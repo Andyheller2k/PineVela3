@@ -1,0 +1,2929 @@
+import React, { useState, useEffect, useRef, useCallback, memo } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { queryClient, invalidateAllQueries } from '../lib/queryClient';
+import { useAuth } from '../context/AuthContext';
+import PineLogo from './PineLogo';
+import { compressImageFileToLowRes, optimizeImageDisplayUrl } from '../lib/imageOptimizer';
+import {
+  Store,
+  Package,
+  Plus,
+  Trash2,
+  CheckCircle2,
+  Clock,
+  MapPin,
+  Search,
+  School,
+  BadgeCheck,
+  LogOut,
+  ExternalLink,
+  ShieldCheck,
+  Star,
+  RefreshCw,
+  Edit3,
+  X,
+  Sparkles,
+  ShoppingBag,
+  Users,
+  DollarSign,
+  Bell,
+  TrendingUp,
+  CreditCard,
+  AlertCircle,
+  ArrowRight,
+  User as UserIcon,
+  Camera,
+  Image as ImageIcon,
+  ChevronRight,
+  Compass,
+  SlidersHorizontal,
+  ArrowUpDown,
+  RotateCcw,
+  CheckCheck,
+  Inbox,
+  Tag,
+  ChevronDown
+} from 'lucide-react';
+import CampusMeetupMapPicker from './CampusMeetupMapPicker';
+import ItemImageCropModal from './ItemImageCropModal';
+import { Crop } from 'lucide-react';
+
+export const DIGITAL_MARKET_CATEGORIES = [
+  "Electronics, Gadgets & Accessories",
+  "Laptops, Phones & Computing Gear",
+  "Textbooks, Handouts & Study Materials",
+  "Hostel Furniture & Room Appliances",
+  "Student Fashion, Footwear & Thrift Boutique",
+  "Beauty, Skincare, Haircare & Grooming",
+  "Groceries, Packed Foods, Snacks & Drinks",
+  "Beddings, Mattresses, Curtains & Room Decor",
+  "Stationery, Printing, Binding & Graphic Design",
+  "Campus Services, Peer Tutoring & Tech Repair",
+  "Sports, Fitness, Gym Wear & Supplements",
+  "Provisions, Cookware & Kitchen Utensils",
+  "Handmade Crafts, Art & Campus Merchandise",
+  "Musical Instruments & Audio Equipment",
+  "General Campus Essentials"
+];
+
+interface MarketProduct {
+  id: string;
+  storeId: string;
+  storeName: string;
+  sellerId: string;
+  sellerEmail: string;
+  sellerUniversity: string;
+  title: string;
+  description: string;
+  price: number;
+  currency: string;
+  category: string;
+  stockQuantity: number;
+  imageUrl: string;
+  condition?: string;
+  meetingLocation?: string;
+  isAvailable: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface MarketOrder {
+  id: string;
+  productId: string;
+  productTitle: string;
+  productPrice: number;
+  productImage?: string;
+  quantity: number;
+  totalAmount: number;
+  buyerId: string;
+  buyerEmail: string;
+  buyerName: string;
+  buyerPhone?: string;
+  sellerId: string;
+  sellerEmail: string;
+  storeId: string;
+  storeName: string;
+  university: string;
+  meetingLocation: string;
+  meetingLatitude?: number;
+  meetingLongitude?: number;
+  sellerConfirmed?: boolean;
+  sellerAgreedLocation?: boolean;
+  sellerAgreedAt?: string;
+  otpPin: string;
+  status: string;
+  paymentMethod: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface SellerInventoryCardProps {
+  product: MarketProduct;
+  onUpdateStock: (product: MarketProduct, delta: number) => void;
+  onDeleteProduct: (product: MarketProduct) => void;
+}
+
+const SellerInventoryCard: React.FC<SellerInventoryCardProps> = memo(
+  ({ product, onUpdateStock, onDeleteProduct }) => {
+    return (
+      <div
+        className="bg-white/90 border border-slate-200/80 rounded-3xl overflow-hidden shadow-xs hover:border-blue-400 hover:shadow-md transition-all duration-150 flex flex-col justify-between"
+      >
+        <div>
+          <div className="relative h-48 bg-slate-900/5 overflow-hidden flex items-center justify-center p-1 border-b border-slate-100">
+            <img
+              src={optimizeImageDisplayUrl(product.imageUrl, 150, 20)}
+              alt={product.title}
+              loading="lazy"
+              decoding="async"
+              className="w-full h-full object-contain"
+              referrerPolicy="no-referrer"
+            />
+            <div className="absolute top-3 left-3 px-2.5 py-1 bg-slate-900/80 backdrop-blur-md text-white text-[9px] font-black rounded-lg uppercase">
+              {product.category}
+            </div>
+            <div className="absolute top-3 right-3 px-2.5 py-1 bg-blue-600 text-white text-xs font-black rounded-lg shadow-xs">
+              GH₵ {product.price}
+            </div>
+          </div>
+
+          <div className="p-5 space-y-2">
+            <h3 className="text-xs font-black text-slate-950 line-clamp-1">{product.title}</h3>
+            <p className="text-[11px] text-slate-500 line-clamp-2 leading-relaxed">{product.description || 'No description provided.'}</p>
+          </div>
+        </div>
+
+        <div className="p-5 pt-3 border-t border-slate-100 space-y-3 bg-slate-50/40">
+          {/* REAL TIME STOCK ADJUSTER */}
+          <div className="flex items-center justify-between">
+            <div className="text-xs font-bold text-slate-500">
+              In Stock:{' '}
+              <span className={`font-black ${product.stockQuantity > 0 ? 'text-slate-950' : 'text-rose-600'}`}>
+                {product.stockQuantity} units
+              </span>
+            </div>
+
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => onUpdateStock(product, -1)}
+                disabled={product.stockQuantity <= 0}
+                className="w-7 h-7 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 font-bold text-sm flex items-center justify-center cursor-pointer disabled:opacity-40"
+                title="Decrease Stock Quantity"
+              >
+                -
+              </button>
+              <span className="w-6 text-center text-xs font-black text-slate-950">{product.stockQuantity}</span>
+              <button
+                type="button"
+                onClick={() => onUpdateStock(product, 1)}
+                className="w-7 h-7 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 font-bold text-sm flex items-center justify-center cursor-pointer"
+                title="Increase Stock Quantity"
+              >
+                +
+              </button>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-200/50">
+            <span className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase ${
+              product.stockQuantity > 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
+            }`}>
+              {product.stockQuantity > 0 ? 'Active in Market' : 'Out of Stock'}
+            </span>
+
+            <button
+              type="button"
+              onClick={() => onDeleteProduct(product)}
+              className="px-2.5 py-1 text-rose-600 hover:text-rose-800 hover:bg-rose-50 rounded-lg text-xs font-bold flex items-center gap-1 transition-all cursor-pointer"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>Remove</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  },
+  (prev, next) => {
+    return (
+      prev.product.id === next.product.id &&
+      prev.product.title === next.product.title &&
+      prev.product.price === next.product.price &&
+      prev.product.imageUrl === next.product.imageUrl &&
+      prev.product.stockQuantity === next.product.stockQuantity &&
+      prev.product.isAvailable === next.product.isAvailable &&
+      prev.product.description === next.product.description &&
+      prev.product.category === next.product.category
+    );
+  }
+);
+
+SellerInventoryCard.displayName = 'SellerInventoryCard';
+
+export default function PageDigitalMarket() {
+  const navigate = useNavigate();
+  const { user, logout, apiFetch } = useAuth();
+  const initialLoadCompletedRef = useRef<boolean>(false);
+
+  // Role Protection Guard: Only merchant and student roles can access digital market platform
+  useEffect(() => {
+    if (user) {
+      if (user.role === 'staff') {
+        navigate('/staff/dashboard', { replace: true });
+      } else if (user.role === 'manager') {
+        navigate('/manager/dashboard', { replace: true });
+      } else if (user.role === 'admin') {
+        navigate('/admin/dashboard', { replace: true });
+      }
+    }
+  }, [user, navigate]);
+
+  // Navigation
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'inventory' | 'sales' | 'notifications' | 'profile'>('dashboard');
+  const [storeData, setStoreData] = useState<any>(null);
+  const [applicationData, setApplicationData] = useState<any>(null);
+  const [products, setProducts] = useState<MarketProduct[]>([]);
+  const [orders, setOrders] = useState<MarketOrder[]>([]);
+  const [sellerNotifications, setSellerNotifications] = useState<any[]>([]);
+  const [notifFilter, setNotifFilter] = useState<'all' | 'unread' | 'orders' | 'system'>('all');
+  const [loading, setLoading] = useState<boolean>(true);
+  const [refreshing, setRefreshing] = useState<boolean>(false);
+
+  // Search, Price Filter & Sort
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('All');
+  const [minPriceFilter, setMinPriceFilter] = useState<number>(0);
+
+  // Broad flexible category matcher helper
+  const matchesCategory = (productCategory: string = '', selectedCat: string = '') => {
+    if (!selectedCat || selectedCat === 'All') return true;
+    const pCat = (productCategory || '').toLowerCase().trim();
+    const sCat = selectedCat.toLowerCase().trim();
+
+    if (!pCat) return true;
+    if (pCat === sCat || pCat.includes(sCat) || sCat.includes(pCat)) return true;
+
+    const sWords = sCat.split(/[\s,&/]+/).filter(w => w.length > 2 && w !== 'and' && w !== 'the' && w !== 'for');
+    for (const word of sWords) {
+      if (pCat.includes(word)) return true;
+    }
+
+    const techKeywords = ['electronic', 'gadget', 'laptop', 'phone', 'computing', 'gear', 'accessory', 'accessories', 'tech', 'audio', 'instrument', 'device', 'charger', 'headphone', 'macbook', 'iphone', 'android', 'powerbank'];
+    const isTechSelected = techKeywords.some(k => sCat.includes(k));
+    const isTechProd = techKeywords.some(k => pCat.includes(k));
+    if (isTechSelected && isTechProd) return true;
+
+    const bookKeywords = ['textbook', 'book', 'study', 'handout', 'material', 'stationery', 'print', 'binding', 'paper', 'note'];
+    const isBookSelected = bookKeywords.some(k => sCat.includes(k));
+    const isBookProd = bookKeywords.some(k => pCat.includes(k));
+    if (isBookSelected && isBookProd) return true;
+
+    const applianceKeywords = ['appliance', 'hostel', 'cookware', 'kitchen', 'utensil', 'fridge', 'iron', 'provision', 'microwave', 'kettle', 'blender'];
+    const isApplianceSelected = applianceKeywords.some(k => sCat.includes(k));
+    const isApplianceProd = applianceKeywords.some(k => pCat.includes(k));
+    if (isApplianceSelected && isApplianceProd) return true;
+
+    const fashionKeywords = ['fashion', 'footwear', 'thrift', 'boutique', 'apparel', 'clothing', 'beauty', 'skincare', 'haircare', 'grooming', 'shoe', 'shirt', 'dress'];
+    const isFashionSelected = fashionKeywords.some(k => sCat.includes(k));
+    const isFashionProd = fashionKeywords.some(k => pCat.includes(k));
+    if (isFashionSelected && isFashionProd) return true;
+
+    const furnitureKeywords = ['furniture', 'bedding', 'mattress', 'curtain', 'decor', 'desk', 'chair', 'table', 'pillow'];
+    const isFurnitureSelected = furnitureKeywords.some(k => sCat.includes(k));
+    const isFurnitureProd = furnitureKeywords.some(k => pCat.includes(k));
+    if (isFurnitureSelected && isFurnitureProd) return true;
+
+    const serviceKeywords = ['service', 'tutoring', 'repair', 'graphic', 'printing', 'laundry', 'cleaning'];
+    const isServiceSelected = serviceKeywords.some(k => sCat.includes(k));
+    const isServiceProd = serviceKeywords.some(k => pCat.includes(k));
+    if (isServiceSelected && isServiceProd) return true;
+
+    return false;
+  };
+  const [maxPriceFilter, setMaxPriceFilter] = useState<number>(5000);
+  const [priceSortOption, setPriceSortOption] = useState<'featured' | 'price-asc' | 'price-desc' | 'newest'>('featured');
+  const [showPriceFilterPanel, setShowPriceFilterPanel] = useState<boolean>(false);
+  const [marketVisibleCount, setMarketVisibleCount] = useState<number>(24);
+
+  useEffect(() => {
+    setMarketVisibleCount(24);
+  }, [selectedCategory, searchQuery, minPriceFilter, maxPriceFilter, priceSortOption]);
+
+  // New Product Modal Form
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [isSubmittingProduct, setIsSubmittingProduct] = useState(false);
+  const [prodTitle, setProdTitle] = useState('');
+  const [prodPrice, setProdPrice] = useState('');
+  const [prodCategory, setProdCategory] = useState('Electronics');
+  const [prodCondition, setProdCondition] = useState('Like New');
+  const [prodStock, setProdStock] = useState('1');
+  const [prodLocation, setProdLocation] = useState('KNUST Main Library Car Park');
+  const [prodImageUrl, setProdImageUrl] = useState('');
+  const [prodDesc, setProdDesc] = useState('');
+
+  // Item Image Crop Modal State
+  const [cropRawImage, setCropRawImage] = useState<string | null>(null);
+  const [isCropModalOpen, setIsCropModalOpen] = useState<boolean>(false);
+
+  // PIN Verification State
+  const [verifyingOrder, setVerifyingOrder] = useState<MarketOrder | null>(null);
+  const [pinInput, setPinInput] = useState('');
+  const [pinSubmitting, setPinSubmitting] = useState(false);
+  const [viewingOrderMap, setViewingOrderMap] = useState<MarketOrder | null>(null);
+  const [confirmingOrderId, setConfirmingOrderId] = useState<string | null>(null);
+
+  // Onboarding Wizard States
+  const [onboardingStep, setOnboardingStep] = useState<1 | 2 | 3>(1);
+  const [obStoreName, setObStoreName] = useState('');
+  const [obLocation, setObLocation] = useState('KNUST Campus (On-Campus)');
+  const [obDeliveryForm, setObDeliveryForm] = useState('Physical Meetup & PIN Handshake');
+  const [obCategory, setObCategory] = useState('Electronics');
+  const [obCoverPicture, setObCoverPicture] = useState('https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=1200&auto=format&fit=crop&q=80');
+  const [obProfilePicture, setObProfilePicture] = useState('https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80');
+  const [obUsername, setObUsername] = useState('');
+  const [obMomoNetwork, setObMomoNetwork] = useState('MTN Mobile Money');
+  const [obMomoNumber, setObMomoNumber] = useState('');
+  const [isPaying, setIsPaying] = useState(false);
+  const [payProgress, setPayProgress] = useState(0);
+  const [paymentStatusMessage, setPaymentStatusMessage] = useState('');
+
+  // Profile Edit States
+  const [editStoreName, setEditStoreName] = useState('');
+  const [editLocation, setEditLocation] = useState('');
+  const [editDeliveryForm, setEditDeliveryForm] = useState('');
+  const [editCategory, setEditCategory] = useState('');
+  const [editCoverPicture, setEditCoverPicture] = useState('');
+  const [editProfilePicture, setEditProfilePicture] = useState('');
+  const [editUsername, setEditUsername] = useState('');
+  const [editDescription, setEditDescription] = useState('');
+  const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
+
+  // Toast State
+  const [toastMessage, setToastMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+
+  const triggerToast = (text: string, type: 'success' | 'error' = 'success') => {
+    setToastMessage({ text, type });
+    setTimeout(() => setToastMessage(null), 4000);
+  };
+
+  // Preset resources for onboarding
+  const presetCovers = [
+    { name: 'Modern Tech Store', url: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=1200&auto=format&fit=crop&q=80' },
+    { name: 'Aesthetic Products', url: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=1200&auto=format&fit=crop&q=80' },
+    { name: 'Campus Study Center', url: 'https://images.unsplash.com/photo-1507842217343-583bb7270b66?w=1200&auto=format&fit=crop&q=80' },
+    { name: 'Apparel Boutique', url: 'https://images.unsplash.com/photo-1511556532299-8f662fc26c06?w=1200&auto=format&fit=crop&q=80' }
+  ];
+
+  const presetAvatars = [
+    { name: 'Academic Female', url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80' },
+    { name: 'Aesthetic Male', url: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=400&auto=format&fit=crop&q=80' },
+    { name: 'Vibrant Female', url: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&auto=format&fit=crop&q=80' },
+    { name: 'Professional Male', url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&auto=format&fit=crop&q=80' }
+  ];
+
+  const studentEmail = user?.studentEmail || user?.email || '';
+  const storeName = storeData?.storeName || applicationData?.storeName || `${user?.fullName || 'Student'}'s Store`;
+  const university = storeData?.university || applicationData?.university || 'Accredited Ghanaian University';
+
+  const loadData = async (isBackground = false) => {
+    try {
+      if (!isBackground && !initialLoadCompletedRef.current) {
+        setLoading(true);
+      }
+      if (!isBackground) {
+        setRefreshing(true);
+      }
+      const email = user?.studentEmail || user?.email || '';
+      const userId = user?.id || '';
+
+      // 1. Fetch store status & application
+      const statusRes = await apiFetch(`/api/digital-market/status?email=${encodeURIComponent(email)}&userId=${encodeURIComponent(userId)}`).catch(() => null);
+      
+      if (statusRes?.application) {
+        setApplicationData((prev: any) => JSON.stringify(prev) === JSON.stringify(statusRes.application) ? prev : statusRes.application);
+        // Pre-fill some onboarding defaults from application only if empty
+        if (!obStoreName) setObStoreName(statusRes.application.storeName || `${statusRes.application.fullName}'s Store`);
+        if (!obCategory) setObCategory(statusRes.application.categoryToSell || 'Electronics');
+        if (!obUsername) setObUsername(statusRes.application.fullName?.split(' ')[0]?.toLowerCase() || 'student_merchant');
+      }
+
+      if (!statusRes?.store || !statusRes.store.setupCompleted) {
+        navigate('/digital-market/onboard', { replace: true });
+        return;
+      } else {
+        setStoreData((prev: any) => JSON.stringify(prev) === JSON.stringify(statusRes.store) ? prev : statusRes.store);
+        // Pre-fill profile edit fields ONLY on initial load to preserve unsaved form edits
+        if (!initialLoadCompletedRef.current) {
+          setEditStoreName(statusRes.store.storeName || '');
+          setEditLocation(statusRes.store.location || '');
+          setEditDeliveryForm(statusRes.store.deliveryForm || '');
+          setEditCategory(statusRes.store.category || '');
+          setEditCoverPicture(statusRes.store.coverPicture || statusRes.store.bannerUrl || '');
+          setEditProfilePicture(statusRes.store.profilePicture || statusRes.store.logoUrl || '');
+          setEditUsername(statusRes.store.username || '');
+          setEditDescription(statusRes.store.description || '');
+        }
+      }
+
+      // 2. Fetch products
+      const allProducts: MarketProduct[] = await apiFetch('/api/digital-market/products?includeAll=true').catch(() => []);
+      const currentStoreId = statusRes?.store?.id || (user as any)?.merchantStoreId;
+      const currentEmail = (user?.studentEmail || user?.email || '').toLowerCase();
+
+      // Filter products belonging to this merchant store
+      const myProducts = allProducts.filter((p: MarketProduct) => {
+        if (currentStoreId && p.storeId === currentStoreId) return true;
+        if (currentEmail && p.sellerEmail && p.sellerEmail.toLowerCase() === currentEmail) return true;
+        return false;
+      });
+      setProducts(prev => JSON.stringify(prev) === JSON.stringify(myProducts) ? prev : myProducts);
+
+      // 3. Fetch orders
+      const ordersRes: MarketOrder[] = await apiFetch(`/api/digital-market/my-orders?email=${encodeURIComponent(email)}&storeId=${encodeURIComponent(currentStoreId || '')}`).catch(() => []);
+      setOrders(prev => JSON.stringify(prev) === JSON.stringify(ordersRes || []) ? prev : (ordersRes || []));
+
+      // 4. Fetch seller notifications (scoped strictly to Digital Market & E-Commerce)
+      const notifsRes: any[] = await apiFetch('/api/notifications?scope=market').catch(() => []);
+      
+      const isSellerMarketNotification = (n: any) => {
+        if (!n) return false;
+        if (n.scope === 'market' || n.category === 'market' || n.category === 'ecommerce' || n.module === 'digital_market' || n.targetRole === 'merchant') {
+          return true;
+        }
+        const title = (n.title || '').toLowerCase();
+        const msg = (n.message || '').toLowerCase();
+        const text = `${title} ${msg}`;
+
+        // Explicitly reject staff, hostel management, room key, and maintenance notifications
+        const nonMarketKeywords = [
+          'staff verification',
+          'staff account',
+          'staff profile',
+          'national id credentials',
+          'electrician',
+          'backup power',
+          'plumber',
+          'carpenter',
+          'hostel staff',
+          'room key',
+          'maintenance issue',
+          'damage deposit',
+          'hostel manager',
+          'manager account',
+          'property inspection',
+          'field officer',
+          'employment concluded',
+          'staff resignation',
+          'deal accepted by manager',
+          'bargain proposal'
+        ];
+
+        if (nonMarketKeywords.some(kw => text.includes(kw))) {
+          return false;
+        }
+
+        const marketKeywords = [
+          'merchant',
+          'digital market',
+          'campus store',
+          'store application',
+          'store accreditation',
+          'buy request',
+          'order',
+          'handover',
+          'escrow',
+          'delivery pin',
+          'meetup location',
+          'product',
+          'inventory',
+          'buyer',
+          'seller',
+          'item sold',
+          'e-commerce',
+          'marketplace'
+        ];
+
+        return marketKeywords.some(kw => text.includes(kw)) || (n.id && (String(n.id).startsWith('notif-dm') || String(n.id).startsWith('notif-ord')));
+      };
+
+      const marketNotifs = (notifsRes || []).filter(isSellerMarketNotification);
+      setSellerNotifications(prev => JSON.stringify(prev) === JSON.stringify(marketNotifs) ? prev : marketNotifs);
+    } catch (err) {
+      console.error("Error loading digital market data:", err);
+    } finally {
+      initialLoadCompletedRef.current = true;
+      setLoading(false);
+      if (!isBackground) {
+        setRefreshing(false);
+      }
+    }
+  };
+
+  const handleMarkNotificationRead = async (notifId: string) => {
+    setSellerNotifications(prev => prev.map(n => n.id === notifId ? { ...n, read: true } : n));
+    await apiFetch(`/api/notifications/${notifId}/read`, { method: 'PUT' }).catch(() => {});
+  };
+
+  const handleMarkAllNotificationsRead = async () => {
+    setSellerNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    await apiFetch('/api/notifications/read-all', { method: 'PUT' }).catch(() => {});
+    triggerToast('All seller notifications marked as read', 'success');
+  };
+
+  useEffect(() => {
+    loadData(false);
+    const interval = setInterval(() => {
+      loadData(true);
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [user?.email, user?.studentEmail]);
+
+  // Handle Onboarding Next Step
+  const handleOnboardingNext = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (onboardingStep === 1) {
+      if (!obStoreName.trim()) {
+        triggerToast("Please provide your store name.", "error");
+        return;
+      }
+      setOnboardingStep(2);
+    } else if (onboardingStep === 2) {
+      if (!obUsername.trim()) {
+        triggerToast("Please choose a unique merchant username.", "error");
+        return;
+      }
+      setOnboardingStep(3);
+    }
+  };
+
+  // Process Simulated Payment of 50 GHS & Create Store
+  const handleProcessPayment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!obMomoNumber.trim()) {
+      triggerToast("Please enter your Mobile Money Phone Number.", "error");
+      return;
+    }
+    if (obMomoNumber.trim().length < 9) {
+      triggerToast("Please enter a valid Ghanaian Mobile Money Phone Number.", "error");
+      return;
+    }
+
+    setIsPaying(true);
+    setPayProgress(15);
+    setPaymentStatusMessage("Contacting network provider...");
+
+    const steps = [
+      { progress: 30, text: "Sending GH₵ 50.00 authorization request to PineVela Secure Gateway..." },
+      { progress: 55, text: "Awaiting approval prompt on your mobile device..." },
+      { progress: 80, text: "MoMo Pin validated! Confirming transaction settlement..." },
+      { progress: 100, text: "Payment Approved! Provisioning your digital storefront..." }
+    ];
+
+    for (const step of steps) {
+      await new Promise(resolve => setTimeout(resolve, 800));
+      setPayProgress(step.progress);
+      setPaymentStatusMessage(step.text);
+    }
+
+    try {
+      const email = user?.studentEmail || user?.email || '';
+      const res = await apiFetch('/api/digital-market/create-store', {
+        method: 'POST',
+        body: JSON.stringify({
+          studentEmail: email,
+          storeName: obStoreName.trim(),
+          location: obLocation,
+          deliveryForm: obDeliveryForm,
+          category: obCategory,
+          coverPicture: obCoverPicture,
+          profilePicture: obProfilePicture,
+          username: obUsername.trim()
+        })
+      });
+
+      if (res?.success && res?.store) {
+        triggerToast(`Congratulations! "${obStoreName}" has been successfully created.`, "success");
+        setStoreData(res.store);
+        setOnboardingStep(1);
+        await loadData();
+        setActiveTab('dashboard');
+      } else {
+        triggerToast(res?.error || "Store creation failed. Please try again.", "error");
+        setOnboardingStep(1);
+      }
+    } catch (err: any) {
+      triggerToast(err?.message || "Failed to finalize store setup.", "error");
+      setOnboardingStep(1);
+    } finally {
+      setIsPaying(false);
+      setPayProgress(0);
+      setPaymentStatusMessage('');
+    }
+  };
+
+  // Handle Add Product (MANDATORY Description and Image)
+  const handleCreateProduct = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!prodTitle.trim()) {
+      triggerToast("Please provide a product title.", "error");
+      return;
+    }
+    if (!prodPrice.trim() || parseFloat(prodPrice) <= 0) {
+      triggerToast("Please provide a valid price.", "error");
+      return;
+    }
+    if (!prodImageUrl.trim()) {
+      triggerToast("It is mandatory to put up an item picture for campus listing.", "error");
+      return;
+    }
+    if (!prodDesc.trim()) {
+      triggerToast("It is mandatory to provide a detailed product description.", "error");
+      return;
+    }
+
+    setIsSubmittingProduct(true);
+    try {
+      const email = user?.studentEmail || user?.email || '';
+      const storeId = storeData?.id || (user as any)?.merchantStoreId || `store-${Date.now()}`;
+
+      const res = await apiFetch('/api/digital-market/products', {
+        method: 'POST',
+        body: JSON.stringify({
+          storeId,
+          title: prodTitle.trim(),
+          description: prodDesc.trim(),
+          price: parseFloat(prodPrice),
+          category: prodCategory,
+          stockQuantity: parseInt(prodStock, 10) || 1,
+          imageUrl: prodImageUrl.trim(),
+          userEmail: email,
+          condition: prodCondition,
+          meetingLocation: prodLocation
+        })
+      });
+
+      if (res?.success || res?.product) {
+        triggerToast(`"${prodTitle}" successfully published to the Global Market!`, "success");
+        if (res.product) {
+          setProducts(prev => [res.product, ...prev.filter(p => p.id !== res.product.id)]);
+        }
+        setShowAddModal(false);
+        // Reset filters so newly published product renders immediately
+        setSelectedCategory('All');
+        setSearchQuery('');
+        setMinPriceFilter(0);
+        setMaxPriceFilter(5000);
+        setActiveTab('inventory');
+        // Reset form
+        setProdTitle('');
+        setProdPrice('');
+        setProdDesc('');
+        setProdStock('1');
+        setProdImageUrl('');
+        await loadData();
+      } else {
+        triggerToast(res?.error || "Failed to publish product.", "error");
+      }
+    } catch (err: any) {
+      triggerToast(err?.message || "Failed to publish product.", "error");
+    } finally {
+      setIsSubmittingProduct(false);
+    }
+  };
+
+  // Adjust stock inline (+ / -)
+  const handleUpdateStock = useCallback(async (product: MarketProduct, delta: number) => {
+    const newStock = Math.max(0, product.stockQuantity + delta);
+    try {
+      await apiFetch(`/api/digital-market/products/${product.id}`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          stockQuantity: newStock,
+          isAvailable: newStock > 0
+        })
+      });
+      setProducts(prev => prev.map(p => p.id === product.id ? { ...p, stockQuantity: newStock, isAvailable: newStock > 0 } : p));
+      triggerToast(`Successfully adjusted stock for "${product.title}" to ${newStock} units.`, "success");
+    } catch (err) {
+      triggerToast("Failed to adjust stock level.", "error");
+    }
+  }, [apiFetch]);
+
+  // Delete product from store
+  const handleDeleteProduct = useCallback(async (product: MarketProduct) => {
+    if (!window.confirm(`Are you absolutely sure you want to remove "${product.title}" from the global campus catalog?`)) return;
+    try {
+      await apiFetch(`/api/digital-market/products/${product.id}`, {
+        method: 'DELETE'
+      });
+      setProducts(prev => prev.filter(p => p.id !== product.id));
+      triggerToast(`Removed "${product.title}" from global marketplace.`, "success");
+    } catch (err) {
+      triggerToast("Failed to remove product.", "error");
+    }
+  }, [apiFetch]);
+
+  // Verify PIN for buyer handover
+  const handleVerifyPin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!verifyingOrder || !pinInput.trim()) return;
+
+    setPinSubmitting(true);
+    try {
+      const res = await apiFetch(`/api/digital-market/orders/${verifyingOrder.id}/update-status`, {
+        method: 'POST',
+        body: JSON.stringify({
+          newStatus: 'Completed & Paid',
+          inputPin: pinInput.trim()
+        })
+      });
+
+      if (res?.success || res?.order) {
+        triggerToast(`Campus verification handshake successful for order #${verifyingOrder.id}!`, "success");
+        setVerifyingOrder(null);
+        setPinInput('');
+        await loadData();
+      } else {
+        triggerToast(res?.error || "Incorrect 4-Digit Pickup PIN.", "error");
+      }
+    } catch (err: any) {
+      triggerToast(err?.message || "PIN verification handshake failed.", "error");
+    } finally {
+      setPinSubmitting(false);
+    }
+  };
+
+  // Agree to Proposed Campus Meetup Location
+  const handleAgreeLocation = async (orderId: string) => {
+    setConfirmingOrderId(orderId);
+    try {
+      const res = await apiFetch(`/api/digital-market/orders/${orderId}/update-status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'agree-location' })
+      });
+      if (res && res.success) {
+        triggerToast("Meetup location agreed! Purchase confirmed for handover.", "success");
+        await loadData();
+      } else {
+        triggerToast(res?.error || "Failed to confirm meetup location.", "error");
+      }
+    } catch (err: any) {
+      triggerToast(err.message || "Failed to confirm meetup location.", "error");
+    } finally {
+      setConfirmingOrderId(null);
+    }
+  };
+
+  // Decline Proposed Campus Meetup Location
+  const handleDeclineLocation = async (orderId: string) => {
+    if (!window.confirm("Are you sure you want to decline this proposed meetup spot?")) return;
+    setConfirmingOrderId(orderId);
+    try {
+      const res = await apiFetch(`/api/digital-market/orders/${orderId}/update-status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'reject-location' })
+      });
+      if (res && res.success) {
+        triggerToast("Proposed meetup spot declined.", "success");
+        await loadData();
+      } else {
+        triggerToast(res?.error || "Failed to decline location.", "error");
+      }
+    } catch (err: any) {
+      triggerToast(err.message || "Failed to decline location.", "error");
+    } finally {
+      setConfirmingOrderId(null);
+    }
+  };
+
+  // Edit Store Profile Details
+  const handleUpdateProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editStoreName.trim() || !editUsername.trim()) {
+      triggerToast("Store Name and Username cannot be empty.", "error");
+      return;
+    }
+
+    setIsUpdatingProfile(true);
+    try {
+      const email = user?.studentEmail || user?.email || '';
+      const res = await apiFetch('/api/digital-market/store', {
+        method: 'PUT',
+        body: JSON.stringify({
+          studentEmail: email,
+          storeName: editStoreName.trim(),
+          location: editLocation,
+          deliveryForm: editDeliveryForm,
+          category: editCategory,
+          coverPicture: editCoverPicture,
+          profilePicture: editProfilePicture,
+          username: editUsername.trim(),
+          description: editDescription.trim()
+        })
+      });
+
+      if (res?.success && res?.store) {
+        triggerToast("Merchant store profile updated successfully!", "success");
+        setStoreData(res.store);
+        await loadData();
+      } else {
+        triggerToast(res?.error || "Failed to update profile.", "error");
+      }
+    } catch (err: any) {
+      triggerToast(err?.message || "Failed to update profile details.", "error");
+    } finally {
+      setIsUpdatingProfile(false);
+    }
+  };
+
+  // Filter and sort products for view
+  const isPriceFiltered = minPriceFilter > 0 || maxPriceFilter < 5000;
+  const filteredProducts = products
+    .filter(p => {
+      if (selectedCategory !== 'All' && !matchesCategory(p.category, selectedCategory)) return false;
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        if (!p.title.toLowerCase().includes(q) && !p.description.toLowerCase().includes(q)) return false;
+      }
+      const itemPrice = Number(p.price) || 0;
+      if (itemPrice < minPriceFilter) return false;
+      if (maxPriceFilter < 5000 && itemPrice > maxPriceFilter) return false;
+      return true;
+    })
+    .sort((a, b) => {
+      if (priceSortOption === 'price-asc') return (a.price || 0) - (b.price || 0);
+      if (priceSortOption === 'price-desc') return (b.price || 0) - (a.price || 0);
+      if (priceSortOption === 'newest') return (b.id || '').localeCompare(a.id || '');
+      return 0;
+    });
+
+  // Stats calculation
+  const totalStockUnits = products.reduce((acc, p) => acc + (p.stockQuantity || 0), 0);
+  const pendingOrders = orders.filter(o => o.status !== 'Completed & Paid' && o.status !== 'Cancelled');
+  const completedOrders = orders.filter(o => o.status === 'Completed & Paid');
+  const totalRevenue = completedOrders.reduce((acc, o) => acc + (o.totalAmount || (o.productPrice * o.quantity) || 0), 0);
+
+  const unreadNotifCount = sellerNotifications.filter((n: any) => !n.read).length;
+
+  const filteredNotifications = sellerNotifications.filter((n: any) => {
+    if (notifFilter === 'unread') return !n.read;
+    if (notifFilter === 'orders') {
+      const titleLower = (n.title || '').toLowerCase();
+      const msgLower = (n.message || '').toLowerCase();
+      return titleLower.includes('buy') || titleLower.includes('order') || titleLower.includes('purchase') || titleLower.includes('pickup') || titleLower.includes('pin') || msgLower.includes('order') || msgLower.includes('buy');
+    }
+    if (notifFilter === 'system') {
+      const titleLower = (n.title || '').toLowerCase();
+      const msgLower = (n.message || '').toLowerCase();
+      return !(titleLower.includes('buy') || titleLower.includes('order') || titleLower.includes('purchase') || titleLower.includes('pickup') || titleLower.includes('pin') || msgLower.includes('order') || msgLower.includes('buy'));
+    }
+    return true;
+  });
+
+  // Extract unique customer buyers
+  const uniqueCustomers = Array.from(new Set(orders.map(o => o.buyerEmail))).map(email => {
+    const matchingOrder = orders.find(o => o.buyerEmail === email);
+    const totalSpent = orders
+      .filter(o => o.buyerEmail === email && o.status === 'Completed & Paid')
+      .reduce((acc, o) => acc + (o.totalAmount || (o.productPrice * o.quantity) || 0), 0);
+    const orderCount = orders.filter(o => o.buyerEmail === email).length;
+
+    return {
+      email,
+      name: matchingOrder?.buyerName || 'Student Customer',
+      phone: matchingOrder?.buyerPhone || 'N/A',
+      orderCount,
+      totalSpent
+    };
+  });
+
+  // Loading Screen
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-tr from-sky-100 via-blue-50 to-indigo-100 flex flex-col items-center justify-center p-6 text-slate-800 relative overflow-hidden">
+        {/* GIANT WATERMARK PINEVELA LOGO — FIXED TO BACKGROUND */}
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none overflow-hidden z-0">
+          <div className="transform scale-[4.5] opacity-[0.15] blur-[0.4px]">
+            <PineLogo size={180} hideText={true} />
+          </div>
+        </div>
+
+        <div className="relative z-10 flex flex-col items-center space-y-4 text-center">
+          <div className="w-20 h-20 rounded-3xl bg-white/75 backdrop-blur-md border border-blue-200/60 shadow-xl flex items-center justify-center animate-pulse">
+            <PineLogo size={48} hideText={true} />
+          </div>
+          
+          <div className="space-y-1">
+            <h1 className="text-xl font-black text-slate-900 tracking-tight">PineVela</h1>
+            <p className="text-sm font-bold text-blue-700 flex items-center gap-2 justify-center">
+              <RefreshCw className="w-4 h-4 animate-spin text-blue-600" />
+              <span>Syncing Market Portal...</span>
+            </p>
+          </div>
+          
+          <p className="text-xs text-slate-500 font-medium">Connecting to peer-to-peer secure commerce channels...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // ONBOARDING WIZARD SCREEN
+  if (!storeData && applicationData?.status === 'approved') {
+    return (
+      <div className="min-h-screen bg-slate-50 text-slate-800 pb-20">
+        {/* Toast */}
+        {toastMessage && (
+          <div className={`fixed bottom-6 right-6 z-50 px-5 py-3 rounded-2xl shadow-2xl text-xs font-bold flex items-center gap-2.5 transition-all animate-bounce ${
+            toastMessage.type === 'success' ? 'bg-emerald-600 text-white' : 'bg-rose-600 text-white'
+          }`}>
+            {toastMessage.type === 'success' ? <CheckCircle2 className="w-4 h-4" /> : <X className="w-4 h-4" />}
+            <span>{toastMessage.text}</span>
+          </div>
+        )}
+
+        <header className="bg-white border-b border-blue-100/50 py-4 px-6 sticky top-0 z-40 backdrop-blur-md shadow-xs">
+          <div className="max-w-4xl mx-auto flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-blue-600 flex items-center justify-center font-bold">
+                <Store className="w-4.5 h-4.5 text-white" />
+              </div>
+              <span className="text-sm font-black tracking-tight text-slate-900">PineVela Student Merchant Setup</span>
+            </div>
+            <button
+              onClick={() => { logout(); navigate('/login'); }}
+              className="px-3.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span>Cancel & Sign Out</span>
+            </button>
+          </div>
+        </header>
+
+        <main className="max-w-2xl mx-auto px-4 pt-10">
+          <div className="bg-white rounded-3xl border border-blue-100 shadow-xl p-8 space-y-8 backdrop-blur-md relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-2xl pointer-events-none" />
+
+            {/* Steps Eyebrow */}
+            <div className="flex items-center justify-between border-b border-slate-100 pb-6">
+              <div>
+                <span className="text-[10px] font-extrabold uppercase text-blue-600 tracking-widest">Store Onboarding</span>
+                <h1 className="text-xl font-black text-slate-900 mt-1">Activate Your Campus Storefront</h1>
+              </div>
+              <div className="flex items-center gap-1.5 text-xs font-black">
+                <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] ${onboardingStep >= 1 ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-400'}`}>1</span>
+                <ChevronRight className="w-3.5 h-3.5 text-slate-300" />
+                <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] ${onboardingStep >= 2 ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-400'}`}>2</span>
+                <ChevronRight className="w-3.5 h-3.5 text-slate-300" />
+                <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] ${onboardingStep >= 3 ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-400'}`}>3</span>
+              </div>
+            </div>
+
+            {/* STEP 1: MARKET DETAILS */}
+            {onboardingStep === 1 && (
+              <form onSubmit={handleOnboardingNext} className="space-y-5">
+                <div className="p-4 bg-blue-50/70 border border-blue-100 rounded-2xl text-xs text-blue-950 space-y-1">
+                  <span className="font-extrabold text-blue-900 block">Verified Status Approved!</span>
+                  <p className="text-slate-600 leading-relaxed">
+                    Your institutional student merchant registration is approved by PineVela Admins. Let's customize your store details to list items on your campus.
+                  </p>
+                </div>
+
+                <div id="ob-group-store-name">
+                  <label className="block text-xs font-black text-slate-800 mb-1">Store / Market Name *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Kwame's Hub KNUST, Elite Textbooks, etc."
+                    value={obStoreName}
+                    onChange={(e) => setObStoreName(e.target.value)}
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-hidden focus:ring-2 focus:ring-blue-600 focus:bg-white"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div id="ob-group-location">
+                    <label className="block text-xs font-black text-slate-800 mb-1">Campus Location *</label>
+                    <select
+                      value={obLocation}
+                      onChange={(e) => setObLocation(e.target.value)}
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-hidden focus:ring-2 focus:ring-blue-600 focus:bg-white cursor-pointer"
+                    >
+                      <option value="KNUST Campus (On-Campus)">KNUST Campus (On-Campus)</option>
+                      <option value="University of Ghana (Legon On-Campus)">University of Ghana (Legon On-Campus)</option>
+                      <option value="UCC Campus (Cape Coast On-Campus)">UCC Campus (Cape Coast On-Campus)</option>
+                      <option value="Kumasi Metropolis (Anywhere in Kumasi)">Kumasi Metropolis (Anywhere in Kumasi)</option>
+                      <option value="Ayeduase & Kotei (KNUST Enclave)">Ayeduase & Kotei (KNUST Enclave)</option>
+                      <option value="Bomso / Kentinkrono (Kumasi)">Bomso / Kentinkrono (Kumasi)</option>
+                    </select>
+                  </div>
+
+                  <div id="ob-group-category">
+                    <label className="block text-xs font-black text-slate-800 mb-1">Primary Type of Items *</label>
+                    <select
+                      value={obCategory}
+                      onChange={(e) => setObCategory(e.target.value)}
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-hidden focus:ring-2 focus:ring-blue-600 focus:bg-white cursor-pointer"
+                    >
+                      {DIGITAL_MARKET_CATEGORIES.map(cat => (
+                        <option key={cat} value={cat}>{cat}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div id="ob-group-delivery">
+                  <label className="block text-xs font-black text-slate-800 mb-1">Form of Delivery *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Physical Handover at Hostel Porter Lodge, Campus delivery couriers"
+                    value={obDeliveryForm}
+                    onChange={(e) => setObDeliveryForm(e.target.value)}
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-hidden focus:ring-2 focus:ring-blue-600 focus:bg-white"
+                  />
+                </div>
+
+                <div className="pt-4 border-t border-slate-100 flex justify-end">
+                  <button
+                    type="submit"
+                    className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-black shadow-lg shadow-blue-600/20 transition-all flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <span>Branding & Cover</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {/* STEP 2: BRANDING & IDENTITY */}
+            {onboardingStep === 2 && (
+              <form onSubmit={handleOnboardingNext} className="space-y-6">
+                <div id="ob-group-username">
+                  <label className="block text-xs font-black text-slate-800 mb-1">Merchant Display Username *</label>
+                  <div className="relative">
+                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">@</span>
+                    <input
+                      type="text"
+                      required
+                      pattern="^[a-zA-Z0-9_]{3,20}$"
+                      placeholder="kwame_store"
+                      value={obUsername}
+                      onChange={(e) => setObUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
+                      className="w-full pl-8 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-hidden focus:ring-2 focus:ring-blue-600 focus:bg-white"
+                    />
+                  </div>
+                  <span className="text-[10px] text-slate-400 block mt-1">Alphanumeric, underscores, 3-20 chars. Visible to buyers on student portal.</span>
+                </div>
+
+                {/* Profile Picture presets */}
+                <div id="ob-group-avatar">
+                  <label className="block text-xs font-black text-slate-800 mb-2">Select Profile Avatar</label>
+                  <div className="grid grid-cols-4 gap-3">
+                    {presetAvatars.map((preset, index) => (
+                      <button
+                        key={index}
+                        type="button"
+                        onClick={() => setObProfilePicture(preset.url)}
+                        className={`relative rounded-2xl overflow-hidden aspect-square border-2 transition-all cursor-pointer ${
+                          obProfilePicture === preset.url ? 'border-blue-600 ring-2 ring-blue-500/20' : 'border-transparent opacity-75 hover:opacity-100'
+                        }`}
+                      >
+                        <img src={preset.url} alt={preset.name} className="w-full h-full object-cover" />
+                        {obProfilePicture === preset.url && (
+                          <div className="absolute inset-0 bg-blue-600/20 flex items-center justify-center">
+                            <CheckCircle2 className="w-5 h-5 text-white fill-blue-600" />
+                          </div>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="mt-3">
+                    <input
+                      type="url"
+                      placeholder="Or enter custom profile picture URL..."
+                      value={obProfilePicture}
+                      onChange={(e) => setObProfilePicture(e.target.value)}
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-hidden"
+                    />
+                  </div>
+                </div>
+
+                {/* Cover presets */}
+                <div id="ob-group-cover">
+                  <label className="block text-xs font-black text-slate-800 mb-2">Select Store Cover Banner</label>
+                  <div className="grid grid-cols-2 gap-3">
+                    {presetCovers.map((preset, index) => (
+                      <button
+                        key={index}
+                        type="button"
+                        onClick={() => setObCoverPicture(preset.url)}
+                        className={`relative rounded-2xl overflow-hidden h-18 border-2 transition-all cursor-pointer ${
+                          obCoverPicture === preset.url ? 'border-blue-600 ring-2 ring-blue-500/20' : 'border-transparent opacity-75 hover:opacity-100'
+                        }`}
+                      >
+                        <img src={preset.url} alt={preset.name} className="w-full h-full object-cover" />
+                        <div className="absolute bottom-1 left-2 bg-slate-900/80 text-[8px] font-bold text-white px-1.5 py-0.5 rounded-sm">
+                          {preset.name}
+                        </div>
+                        {obCoverPicture === preset.url && (
+                          <div className="absolute inset-0 bg-blue-600/20 flex items-center justify-center">
+                            <CheckCircle2 className="w-5 h-5 text-white fill-blue-600" />
+                          </div>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="mt-3">
+                    <input
+                      type="url"
+                      placeholder="Or enter custom banner picture URL..."
+                      value={obCoverPicture}
+                      onChange={(e) => setObCoverPicture(e.target.value)}
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-hidden"
+                    />
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
+                  <button
+                    type="button"
+                    onClick={() => setOnboardingStep(1)}
+                    className="px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50"
+                  >
+                    Back
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-black shadow-lg shadow-blue-600/20 transition-all flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <span>Verify & Pay Activation</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {/* STEP 3: PAYMENT ACTIVATION (50 CEDIS) */}
+            {onboardingStep === 3 && (
+              <form onSubmit={handleProcessPayment} className="space-y-6">
+                <div className="p-5 bg-emerald-50 border border-emerald-200 rounded-3xl space-y-3">
+                  <div className="flex items-center gap-2">
+                    <CreditCard className="w-5 h-5 text-emerald-600" />
+                    <span className="text-sm font-black text-emerald-950">One-Time Platform Verification Fee</span>
+                  </div>
+                  <p className="text-xs text-slate-600 leading-relaxed">
+                    Accredited student merchants pay a non-refundable security integration fee of <strong>GH₵ 50.00</strong> to the PineVela Merchant Account. This supports hosting, verification, fraud prevention, and real-time pickup security services.
+                  </p>
+                  <div className="flex items-center justify-between pt-2 border-t border-emerald-200 text-xs">
+                    <span className="text-slate-500">Amount Due:</span>
+                    <span className="text-base font-black text-emerald-800">GH₵ 50.00</span>
+                  </div>
+                </div>
+
+                {!isPaying ? (
+                  <div className="space-y-4">
+                    <div id="pay-group-network">
+                      <label className="block text-xs font-black text-slate-800 mb-1">Select Mobile Money Network</label>
+                      <div className="grid grid-cols-3 gap-2.5">
+                        {['MTN Mobile Money', 'Telecel Cash', 'AT Money'].map((net) => (
+                          <button
+                            key={net}
+                            type="button"
+                            onClick={() => setObMomoNetwork(net)}
+                            className={`py-2 px-3 rounded-xl border text-[11px] font-black transition-all cursor-pointer ${
+                              obMomoNetwork === net
+                                ? 'bg-yellow-500/10 border-yellow-500 text-yellow-900 shadow-xs'
+                                : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                            }`}
+                          >
+                            {net}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div id="pay-group-phone">
+                      <label className="block text-xs font-black text-slate-800 mb-1">Mobile Money Number *</label>
+                      <div className="relative">
+                        <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">+233</span>
+                        <input
+                          type="text"
+                          required
+                          pattern="^[0-9]{9,10}$"
+                          placeholder="244123456"
+                          value={obMomoNumber}
+                          onChange={(e) => setObMomoNumber(e.target.value.replace(/\D/g, ''))}
+                          className="w-full pl-14 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-hidden focus:ring-2 focus:ring-blue-600 focus:bg-white"
+                        />
+                      </div>
+                      <span className="text-[10px] text-slate-400 block mt-1">Provide your local active MoMo billing phone number to authorize pull.</span>
+                    </div>
+
+                    <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
+                      <button
+                        type="button"
+                        onClick={() => setOnboardingStep(2)}
+                        className="px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50"
+                      >
+                        Back
+                      </button>
+                      <button
+                        type="submit"
+                        className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black shadow-lg shadow-emerald-600/20 transition-all flex items-center gap-1.5 cursor-pointer"
+                      >
+                        <CheckCircle2 className="w-4 h-4" />
+                        <span>Pay GH₵ 50.00 & Activate Store</span>
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-4 py-6 text-center">
+                    <div className="relative w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-emerald-500 rounded-full transition-all duration-300"
+                        style={{ width: `${payProgress}%` }}
+                      />
+                    </div>
+                    <div className="flex items-center justify-center gap-2">
+                      <div className="w-4 h-4 rounded-full border-2 border-emerald-200 border-t-emerald-600 animate-spin" />
+                      <span className="text-xs font-bold text-emerald-800">{paymentStatusMessage}</span>
+                    </div>
+                    <p className="text-[10px] text-slate-400 font-medium">Please do not refresh this page. Authorizing via secure campus merchant token...</p>
+                  </div>
+                )}
+              </form>
+            )}
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  // REDESIGNED MERCHANT MANAGEMENT WORKBENCH (GLOSSY LIGHT-BLUE VIBE)
+  return (
+    <div className="min-h-screen bg-gradient-to-tr from-sky-50 via-slate-50 to-blue-50 text-slate-800 pb-24 relative">
+      {/* GIANT WATERMARK PINEVELA LOGO — FIXED TO VIEWPORT (does not scroll with content) */}
+      <div className="fixed inset-0 flex items-center justify-center pointer-events-none select-none overflow-hidden z-0">
+        <div className="transform scale-[4.5] opacity-[0.15] blur-[0.4px]">
+          <PineLogo size={180} hideText={true} />
+        </div>
+      </div>
+
+      {/* Toast */}
+      {toastMessage && (
+        <div className={`fixed bottom-6 right-6 z-50 px-5 py-3 rounded-2xl shadow-2xl text-xs font-bold flex items-center gap-2.5 transition-all animate-bounce ${
+          toastMessage.type === 'success' ? 'bg-emerald-600 text-white' : 'bg-rose-600 text-white'
+        }`}>
+          {toastMessage.type === 'success' ? <CheckCircle2 className="w-4 h-4" /> : <X className="w-4 h-4" />}
+          <span>{toastMessage.text}</span>
+        </div>
+      )}
+
+      {/* TOPBAR SECURE HEADER WITH FROSTY LIGHT-BLUE GLASS BACKGROUND — FIXED TO TOP */}
+      <header className="fixed top-0 left-0 right-0 z-40 bg-sky-100/90 backdrop-blur-xl border-b border-blue-200 text-slate-800 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center font-black shadow-md border border-blue-400/30 overflow-hidden shrink-0">
+              {storeData?.profilePicture || editProfilePicture ? (
+                <img src={storeData?.profilePicture || editProfilePicture} alt={storeData?.storeName || storeName} className="w-full h-full object-cover" />
+              ) : (
+                <Store className="w-5 h-5 text-white" />
+              )}
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm sm:text-base font-black tracking-tight text-slate-900 leading-tight">{storeData?.storeName || storeName}</span>
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 text-[9px] font-black uppercase shrink-0">
+                  <BadgeCheck className="w-2.5 h-2.5 text-emerald-600" />
+                  <span>Verified</span>
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 sm:gap-3">
+            {/* Prominent Plus Button in Header - Hidden on Mobile, use floating plus button instead */}
+            <button
+              type="button"
+              onClick={() => setShowAddModal(true)}
+              className="hidden sm:flex px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-black rounded-xl shadow-md hover:shadow-lg transition-all items-center gap-1.5 cursor-pointer"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Publish Item</span>
+            </button>
+
+            {/* Real-time Seller Notification Badge */}
+            <div className="relative group">
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab('notifications');
+                  triggerToast('Opening seller notifications...');
+                }}
+                className="p-2 sm:p-2.5 rounded-xl bg-blue-100/40 hover:bg-blue-200/60 border border-blue-200/50 text-blue-700 transition-all cursor-pointer flex items-center justify-center relative shadow-xs"
+                title={`${unreadNotifCount} unread seller notifications`}
+              >
+                <Bell className="w-4 h-4 text-blue-600 group-hover:scale-110 transition-transform" />
+                {(unreadNotifCount > 0 || pendingOrders.length > 0) && (
+                  <span className="absolute -top-1.5 -right-1.5 min-w-5 h-5 px-1.5 rounded-full bg-red-500 text-white font-extrabold text-[9px] flex items-center justify-center border-2 border-white shadow-sm animate-pulse">
+                    {unreadNotifCount > 0 ? unreadNotifCount : pendingOrders.length}
+                  </span>
+                )}
+              </button>
+
+              {/* Hover Tooltip card with frosty design */}
+              <div className="absolute right-0 top-11 scale-0 group-hover:scale-100 transition-all duration-150 origin-top-right z-50 bg-white/95 backdrop-blur-md border border-blue-200 rounded-xl p-2.5 shadow-lg w-52 text-left pointer-events-none">
+                <p className="text-[10px] font-black text-slate-800">
+                  {unreadNotifCount > 0 
+                    ? `🔔 ${unreadNotifCount} Unread Notifications!`
+                    : pendingOrders.length > 0
+                    ? `🛒 ${pendingOrders.length} Active Handovers!`
+                    : "✅ Zero pending notifications"}
+                </p>
+                <p className="text-[9px] text-slate-500 font-bold mt-0.5">
+                  Click to view buy requests & seller activity notifications.
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowLogoutConfirm(true)}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 text-xs font-bold transition-all cursor-pointer"
+              title="Sign out from secure digital store workbench"
+            >
+              <LogOut className="w-4 h-4 text-rose-600" />
+              <span className="hidden sm:inline">Sign Out</span>
+            </button>
+          </div>
+        </div>
+
+        {/* TOPBAR NAVIGATION TABS (HIDDEN ON MOBILE, USE MOBILE BOTTOM NAV INSTEAD) */}
+        <div className="border-t border-blue-200/50 bg-sky-100/30 hidden sm:block">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <nav className="flex space-x-1 py-2">
+              <button
+                type="button"
+                onClick={() => setActiveTab('dashboard')}
+                className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 cursor-pointer ${
+                  activeTab === 'dashboard'
+                    ? 'bg-blue-600 text-white shadow-md'
+                    : 'text-slate-600 hover:bg-slate-100/80 hover:text-slate-900'
+                }`}
+              >
+                <TrendingUp className="w-4 h-4" />
+                <span>Dashboard / POS</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveTab('inventory')}
+                className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 cursor-pointer ${
+                  activeTab === 'inventory'
+                    ? 'bg-blue-600 text-white shadow-md'
+                    : 'text-slate-600 hover:bg-slate-100/80 hover:text-slate-900'
+                }`}
+              >
+                <Package className="w-4 h-4" />
+                <span>Inventory ({products.length})</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveTab('sales')}
+                className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 cursor-pointer ${
+                  activeTab === 'sales'
+                    ? 'bg-blue-600 text-white shadow-md'
+                    : 'text-slate-600 hover:bg-slate-100/80 hover:text-slate-900'
+                }`}
+              >
+                <Clock className="w-4 h-4" />
+                <span>Successful Sales ({completedOrders.length})</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveTab('notifications')}
+                className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 cursor-pointer ${
+                  activeTab === 'notifications'
+                    ? 'bg-blue-600 text-white shadow-md'
+                    : 'text-slate-600 hover:bg-slate-100/80 hover:text-slate-900'
+                }`}
+              >
+                <Bell className="w-4 h-4" />
+                <span>Notifications</span>
+                {unreadNotifCount > 0 && (
+                  <span className="px-1.5 py-0.5 rounded-full bg-red-500 text-white font-extrabold text-[10px] flex items-center justify-center animate-pulse">
+                    {unreadNotifCount}
+                  </span>
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveTab('profile')}
+                className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 cursor-pointer ${
+                  activeTab === 'profile'
+                    ? 'bg-blue-600 text-white shadow-md'
+                    : 'text-slate-600 hover:bg-slate-100/80 hover:text-slate-900'
+                }`}
+              >
+                <ShieldCheck className="w-4 h-4" />
+                <span>Store Profile</span>
+              </button>
+            </nav>
+          </div>
+        </div>
+      </header>
+
+      {/* MAIN CONTAINER — OFFSET FOR FIXED HEADER */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-[96px] sm:pt-[154px] space-y-8">
+        
+        {/* TAB 1: DASHBOARD / MINI POS HOME */}
+        {activeTab === 'dashboard' && (
+          <div className="space-y-8">
+            {/* Frosty, Transparent and Premium Greeting banner */}
+            <div className="relative overflow-hidden bg-white/40 backdrop-blur-xl text-slate-800 rounded-3xl p-6 sm:p-8 shadow-[0_8px_32px_0_rgba(59,130,246,0.12)] border border-blue-400/25">
+              {/* Massive PinVela Watermark Logo */}
+              <div className="absolute right-[-30px] bottom-[-45px] opacity-10 pointer-events-none transform rotate-12 scale-[2.2]">
+                <PineLogo size={150} hideText={true} />
+              </div>
+              <div className="absolute top-0 right-0 w-80 h-80 bg-blue-400/5 rounded-full blur-3xl pointer-events-none" />
+              <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                <div>
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-100/60 border border-blue-200 text-blue-800 text-xs font-black uppercase tracking-wider mb-2">
+                    <Sparkles className="w-3.5 h-3.5 text-blue-600" />
+                    <span>Mini POS Management System</span>
+                  </div>
+                  <h2 className="text-xl sm:text-2xl font-black text-slate-900">Welcome back, @{storeData?.username || 'student_merchant'}</h2>
+                  <p className="text-xs sm:text-sm text-slate-600 font-bold mt-1.5 leading-relaxed max-w-2xl">
+                    Track student listings, keep real-time campus stock logs, and accept client delivery authentication handshakes.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => loadData(false)}
+                  disabled={refreshing}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-black shadow-md shadow-blue-600/20 transition-all flex items-center gap-1.5 cursor-pointer shrink-0"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
+                  <span>Sync Status</span>
+                </button>
+              </div>
+            </div>
+
+            {/* HIGH-CONTRAST METRICS ROWS */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="bg-white/80 border border-blue-100/50 backdrop-blur-md rounded-2xl p-5 shadow-xs">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-black uppercase text-slate-400">Total Products</span>
+                  <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600">
+                    <Package className="w-4 h-4" />
+                  </div>
+                </div>
+                <div className="text-2xl font-black text-slate-900 mt-2">{products.length}</div>
+                <div className="text-[10px] text-slate-500 mt-0.5">Active catalog listings</div>
+              </div>
+
+              <div className="bg-white/80 border border-blue-100/50 backdrop-blur-md rounded-2xl p-5 shadow-xs">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-black uppercase text-slate-400">Total Stock</span>
+                  <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600">
+                    <TrendingUp className="w-4 h-4" />
+                  </div>
+                </div>
+                <div className="text-2xl font-black text-slate-900 mt-2">{totalStockUnits}</div>
+                <div className="text-[10px] text-slate-500 mt-0.5">Physical items on hand</div>
+              </div>
+
+              <div className="bg-white/80 border border-blue-100/50 backdrop-blur-md rounded-2xl p-5 shadow-xs">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-black uppercase text-slate-400">Paid Sales</span>
+                  <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600">
+                    <CheckCircle2 className="w-4 h-4" />
+                  </div>
+                </div>
+                <div className="text-2xl font-black text-emerald-700 mt-2">{completedOrders.length}</div>
+                <div className="text-[10px] text-slate-500 mt-0.5">Completed peer handovers</div>
+              </div>
+
+              <div className="bg-white/80 border border-blue-100/50 backdrop-blur-md rounded-2xl p-5 shadow-xs">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-black uppercase text-slate-400">Total Revenue</span>
+                  <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center text-amber-600">
+                    <DollarSign className="w-4 h-4" />
+                  </div>
+                </div>
+                <div className="text-2xl font-black text-slate-900 mt-2">GH₵ {totalRevenue.toLocaleString()}</div>
+                <div className="text-[10px] text-emerald-600 mt-0.5">Settled through system</div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              {/* POS ACTIVE HANDOVERS */}
+              <div id="active-handover-orders" className="lg:col-span-2 space-y-4">
+                <div className="bg-white/70 border border-blue-100/50 backdrop-blur-md rounded-3xl p-6 shadow-xs">
+                  <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+                    <div>
+                      <h3 className="text-sm font-black text-slate-950 flex items-center gap-1.5">
+                        <Clock className="w-4 h-4 text-blue-600" />
+                        <span>Awaiting Campus Verification & PIN Handshake</span>
+                      </h3>
+                      <p className="text-[11px] text-slate-400">When student buyers order, verify their transaction with their 4-digit pickup token.</p>
+                    </div>
+                    <span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-800 text-[10px] font-black">
+                      {pendingOrders.length} Pending
+                    </span>
+                  </div>
+
+                  {pendingOrders.length > 0 ? (
+                    <div className="divide-y divide-slate-100">
+                      {pendingOrders.map(order => {
+                        const needsAgreement = order.status === 'Awaiting Seller Confirmation' || !order.sellerConfirmed;
+                        return (
+                          <div key={order.id} className="py-4 space-y-3">
+                            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                              <div className="space-y-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-[9px] font-mono text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-md uppercase">ID: {order.id.slice(-6)}</span>
+                                  <span className={`text-[9px] font-extrabold px-2 py-0.5 rounded-full ${
+                                    needsAgreement ? 'bg-amber-100 text-amber-800 border border-amber-300' : 'bg-emerald-100 text-emerald-800'
+                                  }`}>
+                                    {order.status}
+                                  </span>
+                                </div>
+                                <div className="text-xs font-black text-slate-900">{order.productTitle}</div>
+                                <div className="text-[11px] text-slate-500">
+                                  Buyer: <strong className="text-slate-700">{order.buyerName}</strong> • GHS {order.totalAmount || (order.productPrice * order.quantity)}
+                                </div>
+                                <div className="text-[11px] text-blue-800 font-bold flex flex-wrap items-center gap-1.5 pt-0.5">
+                                  <span className="flex items-center gap-1">
+                                    <MapPin className="w-3.5 h-3.5 text-blue-600" />
+                                    <span>Meetup: {order.meetingLocation}</span>
+                                  </span>
+                                  {order.meetingLatitude && (
+                                    <button
+                                      type="button"
+                                      onClick={() => setViewingOrderMap(order)}
+                                      className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-100 hover:bg-blue-200 text-blue-800 rounded-md text-[10px] font-extrabold cursor-pointer transition-colors"
+                                    >
+                                      <Compass className="w-3 h-3 text-blue-700" />
+                                      <span>Map Pin ({order.meetingLatitude.toFixed(3)}, {order.meetingLongitude?.toFixed(3)})</span>
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+
+                              <div className="flex flex-wrap items-center gap-2">
+                                {needsAgreement ? (
+                                  <div className="flex items-center gap-1.5">
+                                    <button
+                                      type="button"
+                                      disabled={confirmingOrderId === order.id}
+                                      onClick={() => handleAgreeLocation(order.id)}
+                                      className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-extrabold text-[10px] rounded-lg transition-all shadow-xs cursor-pointer flex items-center gap-1"
+                                    >
+                                      <CheckCircle2 className="w-3.5 h-3.5" />
+                                      <span>{confirmingOrderId === order.id ? 'Confirming...' : 'Agree & Confirm'}</span>
+                                    </button>
+                                    <button
+                                      type="button"
+                                      disabled={confirmingOrderId === order.id}
+                                      onClick={() => handleDeclineLocation(order.id)}
+                                      className="px-2.5 py-1.5 bg-rose-100 hover:bg-rose-200 disabled:opacity-50 text-rose-800 font-bold text-[10px] rounded-lg transition-all cursor-pointer"
+                                    >
+                                      Decline
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setVerifyingOrder(order);
+                                      setPinInput('');
+                                    }}
+                                    className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-[10px] rounded-lg transition-all shadow-xs cursor-pointer"
+                                  >
+                                    Verify PIN
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+
+                            {needsAgreement && (
+                              <div className="p-2.5 bg-amber-50/80 border border-amber-200/90 rounded-xl text-[11px] text-amber-900 font-medium flex items-center justify-between gap-2">
+                                <span>Buyer requested handover at this spot. Please review coordinates and confirm agreement.</span>
+                                {order.meetingLatitude && (
+                                  <button
+                                    type="button"
+                                    onClick={() => setViewingOrderMap(order)}
+                                    className="text-[10px] text-amber-800 underline font-black hover:text-amber-950 cursor-pointer shrink-0"
+                                  >
+                                    Inspect on Map
+                                  </button>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="py-10 text-center text-slate-400 space-y-2">
+                      <Clock className="w-8 h-8 mx-auto text-slate-300" />
+                      <p className="text-xs font-bold text-slate-600">No pending pickups right now.</p>
+                      <p className="text-[10px] text-slate-400">When students order items, verify them here.</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* RECENT CUSTOMER LOGS */}
+              <div className="space-y-4">
+                <div className="bg-white/70 border border-blue-100/50 backdrop-blur-md rounded-3xl p-6 shadow-xs">
+                  <div className="pb-4 border-b border-slate-100">
+                    <h3 className="text-sm font-black text-slate-950 flex items-center gap-1.5">
+                      <Users className="w-4 h-4 text-blue-600" />
+                      <span>Verified Student Buyers</span>
+                    </h3>
+                    <p className="text-[11px] text-slate-400">Student customers who placed orders.</p>
+                  </div>
+
+                  {uniqueCustomers.length > 0 ? (
+                    <div className="divide-y divide-slate-100">
+                      {uniqueCustomers.slice(0, 5).map((cust, idx) => (
+                        <div key={idx} className="py-3 flex items-center justify-between gap-3">
+                          <div>
+                            <div className="text-xs font-black text-slate-900">{cust.name}</div>
+                            <div className="text-[9px] text-slate-400 font-mono">{cust.email}</div>
+                          </div>
+                          <div className="text-right">
+                            <span className="text-[10px] font-black text-slate-700 block">GH₵ {cust.totalSpent.toLocaleString()}</span>
+                            <span className="text-[9px] text-slate-400">{cust.orderCount} orders placed</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="py-10 text-center text-slate-400 space-y-1">
+                      <Users className="w-8 h-8 mx-auto text-slate-300" />
+                      <p className="text-xs font-bold text-slate-500">No buyer logs recorded yet.</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 2: INVENTORY STOCK ADJUSTER */}
+        {activeTab === 'inventory' && (
+          <div className="space-y-6">
+            {/* Search, price filter, sorting, category tags */}
+            <div className="bg-white/90 border border-blue-100 backdrop-blur-md rounded-3xl p-5 shadow-xs space-y-4">
+              <div className="flex flex-col lg:flex-row items-center justify-between gap-4">
+                <div className="relative w-full lg:w-72" id="inv-search-container">
+                  <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    placeholder="Search store inventory..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white"
+                  />
+                  {searchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setSearchQuery('')}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                    >
+                      <X size={14} />
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2.5 w-full lg:w-auto justify-end">
+                  {/* Price Filter Panel Toggle */}
+                  <button
+                    type="button"
+                    onClick={() => setShowPriceFilterPanel(!showPriceFilterPanel)}
+                    className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer border ${
+                      showPriceFilterPanel || isPriceFiltered
+                        ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
+                        : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200'
+                    }`}
+                  >
+                    <SlidersHorizontal className="w-3.5 h-3.5" />
+                    <span>Price Range Filter</span>
+                    {isPriceFiltered && (
+                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                    )}
+                  </button>
+
+                  {/* Price Sorting Selector */}
+                  <div className="relative inline-flex items-center">
+                    <ArrowUpDown className="w-3.5 h-3.5 text-slate-500 absolute left-2.5 pointer-events-none" />
+                    <select
+                      value={priceSortOption}
+                      onChange={(e) => setPriceSortOption(e.target.value as any)}
+                      className="pl-8 pr-3 py-2 bg-slate-50 border border-slate-200 text-slate-800 text-xs font-bold rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 cursor-pointer"
+                    >
+                      <option value="featured">Sort: Default</option>
+                      <option value="price-asc">Price: Low to High 📈</option>
+                      <option value="price-desc">Price: High to Low 📉</option>
+                      <option value="newest">Sort: Newest First ⚡</option>
+                    </select>
+                  </div>
+
+                  <span className="px-3.5 py-2 bg-blue-100 text-blue-900 font-black text-xs rounded-xl shrink-0">
+                    {filteredProducts.length} {filteredProducts.length === 1 ? 'Item' : 'Items'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Expandable Price Range Slider */}
+              {(showPriceFilterPanel || isPriceFiltered) && (
+                <div className="p-4 bg-gradient-to-r from-blue-50/80 to-indigo-50/60 border border-blue-200/80 rounded-2xl space-y-3.5 animate-fadeIn">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <DollarSign className="w-4 h-4 text-blue-700" />
+                      <span className="text-xs font-black text-slate-900">Inventory Price Filter</span>
+                      <span className="text-[11px] font-bold text-blue-800 bg-white/80 px-2.5 py-0.5 rounded-md border border-blue-200 font-mono">
+                        GHS {minPriceFilter} – GHS {maxPriceFilter >= 5000 ? '5,000+' : maxPriceFilter}
+                      </span>
+                    </div>
+
+                    {isPriceFiltered && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMinPriceFilter(0);
+                          setMaxPriceFilter(5000);
+                        }}
+                        className="text-[11px] font-bold text-rose-600 hover:text-rose-800 flex items-center gap-1 cursor-pointer"
+                      >
+                        <RotateCcw className="w-3 h-3" />
+                        <span>Reset Price Filter</span>
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Sliders Grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Minimum Price Slider */}
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-bold text-slate-700">Minimum Price:</span>
+                        <span className="font-black text-blue-900 font-mono">GHS {minPriceFilter}</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="0"
+                        max={Math.min(maxPriceFilter, 5000)}
+                        step="10"
+                        value={minPriceFilter}
+                        onChange={(e) => setMinPriceFilter(Number(e.target.value))}
+                        className="w-full accent-blue-600 cursor-pointer h-2 bg-slate-200 rounded-lg"
+                      />
+                    </div>
+
+                    {/* Maximum Price Slider */}
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-bold text-slate-700">Maximum Price:</span>
+                        <span className="font-black text-blue-900 font-mono">
+                          GHS {maxPriceFilter >= 5000 ? '5,000+' : maxPriceFilter}
+                        </span>
+                      </div>
+                      <input
+                        type="range"
+                        min={minPriceFilter}
+                        max="5000"
+                        step="25"
+                        value={maxPriceFilter}
+                        onChange={(e) => setMaxPriceFilter(Number(e.target.value))}
+                        className="w-full accent-blue-600 cursor-pointer h-2 bg-slate-200 rounded-lg"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Quick Preset Pills */}
+                  <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 mr-1">Presets:</span>
+                    {[
+                      { label: 'Under GHS 100', min: 0, max: 100 },
+                      { label: 'GHS 100 - 500', min: 100, max: 500 },
+                      { label: 'GHS 500 - 1,500', min: 500, max: 1500 },
+                      { label: 'GHS 1,500 - 5,000', min: 1500, max: 5000 },
+                      { label: 'All Prices', min: 0, max: 5000 }
+                    ].map((preset) => {
+                      const isActive = minPriceFilter === preset.min && maxPriceFilter === preset.max;
+                      return (
+                        <button
+                          key={preset.label}
+                          type="button"
+                          onClick={() => {
+                            setMinPriceFilter(preset.min);
+                            setMaxPriceFilter(preset.max);
+                          }}
+                          className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
+                            isActive
+                              ? 'bg-blue-700 text-white shadow-xs'
+                              : 'bg-white/80 text-slate-700 hover:bg-white border border-blue-100'
+                          }`}
+                        >
+                          {preset.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Product Category Select Menu */}
+              <div className="pt-2 border-t border-slate-100" id="inv-tags">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+                      <Tag className="w-3.5 h-3.5" />
+                    </div>
+                    <div>
+                      <span className="text-xs font-black text-slate-800 block">Product Category</span>
+                      <span className="text-[10px] text-slate-400 font-medium">Filter inventory items by registered category</span>
+                    </div>
+                  </div>
+
+                  <div className="relative w-full sm:w-80">
+                    <select
+                      id="inventory-category-select"
+                      value={selectedCategory}
+                      onChange={(e) => setSelectedCategory(e.target.value)}
+                      className="w-full pl-3.5 pr-10 py-2.5 bg-slate-50 hover:bg-slate-100/80 border border-slate-200 text-slate-800 text-xs font-bold rounded-xl focus:outline-hidden focus:ring-2 focus:ring-blue-600 focus:bg-white transition-all cursor-pointer shadow-2xs appearance-none"
+                    >
+                      <option value="All">All Categories (Entire Inventory)</option>
+                      {DIGITAL_MARKET_CATEGORIES.map(cat => (
+                        <option key={cat} value={cat}>{cat}</option>
+                      ))}
+                    </select>
+                    <ChevronDown className="w-4 h-4 text-slate-500 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Inventory table & Stock Editor */}
+            {refreshing && products.length === 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-pulse pb-6">
+                {[1, 2, 3, 4, 5, 6].map((i) => (
+                  <div key={i} className="bg-white/60 border border-slate-200/50 rounded-3xl overflow-hidden shadow-2xs flex flex-col justify-between h-[340px]">
+                    <div>
+                      <div className="h-44 bg-slate-200/50 relative overflow-hidden flex items-center justify-center">
+                        <ShoppingBag className="w-10 h-10 text-slate-300/60" />
+                      </div>
+                      <div className="p-3.5 space-y-2.5">
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-4.5 h-4.5 rounded bg-slate-200/70" />
+                          <div className="h-2.5 bg-slate-200/70 rounded w-16" />
+                        </div>
+                        <div className="h-3.5 bg-slate-200/70 rounded w-3/4" />
+                        <div className="space-y-1">
+                          <div className="h-2 bg-slate-200/60 rounded w-full" />
+                          <div className="h-2 bg-slate-200/60 rounded w-5/6" />
+                        </div>
+                      </div>
+                    </div>
+                    <div className="p-3.5 pt-0 border-t border-slate-100/60 flex items-center justify-between gap-2">
+                      <div className="h-2 bg-slate-200/60 rounded w-12" />
+                      <div className="h-7 bg-slate-200/80 rounded-lg w-16" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : filteredProducts.length > 0 ? (
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {filteredProducts.slice(0, marketVisibleCount).map(product => (
+                    <SellerInventoryCard
+                      key={product.id}
+                      product={product}
+                      onUpdateStock={handleUpdateStock}
+                      onDeleteProduct={handleDeleteProduct}
+                    />
+                  ))}
+                </div>
+
+                {marketVisibleCount < filteredProducts.length && (
+                  <div className="flex justify-center pt-4 pb-2">
+                    <button
+                      type="button"
+                      onClick={() => setMarketVisibleCount(prev => prev + 32)}
+                      className="px-6 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-black rounded-xl border border-slate-200 transition-all shadow-xs cursor-pointer flex items-center gap-1.5"
+                    >
+                      <span>Load More Items</span>
+                      <span className="text-[10px] text-slate-400 font-bold">
+                        (Showing {Math.min(marketVisibleCount, filteredProducts.length)} of {filteredProducts.length})
+                      </span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="bg-white/80 border border-blue-100/50 rounded-3xl p-12 text-center space-y-4">
+                <Package className="w-12 h-12 text-slate-300 mx-auto" />
+                <div>
+                  <h3 className="text-base font-bold text-slate-800">No Inventory Found</h3>
+                  <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
+                    {searchQuery ? "No products match your search query." : "You haven't listed any items in your store yet. Click 'Publish Item' above to start selling!"}
+                  </p>
+                </div>
+                {!searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setShowAddModal(true)}
+                    className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl transition-all inline-flex items-center gap-1.5 cursor-pointer shadow-md"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Publish First Product</span>
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* TAB 3: SUCCESSFUL SALES LOG */}
+        {activeTab === 'sales' && (
+          <div className="space-y-6">
+            <div className="bg-white/70 border border-blue-100/50 backdrop-blur-md rounded-3xl p-6 shadow-xs">
+              <div className="pb-4 border-b border-slate-100">
+                <h3 className="text-base font-black text-slate-950 flex items-center gap-1.5">
+                  <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                  <span>Completed Sales History</span>
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">Verified campus student peer handovers with buyers' name, items bought, total amount, and time of sale.</p>
+              </div>
+
+              {completedOrders.length > 0 ? (
+                <div className="space-y-4 pt-4">
+                  {completedOrders.map(order => (
+                    <div
+                      key={order.id}
+                      className="bg-slate-50/70 border border-slate-100 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+                    >
+                      <div className="space-y-1.5">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-mono text-slate-400 bg-slate-200/60 px-1.5 py-0.5 rounded-md uppercase">Order ID: {order.id.slice(-6)}</span>
+                          <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 text-[9px] font-black rounded-full uppercase">Settled Handover</span>
+                        </div>
+                        <h4 className="text-xs font-black text-slate-950">{order.productTitle}</h4>
+                        <div className="text-xs text-slate-600">
+                          Buyer Name: <strong className="text-slate-900">{order.buyerName}</strong> • Phone: <strong className="text-slate-800">{order.buyerPhone || 'N/A'}</strong>
+                        </div>
+                        <div className="text-[10px] text-slate-400">
+                          Institutional Email: <span className="font-mono text-slate-500">{order.buyerEmail}</span>
+                        </div>
+                        <div className="text-[10px] text-blue-600 flex items-center gap-1">
+                          <MapPin className="w-3.5 h-3.5" />
+                          <span>Delivery: {order.meetingLocation || 'KNUST Campus'}</span>
+                        </div>
+                      </div>
+
+                      <div className="text-left sm:text-right space-y-1">
+                        <div className="text-sm font-black text-emerald-700">GH₵ {(order.totalAmount || (order.productPrice * order.quantity)).toLocaleString()}</div>
+                        <div className="text-[10px] text-slate-400 flex items-center sm:justify-end gap-1 font-medium">
+                          <Clock className="w-3 h-3 text-slate-400" />
+                          <span>{new Date(order.createdAt).toLocaleString('en-GH', { dateStyle: 'medium', timeStyle: 'short' })}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="py-12 text-center text-slate-400 space-y-2">
+                  <CheckCircle2 className="w-10 h-10 mx-auto text-slate-300" />
+                  <p className="text-xs font-bold text-slate-600">No completed sales logged yet.</p>
+                  <p className="text-[10px] text-slate-400">When handovers are authenticated with OTP PINs, completed logs appear here.</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* TAB: SELLER NOTIFICATIONS VIEW */}
+        {activeTab === 'notifications' && (
+          <div className="space-y-6">
+            <div className="bg-white/80 border border-blue-100 backdrop-blur-md rounded-3xl p-6 shadow-xs space-y-6">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+                <div>
+                  <h3 className="text-base font-black text-slate-950 flex items-center gap-2">
+                    <Bell className="w-5 h-5 text-blue-600" />
+                    <span>Seller Notifications & Alerts</span>
+                    {unreadNotifCount > 0 && (
+                      <span className="px-2.5 py-0.5 rounded-full bg-red-100 text-red-700 border border-red-200 text-xs font-black">
+                        {unreadNotifCount} unread
+                      </span>
+                    )}
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Real-time buy requests, customer handover PIN confirmations, store accreditation status, and platform updates.
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => loadData()}
+                    className="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
+                    <span>Refresh Feed</span>
+                  </button>
+
+                  {unreadNotifCount > 0 && (
+                    <button
+                      type="button"
+                      onClick={handleMarkAllNotificationsRead}
+                      className="px-3 py-2 rounded-xl bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <CheckCheck className="w-4 h-4 text-blue-600" />
+                      <span>Mark All Read</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* FILTER TABS */}
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+                {[
+                  { id: 'all', label: `All Alerts (${sellerNotifications.length})` },
+                  { id: 'unread', label: `Unread (${unreadNotifCount})` },
+                  { id: 'orders', label: 'Buy Requests & Handovers' },
+                  { id: 'system', label: 'Store & Platform' }
+                ].map(filterTab => (
+                  <button
+                    key={filterTab.id}
+                    type="button"
+                    onClick={() => setNotifFilter(filterTab.id as any)}
+                    className={`px-3.5 py-1.5 rounded-xl text-xs font-extrabold whitespace-nowrap transition-all cursor-pointer ${
+                      notifFilter === filterTab.id
+                        ? 'bg-blue-600 text-white shadow-xs'
+                        : 'bg-slate-100/80 text-slate-600 hover:bg-slate-200/80'
+                    }`}
+                  >
+                    {filterTab.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* NOTIFICATION CARDS */}
+              {filteredNotifications.length > 0 ? (
+                <div className="space-y-3 pt-2">
+                  {filteredNotifications.map((notif: any) => {
+                    const isBuyRequest = (notif.title || '').toLowerCase().includes('buy') || (notif.title || '').toLowerCase().includes('order') || (notif.message || '').toLowerCase().includes('purchase');
+                    return (
+                      <div
+                        key={notif.id || `notif-${Math.random()}`}
+                        className={`p-4 rounded-2xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${
+                          !notif.read
+                            ? 'bg-blue-50/60 border-blue-200 shadow-2xs'
+                            : 'bg-slate-50/50 border-slate-200/80 text-slate-700'
+                        }`}
+                      >
+                        <div className="flex items-start gap-3.5">
+                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border ${
+                            isBuyRequest
+                              ? 'bg-emerald-100 text-emerald-700 border-emerald-200'
+                              : !notif.read
+                              ? 'bg-blue-100 text-blue-700 border-blue-200'
+                              : 'bg-slate-200/70 text-slate-600 border-slate-300'
+                          }`}>
+                            {isBuyRequest ? (
+                              <ShoppingBag className="w-5 h-5" />
+                            ) : (
+                              <Bell className="w-5 h-5" />
+                            )}
+                          </div>
+
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <h4 className="text-sm font-black text-slate-900">{notif.title}</h4>
+                              {!notif.read && (
+                                <span className="w-2.5 h-2.5 rounded-full bg-blue-600 animate-pulse" />
+                              )}
+                              <span className="text-[10px] font-bold text-slate-400 bg-white border border-slate-200 px-2 py-0.5 rounded-full">
+                                {notif.date || 'Recent'}
+                              </span>
+                            </div>
+
+                            <p className="text-xs text-slate-600 font-medium leading-relaxed max-w-2xl">
+                              {notif.message}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                          {isBuyRequest && (() => {
+                            const notifTitle = (notif.title || '').toLowerCase();
+                            const notifMsg = (notif.message || '').toLowerCase();
+                            const notifCombined = `${notifTitle} ${notifMsg}`;
+
+                            const matchedOrder = orders.find(o => 
+                              (notif.orderId && o.id === notif.orderId) ||
+                              (notif.productId && o.productId === notif.productId) ||
+                              (o.productTitle && notifCombined.includes(o.productTitle.toLowerCase())) ||
+                              (o.buyerName && notifCombined.includes(o.buyerName.toLowerCase()))
+                            );
+
+                            const isOrderCompleted = matchedOrder && (
+                              matchedOrder.status === 'Completed & Paid' || 
+                              matchedOrder.status === 'Completed' || 
+                              matchedOrder.status === 'completed'
+                            );
+
+                            if (isOrderCompleted) {
+                              return (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (!notif.read) handleMarkNotificationRead(notif.id);
+                                    setActiveTab('sales');
+                                    setTimeout(() => {
+                                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                                    }, 100);
+                                  }}
+                                  className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 text-xs font-black rounded-xl shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer"
+                                  title="Sale completed successfully - View Sales History"
+                                >
+                                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                                  <span>Success ✓</span>
+                                </button>
+                              );
+                            }
+
+                            return (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (!notif.read) handleMarkNotificationRead(notif.id);
+                                  const targetOrder = matchedOrder || pendingOrders[0];
+
+                                  setActiveTab('dashboard');
+                                  if (targetOrder && targetOrder.status !== 'Completed & Paid') {
+                                    setVerifyingOrder(targetOrder);
+                                    setPinInput('');
+                                  }
+                                  setTimeout(() => {
+                                    const el = document.getElementById('active-handover-orders');
+                                    if (el) el.scrollIntoView({ behavior: 'smooth' });
+                                    else window.scrollTo({ top: 0, behavior: 'smooth' });
+                                  }, 100);
+                                }}
+                                className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black rounded-xl shadow-xs transition-all flex items-center gap-1 cursor-pointer"
+                              >
+                                <span>View Orders</span>
+                                <ArrowRight className="w-3.5 h-3.5" />
+                              </button>
+                            );
+                          })()}
+
+                          {!notif.read ? (
+                            <button
+                              type="button"
+                              onClick={() => handleMarkNotificationRead(notif.id)}
+                              className="px-3 py-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-bold rounded-xl transition-all cursor-pointer"
+                              title="Mark as read"
+                            >
+                              Mark Read
+                            </button>
+                          ) : (
+                            <span className="text-[10px] font-bold text-slate-400 px-2.5 py-1 bg-slate-100 rounded-xl flex items-center gap-1">
+                              <CheckCircle2 className="w-3 h-3 text-emerald-500" />
+                              Read
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="py-16 text-center space-y-3">
+                  <div className="w-16 h-16 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center mx-auto text-blue-500">
+                    <Inbox className="w-8 h-8 text-blue-400" />
+                  </div>
+                  <div className="space-y-1">
+                    <h4 className="text-sm font-black text-slate-800">No Notifications Found</h4>
+                    <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                      {notifFilter === 'unread'
+                        ? "You have zero unread notifications. Great job keeping up with buyer updates!"
+                        : "When buyers place order requests or submit handover OTP codes, notifications will appear right here."}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* TAB 4: STORE PROFILE EDIT */}
+        {activeTab === 'profile' && (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            {/* ACCREDITATION DOSSIER (LEFT CARD) */}
+            <div className="lg:col-span-1 space-y-6">
+              <div className="bg-white/70 border border-blue-100/50 backdrop-blur-md rounded-3xl p-6 shadow-xs space-y-6 text-center">
+                <div className="w-16 h-16 rounded-full bg-blue-100/80 flex items-center justify-center mx-auto border border-blue-200">
+                  <ShieldCheck className="w-8 h-8 text-blue-600 animate-pulse" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-slate-950">Official Merchant Accreditation</h3>
+                  <p className="text-[11px] text-slate-400 mt-0.5">Peer-to-peer campus business license verified by PineVela administration.</p>
+                </div>
+
+                <div className="border-t border-slate-100 pt-4 text-left space-y-3.5 text-[11px]">
+                  <div className="flex justify-between">
+                    <span className="text-slate-400 font-bold">ACC CODE:</span>
+                    <span className="font-mono font-black text-slate-800">PINE-AC-{(storeData?.id || '00').slice(-6).toUpperCase()}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400 font-bold">FEE PAID:</span>
+                    <span className="font-black text-emerald-600">GH₵ 50.00 (MoMo)</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400 font-bold">INSTITUTION:</span>
+                    <span className="font-black text-slate-800 text-right">{storeData?.university || 'Ghanaian Accredited University'}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-400 font-bold">VERIFIED EMAIL:</span>
+                    <span className="font-mono text-slate-600">{studentEmail}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-400 font-bold">STORE RATING:</span>
+                    <span className="font-black text-amber-600 flex items-center gap-1">
+                      <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-500" />
+                      <span>{(storeData as any)?.storeRating !== undefined && (storeData as any)?.storeRating !== null ? Number((storeData as any).storeRating).toFixed(1) : '5.0'}</span>
+                      <span className="text-[9px] text-slate-400 font-normal">({(storeData as any)?.ratingCount || 0} reviews)</span>
+                    </span>
+                  </div>
+                </div>
+
+                <div className="p-3 rounded-xl bg-blue-50 text-[10px] text-blue-900 leading-relaxed text-left">
+                  <strong>P2P Commerce Code:</strong> All merchants must verify transactions physically inside KNUST/Accra college enclaves. Never handover goods without customer's 4-digit pickup PIN.
+                </div>
+              </div>
+            </div>
+
+            {/* EDIT FORM (RIGHT CARD) */}
+            <div className="lg:col-span-2 space-y-6">
+              <div className="bg-white/70 border border-blue-100/50 backdrop-blur-md rounded-3xl p-6 shadow-xs">
+                <div className="pb-4 border-b border-slate-100 mb-6">
+                  <h3 className="text-sm font-black text-slate-950 flex items-center gap-1.5">
+                    <Edit3 className="w-4 h-4 text-blue-600" />
+                    <span>Edit Storefront Profile Details</span>
+                  </h3>
+                  <p className="text-[11px] text-slate-400">Update your market branding, locations, and profile settings in real-time.</p>
+                </div>
+
+                <form onSubmit={handleUpdateProfile} className="space-y-4">
+                  {/* Store Logo/Picture Uploader Widget */}
+                  <div className="p-4 bg-blue-50/50 border border-blue-100 rounded-2xl flex flex-col sm:flex-row items-center gap-4 mb-4">
+                    <div className="relative w-16 h-16 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center font-black shadow-md border border-blue-400/30 overflow-hidden shrink-0">
+                      {editProfilePicture ? (
+                        <img src={editProfilePicture} alt="Store Logo Preview" className="w-full h-full object-cover" />
+                      ) : (
+                        <Store className="w-8 h-8 text-white" />
+                      )}
+                    </div>
+                    <div className="space-y-1.5 text-center sm:text-left">
+                      <span className="block text-xs font-black text-slate-800">Store Logo / Branding Icon</span>
+                      <p className="text-[10px] text-slate-400 font-medium">This logo uniquely identifies your campus store on the global marketplace catalog.</p>
+                      <div className="flex items-center gap-2 justify-center sm:justify-start">
+                        <label htmlFor="logo-upload-input" className="cursor-pointer px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-black rounded-lg transition-all shadow-xs flex items-center gap-1">
+                          <Camera className="w-3 h-3" />
+                          <span>Upload Store Logo</span>
+                          <input
+                            id="logo-upload-input"
+                            type="file"
+                            accept="image/*"
+                            onChange={async (e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                try {
+                                  const lowResBase64 = await compressImageFileToLowRes(file);
+                                  setEditProfilePicture(lowResBase64);
+                                } catch (err) {
+                                  console.error("Error compressing logo:", err);
+                                }
+                              }
+                            }}
+                            className="sr-only"
+                          />
+                        </label>
+                        {editProfilePicture && (
+                          <button
+                            type="button"
+                            onClick={() => setEditProfilePicture('')}
+                            className="px-2.5 py-1.5 bg-white hover:bg-slate-50 text-rose-600 border border-rose-200 rounded-lg text-[10px] font-bold transition-all shadow-xs"
+                          >
+                            Remove Logo
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div id="prof-group-name">
+                      <label className="block text-xs font-black text-slate-800 mb-1">Store / Market Name</label>
+                      <input
+                        type="text"
+                        required
+                        value={editStoreName}
+                        onChange={(e) => setEditStoreName(e.target.value)}
+                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-hidden focus:ring-2 focus:ring-blue-600 focus:bg-white"
+                      />
+                    </div>
+
+                    <div id="prof-group-username">
+                      <label className="block text-xs font-black text-slate-800 mb-1">Merchant Username</label>
+                      <input
+                        type="text"
+                        required
+                        value={editUsername}
+                        onChange={(e) => setEditUsername(e.target.value)}
+                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-hidden focus:ring-2 focus:ring-blue-600 focus:bg-white"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div id="prof-group-location">
+                      <label className="block text-xs font-black text-slate-800 mb-1">Campus Location</label>
+                      <input
+                        type="text"
+                        required
+                        value={editLocation}
+                        onChange={(e) => setEditLocation(e.target.value)}
+                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-hidden focus:ring-2 focus:ring-blue-600 focus:bg-white"
+                      />
+                    </div>
+
+                    <div id="prof-group-category">
+                      <label className="block text-xs font-black text-slate-800 mb-1">Primary Category</label>
+                      <input
+                        type="text"
+                        required
+                        value={editCategory}
+                        onChange={(e) => setEditCategory(e.target.value)}
+                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-hidden focus:ring-2 focus:ring-blue-600 focus:bg-white"
+                      />
+                    </div>
+                  </div>
+
+                  <div id="prof-group-delivery">
+                    <label className="block text-xs font-black text-slate-800 mb-1">Delivery / Handover Mode</label>
+                    <input
+                      type="text"
+                      required
+                      value={editDeliveryForm}
+                      onChange={(e) => setEditDeliveryForm(e.target.value)}
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-hidden focus:ring-2 focus:ring-blue-600 focus:bg-white"
+                    />
+                  </div>
+
+                  <div id="prof-group-desc">
+                    <label className="block text-xs font-black text-slate-800 mb-1">Store Description / About</label>
+                    <textarea
+                      rows={3}
+                      value={editDescription}
+                      onChange={(e) => setEditDescription(e.target.value)}
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-hidden focus:ring-2 focus:ring-blue-600 focus:bg-white"
+                      placeholder="Add an about statement for your store..."
+                    />
+                  </div>
+
+                  <div className="pt-4 border-t border-slate-100 flex justify-end">
+                    <button
+                      type="submit"
+                      disabled={isUpdatingProfile}
+                      className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-505 text-white text-xs font-black shadow-lg shadow-blue-600/20 transition-all cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+                    >
+                      <CheckCircle2 className="w-4 h-4" />
+                      <span>{isUpdatingProfile ? "Saving Details..." : "Save Store Changes"}</span>
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        )}
+      </main>
+
+      {/* MODAL 1: PUBLISH PRODUCT (MANDATORY DESCRIPTION AND IMAGE) */}
+      {showAddModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/40 backdrop-blur-sm flex items-center justify-center p-4 overflow-hidden">
+          <div className="bg-white rounded-3xl max-w-xl w-full max-h-[90vh] flex flex-col p-6 sm:p-8 shadow-2xl border border-slate-100 animate-scaleIn">
+            
+            {/* Header: Fixed & static */}
+            <div className="flex items-center justify-between pb-4 border-b border-slate-100 shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
+                  <Plus className="w-5 h-5 text-blue-600" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-slate-900">Publish Item to Global Market</h3>
+                  <p className="text-[11px] text-slate-400">List products where active PineVela campus buyers can view and purchase instantly.</p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowAddModal(false)}
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center cursor-pointer transition-all"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Scrollable Form Body Container */}
+            <form onSubmit={handleCreateProduct} className="flex-1 overflow-y-auto pr-1 py-4 space-y-4 scrollbar-thin">
+              <div id="add-group-title">
+                <label className="block text-xs font-black text-slate-800 mb-1">Product / Item Title *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Apple MacBook Pro 14' M2 (16GB/512GB)"
+                  value={prodTitle}
+                  onChange={(e) => setProdTitle(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-hidden focus:ring-2 focus:ring-blue-600"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div id="add-group-price">
+                  <label className="block text-xs font-black text-slate-800 mb-1">Price in GHS (GH₵) *</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="1"
+                    required
+                    placeholder="e.g. 4500"
+                    value={prodPrice}
+                    onChange={(e) => setProdPrice(e.target.value)}
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-hidden focus:ring-2 focus:ring-blue-600"
+                  />
+                </div>
+
+                <div id="add-group-category">
+                  <label className="block text-xs font-black text-slate-800 mb-1">Product Category *</label>
+                  <div className="relative">
+                    <select
+                      value={prodCategory}
+                      onChange={(e) => setProdCategory(e.target.value)}
+                      className="w-full pl-4 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-hidden focus:ring-2 focus:ring-blue-600 cursor-pointer appearance-none"
+                    >
+                      {DIGITAL_MARKET_CATEGORIES.map(cat => (
+                        <option key={cat} value={cat}>{cat}</option>
+                      ))}
+                    </select>
+                    <ChevronDown className="w-4 h-4 text-slate-500 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div id="add-group-condition">
+                  <label className="block text-xs font-black text-slate-800 mb-1">Item Condition</label>
+                  <select
+                    value={prodCondition}
+                    onChange={(e) => setProdCondition(e.target.value)}
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-hidden focus:ring-2 focus:ring-blue-600 cursor-pointer"
+                  >
+                    <option value="Brand New">Brand New (Sealed)</option>
+                    <option value="Like New">Like New (Mint)</option>
+                    <option value="Fairly Used">Fairly Used (Functional)</option>
+                    <option value="Refurbished">Refurbished</option>
+                  </select>
+                </div>
+
+                <div id="add-group-stock">
+                  <label className="block text-xs font-black text-slate-800 mb-1">Stock Quantity</label>
+                  <input
+                    type="number"
+                    min="1"
+                    required
+                    value={prodStock}
+                    onChange={(e) => setProdStock(e.target.value)}
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-hidden focus:ring-2 focus:ring-blue-600"
+                  />
+                </div>
+              </div>
+
+              <div id="add-group-location">
+                <label className="block text-xs font-black text-slate-800 mb-1">Safe Campus Meetup Location</label>
+                <input
+                  type="text"
+                  placeholder="e.g. KNUST Main Library Gate or Queens Hall Car Park"
+                  value={prodLocation}
+                  onChange={(e) => setProdLocation(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-hidden focus:ring-2 focus:ring-blue-600"
+                />
+              </div>
+
+              {/* MANDATORY IMAGE INPUT (FROM SELLERS DEVICE ONLY WITH CROPPER) */}
+              <div id="add-group-image">
+                <label className="block text-xs font-black text-slate-800 mb-1">Product Photo * (Mandatory - Upload & crop directly from your device to ensure listing fit)</label>
+                <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-slate-300 border-dashed rounded-2xl hover:border-blue-500 transition-all bg-slate-50 relative">
+                  <div className="space-y-1 text-center w-full">
+                    {prodImageUrl ? (
+                      <div className="flex flex-col items-center gap-2">
+                        <div className="relative inline-block">
+                          <img src={prodImageUrl} alt="Selected Product Preview" className="mx-auto h-36 w-36 object-contain rounded-2xl shadow-md border-2 border-blue-200 bg-slate-100 p-1" referrerPolicy="no-referrer" />
+                          <button
+                            type="button"
+                            onClick={() => setProdImageUrl('')}
+                            className="absolute -top-2 -right-2 p-1.5 bg-rose-600 text-white rounded-full hover:bg-rose-700 shadow-sm cursor-pointer"
+                            title="Remove photo"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+
+                        <div className="flex items-center gap-2 pt-1">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setCropRawImage(prodImageUrl);
+                              setIsCropModalOpen(true);
+                            }}
+                            className="px-3.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
+                          >
+                            <Crop className="w-3.5 h-3.5 text-blue-600" />
+                            <span>Adjust & Crop Photo</span>
+                          </button>
+
+                          <label htmlFor="file-upload-replace" className="cursor-pointer px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-xl text-xs font-bold transition-all shadow-xs">
+                            <span>Change</span>
+                            <input
+                              id="file-upload-replace"
+                              type="file"
+                              accept="image/*"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                  const reader = new FileReader();
+                                  reader.onloadend = () => {
+                                    if (reader.result) {
+                                      setCropRawImage(reader.result as string);
+                                      setIsCropModalOpen(true);
+                                    }
+                                  };
+                                  reader.readAsDataURL(file);
+                                  e.target.value = '';
+                                }
+                              }}
+                              className="sr-only"
+                            />
+                          </label>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <ImageIcon className="mx-auto h-10 w-10 text-slate-400" />
+                        <div className="flex flex-col items-center justify-center text-xs text-slate-600 mt-2">
+                          <label htmlFor="file-upload" className="relative cursor-pointer bg-white px-3.5 py-2 border border-blue-200 rounded-xl font-extrabold text-blue-600 hover:text-blue-500 hover:border-blue-400 transition-all shadow-xs focus-within:outline-none flex items-center gap-2">
+                            <Crop className="w-4 h-4 text-blue-600" />
+                            <span>Select Photo & Crop for Card</span>
+                            <input
+                              id="file-upload"
+                              name="file-upload"
+                              type="file"
+                              accept="image/*"
+                              required
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                  const reader = new FileReader();
+                                  reader.onloadend = () => {
+                                    if (reader.result) {
+                                      setCropRawImage(reader.result as string);
+                                      setIsCropModalOpen(true);
+                                    }
+                                  };
+                                  reader.readAsDataURL(file);
+                                  e.target.value = '';
+                                }
+                              }}
+                              className="sr-only"
+                            />
+                          </label>
+                        </div>
+                        <p className="text-[10px] text-slate-400 font-bold uppercase mt-1">PNG, JPG, JPEG, WEBP files only</p>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* MANDATORY DESCRIPTION TEXTAREA */}
+              <div id="add-group-desc">
+                <label className="block text-xs font-black text-slate-800 mb-1">Product Description * (Mandatory)</label>
+                <textarea
+                  rows={3}
+                  required
+                  placeholder="Provide specifications, age of item, warranty details, and conditions..."
+                  value={prodDesc}
+                  onChange={(e) => setProdDesc(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-hidden focus:ring-2 focus:ring-blue-600"
+                />
+              </div>
+
+              {/* Footer: Fixed inside form element bottom */}
+              <div className="pt-4 flex items-center justify-end gap-3 border-t border-slate-100 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setShowAddModal(false)}
+                  className="px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingProduct}
+                  className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-black shadow-lg shadow-blue-600/20 transition-all cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+                >
+                  {isSubmittingProduct ? "Publishing..." : "Publish to Campus Market"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 2: OTP VERIFICATION POPUP */}
+      {verifyingOrder && (
+        <div className="fixed inset-0 z-50 bg-slate-950/40 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-slate-100 space-y-6 animate-scaleIn">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
+                  <CheckCircle2 className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-slate-900">Verify Customer Pickup PIN</h3>
+                  <p className="text-[11px] text-slate-400">Transaction ID: #{verifyingOrder.id.slice(-8)}</p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setVerifyingOrder(null)}
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200/80 space-y-2 text-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-slate-500 font-medium">Product:</span>
+                <span className="font-bold text-slate-950">{verifyingOrder.productTitle}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-500 font-medium">Customer:</span>
+                <span className="font-bold text-slate-950">{verifyingOrder.buyerName}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-500 font-medium">Amount Due:</span>
+                <span className="font-black text-emerald-700 text-sm">GH₵ {verifyingOrder.totalAmount || (verifyingOrder.productPrice * verifyingOrder.quantity)}</span>
+              </div>
+            </div>
+
+            <form onSubmit={handleVerifyPin} className="space-y-4">
+              <div id="pin-group-input">
+                <label className="block text-xs font-black text-slate-800 mb-2 text-center">
+                  Enter buyer's 4-Digit Pickup PIN to finalize delivery:
+                </label>
+                <input
+                  type="text"
+                  maxLength={4}
+                  required
+                  placeholder="• • • •"
+                  value={pinInput}
+                  onChange={(e) => setPinInput(e.target.value.replace(/\D/g, ''))}
+                  className="w-full py-3 bg-blue-50 border-2 border-blue-400 rounded-2xl text-center text-3xl font-black font-mono tracking-widest text-blue-900 focus:outline-hidden focus:ring-2 focus:ring-blue-600 focus:bg-white"
+                  autoFocus
+                />
+              </div>
+
+              <div className="flex items-center gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setVerifyingOrder(null)}
+                  className="flex-1 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={pinSubmitting || pinInput.length < 4}
+                  className="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-505 text-white text-xs font-black shadow-lg shadow-emerald-600/20 transition-all cursor-pointer disabled:opacity-50"
+                >
+                  {pinSubmitting ? "Verifying..." : "Verify & Complete"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* VIEW ORDER PINNED MEETUP SPOT MODAL */}
+      {viewingOrderMap && (
+        <div className="fixed inset-0 z-[70] bg-slate-950/75 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 animate-fadeIn">
+          <div className="max-w-2xl w-full">
+            <CampusMeetupMapPicker
+              latitude={viewingOrderMap.meetingLatitude || 6.6745}
+              longitude={viewingOrderMap.meetingLongitude || -1.5716}
+              initialLocationName={viewingOrderMap.meetingLocation}
+              readOnly={true}
+              preferredUniversity={viewingOrderMap.university}
+              onClose={() => setViewingOrderMap(null)}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* GLOBAL FLOATING PLUS BUTTON (MOBILE ONLY) */}
+      <button
+        type="button"
+        onClick={() => setShowAddModal(true)}
+        className="sm:hidden fixed bottom-20 right-6 z-40 w-14 h-14 bg-gradient-to-tr from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-full shadow-[0_8px_32px_rgba(59,130,246,0.35)] flex items-center justify-center transition-all transform active:scale-95 cursor-pointer border border-blue-400/30"
+        title="Publish New Item"
+      >
+        <Plus className="w-7 h-7 text-white" />
+      </button>
+
+      {/* MOBILE BOTTOM NAVIGATION BAR — FIXED FROSTY LIGHT-BLUE GLASS LOOK */}
+      <div className="fixed bottom-0 left-0 right-0 z-50 sm:hidden bg-sky-100/95 backdrop-blur-xl border-t border-blue-200/80 px-2 py-1.5 flex items-center justify-around shadow-[0_-8px_32px_rgba(59,130,246,0.12)] pb-safe">
+        <button
+          type="button"
+          onClick={() => {
+            setActiveTab('dashboard');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+          className={`flex flex-col items-center gap-0.5 p-1 text-[9px] font-black tracking-tight transition-all rounded-xl min-w-[64px] ${
+            activeTab === 'dashboard'
+              ? 'text-blue-600 font-extrabold scale-105'
+              : 'text-slate-600 hover:text-slate-900'
+          }`}
+        >
+          <TrendingUp className="w-4.5 h-4.5 shrink-0" />
+          <span>Home</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            setActiveTab('inventory');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+          className={`flex flex-col items-center gap-0.5 p-1 text-[9px] font-black tracking-tight transition-all rounded-xl min-w-[64px] ${
+            activeTab === 'inventory'
+              ? 'text-blue-600 font-extrabold scale-105'
+              : 'text-slate-600 hover:text-slate-900'
+          }`}
+        >
+          <Package className="w-4.5 h-4.5 shrink-0" />
+          <span>Stock ({products.length})</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            setActiveTab('sales');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+          className={`flex flex-col items-center gap-0.5 p-1 text-[9px] font-black tracking-tight transition-all rounded-xl relative min-w-[64px] ${
+            activeTab === 'sales'
+              ? 'text-blue-600 font-extrabold scale-105'
+              : 'text-slate-600 hover:text-slate-900'
+          }`}
+        >
+          <Clock className="w-4.5 h-4.5 shrink-0" />
+          <span>Sales ({completedOrders.length})</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            setActiveTab('notifications');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+          className={`flex flex-col items-center gap-0.5 p-1 text-[9px] font-black tracking-tight transition-all rounded-xl relative min-w-[56px] ${
+            activeTab === 'notifications'
+              ? 'text-blue-600 font-extrabold scale-105'
+              : 'text-slate-600 hover:text-slate-900'
+          }`}
+        >
+          <Bell className="w-4.5 h-4.5 shrink-0" />
+          <span>Notifs</span>
+          {unreadNotifCount > 0 && (
+            <span className="absolute top-0.5 right-1 min-w-4 h-4 px-1 rounded-full bg-red-500 text-white font-extrabold text-[8px] flex items-center justify-center">
+              {unreadNotifCount}
+            </span>
+          )}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            setActiveTab('profile');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+          className={`flex flex-col items-center gap-0.5 p-1 text-[9px] font-black tracking-tight transition-all rounded-xl min-w-[64px] ${
+            activeTab === 'profile'
+              ? 'text-blue-600 font-extrabold scale-105'
+              : 'text-slate-600 hover:text-slate-900'
+          }`}
+        >
+          <ShieldCheck className="w-4.5 h-4.5 shrink-0" />
+          <span>Profile</span>
+        </button>
+      </div>
+
+      {/* SECURE SIGNOUT CONFIRMATION MODAL */}
+      {showLogoutConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          {/* Backdrop */}
+          <div 
+            className="absolute inset-0 bg-slate-950/40 backdrop-blur-md transition-opacity" 
+            onClick={() => setShowLogoutConfirm(false)}
+          />
+          
+          {/* Modal Container */}
+          <div className="relative bg-white/95 backdrop-blur-xl border-2 border-blue-200 rounded-3xl p-6 max-w-sm w-full shadow-[0_20px_50px_rgba(59,130,246,0.15)] text-center space-y-5 animate-scaleUp">
+            <div className="flex justify-center">
+              <div className="w-16 h-16 rounded-2xl bg-sky-100/80 flex items-center justify-center border border-blue-200 shadow-inner">
+                <PineLogo size={40} hideText={true} />
+              </div>
+            </div>
+            
+            <div className="space-y-1.5">
+              <h3 className="text-lg font-black text-slate-900">Sign Out of Market?</h3>
+              <p className="text-xs text-slate-600 font-bold leading-relaxed">
+                You are about to close your secure Digital Market workbench session. Your listings and logs will remain active on campus.
+              </p>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowLogoutConfirm(false)}
+                className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-black rounded-xl border border-slate-200 transition-all cursor-pointer"
+              >
+                Keep Open
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowLogoutConfirm(false);
+                  logout();
+                  navigate('/login');
+                }}
+                className="px-4 py-2.5 bg-rose-600 hover:bg-rose-500 text-white text-xs font-black rounded-xl shadow-md shadow-rose-600/20 transition-all cursor-pointer"
+              >
+                Sign Out
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ITEM IMAGE CROP MODAL */}
+      {cropRawImage && (
+        <ItemImageCropModal
+          isOpen={isCropModalOpen}
+          imageSrc={cropRawImage}
+          productTitle={prodTitle || 'Sample Item'}
+          productPrice={prodPrice || '0.00'}
+          productCategory={prodCategory}
+          onCropSave={(croppedBase64) => {
+            setProdImageUrl(croppedBase64);
+            setIsCropModalOpen(false);
+            setCropRawImage(null);
+          }}
+          onClose={() => {
+            setIsCropModalOpen(false);
+            setCropRawImage(null);
+          }}
+        />
+      )}
+    </div>
+  );
+}
