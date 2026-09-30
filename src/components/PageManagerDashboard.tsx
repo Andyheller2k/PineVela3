@@ -18,7 +18,7 @@ import {
   AlertCircle, Check, Sparkles, ArrowRight, ArrowLeft, Layers, Wrench, Settings, Bell,
   Send, MessageSquare, Phone, Mail, Shield, Trash2, Edit3, Eye, EyeOff, FileText, CheckCircle, Lock, Calendar, CalendarCheck,
   Briefcase, Sliders, ExternalLink, Download, RefreshCw, Scale, Handshake, HelpCircle, ThumbsUp, ThumbsDown,
-  Key, Copy, Smartphone, Share2, ChevronRight, X
+  Key, Copy, Smartphone, Share2, ChevronRight, X, ShieldAlert
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
@@ -170,6 +170,38 @@ export default function PageManagerDashboard() {
   const [newIssueUrgency, setNewIssueUrgency] = useState<'Normal' | 'High' | 'Emergency'>('Normal');
   const [newIssueDescription, setNewIssueDescription] = useState('');
   const [maintenanceFilter, setMaintenanceFilter] = useState<'all' | 'Open' | 'In Progress' | 'Resolved'>('all');
+  const [lastViewedMaintenance, setLastViewedMaintenance] = useState<number>(() => {
+    try {
+      return Number(localStorage.getItem('pinevela_manager_viewed_maintenance') || 0);
+    } catch {
+      return 0;
+    }
+  });
+
+  // Calculate if there are maintenance tickets filed that need manager attention and trigger beaming red tab
+  const hasUnviewedMaintenanceLogs = useMemo(() => {
+    if (maintenanceIssues.length === 0) return false;
+    return maintenanceIssues.some(i => {
+      if (i.closedByManager || (i as any).isClosed) return false;
+      const rawDate = i.reportedAt || (i as any).createdAt || (i as any).date;
+      const createdTime = rawDate ? new Date(rawDate).getTime() : 0;
+      return createdTime > lastViewedMaintenance || i.status === 'Pending' || i.staffDeclineRequested || i.rescheduleRequested;
+    });
+  }, [maintenanceIssues, lastViewedMaintenance]);
+
+  const markMaintenanceViewed = () => {
+    const now = Date.now();
+    setLastViewedMaintenance(now);
+    try {
+      localStorage.setItem('pinevela_manager_viewed_maintenance', String(now));
+    } catch {}
+  };
+
+  useEffect(() => {
+    if (activeTab === 'maintenance') {
+      markMaintenanceViewed();
+    }
+  }, [activeTab]);
 
   // Detailed Maintenance state
   const [selectedIssueDetail, setSelectedIssueDetail] = useState<any | null>(null);
@@ -1133,6 +1165,63 @@ export default function PageManagerDashboard() {
     return i.status === maintenanceFilter;
   });
 
+  const isManagerBlocked = Boolean(
+    user?.isBlocked === true || 
+    user?.status === 'blocked' || 
+    user?.verificationStatus === 'blocked' ||
+    (primaryProperty && (primaryProperty.isBlocked === true || primaryProperty.status === 'Blocked'))
+  );
+
+  if (isManagerBlocked) {
+    return (
+      <div className="min-h-screen bg-slate-100 flex flex-col items-center justify-center p-4 font-sans text-slate-800">
+        <div className="bg-white rounded-3xl border-2 border-rose-300 shadow-2xl max-w-md w-full p-6 sm:p-8 space-y-6 text-center relative overflow-hidden">
+          <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-rose-600 via-red-500 to-amber-600" />
+          
+          <div className="flex flex-col items-center space-y-3 pt-2">
+            <div className="w-16 h-16 rounded-2xl bg-rose-50 text-rose-600 border border-rose-200 flex items-center justify-center shadow-inner">
+              <Lock className="w-8 h-8 text-rose-600 animate-pulse" />
+            </div>
+            
+            <div>
+              <span className="inline-flex items-center gap-1.5 bg-rose-100 text-rose-900 text-[10px] font-black uppercase tracking-wider px-3.5 py-1 rounded-full border border-rose-300">
+                Account Access Blocked
+              </span>
+              <h2 className="text-2xl font-black text-slate-900 mt-2 tracking-tight">
+                Manager Portal Restricted
+              </h2>
+            </div>
+          </div>
+
+          <div className="p-4 bg-rose-50/90 border border-rose-200 rounded-2xl text-left space-y-2">
+            <p className="font-bold flex items-center gap-1.5 text-rose-900 text-xs">
+              <ShieldAlert className="w-4 h-4 text-rose-600 shrink-0" />
+              Administrative Restriction Notice
+            </p>
+            <div className="p-3 bg-white/90 border border-rose-200 rounded-xl text-xs text-rose-950 font-medium">
+              <span className="block text-[10px] font-black text-rose-600 uppercase tracking-wider mb-0.5">Reason:</span>
+              <p className="font-bold text-rose-950 leading-relaxed">
+                "{user?.blockReason || primaryProperty?.blockReason || 'Your manager account access has been restricted by administration.'}"
+              </p>
+            </div>
+            <p className="text-[11px] text-rose-800 leading-relaxed">
+              Your registered property listings have been temporarily removed from live student searches. <strong>Please wait until further notice</strong> or contact PineVela Administrator support.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={confirmLogout}
+            className="w-full py-3.5 bg-rose-600 hover:bg-rose-700 text-white font-black rounded-xl text-xs transition-all shadow-md cursor-pointer uppercase tracking-wider flex items-center justify-center gap-2"
+          >
+            <LogOutIcon className="w-4 h-4" />
+            <span>Sign Out & Return to Login</span>
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (loading && properties.length === 0) {
     return (
       <div className="min-h-screen h-screen flex flex-col items-center justify-center bg-transparent">
@@ -1191,7 +1280,7 @@ export default function PageManagerDashboard() {
       </header>
 
       {/* MOBILE BOTTOM NAV (lg:hidden) */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-xl border-t border-slate-200 shadow-[0_-10px_40px_rgba(0,0,0,0.08)]">
+      <nav className="mobile-bottom-nav lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-xl border-t border-slate-200 shadow-[0_-10px_40px_rgba(0,0,0,0.08)]">
         <div className="flex items-center gap-1 overflow-x-auto px-2 py-2 pb-safe snap-x hide-scrollbar">
           {[
             { id: 'overview', label: 'Overview', icon: ShieldCheck, locked: !hasApprovedProperty },
@@ -1211,6 +1300,7 @@ export default function PageManagerDashboard() {
               icon: Wrench, 
               badge: maintenanceIssues.filter(i => !i.closedByManager && (i.status === 'Pending' || i.status === 'Resolved' || i.rescheduleRequested || i.staffRescheduleRequested || i.staffDeclined)).length || (activeIssues > 0 ? activeIssues : null),
               isRed: maintenanceIssues.some(i => !i.closedByManager && (i.status === 'Pending' || i.status === 'Resolved' || i.rescheduleRequested || i.staffRescheduleRequested || i.staffDeclined)),
+              isBeamingRed: hasUnviewedMaintenanceLogs,
               locked: !hasApprovedProperty 
             },
             { id: 'meetings', label: 'Meetings', icon: CalendarCheck, locked: !hasApprovedProperty },
@@ -1223,31 +1313,36 @@ export default function PageManagerDashboard() {
               isRed: (systemNotifications || []).some(n => !n.read),
               locked: false 
             }
-          ].map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => !tab.locked && setActiveTab(tab.id as any)}
-              disabled={tab.locked}
-              className={`snap-center shrink-0 flex flex-col items-center justify-center w-[64px] h-12 rounded-xl transition-all relative ${
-                tab.locked ? 'opacity-40 cursor-not-allowed text-slate-400' : 
-                activeTab === tab.id ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'
-              }`}
-            >
-              <div className={`p-1.5 rounded-lg ${activeTab === tab.id ? 'bg-blue-100/50' : ''}`}>
-                <tab.icon className={`w-5 h-5 ${activeTab === tab.id ? 'scale-110 transition-transform' : ''}`} />
-                {tab.badge ? (
-                  <span className={`absolute top-1 right-2 w-4 h-4 rounded-full text-[9px] font-black flex items-center justify-center ring-2 ring-white ${
-                    tab.isRed ? 'bg-red-600 text-white animate-pulse' : 'bg-amber-400 text-slate-900'
-                  }`}>
-                    {tab.badge}
-                  </span>
-                ) : null}
-              </div>
-              <span className={`text-[9px] font-bold mt-0.5 ${activeTab === tab.id ? 'text-blue-700' : 'text-slate-500'}`}>
-                {tab.label}
-              </span>
-            </button>
-          ))}
+          ].map(tab => {
+            const isBeaming = Boolean((tab as any).isBeamingRed && !tab.locked);
+            return (
+              <button
+                key={tab.id}
+                onClick={() => !tab.locked && setActiveTab(tab.id as any)}
+                disabled={tab.locked}
+                className={`snap-center shrink-0 flex flex-col items-center justify-center w-[64px] h-12 rounded-xl transition-all relative ${
+                  tab.locked ? 'opacity-40 cursor-not-allowed text-slate-400' : 
+                  isBeaming && activeTab !== tab.id ? 'text-red-600 font-black animate-pulse' :
+                  activeTab === tab.id ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'
+                }`}
+              >
+                <div className={`p-1.5 rounded-lg ${isBeaming && activeTab !== tab.id ? 'bg-red-100 text-red-600 ring-2 ring-red-400/50' : activeTab === tab.id ? 'bg-blue-100/50' : ''}`}>
+                  <tab.icon className={`w-5 h-5 ${activeTab === tab.id ? 'scale-110 transition-transform' : ''}`} />
+                  {tab.badge ? (
+                    <span className={`absolute top-1 right-2 w-4 h-4 rounded-full text-[9px] font-black flex items-center justify-center ring-2 ring-white ${
+                      isBeaming && activeTab !== tab.id ? 'bg-red-600 text-white animate-bounce shadow-md' :
+                      tab.isRed ? 'bg-red-600 text-white animate-pulse' : 'bg-amber-400 text-slate-900'
+                    }`}>
+                      {tab.badge}
+                    </span>
+                  ) : null}
+                </div>
+                <span className={`text-[9px] font-bold mt-0.5 ${isBeaming && activeTab !== tab.id ? 'text-red-600 font-extrabold' : activeTab === tab.id ? 'text-blue-700' : 'text-slate-500'}`}>
+                  {tab.label}
+                </span>
+              </button>
+            );
+          })}
         </div>
       </nav>
 
@@ -1335,6 +1430,7 @@ export default function PageManagerDashboard() {
                   ? maintenanceIssues.filter(i => !i.closedByManager && (i.status === 'Pending' || i.status === 'Resolved' || i.rescheduleRequested || i.staffRescheduleRequested || i.staffDeclined)).length
                   : (activeIssues > 0 ? activeIssues : null),
                 isRed: maintenanceIssues.some(i => !i.closedByManager && (i.status === 'Pending' || i.status === 'Resolved' || i.rescheduleRequested || i.staffRescheduleRequested || i.staffDeclined)),
+                isBeamingRed: hasUnviewedMaintenanceLogs,
                 sub: 'Dispatch & tickets', 
                 locked: !hasApprovedProperty 
               },
@@ -1355,6 +1451,8 @@ export default function PageManagerDashboard() {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
               const isLocked = tab.locked;
+              const isBeaming = Boolean((tab as any).isBeamingRed && !isLocked);
+
               return (
                 <button
                   key={tab.id}
@@ -1364,13 +1462,16 @@ export default function PageManagerDashboard() {
                   className={`w-full flex items-center ${isSidebarCollapsed ? 'justify-center' : 'justify-between'} px-3.5 py-3 rounded-2xl font-medium transition-all duration-300 text-left group relative ${
                     isLocked ? 'opacity-40 cursor-not-allowed text-slate-400' : 'cursor-pointer'
                   } ${
-                    isActive && !isLocked
+                    isBeaming && !isActive
+                      ? 'bg-gradient-to-r from-red-600 via-rose-600 to-red-700 text-white shadow-xl shadow-red-500/50 ring-4 ring-red-400/50 animate-pulse border border-red-300'
+                      : isActive && !isLocked
                       ? 'bg-blue-600 text-white shadow-xl shadow-blue-500/40 border border-blue-400/50 ring-2 ring-blue-400/20'
                       : !isLocked ? 'text-slate-700 hover:text-slate-900 hover:bg-blue-200/50' : ''
                   }`}
                 >
                   <div className="flex items-center space-x-3 overflow-hidden">
                     <div className={`w-8 h-8 rounded-xl flex items-center justify-center transition-colors shrink-0 ${
+                      isBeaming && !isActive ? 'bg-white/20 text-white' :
                       isActive && !isLocked ? 'bg-white/20 text-white' : 
                       isLocked ? 'bg-slate-200 text-slate-400' : 'bg-blue-200/70 text-blue-700 group-hover:bg-blue-300/80'
                     }`}>
@@ -1379,15 +1480,23 @@ export default function PageManagerDashboard() {
                     {!isSidebarCollapsed && (
                       <div className="overflow-hidden">
                         <div className="text-xs font-semibold tracking-wide flex items-center gap-1.5 truncate">
-                          {tab.label}
+                          {isBeaming && !isActive && (
+                            <span className="relative flex h-2 w-2 shrink-0">
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+                              <span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
+                            </span>
+                          )}
+                          <span>{tab.label}</span>
                         </div>
-                        <div className={`text-[10px] font-normal truncate ${isActive && !isLocked ? 'text-blue-100' : 'text-slate-500'}`}>{tab.sub}</div>
+                        <div className={`text-[10px] font-normal truncate ${isBeaming && !isActive ? 'text-red-100 font-semibold' : isActive && !isLocked ? 'text-blue-100' : 'text-slate-500'}`}>{tab.sub}</div>
                       </div>
                     )}
                   </div>
                   {!isSidebarCollapsed && tab.badge && !isLocked ? (
                     <span className={`px-2 py-0.5 text-[10px] font-bold rounded-full shadow-sm ${
-                      tab.isRed ? 'bg-red-600 text-white animate-pulse ring-2 ring-red-300' : 'bg-blue-100 text-blue-800'
+                      isBeaming && !isActive
+                        ? 'bg-white text-red-700 font-black animate-bounce shadow-md'
+                        : tab.isRed ? 'bg-red-600 text-white animate-pulse ring-2 ring-red-300' : 'bg-blue-100 text-blue-800'
                     }`}>
                       {tab.badge}
                     </span>
@@ -1487,14 +1596,29 @@ export default function PageManagerDashboard() {
                     { label: 'Total Capacity', value: `${(primaryProperty?.totalCapacity || 1200).toLocaleString()} Beds`, sub: `${propertyBlocks.length} Physical Blocks • Verified Wings`, icon: Building2, color: 'bg-blue-600 text-white' },
                     { label: 'Available Beds', value: `${(availableBeds || primaryProperty?.totalCapacity || 1200).toLocaleString()} Available`, sub: 'Ready for student bookings', icon: Users, color: 'bg-emerald-600 text-white' },
                     { label: 'Staff On Duty', value: `${staffList.filter(s => s.status === 'Active').length} Personnel`, sub: `${staffList.length} Total Enrolled Staff`, icon: UserPlus, color: 'bg-indigo-600 text-white' },
-                    { label: 'Active Tickets', value: `${activeIssues} Requests`, sub: `${maintenanceIssues.filter(i => i.status === 'Resolved').length} Resolved to date`, icon: AlertCircle, color: activeIssues > 0 ? 'bg-amber-500 text-white' : 'bg-slate-700 text-white' }
+                    { 
+                      label: 'Active Tickets', 
+                      value: `${activeIssues} Requests`, 
+                      sub: `${maintenanceIssues.filter(i => i.status === 'Resolved').length} Resolved to date`, 
+                      icon: AlertCircle, 
+                      color: activeIssues > 0 ? 'bg-red-600 text-white shadow-red-500/30' : 'bg-slate-700 text-white',
+                      isBeaming: activeIssues > 0 || hasUnviewedMaintenanceLogs
+                    }
                   ].map((stat, idx) => {
                     const Icon = stat.icon;
                     return (
-                      <div key={idx} className="bg-white/70 border border-blue-200/50 p-6 rounded-3xl backdrop-blur-xl shadow-lg relative overflow-hidden flex flex-col justify-between">
+                      <div key={idx} className={`bg-white/70 border ${stat.isBeaming ? 'border-red-300 ring-2 ring-red-400/20 shadow-red-500/10' : 'border-blue-200/50'} p-6 rounded-3xl backdrop-blur-xl shadow-lg relative overflow-hidden flex flex-col justify-between`}>
                         <div className="flex items-center justify-between mb-4">
-                          <span className="text-xs font-bold text-slate-700 tracking-wider uppercase">{stat.label}</span>
-                          <div className={`w-10 h-10 rounded-2xl ${stat.color} flex items-center justify-center shadow-md`}>
+                          <div className="flex items-center gap-2">
+                            {stat.isBeaming && (
+                              <span className="relative flex h-2.5 w-2.5">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-600"></span>
+                              </span>
+                            )}
+                            <span className="text-xs font-bold text-slate-700 tracking-wider uppercase">{stat.label}</span>
+                          </div>
+                          <div className={`w-10 h-10 rounded-2xl ${stat.color} flex items-center justify-center shadow-md relative`}>
                             <Icon className="w-5 h-5" />
                           </div>
                         </div>
@@ -1603,9 +1727,17 @@ export default function PageManagerDashboard() {
                       </button>
                       <button 
                         onClick={() => setActiveTab('maintenance')}
-                        className="w-full flex items-center justify-between px-4 py-2.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold transition-all cursor-pointer"
+                        className={`w-full flex items-center justify-between px-4 py-2.5 rounded-xl ${hasUnviewedMaintenanceLogs ? 'bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 shadow-sm' : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-700'} text-xs font-bold transition-all cursor-pointer`}
                       >
-                        <span className="flex items-center gap-2"><Wrench className="w-3.5 h-3.5" /> Maintenance Tickets ({maintenanceIssues.length})</span>
+                        <span className="flex items-center gap-2">
+                          {hasUnviewedMaintenanceLogs ? (
+                            <span className="relative flex h-2 w-2">
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                              <span className="relative inline-flex rounded-full h-2 w-2 bg-red-600"></span>
+                            </span>
+                          ) : null}
+                          <Wrench className="w-3.5 h-3.5" /> Maintenance Tickets ({maintenanceIssues.length})
+                        </span>
                         <ArrowRight className="w-3.5 h-3.5" />
                       </button>
                     </div>

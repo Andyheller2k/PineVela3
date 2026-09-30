@@ -73,7 +73,8 @@ import {
   dbRecordRoomKeyDispatch,
   dbGetStudentMessages,
   dbCreateStudentMessage,
-  generateHostelRoomKeyCode
+  generateHostelRoomKeyCode,
+  persistStore
 } from "./localDb.js";
 import {
   defaultVerificationProvider,
@@ -238,7 +239,11 @@ interface ServerManagerRequest {
   proposedCapacity?: number;
   notes?: string;
   reason?: string;
-  status: 'pending' | 'approved' | 'rejected';
+  status: 'pending' | 'approved' | 'rejected' | 'blocked' | string;
+  isBlocked?: boolean;
+  blockReason?: string | null;
+  blockedAt?: string;
+  unblockedAt?: string;
   requestedAt: string;
   submittedAt?: string;
   createdAt?: string;
@@ -1506,17 +1511,49 @@ async function startServer() {
       }
     }
 
-    // Check manager approval status
+    // Check manager approval and block status
     if (userRole === 'manager') {
+      const store = getStoreInstance();
       const cleanEmail = (matched.email || userObj.email || '').toLowerCase().trim();
-      const verif = managerVerifications.find(v => (v.managerEmail || '').toLowerCase().trim() === cleanEmail);
-      const reqRecord = managerRequests.find(r => (r.managerEmail || '').toLowerCase().trim() === cleanEmail);
-      
+      const targetMgrId = userObj.id || matched.id;
+      const verif = managerVerifications.find(v => (v.managerEmail && v.managerEmail.toLowerCase().trim() === cleanEmail) || (targetMgrId && (v.managerId === targetMgrId || v.id === targetMgrId)));
+      const reqRecord = managerRequests.find(r => (r.managerEmail && r.managerEmail.toLowerCase().trim() === cleanEmail) || (targetMgrId && (r.managerId === targetMgrId || r.id === targetMgrId)));
+      const storedVerif = ((store as any).managerVerifications || []).find((v: any) => (v.managerEmail && v.managerEmail.toLowerCase().trim() === cleanEmail) || (targetMgrId && (v.managerId === targetMgrId || v.id === targetMgrId)));
+      const storedReq = (store.managerRegistrationRequests || []).find((r: any) => (r.managerEmail && r.managerEmail.toLowerCase().trim() === cleanEmail) || (targetMgrId && (r.managerId === targetMgrId || r.id === targetMgrId)));
+
+      const isBlocked = 
+        userObj.isBlocked === true ||
+        userObj.status === 'blocked' ||
+        userObj.verificationStatus === 'blocked' ||
+        matched.user?.isBlocked === true ||
+        matched.isBlocked === true ||
+        verif?.status === 'blocked' ||
+        verif?.isBlocked === true ||
+        reqRecord?.status === 'blocked' ||
+        reqRecord?.isBlocked === true ||
+        storedVerif?.status === 'blocked' ||
+        storedVerif?.isBlocked === true ||
+        storedReq?.status === 'blocked' ||
+        storedReq?.isBlocked === true;
+
+      if (isBlocked) {
+        const restrictionReason = userObj.blockReason || verif?.blockReason || verif?.adminNotes || reqRecord?.blockReason || reqRecord?.adminNotes || storedVerif?.blockReason || storedReq?.blockReason || "Your manager account access has been restricted by administration.";
+        return res.status(403).json({
+          error: `Your manager account is blocked. Reason: ${restrictionReason}. Please wait until further notice or contact administration.`,
+          isBlocked: true,
+          restrictionReason: restrictionReason,
+          managerEmail: matched.email || userObj.email,
+          managerName: userObj.name
+        });
+      }
+
       const isApproved = 
         userObj.isVerified === true ||
         userObj.verificationStatus === 'approved' ||
         verif?.status === 'approved' ||
         reqRecord?.status === 'approved' ||
+        storedVerif?.status === 'approved' ||
+        storedReq?.status === 'approved' ||
         cleanEmail === 'manager@pinevela.com' ||
         cleanEmail === 'sarah.j@pinevela.com';
 
@@ -2469,21 +2506,46 @@ async function startServer() {
   // Update profile details (e.g. photo, name, phone, etc.) and sync everywhere
   const handleProfileUpdate = async (req: any, res: any) => {
     try {
-      const { name, email, phone, photo, avatar, photoUrl, avatarUrl, organization, roleTitle, address, studentId, residentType, programOfStudy, department, institution } = req.body;
+      const { name, email, phone, photo, avatar, photoUrl, avatarUrl, profilePicture, organization, roleTitle, address, studentId, residentType, programOfStudy, department, institution } = req.body;
       const userId = req.user.id;
       const cleanEmail = (req.user.email || '').toLowerCase().trim();
 
-      const userIndex = MOCK_USERS.findIndex(u => 
+      let userIndex = MOCK_USERS.findIndex(u => 
         (u.user && u.user.id === userId) || 
         (u.user && u.user.email && cleanEmail && u.user.email.toLowerCase().trim() === cleanEmail) ||
-        (u.email && cleanEmail && u.email.toLowerCase().trim() === cleanEmail)
+        (u.email && cleanEmail && u.email.toLowerCase().trim() === cleanEmail) ||
+        (u.id && u.id === userId)
       );
 
-      if (userIndex === -1) {
-        return res.status(404).json({ error: "User not found" });
+      let targetUserObj: any = userIndex !== -1 ? MOCK_USERS[userIndex] : null;
+
+      if (!targetUserObj) {
+        const store = getStoreInstance();
+        const foundInStore = (store.users || []).find((u: any) =>
+          (u.user && u.user.id === userId) || 
+          (u.user && u.user.email && cleanEmail && u.user.email.toLowerCase().trim() === cleanEmail) ||
+          (u.email && cleanEmail && u.email.toLowerCase().trim() === cleanEmail) ||
+          (u.id && u.id === userId) ||
+          (cleanEmail && ((u.studentEmail && u.studentEmail.toLowerCase().trim() === cleanEmail) || (u.parentUserEmail && u.parentUserEmail.toLowerCase().trim() === cleanEmail)))
+        );
+        if (foundInStore) {
+          targetUserObj = foundInStore.user ? foundInStore : { user: { ...foundInStore }, email: cleanEmail || foundInStore.email, id: userId || foundInStore.id };
+          MOCK_USERS.push(targetUserObj);
+        } else {
+          targetUserObj = {
+            id: userId,
+            email: cleanEmail,
+            username: (req.user.username || (cleanEmail ? cleanEmail.split('@')[0] : `user_${Date.now()}`)),
+            user: { ...req.user }
+          };
+          MOCK_USERS.push(targetUserObj);
+        }
       }
 
-      const targetUserObj: any = MOCK_USERS[userIndex];
+      if (!targetUserObj.user) {
+        targetUserObj.user = { ...targetUserObj };
+      }
+
       const isUserVerified = Boolean(
         targetUserObj.user?.isVerified === true ||
         targetUserObj.user?.verificationStatus === 'approved' ||
@@ -2493,10 +2555,14 @@ async function startServer() {
         req.user?.verificationStatus === 'verified'
       );
 
-      const updatedPhoto = photo || avatar || photoUrl || avatarUrl || req.user.photo || req.user.avatar || req.user.photoUrl;
-      const updatedName = name || req.user.name;
-      const updatedEmail = email ? email.toLowerCase().trim() : (req.user.email || '').toLowerCase().trim();
-      const updatedPhone = phone || req.user.phone;
+      const incomingPhoto = photo !== undefined ? photo : (avatar !== undefined ? avatar : (profilePicture !== undefined ? profilePicture : (photoUrl !== undefined ? photoUrl : avatarUrl)));
+      const updatedPhoto = (incomingPhoto !== undefined && incomingPhoto !== null && incomingPhoto !== '') 
+        ? incomingPhoto 
+        : (photo || avatar || photoUrl || avatarUrl || profilePicture || req.user.photo || req.user.avatar || req.user.photoUrl || req.user.avatarUrl || req.user.profilePicture || targetUserObj.user?.avatar || targetUserObj.avatar || '');
+
+      const updatedName = name || req.user.name || targetUserObj.user?.name;
+      const updatedEmail = email ? email.toLowerCase().trim() : (req.user.email || targetUserObj.user?.email || '').toLowerCase().trim();
+      const updatedPhone = phone || req.user.phone || targetUserObj.user?.phone;
       const updatedOrg = isUserVerified
         ? (targetUserObj.user?.organization || req.user.organization || organization)
         : (organization !== undefined ? organization : req.user.organization);
@@ -2533,10 +2599,25 @@ async function startServer() {
       if (targetUserObj.name !== undefined) targetUserObj.name = updatedName;
       if (targetUserObj.email !== undefined) targetUserObj.email = updatedEmail;
       if (targetUserObj.phone !== undefined) targetUserObj.phone = updatedPhone;
-      if (targetUserObj.photo !== undefined) targetUserObj.photo = updatedPhoto;
-      if (targetUserObj.avatar !== undefined) targetUserObj.avatar = updatedPhoto;
-      if (targetUserObj.avatarUrl !== undefined) targetUserObj.avatarUrl = updatedPhoto;
-      if (targetUserObj.photoUrl !== undefined) targetUserObj.photoUrl = updatedPhoto;
+      targetUserObj.photo = updatedPhoto;
+      targetUserObj.avatar = updatedPhoto;
+      targetUserObj.avatarUrl = updatedPhoto;
+      targetUserObj.photoUrl = updatedPhoto;
+      targetUserObj.profilePicture = updatedPhoto;
+
+      // Update current request user session object
+      req.user.photo = updatedPhoto;
+      req.user.avatar = updatedPhoto;
+      req.user.avatarUrl = updatedPhoto;
+      req.user.photoUrl = updatedPhoto;
+      req.user.profilePicture = updatedPhoto;
+      if (req.user.user) {
+        req.user.user.photo = updatedPhoto;
+        req.user.user.avatar = updatedPhoto;
+        req.user.user.avatarUrl = updatedPhoto;
+        req.user.user.photoUrl = updatedPhoto;
+        req.user.user.profilePicture = updatedPhoto;
+      }
 
       // Update in store.users as well (all matching records)
       const store = getStoreInstance();
@@ -2581,6 +2662,44 @@ async function startServer() {
         });
       }
 
+      // Update in staff array if user is staff
+      for (let i = 0; i < staff.length; i++) {
+        const s = staff[i];
+        if (
+          (userId && (s.userId === userId || s.id === userId)) ||
+          (cleanEmail && s.email && s.email.toLowerCase().trim() === cleanEmail)
+        ) {
+          staff[i].photo = updatedPhoto;
+          staff[i].avatar = updatedPhoto;
+          if (updatedName) staff[i].name = updatedName;
+          if (updatedPhone) staff[i].phone = updatedPhone;
+        }
+      }
+
+      // Update in verificationTeams if user is verification officer
+      for (const vt of verificationTeams) {
+        if (
+          (userId && vt.id === userId) ||
+          (cleanEmail && vt.email && vt.email.toLowerCase().trim() === cleanEmail)
+        ) {
+          vt.avatar = updatedPhoto;
+          vt.photo = updatedPhoto;
+          vt.avatarUrl = updatedPhoto;
+          vt.photoUrl = updatedPhoto;
+        }
+      }
+
+      // Update in chatProfiles
+      for (const cp of chatProfiles) {
+        if (
+          (userId && cp.userId === userId) ||
+          (cleanEmail && cp.email && cp.email.toLowerCase().trim() === cleanEmail)
+        ) {
+          cp.avatarUrl = updatedPhoto;
+          if (updatedName) cp.nickname = updatedName;
+        }
+      }
+
       // Sync across all registered hostels if user is manager or staff
       const currentHostels = await dbGetHostels(hostels);
       for (const h of currentHostels) {
@@ -2618,6 +2737,7 @@ async function startServer() {
         }
       }
 
+      persistStore();
       syncStore();
 
       return res.json({
@@ -3384,6 +3504,440 @@ async function startServer() {
     }
   });
 
+  // Block manager access with required detailed explanation message and unlist their hostel
+  app.put(["/api/manager-requests/:id/block", "/api/manager-verifications/:id/block", "/api/admin/managers/:id/block", "/api/manager-verifications/:id/suspend"], requireAuth(["admin"]), async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const rawNotes = (req.body?.reason || req.body?.adminNotes || req.body?.blockReason || req.body?.rejectionReason || req.body?.message || '').trim();
+      if (!rawNotes || rawNotes.length < 5) {
+        return res.status(400).json({ error: "A valid, detailed message explaining why manager access is restricted must be provided (minimum 5 characters)." });
+      }
+      const blockReason = rawNotes;
+      const store = getStoreInstance();
+
+      // Check if ID belongs to an inspection first
+      const matchedInsp = verificationInspections.find(i => i.id === id || i.managerVerificationId === id);
+      const effectiveId = matchedInsp?.managerVerificationId || id;
+
+      const target = managerRequests.find(r => r.id === effectiveId || r.managerId === effectiveId || r.id === id || r.managerId === id || (r.managerEmail && r.managerEmail.toLowerCase() === id.toLowerCase())) ||
+                     managerVerifications.find(v => v.id === effectiveId || v.managerId === effectiveId || v.id === id || v.managerId === id || (v.managerEmail && v.managerEmail.toLowerCase() === id.toLowerCase())) ||
+                     (store.managerRegistrationRequests || []).find((r: any) => r.id === effectiveId || r.managerId === effectiveId || r.id === id) ||
+                     ((store as any).managerVerifications || []).find((v: any) => v.id === effectiveId || v.managerId === effectiveId || v.id === id) ||
+                     MOCK_USERS.find(u => (u.user && (u.user.id === id || u.user.email?.toLowerCase() === id.toLowerCase())) || u.id === id || u.email?.toLowerCase() === id.toLowerCase());
+
+      if (!target) {
+        return res.status(404).json({ error: "Manager record not found." });
+      }
+
+      const now = new Date().toISOString();
+      const cleanEmail = (target.managerEmail || target.email || target.user?.email || '').toLowerCase().trim();
+      const cleanParentEmail = ((target as any).parentUserEmail || target.user?.parentUserEmail || '').toLowerCase().trim();
+      const targetMgrId = target.managerId || (target as any).userId || target.user?.id || target.id;
+
+      const matchesTarget = (obj: any) => {
+        if (!obj) return false;
+        const e1 = (obj.managerEmail || obj.email || obj.user?.email || '').toLowerCase().trim();
+        const e2 = (obj.parentUserEmail || obj.user?.parentUserEmail || '').toLowerCase().trim();
+        const id1 = obj.managerId || obj.userId || obj.user?.id || obj.id;
+        const id2 = obj.parentUserId || obj.user?.parentUserId;
+
+        const emailMatch = Boolean(cleanEmail) && (e1 === cleanEmail || e2 === cleanEmail);
+        const parentEmailMatch = Boolean(cleanParentEmail) && (e1 === cleanParentEmail || e2 === cleanParentEmail);
+        const idMatch = Boolean(targetMgrId) && (id1 === targetMgrId || id2 === targetMgrId);
+        return emailMatch || parentEmailMatch || idMatch || obj.id === id || obj.id === effectiveId;
+      };
+
+      // 1. Update in-memory managerRequests
+      managerRequests.forEach(r => {
+        if (r.id === id || r.id === effectiveId || matchesTarget(r)) {
+          r.status = 'blocked';
+          (r as any).isApproved = false;
+          (r as any).isBlocked = true;
+          r.blockReason = blockReason;
+          r.adminNotes = blockReason;
+          r.blockedAt = now;
+          r.updatedAt = now;
+        }
+      });
+
+      // 2. Update in-memory managerVerifications
+      managerVerifications.forEach(v => {
+        if (v.id === id || v.id === effectiveId || matchesTarget(v)) {
+          v.status = 'blocked';
+          v.authorityStatus = 'blocked';
+          v.isBlocked = true;
+          (v as any).isApproved = false;
+          v.blockReason = blockReason;
+          v.adminNotes = blockReason;
+          v.blockedAt = now;
+          v.reviewedAt = now;
+          v.reviewedBy = req.user?.name || 'Admin';
+          v.updatedAt = now;
+        }
+      });
+
+      // 3. Update store
+      if (store.managerRegistrationRequests) {
+        store.managerRegistrationRequests.forEach((r: any) => {
+          if (r.id === id || matchesTarget(r)) {
+            r.status = 'blocked';
+            r.isApproved = false;
+            r.isBlocked = true;
+            r.blockReason = blockReason;
+            r.adminNotes = blockReason;
+            r.blockedAt = now;
+            r.updatedAt = now;
+          }
+        });
+      }
+      if ((store as any).managerVerifications) {
+        (store as any).managerVerifications.forEach((v: any) => {
+          if (v.id === id || matchesTarget(v)) {
+            v.status = 'blocked';
+            v.authorityStatus = 'blocked';
+            v.isApproved = false;
+            v.isBlocked = true;
+            v.blockReason = blockReason;
+            v.adminNotes = blockReason;
+            v.blockedAt = now;
+            v.reviewedAt = now;
+            v.reviewedBy = req.user?.name || 'Admin';
+            v.updatedAt = now;
+          }
+        });
+      }
+
+      // 4. Update MOCK_USERS and store.users
+      const updateUserObj = (u: any) => {
+        if (!u) return;
+        const uEmail = (u.email || u.user?.email || '').toLowerCase().trim();
+        const uId = u.id || u.user?.id;
+        const uRole = (u.role || u.user?.role || '').toLowerCase();
+
+        const isActualMgr = (uRole === 'manager' || (cleanEmail && uEmail === cleanEmail)) && 
+                            (!cleanParentEmail || uEmail !== cleanParentEmail) && 
+                            ((cleanEmail && uEmail === cleanEmail) || (targetMgrId && uId === targetMgrId));
+        if (isActualMgr) {
+          if (u.user) {
+            u.user.isVerified = false;
+            u.user.isBlocked = true;
+            u.user.verificationStatus = 'blocked';
+            u.user.status = 'blocked';
+            u.user.blockReason = blockReason;
+            u.user.adminNotes = blockReason;
+          }
+          u.isVerified = false;
+          u.isBlocked = true;
+          u.verificationStatus = 'blocked';
+          u.status = 'blocked';
+          u.blockReason = blockReason;
+          u.adminNotes = blockReason;
+        }
+
+        const isParentUser = (cleanParentEmail && uEmail === cleanParentEmail) || (target.parentUserId && uId === target.parentUserId);
+        if (isParentUser || u.registeredAccounts?.managerAccount || u.user?.registeredAccounts?.managerAccount) {
+          const targetAcc = u.registeredAccounts?.managerAccount || u.user?.registeredAccounts?.managerAccount;
+          if (targetAcc && (isParentUser || (cleanEmail && targetAcc.email?.toLowerCase().trim() === cleanEmail))) {
+            targetAcc.status = 'blocked';
+            targetAcc.isApproved = false;
+            targetAcc.isBlocked = true;
+            targetAcc.blockReason = blockReason;
+            targetAcc.adminNotes = blockReason;
+          }
+        }
+      };
+      MOCK_USERS.forEach(updateUserObj);
+      if (store.users) {
+        store.users.forEach(updateUserObj);
+      }
+
+      // 5. Unlist/hide all hostels registered or managed by this manager from live public search
+      const currentHostels = await dbGetHostels(hostels);
+      for (const h of currentHostels) {
+        const isMgr = (h.managerId && targetMgrId && h.managerId === targetMgrId) ||
+                      (h.assignedManagerId && targetMgrId && h.assignedManagerId === targetMgrId) ||
+                      (h.managerEmail && cleanEmail && h.managerEmail.toLowerCase().trim() === cleanEmail) ||
+                      (target.propertyName && h.name && h.name.toLowerCase().trim() === target.propertyName.toLowerCase().trim()) ||
+                      (target.proposedHostelName && h.name && h.name.toLowerCase().trim() === target.proposedHostelName.toLowerCase().trim()) ||
+                      (target.hostelName && h.name && h.name.toLowerCase().trim() === target.hostelName.toLowerCase().trim());
+        if (isMgr) {
+          h.isApproved = false;
+          h.approvalStatus = 'Blocked';
+          h.status = 'Blocked';
+          h.isLive = false;
+          h.isBlocked = true;
+          h.blockReason = blockReason;
+          await dbUpdateHostel(h.id, {
+            isApproved: false,
+            approvalStatus: 'Blocked',
+            status: 'Blocked',
+            isLive: false,
+            isBlocked: true,
+            blockReason: blockReason
+          }, hostels);
+        }
+      }
+
+      // 6. Send detailed restriction notification to primary user account and manager
+      const parentUserId = (target as any).parentUserId || targetMgrId;
+      const notifyEmails = Array.from(new Set([cleanEmail, cleanParentEmail].filter(Boolean)));
+      for (const emailToNotify of notifyEmails) {
+        const blkNotif = {
+          id: `notif-mgr-blk-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+          studentId: targetMgrId,
+          userId: parentUserId || targetMgrId,
+          parentUserId: parentUserId,
+          userEmail: emailToNotify,
+          recipientEmail: emailToNotify,
+          targetEmail: emailToNotify,
+          parentUserEmail: cleanParentEmail,
+          managerEmail: cleanEmail,
+          title: 'Manager Account Restricted / Blocked',
+          message: `Your Manager Account for "${target.propertyName || target.proposedHostelName || target.managerName || 'Hostel'}" has been restricted by PineVela Administration. Reason: ${blockReason}. Manager Console login and live property listings are suspended until further notice.`,
+          type: 'danger',
+          isBlocked: true,
+          date: new Date().toISOString().split('T')[0],
+          read: false
+        };
+        notifications.unshift(blkNotif);
+        await dbCreateNotification(blkNotif, notifications);
+      }
+
+      syncStore();
+
+      await dbUpdateManagerRequestStatus(id, 'blocked', blockReason);
+      await dbUpdateManagerVerificationStatus(id, 'blocked', blockReason, req.user?.name || 'Admin', cleanEmail, targetMgrId);
+
+      await dbCreateActivity({
+        id: `act-new-${Date.now()}`,
+        text: `Admin RESTRICTED/BLOCKED manager access for "${target.managerName || cleanEmail}". Reason: ${blockReason}`,
+        time: 'Just now',
+        type: 'danger'
+      }, activities);
+
+      return res.json({
+        success: true,
+        message: `Manager access for ${cleanEmail || target.managerName} has been restricted and property unlisted.`,
+        status: 'blocked',
+        isBlocked: true,
+        blockReason: blockReason
+      });
+    } catch (err: any) {
+      console.error("Error blocking manager:", err);
+      return res.status(500).json({ error: err.message || "Failed to block manager." });
+    }
+  });
+
+  // Unblock manager access and restore property to live
+  app.put(["/api/manager-requests/:id/unblock", "/api/manager-verifications/:id/unblock", "/api/admin/managers/:id/unblock"], requireAuth(["admin"]), async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const store = getStoreInstance();
+
+      const matchedInsp = verificationInspections.find(i => i.id === id || i.managerVerificationId === id);
+      const effectiveId = matchedInsp?.managerVerificationId || id;
+
+      const target = managerRequests.find(r => r.id === effectiveId || r.managerId === effectiveId || r.id === id || r.managerId === id || (r.managerEmail && r.managerEmail.toLowerCase() === id.toLowerCase())) ||
+                     managerVerifications.find(v => v.id === effectiveId || v.managerId === effectiveId || v.id === id || v.managerId === id || (v.managerEmail && v.managerEmail.toLowerCase() === id.toLowerCase())) ||
+                     (store.managerRegistrationRequests || []).find((r: any) => r.id === effectiveId || r.managerId === effectiveId || r.id === id) ||
+                     ((store as any).managerVerifications || []).find((v: any) => v.id === effectiveId || v.managerId === effectiveId || v.id === id) ||
+                     MOCK_USERS.find(u => (u.user && (u.user.id === id || u.user.email?.toLowerCase() === id.toLowerCase())) || u.id === id || u.email?.toLowerCase() === id.toLowerCase());
+
+      if (!target) {
+        return res.status(404).json({ error: "Manager record not found." });
+      }
+
+      const now = new Date().toISOString();
+      const cleanEmail = (target.managerEmail || target.email || target.user?.email || '').toLowerCase().trim();
+      const cleanParentEmail = ((target as any).parentUserEmail || target.user?.parentUserEmail || '').toLowerCase().trim();
+      const targetMgrId = target.managerId || (target as any).userId || target.user?.id || target.id;
+
+      const matchesTarget = (obj: any) => {
+        if (!obj) return false;
+        const e1 = (obj.managerEmail || obj.email || obj.user?.email || '').toLowerCase().trim();
+        const e2 = (obj.parentUserEmail || obj.user?.parentUserEmail || '').toLowerCase().trim();
+        const id1 = obj.managerId || obj.userId || obj.user?.id || obj.id;
+        const id2 = obj.parentUserId || obj.user?.parentUserId;
+
+        const emailMatch = Boolean(cleanEmail) && (e1 === cleanEmail || e2 === cleanEmail);
+        const parentEmailMatch = Boolean(cleanParentEmail) && (e1 === cleanParentEmail || e2 === cleanParentEmail);
+        const idMatch = Boolean(targetMgrId) && (id1 === targetMgrId || id2 === targetMgrId);
+        return emailMatch || parentEmailMatch || idMatch || obj.id === id || obj.id === effectiveId;
+      };
+
+      // 1. Update in-memory managerRequests
+      managerRequests.forEach(r => {
+        if (r.id === id || r.id === effectiveId || matchesTarget(r)) {
+          r.status = 'approved';
+          (r as any).isApproved = true;
+          (r as any).isBlocked = false;
+          r.blockReason = null;
+          r.unblockedAt = now;
+          r.updatedAt = now;
+        }
+      });
+
+      // 2. Update in-memory managerVerifications
+      managerVerifications.forEach(v => {
+        if (v.id === id || v.id === effectiveId || matchesTarget(v)) {
+          v.status = 'approved';
+          v.authorityStatus = 'verified';
+          v.isBlocked = false;
+          (v as any).isApproved = true;
+          v.blockReason = null;
+          v.unblockedAt = now;
+          v.reviewedAt = now;
+          v.reviewedBy = req.user?.name || 'Admin';
+          v.updatedAt = now;
+        }
+      });
+
+      // 3. Update store
+      if (store.managerRegistrationRequests) {
+        store.managerRegistrationRequests.forEach((r: any) => {
+          if (r.id === id || matchesTarget(r)) {
+            r.status = 'approved';
+            r.isApproved = true;
+            r.isBlocked = false;
+            r.blockReason = null;
+            r.unblockedAt = now;
+            r.updatedAt = now;
+          }
+        });
+      }
+      if ((store as any).managerVerifications) {
+        (store as any).managerVerifications.forEach((v: any) => {
+          if (v.id === id || matchesTarget(v)) {
+            v.status = 'approved';
+            v.authorityStatus = 'verified';
+            v.isApproved = true;
+            v.isBlocked = false;
+            v.blockReason = null;
+            v.unblockedAt = now;
+            v.reviewedAt = now;
+            v.reviewedBy = req.user?.name || 'Admin';
+            v.updatedAt = now;
+          }
+        });
+      }
+
+      // 4. Update MOCK_USERS and store.users
+      const updateUserObj = (u: any) => {
+        if (!u) return;
+        const uEmail = (u.email || u.user?.email || '').toLowerCase().trim();
+        const uId = u.id || u.user?.id;
+        const uRole = (u.role || u.user?.role || '').toLowerCase();
+
+        const isActualMgr = (uRole === 'manager' || (cleanEmail && uEmail === cleanEmail)) && 
+                            (!cleanParentEmail || uEmail !== cleanParentEmail) && 
+                            ((cleanEmail && uEmail === cleanEmail) || (targetMgrId && uId === targetMgrId));
+        if (isActualMgr) {
+          if (u.user) {
+            u.user.isVerified = true;
+            u.user.isBlocked = false;
+            u.user.verificationStatus = 'approved';
+            u.user.status = 'approved';
+            u.user.blockReason = null;
+          }
+          u.isVerified = true;
+          u.isBlocked = false;
+          u.verificationStatus = 'approved';
+          u.status = 'approved';
+          u.blockReason = null;
+        }
+
+        const isParentUser = (cleanParentEmail && uEmail === cleanParentEmail) || (target.parentUserId && uId === target.parentUserId);
+        if (isParentUser || u.registeredAccounts?.managerAccount || u.user?.registeredAccounts?.managerAccount) {
+          const targetAcc = u.registeredAccounts?.managerAccount || u.user?.registeredAccounts?.managerAccount;
+          if (targetAcc && (isParentUser || (cleanEmail && targetAcc.email?.toLowerCase().trim() === cleanEmail))) {
+            targetAcc.status = 'approved';
+            targetAcc.isApproved = true;
+            targetAcc.isVerified = true;
+            targetAcc.isBlocked = false;
+            targetAcc.blockReason = null;
+          }
+        }
+      };
+      MOCK_USERS.forEach(updateUserObj);
+      if (store.users) {
+        store.users.forEach(updateUserObj);
+      }
+
+      // 5. Restore hostel(s) back to live public search
+      const currentHostels = await dbGetHostels(hostels);
+      for (const h of currentHostels) {
+        const isMgr = (h.managerId && targetMgrId && h.managerId === targetMgrId) ||
+                      (h.assignedManagerId && targetMgrId && h.assignedManagerId === targetMgrId) ||
+                      (h.managerEmail && cleanEmail && h.managerEmail.toLowerCase().trim() === cleanEmail) ||
+                      (target.propertyName && h.name && h.name.toLowerCase().trim() === target.propertyName.toLowerCase().trim()) ||
+                      (target.proposedHostelName && h.name && h.name.toLowerCase().trim() === target.proposedHostelName.toLowerCase().trim()) ||
+                      (target.hostelName && h.name && h.name.toLowerCase().trim() === target.hostelName.toLowerCase().trim());
+        if (isMgr) {
+          h.isApproved = true;
+          h.approvalStatus = 'Approved';
+          h.status = 'Open';
+          h.isLive = true;
+          h.isBlocked = false;
+          delete h.blockReason;
+          await dbUpdateHostel(h.id, {
+            isApproved: true,
+            approvalStatus: 'Approved',
+            status: 'Open',
+            isLive: true,
+            isBlocked: false,
+            blockReason: null
+          }, hostels);
+        }
+      }
+
+      // 6. Send unblock notification to primary user account and manager
+      const parentUserId = (target as any).parentUserId || targetMgrId;
+      const notifyEmails = Array.from(new Set([cleanEmail, cleanParentEmail].filter(Boolean)));
+      for (const emailToNotify of notifyEmails) {
+        const unblkNotif = {
+          id: `notif-mgr-unblk-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+          studentId: targetMgrId,
+          userId: parentUserId || targetMgrId,
+          parentUserId: parentUserId,
+          userEmail: emailToNotify,
+          recipientEmail: emailToNotify,
+          targetEmail: emailToNotify,
+          parentUserEmail: cleanParentEmail,
+          managerEmail: cleanEmail,
+          title: 'Manager Account Access Restored / Unblocked',
+          message: `Your Manager Account for "${target.propertyName || target.proposedHostelName || target.managerName || 'Hostel'}" has been unblocked by PineVela Administration. Full manager dashboard access and live property listings are now active.`,
+          type: 'success',
+          date: new Date().toISOString().split('T')[0],
+          read: false
+        };
+        notifications.unshift(unblkNotif);
+        await dbCreateNotification(unblkNotif, notifications);
+      }
+
+      syncStore();
+
+      await dbUpdateManagerRequestStatus(id, 'approved');
+      await dbUpdateManagerVerificationStatus(id, 'approved', 'Unblocked by Administrator', req.user?.name || 'Admin', cleanEmail, targetMgrId);
+
+      await dbCreateActivity({
+        id: `act-new-${Date.now()}`,
+        text: `Admin UNBLOCKED manager access for "${target.managerName || cleanEmail}". Full access and live property listings restored.`,
+        time: 'Just now',
+        type: 'success'
+      }, activities);
+
+      return res.json({
+        success: true,
+        message: `Manager access for ${cleanEmail || target.managerName} has been restored and property returned to live listings.`,
+        status: 'approved',
+        isBlocked: false
+      });
+    } catch (err: any) {
+      console.error("Error unblocking manager:", err);
+      return res.status(500).json({ error: err.message || "Failed to unblock manager." });
+    }
+  });
+
   // Verify manager document individually
   app.put(["/api/manager-verifications/:id/verify-doc", "/api/manager-requests/:id/verify-doc"], requireAuth(["admin"]), async (req: any, res) => {
     try {
@@ -3858,14 +4412,18 @@ async function startServer() {
           (matchedMgrReq as any)?.isApproved ? 'approved' : null,
           matchedMgrUser?.user?.verificationStatus,
           matchedMgrUser?.verificationStatus,
+          matchedMgrUser?.user?.status,
+          matchedMgrUser?.status,
           matchedMgrUser?.user?.isVerified ? 'approved' : null,
           matchedMgrUser?.isVerified ? 'approved' : null,
         ].filter(Boolean).map(s => String(s).toLowerCase().trim());
 
-        const isApproved = allStatusValues.includes('approved') || allStatusValues.includes('verified');
-        const isRejected = !isApproved && allStatusValues.includes('rejected');
-        const rawStatus = isApproved ? 'approved' : (isRejected ? 'rejected' : 'pending');
-        const displayStatus = isApproved ? 'Approved' : (isRejected ? 'Rejected' : 'Pending Admin Approval');
+        const isBlocked = allStatusValues.includes('blocked') || matchedVerif?.isBlocked === true || matchedMgrReq?.isBlocked === true || matchedMgrUser?.isBlocked === true || matchedMgrUser?.user?.isBlocked === true;
+        const isApproved = !isBlocked && (allStatusValues.includes('approved') || allStatusValues.includes('verified'));
+        const isRejected = !isBlocked && !isApproved && allStatusValues.includes('rejected');
+        const rawStatus = isBlocked ? 'blocked' : (isApproved ? 'approved' : (isRejected ? 'rejected' : 'pending'));
+        const displayStatus = isBlocked ? 'Blocked' : (isApproved ? 'Approved' : (isRejected ? 'Rejected' : 'Pending Admin Approval'));
+        const blockReason = isBlocked ? (matchedVerif?.blockReason || matchedMgrReq?.blockReason || (matchedMgrUser as any)?.blockReason || (matchedMgrUser?.user as any)?.blockReason || matchedVerif?.adminNotes || matchedMgrReq?.adminNotes || 'Manager account access has been restricted by administration.') : null;
 
         if (isApproved) {
           if (matchedVerif) matchedVerif.status = 'approved';
@@ -3892,13 +4450,15 @@ async function startServer() {
           phone: matchedVerif?.phone || matchedMgrReq?.managerPhone || (matchedMgrReq as any)?.phone || matchedMgrUser?.phone || 'N/A',
           idType: matchedVerif?.idType || 'Ghana Card (National ID)',
           idNumber: matchedVerif?.idNumber || 'N/A',
-          status: isApproved ? 'approved' : (isRejected ? 'rejected' : 'pending'),
+          status: rawStatus,
           rawStatus: rawStatus,
           displayStatus: displayStatus,
           isApproved: isApproved,
           isVerified: isApproved,
           isRejected: isRejected,
-          adminNotes: matchedVerif?.rejectionReason || (matchedVerif as any)?.adminNotes || (matchedMgrReq as any)?.adminNotes || null,
+          isBlocked: isBlocked,
+          blockReason: blockReason,
+          adminNotes: blockReason || matchedVerif?.rejectionReason || (matchedVerif as any)?.adminNotes || (matchedMgrReq as any)?.adminNotes || null,
           submittedAt: matchedVerif?.submittedAt || matchedVerif?.createdAt || new Date().toISOString().split('T')[0]
         };
       }
@@ -5400,7 +5960,11 @@ async function startServer() {
       if (!store.digitalMarketStores) store.digitalMarketStores = [];
 
       let existingStore = store.digitalMarketStores.find((s: any) =>
-        s.studentEmail?.toLowerCase() === cleanEmail
+        s.studentEmail?.toLowerCase() === cleanEmail ||
+        s.parentUserEmail?.toLowerCase() === cleanEmail ||
+        s.email?.toLowerCase() === cleanEmail ||
+        (s.id && s.id === studentEmail) ||
+        (s.userId && s.userId === studentEmail)
       );
 
       if (!existingStore) {
@@ -5589,6 +6153,8 @@ async function startServer() {
       targetStore.setupCompleted = true;
       targetStore.isBanned = false;
 
+      const isServiceItem = Boolean(req.body.isService || category === 'Services' || String(category || '').toLowerCase().includes('service'));
+
       const newProduct = {
         id: `dmprod-${Date.now()}`,
         storeId: targetStore.id,
@@ -5596,18 +6162,30 @@ async function startServer() {
         sellerId: targetStore.userId,
         sellerEmail: targetStore.studentEmail || targetStore.parentUserEmail || cleanEmail,
         sellerUniversity: targetStore.university || 'KNUST',
-        sellerPhone: targetStore.phone || '0244-123-456',
+        sellerPhone: targetStore.phone || req.body.callLine || '0244-123-456',
         sellerName: targetStore.username || targetStore.storeName || 'Student Merchant',
         title: title || 'Untitled Item',
         description: description || '',
         price: Number(price) || 0,
         currency: 'GHS',
-        category: category || targetStore.category || 'Electronics',
-        stockQuantity: Number(stockQuantity) || 1,
-        imageUrl: imageUrl || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&auto=format&fit=crop&q=60',
+        category: category || (isServiceItem ? 'Services' : (targetStore.category || 'Electronics')),
+        stockQuantity: isServiceItem ? (Number(stockQuantity) || 999) : (Number(stockQuantity) || 1),
+        imageUrl: imageUrl || (isServiceItem ? 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=600&auto=format&fit=crop&q=60' : 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&auto=format&fit=crop&q=60'),
         condition: condition || 'Like New',
-        meetingLocation: meetingLocation || targetStore.location || 'Campus Enclave',
+        meetingLocation: meetingLocation || req.body.location || targetStore.location || 'Campus Enclave',
+        location: req.body.location || meetingLocation || targetStore.location || 'Campus Enclave',
+        lat: req.body.lat !== undefined ? Number(req.body.lat) : 6.6745,
+        lng: req.body.lng !== undefined ? Number(req.body.lng) : -1.5716,
+        workingDays: req.body.workingDays || 'Mon - Sat',
+        openingTime: req.body.openingTime || '08:00 AM',
+        closingTime: req.body.closingTime || '08:00 PM',
+        callLine: req.body.callLine || targetStore.phone || req.body.sellerPhone || '0244-123-456',
+        isService: isServiceItem,
+        serviceCategory: req.body.serviceCategory || (isServiceItem ? 'Campus Service' : ''),
+        priceCategories: Array.isArray(req.body.priceCategories) ? req.body.priceCategories : [],
         isAvailable: true,
+        rating: 5.0,
+        reviewCount: 0,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };
@@ -5616,7 +6194,7 @@ async function startServer() {
       savePersistentStore(store);
       syncStore();
 
-      return res.status(201).json({ success: true, product: newProduct, message: "Product listed on Digital Market!" });
+      return res.status(201).json({ success: true, product: newProduct, message: isServiceItem ? "Service published to Digital Market!" : "Product listed on Digital Market!" });
     } catch (err: any) {
       console.error("Error adding product:", err);
       return res.status(500).json({ error: "Failed to add product." });
@@ -5627,7 +6205,7 @@ async function startServer() {
   app.put("/api/digital-market/products/:id", requireAuth(["merchant", "student", "user", "admin"]), async (req: any, res) => {
     try {
       const { id } = req.params;
-      const { title, description, price, stockQuantity, isAvailable } = req.body;
+      const { title, description, price, stockQuantity, isAvailable, category, imageUrl, meetingLocation, location, callLine, isService, serviceCategory, workingDays, openingTime, closingTime, lat, lng } = req.body;
       const store = getStoreInstance();
       if (!store.digitalMarketProducts) store.digitalMarketProducts = [];
 
@@ -5639,9 +6217,22 @@ async function startServer() {
       if (title !== undefined) product.title = title;
       if (description !== undefined) product.description = description;
       if (price !== undefined) product.price = Number(price);
+      if (category !== undefined) product.category = category;
+      if (imageUrl !== undefined) product.imageUrl = imageUrl;
+      if (meetingLocation !== undefined) product.meetingLocation = meetingLocation;
+      if (location !== undefined) product.location = location;
+      if (callLine !== undefined) product.callLine = callLine;
+      if (isService !== undefined) product.isService = Boolean(isService);
+      if (serviceCategory !== undefined) product.serviceCategory = serviceCategory;
+      if (req.body.priceCategories !== undefined) product.priceCategories = Array.isArray(req.body.priceCategories) ? req.body.priceCategories : [];
+      if (workingDays !== undefined) product.workingDays = workingDays;
+      if (openingTime !== undefined) product.openingTime = openingTime;
+      if (closingTime !== undefined) product.closingTime = closingTime;
+      if (lat !== undefined) product.lat = Number(lat);
+      if (lng !== undefined) product.lng = Number(lng);
       if (stockQuantity !== undefined) {
         product.stockQuantity = Number(stockQuantity);
-        if (product.stockQuantity <= 0) {
+        if (product.stockQuantity <= 0 && !product.isService) {
           product.isAvailable = false;
         } else {
           product.isAvailable = true;
@@ -5657,6 +6248,87 @@ async function startServer() {
     } catch (err: any) {
       console.error("Error updating product:", err);
       return res.status(500).json({ error: "Failed to update product." });
+    }
+  });
+
+  // Service Reviews Endpoints
+  app.post("/api/digital-market/services/:id/reviews", requireAuth(["student", "user", "merchant", "admin"]), async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const { rating, review, reviewerName, reviewerAvatar } = req.body;
+      const numRating = Number(rating);
+
+      if (!numRating || numRating < 1 || numRating > 5) {
+        return res.status(400).json({ error: "Rating must be between 1 and 5 stars." });
+      }
+
+      const store = getStoreInstance();
+      if (!store.digitalMarketServiceReviews) store.digitalMarketServiceReviews = [];
+      if (!store.digitalMarketProducts) store.digitalMarketProducts = [];
+
+      const product = store.digitalMarketProducts.find((p: any) => p.id === id);
+      if (!product) {
+        return res.status(404).json({ error: "Service not found." });
+      }
+
+      const newReview = {
+        id: `servrev-${Date.now()}`,
+        serviceId: id,
+        reviewerName: reviewerName || req.user.name || 'Student Reviewer',
+        reviewerEmail: req.user.email || '',
+        reviewerAvatar: reviewerAvatar || req.user.avatar || req.user.photo || 'preset:pine-classic',
+        rating: Math.min(5, Math.max(1, numRating)),
+        review: (review || '').toString().trim(),
+        createdAt: new Date().toISOString()
+      };
+
+      store.digitalMarketServiceReviews.unshift(newReview);
+
+      // Re-calculate rating average for service
+      const serviceReviews = store.digitalMarketServiceReviews.filter((r: any) => r.serviceId === id);
+      const totalCount = serviceReviews.length;
+      const sum = serviceReviews.reduce((acc: number, item: any) => acc + (Number(item.rating) || 0), 0);
+      const avg = totalCount > 0 ? Math.round((sum / totalCount) * 10) / 10 : 5.0;
+
+      product.rating = avg;
+      product.reviewCount = totalCount;
+
+      savePersistentStore(store);
+      syncStore();
+
+      return res.status(201).json({
+        success: true,
+        review: newReview,
+        averageRating: avg,
+        reviewCount: totalCount,
+        message: "Thank you for reviewing this service!"
+      });
+    } catch (err: any) {
+      console.error("Error submitting service review:", err);
+      return res.status(500).json({ error: "Failed to submit service review." });
+    }
+  });
+
+  app.get("/api/digital-market/services/:id/reviews", async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const store = getStoreInstance();
+      if (!store.digitalMarketServiceReviews) store.digitalMarketServiceReviews = [];
+
+      const serviceReviews = store.digitalMarketServiceReviews.filter((r: any) => r.serviceId === id);
+      const totalCount = serviceReviews.length;
+      const sum = serviceReviews.reduce((acc: number, item: any) => acc + (Number(item.rating) || 0), 0);
+      const avg = totalCount > 0 ? Math.round((sum / totalCount) * 10) / 10 : 5.0;
+
+      return res.json({
+        serviceId: id,
+        averageRating: avg,
+        reviewCount: totalCount,
+        reviews: serviceReviews
+      });
+    } catch (err: any) {
+      console.error("Error fetching service reviews:", err);
+      return res.status(500).json({ error: "Failed to fetch service reviews." });
     }
   });
 
@@ -6003,7 +6675,10 @@ async function startServer() {
       }
 
       const orderQty = Number(quantity) || 1;
-      const totalAmount = product.price * orderQty;
+      const unitPrice = (req.body.price !== undefined && !isNaN(Number(req.body.price)) && Number(req.body.price) >= 0) ? Number(req.body.price) : product.price;
+      const totalAmount = unitPrice * orderQty;
+      const priceCatName = req.body.priceCategoryName ? String(req.body.priceCategoryName).trim() : (req.body.priceCategory ? String(req.body.priceCategory).trim() : undefined);
+      const finalProductTitle = priceCatName ? `${product.title} (${priceCatName})` : product.title;
       const otpPin = Math.floor(1000 + Math.random() * 9000).toString();
 
       const parsedLat = meetingLatitude !== undefined && meetingLatitude !== null && !isNaN(Number(meetingLatitude)) ? Number(meetingLatitude) : undefined;
@@ -6013,8 +6688,9 @@ async function startServer() {
       const newOrder = {
         id: `ord-${Date.now()}`,
         productId: product.id,
-        productTitle: product.title,
-        productPrice: product.price,
+        productTitle: finalProductTitle,
+        productPrice: unitPrice,
+        priceCategory: priceCatName,
         productImage: product.imageUrl,
         quantity: orderQty,
         totalAmount: totalAmount,
@@ -6113,10 +6789,10 @@ async function startServer() {
     }
   });
 
-  // Store Ratings & Reviews Endpoint
+  // Store & Service Ratings & Reviews Endpoint
   app.post("/api/digital-market/ratings", async (req: any, res) => {
     try {
-      const { orderId, storeId, sellerEmail, buyerEmail, rating, review } = req.body;
+      const { orderId, storeId, serviceId, productId, sellerEmail, buyerEmail, buyerName, rating, review } = req.body;
       const numRating = Number(rating);
 
       if (!numRating || numRating < 1 || numRating > 5) {
@@ -6126,16 +6802,24 @@ async function startServer() {
       const store = getStoreInstance();
       if (!store.digitalMarketRatings) store.digitalMarketRatings = [];
       if (!store.digitalMarketOrders) store.digitalMarketOrders = [];
+      if (!store.digitalMarketProducts) store.digitalMarketProducts = [];
 
       const cleanBuyer = (buyerEmail || '').toString().toLowerCase().trim();
       const cleanSeller = (sellerEmail || '').toString().toLowerCase().trim();
       const cleanStoreId = (storeId || '').toString().trim();
       const cleanOrderId = (orderId || '').toString().trim();
+      const cleanServiceId = (serviceId || productId || '').toString().trim();
+      const cleanBuyerName = (buyerName || '').toString().trim();
 
-      // Check if rating for this order or buyer-seller pair already exists
+      // Check if rating for this order/service or buyer-seller pair already exists
       let existingIndex = -1;
       if (cleanOrderId) {
         existingIndex = store.digitalMarketRatings.findIndex((r: any) => r.orderId === cleanOrderId);
+      }
+      if (existingIndex < 0 && cleanServiceId && cleanBuyer) {
+        existingIndex = store.digitalMarketRatings.findIndex((r: any) =>
+          r.buyerEmail?.toLowerCase() === cleanBuyer && (r.serviceId === cleanServiceId || r.productId === cleanServiceId)
+        );
       }
       if (existingIndex < 0 && cleanBuyer && (cleanStoreId || cleanSeller)) {
         existingIndex = store.digitalMarketRatings.findIndex((r: any) =>
@@ -6148,9 +6832,12 @@ async function startServer() {
       const ratingRecord = {
         id: existingIndex >= 0 ? store.digitalMarketRatings[existingIndex].id : `rating-${Date.now()}`,
         orderId: cleanOrderId || undefined,
+        serviceId: cleanServiceId || undefined,
+        productId: cleanServiceId || undefined,
         storeId: cleanStoreId || undefined,
         sellerEmail: cleanSeller || undefined,
         buyerEmail: cleanBuyer || undefined,
+        buyerName: cleanBuyerName || (cleanBuyer ? cleanBuyer.split('@')[0] : 'Student Resident'),
         rating: Math.min(5, Math.max(1, numRating)),
         review: (review || '').toString().trim(),
         createdAt: nowIso
@@ -6163,16 +6850,16 @@ async function startServer() {
       }
 
       // Calculate new store average rating
-      const matched = store.digitalMarketRatings.filter((r: any) => {
+      const matchedStore = store.digitalMarketRatings.filter((r: any) => {
         if (cleanStoreId && r.storeId === cleanStoreId) return true;
         if (cleanSeller && r.sellerEmail?.toLowerCase() === cleanSeller) return true;
         return false;
       });
-      const count = matched.length;
-      const sum = matched.reduce((s: number, r: any) => s + (Number(r.rating) || 0), 0);
-      const avg = count > 0 ? Math.round((sum / count) * 10) / 10 : 5.0;
+      const storeCount = matchedStore.length;
+      const storeSum = matchedStore.reduce((s: number, r: any) => s + (Number(r.rating) || 0), 0);
+      const storeAvg = storeCount > 0 ? Math.round((storeSum / storeCount) * 10) / 10 : 5.0;
 
-      // Also sync rating directly into digitalMarketStores
+      // Sync rating into digitalMarketStores
       if (store.digitalMarketStores) {
         const targetStoreIdx = store.digitalMarketStores.findIndex((s: any) =>
           (cleanStoreId && s.id === cleanStoreId) ||
@@ -6181,9 +6868,25 @@ async function startServer() {
         if (targetStoreIdx !== -1) {
           store.digitalMarketStores[targetStoreIdx] = {
             ...store.digitalMarketStores[targetStoreIdx],
-            storeRating: avg,
-            ratingCount: count
+            storeRating: storeAvg,
+            ratingCount: storeCount
           };
+        }
+      }
+
+      // Sync rating into digitalMarketProducts / service items
+      if (cleanServiceId && store.digitalMarketProducts) {
+        const matchedProdRatings = store.digitalMarketRatings.filter((r: any) =>
+          r.serviceId === cleanServiceId || r.productId === cleanServiceId
+        );
+        const prodCount = matchedProdRatings.length;
+        const prodSum = matchedProdRatings.reduce((s: number, r: any) => s + (Number(r.rating) || 0), 0);
+        const prodAvg = prodCount > 0 ? Math.round((prodSum / prodCount) * 10) / 10 : 5.0;
+
+        const targetProd = store.digitalMarketProducts.find((p: any) => p.id === cleanServiceId);
+        if (targetProd) {
+          targetProd.rating = prodAvg;
+          targetProd.reviewCount = prodCount;
         }
       }
 
@@ -6193,27 +6896,29 @@ async function startServer() {
       return res.json({
         success: true,
         ratingRecord,
-        averageRating: avg,
-        ratingCount: count,
-        message: "Store rating submitted successfully! ⭐"
+        averageRating: storeAvg,
+        ratingCount: storeCount,
+        message: "Rating & review submitted successfully! ⭐"
       });
     } catch (err: any) {
-      console.error("Error rating digital market store:", err);
-      return res.status(500).json({ error: "Failed to submit store rating." });
+      console.error("Error rating digital market item:", err);
+      return res.status(500).json({ error: "Failed to submit rating." });
     }
   });
 
-  // GET Ratings for a store
+  // GET Ratings for a store or service
   app.get("/api/digital-market/ratings", async (req: any, res) => {
     try {
-      const { storeId, sellerEmail } = req.query;
+      const { storeId, sellerEmail, serviceId, productId } = req.query;
       const store = getStoreInstance();
       if (!store.digitalMarketRatings) store.digitalMarketRatings = [];
 
       const cleanStoreId = (storeId || '').toString().trim();
       const cleanSeller = (sellerEmail || '').toString().toLowerCase().trim();
+      const cleanServiceId = (serviceId || productId || '').toString().trim();
 
       const matched = store.digitalMarketRatings.filter((r: any) => {
+        if (cleanServiceId && (r.serviceId === cleanServiceId || r.productId === cleanServiceId)) return true;
         if (cleanStoreId && r.storeId === cleanStoreId) return true;
         if (cleanSeller && r.sellerEmail?.toLowerCase() === cleanSeller) return true;
         return false;
@@ -7778,7 +8483,8 @@ async function startServer() {
       const id = v.managerId || v.id;
       const email = (v.managerEmail || '').toLowerCase().trim();
       const existing = managerMap.get(id) || Array.from(managerMap.values()).find(m => m.email === email);
-      const isAppr = v.status === 'approved';
+      const isBlk = v.status === 'blocked' || v.isBlocked === true;
+      const isAppr = !isBlk && v.status === 'approved';
 
       const merged = {
         id: id,
@@ -7789,9 +8495,12 @@ async function startServer() {
         maskedIdNumber: v.maskedIdNumber || existing?.maskedIdNumber || (v.nationalId ? maskIdentifier(v.nationalId) : 'GHA-***-***'),
         organization: v.organizationName || existing?.organization || 'Independent Accommodation',
         roleTitle: v.authorityRelationship || existing?.roleTitle || 'Resident Administrator',
-        verificationStatus: isAppr ? 'approved' : (v.status || existing?.verificationStatus || 'pending'),
-        authorityStatus: v.authorityStatus || (isAppr ? 'verified' : 'pending'),
-        isVerified: isAppr || existing?.isVerified || false,
+        status: isBlk ? 'blocked' : (isAppr ? 'approved' : (v.status || existing?.status || 'pending')),
+        verificationStatus: isBlk ? 'blocked' : (isAppr ? 'approved' : (v.status || existing?.verificationStatus || 'pending')),
+        authorityStatus: isBlk ? 'blocked' : (v.authorityStatus || (isAppr ? 'verified' : 'pending')),
+        isVerified: isAppr || (existing?.isVerified && !isBlk) || false,
+        isBlocked: isBlk,
+        blockReason: v.blockReason || v.adminNotes || existing?.blockReason || null,
         approvedAt: v.reviewedAt || existing?.approvedAt,
         createdAt: v.createdAt || existing?.createdAt || new Date().toISOString()
       };
@@ -7803,7 +8512,8 @@ async function startServer() {
       const id = r.managerId || r.id;
       const email = (r.managerEmail || '').toLowerCase().trim();
       const existing = managerMap.get(id) || Array.from(managerMap.values()).find(m => m.email === email);
-      const isAppr = (r.status || '').toLowerCase() === 'approved';
+      const isBlk = r.status === 'blocked' || r.isBlocked === true || existing?.isBlocked;
+      const isAppr = !isBlk && (r.status || '').toLowerCase() === 'approved';
 
       const merged = {
         id: id,
@@ -7814,9 +8524,12 @@ async function startServer() {
         maskedIdNumber: existing?.maskedIdNumber || (r.nationalId ? maskIdentifier(r.nationalId) : 'GHA-***-***'),
         organization: r.organization || existing?.organization || 'PineVela Hostels',
         roleTitle: r.roleTitle || existing?.roleTitle || 'Property Manager',
-        verificationStatus: isAppr ? 'approved' : (existing?.verificationStatus || r.status || 'pending'),
-        authorityStatus: isAppr ? 'verified' : (existing?.authorityStatus || 'pending'),
-        isVerified: isAppr || existing?.isVerified || false,
+        status: isBlk ? 'blocked' : (isAppr ? 'approved' : (existing?.status || r.status || 'pending')),
+        verificationStatus: isBlk ? 'blocked' : (isAppr ? 'approved' : (existing?.verificationStatus || r.status || 'pending')),
+        authorityStatus: isBlk ? 'blocked' : (isAppr ? 'verified' : (existing?.authorityStatus || 'pending')),
+        isVerified: isAppr || (existing?.isVerified && !isBlk) || false,
+        isBlocked: isBlk,
+        blockReason: r.blockReason || r.adminNotes || existing?.blockReason || null,
         approvedAt: r.approvedAt || existing?.approvedAt,
         createdAt: r.requestedAt || r.createdAt || existing?.createdAt || new Date().toISOString()
       };
@@ -8490,7 +9203,60 @@ async function startServer() {
   app.get("/api/hostels", async (req, res) => {
     try {
       const list = await dbGetHostels(hostels);
-      return res.json(list || hostels || []);
+      const authHeader = req.headers.authorization;
+      let isAdmin = false;
+      if (authHeader) {
+        const token = authHeader.replace("Bearer ", "").trim();
+        const foundUser = MOCK_USERS.find(u => (u.user && u.user.token === token) || u.token === token);
+        const userRole = (foundUser?.user?.role || foundUser?.role || '').toLowerCase();
+        if (userRole === 'admin') isAdmin = true;
+      }
+
+      if (isAdmin) {
+        return res.json(list || hostels || []);
+      }
+
+      // Check blocked managers to ensure any hostel tied to a blocked manager is hidden from live user search/landing page
+      const verifs = await dbGetManagerVerifications(managerVerifications);
+      const reqs = await dbGetManagerRequests(managerRequests);
+      const blockedManagerEmails = new Set<string>();
+      const blockedManagerIds = new Set<string>();
+
+      verifs.forEach(v => {
+        if (v.status === 'blocked' || v.isBlocked === true) {
+          if (v.managerEmail) blockedManagerEmails.add(v.managerEmail.toLowerCase().trim());
+          if (v.managerId) blockedManagerIds.add(v.managerId);
+          if (v.id) blockedManagerIds.add(v.id);
+        }
+      });
+      reqs.forEach(r => {
+        if (r.status === 'blocked' || r.isBlocked === true) {
+          if (r.managerEmail) blockedManagerEmails.add(r.managerEmail.toLowerCase().trim());
+          if (r.managerId) blockedManagerIds.add(r.managerId);
+          if (r.id) blockedManagerIds.add(r.id);
+        }
+      });
+      MOCK_USERS.forEach(u => {
+        const isBlk = u.isBlocked === true || u.user?.isBlocked === true || u.status === 'blocked' || u.user?.status === 'blocked';
+        if (isBlk) {
+          const email = (u.email || u.user?.email || '').toLowerCase().trim();
+          const id = u.id || u.user?.id;
+          if (email) blockedManagerEmails.add(email);
+          if (id) blockedManagerIds.add(id);
+        }
+      });
+
+      const activeList = (list || hostels || []).filter((h: any) => {
+        if (!h) return false;
+        if (h.isBlocked === true || h.status === 'Blocked' || h.approvalStatus === 'Blocked' || h.isLive === false) return false;
+        const hEmail = (h.managerEmail || '').toLowerCase().trim();
+        const hId = h.managerId || h.assignedManagerId;
+        if (hEmail && blockedManagerEmails.has(hEmail)) return false;
+        if (hId && blockedManagerIds.has(hId)) return false;
+        return true;
+      });
+
+      return res.json(activeList);
     } catch (err) {
       console.error("Error retrieving hostels from db:", err);
       return res.json(hostels || []);
@@ -10208,7 +10974,7 @@ async function startServer() {
     }
   });
 
-  // Manager permanently closes and logs task (Resident MUST have confirmed first)
+  // Manager permanently closes and logs task (Resident MUST have confirmed first if filed by resident)
   app.post("/api/issue-reports/:id/manager-close", requireAuth(["manager", "admin"]), async (req: any, res) => {
     try {
       const { id } = req.params;
@@ -10222,8 +10988,22 @@ async function startServer() {
         return res.json(existing);
       }
 
+      // STRICT VALIDATION: If filed by a resident/student, manager CANNOT override or close until the resident confirmed complete
+      const isResidentReport = Boolean(
+        existing.studentId || 
+        existing.studentEmail || 
+        existing.residentId || 
+        (existing.reportedBy && existing.reportedBy.toLowerCase().includes('resident'))
+      );
+      const wasResidentConfirmed = Boolean(existing.studentConfirmed || existing.studentAcceptedResolved);
+
+      if (isResidentReport && !wasResidentConfirmed) {
+        return res.status(400).json({
+          error: "Sign-off Locked: The student resident who filed this maintenance report must inspect the repair and tick/confirm it as complete from their resident room page before the manager can finalize and archive signoff."
+        });
+      }
+
       const logs = existing.historyLogs || [];
-      const wasResidentConfirmed = existing.studentConfirmed || existing.studentAcceptedResolved;
       logs.push({
         action: 'Work Order Closed & Archived by Manager (Success)',
         actor: req.user.name || 'Hostel Manager',
@@ -10471,7 +11251,15 @@ async function startServer() {
 
       const studentObj = linkedStudent ? (linkedStudent.user ? { ...linkedStudent.user } : { ...linkedStudent }) : null;
       const baseUser = storeUser || mockUserObj || currentUser;
-      const fullUser = { ...baseUser, ...(studentObj || {}) };
+      const fullUser = { 
+        ...(studentObj || {}), 
+        ...baseUser,
+        avatar: currentUser.avatar || baseUser.avatar || studentObj?.avatar || 'preset:pine-classic',
+        photo: currentUser.photo || baseUser.photo || studentObj?.photo || '',
+        photoUrl: currentUser.photoUrl || baseUser.photoUrl || studentObj?.photoUrl || '',
+        avatarUrl: currentUser.avatarUrl || baseUser.avatarUrl || studentObj?.avatarUrl || '',
+        profilePicture: currentUser.profilePicture || baseUser.profilePicture || studentObj?.profilePicture || ''
+      };
 
       const keyToSearch = fullUser.roomKey || studentObj?.roomKey || currentUser.roomKey;
 
@@ -10510,11 +11298,11 @@ async function startServer() {
         department: studentObj?.department || keyRecord?.assignedDepartment || fullUser.department || currentUser.department || '',
         residentType: studentObj?.residentType || keyRecord?.assignedResidentType || fullUser.residentType || currentUser.residentType || 'student',
         role: currentUser.role === 'user' ? 'user' : (studentObj?.role || 'student'),
-        avatar: fullUser.avatar || fullUser.photo || fullUser.photoUrl || fullUser.avatarUrl || studentObj?.avatar || currentUser.avatar || currentUser.photo || 'preset:pine-classic',
-        photo: fullUser.photo || fullUser.avatar || fullUser.photoUrl || fullUser.avatarUrl || studentObj?.photo || currentUser.photo || currentUser.avatar || '',
-        photoUrl: fullUser.photoUrl || fullUser.avatar || fullUser.photo || studentObj?.photoUrl || currentUser.photoUrl || '',
-        avatarUrl: fullUser.avatarUrl || fullUser.avatar || fullUser.photo || studentObj?.avatarUrl || currentUser.avatarUrl || '',
-        profilePicture: fullUser.profilePicture || fullUser.avatar || fullUser.photo || studentObj?.profilePicture || currentUser.profilePicture || ''
+        avatar: currentUser.avatar || currentUser.photo || fullUser.avatar || fullUser.photo || fullUser.photoUrl || fullUser.avatarUrl || studentObj?.avatar || 'preset:pine-classic',
+        photo: currentUser.photo || currentUser.avatar || fullUser.photo || fullUser.avatar || fullUser.photoUrl || fullUser.avatarUrl || studentObj?.photo || '',
+        photoUrl: currentUser.photoUrl || currentUser.avatar || fullUser.photoUrl || fullUser.avatar || fullUser.photo || studentObj?.photoUrl || '',
+        avatarUrl: currentUser.avatarUrl || currentUser.avatar || fullUser.avatarUrl || fullUser.avatar || fullUser.photo || studentObj?.avatarUrl || '',
+        profilePicture: currentUser.profilePicture || currentUser.avatar || fullUser.profilePicture || fullUser.avatar || fullUser.photo || studentObj?.profilePicture || ''
       };
 
       // Check if student has an active approved Digital Market Store
@@ -11362,16 +12150,21 @@ async function startServer() {
   // ==========================================
 
   // Get direct messages for student or manager
-  app.get("/api/student-messages", requireAuth(["student", "manager", "admin"]), async (req: any, res) => {
+  app.get("/api/student-messages", requireAuth(["student", "manager", "admin", "resident", "user", "staff"]), async (req: any, res) => {
     try {
-      const userRole = req.user.role;
+      const userRole = (req.user.role || '').toLowerCase();
       const userEmail = (req.user.email || '').toLowerCase().trim();
       const userId = (req.user.id || '').toString().trim();
       const userName = (req.user.name || '').toLowerCase().trim();
       const studentIdQuery = req.query.studentId as string;
       const hostelIdQuery = req.query.hostelId as string;
 
-      if (userRole === 'student') {
+      // Staff accounts use encrypted staff-manager chat rooms (/api/staff-chat/*), never student direct messages
+      if (userRole === 'staff') {
+        return res.json([]);
+      }
+
+      if (userRole === 'student' || userRole === 'resident' || userRole === 'user') {
         const myStudentId = (req.user.studentId || req.user.id || '').trim();
         const myEmail = userEmail;
         const myRoomKey = (req.user.roomKey || '').trim();
@@ -11386,8 +12179,22 @@ async function startServer() {
           exactStudentMatchOnly: true
         });
 
-        // Ensure resident student messages are only from their active or assigned hostel
+        // Ensure resident student messages are only where this resident is the participant and from their active or assigned hostel
         const finalMsgs = msgs.filter((m: any) => {
+          const mStudentId = (m.studentId || '').toLowerCase().trim();
+          const mStudentEmail = (m.studentEmail || '').toLowerCase().trim();
+          const mUserId = (m.userId || '').toLowerCase().trim();
+          const mRoomKey = (m.roomKey || '').toUpperCase().trim();
+
+          const isMine = (myStudentId && mStudentId && mStudentId === myStudentId.toLowerCase()) ||
+                         (myEmail && mStudentEmail && mStudentEmail === myEmail) ||
+                         (userId && mUserId && mUserId === userId.toLowerCase()) ||
+                         (myRoomKey && mRoomKey && mRoomKey === myRoomKey.toUpperCase());
+
+          if (!isMine) {
+            return false;
+          }
+
           if (myHostelId && m.hostelId && m.hostelId !== myHostelId) {
             return false;
           }
@@ -11448,8 +12255,12 @@ async function startServer() {
         return res.json(filteredMsgs);
       }
 
-      const allMsgs = await dbGetStudentMessages();
-      res.json(allMsgs);
+      if (userRole === 'admin') {
+        const allMsgs = await dbGetStudentMessages();
+        return res.json(allMsgs);
+      }
+
+      res.json([]);
     } catch (err: any) {
       console.error("Error fetching student messages:", err);
       res.status(500).json({ error: "Failed to load messages" });
@@ -11645,6 +12456,30 @@ async function startServer() {
       store.users.push(userRecord);
     }
 
+    // Ensure a private encrypted staff-manager chat room exists for direct communication
+    const staffRoomId = `room-${saved.id}-${userId}`;
+    if (!staffChatRooms) staffChatRooms = [];
+    const existingRoom = staffChatRooms.find((r: any) => 
+      (r.staffId === saved.id || r.staffUserId === saved.userId || (r.staffEmail && r.staffEmail.toLowerCase() === email)) &&
+      (r.managerId === userId || (r.managerEmail && r.managerEmail.toLowerCase() === userEmail))
+    );
+    if (!existingRoom) {
+      staffChatRooms.push({
+        id: staffRoomId,
+        staffId: saved.id,
+        staffUserId: saved.userId,
+        staffName: saved.name,
+        staffRole: saved.role,
+        staffEmail: email,
+        managerId: userId,
+        managerName: req.user.name || 'Property Manager',
+        managerEmail: userEmail,
+        hostelId: saved.hostelId,
+        hostelName: saved.hostelName,
+        createdAt: new Date().toISOString()
+      });
+    }
+
     syncStore();
     res.status(201).json(saved);
   });
@@ -11658,8 +12493,8 @@ async function startServer() {
 
       console.log(`[PROFILE UPDATE DEBUG] Updating profile for userId="${userId}" | req.user:`, JSON.stringify(req.user));
 
-      // 1. Find user in MOCK_USERS
-      const userIndex = MOCK_USERS.findIndex(u => 
+      // 1. Find user in MOCK_USERS or store.users
+      let userIndex = MOCK_USERS.findIndex(u => 
         (u.user && u.user.id === userId) || 
         u.username === req.user.username || 
         (u.email && req.user.email && u.email.toLowerCase() === req.user.email.toLowerCase())
@@ -11668,10 +12503,30 @@ async function startServer() {
       console.log(`[PROFILE UPDATE DEBUG] userIndex in MOCK_USERS: ${userIndex}`);
 
       if (userIndex === -1) {
-        return res.status(404).json({ error: "User account not found" });
+        const store = getStoreInstance();
+        const foundInStore = (store.users || []).find((u: any) =>
+          (u.user && u.user.id === userId) ||
+          u.username === req.user.username ||
+          (u.email && req.user.email && u.email.toLowerCase() === req.user.email.toLowerCase())
+        );
+        if (foundInStore) {
+          MOCK_USERS.push(foundInStore.user ? foundInStore : { user: foundInStore, email: req.user.email, id: userId, username: req.user.username });
+          userIndex = MOCK_USERS.length - 1;
+        } else {
+          MOCK_USERS.push({
+            id: userId,
+            email: req.user.email,
+            username: req.user.username || 'staff',
+            user: { ...req.user }
+          });
+          userIndex = MOCK_USERS.length - 1;
+        }
       }
 
       const existingUser = MOCK_USERS[userIndex];
+      if (!existingUser.user) {
+        existingUser.user = { ...existingUser };
+      }
       const oldEmail = (existingUser.email || existingUser.user?.email || '').toLowerCase().trim();
 
       if (username && username !== existingUser.username) {
@@ -11697,9 +12552,50 @@ async function startServer() {
       if (name) existingUser.user.name = name.trim();
       if (phone) (existingUser.user as any).phone = phone.trim();
       if (pic) {
+        existingUser.avatar = pic;
+        existingUser.photo = pic;
+        existingUser.photoUrl = pic;
+        existingUser.avatarUrl = pic;
+        existingUser.profilePicture = pic;
         (existingUser.user as any).avatar = pic;
         (existingUser.user as any).photo = pic;
+        (existingUser.user as any).photoUrl = pic;
+        (existingUser.user as any).avatarUrl = pic;
         (existingUser.user as any).profilePicture = pic;
+      }
+
+      // Also sync store.users
+      const store = getStoreInstance();
+      if (store.users) {
+        store.users.forEach((u: any) => {
+          if (
+            (userId && (u.id === userId || u.user?.id === userId)) ||
+            (oldEmail && (u.email?.toLowerCase().trim() === oldEmail || u.user?.email?.toLowerCase().trim() === oldEmail))
+          ) {
+            if (name) {
+              u.name = name.trim();
+              if (u.user) u.user.name = name.trim();
+            }
+            if (phone) {
+              u.phone = phone.trim();
+              if (u.user) u.user.phone = phone.trim();
+            }
+            if (pic) {
+              u.avatar = pic;
+              u.photo = pic;
+              u.photoUrl = pic;
+              u.avatarUrl = pic;
+              u.profilePicture = pic;
+              if (u.user) {
+                u.user.avatar = pic;
+                u.user.photo = pic;
+                u.user.photoUrl = pic;
+                u.user.avatarUrl = pic;
+                u.user.profilePicture = pic;
+              }
+            }
+          }
+        });
       }
 
       // 2. Directly update corresponding staff record in manager's staff directory
@@ -11728,6 +12624,7 @@ async function startServer() {
         }
       }
 
+      persistStore();
       syncStore();
 
       return res.json({
@@ -15091,8 +15988,9 @@ ${400 + streamLength}
   // 1. GET staff chat rooms (only accessible to manager or the staff themselves, strictly forbidden to admin and anyone else)
   app.get("/api/staff-chat/rooms", requireAuth(), async (req: any, res) => {
     try {
-      const userId = req.user.id;
-      const userRole = req.user.role;
+      const userId = (req.user.id || '').toString().trim();
+      const userEmail = (req.user.email || '').toLowerCase().trim();
+      const userRole = (req.user.role || '').toLowerCase();
 
       // Strictly deny access to admins to fulfill "noone can see it beside the users not even the admins"
       if (userRole === 'admin') {
@@ -15101,9 +15999,16 @@ ${400 + streamLength}
 
       let rooms = [];
       if (userRole === 'manager') {
-        rooms = staffChatRooms.filter((r: any) => r.managerId === userId);
+        rooms = (staffChatRooms || []).filter((r: any) => 
+          r.managerId === userId || 
+          (userEmail && r.managerEmail && r.managerEmail.toLowerCase().trim() === userEmail)
+        );
       } else if (userRole === 'staff') {
-        rooms = staffChatRooms.filter((r: any) => r.staffId === userId);
+        rooms = (staffChatRooms || []).filter((r: any) => 
+          r.staffId === userId || 
+          r.staffUserId === userId || 
+          (userEmail && r.staffEmail && r.staffEmail.toLowerCase().trim() === userEmail)
+        );
       }
 
       res.json(rooms);
@@ -15117,8 +16022,9 @@ ${400 + streamLength}
   app.get("/api/staff-chat/rooms/:roomId/messages", requireAuth(), async (req: any, res) => {
     try {
       const { roomId } = req.params;
-      const userId = req.user.id;
-      const userRole = req.user.role;
+      const userId = (req.user.id || '').toString().trim();
+      const userEmail = (req.user.email || '').toLowerCase().trim();
+      const userRole = (req.user.role || '').toLowerCase();
 
       console.log(`[CHAT DEBUG] Loading messages for roomId="${roomId}" | Requester: userId="${userId}", role="${userRole}"`);
 
@@ -15128,7 +16034,7 @@ ${400 + streamLength}
         return res.status(403).json({ error: "Access Denied: Even admins cannot view encrypted conversations." });
       }
 
-      const room = staffChatRooms.find((r: any) => r.id === roomId);
+      const room = (staffChatRooms || []).find((r: any) => r.id === roomId);
       if (!room) {
         console.log(`[CHAT DEBUG] 404 Room not found: "${roomId}"`);
         return res.status(404).json({ error: "Chat room not found" });
@@ -15137,8 +16043,11 @@ ${400 + streamLength}
       console.log(`[CHAT DEBUG] Room details: staffId="${room.staffId}", managerId="${room.managerId}"`);
 
       // Check if user is either the staff or the manager in this room
-      if (room.staffId !== userId && room.managerId !== userId) {
-        console.log(`[CHAT DEBUG] 403 Forbidden! Requester userId="${userId}" is neither staffId="${room.staffId}" nor managerId="${room.managerId}"`);
+      const isStaffInRoom = room.staffId === userId || room.staffUserId === userId || (userEmail && room.staffEmail && room.staffEmail.toLowerCase().trim() === userEmail);
+      const isManagerInRoom = room.managerId === userId || (userEmail && room.managerEmail && room.managerEmail.toLowerCase().trim() === userEmail);
+
+      if (!isStaffInRoom && !isManagerInRoom) {
+        console.log(`[CHAT DEBUG] 403 Forbidden! Requester userId="${userId}" is not authorized for this room`);
         return res.status(403).json({ error: "Access Denied: You are not authorized to view this encrypted conversation." });
       }
 

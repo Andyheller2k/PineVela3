@@ -811,6 +811,13 @@ export interface DigitalMarketStore {
   activatedAt?: string;
 }
 
+export interface ServicePriceCategory {
+  id: string;
+  name: string; // e.g. "Indomie Assorted"
+  price: number; // in Cedis, e.g. 50
+  description?: string;
+}
+
 export interface DigitalMarketProduct {
   id: string;
   storeId: string;
@@ -822,12 +829,26 @@ export interface DigitalMarketProduct {
   sellerPhone?: string;
   title: string;
   description: string;
-  price: number; // GHS
+  price: number; // GHS (Cedis)
   currency: string;
   category: string;
   stockQuantity: number;
   imageUrl: string;
   isAvailable: boolean;
+  isService?: boolean;
+  serviceCategory?: string;
+  priceCategories?: ServicePriceCategory[];
+  callLine?: string;
+  location?: string;
+  meetingLocation?: string;
+  workingDays?: string;
+  openingTime?: string;
+  closingTime?: string;
+  isOpen247?: boolean;
+  lat?: number;
+  lng?: number;
+  rating?: number;
+  reviewCount?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -844,6 +865,7 @@ export interface DigitalMarketOrder {
   productId: string;
   productTitle: string;
   productPrice: number;
+  priceCategory?: string;
   productImage: string;
   quantity: number;
   totalAmount: number;

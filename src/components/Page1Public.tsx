@@ -482,38 +482,24 @@ export default function Page1Public({
       const percent = docHeight > 0 ? (scrollTop / docHeight) * 100 : 0;
       setScrollPercent(percent);
 
-      const sections = [
-        'welcome-section',
-        'hostels-section',
-        'testimonials-section',
-        'faq-about-section',
-        'footer-section'
-      ];
+      const sections = ['welcome-section', 'hostels-section', 'testimonials-section', 'faq-about-section', 'footer-section'];
       let current = 'welcome-section';
       for (const sectionId of sections) {
         const el = document.getElementById(sectionId);
-        if (el) {
-          const rect = el.getBoundingClientRect();
-          // If top of section is within upper half of the screen
-          if (rect.top <= window.innerHeight * 0.45) {
-            current = sectionId;
-          }
-        }
+        if (el && el.getBoundingClientRect().top <= window.innerHeight * 0.45) current = sectionId;
       }
-
-      // If we are close to the bottom, force the active section to be footer-section
-      const isAtBottom = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 120;
-      if (isAtBottom) {
-        current = 'footer-section';
-      }
-
+      if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 120) current = 'footer-section';
       setActiveSection(current);
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
-    // Run once on mount
     setTimeout(handleScroll, 100);
     return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  useEffect(() => {
+    document.documentElement.classList.add('landing-page-scrollbar-hidden');
+    return () => document.documentElement.classList.remove('landing-page-scrollbar-hidden');
   }, []);
 
   // Filter logic
@@ -546,7 +532,6 @@ export default function Page1Public({
         </div>
 
         <div className="relative w-[3px] h-36 bg-slate-100 rounded-full flex flex-col justify-start overflow-hidden shrink-0">
-          {/* Dynamic Blue Filled Line */}
           <motion.div 
             className="absolute top-0 left-0 w-full bg-blue-900 rounded-full origin-top"
             style={{ height: `${scrollPercent}%` }}
@@ -554,7 +539,6 @@ export default function Page1Public({
           />
         </div>
 
-        {/* Section Dots */}
         <div className="flex flex-col gap-3.5 w-full">
           {[
             { id: 'welcome-section', label: 'Welcome to PineVela' },
@@ -568,13 +552,12 @@ export default function Page1Public({
               <button
                 key={sec.id}
                 onClick={(e) => {
-                  e.stopPropagation(); // Prevent toggling sidebar width on clicking dot
+                  e.stopPropagation();
                   document.getElementById(sec.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 }}
                 className="group relative flex items-center w-full cursor-pointer focus:outline-none py-1 rounded-lg hover:bg-slate-50 transition-colors"
                 title={sec.label}
               >
-                {/* Outer pulsing indicator ring */}
                 <div className={`w-3.5 h-3.5 rounded-full flex items-center justify-center border-2 transition-all duration-300 shrink-0 ${
                   isActive 
                     ? 'border-blue-900 bg-white scale-110 shadow-sm shadow-blue-950/20' 
@@ -583,7 +566,6 @@ export default function Page1Public({
                   {isActive && <div className="w-1.5 h-1.5 rounded-full bg-blue-900" />}
                 </div>
 
-                {/* Animated Label presentation */}
                 <AnimatePresence initial={false}>
                   {isSidebarExpanded ? (
                     <motion.span
@@ -598,7 +580,6 @@ export default function Page1Public({
                       {sec.label}
                     </motion.span>
                   ) : (
-                    /* Floating tooltip label (only when collapsed) */
                     <span className="absolute right-10 bg-slate-900 text-white text-[10px] font-bold py-1.5 px-3 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap shadow-md z-50">
                       {sec.label}
                     </span>
@@ -609,7 +590,6 @@ export default function Page1Public({
           })}
         </div>
 
-        {/* Click to expand helper */}
         {!isSidebarExpanded && (
           <span className="text-[8px] font-black text-slate-400 mt-1 uppercase tracking-tighter">Tap</span>
         )}
@@ -620,7 +600,10 @@ export default function Page1Public({
       <div className="absolute top-1/2 left-0 w-80 h-80 bg-blue-100 rounded-full blur-3xl opacity-30 -z-10" />
 
       {/* Fixed Header Bar at top with frost/glassmorphism */}
-      <header id="public-header" className="fixed top-0 left-0 right-0 z-40 px-4 sm:px-6 md:px-12 py-3 bg-white/85 backdrop-blur-xl border-b border-blue-200/50 shadow-md transition-all">
+      <header
+        id="public-header"
+        className="fixed top-0 left-0 right-0 z-40 px-4 sm:px-6 md:px-12 py-3 bg-white/10 backdrop-blur-xl border-b border-white/30 shadow-none transition-all duration-300"
+      >
         <div className="max-w-7xl mx-auto w-full flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
           <div className="cursor-pointer shrink-0" onClick={() => {
             document.getElementById('welcome-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -650,7 +633,7 @@ export default function Page1Public({
                   document.getElementById('hostels-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 }
               }}
-              className="w-full pl-10 pr-20 py-2 border border-slate-200/80 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-900 bg-white/95 text-slate-800 text-xs sm:text-sm font-semibold transition-all shadow-inner"
+              className="w-full pl-10 pr-20 py-2 border border-white/60 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-900 bg-white/85 backdrop-blur-md text-slate-800 text-xs sm:text-sm font-semibold transition-all shadow-inner"
             />
             {searchQuery && (
               <button
@@ -685,12 +668,20 @@ export default function Page1Public({
                 </button>
               </div>
             ) : (
-              <button
-                onClick={() => onNavigate('student-login')}
-                className="px-5 py-2 bg-blue-900 hover:bg-blue-800 text-white font-extrabold rounded-xl text-xs shadow-md transition-all cursor-pointer hover:scale-102 active:scale-98"
-              >
-                Login
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => navigate('/login?mode=register', { state: { mode: 'register' } })}
+                  className="px-4 py-2 bg-white/90 hover:bg-white text-blue-800 border border-white font-extrabold rounded-xl text-xs shadow-sm backdrop-blur-md transition-all cursor-pointer hover:scale-102 active:scale-98"
+                >
+                  Sign Up
+                </button>
+                <button
+                  onClick={() => onNavigate('student-login')}
+                  className="px-5 py-2 bg-blue-900 hover:bg-blue-800 text-white font-extrabold rounded-xl text-xs shadow-md transition-all cursor-pointer hover:scale-102 active:scale-98"
+                >
+                  Login
+                </button>
+              </div>
             )}
           </div>
         </div>
@@ -763,9 +754,9 @@ export default function Page1Public({
               <button
                 id="btn-login"
                 onClick={() => onNavigate('student-login')}
-                className="px-8 py-3.5 bg-blue-900 hover:bg-blue-800 text-white font-extrabold rounded-xl shadow-lg shadow-blue-900/20 transition-all transform hover:-translate-y-1 hover:shadow-xl hover:shadow-blue-900/35 flex items-center gap-2 text-sm cursor-pointer"
+                className="px-10 py-3.5 bg-blue-900 hover:bg-blue-800 text-white font-extrabold rounded-xl shadow-lg shadow-blue-900/20 transition-all transform hover:-translate-y-1 hover:shadow-xl hover:shadow-blue-900/35 flex items-center gap-2 text-sm cursor-pointer"
               >
-                <span>Login to Portal</span>
+                <span>Login</span>
               </button>
             </motion.div>
 
@@ -1263,8 +1254,7 @@ export default function Page1Public({
                   PineVela is designed with security and accountability at its foundation. Hostel approvals, manager verification, accommodation allocations, and financial activity are handled through controlled workflows rather than relying solely on user input.
                 </p>
                 <p className="text-xs md:text-sm text-blue-900 font-extrabold leading-relaxed">
-                  Our goal is to make student living more peaceful — allowing residents to log maintenance issues directly rather than going up and down to report to managers.
-                </p>
+                  Our goal is to create a system where student marketing meets hostel management.</p>
               </div>
 
               {/* Vision Card */}

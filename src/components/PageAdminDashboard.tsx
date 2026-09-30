@@ -15,7 +15,7 @@ import {
   Building2, Users, DollarSign, CheckCircle2, XCircle, Clock, Plus, 
   ShieldCheck, LogOut as LogOutIcon, Search, Filter, Home, Hotel, Coffee, UserPlus, 
   AlertCircle, Check, Trash2, Edit3, Eye, Sparkles, ArrowRight,
-  Bell, MessageSquare, Send, X, FileText, File, Download, Lock, FileCheck,
+  Bell, MessageSquare, Send, X, FileText, File, Download, Lock, Unlock, FileCheck,
   ChevronRight, ShieldAlert, RefreshCw, Ban, ExternalLink, CreditCard,
   Image as ImageIcon, MapPin, Camera,
   ShoppingBag, Store, Package
@@ -132,6 +132,11 @@ export default function PageAdminDashboard() {
   const [rejectManagerModal, setRejectManagerModal] = useState<{ id: string; name: string; email: string } | null>(null);
   const [rejectManagerReason, setRejectManagerReason] = useState<string>('');
   const [rejectingManagerLoading, setRejectingManagerLoading] = useState<boolean>(false);
+
+  // Manager Block & Restriction Modal States
+  const [blockManagerModal, setBlockManagerModal] = useState<{ id: string; name: string; email: string } | null>(null);
+  const [blockManagerReason, setBlockManagerReason] = useState<string>('');
+  const [blockingManagerLoading, setBlockingManagerLoading] = useState<boolean>(false);
 
   // Board Requests & Notifications State
   const [boardRequests, setBoardRequests] = useState<any[]>([]);
@@ -653,13 +658,99 @@ export default function PageAdminDashboard() {
     }
   };
 
-  const handleBlockManager = async (reqId: string, managerEmail: string) => {
+  const handleBlockManager = (reqId: string, managerEmail: string, managerName?: string) => {
+    const target = managerRequests.find(r => r.id === reqId || r.managerId === reqId);
+    setBlockManagerModal({
+      id: reqId,
+      name: managerName || target?.managerName || 'Hostel Manager',
+      email: managerEmail || target?.managerEmail || ''
+    });
+    setBlockManagerReason('');
+  };
+
+  const handleConfirmBlockManager = async () => {
+    if (!blockManagerModal) return;
+    if (!blockManagerReason.trim() || blockManagerReason.trim().length < 5) {
+      triggerToast('Please provide a detailed explanation (minimum 5 characters) for why manager access is restricted.');
+      return;
+    }
+
+    setBlockingManagerLoading(true);
     try {
-      setManagerRequests(prev => prev.map(r => r.id === reqId ? { ...r, status: 'blocked' } : r));
-      triggerToast(`Manager access revoked/blocked for ${managerEmail}.`);
-    } catch (err) {
+      const payload = {
+        reason: blockManagerReason.trim(),
+        blockReason: blockManagerReason.trim(),
+        adminNotes: blockManagerReason.trim()
+      };
+
+      await apiFetch(`/api/manager-verifications/${blockManagerModal.id}/block`, {
+        method: 'PUT',
+        body: JSON.stringify(payload)
+      }).catch(async () => {
+        return await apiFetch(`/api/manager-requests/${blockManagerModal.id}/block`, {
+          method: 'PUT',
+          body: JSON.stringify(payload)
+        });
+      });
+
+      setManagerRequests(prev => prev.map(r => (r.id === blockManagerModal.id || r.managerId === blockManagerModal.id) ? {
+        ...r,
+        status: 'blocked',
+        isBlocked: true,
+        isApproved: false,
+        blockReason: blockManagerReason.trim(),
+        adminNotes: blockManagerReason.trim()
+      } : r));
+
+      // Update local residences list to remove blocked hostel from active live view
+      setResidences(prev => prev.map(h => {
+        const match = (h.managerEmail && blockManagerModal.email && h.managerEmail.toLowerCase() === blockManagerModal.email.toLowerCase()) ||
+                      (h.managerId && (h.managerId === blockManagerModal.id || h.managerId === blockManagerModal.name));
+        return match ? { ...h, status: 'Blocked', approvalStatus: 'Blocked', isApproved: false, isLive: false, isBlocked: true } : h;
+      }));
+
+      triggerToast(`Manager access blocked for ${blockManagerModal.email}. Detailed restriction message delivered to manager.`);
+      setBlockManagerModal(null);
+      setBlockManagerReason('');
+      refreshNotifications();
+    } catch (err: any) {
       console.error(err);
-      triggerToast('Failed to block manager.');
+      triggerToast(err.message || 'Failed to block manager.');
+    } finally {
+      setBlockingManagerLoading(false);
+    }
+  };
+
+  const handleUnblockManager = async (reqId: string, managerEmail: string) => {
+    try {
+      await apiFetch(`/api/manager-verifications/${reqId}/unblock`, {
+        method: 'PUT'
+      }).catch(async () => {
+        return await apiFetch(`/api/manager-requests/${reqId}/unblock`, {
+          method: 'PUT'
+        });
+      });
+
+      setManagerRequests(prev => prev.map(r => (r.id === reqId || r.managerId === reqId) ? {
+        ...r,
+        status: 'approved',
+        isBlocked: false,
+        isApproved: true,
+        blockReason: null
+      } : r));
+
+      // Restore residences list
+      setResidences(prev => prev.map(h => {
+        const match = (h.managerEmail && managerEmail && h.managerEmail.toLowerCase() === managerEmail.toLowerCase()) ||
+                      (h.managerId && h.managerId === reqId);
+        return match ? { ...h, status: 'Open', approvalStatus: 'Approved', isApproved: true, isLive: true, isBlocked: false } : h;
+      }));
+
+      triggerToast(`Manager ${managerEmail} unblocked successfully! Access and live listings restored.`);
+      refreshNotifications();
+    } catch (err: any) {
+      console.error(err);
+      triggerToast(err.message || 'Failed to unblock manager.');
     }
   };
 
@@ -966,7 +1057,7 @@ export default function PageAdminDashboard() {
       </header>
 
       {/* MOBILE BOTTOM NAV (lg:hidden) */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-xl border-t border-slate-200 shadow-[0_-10px_40px_rgba(0,0,0,0.08)]">
+      <nav className="mobile-bottom-nav lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-xl border-t border-slate-200 shadow-[0_-10px_40px_rgba(0,0,0,0.08)]">
         <div className="flex items-center gap-1 overflow-x-auto px-2 py-2 pb-safe snap-x hide-scrollbar">
           {[
             { id: 'overview', label: 'Overview', icon: ShieldCheck },
@@ -1818,8 +1909,11 @@ export default function PageAdminDashboard() {
                     .map((req, idx) => {
                       const inspection = verificationInspections.find(i => i.managerVerificationId === req.id || i.managerEmail === req.managerEmail || (i.id && (req.inspectionId === i.id || req.id === i.id)));
                       const hasSubmittedReport = Boolean(inspection?.report || req.inspectionReport || req.verificationReport || inspection?.status === 'report_submitted');
-                      const isApproved = req.status === 'approved' || req.inspectionStatus === 'approved' || inspection?.status === 'approved';
-                      const currentStatus = isApproved 
+                      const isBlocked = req.status === 'blocked' || req.isBlocked === true;
+                      const isApproved = !isBlocked && (req.status === 'approved' || req.inspectionStatus === 'approved' || inspection?.status === 'approved');
+                      const currentStatus = isBlocked
+                        ? 'blocked'
+                        : isApproved 
                         ? 'approved' 
                         : (req.inspectionStatus === 'report_submitted' || hasSubmittedReport)
                         ? 'report_submitted'
@@ -1832,7 +1926,9 @@ export default function PageAdminDashboard() {
                               <div className="flex items-center gap-3 flex-wrap">
                                 <h4 className="text-base font-black text-slate-900 text-outline-sm">{req.managerName}</h4>
                                 <span className={`px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider border ${
-                                  currentStatus === 'approved' || req.status === 'approved'
+                                  currentStatus === 'blocked' || req.status === 'blocked'
+                                    ? 'bg-rose-100 text-rose-900 border-rose-300 font-extrabold flex items-center gap-1'
+                                    : currentStatus === 'approved' || req.status === 'approved'
                                     ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
                                     : currentStatus === 'report_submitted'
                                     ? 'bg-blue-100 text-blue-800 border-blue-300'
@@ -1842,7 +1938,9 @@ export default function PageAdminDashboard() {
                                     ? 'bg-rose-100 text-rose-800 border-rose-300'
                                     : 'bg-amber-100 text-amber-800 border-amber-300'
                                 }`}>
-                                  {currentStatus === 'approved' || req.status === 'approved'
+                                  {currentStatus === 'blocked' || req.status === 'blocked'
+                                    ? '🚫 Blocked / Restricted'
+                                    : currentStatus === 'approved' || req.status === 'approved'
                                     ? '✓ Verified & Approved'
                                     : currentStatus === 'report_submitted'
                                     ? '📋 On-Site Report Ready'
@@ -1888,7 +1986,9 @@ export default function PageAdminDashboard() {
                           <div className="p-4 bg-sky-100/30 rounded-2xl border border-sky-200/50 flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
                             <div className="flex items-center gap-3">
                               <div className={`p-2.5 rounded-xl ${
-                                currentStatus === 'report_submitted'
+                                currentStatus === 'blocked' || req.status === 'blocked'
+                                  ? 'bg-rose-600 text-white'
+                                  : currentStatus === 'report_submitted'
                                   ? 'bg-blue-600 text-white'
                                   : currentStatus === 'dispatched'
                                   ? 'bg-purple-600 text-white'
@@ -1896,11 +1996,17 @@ export default function PageAdminDashboard() {
                                   ? 'bg-emerald-600 text-white'
                                   : 'bg-slate-200 text-slate-700'
                               }`}>
-                                <ShieldCheck className="w-5 h-5" />
+                                {currentStatus === 'blocked' || req.status === 'blocked' ? (
+                                  <Lock className="w-5 h-5" />
+                                ) : (
+                                  <ShieldCheck className="w-5 h-5" />
+                                )}
                               </div>
                               <div>
                                 <span className="font-black text-slate-900 block">
-                                  {currentStatus === 'report_submitted'
+                                  {currentStatus === 'blocked' || req.status === 'blocked'
+                                    ? 'Manager Access Restricted & Properties Unlisted'
+                                    : currentStatus === 'report_submitted'
                                     ? 'Field Verification Report Submitted & Ready for Admin Review'
                                     : currentStatus === 'dispatched'
                                     ? `PineVela Field Officer Dispatched: ${req.assignedOfficerName || inspection?.assignedOfficerName || 'Officer En Route'}`
@@ -1909,7 +2015,9 @@ export default function PageAdminDashboard() {
                                     : 'Awaiting PineVela On-Site Verification Dispatch'}
                                 </span>
                                 <span className="text-[11px] text-slate-600">
-                                  {currentStatus === 'report_submitted'
+                                  {currentStatus === 'blocked' || req.status === 'blocked'
+                                    ? 'Login access to the Manager Console is locked and all registered hostel listings are hidden from live student searches.'
+                                    : currentStatus === 'report_submitted'
                                     ? 'Live GPS coordinates, photographs, and property legitimacy checklist provided.'
                                     : currentStatus === 'dispatched'
                                     ? 'Officer is conducting physical on-site audit of the hostel property.'
@@ -1922,8 +2030,20 @@ export default function PageAdminDashboard() {
 
                             {/* Action Buttons */}
                             <div className="flex items-center gap-2 shrink-0 flex-wrap">
+                              {/* Unblock Button for Blocked Managers */}
+                              {(req.status === 'blocked' || req.isBlocked) && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleUnblockManager(req.id, req.managerEmail)}
+                                  className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs rounded-xl shadow-md cursor-pointer transition-all flex items-center gap-1.5"
+                                >
+                                  <Unlock className="w-3.5 h-3.5" />
+                                  <span>Unblock Access & Restore Listings</span>
+                                </button>
+                              )}
+
                               {/* Dispatch Button */}
-                              {(currentStatus === 'pending_dispatch' || !req.inspectionStatus) && req.status !== 'approved' && (
+                              {(currentStatus === 'pending_dispatch' || !req.inspectionStatus) && req.status !== 'approved' && req.status !== 'blocked' && !req.isBlocked && (
                                 <button
                                   type="button"
                                   onClick={() => {
@@ -1940,7 +2060,7 @@ export default function PageAdminDashboard() {
                               )}
 
                               {/* Review Report Button */}
-                              {currentStatus === 'report_submitted' && (
+                              {currentStatus === 'report_submitted' && req.status !== 'blocked' && !req.isBlocked && (
                                 <button
                                   type="button"
                                   onClick={() => {
@@ -1973,7 +2093,7 @@ export default function PageAdminDashboard() {
                               )}
 
                               {/* Direct Approve/Reject buttons */}
-                              {req.status !== 'approved' && req.status !== 'rejected' && (
+                              {req.status !== 'approved' && req.status !== 'rejected' && req.status !== 'blocked' && !req.isBlocked && (
                                 <>
                                   <button
                                     type="button"
@@ -1994,20 +2114,34 @@ export default function PageAdminDashboard() {
                                 </>
                               )}
 
-                              {req.status === 'approved' && (
+                              {/* Block Access button for approved managers */}
+                              {req.status === 'approved' && !req.isBlocked && (
                                 <button
                                   type="button"
-                                  onClick={() => handleBlockManager(req.id, req.managerEmail)}
-                                  className="px-3.5 py-2 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 font-semibold text-xs rounded-xl cursor-pointer transition-all"
+                                  onClick={() => handleBlockManager(req.id, req.managerEmail, req.managerName)}
+                                  className="px-3.5 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-300 font-bold text-xs rounded-xl cursor-pointer transition-all flex items-center gap-1.5"
                                 >
+                                  <Lock className="w-3.5 h-3.5 text-rose-600" />
                                   <span>Block Access</span>
                                 </button>
                               )}
                             </div>
                           </div>
 
+                          {/* Notes if blocked or restricted */}
+                          {(req.blockReason || (req.status === 'blocked' && req.adminNotes)) && (
+                            <div className="p-3.5 bg-rose-50 rounded-2xl border border-rose-200 text-rose-900 text-xs space-y-1">
+                              <strong className="block text-rose-800 font-bold flex items-center gap-1.5">
+                                <ShieldAlert className="w-4 h-4 text-rose-600" />
+                                Active Account Restriction Notice Sent to Manager:
+                              </strong>
+                              <p className="font-semibold text-rose-950">"{req.blockReason || req.adminNotes}"</p>
+                              <p className="text-[10px] text-rose-600">This notice is delivered to their primary user account. Manager console access and live hostel search listings are frozen.</p>
+                            </div>
+                          )}
+
                           {/* Notes if rejected */}
-                          {req.rejectionReason && (
+                          {req.rejectionReason && req.status !== 'blocked' && (
                             <div className="p-3 bg-rose-50 rounded-xl border border-rose-200 text-rose-900 text-xs">
                               <strong>Rejection Feedback Sent:</strong> "{req.rejectionReason}"
                             </div>
@@ -5356,6 +5490,76 @@ export default function PageAdminDashboard() {
               >
                 <X className="w-4 h-4" />
                 <span>{rejectingManagerLoading ? 'Processing...' : 'Confirm Rejection & Send Feedback'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: BLOCK / RESTRICT MANAGER ACCESS WITH REQUIRED DETAILED REASON */}
+      {blockManagerModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-white border-2 border-rose-300 rounded-3xl p-6 max-w-md w-full space-y-5 shadow-2xl animate-fadeIn">
+            <div className="flex items-center justify-between border-b pb-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-rose-600 text-white flex items-center justify-center font-bold shadow-md shadow-rose-500/30">
+                  <Lock className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="text-base font-black text-slate-900">Restrict & Block Manager</h4>
+                  <p className="text-xs text-slate-500">Manager: <strong>{blockManagerModal.name}</strong> ({blockManagerModal.email})</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setBlockManagerModal(null)}
+                className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-3 bg-amber-50 border border-amber-200 rounded-2xl text-[11px] text-amber-900 space-y-1">
+              <span className="font-bold block">⚠️ Mandatory Restriction Policy:</span>
+              <p>
+                Before blocking, you must provide a detailed explanation of why this manager's account is restricted. This message will be sent to their primary user account, their manager card will display a Blocked status, and their registered hostel will be removed from live search.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-700 block">
+                Detailed Reason for Account Restriction <span className="text-rose-600 font-extrabold">* (Required)</span>
+              </label>
+              <textarea
+                required
+                rows={4}
+                value={blockManagerReason}
+                onChange={(e) => setBlockManagerReason(e.target.value)}
+                placeholder="e.g. Failure to comply with KNUST fire safety standards, unverified student complaints regarding utilities, or pending credential re-audit. Account frozen pending investigation."
+                className="w-full p-3.5 border-2 border-slate-300 rounded-2xl text-xs font-medium focus:ring-2 focus:ring-rose-500 focus:border-rose-500 focus:outline-none bg-slate-50 text-slate-900"
+              />
+              <p className="text-[10px] text-slate-500 leading-normal">
+                Minimum 5 characters. This explanation is immediately delivered to the manager's account and displayed on their manager card.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-3 border-t">
+              <button
+                type="button"
+                disabled={blockingManagerLoading}
+                onClick={() => setBlockManagerModal(null)}
+                className="px-4 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={blockingManagerLoading}
+                onClick={handleConfirmBlockManager}
+                className="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-black rounded-xl shadow-md transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+              >
+                <Lock className="w-4 h-4" />
+                <span>{blockingManagerLoading ? 'Restricting Access...' : 'Confirm & Block Manager'}</span>
               </button>
             </div>
           </div>

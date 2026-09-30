@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import PineLogo from './PineLogo';
-import { Mail, Key, Eye, EyeOff, ShieldCheck, ArrowLeft, ArrowRight, ShieldAlert, CheckCircle, CheckCircle2, RefreshCw, Sparkles, LogIn, ClipboardList, Building, MapPin, Lock, Phone, ChevronRight, ChevronLeft, Search, User, X, Clock, Briefcase, Home, Wrench, GraduationCap, School, BookOpen, Building2, Bell, HelpCircle, Info } from 'lucide-react';
+import { Mail, Key, Eye, EyeOff, ShieldCheck, ArrowLeft, ArrowRight, ShieldAlert, CheckCircle, CheckCircle2, RefreshCw, Sparkles, LogIn, ClipboardList, Building, MapPin, Lock, Phone, ChevronRight, ChevronLeft, Search, User, X, Clock, Briefcase, Home, Wrench, GraduationCap, School, BookOpen, Building2, Bell, HelpCircle, Info, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   validateEmail,
@@ -57,6 +57,7 @@ export default function PageUnifiedLogin() {
   const [showPassword, setShowPassword] = useState(false);
   const [loadingLogin, setLoadingLogin] = useState(false);
   const [pendingApprovalModal, setPendingApprovalModal] = useState<{ email: string; name?: string; message: string; pass?: string } | null>(null);
+  const [blockedAccountModal, setBlockedAccountModal] = useState<{ email: string; name?: string; message: string; reason: string } | null>(null);
   const [approvingFromModal, setApprovingFromModal] = useState(false);
 
   // Unified Registration & Verification states
@@ -463,7 +464,16 @@ export default function PageUnifiedLogin() {
       }, 800);
     } catch (err: any) {
       const errMsg = err?.message || '';
-      if (err?.isPendingApproval || err?.status === 403 || errMsg.toLowerCase().includes('pending') || errMsg.toLowerCase().includes('review') || errMsg.toLowerCase().includes('approv')) {
+      if (err?.isBlocked || errMsg.toLowerCase().includes('blocked') || errMsg.toLowerCase().includes('restricted') || errMsg.toLowerCase().includes('freeze')) {
+        const rawReason = err?.restrictionReason || errMsg;
+        const cleanReason = rawReason.replace(/^.*Reason:\s*/i, '').replace(/\.\s*Please wait.*$/i, '').trim();
+        setBlockedAccountModal({
+          email: err.managerEmail || usernameOrEmail,
+          name: err.managerName || usernameOrEmail,
+          message: errMsg,
+          reason: cleanReason || 'Account access has been restricted by administration.'
+        });
+      } else if (err?.isPendingApproval || err?.status === 403 || errMsg.toLowerCase().includes('pending') || errMsg.toLowerCase().includes('review') || errMsg.toLowerCase().includes('approv')) {
         setPendingApprovalModal({
           email: usernameOrEmail,
           name: usernameOrEmail,
@@ -888,16 +898,17 @@ export default function PageUnifiedLogin() {
         <div>
           <button 
             onClick={() => navigate('/')}
-            className="text-xs font-bold text-slate-500 hover:text-blue-900 flex items-center gap-1 bg-slate-100 hover:bg-slate-200/80 px-3 py-1.5 rounded-lg transition-all"
+            className="text-xs font-bold text-blue-700 hover:text-blue-900 hover:bg-blue-50 flex items-center gap-1.5 bg-transparent px-3 py-1.5 rounded-lg transition-all"
           >
-            <ArrowLeft size={13} />
-            <span>Browse Hostels</span>
+            <Home size={13} className="text-blue-700" />
+            <span>Home</span>
           </button>
         </div>
       </header>
 
       {/* Main Container */}
-      <main className="flex-1 grid grid-cols-1 lg:grid-cols-12 items-start justify-center w-full px-4 sm:px-6 md:px-10 py-8 gap-8 lg:gap-12 z-10 max-w-[1380px] mx-auto">
+      <main className="flex-1 grid grid-cols-1 lg:grid-cols-12 items-start justify-center w-full px-5 sm:px-6 md:px-10 py-8 gap-8 lg:gap-12 z-10 max-w-[1380px] mx-auto">
+        
         
         {/* Left Side: Enlarged Picture Card Showcase (Covers balanced half of the login page) */}
         <div className="lg:col-span-6 hidden lg:flex flex-col items-stretch justify-start w-full lg:sticky lg:top-24 select-none">
@@ -1040,8 +1051,8 @@ export default function PageUnifiedLogin() {
                 {verificationPending 
                   ? 'Verify your email to activate your PineVela identity account.' 
                   : activeTab === 'login' 
-                    ? 'Enter your credentials to access your designated workspace dashboard.' 
-                    : 'Get your single PineVela user account. You can optionally register roles later.'}
+                   
+                    }
               </p>
             </div>
 
@@ -1173,7 +1184,7 @@ export default function PageUnifiedLogin() {
 
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
-                    <label className="text-xs font-bold text-slate-700 block">Security Password</label>
+                    <label className="text-xs font-bold text-slate-700 block">Password</label>
                     <button 
                       type="button" 
                       onClick={() => triggerToast('Standard password reset requires system administrator approval.', 'info')} 
@@ -1217,7 +1228,7 @@ export default function PageUnifiedLogin() {
                   ) : (
                     <>
                       <LogIn size={17} />
-                      <span>Authorize & Continue</span>
+                      <span>Login</span>
                     </>
                   )}
                 </button>
@@ -2124,6 +2135,63 @@ export default function PageUnifiedLogin() {
                 className="w-full py-3.5 bg-blue-900 hover:bg-blue-800 active:scale-[0.99] text-white font-black rounded-xl text-xs transition-all shadow-md cursor-pointer tracking-wider uppercase flex items-center justify-center gap-2"
               >
                 <span>Understood & Return to Sign In</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: Blocked / Restricted Manager Account Popup */}
+      {blockedAccountModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md animate-fadeIn">
+          <div className="bg-white rounded-3xl border-2 border-rose-300 shadow-2xl max-w-md w-full p-6 md:p-8 space-y-6 text-center relative overflow-hidden">
+            {/* Red Accent Header */}
+            <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-rose-600 via-red-500 to-amber-600" />
+            
+            <div className="flex flex-col items-center space-y-3 pt-2">
+              <div className="w-14 h-14 rounded-2xl bg-rose-50 text-rose-600 border border-rose-200 flex items-center justify-center shadow-inner">
+                <ShieldAlert size={32} className="text-rose-600 animate-pulse" />
+              </div>
+              
+              <div>
+                <span className="inline-flex items-center gap-1.5 bg-rose-100 text-rose-900 text-[10px] font-black uppercase tracking-wider px-3.5 py-1 rounded-full border border-rose-300 shadow-xs">
+                  <Lock size={12} className="text-rose-600" />
+                  Account Access Suspended
+                </span>
+                <h3 className="text-2xl font-black text-slate-900 mt-2 tracking-tight">
+                  Manager Account Blocked
+                </h3>
+              </div>
+            </div>
+
+            <div className="space-y-3 text-xs text-slate-650 leading-relaxed max-w-sm mx-auto">
+              <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl">
+                <p className="text-[11px] text-slate-500 font-medium">Work Email Account:</p>
+                <p className="text-rose-900 font-mono font-bold text-xs truncate">{blockedAccountModal.email}</p>
+              </div>
+
+              <div className="p-4 bg-rose-50/90 border border-rose-200 rounded-2xl text-rose-950 font-medium text-left space-y-2.5">
+                <p className="font-bold flex items-center gap-2 text-rose-900 text-xs">
+                  <AlertCircle size={16} className="text-rose-600 shrink-0" />
+                  Administrator Restriction Notice
+                </p>
+                <div className="p-3 bg-white/80 border border-rose-200 rounded-xl text-xs text-rose-950 font-medium">
+                  <span className="block text-[10px] font-black text-rose-600 uppercase tracking-wider mb-0.5">Reason for Restriction:</span>
+                  <p className="font-semibold text-rose-900 leading-relaxed">"{blockedAccountModal.reason}"</p>
+                </div>
+                <p className="text-[11px] text-rose-800 leading-relaxed">
+                  Your manager console credentials and live property listings are temporarily paused. <strong>Please wait until further notice</strong> or contact PineVela administrative support for case review.
+                </p>
+              </div>
+            </div>
+
+            <div className="pt-1">
+              <button
+                type="button"
+                onClick={() => setBlockedAccountModal(null)}
+                className="w-full py-3.5 bg-rose-600 hover:bg-rose-700 active:scale-[0.99] text-white font-black rounded-xl text-xs transition-all shadow-md cursor-pointer tracking-wider uppercase flex items-center justify-center gap-2"
+              >
+                <span>Understood & Close</span>
               </button>
             </div>
           </div>

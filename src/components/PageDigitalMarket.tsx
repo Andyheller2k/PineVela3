@@ -42,13 +42,18 @@ import {
   CheckCheck,
   Inbox,
   Tag,
-  ChevronDown
+  ChevronDown,
+  Phone,
+  Wrench,
+  Scissors,
+  Briefcase
 } from 'lucide-react';
 import CampusMeetupMapPicker from './CampusMeetupMapPicker';
 import ItemImageCropModal from './ItemImageCropModal';
 import { Crop } from 'lucide-react';
 
 export const DIGITAL_MARKET_CATEGORIES = [
+  "Services",
   "Electronics, Gadgets & Accessories",
   "Laptops, Phones & Computing Gear",
   "Textbooks, Handouts & Study Materials",
@@ -83,6 +88,15 @@ interface MarketProduct {
   condition?: string;
   meetingLocation?: string;
   isAvailable: boolean;
+  isService?: boolean;
+  serviceCategory?: string;
+  priceCategories?: Array<{ id?: string; name: string; price: number; description?: string }>;
+  callLine?: string;
+  location?: string;
+  workingDays?: string;
+  openingTime?: string;
+  closingTime?: string;
+  isOpen247?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -92,6 +106,7 @@ interface MarketOrder {
   productId: string;
   productTitle: string;
   productPrice: number;
+  priceCategory?: string;
   productImage?: string;
   quantity: number;
   totalAmount: number;
@@ -125,6 +140,12 @@ interface SellerInventoryCardProps {
 
 const SellerInventoryCard: React.FC<SellerInventoryCardProps> = memo(
   ({ product, onUpdateStock, onDeleteProduct }) => {
+    const isService = Boolean(
+      product.isService ||
+      product.category === 'Services' ||
+      product.category?.toLowerCase().includes('service')
+    );
+
     return (
       <div
         className="bg-white/90 border border-slate-200/80 rounded-3xl overflow-hidden shadow-xs hover:border-blue-400 hover:shadow-md transition-all duration-150 flex flex-col justify-between"
@@ -139,9 +160,16 @@ const SellerInventoryCard: React.FC<SellerInventoryCardProps> = memo(
               className="w-full h-full object-contain"
               referrerPolicy="no-referrer"
             />
-            <div className="absolute top-3 left-3 px-2.5 py-1 bg-slate-900/80 backdrop-blur-md text-white text-[9px] font-black rounded-lg uppercase">
-              {product.category}
-            </div>
+            {isService ? (
+              <div className="absolute top-3 left-3 px-2.5 py-1 bg-gradient-to-r from-blue-700 via-blue-600 to-indigo-700 text-white text-[9px] font-black rounded-lg uppercase flex items-center gap-1 shadow-xs">
+                <span>PineVela</span>
+                <span>(Service)</span>
+              </div>
+            ) : (
+              <div className="absolute top-3 left-3 px-2.5 py-1 bg-slate-900/80 backdrop-blur-md text-white text-[9px] font-black rounded-lg uppercase">
+                {product.category}
+              </div>
+            )}
             <div className="absolute top-3 right-3 px-2.5 py-1 bg-blue-600 text-white text-xs font-black rounded-lg shadow-xs">
               GH₵ {product.price}
             </div>
@@ -154,42 +182,54 @@ const SellerInventoryCard: React.FC<SellerInventoryCardProps> = memo(
         </div>
 
         <div className="p-5 pt-3 border-t border-slate-100 space-y-3 bg-slate-50/40">
-          {/* REAL TIME STOCK ADJUSTER */}
-          <div className="flex items-center justify-between">
-            <div className="text-xs font-bold text-slate-500">
-              In Stock:{' '}
-              <span className={`font-black ${product.stockQuantity > 0 ? 'text-slate-950' : 'text-rose-600'}`}>
-                {product.stockQuantity} units
-              </span>
-            </div>
+          {!isService ? (
+            /* REAL TIME STOCK ADJUSTER - ONLY FOR PHYSICAL PRODUCTS */
+            <div className="flex items-center justify-between">
+              <div className="text-xs font-bold text-slate-500">
+                In Stock:{' '}
+                <span className={`font-black ${product.stockQuantity > 0 ? 'text-slate-950' : 'text-rose-600'}`}>
+                  {product.stockQuantity} units
+                </span>
+              </div>
 
-            <div className="flex items-center gap-1.5">
-              <button
-                type="button"
-                onClick={() => onUpdateStock(product, -1)}
-                disabled={product.stockQuantity <= 0}
-                className="w-7 h-7 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 font-bold text-sm flex items-center justify-center cursor-pointer disabled:opacity-40"
-                title="Decrease Stock Quantity"
-              >
-                -
-              </button>
-              <span className="w-6 text-center text-xs font-black text-slate-950">{product.stockQuantity}</span>
-              <button
-                type="button"
-                onClick={() => onUpdateStock(product, 1)}
-                className="w-7 h-7 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 font-bold text-sm flex items-center justify-center cursor-pointer"
-                title="Increase Stock Quantity"
-              >
-                +
-              </button>
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => onUpdateStock(product, -1)}
+                  disabled={product.stockQuantity <= 0}
+                  className="w-7 h-7 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 font-bold text-sm flex items-center justify-center cursor-pointer disabled:opacity-40"
+                  title="Decrease Stock Quantity"
+                >
+                  -
+                </button>
+                <span className="w-6 text-center text-xs font-black text-slate-950">{product.stockQuantity}</span>
+                <button
+                  type="button"
+                  onClick={() => onUpdateStock(product, 1)}
+                  className="w-7 h-7 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 font-bold text-sm flex items-center justify-center cursor-pointer"
+                  title="Increase Stock Quantity"
+                >
+                  +
+                </button>
+              </div>
             </div>
-          </div>
+          ) : (
+            /* SERVICE STATUS BADGE FOR SELLERS */
+            <div className="flex items-center justify-between py-1">
+             
+              <div className="text-[11px] font-black text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-200">
+                Open for Bookings
+              </div>
+            </div>
+          )}
 
           <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-200/50">
             <span className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase ${
-              product.stockQuantity > 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
+              !isService
+                ? (product.stockQuantity > 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800')
+                : 'bg-blue-100 text-blue-800'
             }`}>
-              {product.stockQuantity > 0 ? 'Active in Market' : 'Out of Stock'}
+              {!isService ? (product.stockQuantity > 0 ? 'Active in Market' : 'Out of Stock') : 'Service Listed'}
             </span>
 
             <button
@@ -240,7 +280,7 @@ export default function PageDigitalMarket() {
   }, [user, navigate]);
 
   // Navigation
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'inventory' | 'sales' | 'notifications' | 'profile'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'inventory' | 'services' | 'sales' | 'notifications' | 'profile'>('dashboard');
   const [storeData, setStoreData] = useState<any>(null);
   const [applicationData, setApplicationData] = useState<any>(null);
   const [products, setProducts] = useState<MarketProduct[]>([]);
@@ -326,6 +366,47 @@ export default function PageDigitalMarket() {
   // Item Image Crop Modal State
   const [cropRawImage, setCropRawImage] = useState<string | null>(null);
   const [isCropModalOpen, setIsCropModalOpen] = useState<boolean>(false);
+  const [cropTarget, setCropTarget] = useState<'product' | 'service'>('product');
+
+  // Services Tab & Modal State
+  const [showServiceModal, setShowServiceModal] = useState(false);
+  const [editingServiceId, setEditingServiceId] = useState<string | null>(null);
+  const [servTitle, setServTitle] = useState('');
+  const [servSubCategory, setServSubCategory] = useState('Phone & Device Repairs');
+  const [servDesc, setServDesc] = useState('');
+  const [servPrice, setServPrice] = useState('');
+  const [servPriceCategories, setServPriceCategories] = useState<Array<{ id: string; name: string; price: number | string }>>([]);
+  const [servLocation, setServLocation] = useState('KNUST Campus Enclave / Hostel Delivery');
+  const [servCallLine, setServCallLine] = useState('');
+  const [servImageUrl, setServImageUrl] = useState('');
+  const [servIsAvailable, setServIsAvailable] = useState(true);
+  const [servWorkingDays, setServWorkingDays] = useState('Mon - Sat');
+  const [servOpeningTime, setServOpeningTime] = useState('08:00 AM');
+  const [servClosingTime, setServClosingTime] = useState('06:00 PM');
+  const [servIsOpen247, setServIsOpen247] = useState(false);
+  const [servLat, setServLat] = useState(6.6745);
+  const [servLng, setServLng] = useState(-1.5716);
+  const [isMapLocationPickerOpen, setIsMapLocationPickerOpen] = useState(false);
+  const [viewingServiceMap, setViewingServiceMap] = useState<any | null>(null);
+  const [viewingServiceReviews, setViewingServiceReviews] = useState<any | null>(null);
+  const [newReviewRating, setNewReviewRating] = useState(5);
+  const [newReviewText, setNewReviewText] = useState('');
+  const [serviceReviewsList, setServiceReviewsList] = useState<any[]>([]);
+  const [loadingReviews, setLoadingReviews] = useState(false);
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+  const [isSubmittingService, setIsSubmittingService] = useState(false);
+  const [servicesSearchQuery, setServicesSearchQuery] = useState('');
+  const [servicesCategoryFilter, setServicesCategoryFilter] = useState('All');
+
+  const presetServiceCovers = [
+    { label: 'Phone Repairs', category: 'Phone & Device Repairs', url: 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=800&auto=format&fit=crop&q=80' },
+    { label: 'Food Services', category: 'Food Services & Catering', url: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=800&auto=format&fit=crop&q=80' },
+    { label: 'Barbering', category: 'Barbering & Grooming', url: 'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=800&auto=format&fit=crop&q=80' },
+    { label: 'Hair Styling', category: 'Hair Styling & Braiding', url: 'https://images.unsplash.com/photo-1562322140-8baeececf3df?w=800&auto=format&fit=crop&q=80' },
+    { label: 'Peer Tutoring', category: 'Academic Tutoring & Proofreading', url: 'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=800&auto=format&fit=crop&q=80' },
+    { label: 'Laundry Service', category: 'Laundry & Cleaning', url: 'https://images.unsplash.com/photo-1545173168-9f1947eebb7f?w=800&auto=format&fit=crop&q=80' },
+    { label: 'Graphic Design', category: 'Graphic Design & Printing', url: 'https://images.unsplash.com/photo-1626785774573-4b799315345d?w=800&auto=format&fit=crop&q=80' },
+  ];
 
   // PIN Verification State
   const [verifyingOrder, setVerifyingOrder] = useState<MarketOrder | null>(null);
@@ -841,6 +922,276 @@ export default function PageDigitalMarket() {
     }
   };
 
+  // Services segmentation and filtering
+  const servicesList = products.filter(p => Boolean(
+    (p as any).isService ||
+    p.category === 'Services' ||
+    p.category?.toLowerCase().includes('service')
+  ));
+
+  const physicalProductsList = products.filter(p => !Boolean(
+    (p as any).isService ||
+    p.category === 'Services' ||
+    p.category?.toLowerCase().includes('service')
+  ));
+
+  const filteredServices = servicesList
+    .filter(s => {
+      if (servicesCategoryFilter !== 'All') {
+        const matchCat = (s as any).serviceCategory === servicesCategoryFilter ||
+          s.category === servicesCategoryFilter ||
+          s.title.toLowerCase().includes(servicesCategoryFilter.toLowerCase());
+        if (!matchCat) return false;
+      }
+      if (servicesSearchQuery.trim()) {
+        const q = servicesSearchQuery.toLowerCase().trim();
+        return (
+          s.title.toLowerCase().includes(q) ||
+          s.description.toLowerCase().includes(q) ||
+          Boolean((s as any).location && (s as any).location.toLowerCase().includes(q)) ||
+          Boolean((s as any).callLine && (s as any).callLine.toLowerCase().includes(q)) ||
+          Boolean((s as any).serviceCategory && (s as any).serviceCategory.toLowerCase().includes(q))
+        );
+      }
+      return true;
+    })
+    .sort((a, b) => (b.id || '').localeCompare(a.id || ''));
+
+  const handleOpenAddService = () => {
+    setEditingServiceId(null);
+    setServTitle('');
+    setServSubCategory('Phone & Device Repairs');
+    setServDesc('');
+    setServPrice('');
+    setServPriceCategories([]);
+    setServLocation(storeData?.location || 'KNUST Campus Enclave / Hostel Delivery');
+    setServCallLine(storeData?.phone || (user as any)?.phone || '');
+    setServImageUrl('');
+    setServIsAvailable(true);
+    setServWorkingDays('Mon - Sat');
+    setServOpeningTime('08:00 AM');
+    setServClosingTime('06:00 PM');
+    setServIsOpen247(false);
+    setServLat(6.6745);
+    setServLng(-1.5716);
+    setShowServiceModal(true);
+  };
+
+  const handleOpenEditService = (service: MarketProduct) => {
+    setEditingServiceId(service.id);
+    setServTitle(service.title || '');
+    setServSubCategory((service as any).serviceCategory || 'Phone & Device Repairs');
+    setServDesc(service.description || '');
+    setServPrice(String(service.price || ''));
+    setServPriceCategories(
+      Array.isArray((service as any).priceCategories)
+        ? (service as any).priceCategories.map((c: any) => ({
+            id: c.id || `pcat-${Math.random().toString(36).substr(2, 6)}`,
+            name: c.name || '',
+            price: c.price !== undefined ? c.price : ''
+          }))
+        : []
+    );
+    setServLocation((service as any).location || service.meetingLocation || storeData?.location || '');
+    setServCallLine((service as any).callLine || storeData?.phone || (user as any)?.phone || '');
+    setServImageUrl(service.imageUrl || '');
+    setServIsAvailable(service.isAvailable !== false);
+    setServWorkingDays((service as any).workingDays || 'Mon - Sat');
+    setServOpeningTime((service as any).openingTime || '08:00 AM');
+    setServClosingTime((service as any).closingTime || '06:00 PM');
+    setServIsOpen247(Boolean((service as any).isOpen247));
+    setServLat(Number((service as any).lat) || 6.6745);
+    setServLng(Number((service as any).lng) || -1.5716);
+    setShowServiceModal(true);
+  };
+
+  const handleOpenServiceReviews = async (service: MarketProduct) => {
+    setViewingServiceReviews(service);
+    setLoadingReviews(true);
+    setNewReviewRating(5);
+    setNewReviewText('');
+    try {
+      const res = await fetch(`/api/digital-market/ratings?serviceId=${encodeURIComponent(service.id)}`);
+      if (res.ok) {
+        const data = await res.json();
+        setServiceReviewsList(data.ratings || []);
+      }
+    } catch (e) {
+      console.error("Error loading service reviews:", e);
+    } finally {
+      setLoadingReviews(false);
+    }
+  };
+
+  const handleSubmitServiceReview = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!viewingServiceReviews) return;
+    if (!newReviewText.trim()) {
+      triggerToast("Please write a brief feedback comment.", "error");
+      return;
+    }
+
+    setIsSubmittingReview(true);
+    try {
+      const email = user?.studentEmail || user?.email || '';
+      const name = user?.name || user?.username || 'Student Buyer';
+      const res = await apiFetch('/api/digital-market/ratings', {
+        method: 'POST',
+        body: JSON.stringify({
+          serviceId: viewingServiceReviews.id,
+          productId: viewingServiceReviews.id,
+          storeId: viewingServiceReviews.storeId,
+          sellerEmail: viewingServiceReviews.sellerEmail,
+          buyerEmail: email,
+          buyerName: name,
+          rating: newReviewRating,
+          review: newReviewText.trim()
+        })
+      });
+
+      if (res?.success) {
+        triggerToast("Thank you! Your feedback review has been published.", "success");
+        setNewReviewText('');
+        const updatedRes = await fetch(`/api/digital-market/ratings?serviceId=${encodeURIComponent(viewingServiceReviews.id)}`);
+        if (updatedRes.ok) {
+          const data = await updatedRes.json();
+          setServiceReviewsList(data.ratings || []);
+        }
+        await loadData();
+      } else {
+        triggerToast(res?.error || "Failed to submit review.", "error");
+      }
+    } catch (err: any) {
+      triggerToast(err?.message || "Failed to submit review.", "error");
+    } finally {
+      setIsSubmittingReview(false);
+    }
+  };
+
+  const handleSaveService = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!servTitle.trim()) {
+      triggerToast("Please provide a service title.", "error");
+      return;
+    }
+    if (!servPrice.trim() || parseFloat(servPrice) <= 0) {
+      triggerToast("Please provide a valid starting rate or price.", "error");
+      return;
+    }
+    if (!servDesc.trim()) {
+      triggerToast("Please provide a detailed description of what you offer.", "error");
+      return;
+    }
+    if (!servLocation.trim()) {
+      triggerToast("Please specify or select your campus location on the map.", "error");
+      return;
+    }
+    if (!servCallLine.trim()) {
+      triggerToast("A direct call line or WhatsApp number is mandatory for services.", "error");
+      return;
+    }
+    if (!servImageUrl.trim()) {
+      triggerToast("Please upload a cover photograph for your service.", "error");
+      return;
+    }
+
+    setIsSubmittingService(true);
+    try {
+      const email = user?.studentEmail || user?.email || '';
+      const storeId = storeData?.id || (user as any)?.merchantStoreId || `store-${Date.now()}`;
+
+      const validPriceCategories = servPriceCategories
+        .filter(c => c.name && c.name.trim() && c.price !== '' && !isNaN(Number(c.price)) && Number(c.price) >= 0)
+        .map(c => ({
+          id: c.id || `pcat-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+          name: c.name.trim(),
+          price: Number(c.price)
+        }));
+
+      const payload = {
+        storeId,
+        title: servTitle.trim(),
+        description: servDesc.trim(),
+        price: parseFloat(servPrice),
+        category: 'Services',
+        serviceCategory: servSubCategory,
+        priceCategories: validPriceCategories,
+        isService: true,
+        stockQuantity: 999,
+        imageUrl: servImageUrl.trim(),
+        userEmail: email,
+        meetingLocation: servLocation.trim(),
+        location: servLocation.trim(),
+        callLine: servCallLine.trim(),
+        workingDays: servWorkingDays,
+        openingTime: servOpeningTime,
+        closingTime: servClosingTime,
+        isOpen247: servIsOpen247,
+        lat: servLat,
+        lng: servLng,
+        isAvailable: servIsAvailable
+      };
+
+      let res: any;
+      if (editingServiceId) {
+        res = await apiFetch(`/api/digital-market/products/${editingServiceId}`, {
+          method: 'PUT',
+          body: JSON.stringify(payload)
+        });
+      } else {
+        res = await apiFetch('/api/digital-market/products', {
+          method: 'POST',
+          body: JSON.stringify(payload)
+        });
+      }
+
+      if (res?.success || res?.product) {
+        triggerToast(
+          editingServiceId 
+            ? `Service "${servTitle}" updated successfully!` 
+            : `Service "${servTitle}" successfully published under Services!`, 
+          "success"
+        );
+        setShowServiceModal(false);
+        setActiveTab('services');
+        await loadData();
+      } else {
+        triggerToast(res?.error || "Failed to save service.", "error");
+      }
+    } catch (err: any) {
+      triggerToast(err?.message || "Failed to save service.", "error");
+    } finally {
+      setIsSubmittingService(false);
+    }
+  };
+
+  const handleToggleServiceStatus = async (service: MarketProduct) => {
+    const newStatus = !service.isAvailable;
+    try {
+      await apiFetch(`/api/digital-market/products/${service.id}`, {
+        method: 'PUT',
+        body: JSON.stringify({ isAvailable: newStatus })
+      });
+      setProducts(prev => prev.map(p => p.id === service.id ? { ...p, isAvailable: newStatus } : p));
+      triggerToast(`Service "${service.title}" is now ${newStatus ? 'Active & Open for Bookings' : 'Paused'}.`, "success");
+    } catch (err: any) {
+      triggerToast("Failed to update service status.", "error");
+    }
+  };
+
+  const handleDeleteService = async (serviceId: string, title: string) => {
+    if (!window.confirm(`Are you sure you want to remove the service "${title}" from the Digital Market?`)) return;
+    try {
+      await apiFetch(`/api/digital-market/products/${serviceId}`, {
+        method: 'DELETE'
+      });
+      setProducts(prev => prev.filter(p => p.id !== serviceId));
+      triggerToast(`Service "${title}" removed successfully.`, "success");
+    } catch (err: any) {
+      triggerToast("Failed to remove service.", "error");
+    }
+  };
+
   // Filter and sort products for view
   const isPriceFiltered = minPriceFilter > 0 || maxPriceFilter < 5000;
   const filteredProducts = products
@@ -863,7 +1214,12 @@ export default function PageDigitalMarket() {
     });
 
   // Stats calculation
-  const totalStockUnits = products.reduce((acc, p) => acc + (p.stockQuantity || 0), 0);
+  const physicalProductsOnly = products.filter(p => !Boolean(
+    (p as any).isService ||
+    p.category === 'Services' ||
+    p.category?.toLowerCase().includes('service')
+  ));
+  const totalStockUnits = physicalProductsOnly.reduce((acc, p) => acc + (p.stockQuantity || 0), 0);
   const pendingOrders = orders.filter(o => o.status !== 'Completed & Paid' && o.status !== 'Cancelled');
   const completedOrders = orders.filter(o => o.status === 'Completed & Paid');
   const totalRevenue = completedOrders.reduce((acc, o) => acc + (o.totalAmount || (o.productPrice * o.quantity) || 0), 0);
@@ -1307,15 +1663,26 @@ export default function PageDigitalMarket() {
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3">
-            {/* Prominent Plus Button in Header - Hidden on Mobile, use floating plus button instead */}
-            <button
-              type="button"
-              onClick={() => setShowAddModal(true)}
-              className="hidden sm:flex px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-black rounded-xl shadow-md hover:shadow-lg transition-all items-center gap-1.5 cursor-pointer"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Publish Item</span>
-            </button>
+            {/* Prominent Action Button in Header */}
+            {activeTab === 'services' ? (
+              <button
+                type="button"
+                onClick={handleOpenAddService}
+                className="hidden sm:flex px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-black rounded-xl shadow-md hover:shadow-lg transition-all items-center gap-1.5 cursor-pointer"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Add Service</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setShowAddModal(true)}
+                className="hidden sm:flex px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-black rounded-xl shadow-md hover:shadow-lg transition-all items-center gap-1.5 cursor-pointer"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Publish Item</span>
+              </button>
+            )}
 
             {/* Real-time Seller Notification Badge */}
             <div className="relative group">
@@ -1390,7 +1757,20 @@ export default function PageDigitalMarket() {
                 }`}
               >
                 <Package className="w-4 h-4" />
-                <span>Inventory ({products.length})</span>
+                <span>Inventory ({physicalProductsList.length})</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveTab('services')}
+                className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 cursor-pointer ${
+                  activeTab === 'services'
+                    ? 'bg-blue-600 text-white shadow-md'
+                    : 'text-slate-600 hover:bg-slate-100/80 hover:text-slate-900'
+                }`}
+              >
+                <Sparkles className="w-4 h-4 text-amber-300" />
+                <span>Services ({servicesList.length})</span>
               </button>
 
               <button
@@ -1456,10 +1836,7 @@ export default function PageDigitalMarket() {
               <div className="absolute top-0 right-0 w-80 h-80 bg-blue-400/5 rounded-full blur-3xl pointer-events-none" />
               <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                 <div>
-                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-100/60 border border-blue-200 text-blue-800 text-xs font-black uppercase tracking-wider mb-2">
-                    <Sparkles className="w-3.5 h-3.5 text-blue-600" />
-                    <span>Mini POS Management System</span>
-                  </div>
+                
                   <h2 className="text-xl sm:text-2xl font-black text-slate-900">Welcome back, @{storeData?.username || 'student_merchant'}</h2>
                   <p className="text-xs sm:text-sm text-slate-600 font-bold mt-1.5 leading-relaxed max-w-2xl">
                     Track student listings, keep real-time campus stock logs, and accept client delivery authentication handshakes.
@@ -1952,6 +2329,237 @@ export default function PageDigitalMarket() {
                     <span>Publish First Product</span>
                   </button>
                 )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* TAB: CAMPUS SERVICES & SKILLED WORK */}
+        {activeTab === 'services' && (
+          <div className="space-y-6 animate-fadeIn">
+            {/* Services Header Banner with White Glassy Backdrop */}
+            <div className="relative overflow-hidden bg-white/80 backdrop-blur-xl border border-slate-200/80 text-slate-900 rounded-3xl p-6 sm:p-8 shadow-xl">
+              <div className="absolute right-[-20px] bottom-[-30px] opacity-5 pointer-events-none transform rotate-12 scale-[1.8]">
+                <PineLogo size={140} hideText={true} />
+              </div>
+              <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                <div className="space-y-1.5 max-w-2xl">
+                  
+                  <h2 className="text-xl sm:text-2xl font-black text-slate-900 flex items-center gap-2">
+                    <span>Services & Skilled Campus Work</span>
+                  </h2>
+                  <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-medium">
+                    Offer your student services across PineVela (Phone repairs, food services, barbering, hair styling, tutoring, and more). Every service card displays your verified location, starting price, and direct call line for easy student bookings.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleOpenAddService}
+                  className="px-5 py-3 bg-blue-900 hover:bg-blue-800 text-white font-black text-xs rounded-2xl shadow-lg shadow-blue-900/20 transition-all flex items-center gap-2 cursor-pointer shrink-0 active:scale-95"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Offer New Service</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Services Grid */}
+            {filteredServices.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {filteredServices.map(service => (
+                  <div
+                    key={service.id}
+                    className="bg-white/95 border border-slate-200/90 rounded-3xl overflow-hidden shadow-xs hover:border-blue-400 hover:shadow-md transition-all duration-150 flex flex-col justify-between group"
+                  >
+                    <div>
+                      {/* Photo container with written PineVela (Service) text */}
+                      <div 
+                        onClick={() => setViewingServiceMap(service)}
+                        className="relative h-48 bg-slate-100 overflow-hidden flex items-center justify-center p-1 border-b border-slate-100 select-none cursor-pointer"
+                        title="Click to view service location on interactive map"
+                      >
+                        <img
+                          src={optimizeImageDisplayUrl(service.imageUrl, 400, 50)}
+                          alt={service.title}
+                          loading="lazy"
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
+
+                        {/* Written PineVela like text written as (Service) */}
+                        <div className="absolute top-2 left-2 px-2 py-0.5 bg-gradient-to-r from-blue-700 via-blue-600 to-indigo-700 text-white text-[9.5px] font-black rounded-md shadow-xs flex items-center gap-1 border border-blue-400/30 tracking-wide pointer-events-none">
+                          <span className="font-extrabold tracking-tight text-blue-200">PineVela</span>
+                          <span className="text-white font-black">(Service)</span>
+                        </div>
+
+                        {/* Starting Price Badge */}
+                        <div className="absolute top-2 right-2 px-2 py-0.5 bg-emerald-600 text-white text-[10px] font-black rounded-md shadow-xs pointer-events-none">
+                          GHS {service.price}
+                        </div>
+
+                        {/* Availability Pill & Map Tap Cue */}
+                        <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between pointer-events-none">
+                          <div className={`px-2 py-0.5 rounded-md text-[9px] font-black shadow-xs ${
+                            service.isAvailable !== false ? 'bg-emerald-500 text-white' : 'bg-slate-700 text-slate-200'
+                          }`}>
+                            {service.isAvailable !== false ? '● Active & Open' : '○ Paused'}
+                          </div>
+
+                          <span className="px-2 py-0.5 bg-slate-900/80 backdrop-blur-md text-white text-[9px] font-black rounded-md shadow-xs flex items-center gap-1">
+                            <MapPin className="w-2.5 h-2.5 text-amber-300" />
+                            <span>View Map Pin</span>
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Content Section */}
+                      <div className="p-4 space-y-2.5">
+                        <div className="flex items-center justify-between gap-1 text-[10px] font-bold text-blue-700">
+                          <span className="bg-blue-50 text-blue-800 px-2 py-0.5 rounded-md border border-blue-100 truncate max-w-[150px]">
+                            {(service as any).serviceCategory || 'Campus Service'}
+                          </span>
+
+                          {/* Interactive Rating Badge */}
+                          <button
+                            type="button"
+                            onClick={() => handleOpenServiceReviews(service)}
+                            className="flex items-center gap-1 px-2 py-0.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 rounded-md font-black transition-colors cursor-pointer"
+                            title="View student reviews and ratings"
+                          >
+                            <Star className="w-3 h-3 text-amber-500 fill-amber-400" />
+                            <span>{(service as any).rating ? Number((service as any).rating).toFixed(1) : '5.0'}</span>
+                            <span className="text-slate-500 font-semibold text-[9px]">({(service as any).reviewCount || 0})</span>
+                          </button>
+                        </div>
+
+                        <h4 className="text-sm font-black text-slate-900 line-clamp-1">{service.title}</h4>
+                        
+                        <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed font-medium">
+                          {service.description || 'No description provided.'}
+                        </p>
+
+                        <div className="pt-2 border-t border-slate-100 space-y-2 text-xs">
+                          {/* Opening Hours & Working Days */}
+                          <div className="flex items-center gap-1.5 text-slate-700 font-bold bg-slate-50 p-2 rounded-xl border border-slate-100">
+                            <Clock className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                            <span className="truncate text-[11px]">
+                              {(service as any).isOpen247
+                                ? 'Available 24/7'
+                                : `${(service as any).workingDays || 'Mon - Sat'} · ${(service as any).openingTime || '08:00 AM'} - ${(service as any).closingTime || '06:00 PM'}`}
+                            </span>
+                          </div>
+
+                          {/* Location Tap Action */}
+                          <button
+                            type="button"
+                            onClick={() => setViewingServiceMap(service)}
+                            className="w-full flex items-center justify-between gap-1.5 text-slate-700 hover:text-blue-700 font-semibold text-left p-1.5 rounded-lg hover:bg-blue-50/50 transition-colors cursor-pointer"
+                          >
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <MapPin className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                              <span className="truncate text-xs">
+                                {(service as any).location || service.meetingLocation || 'Campus-wide / Delivery'}
+                              </span>
+                            </div>
+                            <span className="text-[10px] text-blue-600 font-black underline shrink-0">Map</span>
+                          </button>
+
+                          {/* Call Line */}
+                          <div className="flex items-center justify-between gap-1 text-emerald-800 font-bold px-1.5">
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <Phone className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                              <span className="font-mono text-xs truncate">
+                                {(service as any).callLine || storeData?.phone || 'Call Line Provided'}
+                              </span>
+                            </div>
+                            {(service as any).callLine && (
+                              <a
+                                href={`tel:${(service as any).callLine}`}
+                                className="text-[10px] text-emerald-700 underline font-black hover:text-emerald-900"
+                              >
+                                Call Line
+                              </a>
+                            )}
+                          </div>
+
+                          {/* Price Categories Badges */}
+                          {Array.isArray((service as any).priceCategories) && (service as any).priceCategories.length > 0 && (
+                            <div className="pt-1.5 border-t border-slate-100">
+                              <span className="text-[9px] font-extrabold uppercase text-slate-400 tracking-wider block mb-1">
+                                Price Categories ({service.priceCategories!.length})
+                              </span>
+                              <div className="flex flex-wrap gap-1">
+                                {(service as any).priceCategories.map((pc: any, idx: number) => (
+                                  <span
+                                    key={idx}
+                                    className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 text-blue-950 border border-blue-200/80 rounded-md text-[9.5px] font-bold shadow-2xs"
+                                  >
+                                    <span>{pc.name}</span>
+                                    <span className="font-extrabold text-blue-700">GH₵ {pc.price}</span>
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Card Actions Footer */}
+                    <div className="p-3 border-t border-slate-100 bg-slate-50/50 flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => handleOpenEditService(service)}
+                          className="px-3 py-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-bold rounded-xl transition-all flex items-center gap-1 cursor-pointer shadow-2xs"
+                        >
+                          <Edit3 className="w-3 h-3 text-slate-500" />
+                          <span>Edit</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleToggleServiceStatus(service)}
+                          className={`px-2.5 py-1.5 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+                            service.isAvailable !== false
+                              ? 'bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200'
+                              : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200'
+                          }`}
+                          title={service.isAvailable !== false ? "Temporarily pause service" : "Re-activate service"}
+                        >
+                          {service.isAvailable !== false ? 'Pause' : 'Activate'}
+                        </button>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteService(service.id, service.title)}
+                        className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer"
+                        title="Delete service"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="bg-white/80 border border-blue-100/50 rounded-3xl p-12 text-center space-y-4">
+               
+                <div className="max-w-md mx-auto space-y-1.5">
+                  <h3 className="text-base font-black text-slate-900">No Services Listed Yet</h3>
+                  <p className="text-xs text-slate-500 leading-relaxed font-medium">
+                    Start monetizing your skills on campus! Offer phone & laptop repairs, student food services, barbering, hair styling, laundry, or academic tutoring to fellow hostel residents.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleOpenAddService}
+                  className="px-5 py-2.5 bg-blue-900 hover:bg-blue-800 text-white text-xs font-black rounded-xl transition-all inline-flex items-center gap-1.5 cursor-pointer shadow-md"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Offer Your First Service</span>
+                </button>
               </div>
             )}
           </div>
@@ -2666,6 +3274,457 @@ export default function PageDigitalMarket() {
         </div>
       )}
 
+      {/* MODAL: OFFER / EDIT CAMPUS SERVICE */}
+      {showServiceModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/40 backdrop-blur-sm flex items-center justify-center p-4 overflow-hidden">
+          <div className="bg-white rounded-3xl max-w-xl w-full max-h-[90vh] flex flex-col p-6 sm:p-8 shadow-2xl border border-slate-100 animate-scaleIn">
+            {/* Header */}
+            <div className="flex items-center justify-between pb-4 border-b border-slate-100 shrink-0">
+              <div className="flex items-center gap-2.5">
+              
+                <div>
+                  <h3 className="text-sm font-black text-slate-900">
+                    {editingServiceId ? 'Edit Campus Service' : 'Offer a Service on Digital Market'}
+                  </h3>
+                  <p className="text-[11px] text-slate-400">
+                    List Phone repairs, food services, barbering, tutoring, etc., with full description, location, and call line.
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowServiceModal(false)}
+                className="text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Scrollable Form Body */}
+            <form onSubmit={handleSaveService} className="flex-1 overflow-y-auto space-y-4 py-4 pr-1">
+              {/* Service Title */}
+              <div className="space-y-1">
+                <label className="text-xs font-black text-slate-800">
+                  Service Title <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. iPhone & Laptop Screen Repairs, Campus Barbering & Fades, Homemade Jollof Delivery"
+                  value={servTitle}
+                  onChange={(e) => setServTitle(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white"
+                />
+              </div>
+
+              {/* Service Subcategory & Price */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-xs font-black text-slate-800">
+                    Service Subcategory <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={servSubCategory}
+                    onChange={(e) => setServSubCategory(e.target.value)}
+                    className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white cursor-pointer"
+                  >
+                    <option value="Phone & Device Repairs">Phone & Device Repairs</option>
+                    <option value="Food Services & Catering">Food Services & Catering</option>
+                    <option value="Barbering & Grooming">Barbering & Grooming</option>
+                    <option value="Hair Styling & Braiding">Hair Styling & Braiding</option>
+                    <option value="Tech Support & Software">Tech Support & Software</option>
+                    <option value="Academic Tutoring & Proofreading">Academic Tutoring & Proofreading</option>
+                    <option value="Laundry & Cleaning">Laundry & Cleaning</option>
+                    <option value="Graphic Design & Printing">Graphic Design & Printing</option>
+                    <option value="Photography & Video">Photography & Video</option>
+                    <option value="Other Good Services">Other Good Services</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-black text-slate-800">
+                    Starting Price / Fee (GHS) <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">GHS</span>
+                    <input
+                      type="number"
+                      step="0.5"
+                      min="1"
+                      required
+                      placeholder="e.g. 50"
+                      value={servPrice}
+                      onChange={(e) => setServPrice(e.target.value)}
+                      className="w-full pl-12 pr-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Price Categories (Optional) */}
+              <div className="p-4 bg-slate-50/90 border border-slate-200/90 rounded-2xl space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div>
+                    <div className="flex items-center gap-1.5 text-xs font-black text-slate-800">
+                      <Tag className="w-3.5 h-3.5 text-blue-600" />
+                      <span>Price Categories / Options</span>
+                      <span className="text-[9.5px] font-bold text-slate-500 bg-slate-200/80 px-2 py-0.5 rounded-full">
+                        Optional
+                      </span>
+                    </div>
+                    <p className="text-[10.5px] text-slate-500 font-medium mt-0.5">
+                      Add price categories so buyers can select specific options (e.g. Category Name: <strong>Indomie Assorted</strong>, Price: <strong>50 Cedis</strong>).
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setServPriceCategories(prev => [
+                        ...prev,
+                        { id: `pcat-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`, name: '', price: '' }
+                      ]);
+                    }}
+                    className="self-start sm:self-auto px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shadow-xs active:scale-95 shrink-0"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Add Price</span>
+                  </button>
+                </div>
+
+                {servPriceCategories.length > 0 ? (
+                  <div className="space-y-2 pt-1">
+                    {servPriceCategories.map((cat, idx) => (
+                      <div
+                        key={cat.id || idx}
+                        className="flex items-center gap-2 bg-white p-2.5 rounded-xl border border-slate-200 shadow-2xs animate-fadeIn"
+                      >
+                        <div className="flex-1 space-y-1">
+                          <label className="text-[10px] font-extrabold text-slate-700 block">
+                            Category Name <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="e.g. Indomie Assorted, Jollof with Chicken"
+                            value={cat.name}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setServPriceCategories(prev => prev.map((c, i) => i === idx ? { ...c, name: val } : c));
+                            }}
+                            className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white"
+                          />
+                        </div>
+
+                        <div className="w-32 sm:w-36 space-y-1">
+                          <label className="text-[10px] font-extrabold text-slate-700 block">
+                            Price (Cedis) <span className="text-red-500">*</span>
+                          </label>
+                          <div className="relative">
+                            <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400">GH₵</span>
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.5"
+                              placeholder="50"
+                              value={cat.price}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setServPriceCategories(prev => prev.map((c, i) => i === idx ? { ...c, price: val } : c));
+                              }}
+                              className="w-full pl-8 pr-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-900 font-mono focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="pt-4 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setServPriceCategories(prev => prev.filter((_, i) => i !== idx));
+                            }}
+                            className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                            title="Remove this price category"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-[11px] text-slate-500 bg-white/80 p-3 rounded-xl border border-dashed border-slate-200 text-center">
+                    No price categories added yet. Tap <strong>"+ Add Price"</strong> to specify category names and prices in Cedis (e.g. <em>Indomie Assorted = 50 Cedis</em>).
+                  </div>
+                )}
+              </div>
+
+              {/* Campus Location & Call Line with Map Location Picker */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-black text-slate-800 flex items-center gap-1">
+                      <MapPin className="w-3.5 h-3.5 text-blue-600" />
+                      <span>Campus Location / Service Base</span> <span className="text-red-500">*</span>
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setIsMapLocationPickerOpen(true)}
+                      className="text-[10px] text-blue-700 font-extrabold hover:underline flex items-center gap-0.5 cursor-pointer"
+                    >
+                      <Compass className="w-3 h-3 text-blue-600" />
+                      <span>Select on Map</span>
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      required
+                      placeholder="Search or pick on map e.g. Unity Hall Block B, Room 14"
+                      value={servLocation}
+                      onChange={(e) => setServLocation(e.target.value)}
+                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setIsMapLocationPickerOpen(true)}
+                      className="px-3 py-2.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-xl text-xs font-black shrink-0 transition-colors cursor-pointer flex items-center gap-1"
+                      title="Open Interactive Map Location Selector"
+                    >
+                      <MapPin className="w-3.5 h-3.5 text-blue-600" />
+                      <span className="hidden sm:inline">Map</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-black text-slate-800 flex items-center gap-1">
+                    <Phone className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Direct Call Line / WhatsApp</span> <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. 024 123 4567"
+                    value={servCallLine}
+                    onChange={(e) => setServCallLine(e.target.value)}
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white font-mono"
+                  />
+                </div>
+              </div>
+
+              {/* Working Days & Opening/Closing Hours */}
+              <div className="p-3.5 bg-slate-50 border border-slate-200/80 rounded-2xl space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-black text-slate-800 flex items-center gap-1.5">
+                    <Clock className="w-3.5 h-3.5 text-blue-600" />
+                    <span>Working Days & Opening Hours</span>
+                  </span>
+                  <label className="flex items-center gap-1.5 text-[11px] font-bold text-slate-700 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={servIsOpen247}
+                      onChange={(e) => setServIsOpen247(e.target.checked)}
+                      className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                    />
+                    <span>Available 24/7</span>
+                  </label>
+                </div>
+
+                {!servIsOpen247 && (
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-600">Working Days</label>
+                      <select
+                        value={servWorkingDays}
+                        onChange={(e) => setServWorkingDays(e.target.value)}
+                        className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-800"
+                      >
+                        <option value="Mon - Sat">Mon - Sat</option>
+                        <option value="Mon - Fri">Mon - Fri</option>
+                        <option value="Everyday (7 Days)">Everyday (7 Days)</option>
+                        <option value="Weekends Only">Weekends Only</option>
+                        <option value="By Appointment">By Appointment</option>
+                      </select>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-600">Starting Hour</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. 08:00 AM"
+                        value={servOpeningTime}
+                        onChange={(e) => setServOpeningTime(e.target.value)}
+                        className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-800 font-mono"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-600">Closing Hour</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. 06:00 PM"
+                        value={servClosingTime}
+                        onChange={(e) => setServClosingTime(e.target.value)}
+                        className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-800 font-mono"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Detailed Description */}
+              <div className="space-y-1">
+                <label className="text-xs font-black text-slate-800">
+                  Detailed Description of What You Offer <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  rows={3}
+                  required
+                  placeholder="Provide detailed description of what you offer (e.g. for phone repairs: models supported, authentic screen replacement, battery testing, 30-day warranty; for food: ingredients, meal portion, packaging, hot delivery; for barbering: haircuts, beard trims, tools sanitized)."
+                  value={servDesc}
+                  onChange={(e) => setServDesc(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white resize-none"
+                />
+              </div>
+
+              {/* Mandatory Cover Photo Upload & Crop */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-black text-slate-800">
+                    Service Cover Photograph <span className="text-red-500">*</span>
+                  </label>
+                  <span className="text-[10px] text-slate-500 font-bold">Upload & Crop to fit</span>
+                </div>
+
+                {/* Image Preview / Upload Box */}
+                <div className="relative border-2 border-dashed border-slate-200 hover:border-blue-400 rounded-2xl p-4 flex flex-col items-center justify-center bg-slate-50/70 transition-all">
+                  {servImageUrl ? (
+                    <div className="relative w-full flex flex-col items-center">
+                      <div className="relative w-full h-40 rounded-xl overflow-hidden bg-slate-900 border border-slate-200 flex items-center justify-center shadow-xs">
+                        <img src={servImageUrl} alt="Service cover" className="w-full h-full object-cover" />
+                        <div className="absolute top-2 left-2 px-2 py-0.5 bg-gradient-to-r from-blue-700 via-blue-600 to-indigo-700 text-white text-[9.5px] font-black rounded-md shadow-xs flex items-center gap-1 border border-blue-400/30">
+                          <span className="text-blue-200 font-extrabold">PineVela</span>
+                          <span className="text-white font-black">(Service)</span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 mt-3">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setCropTarget('service');
+                            setCropRawImage(servImageUrl);
+                            setIsCropModalOpen(true);
+                          }}
+                          className="px-3.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                        >
+                          <Crop className="w-3.5 h-3.5 text-blue-600" />
+                          <span>Crop & Fit Cover Photo</span>
+                        </button>
+
+                        <label htmlFor="serv-file-replace" className="cursor-pointer px-3.5 py-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-xl text-xs font-black transition-all shadow-2xs">
+                          <span>Upload Different Photo</span>
+                          <input
+                            id="serv-file-replace"
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                const reader = new FileReader();
+                                reader.onloadend = () => {
+                                  if (reader.result) {
+                                    setCropTarget('service');
+                                    setCropRawImage(reader.result as string);
+                                    setIsCropModalOpen(true);
+                                  }
+                                };
+                                reader.readAsDataURL(file);
+                                e.target.value = '';
+                              }
+                            }}
+                            className="sr-only"
+                          />
+                        </label>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="py-6 text-center space-y-2">
+                      <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mx-auto">
+                        <ImageIcon className="h-6 w-6 text-blue-600" />
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-xs font-black text-slate-800">Upload Your Service Cover Photograph</p>
+                        <p className="text-[10px] text-slate-500 font-medium">Sellers should upload an authentic photo of their work and crop it to fit.</p>
+                      </div>
+                      <label htmlFor="serv-file-upload" className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white rounded-xl text-xs font-black cursor-pointer shadow-md transition-all">
+                        <Crop className="w-3.5 h-3.5 text-blue-200" />
+                        <span>Select Photo & Crop</span>
+                        <input
+                          id="serv-file-upload"
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              const reader = new FileReader();
+                              reader.onloadend = () => {
+                                if (reader.result) {
+                                  setCropTarget('service');
+                                  setCropRawImage(reader.result as string);
+                                  setIsCropModalOpen(true);
+                                }
+                              };
+                              reader.readAsDataURL(file);
+                              e.target.value = '';
+                            }
+                          }}
+                          className="sr-only"
+                        />
+                      </label>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Availability Toggle */}
+              <div className="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                <div>
+                  <div className="text-xs font-black text-slate-800">Currently Open & Accepting Bookings</div>
+                  <div className="text-[10px] text-slate-500">When enabled, students can see your service and call or book.</div>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={servIsAvailable}
+                  onChange={(e) => setServIsAvailable(e.target.checked)}
+                  className="w-4 h-4 accent-blue-600 cursor-pointer"
+                />
+              </div>
+
+              {/* Submit Buttons */}
+              <div className="pt-2 flex items-center justify-end gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setShowServiceModal(false)}
+                  className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-all cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingService}
+                  className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-black rounded-xl shadow-md transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                >
+                  {isSubmittingService && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
+                  <span>{editingServiceId ? 'Save Service Changes' : 'Publish Service to Digital Market'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* MODAL 2: OTP VERIFICATION POPUP */}
       {verifyingOrder && (
         <div className="fixed inset-0 z-50 bg-slate-950/40 backdrop-blur-sm flex items-center justify-center p-4">
@@ -2762,22 +3821,28 @@ export default function PageDigitalMarket() {
       {/* GLOBAL FLOATING PLUS BUTTON (MOBILE ONLY) */}
       <button
         type="button"
-        onClick={() => setShowAddModal(true)}
+        onClick={() => {
+          if (activeTab === 'services') {
+            handleOpenAddService();
+          } else {
+            setShowAddModal(true);
+          }
+        }}
         className="sm:hidden fixed bottom-20 right-6 z-40 w-14 h-14 bg-gradient-to-tr from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-full shadow-[0_8px_32px_rgba(59,130,246,0.35)] flex items-center justify-center transition-all transform active:scale-95 cursor-pointer border border-blue-400/30"
-        title="Publish New Item"
+        title={activeTab === 'services' ? "Offer New Service" : "Publish New Item"}
       >
         <Plus className="w-7 h-7 text-white" />
       </button>
 
       {/* MOBILE BOTTOM NAVIGATION BAR — FIXED FROSTY LIGHT-BLUE GLASS LOOK */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 sm:hidden bg-sky-100/95 backdrop-blur-xl border-t border-blue-200/80 px-2 py-1.5 flex items-center justify-around shadow-[0_-8px_32px_rgba(59,130,246,0.12)] pb-safe">
+      <div className="mobile-bottom-nav fixed bottom-0 left-0 right-0 z-50 sm:hidden bg-sky-100/95 backdrop-blur-xl border-t border-blue-200/80 px-2 py-1.5 flex items-center justify-around shadow-[0_-8px_32px_rgba(59,130,246,0.12)] pb-safe">
         <button
           type="button"
           onClick={() => {
             setActiveTab('dashboard');
             window.scrollTo({ top: 0, behavior: 'smooth' });
           }}
-          className={`flex flex-col items-center gap-0.5 p-1 text-[9px] font-black tracking-tight transition-all rounded-xl min-w-[64px] ${
+          className={`flex flex-col items-center gap-0.5 p-1 text-[9px] font-black tracking-tight transition-all rounded-xl min-w-[54px] ${
             activeTab === 'dashboard'
               ? 'text-blue-600 font-extrabold scale-105'
               : 'text-slate-600 hover:text-slate-900'
@@ -2793,14 +3858,30 @@ export default function PageDigitalMarket() {
             setActiveTab('inventory');
             window.scrollTo({ top: 0, behavior: 'smooth' });
           }}
-          className={`flex flex-col items-center gap-0.5 p-1 text-[9px] font-black tracking-tight transition-all rounded-xl min-w-[64px] ${
+          className={`flex flex-col items-center gap-0.5 p-1 text-[9px] font-black tracking-tight transition-all rounded-xl min-w-[54px] ${
             activeTab === 'inventory'
               ? 'text-blue-600 font-extrabold scale-105'
               : 'text-slate-600 hover:text-slate-900'
           }`}
         >
           <Package className="w-4.5 h-4.5 shrink-0" />
-          <span>Stock ({products.length})</span>
+          <span>Stock ({physicalProductsList.length})</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            setActiveTab('services');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+          className={`flex flex-col items-center gap-0.5 p-1 text-[9px] font-black tracking-tight transition-all rounded-xl min-w-[54px] ${
+            activeTab === 'services'
+              ? 'text-blue-600 font-extrabold scale-105'
+              : 'text-slate-600 hover:text-slate-900'
+          }`}
+        >
+          <Sparkles className="w-4.5 h-4.5 shrink-0" />
+          <span>Services ({servicesList.length})</span>
         </button>
 
         <button
@@ -2857,6 +3938,185 @@ export default function PageDigitalMarket() {
         </button>
       </div>
 
+      {/* SELECT SERVICE LOCATION ON MAP MODAL */}
+      {isMapLocationPickerOpen && (
+        <div className="fixed inset-0 z-[80] bg-slate-950/75 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 animate-fadeIn">
+          <div className="max-w-2xl w-full">
+            <CampusMeetupMapPicker
+              latitude={servLat}
+              longitude={servLng}
+              initialLocationName={servLocation}
+              readOnly={false}
+              preferredUniversity={storeData?.university || 'KNUST'}
+              onLocationSelect={({ locationName, latitude, longitude }) => {
+                setServLocation(locationName);
+                setServLat(latitude);
+                setServLng(longitude);
+                setIsMapLocationPickerOpen(false);
+                triggerToast(`Location pin set to "${locationName}"`, "success");
+              }}
+              onClose={() => setIsMapLocationPickerOpen(false)}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* VIEW EXACT SERVICE LOCATION PIN MODAL */}
+      {viewingServiceMap && (
+        <div className="fixed inset-0 z-[80] bg-slate-950/75 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 animate-fadeIn">
+          <div className="max-w-2xl w-full">
+            <CampusMeetupMapPicker
+              latitude={viewingServiceMap.lat || viewingServiceMap.latitude || 6.6745}
+              longitude={viewingServiceMap.lng || viewingServiceMap.longitude || -1.5716}
+              initialLocationName={viewingServiceMap.location || viewingServiceMap.meetingLocation || 'Campus Service Base'}
+              readOnly={true}
+              preferredUniversity={viewingServiceMap.sellerUniversity}
+              onClose={() => setViewingServiceMap(null)}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* SERVICE RATINGS & STUDENT REVIEWS MODAL */}
+      {viewingServiceReviews && (
+        <div className="fixed inset-0 z-[75] bg-slate-950/60 backdrop-blur-md flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-white rounded-3xl max-w-lg w-full max-h-[85vh] flex flex-col p-6 shadow-2xl border border-slate-100 animate-scaleUp">
+            {/* Header */}
+            <div className="flex items-center justify-between pb-4 border-b border-slate-100 shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600 font-bold">
+                  <Star className="w-5 h-5 fill-amber-400 text-amber-500" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-slate-900 line-clamp-1">
+                    {viewingServiceReviews.title}
+                  </h3>
+                  <div className="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
+                    <span className="font-extrabold text-amber-900">
+                      {viewingServiceReviews.rating ? Number(viewingServiceReviews.rating).toFixed(1) : '5.0'} ★
+                    </span>
+                    <span>·</span>
+                    <span>{serviceReviewsList.length} verified student reviews</span>
+                  </div>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setViewingServiceReviews(null)}
+                className="text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Scrollable Reviews List & Feedback Form */}
+            <div className="flex-1 overflow-y-auto py-4 space-y-5 pr-1">
+              {/* Submit Review Form for Students */}
+              <form onSubmit={handleSubmitServiceReview} className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-black text-slate-900">Write Feedback & Rate Service</span>
+                  
+                  {/* Star Rating Picker */}
+                  <div className="flex items-center gap-1">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <button
+                        key={star}
+                        type="button"
+                        onClick={() => setNewReviewRating(star)}
+                        className="p-1 cursor-pointer hover:scale-110 transition-transform"
+                      >
+                        <Star
+                          className={`w-4 h-4 ${
+                            star <= newReviewRating
+                              ? 'fill-amber-400 text-amber-500'
+                              : 'text-slate-300'
+                          }`}
+                        />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <textarea
+                  rows={2}
+                  required
+                  placeholder="Share your experience (e.g. fast phone repair, great food portion, professional haircut, friendly service)..."
+                  value={newReviewText}
+                  onChange={(e) => setNewReviewText(e.target.value)}
+                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-600 resize-none"
+                />
+
+                <div className="flex justify-end">
+                  <button
+                    type="submit"
+                    disabled={isSubmittingReview || !newReviewText.trim()}
+                    className="px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white text-xs font-black rounded-xl shadow-md transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                  >
+                    {isSubmittingReview && <RefreshCw className="w-3 h-3 animate-spin" />}
+                    <span>Submit Student Review</span>
+                  </button>
+                </div>
+              </form>
+
+              {/* Reviews List */}
+              <div className="space-y-3">
+                <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider">
+                  Student Experiences ({serviceReviewsList.length})
+                </h4>
+
+                {loadingReviews ? (
+                  <div className="py-8 text-center text-xs text-slate-400 font-bold flex items-center justify-center gap-2">
+                    <RefreshCw className="w-4 h-4 animate-spin text-blue-600" />
+                    <span>Loading student reviews...</span>
+                  </div>
+                ) : serviceReviewsList.length > 0 ? (
+                  serviceReviewsList.map((rev) => (
+                    <div key={rev.id || Math.random()} className="bg-white border border-slate-150 rounded-2xl p-3.5 space-y-1.5 shadow-2xs">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 rounded-full bg-blue-100 text-blue-900 text-xs font-black flex items-center justify-center">
+                            {(rev.buyerName || rev.buyerEmail || 'S')[0].toUpperCase()}
+                          </div>
+                          <div>
+                            <div className="text-xs font-black text-slate-900">{rev.buyerName || rev.buyerEmail || 'Student Buyer'}</div>
+                            <div className="text-[10px] text-slate-400">
+                              {rev.createdAt ? new Date(rev.createdAt).toLocaleDateString() : 'Verified Resident'}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Stars */}
+                        <div className="flex items-center gap-0.5">
+                          {[1, 2, 3, 4, 5].map((s) => (
+                            <Star
+                              key={s}
+                              className={`w-3 h-3 ${
+                                s <= (rev.rating || 5)
+                                  ? 'fill-amber-400 text-amber-500'
+                                  : 'text-slate-200'
+                              }`}
+                            />
+                          ))}
+                        </div>
+                      </div>
+
+                      <p className="text-xs text-slate-700 leading-relaxed font-medium pl-9">
+                        {rev.review || 'No written comment.'}
+                      </p>
+                    </div>
+                  ))
+                ) : (
+                  <div className="bg-slate-50 border border-slate-200/70 rounded-2xl p-6 text-center text-xs text-slate-500 font-medium">
+                    No reviews written yet for this campus service. Be the first student to share your experience above!
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* SECURE SIGNOUT CONFIRMATION MODAL */}
       {showLogoutConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -2910,11 +4170,15 @@ export default function PageDigitalMarket() {
         <ItemImageCropModal
           isOpen={isCropModalOpen}
           imageSrc={cropRawImage}
-          productTitle={prodTitle || 'Sample Item'}
-          productPrice={prodPrice || '0.00'}
-          productCategory={prodCategory}
+          productTitle={cropTarget === 'service' ? (servTitle || 'Campus Service') : (prodTitle || 'Sample Item')}
+          productPrice={cropTarget === 'service' ? (servPrice || '0.00') : (prodPrice || '0.00')}
+          productCategory={cropTarget === 'service' ? 'Services' : prodCategory}
           onCropSave={(croppedBase64) => {
-            setProdImageUrl(croppedBase64);
+            if (cropTarget === 'service') {
+              setServImageUrl(croppedBase64);
+            } else {
+              setProdImageUrl(croppedBase64);
+            }
             setIsCropModalOpen(false);
             setCropRawImage(null);
           }}

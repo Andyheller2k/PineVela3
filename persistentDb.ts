@@ -44,6 +44,7 @@ export interface PersistentStore {
   digitalMarketOrders?: any[];
   digitalMarketMessages?: any[];
   digitalMarketRatings?: any[];
+  digitalMarketServiceReviews?: any[];
   verificationTeams?: any[];
   verificationInspections?: any[];
 }

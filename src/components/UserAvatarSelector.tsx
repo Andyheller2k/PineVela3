@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import PineLogo from './PineLogo';
+import { compressImageFileToLowRes } from '../lib/imageOptimizer';
 
 // System-provided avatar presets with custom styles (PineVela logo in varied colors)
 export interface PresetAvatar {
@@ -71,16 +72,17 @@ export default function UserAvatarSelector({ onAvatarSave }: UserAvatarSelectorP
   const { user, updateUser } = useAuth();
   
   // Storage key based on user email or ID
-  const storageKey = user?.email ? `pinevela_avatar_${user.email}` : 'pinevela_user_avatar';
+  const cleanEmail = (user?.email || '').toLowerCase().trim();
+  const storageKey = cleanEmail ? `pinevela_avatar_${cleanEmail}` : 'pinevela_user_avatar';
   
   // Current active avatar (URL, base64 camera photo, or preset ID)
   const [currentAvatar, setCurrentAvatar] = useState<string>(() => {
-    return user?.avatar || user?.photoUrl || localStorage.getItem(storageKey) || 'preset:pine-star';
+    return user?.avatar || user?.photo || user?.photoUrl || user?.avatarUrl || user?.profilePicture || localStorage.getItem(storageKey) || localStorage.getItem('pinevela_user_avatar') || 'preset:pine-classic';
   });
 
   const [activeTab, setActiveTab] = useState<'presets' | 'camera' | 'upload'>('presets');
   const [selectedPresetId, setSelectedPresetId] = useState<string>(() => {
-    return currentAvatar.startsWith('preset:') ? currentAvatar.replace('preset:', '') : 'pine-star';
+    return currentAvatar.startsWith('preset:') ? currentAvatar.replace('preset:', '') : 'pine-classic';
   });
 
   // Camera state
@@ -99,14 +101,14 @@ export default function UserAvatarSelector({ onAvatarSave }: UserAvatarSelectorP
 
   // Sync state if user prop changes
   useEffect(() => {
-    const saved = user?.avatar || user?.photoUrl || localStorage.getItem(storageKey);
+    const saved = user?.avatar || user?.photo || user?.photoUrl || user?.avatarUrl || user?.profilePicture || localStorage.getItem(storageKey) || localStorage.getItem('pinevela_user_avatar');
     if (saved) {
       setCurrentAvatar(saved);
       if (saved.startsWith('preset:')) {
         setSelectedPresetId(saved.replace('preset:', ''));
       }
     }
-  }, [user?.avatar, user?.photoUrl, storageKey]);
+  }, [user?.avatar, user?.photo, user?.photoUrl, user?.avatarUrl, user?.profilePicture, storageKey]);
 
   // Clean up camera stream on unmount or tab change
   useEffect(() => {
@@ -160,43 +162,74 @@ export default function UserAvatarSelector({ onAvatarSave }: UserAvatarSelectorP
   const capturePhoto = () => {
     if (!videoRef.current) return;
     const video = videoRef.current;
+    const maxDimension = 360;
+    const sourceWidth = video.videoWidth || 400;
+    const sourceHeight = video.videoHeight || 400;
+    const scale = Math.min(1, maxDimension / Math.max(sourceWidth, sourceHeight));
     const canvas = document.createElement('canvas');
-    canvas.width = video.videoWidth || 400;
-    canvas.height = video.videoHeight || 400;
-    
+    canvas.width = Math.max(1, Math.round(sourceWidth * scale));
+    canvas.height = Math.max(1, Math.round(sourceHeight * scale));
+
     const ctx = canvas.getContext('2d');
     if (ctx) {
-      // Mirror image horizontally for natural selfie feel
+      // Mirror image horizontally for natural selfie feel.
       ctx.translate(canvas.width, 0);
       ctx.scale(-1, 1);
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
       setCapturedImage(dataUrl);
       stopCamera();
     }
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        setCameraError("File size exceeds 5MB limit. Please choose a smaller photo.");
-        return;
-      }
-      const reader = new FileReader();
-      reader.onload = () => {
-        if (typeof reader.result === 'string') {
-          setUploadPreview(reader.result);
-        }
-      };
-      reader.readAsDataURL(file);
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      setCameraError('Please choose a valid image file.');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setCameraError('File size exceeds 5MB limit. Please choose a smaller photo.');
+      return;
+    }
+
+    setCameraError(null);
+    try {
+      // Keep the persisted avatar safely below browser-storage and API payload limits.
+      setUploadPreview(await compressImageFileToLowRes(file, 360, 0.55));
+    } catch (err) {
+      console.error('Profile photo compression failed:', err);
+      setCameraError('We could not prepare that photo. Please try a different image.');
     }
   };
 
   const applyAvatar = async (newAvatarVal: string) => {
     setCurrentAvatar(newAvatarVal);
-    localStorage.setItem(storageKey, newAvatarVal);
+    const cleanMail = (user?.email || '').toLowerCase().trim();
+    try {
+      if (cleanMail) localStorage.setItem(`pinevela_avatar_${cleanMail}`, newAvatarVal);
+      localStorage.setItem('pinevela_user_avatar', newAvatarVal);
+    } catch (err) {
+      // A storage quota must not block the authenticated server-side save.
+      console.warn('[UserAvatarSelector] Avatar could not be cached locally:', err);
+    }
     
+    // Also sync pinevela_user in localStorage if present
+    try {
+      const storedUserRaw = localStorage.getItem('pinevela_user');
+      if (storedUserRaw) {
+        const storedUser = JSON.parse(storedUserRaw);
+        storedUser.avatar = newAvatarVal;
+        storedUser.photo = newAvatarVal;
+        storedUser.photoUrl = newAvatarVal;
+        storedUser.avatarUrl = newAvatarVal;
+        storedUser.profilePicture = newAvatarVal;
+        localStorage.setItem('pinevela_user', JSON.stringify(storedUser));
+      }
+    } catch (e) {}
+
     // Update global auth state (in-memory)
     if (updateUser) {
       updateUser({
@@ -208,11 +241,19 @@ export default function UserAvatarSelector({ onAvatarSave }: UserAvatarSelectorP
       });
     }
 
+    if (onAvatarSave) {
+      try {
+        onAvatarSave(newAvatarVal);
+      } catch (e) {
+        console.warn('[UserAvatarSelector] onAvatarSave error:', e);
+      }
+    }
+
     // Persist avatar to backend so it survives logout/login
     try {
       const token = user?.token || localStorage.getItem('pinevela_session_token') || localStorage.getItem('token') || localStorage.getItem('pinevela_auth_token');
       if (token) {
-        await fetch('/api/auth/profile', {
+        const res = await fetch('/api/auth/profile', {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -226,13 +267,12 @@ export default function UserAvatarSelector({ onAvatarSave }: UserAvatarSelectorP
             profilePicture: newAvatarVal
           })
         });
+        if (!res.ok) {
+          console.warn('[UserAvatarSelector] Server responded with error status:', res.status);
+        }
       }
     } catch (err) {
       console.warn('[UserAvatarSelector] Failed to persist avatar to server:', err);
-    }
-
-    if (onAvatarSave) {
-      onAvatarSave(newAvatarVal);
     }
 
     setSaveSuccess(true);

@@ -102,13 +102,13 @@ export default function PageVerificationTeamPortal() {
   const [showSignoutConfirm, setShowSignoutConfirm] = useState(false);
 
   const handleSaveAvatar = (newAvatarUrl: string) => {
-    const updatedSession = { ...officerSession, avatar: newAvatarUrl, photoUrl: newAvatarUrl };
+    const updatedSession = { ...officerSession, avatar: newAvatarUrl, photoUrl: newAvatarUrl, photo: newAvatarUrl, profilePicture: newAvatarUrl };
     setOfficerSession(updatedSession);
     try {
       localStorage.setItem('pinevela_officer_session', JSON.stringify(updatedSession));
       if (user) {
-        localStorage.setItem('pinevela_user', JSON.stringify({ ...user, avatar: newAvatarUrl, photoUrl: newAvatarUrl }));
-        setSessionUser({ ...user, avatar: newAvatarUrl, photoUrl: newAvatarUrl });
+        localStorage.setItem('pinevela_user', JSON.stringify({ ...user, avatar: newAvatarUrl, photoUrl: newAvatarUrl, photo: newAvatarUrl, profilePicture: newAvatarUrl }));
+        setSessionUser({ ...user, avatar: newAvatarUrl, photoUrl: newAvatarUrl, photo: newAvatarUrl, profilePicture: newAvatarUrl });
       }
     } catch (e) {}
   };

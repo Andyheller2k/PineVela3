@@ -7,7 +7,7 @@ import { safeJson, hashPassword } from '../lib/api';
 import { optimizeImageDisplayUrl } from '../lib/imageOptimizer';
 import PineLogo from './PineLogo';
 import UserAvatarSelector, { renderAvatarGraphic } from './UserAvatarSelector';
-import MarketItemCard from './MarketItemCard';
+import MarketItemCard, { getServiceActionLabel } from './MarketItemCard';
 import { 
   Home, 
   Wrench, 
@@ -375,6 +375,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
   const [priceSortOption, setPriceSortOption] = useState<'featured' | 'price-asc' | 'price-desc' | 'newest'>('featured');
   const [showPriceFilterPanel, setShowPriceFilterPanel] = useState<boolean>(false);
   const [selectedProductForBuy, setSelectedProductForBuy] = useState<DigitalMarketProduct | null>(null);
+  const [selectedPriceCategory, setSelectedPriceCategory] = useState<{ id?: string; name: string; price: number } | null>(null);
   const [showPendingModal, setShowPendingModal] = useState<boolean>(false);
 
   // Data states
@@ -411,7 +412,17 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
   const [delRoomPasswordInput, setDelRoomPasswordInput] = useState<string>('');
   const [delRoomError, setDelRoomError] = useState<string | null>(null);
 
-  const currentUser = { ...(user || {}), ...(studentProfile || {}), role: user?.role || 'user', id: user?.id || (studentProfile?.id) };
+  const currentUser = {
+    ...(studentProfile || {}),
+    ...(user || {}),
+    avatar: user?.avatar || studentProfile?.avatar || user?.photo || studentProfile?.photo || user?.photoUrl || studentProfile?.photoUrl || 'preset:pine-classic',
+    photo: user?.photo || studentProfile?.photo || user?.avatar || studentProfile?.avatar || '',
+    photoUrl: user?.photoUrl || studentProfile?.photoUrl || user?.avatar || studentProfile?.avatar || '',
+    avatarUrl: user?.avatarUrl || studentProfile?.avatarUrl || user?.avatar || studentProfile?.avatar || '',
+    profilePicture: user?.profilePicture || studentProfile?.profilePicture || user?.avatar || studentProfile?.avatar || '',
+    role: user?.role || studentProfile?.role || 'user',
+    id: user?.id || (studentProfile?.id)
+  };
 
   const fetchChatMessages = async () => {
     if (!currentUser?.email) return;
@@ -899,7 +910,15 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
     const mainQ = homeSearchQuery.toLowerCase().trim();
     return publicCatalog
       .filter(p => {
-        if (catalogCategory !== 'All' && !matchesCategory(p.category, catalogCategory)) return false;
+        if (catalogCategory !== 'All') {
+          const isServ = Boolean(p.isService || p.category === 'Services' || (p as any).serviceCategory || p.category?.toLowerCase().includes('service'));
+          if (catalogCategory === 'Services') {
+            if (!isServ) return false;
+          } else {
+            if (isServ) return false;
+            if (!matchesCategory(p.category, catalogCategory)) return false;
+          }
+        }
         if (query) {
           if (!p.title.toLowerCase().includes(query) && !p.description.toLowerCase().includes(query) && !p.storeName.toLowerCase().includes(query)) {
             return false;
@@ -1805,7 +1824,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
       id: 'register-resident', 
       label: registeredAccounts.managerAccount ? 'Hostel Manager' : 'Register Your Resident', 
       sub: registeredAccounts.managerAccount 
-        ? ((registeredAccounts.managerAccount.status?.toLowerCase() === 'approved') ? 'Verified Account' : (registeredAccounts.managerAccount.status?.toLowerCase() === 'rejected') ? 'Rejected' : 'Pending Approval') 
+        ? ((registeredAccounts.managerAccount.status?.toLowerCase() === 'blocked' || registeredAccounts.managerAccount.isBlocked) ? 'Blocked / Restricted' : (registeredAccounts.managerAccount.status?.toLowerCase() === 'approved') ? 'Verified Account' : (registeredAccounts.managerAccount.status?.toLowerCase() === 'rejected') ? 'Rejected' : 'Pending Approval') 
         : 'Hostel Manager Gateway', 
       icon: Building2 
     },
@@ -2187,9 +2206,15 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
     setSubmittingOrder(true);
 
     try {
+      const activeUnitPrice = (selectedPriceCategory && selectedPriceCategory.price !== undefined)
+        ? Number(selectedPriceCategory.price)
+        : selectedProdForOrder.price;
+
       const payload = {
         productId: selectedProdForOrder.id,
         quantity: orderQtyInput,
+        price: activeUnitPrice,
+        priceCategoryName: selectedPriceCategory?.name || undefined,
         buyerName: currentUser?.name || user?.name || 'Student Buyer',
         buyerEmail: currentUser?.email || user?.email || '',
         buyerPhone: buyerPhoneInput || currentUser?.phone || '',
@@ -2708,7 +2733,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
       </header>
 
       {/* MOBILE BOTTOM NAV (lg:hidden) */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/70 backdrop-blur-md border-t border-slate-200/60 shadow-[0_-10px_35px_rgba(0,0,0,0.06)]">
+      <nav className="mobile-bottom-nav lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/70 backdrop-blur-md border-t border-slate-200/60 shadow-[0_-10px_35px_rgba(0,0,0,0.06)]">
         <div className="flex items-center gap-1 overflow-x-auto px-2 py-2 pb-safe snap-x hide-scrollbar">
           {navItems.map(tab => (
             <button
@@ -3095,7 +3120,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
 
                   {/* Category Pills inside Marketplace */}
                   <div className="flex items-center gap-1.5 overflow-x-auto pb-2 -mx-1 px-1">
-                    {['All', 'Electronics', 'Textbooks', 'Appliances', 'Fashion', 'Services', 'Furniture'].map(cat => (
+                    {['All', 'Services','Electronics', 'Textbooks', 'Appliances', 'Fashion',, 'Furniture'].map(cat => (
                       <button
                         key={cat}
                         onClick={() => setCatalogCategory(cat)}
@@ -3125,7 +3150,11 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                               product={product as any}
                               isFavorite={wishlist.includes(product.id)}
                               onToggleFavorite={toggleFavorite}
-                              onInspect={(prod) => setSelectedProductForBuy(prod as any)}
+                              onInspect={(prod) => {
+                                setSelectedProductForBuy(prod as any);
+                                const cats = (prod as any).priceCategories;
+                                setSelectedPriceCategory(Array.isArray(cats) && cats.length > 0 ? cats[0] : null);
+                              }}
                             />
                           ))}
                         </div>
@@ -3892,7 +3921,12 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                   </div>
                   
                   <div>
-                    {(registeredAccounts.managerAccount.status?.toLowerCase() === 'approved') ? (
+                    {(registeredAccounts.managerAccount.status?.toLowerCase() === 'blocked' || registeredAccounts.managerAccount.isBlocked) ? (
+                      <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-rose-100 text-rose-900 border border-rose-300 rounded-full text-xs font-black shadow-xs">
+                        <ShieldAlert className="w-4 h-4 text-rose-600" />
+                        <span>Manager Account Blocked</span>
+                      </span>
+                    ) : (registeredAccounts.managerAccount.status?.toLowerCase() === 'approved') ? (
                       <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-full text-xs font-black">
                         <CheckCircle2 className="w-4 h-4 text-emerald-600" />
                         <span>Approved & Verified Manager</span>
@@ -3945,14 +3979,31 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                   </div>
                 </div>
 
-                {registeredAccounts.managerAccount.adminNotes && (
+                {/* Detailed Admin Notice for Blocked or Rejected Managers */}
+                {(registeredAccounts.managerAccount.status?.toLowerCase() === 'blocked' || registeredAccounts.managerAccount.isBlocked) ? (
+                  <div className="p-5 bg-rose-50 border-2 border-rose-300 rounded-2xl text-xs text-rose-950 font-medium space-y-3 shadow-xs">
+                    <div className="flex items-center gap-2 text-rose-900 font-black text-sm">
+                      <ShieldAlert className="w-5 h-5 text-rose-600 shrink-0" />
+                      <span>Manager Account Restricted & Properties Unlisted</span>
+                    </div>
+                    <div className="p-3.5 bg-white/90 border border-rose-200 rounded-xl space-y-1">
+                      <span className="block text-[10px] font-black text-rose-600 uppercase tracking-wider">Reason Provided by Administrator:</span>
+                      <p className="text-xs font-bold text-rose-950 leading-relaxed">
+                        "{registeredAccounts.managerAccount.blockReason || registeredAccounts.managerAccount.adminNotes || 'Account access has been restricted by administration.'}"
+                      </p>
+                    </div>
+                    <p className="text-[11px] text-rose-800 leading-relaxed font-semibold">
+                      ⛔ <strong>Notice:</strong> Your Manager Console login access is temporarily blocked and your registered hostel property has been removed from live student searches. <strong>Please wait until further notice</strong> or contact PineVela Administration for clarification.
+                    </p>
+                  </div>
+                ) : registeredAccounts.managerAccount.adminNotes && (
                   <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl text-xs text-amber-950 font-medium space-y-1">
                     <span className="font-black text-amber-900 block">Administrator Review Feedback:</span>
                     <p>{registeredAccounts.managerAccount.adminNotes}</p>
                   </div>
                 )}
 
-                {(registeredAccounts.managerAccount.status?.toLowerCase() !== 'approved') ? (
+                {(registeredAccounts.managerAccount.status?.toLowerCase() === 'blocked' || registeredAccounts.managerAccount.isBlocked) ? null : (registeredAccounts.managerAccount.status?.toLowerCase() !== 'approved') ? (
                   <div className="p-4 bg-amber-50/90 border border-amber-300 rounded-2xl flex items-start gap-3">
                     <Clock className="w-5 h-5 text-amber-700 shrink-0 mt-0.5 animate-pulse" />
                     <div className="text-xs text-amber-950 font-medium leading-relaxed">
@@ -4449,13 +4500,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                   </p>
                 </div>
               </div>
-              <button 
-                type="button"
-                onClick={() => triggerToast("Safety Policy: Always meet in safe campus areas & inspect items before payment.")}
-                className="px-3 py-1.5 bg-blue-100 hover:bg-blue-200 text-blue-900 rounded-xl text-[11px] font-bold shrink-0 transition-colors cursor-pointer border border-blue-200"
-              >
-                Learn Safety Rules
-              </button>
+              
             </div>
 
             {/* MODE 2: MY MERCHANT PLATFORM */}
@@ -5889,242 +5934,426 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
           </div>
         )}
 
-        {/* BUY / INSPECT PRODUCT MODAL */}
-        {selectedProductForBuy && (
-          <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-md flex items-center justify-center p-4">
-            <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 space-y-4 animate-scaleIn">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                <h3 className="text-base font-black text-slate-900">{selectedProductForBuy.title}</h3>
-                <button type="button" onClick={() => setSelectedProductForBuy(null)} className="text-slate-400 hover:text-slate-600 cursor-pointer">
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
+        {/* BUY / INSPECT / SERVICE PRODUCT MODAL */}
+        {selectedProductForBuy && (() => {
+          const isSelectedService = Boolean(
+            (selectedProductForBuy as any).isService ||
+            selectedProductForBuy.category === 'Services' ||
+            (selectedProductForBuy as any).serviceCategory ||
+            selectedProductForBuy.category?.toLowerCase().includes('service')
+          );
+          const serviceActionLabel = isSelectedService ? getServiceActionLabel(selectedProductForBuy as any) : 'Request to Buy';
+          const displayLoc = (selectedProductForBuy as any).location || (selectedProductForBuy as any).meetingLocation;
+          const serviceCallLine = (selectedProductForBuy as any).callLine || selectedProductForBuy.sellerPhone;
 
-              <div className="space-y-3">
-                <div className="relative w-full h-56 bg-slate-900/5 rounded-2xl overflow-hidden border border-slate-200 flex items-center justify-center p-1.5">
-                  <img 
-                    src={optimizeImageDisplayUrl(selectedProductForBuy.imageUrl, 500, 60)} 
-                    alt={selectedProductForBuy.title}
-                    loading="lazy"
-                    decoding="async"
-                    referrerPolicy="no-referrer"
-                    className="w-full h-full object-contain" 
-                  />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <span className="text-xl font-black text-emerald-600">GHS {selectedProductForBuy.price}</span>
-                  <span className="px-2.5 py-1 bg-blue-100 text-blue-800 text-xs font-bold rounded-lg">
-                    {selectedProductForBuy.sellerUniversity}
-                  </span>
-                </div>
-
-                <p className="text-xs text-slate-600 leading-relaxed font-medium">
-                  {selectedProductForBuy.description || 'No description provided.'}
-                </p>
-
-                {/* Seller Information Block */}
-                <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center overflow-hidden border border-blue-400/20 shrink-0 shadow-xs">
-                        {(selectedProductForBuy as any).storeLogoUrl ? (
-                          <img src={(selectedProductForBuy as any).storeLogoUrl} alt={selectedProductForBuy.storeName} className="w-full h-full object-cover" />
-                        ) : (
-                          <Store className="w-5 h-5 text-white" />
-                        )}
-                      </div>
-                      <div className="min-w-0">
-                        <div className="text-xs font-black text-slate-900 truncate">{selectedProductForBuy.storeName}</div>
-                        <div className="text-[10px] font-bold text-slate-500 truncate">Merchant: {selectedProductForBuy.sellerName || 'Verified Merchant'}</div>
-                      </div>
-                    </div>
-
-                    {/* Calculated Average Star Rating */}
-                    <div className="flex items-center gap-1.5 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-xl text-amber-900 shadow-2xs shrink-0">
-                      <Star className="w-4 h-4 fill-amber-400 text-amber-500 shrink-0" />
-                      <div className="flex flex-col items-start leading-none">
-                        <span className="text-xs font-black">
-                          {(selectedProductForBuy as any).storeRating !== undefined && (selectedProductForBuy as any).storeRating !== null
-                            ? Number((selectedProductForBuy as any).storeRating).toFixed(1)
-                            : '5.0'}
-                        </span>
-                        <span className="text-[8.5px] text-amber-700/80 font-extrabold">
-                          {(selectedProductForBuy as any).ratingCount ? `${(selectedProductForBuy as any).ratingCount} ratings` : 'New Store'}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="border-t border-slate-100 pt-2 text-[11px] font-semibold text-slate-500 space-y-1 pl-1">
-                    <div>Email: <span className="text-slate-700 font-bold">{selectedProductForBuy.sellerEmail}</span></div>
-                    {selectedProductForBuy.sellerPhone && (
-                      <div>Phone: <span className="text-slate-700 font-bold">{selectedProductForBuy.sellerPhone}</span></div>
+          return (
+            <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-md flex items-center justify-center p-4">
+              <div className="bg-white rounded-3xl max-w-lg w-full max-h-[92vh] overflow-y-auto p-6 shadow-2xl border border-slate-200 space-y-4 animate-scaleIn">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                  <div className="flex items-center gap-2 min-w-0 pr-2">
+                    <h3 className="text-base font-black text-slate-900 truncate">{selectedProductForBuy.title}</h3>
+                    {isSelectedService && (
+                      <span className="px-2 py-0.5 bg-gradient-to-r from-blue-700 via-blue-600 to-indigo-700 text-white text-[9px] font-black rounded-md shadow-2xs shrink-0 flex items-center gap-1 border border-blue-400/30">
+                        <span className="text-blue-200">PineVela</span>
+                        <span>(Service)</span>
+                      </span>
                     )}
                   </div>
+                  <button type="button" onClick={() => setSelectedProductForBuy(null)} className="text-slate-400 hover:text-slate-600 cursor-pointer shrink-0">
+                    <X className="w-5 h-5" />
+                  </button>
                 </div>
 
-                <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs font-semibold text-amber-900 flex items-start gap-2">
-                  <ShieldAlert className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                  <div>
-                    <strong>Anti-Scam Guarantee:</strong> Meet the student merchant at a safe campus location to inspect this item before paying.
+                <div className="space-y-3">
+                  <div className="relative w-full h-56 bg-slate-900/5 rounded-2xl overflow-hidden border border-slate-200 flex items-center justify-center p-1.5">
+                    <img 
+                      src={optimizeImageDisplayUrl(selectedProductForBuy.imageUrl, 500, 60)} 
+                      alt={selectedProductForBuy.title}
+                      loading="lazy"
+                      decoding="async"
+                      referrerPolicy="no-referrer"
+                      className="w-full h-full object-contain" 
+                    />
+                    {isSelectedService && (
+                      <div className="absolute top-2.5 left-2.5 px-2.5 py-1 bg-gradient-to-r from-blue-700 via-blue-600 to-indigo-700 text-white text-[10px] font-black rounded-md shadow-xs flex items-center gap-1 border border-blue-400/30 tracking-wide pointer-events-none">
+                        <span className="font-extrabold tracking-tight text-blue-200">PineVela</span>
+                        <span className="text-white font-black">(Service)</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-baseline gap-1.5">
+                      <span className="text-xl font-black text-emerald-600">
+                        GHS {selectedPriceCategory ? selectedPriceCategory.price : selectedProductForBuy.price}
+                      </span>
+                      {selectedPriceCategory ? (
+                        <span className="text-[10px] font-bold text-blue-700 bg-blue-100/90 px-2 py-0.5 rounded-md">
+                          {selectedPriceCategory.name}
+                        </span>
+                      ) : isSelectedService ? (
+                        <span className="text-[10px] font-bold text-slate-400">(starting rate)</span>
+                      ) : null}
+                    </div>
+                    <span className="px-2.5 py-1 bg-blue-100 text-blue-800 text-xs font-bold rounded-lg">
+                      {selectedProductForBuy.sellerUniversity}
+                    </span>
+                  </div>
+
+                  {/* Price Categories Selection in Inspect Modal */}
+                  {Array.isArray((selectedProductForBuy as any).priceCategories) && (selectedProductForBuy as any).priceCategories.length > 0 && (
+                    <div className="p-3 bg-blue-50/70 border border-blue-200/90 rounded-2xl space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-black text-slate-900 flex items-center gap-1.5">
+                          <Tag className="w-3.5 h-3.5 text-blue-600" />
+                          <span>Choose Price Category:</span>
+                        </span>
+                        <span className="text-[10px] font-bold text-blue-700 bg-white px-2 py-0.5 rounded-full border border-blue-200 shadow-2xs">
+                          In Cedis (GH₵)
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {(selectedProductForBuy as any).priceCategories.map((cat: any, idx: number) => {
+                          const isSelected = selectedPriceCategory?.name === cat.name;
+                          return (
+                            <button
+                              key={cat.id || idx}
+                              type="button"
+                              onClick={() => setSelectedPriceCategory(cat)}
+                              className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex items-center justify-between gap-2 ${
+                                isSelected
+                                  ? 'bg-blue-600 border-blue-600 text-white shadow-sm ring-2 ring-blue-400/30'
+                                  : 'bg-white border-slate-200 text-slate-800 hover:border-blue-300 hover:bg-slate-50'
+                              }`}
+                            >
+                              <div className="min-w-0">
+                                <div className={`text-xs font-black truncate ${isSelected ? 'text-white' : 'text-slate-900'}`}>
+                                  {cat.name}
+                                </div>
+                                <div className={`text-[10px] font-semibold ${isSelected ? 'text-blue-100' : 'text-slate-400'}`}>
+                                  Option
+                                </div>
+                              </div>
+                              <div className={`text-xs font-black font-mono shrink-0 px-2 py-0.5 rounded-lg ${
+                                isSelected ? 'bg-white/20 text-white' : 'bg-emerald-50 text-emerald-700 border border-emerald-100'
+                              }`}>
+                                GH₵ {cat.price}
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Campus Service Details: Location & Call Line */}
+                  {isSelectedService && (displayLoc || serviceCallLine) && (
+                    <div className="p-3 bg-blue-50/70 border border-blue-200/80 rounded-xl space-y-2">
+                      <div className="text-[10px] font-black text-blue-900 uppercase tracking-wider flex items-center gap-1">
+                        <Sparkles className="w-3 h-3 text-blue-600" />
+                        <span>Campus Service Provider Info</span>
+                      </div>
+                      {displayLoc && (
+                        <div className="flex items-center gap-1.5 text-xs text-slate-700 font-semibold">
+                          <MapPin className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                          <span>Campus Location: <strong>{displayLoc}</strong></span>
+                        </div>
+                      )}
+                      {serviceCallLine && (
+                        <div className="flex items-center justify-between gap-2 pt-1 border-t border-blue-100">
+                          <div className="flex items-center gap-1.5 text-xs text-emerald-800 font-bold">
+                            <Phone className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                            <span className="font-mono">Call Line: {serviceCallLine}</span>
+                          </div>
+                          <a
+                            href={`tel:${serviceCallLine}`}
+                            className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-black rounded-lg transition-colors shadow-2xs"
+                          >
+                            Call Provider
+                          </a>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  <p className="text-xs text-slate-600 leading-relaxed font-medium">
+                    {selectedProductForBuy.description || 'No description provided.'}
+                  </p>
+
+                  {/* Seller Information Block */}
+                  <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center overflow-hidden border border-blue-400/20 shrink-0 shadow-xs">
+                          {(selectedProductForBuy as any).storeLogoUrl ? (
+                            <img src={(selectedProductForBuy as any).storeLogoUrl} alt={selectedProductForBuy.storeName} className="w-full h-full object-cover" />
+                          ) : (
+                            <Store className="w-5 h-5 text-white" />
+                          )}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-xs font-black text-slate-900 truncate">{selectedProductForBuy.storeName}</div>
+                          <div className="text-[10px] font-bold text-slate-500 truncate">
+                            {isSelectedService ? 'Service Provider' : 'Merchant'}: {selectedProductForBuy.sellerName || 'Verified Merchant'}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Calculated Average Star Rating */}
+                      <div className="flex items-center gap-1.5 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-xl text-amber-900 shadow-2xs shrink-0">
+                        <Star className="w-4 h-4 fill-amber-400 text-amber-500 shrink-0" />
+                        <div className="flex flex-col items-start leading-none">
+                          <span className="text-xs font-black">
+                            {(selectedProductForBuy as any).storeRating !== undefined && (selectedProductForBuy as any).storeRating !== null
+                              ? Number((selectedProductForBuy as any).storeRating).toFixed(1)
+                              : '5.0'}
+                          </span>
+                          <span className="text-[8.5px] text-amber-700/80 font-extrabold">
+                            {(selectedProductForBuy as any).ratingCount ? `${(selectedProductForBuy as any).ratingCount} ratings` : 'New Store'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="border-t border-slate-100 pt-2 text-[11px] font-semibold text-slate-500 space-y-1 pl-1">
+                      <div>Email: <span className="text-slate-700 font-bold">{selectedProductForBuy.sellerEmail}</span></div>
+                      {(selectedProductForBuy.sellerPhone || (selectedProductForBuy as any).callLine) && (
+                        <div>Phone / WhatsApp: <span className="text-slate-700 font-bold">{(selectedProductForBuy as any).callLine || selectedProductForBuy.sellerPhone}</span></div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs font-semibold text-amber-900 flex items-start gap-2">
+                    <ShieldAlert className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                    <div>
+                      {isSelectedService ? (
+                        <span><strong>Service Safety Guarantee:</strong> Confirm details and meet the student service provider on campus. Never make unverified advance payments.</span>
+                      ) : (
+                        <span><strong>Anti-Scam Guarantee:</strong> Meet the student merchant at a safe campus location to inspect this item before paying.</span>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <div className="pt-3 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3">
-                <div className="text-xs text-slate-500 font-bold self-start sm:self-center">
-                  Contact: <span className="text-slate-900 font-black">{selectedProductForBuy.sellerEmail}</span>
-                </div>
-                <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-                  <button
-                    type="button"
-                    onClick={() => handleStartChat(selectedProductForBuy)}
-                    className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl cursor-pointer flex items-center gap-1.5"
-                  >
-                    <MessageSquare className="w-3.5 h-3.5 text-slate-500" />
-                    <span>Chat</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSelectedProdForOrder(selectedProductForBuy);
-                      setOrderQtyInput(1);
-                      setBuyerPhoneInput(currentUser?.phone || '');
-                      setSelectedProductForBuy(null);
-                    }}
-                    className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-md cursor-pointer flex items-center gap-1.5"
-                  >
-                    <span>Request to Buy</span>
-                    <ChevronRight className="w-3.5 h-3.5" />
-                  </button>
+                <div className="pt-3 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3">
+                  <div className="text-xs text-slate-500 font-bold self-start sm:self-center">
+                    Contact: <span className="text-slate-900 font-black">{selectedProductForBuy.sellerEmail}</span>
+                  </div>
+                  <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                    <button
+                      type="button"
+                      onClick={() => handleStartChat(selectedProductForBuy)}
+                      className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl cursor-pointer flex items-center gap-1.5"
+                    >
+                      <MessageSquare className="w-3.5 h-3.5 text-slate-500" />
+                      <span>Chat</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedProdForOrder(selectedProductForBuy);
+                        setOrderQtyInput(1);
+                        setBuyerPhoneInput(currentUser?.phone || '');
+                        setSelectedProductForBuy(null);
+                      }}
+                      className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-md cursor-pointer flex items-center gap-1.5"
+                    >
+                      <span>{serviceActionLabel}</span>
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
-        {/* ORDER / MEETUP REQUEST MODAL */}
-        {selectedProdForOrder && (
-          <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-md flex items-center justify-center p-4">
-            <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4 animate-scaleIn">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                <div>
-                  <h3 className="text-base font-black text-slate-900">Request to Buy</h3>
-                  <p className="text-[10px] text-slate-500 font-bold">{selectedProdForOrder.title}</p>
-                </div>
-                <button type="button" onClick={() => setSelectedProdForOrder(null)} className="text-slate-400 hover:text-slate-600 cursor-pointer">
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
+        {/* ORDER / MEETUP / SERVICE REQUEST MODAL */}
+        {selectedProdForOrder && (() => {
+          const isOrderService = Boolean(
+            (selectedProdForOrder as any).isService ||
+            selectedProdForOrder.category === 'Services' ||
+            (selectedProdForOrder as any).serviceCategory ||
+            selectedProdForOrder.category?.toLowerCase().includes('service')
+          );
+          const orderActionVerb = isOrderService ? getServiceActionLabel(selectedProdForOrder as any) : 'Initiate Buy Request';
+          const activeOrderUnitPrice = (selectedPriceCategory && selectedPriceCategory.price !== undefined)
+            ? Number(selectedPriceCategory.price)
+            : selectedProdForOrder.price;
 
-              <form onSubmit={handlePlaceOrder} className="space-y-4">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-700">Item Unit Price</label>
-                  <div className="text-base font-extrabold text-emerald-600 bg-emerald-50 px-3 py-2 rounded-xl border border-emerald-100">
-                    GHS {selectedProdForOrder.price}
+          return (
+            <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-md flex items-center justify-center p-2 sm:p-4">
+              <div className={`bg-white rounded-3xl w-full p-4 sm:p-6 shadow-2xl border border-slate-200 space-y-4 animate-scaleIn max-h-[calc(100dvh-1rem)] sm:max-h-[90vh] overflow-y-auto overscroll-contain scroll-pb-24 ${
+                isOrderService ? 'max-w-4xl pb-[calc(1.5rem+env(safe-area-inset-bottom))] sm:pb-6' : 'max-w-md'
+              }`}>
+                <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                  <div>
+                    <h3 className="text-base font-black text-slate-900">
+                      {isOrderService ? 'Request Campus Service' : 'Request to Buy'}
+                    </h3>
+                    <p className="text-[10px] text-slate-500 font-bold">{selectedProdForOrder.title}</p>
                   </div>
+                  <button type="button" onClick={() => setSelectedProdForOrder(null)} className="text-slate-400 hover:text-slate-600 cursor-pointer">
+                    <X className="w-5 h-5" />
+                  </button>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-700">Quantity</label>
-                    <input
-                      type="number"
-                      min={1}
-                      max={selectedProdForOrder.stockQuantity || 1}
-                      value={orderQtyInput}
-                      onChange={e => setOrderQtyInput(Math.min(selectedProdForOrder.stockQuantity || 1, Math.max(1, Number(e.target.value) || 1)))}
-                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                    />
-                    <span className="text-[10px] text-slate-400 font-medium">Stock: {selectedProdForOrder.stockQuantity} available</span>
-                  </div>
+                <form onSubmit={handlePlaceOrder} className={isOrderService ? 'grid gap-4 lg:grid-cols-2 lg:gap-x-6 lg:gap-y-4' : 'space-y-4'}>
+                  {/* Price Categories Choice in Order Modal */}
+                  {Array.isArray((selectedProdForOrder as any).priceCategories) && (selectedProdForOrder as any).priceCategories.length > 0 && (
+                    <div className={`p-3 bg-blue-50/80 border border-blue-200/90 rounded-2xl space-y-2 ${isOrderService ? 'lg:col-span-2' : ''}`}>
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs font-black text-slate-900 flex items-center gap-1.5">
+                          <Tag className="w-3.5 h-3.5 text-blue-600" />
+                          <span>Price Category Selected:</span>
+                        </label>
+                        <span className="text-[9.5px] font-bold text-blue-700 bg-white px-2 py-0.5 rounded-full border border-blue-200 shadow-2xs">
+                          In Cedis (GH₵)
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {(selectedProdForOrder as any).priceCategories.map((cat: any, idx: number) => {
+                          const isSelected = selectedPriceCategory?.name === cat.name;
+                          return (
+                            <button
+                              key={cat.id || idx}
+                              type="button"
+                              onClick={() => setSelectedPriceCategory(cat)}
+                              className={`p-2 rounded-xl border text-left transition-all cursor-pointer flex items-center justify-between gap-1.5 ${
+                                isSelected
+                                  ? 'bg-blue-600 border-blue-600 text-white shadow-xs ring-2 ring-blue-400/30'
+                                  : 'bg-white border-slate-200 text-slate-800 hover:border-blue-300'
+                              }`}
+                            >
+                              <span className={`text-[11px] font-black truncate ${isSelected ? 'text-white' : 'text-slate-900'}`}>{cat.name}</span>
+                              <span className={`text-[11px] font-bold font-mono shrink-0 ${isSelected ? 'text-white' : 'text-emerald-700'}`}>
+                                GH₵ {cat.price}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
 
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-700">Total Price</label>
-                    <div className="text-base font-extrabold text-slate-800 bg-slate-50 px-3 py-2 rounded-xl border border-slate-100 h-9 flex items-center">
-                      GHS {selectedProdForOrder.price * orderQtyInput}
+                    <label className="text-xs font-bold text-slate-700">
+                      {isOrderService ? 'Unit Rate / Fee' : 'Item Unit Price'}
+                    </label>
+                    <div className="text-base font-extrabold text-emerald-600 bg-emerald-50 px-3 py-2 rounded-xl border border-emerald-100 flex items-center justify-between">
+                      <span>GHS {activeOrderUnitPrice}</span>
+                      {selectedPriceCategory && (
+                        <span className="text-xs font-bold text-emerald-800 bg-emerald-100/90 px-2 py-0.5 rounded-md">
+                          {selectedPriceCategory.name}
+                        </span>
+                      )}
                     </div>
                   </div>
-                </div>
 
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                      <MapPin className="w-3.5 h-3.5 text-blue-600" />
-                      <span>Proposed Campus Meetup Location</span>
-                    </label>
-                    <button
-                      type="button"
-                      onClick={() => setShowMeetupMapModal(true)}
-                      className="px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg text-[10px] font-bold transition-all flex items-center gap-1 cursor-pointer shadow-2xs"
-                    >
-                      <Compass className="w-3 h-3 text-blue-600" />
-                      <span>{orderMeetupLat ? '📍 Update Map Coordinates' : '🗺️ Select on Campus Map'}</span>
-                    </button>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-700">
+                        {isOrderService ? 'Quantity / Portions / Sessions' : 'Quantity'}
+                      </label>
+                      <input
+                        type="number"
+                        min={1}
+                        max={isOrderService ? 50 : (selectedProdForOrder.stockQuantity || 1)}
+                        value={orderQtyInput}
+                        onChange={e => setOrderQtyInput(Math.min(isOrderService ? 50 : (selectedProdForOrder.stockQuantity || 1), Math.max(1, Number(e.target.value) || 1)))}
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                      />
+                      <span className="text-[10px] text-slate-400 font-medium">
+                        {isOrderService ? 'Open for student bookings' : `Stock: ${selectedProdForOrder.stockQuantity} available`}
+                      </span>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-700">Total Price</label>
+                      <div className="text-base font-extrabold text-slate-800 bg-slate-50 px-3 py-2 rounded-xl border border-slate-100 h-9 flex items-center">
+                        GHS {activeOrderUnitPrice * orderQtyInput}
+                      </div>
+                    </div>
                   </div>
 
-                  <input
-                    type="text"
-                    required
-                    value={orderMeetupLocation}
-                    onChange={e => setOrderMeetupLocation(e.target.value)}
-                    placeholder="e.g. KNUST Main Library Lobby, Commercial Area Banks"
-                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                  />
-
-                  {orderMeetupLat && orderMeetupLng ? (
-                    <div className="flex items-center justify-between px-3 py-2 bg-emerald-50 border border-emerald-200 rounded-xl text-[11px] text-emerald-800">
-                      <div className="flex items-center gap-1.5 font-bold">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                        <span>Exact GPS Coordinates: <span className="font-mono">{orderMeetupLat.toFixed(4)}, {orderMeetupLng.toFixed(4)}</span></span>
-                      </div>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                        <MapPin className="w-3.5 h-3.5 text-blue-600" />
+                        <span>{isOrderService ? 'Service / Meetup Location on Campus' : 'Proposed Campus Meetup Location'}</span>
+                      </label>
                       <button
                         type="button"
                         onClick={() => setShowMeetupMapModal(true)}
-                        className="text-[10px] text-emerald-700 underline font-bold hover:text-emerald-900 cursor-pointer"
+                        className="px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg text-[10px] font-bold transition-all flex items-center gap-1 cursor-pointer shadow-2xs"
                       >
-                        Adjust Pin
+                        <Compass className="w-3 h-3 text-blue-600" />
+                        <span>{orderMeetupLat ? '📍 Update Map Coordinates' : '🗺️ Select on Campus Map'}</span>
                       </button>
                     </div>
-                  ) : (
-                    <p className="text-[10px] text-slate-400 font-medium">Click <strong>"🗺️ Select on Campus Map"</strong> to pin the exact place and transmit coordinates to the seller.</p>
-                  )}
-                </div>
 
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-700">Your Contact Phone Number</label>
-                  <input
-                    type="tel"
-                    required
-                    value={buyerPhoneInput}
-                    onChange={e => setBuyerPhoneInput(e.target.value)}
-                    placeholder="Enter your active mobile number"
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                  />
-                  <p className="text-[10px] text-slate-400 font-medium">Make sure your phone number is correct so the seller can reach you.</p>
-                </div>
+                    <input
+                      type="text"
+                      required
+                      value={orderMeetupLocation}
+                      onChange={e => setOrderMeetupLocation(e.target.value)}
+                      placeholder="e.g. Unity Hall Block B, Room 14 / KNUST Commercial Area"
+                      className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                    />
 
-                <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setSelectedProdForOrder(null)}
-                    className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-xs rounded-xl transition-all cursor-pointer"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={submittingOrder}
-                    className="px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-md transition-all cursor-pointer flex items-center gap-1.5"
-                  >
-                    {submittingOrder ? 'Submitting Request...' : 'Initiate Buy Request'}
-                    <ChevronRight className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </form>
+                    {orderMeetupLat && orderMeetupLng ? (
+                      <div className="flex items-center justify-between px-3 py-2 bg-emerald-50 border border-emerald-200 rounded-xl text-[11px] text-emerald-800">
+                        <div className="flex items-center gap-1.5 font-bold">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                          <span>Exact GPS Coordinates: <span className="font-mono">{orderMeetupLat.toFixed(4)}, {orderMeetupLng.toFixed(4)}</span></span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setShowMeetupMapModal(true)}
+                          className="text-[10px] text-emerald-700 underline font-bold hover:text-emerald-900 cursor-pointer"
+                        >
+                          Adjust Pin
+                        </button>
+                      </div>
+                    ) : (
+                      <p className="text-[10px] text-slate-400 font-medium">Click <strong>"🗺️ Select on Campus Map"</strong> to pin the exact place and transmit coordinates to the provider.</p>
+                    )}
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-700">Your Contact Phone Number</label>
+                    <input
+                      type="tel"
+                      required
+                      value={buyerPhoneInput}
+                      onChange={e => setBuyerPhoneInput(e.target.value)}
+                      placeholder="Enter your active mobile number"
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                    />
+                    <p className="text-[10px] text-slate-400 font-medium">Make sure your phone number is correct so the provider can reach you directly.</p>
+                  </div>
+
+                  <div className={`pt-3 border-t border-slate-100 flex items-center justify-end gap-2 ${isOrderService ? 'lg:col-span-2' : ''}`}>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedProdForOrder(null)}
+                      className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-xs rounded-xl transition-all cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={submittingOrder}
+                      className="px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-md transition-all cursor-pointer flex items-center gap-1.5"
+                    >
+                      {submittingOrder ? 'Submitting Request...' : (isOrderService ? `Confirm ${orderActionVerb}` : 'Initiate Buy Request')}
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </form>
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* CAMPUS MEETUP MAP PICKER MODAL */}
         {showMeetupMapModal && (
@@ -6269,7 +6498,28 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
               </div>
 
               {/* USER AVATAR SELECTOR & DISPLAY COMPONENT */}
-              <UserAvatarSelector />
+              <UserAvatarSelector 
+                onAvatarSave={(avatarUrl) => {
+                  setStudentProfile((prev: any) => ({
+                    ...(prev || {}),
+                    avatar: avatarUrl,
+                    photo: avatarUrl,
+                    photoUrl: avatarUrl,
+                    avatarUrl: avatarUrl,
+                    profilePicture: avatarUrl
+                  }));
+                  if (updateUser) {
+                    updateUser({
+                      avatar: avatarUrl,
+                      photo: avatarUrl,
+                      photoUrl: avatarUrl,
+                      avatarUrl: avatarUrl,
+                      profilePicture: avatarUrl
+                    });
+                  }
+                  triggerToast('Profile avatar updated successfully!');
+                }}
+              />
 
               <div className="space-y-4 pt-4 border-t border-slate-100">
                 <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-between">
@@ -6445,7 +6695,9 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                                 }}
                                 className="w-full py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 text-[10px] font-black rounded-lg transition-colors text-center border border-rose-100 cursor-pointer"
                               >
-                                Inspect & Buy
+                                {(product.isService || product.category === 'Services' || (product as any).serviceCategory || product.category?.toLowerCase().includes('service')) 
+                                  ? getServiceActionLabel(product as any) 
+                                  : 'Inspect & Buy'}
                               </button>
                             </div>
                           </div>
@@ -7472,7 +7724,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
             <div className="space-y-1.5">
               <h3 className="text-lg font-black text-slate-900 tracking-tight">Sign Out Confirmation</h3>
               <p className="text-xs text-slate-500 leading-relaxed">
-                Are you sure you want to sign out of your student portal? You will need to log back in to access your digital room console.
+           See you later!
               </p>
             </div>
 

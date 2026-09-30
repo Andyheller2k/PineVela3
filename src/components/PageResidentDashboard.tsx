@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { queryClient, invalidateAllQueries } from '../lib/queryClient';
@@ -165,6 +165,23 @@ export default function PageResidentDashboard() {
     refetchInterval: 8000,
   });
 
+  // Track active maintenance updates requiring attention or recently modified
+  const unconfirmedIssues = useMemo(() => {
+    return issueReports.filter(i => (i.staffCompleted || i.status === 'Resolved') && !(i.studentAcceptedResolved || i.studentConfirmed) && !i.closedByManager);
+  }, [issueReports]);
+
+  const activeUpdatedIssues = useMemo(() => {
+    return issueReports.filter(i => {
+      if (i.closedByManager) return false;
+      if ((i.staffCompleted || i.status === 'Resolved') && !(i.studentAcceptedResolved || i.studentConfirmed)) return true;
+      if (i.status === 'In Progress' || i.assignedStaffId) return true;
+      if (i.rescheduleRequested || i.staffDeclineRequested) return true;
+      return false;
+    });
+  }, [issueReports]);
+
+  const hasMaintenanceUpdates = activeUpdatedIssues.length > 0;
+
   // Sync state with TanStack Query cache
   useEffect(() => {
     if (!residentData) return;
@@ -189,7 +206,7 @@ export default function PageResidentDashboard() {
   };
 
   const currentUser = studentProfile || user;
-  const activeAvatar = studentProfile?.avatar || studentProfile?.photo || studentProfile?.photoUrl || studentProfile?.avatarUrl || user?.avatar || user?.photo || user?.photoUrl || (user?.email ? localStorage.getItem(`pinevela_avatar_${user.email}`) : null) || currentUser?.avatar || 'preset:pine-classic';
+  const activeAvatar = user?.avatar || user?.photo || user?.photoUrl || studentProfile?.avatar || studentProfile?.photo || studentProfile?.photoUrl || studentProfile?.avatarUrl || (user?.email ? localStorage.getItem(`pinevela_avatar_${user.email.toLowerCase().trim()}`) : null) || localStorage.getItem('pinevela_user_avatar') || currentUser?.avatar || 'preset:pine-classic';
 
   // Keep edit fields updated when currentUser loads
   useEffect(() => {
@@ -474,13 +491,28 @@ export default function PageResidentDashboard() {
 
           <nav className="space-y-1.5">
             {[
-              { id: 'room', label: 'My Resident Room', icon: Home, sub: 'Digital key & room hub' },
-              { id: 'complaints', label: 'Maintenance', icon: Wrench, sub: 'File & track complaints' },
+              { 
+                id: 'room', 
+                label: 'My Resident Room', 
+                icon: Home, 
+                sub: 'Digital key & room hub',
+                hasDot: hasMaintenanceUpdates
+              },
+              { 
+                id: 'complaints', 
+                label: 'Maintenance', 
+                icon: Wrench, 
+                sub: 'File & track complaints',
+                badge: unconfirmedIssues.length > 0 ? `${unconfirmedIssues.length} Action Needed` : activeUpdatedIssues.length > 0 ? `${activeUpdatedIssues.length} Active` : null,
+                isBeaming: hasMaintenanceUpdates || unconfirmedIssues.length > 0
+              },
               { id: 'alerts', label: 'Bulletins & Alerts', icon: Bell, sub: 'Announcements & news' },
               { id: 'settings', label: 'Profile & Settings', icon: Settings, sub: 'Manage personal settings' }
             ].map(tab => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
+              const isBeaming = (tab as any).isBeaming;
+              const hasDot = (tab as any).hasDot;
               return (
                 <button
                   key={tab.id}
@@ -494,27 +526,45 @@ export default function PageResidentDashboard() {
                   title={tab.label}
                   className={`w-full flex items-center ${isSidebarCollapsed ? 'justify-center' : 'justify-between'} px-3.5 py-3 rounded-2xl transition-all duration-150 group cursor-pointer ${
                     isActive
-                      ? 'bg-blue-600 text-white shadow-md shadow-blue-500/25 ring-1 ring-blue-50'
-                      : 'text-slate-600 hover:bg-white/60 hover:text-slate-900'
+                      ? isBeaming
+                        ? 'bg-gradient-to-r from-red-600 to-rose-600 text-white shadow-md shadow-red-500/25 ring-2 ring-red-300'
+                        : 'bg-blue-600 text-white shadow-md shadow-blue-500/25 ring-1 ring-blue-50'
+                      : isBeaming
+                        ? 'bg-red-50/90 text-red-700 hover:bg-red-100/90 border border-red-200/80 shadow-xs'
+                        : 'text-slate-600 hover:bg-white/60 hover:text-slate-900'
                   }`}
                 >
                   <div className="flex items-center space-x-3 overflow-hidden">
-                    <div className={`p-2 rounded-xl transition-colors shrink-0 ${
-                      isActive ? 'bg-white/20 text-white' : 'bg-blue-200/70 text-blue-700 group-hover:bg-blue-300/80'
+                    <div className={`p-2 rounded-xl transition-colors shrink-0 relative ${
+                      isActive 
+                        ? 'bg-white/20 text-white' 
+                        : isBeaming 
+                          ? 'bg-red-100 text-red-600 group-hover:bg-red-200' 
+                          : 'bg-blue-200/70 text-blue-700 group-hover:bg-blue-300/80'
                     }`}>
                       <Icon className="w-4 h-4" />
+                      {(isBeaming || hasDot) && (
+                        <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-600"></span>
+                        </span>
+                      )}
                     </div>
                     {!isSidebarCollapsed && (
                       <div className="text-left overflow-hidden">
                         <div className="text-xs font-semibold tracking-wide flex items-center gap-1.5 truncate">
                           <span>{tab.label}</span>
                           {(tab as any).badge && (
-                            <span className="px-1.5 py-0.5 bg-cyan-100 text-cyan-800 text-[9px] font-black rounded-md border border-cyan-300">
+                            <span className={`px-1.5 py-0.5 text-[9px] font-black rounded-md border ${
+                              isBeaming 
+                                ? 'bg-red-600 text-white border-red-700 animate-pulse' 
+                                : 'bg-cyan-100 text-cyan-800 border-cyan-300'
+                            }`}>
                               {(tab as any).badge}
                             </span>
                           )}
                         </div>
-                        <div className={`text-[10px] font-normal truncate ${isActive ? 'text-blue-100' : 'text-slate-500'}`}>
+                        <div className={`text-[10px] font-normal truncate ${isActive ? 'text-blue-100' : isBeaming ? 'text-red-500 font-medium' : 'text-slate-500'}`}>
                           {tab.sub}
                         </div>
                       </div>
@@ -537,19 +587,35 @@ export default function PageResidentDashboard() {
       </aside>
 
       {/* MOBILE BOTTOM NAVIGATION */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200/80 flex items-center justify-around py-2 shadow-lg">
+      <nav className="mobile-bottom-nav lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200/80 flex items-center justify-around py-2 shadow-lg">
         <button 
           onClick={() => setActiveTab('room')}
-          className={`flex flex-col items-center p-1.5 cursor-pointer ${activeTab === 'room' ? 'text-blue-900' : 'text-slate-400'}`}
+          className={`flex flex-col items-center p-1.5 cursor-pointer relative ${activeTab === 'room' ? 'text-blue-900' : 'text-slate-400'}`}
         >
-          <Home size={18} />
+          <div className="relative">
+            <Home size={18} />
+            {hasMaintenanceUpdates && (
+              <span className="absolute -top-1 -right-1 flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-red-600"></span>
+              </span>
+            )}
+          </div>
           <span className="text-[10px] font-bold mt-0.5">My Room</span>
         </button>
         <button 
           onClick={() => setActiveTab('complaints')}
-          className={`flex flex-col items-center p-1.5 cursor-pointer ${activeTab === 'complaints' ? 'text-blue-900' : 'text-slate-400'}`}
+          className={`flex flex-col items-center p-1.5 cursor-pointer relative ${activeTab === 'complaints' ? 'text-blue-900' : hasMaintenanceUpdates ? 'text-red-600 font-bold' : 'text-slate-400'}`}
         >
-          <Wrench size={18} />
+          <div className="relative">
+            <Wrench size={18} />
+            {hasMaintenanceUpdates && (
+              <span className="absolute -top-1 -right-1 flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-red-600"></span>
+              </span>
+            )}
+          </div>
           <span className="text-[10px] font-bold mt-0.5">Complaints</span>
         </button>
         <button 
@@ -762,6 +828,154 @@ export default function PageResidentDashboard() {
 
             </div>
 
+            {/* Room Maintenance & Service Live Updates Card with Beaming Highlight Dots */}
+            <div className={`p-6 rounded-3xl border backdrop-blur-xl transition-all ${
+              hasMaintenanceUpdates || unconfirmedIssues.length > 0
+                ? 'bg-gradient-to-br from-red-50/90 via-white/95 to-amber-50/80 border-red-200/90 shadow-md shadow-red-500/5 ring-1 ring-red-400/30'
+                : 'bg-white/80 border-white/80 shadow-sm'
+            }`}>
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-slate-200/60">
+                <div className="flex items-center gap-3">
+                  <div className={`p-2.5 rounded-2xl relative ${
+                    hasMaintenanceUpdates || unconfirmedIssues.length > 0 
+                      ? 'bg-red-100 text-red-700 ring-2 ring-red-300' 
+                      : 'bg-blue-100 text-blue-700'
+                  }`}>
+                    <Wrench className="w-5 h-5" />
+                    {(hasMaintenanceUpdates || unconfirmedIssues.length > 0) && (
+                      <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-3 w-3 bg-red-600"></span>
+                      </span>
+                    )}
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-sm sm:text-base font-black text-slate-900">Room Maintenance & Repair Updates</h3>
+                      {(hasMaintenanceUpdates || unconfirmedIssues.length > 0) && (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-red-100 text-red-700 border border-red-200 flex items-center gap-1 animate-pulse">
+                          <span className="w-1.5 h-1.5 rounded-full bg-red-600"></span>
+                          Live Update
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-slate-500 font-medium">
+                      Real-time status of repair requests, staff dispatches, and signoffs for your allocated room
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('complaints')}
+                  className="px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white text-xs font-black rounded-xl shadow-sm transition-all flex items-center gap-1.5 cursor-pointer shrink-0"
+                >
+                  <span>Open Maintenance Desk</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              {issueReports.length === 0 ? (
+                <div className="pt-4 flex items-center justify-between text-xs text-slate-500 font-medium">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                    <span>All room fixtures and utilities in good condition. No outstanding maintenance requests.</span>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setActiveTab('complaints');
+                      setShowNewIssueModal(true);
+                    }}
+                    className="text-blue-700 font-bold hover:underline cursor-pointer"
+                  >
+                    + Report New Fault
+                  </button>
+                </div>
+              ) : (
+                <div className="pt-4 space-y-3">
+                  {issueReports.slice(0, 3).map(issue => {
+                    const isUnconfirmed = (issue.staffCompleted || issue.status === 'Resolved') && !(issue.studentAcceptedResolved || issue.studentConfirmed) && !issue.closedByManager;
+                    const isAwaitingDispatch = issue.status === 'Pending' || !issue.assignedStaffId;
+                    const isInProgress = issue.status === 'In Progress' || (issue.assignedStaffId && !issue.staffCompleted);
+
+                    return (
+                      <div
+                        key={issue.id}
+                        onClick={() => {
+                          setActiveTab('complaints');
+                          if (issue.assignedStaffId) {
+                            setActiveChatIssueId(issue.id);
+                          }
+                        }}
+                        className={`p-3.5 rounded-2xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 cursor-pointer transition-all hover:scale-[1.005] ${
+                          isUnconfirmed
+                            ? 'bg-amber-50/90 border-amber-300 ring-2 ring-amber-400/20'
+                            : isInProgress
+                            ? 'bg-blue-50/80 border-blue-200'
+                            : 'bg-slate-50/80 border-slate-200/80'
+                        }`}
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className="mt-1 shrink-0">
+                            {isUnconfirmed ? (
+                              <span className="relative flex h-3 w-3">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
+                              </span>
+                            ) : isInProgress ? (
+                              <span className="relative flex h-3 w-3">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-3 w-3 bg-blue-600"></span>
+                              </span>
+                            ) : isAwaitingDispatch ? (
+                              <span className="relative flex h-2.5 w-2.5">
+                                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-slate-400"></span>
+                              </span>
+                            ) : (
+                              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                            )}
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <h4 className="text-xs sm:text-sm font-black text-slate-900">{issue.title}</h4>
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white border border-slate-200 text-slate-600">
+                                {issue.category}
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-slate-500 line-clamp-1 mt-0.5">{issue.description}</p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
+                          {isUnconfirmed ? (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setActiveTab('complaints');
+                                setSelectedIssueForConfirm(issue);
+                              }}
+                              className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-black text-xs rounded-xl shadow-xs animate-pulse cursor-pointer flex items-center gap-1.5"
+                            >
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                              <span>Verify & Confirm Fix</span>
+                            </button>
+                          ) : (
+                            <span className={`px-2.5 py-1 rounded-xl text-[10px] font-bold ${
+                              isInProgress ? 'bg-blue-100 text-blue-800' :
+                              isAwaitingDispatch ? 'bg-slate-200 text-slate-700' :
+                              'bg-emerald-100 text-emerald-800'
+                            }`}>
+                              {isInProgress ? '🛠️ In Progress' : isAwaitingDispatch ? '⏳ Queued for Dispatch' : '✓ Completed'}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
           </div>
         )}
 
@@ -841,7 +1055,12 @@ export default function PageResidentDashboard() {
                     <p className="text-xs text-slate-500 font-bold">No maintenance complaints match your filter.</p>
                   </div>
                 ) : (
-                  filteredIssues.map(issue => (
+                  filteredIssues.map(issue => {
+                    const isUnconfirmed = (issue.staffCompleted || issue.status === 'Resolved') && !(issue.studentAcceptedResolved || issue.studentConfirmed) && !issue.closedByManager;
+                    const isInProgress = issue.status === 'In Progress' || (issue.assignedStaffId && !issue.staffCompleted);
+                    const hasAction = isUnconfirmed || issue.rescheduleRequested || issue.staffDeclineRequested;
+
+                    return (
                     <div 
                       key={issue.id} 
                       onClick={() => {
@@ -851,13 +1070,29 @@ export default function PageResidentDashboard() {
                           triggerToast("Chat with technician is only available once staff has been assigned.");
                         }
                       }}
-                      className={`p-4 bg-white border rounded-2xl cursor-pointer transition-all hover:border-slate-300 space-y-3 ${
-                        activeChatIssueId === issue.id ? 'ring-2 ring-blue-600 border-blue-600' : 'border-slate-200'
+                      className={`p-4 bg-white border rounded-2xl cursor-pointer transition-all hover:border-slate-300 space-y-3 relative ${
+                        activeChatIssueId === issue.id 
+                          ? 'ring-2 ring-blue-600 border-blue-600 shadow-md' 
+                          : hasAction 
+                            ? 'border-amber-300 ring-2 ring-amber-400/20 shadow-xs' 
+                            : 'border-slate-200'
                       }`}
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div className="space-y-1">
                           <div className="flex flex-wrap items-center gap-1.5">
+                            {hasAction && (
+                              <span className="relative flex h-2.5 w-2.5 mr-0.5">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500"></span>
+                              </span>
+                            )}
+                            {isInProgress && !hasAction && (
+                              <span className="relative flex h-2 w-2 mr-0.5">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-600"></span>
+                              </span>
+                            )}
                             <span className={`px-2 py-0.5 rounded-full text-[9px] font-black inline-block ${
                               issue.urgency === 'High' || issue.urgency === 'Emergency' ? 'bg-rose-100 text-rose-800 border border-rose-200' : issue.urgency === 'Medium' ? 'bg-amber-100 text-amber-800 border border-amber-200' : 'bg-blue-100 text-blue-800 border border-blue-200'
                             }`}>
@@ -1070,8 +1305,9 @@ export default function PageResidentDashboard() {
                         </div>
                       </div>
                     </div>
-                  ))
-                )}
+                  );
+                })
+              )}
               </div>
             </div>
 

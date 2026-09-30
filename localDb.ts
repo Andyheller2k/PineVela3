@@ -802,10 +802,19 @@ export async function dbCreateManagerRequest(req: any, ..._args: any[]): Promise
 
 export async function dbUpdateManagerRequestStatus(id: string, status: string, notes?: string, ..._args: any[]): Promise<any> {
   const store = getStore();
-  const req = store.managerRegistrationRequests.find((m: any) => m.id === id);
+  const req = store.managerRegistrationRequests.find((m: any) => m.id === id || m.managerId === id);
   if (req) {
     req.status = status;
     req.adminNotes = notes;
+    if (status === 'blocked') {
+      req.isBlocked = true;
+      req.isApproved = false;
+      req.blockReason = notes;
+    } else if (status === 'approved') {
+      req.isBlocked = false;
+      req.isApproved = true;
+      req.blockReason = null;
+    }
     persistStore();
     return req;
   }
@@ -830,10 +839,19 @@ export async function dbCreateManagerVerification(verif: any, ..._args: any[]): 
 export async function dbUpdateManagerVerificationStatus(id: string, status: string, notes?: string, ..._args: any[]): Promise<any> {
   const store = getStore();
   const list = (store as any).managerVerifications || [];
-  const rec = list.find((m: any) => m.id === id);
+  const rec = list.find((m: any) => m.id === id || m.managerId === id);
   if (rec) {
     rec.status = status;
     rec.adminNotes = notes;
+    if (status === 'blocked') {
+      rec.isBlocked = true;
+      rec.isApproved = false;
+      rec.blockReason = notes;
+    } else if (status === 'approved') {
+      rec.isBlocked = false;
+      rec.isApproved = true;
+      rec.blockReason = null;
+    }
     persistStore();
     return rec;
   }
@@ -1202,12 +1220,12 @@ export async function dbGetStudentMessages(filter?: {
       const mRoomKey = (m.roomKey || '').toUpperCase().trim();
       const mUserId = (m.userId || '').toLowerCase().trim();
 
-      return (
-        (sId && mStudentId === sId) ||
-        (sEmail && mStudentEmail === sEmail) ||
-        (rKey && mRoomKey === rKey) ||
-        (uId && mUserId === uId)
-      );
+      const matchesStudentId = Boolean(sId && mStudentId && mStudentId === sId);
+      const matchesStudentEmail = Boolean(sEmail && mStudentEmail && mStudentEmail === sEmail);
+      const matchesRoomKey = Boolean(rKey && mRoomKey && mRoomKey === rKey);
+      const matchesUserId = Boolean(uId && mUserId && mUserId === uId);
+
+      return matchesStudentId || matchesStudentEmail || matchesRoomKey || matchesUserId;
     });
   }
 

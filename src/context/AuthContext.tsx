@@ -127,14 +127,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             }
 
             // Restore avatar from localStorage if the server didn't return one
-            const avatarKey = userData.email ? `pinevela_avatar_${userData.email}` : null;
-            const storedAvatar = avatarKey ? localStorage.getItem(avatarKey) : null;
+            const cleanEmail = (userData.email || '').toLowerCase().trim();
+            const avatarKey = cleanEmail ? `pinevela_avatar_${cleanEmail}` : null;
+            const storedAvatar = (avatarKey ? localStorage.getItem(avatarKey) : null) || localStorage.getItem('pinevela_user_avatar');
+            const resolvedAvatar = userData.avatar || userData.photo || userData.photoUrl || userData.avatarUrl || userData.profilePicture || storedAvatar || undefined;
             setUser({
               ...userData,
               token: savedToken,
               hasApprovedHostel,
               hostelStatus,
-              avatar: userData.avatar || storedAvatar || userData.photoUrl || undefined
+              avatar: resolvedAvatar,
+              photo: resolvedAvatar,
+              photoUrl: resolvedAvatar,
+              avatarUrl: resolvedAvatar,
+              profilePicture: resolvedAvatar
             });
           } else {
             // Token is invalid/expired
@@ -164,6 +170,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const errData = await safeJson(res);
       const error: any = new Error(errData.error || 'Authentication failed');
       error.isPendingApproval = Boolean(errData.isPendingApproval);
+      error.isBlocked = Boolean(errData.isBlocked);
+      error.restrictionReason = errData.restrictionReason || errData.reason || errData.adminNotes;
+      error.managerName = errData.managerName;
+      error.managerEmail = errData.managerEmail;
       error.status = res.status;
       throw error;
     }
@@ -195,19 +205,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     // Restore avatar from localStorage if the server didn't return one
-    const avatarKey = userData.email ? `pinevela_avatar_${userData.email}` : null;
-    const storedAvatar = avatarKey ? localStorage.getItem(avatarKey) : null;
+    const cleanEmail = (userData.email || '').toLowerCase().trim();
+    const avatarKey = cleanEmail ? `pinevela_avatar_${cleanEmail}` : null;
+    const storedAvatar = (avatarKey ? localStorage.getItem(avatarKey) : null) || localStorage.getItem('pinevela_user_avatar');
+    const resolvedAvatar = userData.avatar || userData.photo || userData.photoUrl || userData.avatarUrl || userData.profilePicture || storedAvatar || undefined;
 
     const finalUser = {
       ...userData,
       hasApprovedHostel,
       hostelStatus,
-      avatar: userData.avatar || storedAvatar || userData.photoUrl || undefined
+      avatar: resolvedAvatar,
+      photo: resolvedAvatar,
+      photoUrl: resolvedAvatar,
+      avatarUrl: resolvedAvatar,
+      profilePicture: resolvedAvatar
     };
 
     localStorage.setItem('pinevela_session_token', userData.token);
     localStorage.setItem('token', userData.token);
     localStorage.setItem('pinevela_auth_token', userData.token);
+    if (resolvedAvatar && cleanEmail) {
+      localStorage.setItem(`pinevela_avatar_${cleanEmail}`, resolvedAvatar);
+      localStorage.setItem('pinevela_user_avatar', resolvedAvatar);
+    }
     setUser(finalUser);
     return finalUser;
   };
@@ -218,11 +238,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       localStorage.setItem('token', newSessionUser.token);
       localStorage.setItem('pinevela_auth_token', newSessionUser.token);
     }
+    const newPic = newSessionUser?.avatar || newSessionUser?.photo || newSessionUser?.photoUrl || newSessionUser?.avatarUrl || newSessionUser?.profilePicture;
+    if (newPic) {
+      const cleanEmail = (newSessionUser?.email || '').toLowerCase().trim();
+      if (cleanEmail) {
+        localStorage.setItem(`pinevela_avatar_${cleanEmail}`, newPic);
+      }
+      localStorage.setItem('pinevela_user_avatar', newPic);
+    }
     setUser(newSessionUser);
   };
 
   const updateUser = (updatedFields: Partial<AuthenticatedUser>) => {
-    setUser(prev => prev ? { ...prev, ...updatedFields } : null);
+    setUser(prev => {
+      if (!prev) return null;
+      const updated = { ...prev, ...updatedFields };
+      const newPic = updated.avatar || updated.photo || updated.photoUrl || updated.avatarUrl || updated.profilePicture;
+      if (newPic) {
+        const cleanEmail = (updated.email || '').toLowerCase().trim();
+        try {
+          if (cleanEmail) localStorage.setItem(`pinevela_avatar_${cleanEmail}`, newPic);
+          localStorage.setItem('pinevela_user_avatar', newPic);
+        } catch (err) {
+          console.warn('[Auth] Avatar could not be cached locally:', err);
+        }
+      }
+      return updated;
+    });
   };
 
   const logout = () => {
