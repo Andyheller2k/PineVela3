@@ -3,7 +3,7 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import { 
   Key, Search, Copy, Check, Send, Share2, Filter, 
   RefreshCw, Building2, Users, Mail, XCircle, Download, 
-  Layers, CheckCircle2, ChevronRight, Hash, ShieldCheck
+  Layers, CheckCircle2, ChevronRight, Hash, ShieldCheck, Trash2
 } from 'lucide-react';
 
 export interface RoomKeyItem {
@@ -37,6 +37,7 @@ interface ManagerDigitalKeysViewProps {
   onOpenDispatch: (keyItem: RoomKeyItem) => void;
   onTriggerToast: (msg: string) => void;
   onRequestBlockChange?: () => void;
+  onReleaseRoom: (keyItem: RoomKeyItem) => void;
 }
 
 // Highly optimized, memoized single key card to prevent unnecessary re-renders
@@ -45,12 +46,14 @@ const DigitalKeyCard = memo(function DigitalKeyCard({
   onCopy,
   onShare,
   onDispatch,
+  onRelease,
   isCopied
 }: {
   keyItem: RoomKeyItem;
   onCopy: (key: string, id: string) => void;
   onShare: (keyItem: RoomKeyItem) => void;
   onDispatch: (keyItem: RoomKeyItem) => void;
+  onRelease: (keyItem: RoomKeyItem) => void;
   isCopied: boolean;
 }) {
   const isAssigned = Boolean(keyItem.isAssigned || keyItem.status === 'Assigned' || keyItem.status === 'Occupied');
@@ -122,6 +125,12 @@ const DigitalKeyCard = memo(function DigitalKeyCard({
       )}
 
       {/* Action Buttons */}
+      {isAssigned && (
+        <button type="button" onClick={() => onRelease(keyItem)} className="flex items-center justify-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-bold text-rose-700 hover:bg-rose-100 cursor-pointer">
+          <Trash2 className="h-3.5 w-3.5" />
+          <span>Remove Occupant</span>
+        </button>
+      )}
       <div className="grid grid-cols-2 gap-2 pt-1">
         <button
           type="button"
@@ -156,6 +165,7 @@ export default function ManagerDigitalKeysView({
   primaryProperty,
   onOpenDispatch,
   onTriggerToast,
+  onReleaseRoom,
   onRequestBlockChange
 }: ManagerDigitalKeysViewProps) {
   const [searchQuery, setSearchQuery] = useState('');
@@ -583,6 +593,7 @@ export default function ManagerDigitalKeysView({
                         onCopy={handleCopy}
                         onShare={handleShare}
                         onDispatch={onOpenDispatch}
+                        onRelease={onReleaseRoom}
                         isCopied={copiedKeyId === (keyItem.id || keyItem.roomKey)}
                       />
                     ))}

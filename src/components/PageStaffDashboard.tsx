@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { queryClient, invalidateAllQueries } from '../lib/queryClient';
 import { useAuth } from '../context/AuthContext';
 import { apiFetch, safeJson } from '../lib/api';
+import { saveNavigationLayout, usesTopNavigation } from '../lib/navigationLayout';
 import PineLogo from './PineLogo';
 import LogoutConfirmationModal from './LogoutConfirmationModal';
 import { sanitizePdfDataUrl } from '../utils/pdfHelper';
@@ -11,7 +12,7 @@ import {
   Phone, Mail, User, Building2, FileText, UploadCloud, ChevronRight,
   ShieldCheck, ArrowRight, RefreshCw, Sparkles, MapPin, Eye, ExternalLink,
   Camera, Check, Lock, Send, X, MessageSquare, LogOut as LogOutIcon, DollarSign,
-  Scale, Handshake, HelpCircle, ThumbsUp, ThumbsDown, Wrench, Loader2
+  Scale, Handshake, HelpCircle, ThumbsUp, ThumbsDown, Wrench, Loader2, PanelLeftClose, PanelLeftOpen
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -76,6 +77,11 @@ interface NotificationItem {
 export default function PageStaffDashboard() {
   const { user, logout, updateUser, setSessionUser } = useAuth();
   const navigate = useNavigate();
+  const [isSidebarTopNav, setIsSidebarTopNav] = useState(usesTopNavigation);
+
+  useEffect(() => {
+    saveNavigationLayout(isSidebarTopNav);
+  }, [isSidebarTopNav]);
 
   // Data States
   const [staffRecord, setStaffRecord] = useState<any | null>(null);
@@ -894,8 +900,9 @@ export default function PageStaffDashboard() {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <button onClick={() => setShowLogoutConfirm(true)} className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg">
+          <button onClick={() => setShowLogoutConfirm(true)} className="flex items-center gap-1.5 px-2 py-1.5 text-[10px] font-bold text-rose-600 hover:bg-rose-50 rounded-lg" title="Sign Out">
             <LogOutIcon className="w-4 h-4" />
+            <span>Sign Out</span>
           </button>
         </div>
       </header>
@@ -941,7 +948,9 @@ export default function PageStaffDashboard() {
 
       {/* LEFT SIDEBAR NAVIGATION */}
 
-      <aside className={`hidden lg:flex ${isSidebarCollapsed ? 'w-20 p-4' : 'w-72 p-6'} my-6 ml-6 h-[calc(100vh-3rem)] bg-gradient-to-br from-sky-100/90 via-blue-100/85 to-amber-50/40 backdrop-blur-3xl border border-sky-200/80 shadow-2xl rounded-3xl flex flex-col justify-between shrink-0 overflow-y-auto z-20 transition-all duration-300 relative`}>
+      {isSidebarTopNav && <nav className="hidden lg:block fixed top-3 left-1/2 -translate-x-1/2 z-50 w-[min(780px,calc(100vw-3rem))] bg-white/72 backdrop-blur-xl border border-white/80 rounded-2xl shadow-lg"><div className="flex items-center gap-1 px-2 py-1.5">{[{ id: 'maintenance', label: 'Fixes', icon: Wrench }, { id: 'apply', label: 'Apply', icon: Briefcase }, { id: 'offers', label: 'Offers', icon: Handshake }, { id: 'notifications', label: 'Alerts', icon: Bell }, { id: 'chat', label: 'Chat', icon: MessageSquare }, { id: 'settings', label: 'Settings', icon: Settings }].map(tab => <button key={tab.id} onClick={() => setActiveTab(tab.id as any)} className={`flex-1 min-w-0 flex flex-col items-center gap-0.5 py-1.5 rounded-xl text-[9px] font-bold cursor-pointer ${activeTab === tab.id ? 'text-blue-700 bg-blue-100/65' : 'text-slate-500 hover:bg-white/70'}`}><tab.icon className="w-4 h-4" /><span className="truncate max-w-full">{tab.label}</span></button>)}<button onClick={() => setShowLogoutConfirm(true)} title="Sign Out" className="shrink-0 flex flex-col items-center gap-0.5 px-2 py-1.5 text-[9px] font-bold text-rose-600 hover:bg-rose-50 rounded-xl cursor-pointer"><LogOutIcon className="w-4 h-4" /><span>Sign Out</span></button><button onClick={() => setIsSidebarTopNav(false)} title="Show sidebar" className="p-2 text-slate-500 hover:text-blue-700 cursor-pointer"><PanelLeftOpen className="w-4 h-4" /></button></div></nav>}
+      {!isSidebarTopNav && <aside className={`hidden lg:flex ${isSidebarCollapsed ? 'w-20 p-4' : 'w-72 p-6'} my-6 ml-6 h-[calc(100vh-3rem)] bg-gradient-to-br from-sky-100/90 via-blue-100/85 to-amber-50/40 backdrop-blur-3xl border border-sky-200/80 shadow-2xl rounded-3xl flex flex-col justify-between shrink-0 overflow-y-auto z-20 transition-all duration-300 relative`}>
+        <button onClick={() => setIsSidebarTopNav(true)} title="Use top navigation" className="absolute top-3 right-3 p-2 rounded-xl text-slate-500 hover:text-blue-700 hover:bg-white/70 cursor-pointer"><PanelLeftClose className="w-4 h-4" /></button>
 
         <div className="space-y-6">
           {/* Logo & Header */}
@@ -1219,17 +1228,11 @@ export default function PageStaffDashboard() {
             {!isSidebarCollapsed && <span>Log Out</span>}
           </button>
         </div>
-      </aside>
+      </aside>}
 
-      {/* GIANT WATERMARK PINEVELA LOGO — FIXED TO VIEWPORT (does not scroll with content) */}
-      <div className="fixed inset-0 flex items-center justify-center pointer-events-none select-none overflow-hidden z-0">
-        <div className="transform scale-[4.5] opacity-[0.14] blur-[0.4px]">
-          <PineLogo size={180} hideText={true} />
-        </div>
-      </div>
 
       {/* MAIN WORKSPACE CONTENT */}
-      <main className="flex-1 m-4 mb-24 lg:mb-6 lg:my-6 lg:mr-6 h-auto lg:h-[calc(100vh-3rem)] overflow-y-auto pb-24 lg:pb-8 bg-gradient-to-br from-white/95 via-sky-50/50 to-blue-50/30 backdrop-blur-2xl border border-sky-200/70 shadow-2xl rounded-3xl p-6 md:p-8 space-y-8 relative z-10">
+      <main className={`dashboard-centered-content flex-1 m-4 mb-24 lg:mb-6 lg:my-6 lg:mr-6 h-auto lg:h-[calc(100vh-3rem)] overflow-y-auto pb-24 lg:pb-8 bg-gradient-to-br from-white/95 via-sky-50/50 to-blue-50/30 backdrop-blur-2xl border border-sky-200/70 shadow-2xl rounded-3xl p-6 md:p-8 space-y-8 relative z-10 ${isSidebarTopNav ? 'lg:pt-24 lg:w-[calc(100vw-22rem)] lg:max-w-[calc(100vw-22rem)] lg:mx-auto' : ''}`}>
         {/* TOP STATUS BAR */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-200/60">
           <div>
@@ -1285,7 +1288,6 @@ export default function PageStaffDashboard() {
                 <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative z-10">
                   <div className="flex items-start gap-4">
                     <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center shrink-0 border border-white/30 text-white shadow-md">
-                      <Sparkles className="w-6 h-6 text-amber-300 animate-pulse" />
                     </div>
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
@@ -1406,7 +1408,6 @@ export default function PageStaffDashboard() {
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex items-center gap-2.5">
                         <div className="w-10 h-10 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-sm">
-                          <Sparkles className="w-5 h-5" />
                         </div>
                         <div>
                           <div className="flex items-center gap-2">
@@ -3229,7 +3230,6 @@ export default function PageStaffDashboard() {
                   }`}
                 >
                   <div className="flex items-center gap-2 font-black text-xs text-blue-900">
-                    <Sparkles className="w-4 h-4 text-blue-600" />
                     <span>Bargain to Stay</span>
                   </div>
                   <p className="text-[11px] text-slate-500 font-medium leading-tight">
@@ -3352,7 +3352,6 @@ export default function PageStaffDashboard() {
                   </>
                 ) : quitMode === 'bargain' ? (
                   <>
-                    <Sparkles className="w-4 h-4" />
                     <span>Send Bargain Deal to Manager</span>
                   </>
                 ) : (

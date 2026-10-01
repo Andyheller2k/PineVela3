@@ -18,7 +18,7 @@ L.Marker.prototype.options.icon = DefaultIcon;
 interface HostelMapPickerProps {
   latitude: number;
   longitude: number;
-  onLocationSelect: (coords: { lat: number; lng: number; addressSnippet?: string }) => void;
+  onLocationSelect: (coords: { lat: number; lng: number; addressSnippet?: string; city?: string; region?: string }) => void;
   initialAddressHint?: string;
 }
 
@@ -152,7 +152,9 @@ export default function HostelMapPicker({
         onLocationSelect({
           lat: roundedLat,
           lng: roundedLng,
-          addressSnippet: displayName
+          addressSnippet: displayName,
+          city: data.address?.city || data.address?.town || data.address?.village || data.address?.municipality || "",
+          region: data.address?.state || data.address?.region || ""
         });
         if (markerRef.current) {
           markerRef.current.setPopupContent(`<b>Selected Pin:</b><br/>${displayName.substring(0, 70)}...`).openPopup();

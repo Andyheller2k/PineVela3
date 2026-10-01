@@ -22,7 +22,6 @@ import {
   RefreshCw,
   Edit3,
   X,
-  Sparkles,
   ShoppingBag,
   Users,
   DollarSign,
@@ -148,7 +147,7 @@ const SellerInventoryCard: React.FC<SellerInventoryCardProps> = memo(
 
     return (
       <div
-        className="bg-white/90 border border-slate-200/80 rounded-3xl overflow-hidden shadow-xs hover:border-blue-400 hover:shadow-md transition-all duration-150 flex flex-col justify-between"
+        className="bg-slate-100/55 border border-slate-300/60 rounded-3xl overflow-hidden shadow-none hover:bg-slate-100/80 hover:border-blue-300 transition-all duration-150 flex flex-col justify-between"
       >
         <div>
           <div className="relative h-48 bg-slate-900/5 overflow-hidden flex items-center justify-center p-1 border-b border-slate-100">
@@ -181,7 +180,7 @@ const SellerInventoryCard: React.FC<SellerInventoryCardProps> = memo(
           </div>
         </div>
 
-        <div className="p-5 pt-3 border-t border-slate-100 space-y-3 bg-slate-50/40">
+        <div className="p-5 pt-3 border-t border-slate-200/60 space-y-3 bg-transparent">
           {!isService ? (
             /* REAL TIME STOCK ADJUSTER - ONLY FOR PHYSICAL PRODUCTS */
             <div className="flex items-center justify-between">
@@ -266,6 +265,11 @@ export default function PageDigitalMarket() {
   const { user, logout, apiFetch } = useAuth();
   const initialLoadCompletedRef = useRef<boolean>(false);
 
+  useEffect(() => {
+    document.documentElement.classList.add('marketplace-scrollbar-hidden');
+    return () => document.documentElement.classList.remove('marketplace-scrollbar-hidden');
+  }, []);
+
   // Role Protection Guard: Only merchant and student roles can access digital market platform
   useEffect(() => {
     if (user) {
@@ -280,7 +284,7 @@ export default function PageDigitalMarket() {
   }, [user, navigate]);
 
   // Navigation
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'inventory' | 'services' | 'sales' | 'notifications' | 'profile'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'inventory' | 'services' | 'sales' | 'notifications' | 'profile' | 'upgrade'>('dashboard');
   const [storeData, setStoreData] = useState<any>(null);
   const [applicationData, setApplicationData] = useState<any>(null);
   const [products, setProducts] = useState<MarketProduct[]>([]);
@@ -467,6 +471,13 @@ export default function PageDigitalMarket() {
   const studentEmail = user?.studentEmail || user?.email || '';
   const storeName = storeData?.storeName || applicationData?.storeName || `${user?.fullName || 'Student'}'s Store`;
   const university = storeData?.university || applicationData?.university || 'Accredited Ghanaian University';
+  const subscriptionPlan = storeData?.subscriptionPlan || "default";
+  const [selectedMobilePlan, setSelectedMobilePlan] = useState<"default" | "star" | "pro" | null>(null);
+  const [isPlanActivationLoading, setIsPlanActivationLoading] = useState(false);
+  const displayedMobilePlan = selectedMobilePlan || subscriptionPlan;
+  const subscriptionLimits = subscriptionPlan === "pro" ? { items: 200, services: 10, inventory: 900 } : subscriptionPlan === "star" ? { items: 100, services: 5, inventory: 600 } : { items: 20, services: 1, inventory: 200 };
+  const selectSubscription = async (plan: "default" | "star" | "pro") => { try { const result = await apiFetch("/api/digital-market/subscription", { method: "POST", body: JSON.stringify({ studentEmail, plan }) }); if (result?.store) { setStoreData(result.store); triggerToast(plan === "default" ? "Pine Default selected." : `Pine ${plan === "star" ? "Star" : "Pro"} selected for testing.`, "success"); } } catch (err: any) { triggerToast(err?.message || "Unable to update subscription.", "error"); } };
+  const activateMobilePlan = async () => { setIsPlanActivationLoading(true); try { await selectSubscription(displayedMobilePlan); } finally { setIsPlanActivationLoading(false); } };
 
   const loadData = async (isBackground = false) => {
     try {
@@ -1262,12 +1273,6 @@ export default function PageDigitalMarket() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-tr from-sky-100 via-blue-50 to-indigo-100 flex flex-col items-center justify-center p-6 text-slate-800 relative overflow-hidden">
-        {/* GIANT WATERMARK PINEVELA LOGO — FIXED TO BACKGROUND */}
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none overflow-hidden z-0">
-          <div className="transform scale-[4.5] opacity-[0.15] blur-[0.4px]">
-            <PineLogo size={180} hideText={true} />
-          </div>
-        </div>
 
         <div className="relative z-10 flex flex-col items-center space-y-4 text-center">
           <div className="w-20 h-20 rounded-3xl bg-white/75 backdrop-blur-md border border-blue-200/60 shadow-xl flex items-center justify-center animate-pulse">
@@ -1623,12 +1628,6 @@ export default function PageDigitalMarket() {
   // REDESIGNED MERCHANT MANAGEMENT WORKBENCH (GLOSSY LIGHT-BLUE VIBE)
   return (
     <div className="min-h-screen bg-gradient-to-tr from-sky-50 via-slate-50 to-blue-50 text-slate-800 pb-24 relative">
-      {/* GIANT WATERMARK PINEVELA LOGO — FIXED TO VIEWPORT (does not scroll with content) */}
-      <div className="fixed inset-0 flex items-center justify-center pointer-events-none select-none overflow-hidden z-0">
-        <div className="transform scale-[4.5] opacity-[0.15] blur-[0.4px]">
-          <PineLogo size={180} hideText={true} />
-        </div>
-      </div>
 
       {/* Toast */}
       {toastMessage && (
@@ -1725,7 +1724,7 @@ export default function PageDigitalMarket() {
               title="Sign out from secure digital store workbench"
             >
               <LogOut className="w-4 h-4 text-rose-600" />
-              <span className="hidden sm:inline">Sign Out</span>
+              <span>Sign Out</span>
             </button>
           </div>
         </div>
@@ -1769,7 +1768,6 @@ export default function PageDigitalMarket() {
                     : 'text-slate-600 hover:bg-slate-100/80 hover:text-slate-900'
                 }`}
               >
-                <Sparkles className="w-4 h-4 text-amber-300" />
                 <span>Services ({servicesList.length})</span>
               </button>
 
@@ -1804,18 +1802,8 @@ export default function PageDigitalMarket() {
                 )}
               </button>
 
-              <button
-                type="button"
-                onClick={() => setActiveTab('profile')}
-                className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 cursor-pointer ${
-                  activeTab === 'profile'
-                    ? 'bg-blue-600 text-white shadow-md'
-                    : 'text-slate-600 hover:bg-slate-100/80 hover:text-slate-900'
-                }`}
-              >
-                <ShieldCheck className="w-4 h-4" />
-                <span>Store Profile</span>
-              </button>
+              <button type="button" title="Upgrade your seller plan" aria-label="Upgrade your seller plan" onClick={() => setActiveTab("upgrade")} className={`px-3 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 cursor-pointer ${activeTab === "upgrade" ? "bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 shadow-md" : "text-amber-700 hover:bg-amber-50"}`}><CreditCard className="w-4 h-4" /><span className="sr-only">Upgrade</span></button>
+              <button type="button" onClick={() => setActiveTab("profile")} className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 cursor-pointer ${activeTab === "profile" ? "bg-blue-600 text-white shadow-md" : "text-slate-600 hover:bg-slate-100/80 hover:text-slate-900"}`}><ShieldCheck className="w-4 h-4" /><span>Store Profile</span></button>
             </nav>
           </div>
         </div>
@@ -1857,7 +1845,7 @@ export default function PageDigitalMarket() {
 
             {/* HIGH-CONTRAST METRICS ROWS */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="bg-white/80 border border-blue-100/50 backdrop-blur-md rounded-2xl p-5 shadow-xs">
+              <div className="bg-slate-100/45 border border-slate-300/50 backdrop-blur-sm rounded-2xl p-5 shadow-none">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-black uppercase text-slate-400">Total Products</span>
                   <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600">
@@ -1868,7 +1856,7 @@ export default function PageDigitalMarket() {
                 <div className="text-[10px] text-slate-500 mt-0.5">Active catalog listings</div>
               </div>
 
-              <div className="bg-white/80 border border-blue-100/50 backdrop-blur-md rounded-2xl p-5 shadow-xs">
+              <div className="bg-slate-100/45 border border-slate-300/50 backdrop-blur-sm rounded-2xl p-5 shadow-none">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-black uppercase text-slate-400">Total Stock</span>
                   <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600">
@@ -1879,7 +1867,7 @@ export default function PageDigitalMarket() {
                 <div className="text-[10px] text-slate-500 mt-0.5">Physical items on hand</div>
               </div>
 
-              <div className="bg-white/80 border border-blue-100/50 backdrop-blur-md rounded-2xl p-5 shadow-xs">
+              <div className="bg-slate-100/45 border border-slate-300/50 backdrop-blur-sm rounded-2xl p-5 shadow-none">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-black uppercase text-slate-400">Paid Sales</span>
                   <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600">
@@ -1890,7 +1878,7 @@ export default function PageDigitalMarket() {
                 <div className="text-[10px] text-slate-500 mt-0.5">Completed peer handovers</div>
               </div>
 
-              <div className="bg-white/80 border border-blue-100/50 backdrop-blur-md rounded-2xl p-5 shadow-xs">
+              <div className="bg-slate-100/45 border border-slate-300/50 backdrop-blur-sm rounded-2xl p-5 shadow-none">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-black uppercase text-slate-400">Total Revenue</span>
                   <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center text-amber-600">
@@ -2063,7 +2051,7 @@ export default function PageDigitalMarket() {
         {activeTab === 'inventory' && (
           <div className="space-y-6">
             {/* Search, price filter, sorting, category tags */}
-            <div className="bg-white/90 border border-blue-100 backdrop-blur-md rounded-3xl p-5 shadow-xs space-y-4">
+            <div className="bg-slate-100/45 border border-slate-300/50 backdrop-blur-sm rounded-3xl p-5 shadow-none space-y-4">
               <div className="flex flex-col lg:flex-row items-center justify-between gap-4">
                 <div className="relative w-full lg:w-72" id="inv-search-container">
                   <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -2072,7 +2060,7 @@ export default function PageDigitalMarket() {
                     placeholder="Search store inventory..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white"
+                    className="w-full pl-10 pr-4 py-2 bg-white/35 border border-slate-300/60 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white/60"
                   />
                   {searchQuery && (
                     <button
@@ -2370,7 +2358,7 @@ export default function PageDigitalMarket() {
                 {filteredServices.map(service => (
                   <div
                     key={service.id}
-                    className="bg-white/95 border border-slate-200/90 rounded-3xl overflow-hidden shadow-xs hover:border-blue-400 hover:shadow-md transition-all duration-150 flex flex-col justify-between group"
+                    className="bg-slate-100/55 border border-slate-300/60 rounded-3xl overflow-hidden shadow-none hover:bg-slate-100/80 hover:border-blue-300 transition-all duration-150 flex flex-col justify-between group"
                   >
                     <div>
                       {/* Photo container with written PineVela (Service) text */}
@@ -2837,6 +2825,35 @@ export default function PageDigitalMarket() {
               )}
             </div>
           </div>
+        )}
+
+        {activeTab === "upgrade" && (
+          <section className="space-y-6 animate-fadeIn">
+            <div className="relative overflow-hidden rounded-3xl border border-blue-300/40 bg-gradient-to-br from-slate-950 via-blue-950 to-indigo-900 p-6 sm:p-9 text-white shadow-[0_20px_60px_rgba(30,64,175,0.25)]">
+              <div className="absolute -right-16 -top-20 h-56 w-56 rounded-full border border-cyan-300/30 bg-cyan-300/10 animate-pulse" />
+              <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div><div className="mb-3 inline-flex items-center gap-2 rounded-full border border-cyan-200/30 bg-white/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-cyan-100"><Star className="h-3.5 w-3.5 fill-current" /> PineVela seller plans</div><h2 className="text-2xl font-black tracking-tight sm:text-3xl">Make your store stand out.</h2><p className="mt-2 max-w-2xl text-sm text-blue-100">Choose a plan for testing now. Payments are structured for Paystack activation later.</p></div>
+                <div className="rounded-2xl border border-white/20 bg-white/10 px-4 py-3 backdrop-blur"><div className="text-[10px] font-black uppercase tracking-wider text-blue-200">Current plan</div><div className="mt-1 flex items-center gap-2 text-lg font-black"><BadgeCheck className="h-5 w-5 text-cyan-300" />Pine {subscriptionPlan === "star" ? "Star" : subscriptionPlan === "pro" ? "Pro" : "Default"}</div></div>
+              </div>
+            </div>
+            <div className="sm:hidden space-y-4">
+              <div className="grid grid-cols-3 gap-2 rounded-2xl border border-slate-200/80 bg-white/55 p-1.5 backdrop-blur-md">
+                <button type="button" onClick={() => setSelectedMobilePlan("default")} className={`rounded-xl px-2 py-2 text-[10px] font-black transition-all ${displayedMobilePlan === "default" ? "bg-blue-600 text-white shadow-md" : "text-slate-500"}`}>Pine Default</button>
+                <button type="button" onClick={() => setSelectedMobilePlan("star")} className={`rounded-xl px-2 py-2 text-[10px] font-black transition-all ${displayedMobilePlan === "star" ? "bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 shadow-md" : "text-slate-500"}`}>Pine Star</button>
+                <button type="button" onClick={() => setSelectedMobilePlan("pro")} className={`rounded-xl px-2 py-2 text-[10px] font-black transition-all ${displayedMobilePlan === "pro" ? "bg-indigo-950 text-cyan-200 shadow-md" : "text-slate-500"}`}>Pine Pro</button>
+              </div>
+              <div key={displayedMobilePlan} className={`relative min-h-[365px] overflow-hidden rounded-3xl border p-6 shadow-xl animate-fadeIn ${displayedMobilePlan === "pro" ? "border-cyan-300/70 bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-900 text-white" : displayedMobilePlan === "star" ? "border-amber-300 bg-gradient-to-br from-amber-50 via-white to-orange-50 text-slate-900" : "border-blue-200 bg-gradient-to-br from-white via-blue-50 to-slate-50 text-slate-900"}`}>
+                <div className={`absolute inset-x-0 top-0 h-1 ${displayedMobilePlan === "pro" ? "bg-gradient-to-r from-indigo-500 via-cyan-300 to-indigo-500 animate-pulse" : displayedMobilePlan === "star" ? "bg-gradient-to-r from-amber-300 via-yellow-500 to-orange-400 animate-pulse" : "bg-gradient-to-r from-blue-300 via-blue-600 to-indigo-400"}`} />
+                <div className="relative flex h-full flex-col"><div className="flex items-start justify-between"><div className={`rounded-2xl p-3 ${displayedMobilePlan === "pro" ? "bg-cyan-300/15 text-cyan-200" : displayedMobilePlan === "star" ? "bg-gradient-to-br from-amber-400 to-orange-500 text-white" : "bg-blue-100 text-blue-700"}`}>{displayedMobilePlan === "pro" ? <TrendingUp className="h-7 w-7" /> : displayedMobilePlan === "star" ? <Star className="h-7 w-7 fill-current" /> : <Store className="h-7 w-7" />}</div><BadgeCheck className={`h-6 w-6 ${displayedMobilePlan === "pro" ? "text-cyan-300" : displayedMobilePlan === "star" ? "text-amber-600" : "text-blue-600"}`} /></div><div className="mt-6"><div className={`text-[10px] font-black uppercase tracking-[0.16em] ${displayedMobilePlan === "pro" ? "text-cyan-200" : displayedMobilePlan === "star" ? "text-amber-700" : "text-blue-700"}`}>Selected seller subscription</div><h3 className="mt-1 text-3xl font-black">Pine {displayedMobilePlan === "star" ? "Star" : displayedMobilePlan === "pro" ? "Pro" : "Default"}</h3><p className={`mt-2 text-sm font-medium ${displayedMobilePlan === "pro" ? "text-indigo-100" : "text-slate-600"}`}>{displayedMobilePlan === "pro" ? "The full visual storefront toolkit." : displayedMobilePlan === "star" ? "A brighter presence for growing stores." : "Everything needed to begin selling."}</p></div><div className={`my-6 h-px ${displayedMobilePlan === "pro" ? "bg-white/15" : "bg-slate-200"}`} /><div className="grid grid-cols-3 gap-2 text-center"><div className={`rounded-2xl p-3 ${displayedMobilePlan === "pro" ? "bg-white/10" : "bg-white/70"}`}><div className="text-lg font-black">{displayedMobilePlan === "pro" ? "200" : displayedMobilePlan === "star" ? "100" : "20"}</div><div className="text-[9px] font-bold opacity-70">items</div></div><div className={`rounded-2xl p-3 ${displayedMobilePlan === "pro" ? "bg-white/10" : "bg-white/70"}`}><div className="text-lg font-black">{displayedMobilePlan === "pro" ? "10" : displayedMobilePlan === "star" ? "5" : "1"}</div><div className="text-[9px] font-bold opacity-70">services</div></div><div className={`rounded-2xl p-3 ${displayedMobilePlan === "pro" ? "bg-white/10" : "bg-white/70"}`}><div className="text-lg font-black">{displayedMobilePlan === "pro" ? "900" : displayedMobilePlan === "star" ? "600" : "200"}</div><div className="text-[9px] font-bold opacity-70">inventory</div></div></div><div className={`mt-6 rounded-2xl p-3 text-xs font-semibold leading-relaxed ${displayedMobilePlan === "pro" ? "bg-cyan-300/10 text-cyan-100" : displayedMobilePlan === "star" ? "bg-amber-100 text-amber-950" : "bg-blue-100 text-blue-950"}`}>{displayedMobilePlan === "pro" ? "Includes every Pine Star benefit, plus custom animated item-card designs and highlights." : displayedMobilePlan === "star" ? "Includes a Pine Star badge, search priority, a store link, HD images, and AI image tools." : "Publish up to 20 items and one service at a time, with 200 total inventory units."}</div><div className={`mt-auto pt-5 text-lg font-black ${displayedMobilePlan === "pro" ? "text-cyan-200" : displayedMobilePlan === "star" ? "text-amber-700" : "text-blue-700"}`}>{displayedMobilePlan === "default" ? "Free forever" : displayedMobilePlan === "star" ? "GH₵90 / month" : "GH₵150 / month"}</div></div>
+                <button type="button" onClick={activateMobilePlan} disabled={isPlanActivationLoading || displayedMobilePlan === subscriptionPlan} className={`mt-6 flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-3 text-xs font-black transition-all disabled:cursor-default ${displayedMobilePlan === subscriptionPlan ? "bg-emerald-500 text-white" : displayedMobilePlan === "pro" ? "bg-cyan-300 text-slate-950" : displayedMobilePlan === "star" ? "bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950" : "bg-blue-600 text-white"}`}>{isPlanActivationLoading ? <><RefreshCw className="h-4 w-4 animate-spin" />Activating...</> : displayedMobilePlan === subscriptionPlan ? <><CheckCircle2 className="h-4 w-4" />Activated</> : <>Upgrade to Pine {displayedMobilePlan === "star" ? "Star" : displayedMobilePlan === "pro" ? "Pro" : "Default"}<ArrowRight className="h-4 w-4" /></>}</button>
+              </div>
+            </div>
+            <div className="hidden grid-cols-1 gap-5 sm:grid lg:grid-cols-3">
+              <button type="button" onClick={() => selectSubscription("default")} className={`group relative overflow-hidden rounded-3xl border bg-white/70 p-6 text-left shadow-sm transition-all hover:-translate-y-1 hover:shadow-xl ${subscriptionPlan === "default" ? "border-blue-500 ring-2 ring-blue-200" : "border-slate-200"}`}><div className="flex items-start justify-between"><div className="rounded-2xl bg-blue-100 p-3 text-blue-700"><Store className="h-6 w-6" /></div>{subscriptionPlan === "default" && <BadgeCheck className="h-6 w-6 text-blue-600" />}</div><h3 className="mt-5 text-xl font-black text-slate-900">Pine Default</h3><p className="mt-1 text-sm text-slate-500">Everything needed to begin selling.</p><div className="my-5 h-px bg-slate-200" /><div className="space-y-3 text-sm font-semibold text-slate-700"><div className="flex gap-2"><CheckCircle2 className="h-4 w-4 text-blue-600" />Publish 20 items at a time</div><div className="flex gap-2"><CheckCircle2 className="h-4 w-4 text-blue-600" />1 active service</div><div className="flex gap-2"><CheckCircle2 className="h-4 w-4 text-blue-600" />200 total inventory units</div></div><div className="mt-6 text-sm font-black text-blue-700">Free forever <ArrowRight className="ml-1 inline h-4 w-4" /></div></button>
+              <button type="button" onClick={() => selectSubscription("star")} className={`group relative overflow-hidden rounded-3xl border bg-gradient-to-b from-amber-50 via-white to-orange-50 p-6 text-left shadow-md transition-all hover:-translate-y-1 hover:shadow-2xl ${subscriptionPlan === "star" ? "border-amber-400 ring-2 ring-amber-200" : "border-amber-200"}`}><div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-amber-300 via-yellow-500 to-orange-400 animate-pulse" /><div className="flex items-start justify-between"><div className="rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 p-3 text-white shadow-lg"><Star className="h-6 w-6 fill-current" /></div>{subscriptionPlan === "star" && <BadgeCheck className="h-6 w-6 text-amber-600" />}</div><h3 className="mt-5 text-xl font-black text-slate-900">Pine Star</h3><p className="mt-1 text-sm text-slate-600">A brighter presence for growing stores.</p><div className="mt-4 text-2xl font-black text-slate-900">GH₵90 <span className="text-xs font-bold text-slate-500">/ month</span></div><div className="my-5 h-px bg-amber-200" /><div className="space-y-3 text-sm font-semibold text-slate-700"><div className="flex gap-2"><BadgeCheck className="h-4 w-4 text-amber-600" />100 items, 5 services, 600 inventory</div><div className="flex gap-2"><TrendingUp className="h-4 w-4 text-amber-600" />Star badge and search priority</div><div className="flex gap-2"><ImageIcon className="h-4 w-4 text-amber-600" />Store link, HD images and AI tools</div></div><div className="mt-6 text-sm font-black text-amber-700">Choose Pine Star <ArrowRight className="ml-1 inline h-4 w-4" /></div></button>
+              <button type="button" onClick={() => selectSubscription("pro")} className={`group relative overflow-hidden rounded-3xl border bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-900 p-6 text-left text-white shadow-lg transition-all hover:-translate-y-1 hover:shadow-2xl ${subscriptionPlan === "pro" ? "border-cyan-300 ring-2 ring-cyan-300/70" : "border-indigo-500/60"}`}><div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-cyan-300/20 blur-2xl animate-pulse" /><div className="relative flex items-start justify-between"><div className="rounded-2xl border border-cyan-200/40 bg-cyan-300/15 p-3 text-cyan-200"><TrendingUp className="h-6 w-6" /></div>{subscriptionPlan === "pro" && <BadgeCheck className="h-6 w-6 text-cyan-300" />}</div><div className="relative"><h3 className="mt-5 text-xl font-black">Pine Pro</h3><p className="mt-1 text-sm text-indigo-200">The full visual storefront toolkit.</p><div className="mt-4 text-2xl font-black">GH₵150 <span className="text-xs font-bold text-indigo-200">/ month</span></div><div className="my-5 h-px bg-white/15" /><div className="space-y-3 text-sm font-semibold text-indigo-50"><div className="flex gap-2"><CheckCircle2 className="h-4 w-4 text-cyan-300" />200 items, 10 services, 900 inventory</div><div className="flex gap-2"><Star className="h-4 w-4 text-cyan-300" />Every Pine Star advantage</div><div className="flex gap-2"><ImageIcon className="h-4 w-4 text-cyan-300" />Animated, custom item cards</div></div><div className="mt-6 text-sm font-black text-cyan-200">Choose Pine Pro <ArrowRight className="ml-1 inline h-4 w-4" /></div></div></button>
+            </div>
+          </section>
         )}
 
         {/* TAB 4: STORE PROFILE EDIT */}
@@ -3804,8 +3821,8 @@ export default function PageDigitalMarket() {
 
       {/* VIEW ORDER PINNED MEETUP SPOT MODAL */}
       {viewingOrderMap && (
-        <div className="fixed inset-0 z-[70] bg-slate-950/75 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 animate-fadeIn">
-          <div className="max-w-2xl w-full">
+        <div className="fixed inset-0 z-[200] bg-slate-950/75 backdrop-blur-xl flex items-center justify-center p-3 sm:p-6 animate-fadeIn">
+          <div className="max-w-[calc(100vw-1rem)] sm:max-w-2xl w-full">
             <CampusMeetupMapPicker
               latitude={viewingOrderMap.meetingLatitude || 6.6745}
               longitude={viewingOrderMap.meetingLongitude || -1.5716}
@@ -3880,7 +3897,7 @@ export default function PageDigitalMarket() {
               : 'text-slate-600 hover:text-slate-900'
           }`}
         >
-          <Sparkles className="w-4.5 h-4.5 shrink-0" />
+          <Wrench className="w-4.5 h-4.5 shrink-0" />
           <span>Services ({servicesList.length})</span>
         </button>
 
@@ -3924,24 +3941,24 @@ export default function PageDigitalMarket() {
         <button
           type="button"
           onClick={() => {
-            setActiveTab('profile');
+            setActiveTab('upgrade');
             window.scrollTo({ top: 0, behavior: 'smooth' });
           }}
           className={`flex flex-col items-center gap-0.5 p-1 text-[9px] font-black tracking-tight transition-all rounded-xl min-w-[64px] ${
-            activeTab === 'profile'
+            activeTab === 'upgrade'
               ? 'text-blue-600 font-extrabold scale-105'
               : 'text-slate-600 hover:text-slate-900'
           }`}
         >
-          <ShieldCheck className="w-4.5 h-4.5 shrink-0" />
-          <span>Profile</span>
+          <CreditCard className="w-4.5 h-4.5 shrink-0" />
+          <span>Upgrade</span>
         </button>
       </div>
 
       {/* SELECT SERVICE LOCATION ON MAP MODAL */}
       {isMapLocationPickerOpen && (
-        <div className="fixed inset-0 z-[80] bg-slate-950/75 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 animate-fadeIn">
-          <div className="max-w-2xl w-full">
+        <div className="fixed inset-0 z-[200] bg-slate-950/75 backdrop-blur-xl flex items-center justify-center p-3 sm:p-6 animate-fadeIn">
+          <div className="max-w-[calc(100vw-1rem)] sm:max-w-2xl w-full">
             <CampusMeetupMapPicker
               latitude={servLat}
               longitude={servLng}
@@ -3963,8 +3980,8 @@ export default function PageDigitalMarket() {
 
       {/* VIEW EXACT SERVICE LOCATION PIN MODAL */}
       {viewingServiceMap && (
-        <div className="fixed inset-0 z-[80] bg-slate-950/75 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 animate-fadeIn">
-          <div className="max-w-2xl w-full">
+        <div className="fixed inset-0 z-[200] bg-slate-950/75 backdrop-blur-xl flex items-center justify-center p-3 sm:p-6 animate-fadeIn">
+          <div className="max-w-[calc(100vw-1rem)] sm:max-w-2xl w-full">
             <CampusMeetupMapPicker
               latitude={viewingServiceMap.lat || viewingServiceMap.latitude || 6.6745}
               longitude={viewingServiceMap.lng || viewingServiceMap.longitude || -1.5716}
@@ -3979,7 +3996,7 @@ export default function PageDigitalMarket() {
 
       {/* SERVICE RATINGS & STUDENT REVIEWS MODAL */}
       {viewingServiceReviews && (
-        <div className="fixed inset-0 z-[75] bg-slate-950/60 backdrop-blur-md flex items-center justify-center p-4 animate-fadeIn">
+        <div className="fixed inset-0 z-[200] bg-slate-950/75 backdrop-blur-xl flex items-center justify-center p-4 animate-fadeIn">
           <div className="bg-white rounded-3xl max-w-lg w-full max-h-[85vh] flex flex-col p-6 shadow-2xl border border-slate-100 animate-scaleUp">
             {/* Header */}
             <div className="flex items-center justify-between pb-4 border-b border-slate-100 shrink-0">

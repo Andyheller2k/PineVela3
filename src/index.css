@@ -75,10 +75,12 @@ html, body {
 }
 
 /* The public landing page remains scrollable without a visible right-edge scrollbar gutter. */
-html.landing-page-scrollbar-hidden {
+html.landing-page-scrollbar-hidden,
+html.marketplace-scrollbar-hidden {
   scrollbar-width: none;
 }
-html.landing-page-scrollbar-hidden::-webkit-scrollbar {
+html.landing-page-scrollbar-hidden::-webkit-scrollbar,
+html.marketplace-scrollbar-hidden::-webkit-scrollbar {
   display: none;
 }
 
@@ -217,4 +219,14 @@ html.landing-page-scrollbar-hidden::-webkit-scrollbar {
   white-space: nowrap;
   font-size: clamp(0.5rem, 2.25vw, 0.625rem) !important;
   line-height: 1.1;
+}
+
+/* Keep constrained dashboard tab content visually centered in the available
+   desktop canvas without changing any component dimensions. */
+@media (min-width: 1024px) {
+  .user-dashboard-content > div:not(.fixed),
+  .dashboard-centered-content > div:not(.fixed) {
+    margin-left: auto;
+    margin-right: auto;
+  }
 }

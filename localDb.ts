@@ -674,7 +674,6 @@ export async function dbRegisterHostelAtomic(registrationPayload: any, fallbackH
   const resolvedName = registrationPayload.name || registrationPayload.hostelName || 'Registered Hostel';
   const resolvedImage = registrationPayload.imageUrl || registrationPayload.image || registrationPayload.exteriorPhotoUrl || registrationPayload.imagePreviewUrl || (Array.isArray(registrationPayload.images) && registrationPayload.images[0]) || 'https://images.unsplash.com/photo-1555854877-bab0e564b8d5?auto=format&fit=crop&w=800&q=80';
   const resolvedLocation = registrationPayload.location || (registrationPayload.addressLine1 ? `${registrationPayload.addressLine1}, ${registrationPayload.city || 'Accra'}` : (registrationPayload.address || registrationPayload.city || 'Accra, Ghana'));
-  const resolvedPrice = Number(registrationPayload.price || registrationPayload.pricing?.defaultFee || registrationPayload.pricingTiers?.[0]?.price || 3500);
   const resolvedCapacity = Number(registrationPayload.maximumCapacity || registrationPayload.totalCapacity || registrationPayload.totalBeds || 100);
   const resolvedManagerPhoto = registrationPayload.managerPhoto || registrationPayload.managerAvatar || registrationPayload.avatar || registrationPayload.photo || '';
 
@@ -687,7 +686,6 @@ export async function dbRegisterHostelAtomic(registrationPayload: any, fallbackH
     bedsLeft: resolvedCapacity,
     totalCapacity: resolvedCapacity,
     availableSpaces: resolvedCapacity,
-    price: resolvedPrice,
     image: resolvedImage,
     imageUrl: resolvedImage,
     exteriorPhotoUrl: resolvedImage,
@@ -731,7 +729,6 @@ export async function dbRegisterHostelAtomic(registrationPayload: any, fallbackH
     managerPhoto: hostelRecord.managerPhoto,
     imageUrl: hostelRecord.imageUrl,
     image: hostelRecord.image,
-    price: hostelRecord.price,
     location: hostelRecord.location,
     totalCapacity: hostelRecord.totalCapacity,
     status: hostelRecord.isApproved ? 'Approved' : 'Pending Approval',
@@ -1009,7 +1006,7 @@ export function generateHostelRoomKeyCode(hostelName: string, blockNameOrInitial
   }
 
   // 6 randomly generated digits
-  const random6 = Math.floor(100000 + Math.random() * 900000).toString();
+  const random6 = crypto.randomInt(100000, 1000000).toString();
 
   return `${prefix}-${blockCode}-${random6}`;
 }
@@ -1049,7 +1046,10 @@ export async function dbGenerateHostelRoomKeys(hostel: any): Promise<any[]> {
         rk.roomNumber === roomNum
       );
       if (!existing) {
-        const keyVal = generateHostelRoomKeyCode(hostelName, blockName);
+        let keyVal: string;
+        do {
+          keyVal = generateHostelRoomKeyCode(hostelName, blockName);
+        } while (store.roomKeys.some((room: any) => room.roomKey === keyVal) || store.retiredRoomKeys?.includes(keyVal));
         const newKey = {
           id: `rk-${hostelId}-${blockName.replace(/[^a-zA-Z0-9]/g, '_')}-${roomNum}`,
           hostelId,
@@ -1159,6 +1159,9 @@ export async function dbAssignRoomKey(roomKey: string, studentData: {
 
   const idx = store.roomKeys.findIndex((rk: any) => rk.roomKey?.trim().toUpperCase() === normalized);
   if (idx >= 0) {
+    if (store.roomKeys[idx].isAssigned || store.roomKeys[idx].status === 'Occupied') {
+      throw new Error('This room is already occupied.');
+    }
     store.roomKeys[idx] = {
       ...store.roomKeys[idx],
       isAssigned: true,
@@ -1283,5 +1286,4 @@ export async function dbCreateStudentMessage(msgData: any): Promise<any> {
   persistStore();
   return newMsg;
 }
-
 

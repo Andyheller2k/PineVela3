@@ -69,6 +69,18 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+// Uploaded data URLs are too large for reliable localStorage caching. The API persists them; local cache is reserved for presets and ordinary URLs.
+const cacheAvatar = (email: string | undefined, avatar?: string) => {
+  if (!avatar || avatar.startsWith("data:image/")) return;
+  try {
+    const cleanEmail = (email || "").toLowerCase().trim();
+    if (cleanEmail) localStorage.setItem("pinevela_avatar_" + cleanEmail, avatar);
+    localStorage.setItem("pinevela_user_avatar", avatar);
+  } catch (error) {
+    console.warn("[Auth] Avatar could not be cached locally:", error);
+  }
+};
+
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthenticatedUser | null>(null);
@@ -224,28 +236,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('pinevela_session_token', userData.token);
     localStorage.setItem('token', userData.token);
     localStorage.setItem('pinevela_auth_token', userData.token);
-    if (resolvedAvatar && cleanEmail) {
-      localStorage.setItem(`pinevela_avatar_${cleanEmail}`, resolvedAvatar);
-      localStorage.setItem('pinevela_user_avatar', resolvedAvatar);
-    }
+    cacheAvatar(cleanEmail, resolvedAvatar);
     setUser(finalUser);
     return finalUser;
   };
 
   const setSessionUser = (newSessionUser: AuthenticatedUser) => {
     if (newSessionUser?.token) {
-      localStorage.setItem('pinevela_session_token', newSessionUser.token);
-      localStorage.setItem('token', newSessionUser.token);
-      localStorage.setItem('pinevela_auth_token', newSessionUser.token);
+      localStorage.setItem("pinevela_session_token", newSessionUser.token);
+      localStorage.setItem("token", newSessionUser.token);
+      localStorage.setItem("pinevela_auth_token", newSessionUser.token);
     }
     const newPic = newSessionUser?.avatar || newSessionUser?.photo || newSessionUser?.photoUrl || newSessionUser?.avatarUrl || newSessionUser?.profilePicture;
-    if (newPic) {
-      const cleanEmail = (newSessionUser?.email || '').toLowerCase().trim();
-      if (cleanEmail) {
-        localStorage.setItem(`pinevela_avatar_${cleanEmail}`, newPic);
-      }
-      localStorage.setItem('pinevela_user_avatar', newPic);
-    }
+    cacheAvatar(newSessionUser?.email, newPic);
     setUser(newSessionUser);
   };
 
@@ -254,23 +257,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!prev) return null;
       const updated = { ...prev, ...updatedFields };
       const newPic = updated.avatar || updated.photo || updated.photoUrl || updated.avatarUrl || updated.profilePicture;
-      if (newPic) {
-        const cleanEmail = (updated.email || '').toLowerCase().trim();
-        try {
-          if (cleanEmail) localStorage.setItem(`pinevela_avatar_${cleanEmail}`, newPic);
-          localStorage.setItem('pinevela_user_avatar', newPic);
-        } catch (err) {
-          console.warn('[Auth] Avatar could not be cached locally:', err);
-        }
-      }
+      if (newPic) cacheAvatar(updated.email, newPic);
       return updated;
     });
   };
 
   const logout = () => {
-    localStorage.removeItem('pinevela_session_token');
-    localStorage.removeItem('token');
-    localStorage.removeItem('pinevela_auth_token');
+    localStorage.removeItem("pinevela_session_token");
+    localStorage.removeItem("token");
+    localStorage.removeItem("pinevela_auth_token");
     setUser(null);
   };
 

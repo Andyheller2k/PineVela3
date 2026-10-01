@@ -157,6 +157,7 @@ export default function PageVerificationTeamPortal() {
   const [inspectorSignature, setInspectorSignature] = useState('');
   const [isSubmittingReport, setIsSubmittingReport] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
 
   // Fetch Inspections for the Officer
@@ -434,9 +435,10 @@ export default function PageVerificationTeamPortal() {
     e.preventDefault();
     if (!activeInspection) return;
     setSubmitError(null);
+    setFieldErrors({});
 
     if (!observations.trim() || observations.length < 10) {
-      setSubmitError("Please provide thorough on-site observations (minimum 10 characters).");
+      setFieldErrors({ observations: "Please provide thorough on-site observations (minimum 10 characters)." });
       return;
     }
 
@@ -489,8 +491,8 @@ export default function PageVerificationTeamPortal() {
     <div className="relative min-h-screen w-full bg-gradient-to-br from-slate-50 via-blue-50/70 to-indigo-50/50 text-slate-800 flex flex-col items-center justify-start p-4 sm:p-6 md:p-10 overflow-x-hidden font-sans">
       {/* Background PineVela Frost Logo Watermark */}
       <div className="fixed inset-0 flex items-center justify-center pointer-events-none select-none overflow-hidden -z-0">
-        <div className="opacity-[0.07] transform-gpu scale-125 md:scale-150 transition-opacity">
-          <PineLogo size={750} hideText={false} />
+        <div className="opacity-[0.07] transform-gpu scale-100 transition-opacity">
+          <PineLogo size={72} hideText={true} />
         </div>
       </div>
 
@@ -572,7 +574,7 @@ export default function PageVerificationTeamPortal() {
           </div>
         ) : (
           <div className="flex items-center gap-2.5">
-            <span className="hidden sm:inline text-xs font-semibold text-slate-400">Authorized Personnel Only</span>
+            
             <button
               type="button"
               id="btn-verification-exit-header"
@@ -596,10 +598,7 @@ export default function PageVerificationTeamPortal() {
             animate={{ opacity: 1, y: 0 }}
             className="max-w-md mx-auto bg-white/90 backdrop-blur-xl border border-slate-200/80 rounded-3xl p-6 sm:p-8 shadow-xl"
           >
-            <div className="flex items-center justify-between mb-5 pb-3.5 border-b border-slate-100">
-              <span className="text-[11px] font-bold text-slate-500 tracking-wide uppercase">Field Team Portal</span>
-              <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full border border-blue-200">Ground Inspection</span>
-            </div>
+            
 
             <div className="text-center mb-6">
               <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-900 to-indigo-900 text-white flex items-center justify-center mx-auto mb-3 shadow-lg shadow-blue-900/20">
@@ -678,34 +677,6 @@ export default function PageVerificationTeamPortal() {
                 )}
               </button>
             </form>
-
-            {/* Quick Demo Credentials */}
-            <div className="mt-6 pt-5 border-t border-slate-100 text-center space-y-3">
-              <div>
-                <span className="text-[11px] text-slate-400 block mb-2 font-medium">Quick Credentials Shortcut:</span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setLoginEmail('inspector.mensah@pinevela.com');
-                    setLoginPassword('inspector123');
-                  }}
-                  className="text-xs text-blue-800 hover:text-blue-950 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-3.5 py-1.5 rounded-xl transition-all font-mono font-bold"
-                >
-                  Use: inspector.mensah@pinevela.com (inspector123)
-                </button>
-              </div>
-
-              <div>
-                <button
-                  type="button"
-                  onClick={() => navigate('/login')}
-                  className="text-xs font-bold text-slate-500 hover:text-blue-900 transition-colors inline-flex items-center gap-1 cursor-pointer"
-                >
-                  <ArrowLeft className="w-3.5 h-3.5" />
-                  <span>Return to Main Login</span>
-                </button>
-              </div>
-            </div>
           </motion.div>
         ) : (
           /* Authenticated Verification Officer Workspace */
@@ -1156,10 +1127,11 @@ export default function PageVerificationTeamPortal() {
                         required
                         rows={3}
                         value={observations}
-                        onChange={(e) => setObservations(e.target.value)}
+                        onChange={(e) => { setObservations(e.target.value); setFieldErrors(prev => ({ ...prev, observations: "" })); }}
                         placeholder="Describe your in-person visit: Did you meet the manager? How does the building look? Are utilities functional? What did you physically inspect?"
                         className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white transition-all resize-none font-medium"
                       />
+                      {fieldErrors.observations && <p className="mt-1.5 text-[11px] font-semibold text-rose-600" role="alert">{fieldErrors.observations}</p>}
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

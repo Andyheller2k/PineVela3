@@ -688,7 +688,7 @@ export default function PageManagerOnboarding() {
 
                 {/* Progress Bar Circle / Pill */}
                 <div className="hidden sm:flex items-center gap-1.5 bg-white px-3 py-1.5 rounded-full border border-slate-200 shadow-xs">
-                  <span className="text-xs font-extrabold text-slate-700">{Math.round((phase / 3) * 100)}%</span>
+                  <span className="text-xs font-extrabold text-slate-700">{Math.round(10 + ((phase - 1) / 2) * 90)}%</span>
                   <span className="text-[10px] font-bold text-slate-400">Completed</span>
                 </div>
               </div>

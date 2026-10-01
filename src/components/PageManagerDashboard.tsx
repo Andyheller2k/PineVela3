@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { queryClient, invalidateAllQueries } from '../lib/queryClient';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
+import { saveNavigationLayout, usesTopNavigation } from '../lib/navigationLayout';
 import PineLogo from './PineLogo';
 import HostelRegistration from './HostelRegistration';
 import ManagerProfileModal from './ManagerProfileModal';
@@ -18,7 +19,7 @@ import {
   AlertCircle, Check, Sparkles, ArrowRight, ArrowLeft, Layers, Wrench, Settings, Bell,
   Send, MessageSquare, Phone, Mail, Shield, Trash2, Edit3, Eye, EyeOff, FileText, CheckCircle, Lock, Calendar, CalendarCheck,
   Briefcase, Sliders, ExternalLink, Download, RefreshCw, Scale, Handshake, HelpCircle, ThumbsUp, ThumbsDown,
-  Key, Copy, Smartphone, Share2, ChevronRight, X, ShieldAlert
+  Key, Copy, Smartphone, Share2, ChevronRight, X, ShieldAlert, PanelLeftClose, PanelLeftOpen
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
@@ -80,6 +81,11 @@ export default function PageManagerDashboard() {
   );
   // Collapsible sidebar state (Disabled minimizing to prevent glitched overlapping)
   const isSidebarCollapsed = false;
+  const [isSidebarTopNav, setIsSidebarTopNav] = useState(usesTopNavigation);
+
+  useEffect(() => {
+    saveNavigationLayout(isSidebarTopNav);
+  }, [isSidebarTopNav]);
   const [loading, setLoading] = useState(true);
   const isInitialLoadRef = React.useRef(true);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -221,6 +227,13 @@ export default function PageManagerDashboard() {
 
   // Digital Room Keys & Dispatch state
   const [roomKeysList, setRoomKeysList] = useState<any[]>([]);
+  const [roomAccessAction, setRoomAccessAction] = useState<{ type: 'release'; room: any } | { type: 'reshuffle' } | null>(null);
+  const [roomAccessBusy, setRoomAccessBusy] = useState(false);
+  const [roomAccessError, setRoomAccessError] = useState<string | null>(null);
+  const [keysAcademicYear, setKeysAcademicYear] = useState(() => {
+    const year = new Date().getFullYear();
+    return `${year}/${year + 1}`;
+  });
   const [loadingRoomKeys, setLoadingRoomKeys] = useState(false);
   const [roomSearchQuery, setRoomSearchQuery] = useState('');
   const [roomStatusFilter, setRoomStatusFilter] = useState<'all' | 'available' | 'occupied'>('all');
@@ -402,7 +415,7 @@ export default function PageManagerDashboard() {
       } else {
         setActiveTab('notifications');
       }
-      setShowWelcomePopup(false);
+      setShowWelcomePopup(managerData.managerProperties.length === 0);
       isInitialLoadRef.current = false;
     }
     setLoading(false);
@@ -1138,9 +1151,9 @@ export default function PageManagerDashboard() {
   useEffect(() => {
     if (!loading && user) {
       const hasAnyHostel = properties.length > 0;
-      setShowWelcomePopup(false);
+      setShowWelcomePopup(!hasAnyHostel && !showRegistration);
     }
-  }, [loading]);
+  }, [loading, properties.length, showRegistration]);
 
   const handleLogout = () => {
     setShowLogoutConfirm(true);
@@ -1273,8 +1286,9 @@ export default function PageManagerDashboard() {
           <button onClick={() => setShowAccountSettingsModal(true)} className="p-1.5 text-slate-400 hover:text-blue-600 rounded-lg">
             <Settings className="w-4 h-4" />
           </button>
-          <button onClick={() => setShowLogoutConfirm(true)} className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg">
+          <button onClick={() => setShowLogoutConfirm(true)} className="flex items-center gap-1.5 px-2 py-1.5 text-[10px] font-bold text-rose-600 hover:bg-rose-50 rounded-lg" title="Sign Out">
             <LogOutIcon className="w-4 h-4" />
+            <span>Sign Out</span>
           </button>
         </div>
       </header>
@@ -1348,7 +1362,11 @@ export default function PageManagerDashboard() {
 
       {/* SIDEBAR: PURELY STATIC / FIXED ICE-BLUE FROSTY BLUE WITH CURVED EDGES & BLUE GLOW */}
 
-      <aside className={`hidden lg:flex ${isSidebarCollapsed ? 'w-20 p-4' : 'w-72 p-6'} my-6 ml-6 h-[calc(100vh-3rem)] bg-gradient-to-br from-sky-100/90 via-blue-100/85 to-amber-50/40 backdrop-blur-3xl border border-sky-200/80 shadow-2xl rounded-3xl flex flex-col justify-between shrink-0 overflow-y-auto z-20 transition-all duration-300 relative`}>
+      {isSidebarTopNav && <nav className="hidden lg:block fixed top-3 left-1/2 -translate-x-1/2 z-50 w-[min(760px,calc(100vw-3rem))] bg-white/72 backdrop-blur-xl border border-white/80 rounded-2xl shadow-lg"><div className="flex items-center gap-1 px-2 py-1.5">{[
+        { id: 'overview', label: 'Overview', icon: ShieldCheck }, { id: 'properties', label: 'Properties', icon: Building2 }, { id: 'blocks', label: 'Blocks', icon: Layers }, { id: 'staff', label: 'Staff', icon: Users }, { id: 'maintenance', label: 'Fixes', icon: Wrench }, { id: 'meetings', label: 'Meetings', icon: CalendarCheck }, { id: 'chat', label: 'Chat', icon: MessageSquare }, { id: 'notifications', label: 'Alerts', icon: Bell }
+      ].map(tab => <button key={tab.id} disabled={!hasApprovedProperty && tab.id !== 'notifications'} onClick={() => setActiveTab(tab.id as any)} className={`flex-1 min-w-0 flex flex-col items-center gap-0.5 py-1.5 rounded-xl text-[9px] font-bold ${activeTab === tab.id ? 'text-blue-700 bg-blue-100/65' : 'text-slate-500 hover:bg-white/70'} disabled:opacity-40 cursor-pointer`}><tab.icon className="w-4 h-4" /><span className="truncate max-w-full">{tab.label}</span></button>)}<button onClick={() => setShowLogoutConfirm(true)} title="Sign Out" className="shrink-0 flex flex-col items-center gap-0.5 px-2 py-1.5 text-[9px] font-bold text-rose-600 hover:bg-rose-50 rounded-xl cursor-pointer"><LogOutIcon className="w-4 h-4" /><span>Sign Out</span></button><button onClick={() => setIsSidebarTopNav(false)} title="Show sidebar" className="p-2 text-slate-500 hover:text-blue-700 cursor-pointer"><PanelLeftOpen className="w-4 h-4" /></button></div></nav>}
+      {!isSidebarTopNav && <aside className={`hidden lg:flex ${isSidebarCollapsed ? 'w-20 p-4' : 'w-72 p-6'} my-6 ml-6 h-[calc(100vh-3rem)] bg-gradient-to-br from-sky-100/90 via-blue-100/85 to-amber-50/40 backdrop-blur-3xl border border-sky-200/80 shadow-2xl rounded-3xl flex flex-col justify-between shrink-0 overflow-y-auto z-20 transition-all duration-300 relative`}>
+        <button onClick={() => setIsSidebarTopNav(true)} title="Use top navigation" className="absolute top-3 right-3 p-2 rounded-xl text-slate-500 hover:text-blue-700 hover:bg-white/70 cursor-pointer"><PanelLeftClose className="w-4 h-4" /></button>
 
         <div className="space-y-6">
           {/* Logo & Header */}
@@ -1518,17 +1536,11 @@ export default function PageManagerDashboard() {
             {!isSidebarCollapsed && <span>Sign Out</span>}
           </button>
         </div>
-      </aside>
+      </aside>}
 
-      {/* GIANT WATERMARK PINEVELA LOGO — FIXED TO VIEWPORT (does not scroll with content) */}
-      <div className="fixed inset-0 flex items-center justify-center pointer-events-none select-none overflow-hidden z-0">
-        <div className="transform scale-[4.5] opacity-[0.14] blur-[0.4px]">
-          <PineLogo size={180} hideText={true} />
-        </div>
-      </div>
 
       {/* MAIN CONTENT AREA */}
-      <main className="flex-1 p-6 pb-28 lg:p-10 lg:pb-10 space-y-8 overflow-y-auto h-full relative">
+      <main className={`dashboard-centered-content flex-1 p-6 pb-28 lg:p-10 lg:pb-10 space-y-8 overflow-y-auto h-full relative ${isSidebarTopNav ? 'lg:pt-24 lg:w-[calc(100vw-22rem)] lg:max-w-[calc(100vw-22rem)] lg:mx-auto' : ''}`}>
 
         {/* TAB CONTENT OR REGISTRATION */}
         {showRegistration ? (
@@ -1542,7 +1554,7 @@ export default function PageManagerDashboard() {
                   setShowRegistration(false);
                   setActiveTab('notifications');
                 }} 
-                onCancel={() => setShowRegistration(false)} 
+                onCancel={() => { setShowRegistration(false); setShowWelcomePopup(true); }} 
                 currentUserId={user?.id}
               />
             </div>
@@ -1577,15 +1589,8 @@ export default function PageManagerDashboard() {
                       >
                         <Edit3 className="w-4 h-4 text-blue-600" />
                         <span>Edit Manager Profile</span>
-                      </button>
-
-                      <div className="bg-white/80 backdrop-blur-md border border-sky-200/80 p-4 rounded-2xl text-center shrink-0 min-w-[180px] shadow-xs">
-                        <span className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">Standard Student Fee</span>
-                        <div className="text-2xl font-black text-blue-900 mt-0.5">
-                          GHS {(primaryProperty?.price || 35000).toLocaleString()}
-                        </div>
-                        <span className="text-[10px] text-slate-500 font-medium">Per Academic Year</span>
-                      </div>
+                        </button>
+                      <div className="bg-white/80 backdrop-blur-md border border-sky-200/80 p-4 rounded-2xl text-center shrink-0 min-w-[180px] shadow-xs"><span className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">Property capacity</span><div className="text-2xl font-black text-blue-900 mt-0.5">{primaryProperty?.totalCapacity || 0} beds</div></div>
                     </div>
                   </div>
                 </div>
@@ -1898,6 +1903,15 @@ export default function PageManagerDashboard() {
                   </div>
                   <div className="flex items-center gap-2">
                     <button
+                      type="button"
+                      onClick={() => { setRoomAccessError(null); setRoomAccessAction({ type: 'reshuffle' }); }}
+                      disabled={!primaryProperty?.id}
+                      className="flex items-center gap-1.5 rounded-xl border border-amber-300 bg-amber-50 px-3.5 py-2 text-xs font-bold text-amber-900 hover:bg-amber-100 cursor-pointer disabled:opacity-50"
+                    >
+                      <RefreshCw className="h-3.5 w-3.5" />
+                      <span>Reshuffle Keys</span>
+                    </button>
+                    <button
                       onClick={fetchRoomKeys}
                       disabled={loadingRoomKeys}
                       className="px-3.5 py-2 bg-white hover:bg-slate-50 text-blue-900 border border-blue-200 text-xs font-bold rounded-xl shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
@@ -1941,6 +1955,7 @@ export default function PageManagerDashboard() {
                 {/* High-Performance Virtualized Digital Keys Component */}
                 <ManagerDigitalKeysView
                   roomKeys={roomKeysList}
+                  onReleaseRoom={(room) => { setRoomAccessError(null); setRoomAccessAction({ type: 'release', room }); }}
                   activeBlock={selectedBlock || propertyBlocks[0]}
                   allBlocks={propertyBlocks}
                   onSelectBlock={(block) => setSelectedBlock(block)}
@@ -3649,7 +3664,6 @@ export default function PageManagerDashboard() {
                         <div className="relative z-10 space-y-4">
                           <div className="flex items-center justify-between gap-4">
                             <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/15 border border-white/25 rounded-full text-xs font-bold uppercase tracking-wider backdrop-blur-md">
-                              <Sparkles className="w-3.5 h-3.5 text-amber-300" />
                               <span>Accredited Community Partner</span>
                             </div>
 
@@ -4903,7 +4917,6 @@ export default function PageManagerDashboard() {
                   Welcome to PineVela!
                 </h3>
                 <p className="text-xs font-bold text-blue-800 uppercase tracking-widest flex items-center justify-center gap-1">
-                  <Sparkles className="w-3.5 h-3.5" />
                   <span>Onboarding Initiated</span>
                 </p>
               </div>
@@ -4929,6 +4942,54 @@ export default function PageManagerDashboard() {
           </div>
         )}
       </AnimatePresence>
+
+      {roomAccessAction && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-950/70 backdrop-blur-md p-4" role="dialog" aria-modal="true" aria-labelledby="room-access-title">
+          <div className="w-full max-w-lg rounded-3xl border border-slate-200 bg-white p-6 space-y-4 shadow-2xl">
+            <h3 id="room-access-title" className="text-lg font-black text-slate-900">
+              {roomAccessAction.type === 'release' ? `Remove occupant from Room ${roomAccessAction.room.roomNumber}?` : 'Reshuffle all room keys?'}
+            </h3>
+            <p className="text-sm text-slate-600">
+              {roomAccessAction.type === 'release'
+                ? 'This removes the resident’s room account and active session, unlinks the room from their user account, and makes it available with a new key.'
+                : 'This ends occupancy for every room in this residence, removes all resident room accounts and sessions, and generates new random keys. Use it at the start of a new academic year. Residents must activate their rooms again with the new keys.'}
+            </p>
+            {roomAccessAction.type === 'reshuffle' && (
+              <label className="block text-xs font-bold text-slate-700">
+                Academic year
+                <input value={keysAcademicYear} onChange={(event) => setKeysAcademicYear(event.target.value)} placeholder="2026/2027" className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" />
+              </label>
+            )}
+            {roomAccessError && <p role="alert" className="text-xs font-semibold text-rose-700">{roomAccessError}</p>}
+            <div className="flex justify-end gap-3">
+              <button type="button" disabled={roomAccessBusy} onClick={() => setRoomAccessAction(null)} className="rounded-xl bg-slate-100 px-4 py-2 text-xs font-bold text-slate-700 cursor-pointer">Cancel</button>
+              <button
+                type="button"
+                disabled={roomAccessBusy}
+                onClick={async () => {
+                  setRoomAccessBusy(true);
+                  setRoomAccessError(null);
+                  try {
+                    const endpoint = roomAccessAction.type === 'release'
+                      ? `/api/room-keys/${encodeURIComponent(roomAccessAction.room.id)}/release`
+                      : `/api/hostels/${encodeURIComponent(primaryProperty.id)}/reshuffle-room-keys`;
+                    const result = await apiFetch(endpoint, { method: 'POST', body: JSON.stringify({ confirm: true, academicYear: keysAcademicYear }) });
+                    if (!result?.success) throw new Error('Could not update room access. Please sign in again.');
+                    await fetchRoomKeys();
+                    triggerToast(result.message);
+                    setRoomAccessAction(null);
+                  } catch (error: any) {
+                    setRoomAccessError(error.message || 'Could not update room access.');
+                  } finally {
+                    setRoomAccessBusy(false);
+                  }
+                }}
+                className="rounded-xl bg-rose-600 hover:bg-rose-700 px-4 py-2 text-xs font-bold text-white cursor-pointer disabled:opacity-50"
+              >{roomAccessBusy ? 'Updating...' : roomAccessAction.type === 'release' ? 'Remove Occupant' : 'Reshuffle & End Occupancy'}</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ZOOMED IMAGE OVERLAY */}
       <AnimatePresence>

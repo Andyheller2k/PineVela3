@@ -99,10 +99,10 @@ export default function HostelImageUploader({
     setErrorMsg(null);
     const fileArray = Array.from(files);
     const currentCount = galleryUrls.length;
-    const availableSlots = 5 - currentCount;
+    const availableSlots = 3 - currentCount;
 
     if (availableSlots <= 0) {
-      setErrorMsg('Maximum of 5 interior/relevant photos allowed.');
+      setErrorMsg('Maximum of 3 interior/relevant photos allowed.');
       return;
     }
 
@@ -152,7 +152,7 @@ export default function HostelImageUploader({
         <div className="flex items-center justify-between">
           <label className="text-xs font-black text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-blue-600"></span>
-            1. Compulsory Actual Exterior Photograph
+            1. Building Photograph
             <span className="text-rose-600 font-black">*</span>
           </label>
           {displayExterior ? (
@@ -161,7 +161,7 @@ export default function HostelImageUploader({
             </span>
           ) : (
             <span className="text-[11px] font-bold text-rose-700 bg-rose-50 px-2.5 py-0.5 rounded-md border border-rose-200 flex items-center gap-1">
-              <AlertCircle size={12} /> Required: Upload Building Exterior (Max 2MB)
+              <AlertCircle size={12} /> Required: upload a building photograph
             </span>
           )}
         </div>
@@ -191,11 +191,7 @@ export default function HostelImageUploader({
               />
               <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-black/20" />
 
-              {/* Top Quality Badge */}
-              <div className="absolute top-3 left-3 flex items-center gap-1.5 bg-slate-900/80 backdrop-blur-md px-3 py-1 rounded-full border border-white/20 text-white text-[11px] font-bold shadow-lg">
-                <Sparkles className="w-3.5 h-3.5 text-sky-400" />
-                <span>Exterior Photo (&le; 2MB)</span>
-              </div>
+
 
               {/* Bottom Action Controls */}
               <div className="absolute bottom-4 right-4 flex items-center gap-2">
@@ -279,25 +275,23 @@ export default function HostelImageUploader({
         )}
       </div>
 
-      {/* SECTION 2: MANDATORY 3 TO 5 INTERIOR / RELEVANT PHOTOS */}
+      {/* SECTION 2: MANDATORY 1 TO 3 INTERIOR / RELEVANT PHOTOS */}
       <div className="space-y-2 pt-4 border-t border-slate-200">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
           <label className="text-xs font-black text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-blue-600"></span>
-            2. Compulsory Interior & Relevant Photos (3 to 5 Photos)
+            2. Compulsory Interior & Relevant Photos (1 to 3 Photos)
             <span className="text-rose-600 font-black">*</span>
           </label>
           <span className={`text-[11px] font-extrabold px-2.5 py-0.5 rounded-md border self-start sm:self-auto ${
-            galleryUrls.length >= 3
+            galleryUrls.length >= 1
               ? 'text-emerald-700 bg-emerald-50 border-emerald-200'
               : 'text-amber-800 bg-amber-50 border-amber-300'
           }`}>
-            {galleryUrls.length}/5 Photos Uploaded {galleryUrls.length >= 3 ? '(Ready)' : `(Need ${3 - galleryUrls.length} more)`}
+            {galleryUrls.length}/3 Photos Uploaded {galleryUrls.length >= 1 ? '(Ready)' : `(Need ${1 - galleryUrls.length} more)`}
           </span>
         </div>
-        <p className="text-[11px] text-slate-500">
-          Upload authentic photos of bedrooms, study spaces, bathrooms, or corridors. Minimum 3 and maximum 5 interior photos required (maximum <strong>2MB</strong> each).
-        </p>
+
 
         <input
           ref={galleryInputRef}
@@ -336,7 +330,7 @@ export default function HostelImageUploader({
             </div>
           ))}
 
-          {galleryUrls.length < 5 && (
+          {galleryUrls.length < 3 && (
             <div
               onDragOver={(e) => { e.preventDefault(); setIsDraggingGallery(true); }}
               onDragLeave={() => setIsDraggingGallery(false)}
@@ -358,7 +352,7 @@ export default function HostelImageUploader({
                 <Plus size={18} />
               </div>
               <span className="text-[11px] font-bold text-slate-700">Add Photo</span>
-              <span className="text-[9px] text-slate-400">({5 - galleryUrls.length} remaining • Max 2MB)</span>
+              <span className="text-[9px] text-slate-400">({3 - galleryUrls.length} remaining • Max 2MB)</span>
             </div>
           )}
         </div>

@@ -2,6 +2,7 @@ import dotenv from "dotenv";
 dotenv.config();
 
 import crypto from "crypto";
+import { accountData, accountId, accountKey, accountRole, canManageHostel, credentialValues, hasActiveRoom, hashCredential, normalizeEmail, passwordIsReused, publicAccountData, releaseRoom, verifyCredential } from "./accountSecurity.js";
 import express from "express";
 import compression from "compression";
 import path from "path";
@@ -113,7 +114,7 @@ function passwordsMatch(input: string, ...storedCandidates: Array<string | undef
   if (KNOWN_LEGACY_PASSWORDS.has(input) || KNOWN_LEGACY_HASHES.has(hashed)) {
     return false;
   }
-  return storedCandidates.some((c) => Boolean(c) && !String(c).startsWith('!LOCKED_') && (c === input || c === hashed));
+  return storedCandidates.some(c => verifyCredential(input, c));
 }
 
 /** Remove credential fields before sending user objects to clients. */
@@ -697,6 +698,30 @@ ratings = persistentData.ratings || [];
 // Ensure all seeded/retained accounts are written back safely to the database
 const initStore = getStoreInstance();
 if (initStore) {
+  // Repair room records previously promoted to merchant by email and revoke the old mixed sessions once.
+  const migratingAccountIsolation = (initStore as any).accountSecurityVersion !== 1;
+  for (const entry of MOCK_USERS) {
+    const data = accountData(entry);
+    if (!data) continue;
+    if ((data.roomKey || entry.roomKey) && accountRole(entry) !== 'user') {
+      data.role = 'student';
+      if (entry.role) entry.role = 'student';
+      for (const target of [entry, entry.user].filter(Boolean)) {
+        for (const field of ['isDigitalMarketOnly', 'isMerchantApplicant', 'isApprovedMerchant', 'hasApprovedMerchantStore', 'merchantStoreId', 'targetRedirect']) delete target[field];
+        if (migratingAccountIsolation) delete target.token;
+      }
+    } else if (migratingAccountIsolation && (accountRole(entry) === 'merchant' || data.isDigitalMarketOnly)) {
+      delete entry.token;
+      delete data.token;
+    }
+  }
+  if (migratingAccountIsolation) {
+    for (const item of [...(initStore.digitalMarketApplications || []), ...(initStore.digitalMarketStores || [])]) {
+      delete item.token;
+      delete item.merchantToken;
+    }
+    (initStore as any).accountSecurityVersion = 1;
+  }
   // Database healing: ensure primary resident/student users do not have their role mistakenly mutated to 'manager'
   // and ensure manager accounts are kept cleanly isolated under their official work emails
   if (initStore.users) {
@@ -831,14 +856,14 @@ const LEAKED_DEMO_TOKENS = new Set([
 ]);
 for (const entry of MOCK_USERS) {
   if (!entry) continue;
-  if (entry.password && !/^[a-f0-9]{64}$/i.test(entry.password) && !entry.password.startsWith('!LOCKED_')) {
+  if (entry.password && !/^[a-f0-9]{64}$/i.test(entry.password) && !entry.password.startsWith('!LOCKED_') && !entry.password.startsWith('scrypt-sha256$')) {
     entry.password = hashPasswordSha256(entry.password);
   }
   if (entry.plainPassword) {
     delete entry.plainPassword;
   }
   const nested = entry.user;
-  if (nested?.password && !/^[a-f0-9]{64}$/i.test(nested.password) && !nested.password.startsWith('!LOCKED_')) {
+  if (nested?.password && !/^[a-f0-9]{64}$/i.test(nested.password) && !nested.password.startsWith('!LOCKED_') && !nested.password.startsWith('scrypt-sha256$')) {
     nested.password = hashPasswordSha256(nested.password);
   }
   if (nested?.plainPassword) {
@@ -858,7 +883,7 @@ for (const entry of MOCK_USERS) {
   }
 }
 for (const officer of verificationTeams) {
-  if (officer?.password && !/^[a-f0-9]{64}$/i.test(officer.password)) {
+  if (officer?.password && !/^[a-f0-9]{64}$/i.test(officer.password) && !officer.password.startsWith('scrypt-sha256$')) {
     officer.password = hashPasswordSha256(officer.password);
   }
   if (!officer.token || LEAKED_DEMO_TOKENS.has(officer.token) || String(officer.token).startsWith('token_vt_')) {
@@ -869,12 +894,133 @@ try { syncStore(); } catch (_) {}
 
 async function startServer() {
   const app = express();
-  const PORT = 3000;
+  const PORT = Number(process.env.PORT || 3000);
 
   // Support high-resolution hostel photograph uploads (up to 30MB)
   app.use(compression() as any);
   app.use(express.json({ limit: '30mb' }));
   app.use(express.urlencoded({ extended: true, limit: '30mb' }));
+
+  // Credentials and their hashes are never included in API responses.
+  app.use('/api', (req, res, next) => {
+    const sendJson = res.json.bind(res);
+    const sessionResponse = ['/auth/login', '/auth/me', '/auth/verify-unified', '/digital-market/login', '/room-keys/claim', '/residents/onboard', '/verification-teams/login', '/auth/verification-team-login', '/auth/register-unified', '/users/register', '/auth/register-manager'].includes(req.path);
+    res.json = (value: any) => sendJson(publicAccountData(value, sessionResponse));
+    next();
+  });
+
+  function requirePrimaryAccount(req: any, res: any, next: any) {
+    if (req.user?.role !== 'user') return res.status(403).json({ error: 'Create subaccounts from your primary user account. Subaccounts cannot create other subaccounts.' });
+    next();
+  }
+
+  function passwordRecords(email: string, role: string): any[] {
+    const store = getStoreInstance();
+    const users = [...MOCK_USERS, ...(store.users || [])].filter(entry => {
+      const data = accountData(entry);
+      if (normalizeEmail(data.email || entry.email) !== email) return false;
+      if (role === 'resident' || role === 'student') return Boolean(data.roomKey || entry.roomKey) && accountRole(entry) !== 'user';
+      if (role === 'merchant') return !data.roomKey && accountRole(entry) === 'merchant' && data.isDigitalMarketOnly;
+      return accountRole(entry) === role;
+    });
+    if (role === 'merchant') users.push(...(store.digitalMarketApplications || []).filter(app => normalizeEmail(app.studentEmail) === email));
+    return [...new Set(users)];
+  }
+
+  function updateIdentityPassword(records: any[], password: string, email: string, role: string): void {
+    const hash = hashCredential(password);
+    for (const record of records) {
+      const previous = credentialValues(record);
+      for (const target of [record, record.user].filter(Boolean)) {
+        target.passwordHistory = [...new Set([...(target.passwordHistory || []), ...previous])];
+        target.password = hash;
+        delete target.plainPassword;
+        delete target.localPassword;
+        delete target.userPropPassword;
+        delete target.token;
+        delete target.merchantToken;
+        target.requiresPasswordReset = false;
+      }
+    }
+    if (role === 'merchant') {
+      for (const item of getStoreInstance().digitalMarketStores || []) {
+        if (normalizeEmail(item.studentEmail) === email) { delete item.token; delete item.merchantToken; }
+      }
+    }
+    syncStore();
+  }
+
+  const creationPaths = new Set([
+    '/api/auth/register-manager', '/api/users/register', '/api/auth/register-unified', '/api/auth/verify-unified',
+    '/api/auth/register-manager-account', '/api/manager-verifications/submit',
+    '/api/digital-market/register', '/api/room-keys/claim', '/api/residents/onboard',
+    '/api/staff'
+  ]);
+  const passwordPaths = new Set(['/api/auth/change-password', '/api/users/reset-registered-account-password', '/api/admin/reset-user-password']);
+  app.use('/api', (req: any, res, next) => {
+    const route = req.path;
+    const fullPath = `/api${route}`;
+    if (req.method !== 'POST' || (!creationPaths.has(fullPath) && !passwordPaths.has(fullPath))) return next();
+    const store = getStoreInstance();
+    const token = String(req.headers.authorization || '').replace(/^Bearer\s+/i, '');
+    const actorEntry = token ? [...MOCK_USERS, ...(store.users || [])].find(u => u.token === token || u.user?.token === token) : null;
+    const merchantSession = token && [...(store.digitalMarketApplications || []), ...(store.digitalMarketStores || [])].some(m => m.token === token || m.merchantToken === token);
+    const merchantRecord = merchantSession ? [...(store.digitalMarketApplications || []), ...(store.digitalMarketStores || [])].find(m => m.token === token || m.merchantToken === token) : null;
+    const actor = accountData(actorEntry) || (merchantRecord ? { id: `merchant:${merchantRecord.id}`, email: merchantRecord.studentEmail, parentUserId: merchantRecord.userId, parentUserEmail: merchantRecord.parentUserEmail, role: 'merchant' } : null);
+    const ownManagerDocuments = fullPath === '/api/manager-verifications/submit' && actor?.role === 'manager' && !req.body.password && normalizeEmail(req.body.managerEmail || req.body.email) === normalizeEmail(actor.email);
+    const creatingAccount = creationPaths.has(fullPath) && !ownManagerDocuments;
+    if (fullPath === '/api/users/register' && req.body.role && !['user', 'manager'].includes(req.body.role)) return res.status(400).json({ error: 'Use the dedicated registration flow for this account type.' });
+    if (creatingAccount && (merchantSession || (actor && actor.role !== 'user' && !(actor.role === 'admin' && fullPath === '/api/staff')))) {
+      return res.status(403).json({ error: 'Subaccounts cannot create other subaccounts. Sign in with your primary user account.' });
+    }
+    const primaryCreation = ['/api/auth/register-manager', '/api/auth/register-manager-account', '/api/manager-verifications/submit', '/api/digital-market/register', '/api/room-keys/claim', '/api/residents/onboard'].includes(fullPath) || (fullPath === '/api/users/register' && req.body.role !== 'user');
+    if (creatingAccount && primaryCreation && !actor) return res.status(401).json({ error: 'Sign in with your primary account to create a subaccount.' });
+    if (creatingAccount && actor?.role === 'user') {
+      req.body.parentUserId = actor.id;
+      req.body.userId = actor.id;
+      req.body.parentUserEmail = actor.email;
+    } else if (creatingAccount && !actor && (req.body.parentUserId || req.body.parentUserEmail || req.body.userId)) {
+      return res.status(401).json({ error: 'Sign in to your primary account before creating a linked subaccount.' });
+    }
+    const password = req.body.newPassword ?? req.body.password;
+    if (password == null) return next();
+    if (typeof password !== 'string' || password.length < 6 || password.length > 1024 || /^[a-f0-9]{64}$/i.test(password) || password.startsWith('scrypt-sha256$')) {
+      return res.status(400).json({ error: 'Submit a password of 6–1024 characters, rather than a stored password hash.' });
+    }
+    if (req.body.plainPassword && req.body.plainPassword !== password) return res.status(400).json({ error: 'Conflicting password fields.' });
+    const email = normalizeEmail(req.body.studentEmail || req.body.managerEmail || req.body.staffEmail || req.body.email || actor?.email);
+    const intendedRole = fullPath.includes('manager') ? 'manager' : fullPath === '/api/staff' ? 'staff' : '';
+    if (creatingAccount && intendedRole && [...MOCK_USERS, ...(store.users || [])].some(u => normalizeEmail(accountData(u).email || u.email) === email && accountRole(u) !== intendedRole)) return res.status(409).json({ error: 'This email belongs to a different account type. Choose a separate email for this subaccount.' });
+    const records = [...MOCK_USERS, ...(store.users || []), ...(store.digitalMarketApplications || []), ...(store.staffApplications || []), ...(store.managerVerifications || []), ...(store.managerRegistrationRequests || [])];
+    if (passwordIsReused(password, records, email, actor)) {
+      return res.status(409).json({ error: 'Choose a different password. This password is already used by your primary account, a linked subaccount, or a previous password.' });
+    }
+    delete req.body.plainPassword;
+    next();
+  });
+
+  // Seller operations require a merchant session, not a matching room/primary email.
+  app.use('/api/digital-market', (req: any, res, next) => {
+    const mutation = ['POST', 'PUT', 'DELETE', 'PATCH'].includes(req.method);
+    const sellerOperation = mutation && (/^\/(create-store|store-setup|store|subscription)$/.test(req.path) || /^\/products(?:\/|$)/.test(req.path));
+    if (!sellerOperation) return next();
+    return requireAuth(['merchant', 'admin'])(req, res, () => {
+      if (req.user.role !== 'merchant' && req.user.role !== 'admin') return res.status(403).json({ error: 'Sign in with your market password to manage a store.' });
+      const store = getStoreInstance();
+      const email = normalizeEmail(req.user.email);
+      const requestedEmail = normalizeEmail(req.body.studentEmail || req.body.userEmail || req.body.email);
+      const requestedId = req.body.storeId;
+      const productId = req.path.startsWith('/products/') ? req.path.split('/')[2] : null;
+      const product = productId ? store.digitalMarketProducts?.find(p => p.id === productId) : null;
+      const target = (store.digitalMarketStores || []).find(s => s.id === (requestedId || product?.storeId) || (!requestedId && !product && normalizeEmail(s.studentEmail) === (requestedEmail || email)));
+      if (req.user.role !== 'admin' && ((requestedEmail && requestedEmail !== email) || (requestedId && !target) || (target && normalizeEmail(target.studentEmail) !== email))) {
+        return res.status(403).json({ error: 'You cannot manage another merchant’s store.' });
+      }
+      req.body.studentEmail = email;
+      req.body.userEmail = email;
+      next();
+    });
+  });
 
   // Static directory for uploaded hostel images
   app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
@@ -1045,7 +1191,7 @@ async function startServer() {
   // Authentication endpoint
   app.post("/api/auth/login", async (req, res) => {
     const { usernameOrEmail, password } = req.body;
-    if (!usernameOrEmail || !password) {
+    if (typeof usernameOrEmail !== 'string' || !usernameOrEmail || typeof password !== 'string' || !password || password.length > 1024) {
       return res.status(400).json({ error: "Username/Email and Password are required" });
     }
 
@@ -1064,6 +1210,11 @@ async function startServer() {
     const checkCandidateValid = (cand: any) => {
       if (!cand) return false;
       const candRaw = cand.user ? cand.user : cand;
+      if (candRaw.roomKey || cand.roomKey) {
+        if (!hasActiveRoom(cand, getStoreInstance().roomKeys || [])) return false;
+      } else if (accountRole(cand) === 'merchant' || candRaw.isDigitalMarketOnly || candRaw.isMerchantApplicant) {
+        return false;
+      }
       const candPassword = cand.password || candRaw.password;
       if (String(candPassword).startsWith('!LOCKED_') || cand.requiresPasswordReset || candRaw.requiresPasswordReset) {
         return false;
@@ -1100,12 +1251,17 @@ async function startServer() {
     );
 
     if (isStudentMarketEmail) {
+      const marketStore = store.digitalMarketStores?.find(s => normalizeEmail(s.studentEmail) === cleanIdentifier);
       const storedPwd = marketApp?.password || marketApp?.plainPassword;
       const passMatch = storedPwd
         ? passwordsMatch(password, storedPwd)
         : false;
 
       if (passMatch) {
+        if (marketStore?.isBanned || ['rejected', 'banned', 'disabled'].includes(String(marketApp?.status))) return res.status(403).json({ error: 'This market account is not permitted to sign in.' });
+        if (allCandidates.some(candidate => (accountData(candidate)?.roomKey || candidate.roomKey || accountRole(candidate) === 'user') && checkCandidateValid(candidate))) {
+          return res.status(409).json({ error: 'Your existing accounts share a password. Reset the room or market password to separate these accounts before signing in.', requiresPasswordReset: true });
+        }
         if ((marketApp?.status === 'pending') && !approvedMerchantStore) {
           return res.status(403).json({
             error: "Your PineVela Student Digital Market application is awaiting admin verification. PineVela admins are yet to approve your submission. Please check back later.",
@@ -1124,7 +1280,7 @@ async function startServer() {
         );
 
         matched = {
-          id: approvedMerchantStore?.userId || marketApp?.userId || `usr-dm-${Date.now()}`,
+          id: `merchant:${marketApp?.id || approvedMerchantStore?.id}`,
           name: marketApp?.fullName || approvedMerchantStore?.storeName || 'Student Merchant',
           email: marketApp?.studentEmail || approvedMerchantStore?.studentEmail || cleanIdentifier,
           studentEmail: marketApp?.studentEmail || approvedMerchantStore?.studentEmail || cleanIdentifier,
@@ -1362,11 +1518,15 @@ async function startServer() {
     }
 
     // Rotate session token and persist so requireAuth only accepts issued tokens
+    if (userRole === 'merchant') {
+      if (marketApp) marketApp.merchantToken = userObj.token;
+      if (approvedMerchantStore) approvedMerchantStore.merchantToken = userObj.token;
+    }
     persistUserSessionToken(matched, userObj.token);
     if (matched.user) persistUserSessionToken(matched.user, userObj.token);
     const storeUsers = getStoreInstance();
     if (storeUsers.users) {
-      const su = storeUsers.users.find((u: any) => u.id === userObj.id || (u.email && userObj.email && u.email.toLowerCase() === userObj.email.toLowerCase()));
+      const su = storeUsers.users.find((u: any) => accountId(u) === userObj.id && accountRole(u) === userObj.role);
       if (su) {
         persistUserSessionToken(su, userObj.token);
         if (userRole === 'staff') {
@@ -1380,7 +1540,7 @@ async function startServer() {
       }
     }
     // Also update MOCK_USERS entry if present
-    const mockIdx = MOCK_USERS.findIndex((u: any) => (u.user && u.user.id === userObj.id) || u.email === userObj.email || (u.user && u.user.email === userObj.email));
+    const mockIdx = MOCK_USERS.findIndex((u: any) => accountId(u) === userObj.id && accountRole(u) === userObj.role);
     if (mockIdx >= 0) {
       persistUserSessionToken(MOCK_USERS[mockIdx], userObj.token);
       if (userRole === 'staff') {
@@ -1425,69 +1585,13 @@ async function startServer() {
         userObj.managerEmail = rk.managerEmail || rk.email || userObj.managerEmail;
       }
 
-      // Detect approved Digital Market Application and Store
-      const cleanParentEmail = ((rawUser as any).parentUserEmail || (matched as any).parentUserEmail || '').toLowerCase().trim();
-      const userMarketApp = store.digitalMarketApplications?.find((a: any) =>
-        (cleanEmail && (a.studentEmail?.toLowerCase() === cleanEmail || a.parentUserEmail?.toLowerCase() === cleanEmail)) ||
-        (cleanParentEmail && (a.studentEmail?.toLowerCase() === cleanParentEmail || a.parentUserEmail?.toLowerCase() === cleanParentEmail)) ||
-        (userObj.id && a.userId === userObj.id)
-      );
-
-      const approvedStore = store.digitalMarketStores?.find((s: any) =>
-        !s.isBanned &&
-        (
-          (cleanEmail && (s.studentEmail?.toLowerCase() === cleanEmail || s.parentUserEmail?.toLowerCase() === cleanEmail)) ||
-          (cleanParentEmail && (s.studentEmail?.toLowerCase() === cleanParentEmail || s.parentUserEmail?.toLowerCase() === cleanParentEmail)) ||
-          (userObj.id && (s.userId === userObj.id || (s as any).merchantUserId === userObj.id)) ||
-          (userMarketApp && (s.id === userMarketApp.id || s.userId === userMarketApp.userId))
-        )
-      );
-
-      const isApprovedMerchantApp = Boolean(userMarketApp && userMarketApp.status === 'approved');
-      const hasMerchantStore = Boolean(approvedStore || isApprovedMerchantApp);
-
-      if (hasMerchantStore) {
-        userObj.isApprovedMerchant = true;
-        userObj.hasApprovedMerchantStore = true;
-        userObj.merchantStoreId = approvedStore?.id || userMarketApp?.id;
-        userObj.merchantStoreName = approvedStore?.storeName || userMarketApp?.storeName || `${userObj.name}'s Store`;
-        if (!userObj.institution && (approvedStore?.university || userMarketApp?.university)) {
-          userObj.institution = approvedStore?.university || userMarketApp?.university;
-        }
-
-        const isSetupCompleted = Boolean(
-          (approvedStore && approvedStore.setupCompleted === true && approvedStore.registrationFeePaid === true) ||
-          (userMarketApp && userMarketApp.setupCompleted === true && userMarketApp.registrationFeePaid === true)
-        );
-
-        userObj.merchantSetupCompleted = isSetupCompleted;
-        userObj.merchantRegistrationFeePaid = isSetupCompleted;
-
-        // ONLY if the user is logging in using the student email credentials, prioritize digital merchant role & onboarding redirect
-        const isStudentCredentialsLogin = cleanIdentifier === (userMarketApp?.studentEmail || '').toLowerCase().trim() ||
-          cleanIdentifier === (approvedStore?.studentEmail || '').toLowerCase().trim() ||
-          (userObj.isDigitalMarketOnly && cleanIdentifier === (userObj.email || '').toLowerCase().trim());
-
-        if (isStudentCredentialsLogin) {
-          userObj.role = 'merchant';
-          userObj.isDigitalMarketOnly = true;
-          if (isSetupCompleted) {
-            // Already completed onboarding and activated: takes them to registered store
-            userObj.targetRedirect = '/digital-market';
-          } else {
-            // First time login after admin approves submission: takes them to onboarding platform
-            userObj.targetRedirect = '/digital-market/onboard';
-          }
-        } else {
-          // User is logging in with their PRIMARY user email/username:
-          // The route of primary email DOES NOT change! It must not block or redirect to merchant onboarding.
-          delete userObj.targetRedirect;
-          userObj.isDigitalMarketOnly = false;
-          if (userObj.role === 'merchant') {
-            userObj.role = (userObj.roomKey && userObj.roomNumber) ? 'student' : 'user';
-          }
-        }
-      }
+      // A room password authenticates only the room identity, even when its email owns a market.
+      userObj.role = 'student';
+      userObj.isDigitalMarketOnly = false;
+      userObj.isApprovedMerchant = false;
+      userObj.hasApprovedMerchantStore = false;
+      delete (userObj as any).targetRedirect;
+      delete (userObj as any).merchantStoreId;
 
       // Register session token in MOCK_USERS to guarantee immediate authorization
       if (userObj.token) {
@@ -1757,6 +1861,7 @@ async function startServer() {
       const resolvedEmail = (email || managerEmail || '').toLowerCase().trim();
       const resolvedPhone = (phone || managerPhone || '').trim();
       const resolvedRole = role || 'manager';
+      if (!['user', 'manager'].includes(resolvedRole)) return res.status(400).json({ error: 'Use the dedicated registration flow for this account type.' });
 
       if (!resolvedEmail || !password) {
         return res.status(400).json({ error: "Email address and password are required." });
@@ -1859,7 +1964,7 @@ async function startServer() {
       UNIFIED_SIGNUPS[resolvedEmail] = {
         name: resolvedName,
         email: resolvedEmail,
-        password: password,
+        password: hashCredential(password),
         code: code,
         expiresAt: Date.now() + 15 * 60 * 1000 // 15 minutes validity
       };
@@ -1880,7 +1985,7 @@ async function startServer() {
   // Verify temporary registration token and activate base PineVela user account
   app.post("/api/auth/verify-unified", async (req, res) => {
     try {
-      const { email, code } = req.body;
+      const { email, code, password } = req.body;
       const resolvedEmail = (email || '').toLowerCase().trim();
       const resolvedCode = (code || '').trim().toUpperCase();
 
@@ -1892,6 +1997,8 @@ async function startServer() {
       if (!signup || signup.code !== resolvedCode || signup.expiresAt < Date.now()) {
         return res.status(400).json({ error: "Invalid or expired verification code. Please request a new one." });
       }
+      if (!verifyCredential(password, signup.password)) return res.status(400).json({ error: 'Confirm the password chosen during registration.' });
+      if (MOCK_USERS.some(u => normalizeEmail(accountData(u).email || u.email) === resolvedEmail)) return res.status(409).json({ error: 'This account already exists. Sign in instead.' });
 
       // Create new unified user
       const newUserId = `user_${Date.now()}`;
@@ -2323,7 +2430,7 @@ async function startServer() {
           const matchedItem = mStore || mApp;
           const mEmail = (matchedItem.studentEmail || matchedItem.email || '').toLowerCase().trim();
           foundEntry = {
-            id: matchedItem.userId || matchedItem.id,
+            id: `merchant:${mApp?.id || mStore?.id}`,
             email: mEmail,
             studentEmail: mEmail,
             parentUserEmail: matchedItem.parentUserEmail || mEmail,
@@ -2333,7 +2440,10 @@ async function startServer() {
             isVerified: true,
             isApprovedMerchant: true,
             hasApprovedMerchantStore: true,
-            merchantStoreId: matchedItem.id
+            merchantStoreId: mStore?.id || matchedItem.id,
+            isDigitalMarketOnly: true,
+            merchantSetupCompleted: Boolean(mStore?.setupCompleted && mStore?.registrationFeePaid),
+            merchantRegistrationFeePaid: Boolean(mStore?.setupCompleted && mStore?.registrationFeePaid)
           };
         }
       }
@@ -2359,6 +2469,14 @@ async function startServer() {
 
       const rawUser = foundEntry.user ? { ...foundEntry.user } : { ...foundEntry };
       const resolvedRole = rawUser.role || foundEntry.role || 'user';
+      if (resolvedRole === 'merchant') {
+        const app = store.digitalMarketApplications?.find(a => normalizeEmail(a.studentEmail) === normalizeEmail(rawUser.email));
+        const market = store.digitalMarketStores?.find(s => normalizeEmail(s.studentEmail) === normalizeEmail(rawUser.email));
+        if (!app || app.status !== 'approved' || market?.isBanned || ['disabled', 'banned'].includes(market?.status)) return res.status(403).json({ error: 'This market account is no longer authorized.' });
+      }
+      if ((rawUser.roomKey || foundEntry.roomKey) && resolvedRole !== 'user' && !hasActiveRoom(foundEntry, store.roomKeys || [])) {
+        return res.status(401).json({ error: 'Your room access has ended. Sign in with your primary account.' });
+      }
 
       const user = {
         ...rawUser,
@@ -2510,24 +2628,13 @@ async function startServer() {
       const userId = req.user.id;
       const cleanEmail = (req.user.email || '').toLowerCase().trim();
 
-      let userIndex = MOCK_USERS.findIndex(u => 
-        (u.user && u.user.id === userId) || 
-        (u.user && u.user.email && cleanEmail && u.user.email.toLowerCase().trim() === cleanEmail) ||
-        (u.email && cleanEmail && u.email.toLowerCase().trim() === cleanEmail) ||
-        (u.id && u.id === userId)
-      );
+      let userIndex = MOCK_USERS.findIndex(u => accountId(u) === userId && accountRole(u) === req.user.role);
 
       let targetUserObj: any = userIndex !== -1 ? MOCK_USERS[userIndex] : null;
 
       if (!targetUserObj) {
         const store = getStoreInstance();
-        const foundInStore = (store.users || []).find((u: any) =>
-          (u.user && u.user.id === userId) || 
-          (u.user && u.user.email && cleanEmail && u.user.email.toLowerCase().trim() === cleanEmail) ||
-          (u.email && cleanEmail && u.email.toLowerCase().trim() === cleanEmail) ||
-          (u.id && u.id === userId) ||
-          (cleanEmail && ((u.studentEmail && u.studentEmail.toLowerCase().trim() === cleanEmail) || (u.parentUserEmail && u.parentUserEmail.toLowerCase().trim() === cleanEmail)))
-        );
+        const foundInStore = (store.users || []).find(u => accountId(u) === userId && accountRole(u) === req.user.role);
         if (foundInStore) {
           targetUserObj = foundInStore.user ? foundInStore : { user: { ...foundInStore }, email: cleanEmail || foundInStore.email, id: userId || foundInStore.id };
           MOCK_USERS.push(targetUserObj);
@@ -2561,6 +2668,7 @@ async function startServer() {
         : (photo || avatar || photoUrl || avatarUrl || profilePicture || req.user.photo || req.user.avatar || req.user.photoUrl || req.user.avatarUrl || req.user.profilePicture || targetUserObj.user?.avatar || targetUserObj.avatar || '');
 
       const updatedName = name || req.user.name || targetUserObj.user?.name;
+      if (email !== undefined && normalizeEmail(email) !== normalizeEmail(req.user.email)) return res.status(400).json({ error: 'Credential emails cannot be changed through the profile editor. Use a verified account-email change process.' });
       const updatedEmail = email ? email.toLowerCase().trim() : (req.user.email || targetUserObj.user?.email || '').toLowerCase().trim();
       const updatedPhone = phone || req.user.phone || targetUserObj.user?.phone;
       const updatedOrg = isUserVerified
@@ -2630,10 +2738,7 @@ async function startServer() {
           const uId = (storeU.id || storeU.user?.id || '').trim();
           const pId = (storeU.parentUserId || storeU.user?.parentUserId || '').trim();
           
-          if (
-            (userId && (uId === userId || pId === userId)) ||
-            (cleanEmail && (uClean === cleanEmail || pClean === cleanEmail || sClean === cleanEmail))
-          ) {
+          if (accountId(storeU) === userId && accountRole(storeU) === req.user.role) {
             storeU.name = updatedName;
             storeU.email = updatedEmail;
             storeU.phone = updatedPhone;
@@ -2875,33 +2980,17 @@ async function startServer() {
   });
 
   // Secure administrator password reset endpoint for existing accounts
-  app.post("/api/admin/reset-user-password", requireAuth(["admin"]), async (req: any, res) => {
-    try {
-      const { email, newPassword } = req.body || {};
-      if (!email || !newPassword || newPassword.length < 8) {
-        return res.status(400).json({ error: "Target email and new password (minimum 8 characters) are required." });
-      }
-      const cleanEmail = String(email).toLowerCase().trim();
-      const targetUser = MOCK_USERS.find(u => (u.email || u.user?.email || '').toLowerCase().trim() === cleanEmail);
-      if (!targetUser) {
-        return res.status(404).json({ error: "User account not found." });
-      }
-
-      const hashed = hashPasswordSha256(newPassword);
-      targetUser.password = hashed;
-      delete targetUser.plainPassword;
-      targetUser.requiresPasswordReset = false;
-      if (targetUser.user) {
-        targetUser.user.password = hashed;
-        delete targetUser.user.plainPassword;
-        targetUser.user.requiresPasswordReset = false;
-      }
-      syncStore();
-      return res.json({ success: true, message: `Password for ${targetUser.email || cleanEmail} reset successfully.` });
-    } catch (err: any) {
-      console.error("Admin user password reset error:", err);
-      return res.status(500).json({ error: "Failed to reset password." });
-    }
+  app.post("/api/admin/reset-user-password", requireAuth(["admin"]), (req: any, res) => {
+    const email = normalizeEmail(req.body.email);
+    const password = req.body.newPassword;
+    if (!email || typeof password !== 'string' || password.length < 8) return res.status(400).json({ error: 'Target email and a new password of at least 8 characters are required.' });
+    const roles = ['user', 'manager', 'staff', 'student', 'merchant'].filter(role => passwordRecords(email, role).length);
+    const role = String(req.body.role || (roles.length === 1 ? roles[0] : '')).toLowerCase();
+    if (!role) return res.status(400).json({ error: 'This email has multiple accounts. Specify the account role to reset.' });
+    const records = passwordRecords(email, role);
+    if (!records.length) return res.status(404).json({ error: 'Account not found.' });
+    updateIdentityPassword(records, password, email, role);
+    return res.json({ success: true, message: 'Password reset. Existing sessions for this account have been revoked.' });
   });
 
   // --- Manager Requests Endpoints ---
@@ -4333,9 +4422,9 @@ async function startServer() {
   });
 
   // Fetch registered Manager & Staff account records for a user
-  app.get(["/api/users/my-registered-accounts", "/api/user/registered-accounts"], async (req: any, res) => {
+  app.get(["/api/users/my-registered-accounts", "/api/user/registered-accounts"], requireAuth(), async (req: any, res) => {
     try {
-      let authUser: any = null;
+      let authUser: any = req.user;
       const authHeader = req.headers.authorization;
       if (authHeader) {
         const token = authHeader.replace("Bearer ", "").trim();
@@ -4644,99 +4733,23 @@ async function startServer() {
   });
 
   // Reset password for registered Manager, Staff, or Resident account
-  app.post("/api/users/reset-registered-account-password", requireAuth(), async (req: any, res) => {
-    try {
-      const { role, email, newPassword, currentPassword } = req.body || {};
-      if (!role || !email || !newPassword) {
-        return res.status(400).json({ error: "Role, email, and new password are required." });
-      }
-      if (newPassword.length < 6) {
-        return res.status(400).json({ error: "New password must be at least 6 characters long." });
-      }
-      const cleanEmail = email.toLowerCase().trim();
-      let userIndex = -1;
-      if (role === 'resident') {
-        userIndex = MOCK_USERS.findIndex(u => {
-          if (!u) return false;
-          const uEmail = (u.email || u.user?.email || '').toLowerCase().trim();
-          const uRole = (u.role || u.user?.role || '').toLowerCase();
-          return uEmail === cleanEmail && (uRole === 'student' || uRole === 'resident');
-        });
-
-        if (!currentPassword) {
-          return res.status(400).json({ error: "Current resident password is required." });
-        }
-        if (userIndex < 0) {
-          return res.status(404).json({ error: "Resident account not found." });
-        }
-
-        const expectedPassword = MOCK_USERS[userIndex].password || (MOCK_USERS[userIndex].user as any)?.password || (MOCK_USERS[userIndex] as any).localPassword;
-        const hashedInput = crypto.createHash('sha256').update(currentPassword).digest('hex');
-
-        const isMatch = passwordsMatch(currentPassword, expectedPassword);
-        if (!isMatch) {
-          return res.status(400).json({ error: "Incorrect current resident account password." });
-        }
-      } else {
-        userIndex = MOCK_USERS.findIndex(u => 
-          (u.email || u.user?.email || u.username || '').toLowerCase().trim() === cleanEmail
-        );
-        if (currentPassword && userIndex >= 0) {
-          const expectedPassword = MOCK_USERS[userIndex].password;
-          const hashedInput = crypto.createHash('sha256').update(currentPassword).digest('hex');
-          if (MOCK_USERS[userIndex].password && MOCK_USERS[userIndex].password !== currentPassword && hashedInput !== expectedPassword) {
-            return res.status(400).json({ error: "Current password does not match our records." });
-          }
-        }
-      }
-
-      if (userIndex >= 0) {
-        MOCK_USERS[userIndex].password = newPassword;
-        if (MOCK_USERS[userIndex].user) {
-          (MOCK_USERS[userIndex].user as any).password = newPassword;
-        }
-      }
-
-      // Also update in persistent store users
-      const store = getStoreInstance();
-      const storeUser = store.users?.find((u: any) => {
-        const uEmail = (u.email || '').toLowerCase().trim();
-        const uRole = (u.role || '').toLowerCase();
-        if (role === 'resident') {
-          return uEmail === cleanEmail && (uRole === 'student' || uRole === 'resident');
-        }
-        return uEmail === cleanEmail;
-      });
-      if (storeUser) {
-        storeUser.password = newPassword;
-        savePersistentStore(store);
-      }
-      syncStore();
-
-      // Dispatch notification to user
-      const notif = {
-        id: `notif-pwd-${Date.now()}`,
-        studentId: cleanEmail,
-        userId: cleanEmail,
-        userEmail: cleanEmail,
-        recipientEmail: cleanEmail,
-        title: `${role.charAt(0).toUpperCase() + role.slice(1)} Password Reset Successful`,
-        message: `Your ${role} account password has been updated. Use your new password when signing in.`,
-        type: 'info',
-        date: new Date().toISOString().split('T')[0],
-        read: false
-      };
-      notifications.unshift(notif);
-      await dbCreateNotification(notif, notifications);
-
-      return res.json({
-        success: true,
-        message: `Password for your registered ${role} account has been updated successfully.`
-      });
-    } catch (err: any) {
-      console.error("Error resetting registered account password:", err);
-      return res.status(500).json({ error: "Failed to reset password." });
-    }
+  app.post("/api/users/reset-registered-account-password", requireAuth(), (req: any, res) => {
+    if (typeof req.body.newPassword !== 'string' || req.body.newPassword.length < 6) return res.status(400).json({ error: 'A new password of at least 6 characters is required.' });
+    const email = normalizeEmail(req.body.email);
+    const role = String(req.body.role || '').toLowerCase();
+    const candidates = passwordRecords(email, role);
+    if (!candidates.length) return res.status(404).json({ error: 'Account not found.' });
+    const owned = candidates.filter(record => {
+      const data = accountData(record);
+      return req.user.role === 'admin' || ((req.user.role === role || (['resident', 'student'].includes(req.user.role) && ['resident', 'student'].includes(role))) && accountId(record) === req.user.id) ||
+        (req.user.role === 'user' && (data.parentUserId === req.user.id || data.userId === req.user.id || normalizeEmail(data.parentUserEmail) === normalizeEmail(req.user.email)));
+    });
+    if (!owned.length) return res.status(403).json({ error: 'You cannot reset another account.' });
+    const matched = owned.find(record => credentialValues(record, false).some(hash => passwordsMatch(req.body.currentPassword, hash)));
+    if (!matched) return res.status(400).json({ error: 'Enter the current password for this subaccount.' });
+    const records = owned.filter(record => accountId(record) === accountId(matched));
+    updateIdentityPassword(records, req.body.newPassword, email, role);
+    return res.json({ success: true, message: 'Password updated. Sign in again using the new password.' });
   });
 
   // Delete registered Manager, Staff, or Resident account to allow restarting registration
@@ -4788,7 +4801,7 @@ async function startServer() {
         const hashedPass = crypto.createHash('sha256').update(password).digest('hex');
         
         const isResidentPasswordValid = 
-          (expectedResidentPassword && (password === expectedResidentPassword || hashedPass === expectedResidentPassword));
+          passwordsMatch(password, expectedResidentPassword);
           
         if (!isResidentPasswordValid) {
           return res.status(400).json({ error: "Incorrect Resident account password. You can only delete a resident account with the correct resident credentials." });
@@ -4870,7 +4883,7 @@ async function startServer() {
 
         const hashedPass = crypto.createHash('sha256').update(password).digest('hex');
         const isManagerPasswordValid = 
-          (expectedManagerPassword && (password === expectedManagerPassword || hashedPass === expectedManagerPassword));
+          passwordsMatch(password, expectedManagerPassword);
 
         if (!isManagerPasswordValid && expectedManagerPassword) {
           return res.status(400).json({ error: "Incorrect Manager account password. You can only delete a manager account with the manager account's email and password." });
@@ -5349,7 +5362,7 @@ async function startServer() {
   };
 
   // Submit Student Digital Market Application
-  app.post("/api/digital-market/register", async (req: any, res) => {
+  app.post("/api/digital-market/register", requireAuth(["user"]), requirePrimaryAccount, async (req: any, res) => {
     try {
       const {
         fullName, university, studentEmail, categoryToSell,
@@ -5367,13 +5380,11 @@ async function startServer() {
       }
 
       const resolvedCategory = (categoryToSell || whatToSell || 'Electronics, Gadgets & Accessories').trim();
-      const resolvedIdNumber = (idNumber || studentIdNumber || '').trim().toUpperCase();
-
-      // Ghana Card format restriction: GHA-XXXXXXXXX-X (e.g. GHA-712345678-9)
-      const GHANA_CARD_REGEX = /^GHA-\d{9}-\d{1}$/i;
-      if (!resolvedIdNumber || !GHANA_CARD_REGEX.test(resolvedIdNumber)) {
-        return res.status(400).json({ 
-          error: "Invalid Ghana Card number. Format must strictly match official NIA Ghana Card: GHA-XXXXXXXXX-X (e.g. GHA-712345678-9)." 
+      const resolvedIdNumber = (idNumber || studentIdNumber || "").trim().toUpperCase();
+      // A current student ID is sufficient for market access; national-ID-only checks are not required.
+      if (!resolvedIdNumber || !/^[A-Z0-9][A-Z0-9\-\/]{3,31}$/.test(resolvedIdNumber)) {
+        return res.status(400).json({
+          error: "Enter a valid student ID or other school-issued identification number (4–32 letters, numbers, hyphens, or slashes)."
         });
       }
 
@@ -5401,7 +5412,7 @@ async function startServer() {
         });
       }
 
-      const cleanPassword = password;
+      const cleanPassword = hashCredential(password);
       if (!cleanPassword) {
         return res.status(400).json({ error: 'Password is required.' });
       }
@@ -5414,7 +5425,6 @@ async function startServer() {
         university: (university || 'KNUST').trim(),
         studentEmail: cleanStudentEmail || cleanParentEmail,
         password: cleanPassword,
-        plainPassword: cleanPassword,
         categoryToSell: resolvedCategory,
         idNumber: resolvedIdNumber,
         status: 'pending',
@@ -5426,67 +5436,7 @@ async function startServer() {
 
       store.digitalMarketApplications.unshift(newApp);
 
-      // Register or update user record in both store.users AND MOCK_USERS with credentials
-      const updateMerchantUser = (u: any) => {
-        const target = u.user || u;
-        // Only set default credentials if they do not already have them
-        if (!target.password && !target.plainPassword) {
-          target.password = cleanPassword;
-          target.plainPassword = cleanPassword;
-        }
-        target.name = target.name || newApp.fullName;
-        target.institution = target.institution || newApp.university;
-        target.isMerchantApplicant = true;
-        // Retain original role if it's already set to prevent locking out student resident dashboards
-        if (!target.role) {
-          target.role = 'student';
-        }
-        target.studentEmail = cleanStudentEmail;
-      };
-
-      const existingInStore = store.users.find((u: any) => 
-        (u.email || '').toLowerCase().trim() === cleanStudentEmail
-      );
-      if (existingInStore) {
-        updateMerchantUser(existingInStore);
-      } else {
-        const newUserRec = {
-          id: `usr-student-${Date.now()}`,
-          name: newApp.fullName,
-          email: cleanStudentEmail,
-          password: cleanPassword,
-          plainPassword: cleanPassword,
-          role: 'student',
-          institution: newApp.university,
-          isMerchantApplicant: true,
-          isVerified: false,
-          verificationStatus: 'pending',
-          createdAt: new Date().toISOString()
-        };
-        store.users.push(newUserRec);
-      }
-
-      const existingInMock = MOCK_USERS.find((u: any) => 
-        (u.email || u.user?.email || '').toLowerCase().trim() === cleanStudentEmail
-      );
-      if (existingInMock) {
-        updateMerchantUser(existingInMock);
-      } else {
-        const newMockRec = {
-          id: `usr-student-${Date.now()}`,
-          name: newApp.fullName,
-          email: cleanStudentEmail,
-          password: cleanPassword,
-          plainPassword: cleanPassword,
-          role: 'student',
-          institution: newApp.university,
-          isMerchantApplicant: true,
-          isVerified: false,
-          verificationStatus: 'pending',
-          createdAt: new Date().toISOString()
-        };
-        MOCK_USERS.push(newMockRec);
-      }
+      // The application owns merchant credentials. Do not alter any same-email resident or primary record.
       persistentData.users = MOCK_USERS;
 
       savePersistentStore(store);
@@ -5587,6 +5537,7 @@ async function startServer() {
 
       const markMerchantActive = (u: any) => {
         const target = u.user || u;
+        if (target.roomKey || target.role === 'user' || !target.isDigitalMarketOnly) return;
         target.role = 'merchant';
         target.isApprovedMerchant = true;
         target.hasApprovedMerchantStore = true;
@@ -5623,10 +5574,12 @@ async function startServer() {
   });
 
   // Get Digital Market status for current user
-  app.get("/api/digital-market/status", async (req: any, res) => {
+  app.get("/api/digital-market/status", requireAuth(), async (req: any, res) => {
     try {
+      if (!['user', 'merchant', 'admin'].includes(req.user.role)) return res.status(403).json({ error: 'Open market registration from your primary account, or sign in with your market password.' });
       const userEmail = (req.query.email || '').toString().toLowerCase().trim();
       const userId = (req.query.userId || '').toString().trim();
+      if (req.user.role !== 'admin' && ((userEmail && userEmail !== normalizeEmail(req.user.email)) || (userId && userId !== req.user.id && userId !== req.user.parentUserId))) return res.status(403).json({ error: 'You cannot view another account’s market registration.' });
 
       const store = getStoreInstance();
       if (!store.digitalMarketApplications) store.digitalMarketApplications = [];
@@ -5676,7 +5629,7 @@ async function startServer() {
   app.post("/api/digital-market/login", async (req: any, res) => {
     try {
       const { studentEmail, password } = req.body;
-      if (!studentEmail || !password) {
+      if (typeof studentEmail !== 'string' || !studentEmail || typeof password !== 'string' || !password || password.length > 1024) {
         return res.status(400).json({ error: "Student email and store password are required." });
       }
 
@@ -5701,12 +5654,15 @@ async function startServer() {
       // Check password
       const storedPwd = marketApp?.password || marketApp?.plainPassword;
       const hashedInput = crypto.createHash('sha256').update(password).digest('hex');
-      const passMatch = !storedPwd ||
-        storedPwd === password ||
-        storedPwd === hashedInput;
+      const passMatch = passwordsMatch(password, storedPwd);
 
       if (!passMatch) {
         return res.status(401).json({ error: "Incorrect Digital Market Store password." });
+      }
+
+      if (store.digitalMarketStores?.some(s => normalizeEmail(s.studentEmail) === cleanEmail && s.isBanned) || ['rejected', 'banned', 'disabled'].includes(String(marketApp?.status))) return res.status(403).json({ error: 'This market account is not permitted to sign in.' });
+      if ([...MOCK_USERS, ...(store.users || [])].some(u => normalizeEmail(accountData(u)?.email || u.email) === cleanEmail && (accountData(u)?.roomKey || accountRole(u) === 'user') && credentialValues(u).some(hash => passwordsMatch(password, hash)))) {
+        return res.status(409).json({ error: 'Your existing accounts share a password. Reset the room or market password before signing in.', requiresPasswordReset: true });
       }
 
       if ((marketApp?.status === 'pending') && !approvedStore) {
@@ -5735,7 +5691,7 @@ async function startServer() {
       const isSetupCompleted = Boolean(targetStore.setupCompleted && targetStore.registrationFeePaid);
       const parentEmail = marketApp?.parentUserEmail || targetStore?.parentUserEmail || cleanEmail;
       const merchantUser = {
-        id: targetStore.userId || marketApp?.userId || `merchant_${cleanEmail}`,
+        id: `merchant:${marketApp?.id || targetStore.id}`,
         name: marketApp?.fullName || targetStore.storeName || 'Student Merchant',
         email: cleanEmail,
         studentEmail: cleanEmail,
@@ -5750,47 +5706,19 @@ async function startServer() {
         merchantRegistrationFeePaid: isSetupCompleted,
         targetRedirect: isSetupCompleted ? '/digital-market' : '/digital-market/onboard',
         institution: targetStore.university,
-        token: `token_merchant_${cleanEmail.replace(/[^a-zA-Z0-9]/g, '_')}_${Date.now()}`
+        token: createSessionToken('merchant')
       };
 
       // Set session auth cookie for persistence across tabs
       res.cookie("pv_auth_token", merchantUser.token, {
-        httpOnly: false,
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
         sameSite: "lax",
         maxAge: 7 * 24 * 60 * 60 * 1000
       });
 
-      // Register session in MOCK_USERS and persistentStore to guarantee immediate API authorization
-      const mockIdx = MOCK_USERS.findIndex((u: any) => {
-        const uEmail = (u.email || u.user?.email || '').toLowerCase().trim();
-        return uEmail === cleanEmail || (u.id || u.user?.id) === merchantUser.id;
-      });
-      if (mockIdx >= 0) {
-        MOCK_USERS[mockIdx].token = merchantUser.token;
-        if (MOCK_USERS[mockIdx].user) {
-          MOCK_USERS[mockIdx].user.token = merchantUser.token;
-          MOCK_USERS[mockIdx].user.role = 'merchant';
-          MOCK_USERS[mockIdx].user.email = cleanEmail;
-          MOCK_USERS[mockIdx].user.studentEmail = cleanEmail;
-        } else {
-          MOCK_USERS[mockIdx].role = 'merchant';
-          MOCK_USERS[mockIdx].email = cleanEmail;
-        }
-      } else {
-        const newMerchantRecord = {
-          id: merchantUser.id,
-          email: cleanEmail,
-          studentEmail: cleanEmail,
-          parentUserEmail: parentEmail,
-          username: cleanEmail,
-          role: 'merchant',
-          token: merchantUser.token,
-          user: merchantUser
-        };
-        MOCK_USERS.push(newMerchantRecord);
-        if (store.users) store.users.push(newMerchantRecord);
-      }
-      persistentData.users = MOCK_USERS;
+      if (marketApp) marketApp.merchantToken = merchantUser.token;
+      if (approvedStore) approvedStore.merchantToken = merchantUser.token;
       savePersistentStore(store);
 
       const needsSetup = !isSetupCompleted;
@@ -5906,6 +5834,7 @@ async function startServer() {
       // Update student user to merchant role
       const markActivated = (u: any) => {
         const target = u.user || u;
+        if (target.roomKey || target.role === 'user' || !target.isDigitalMarketOnly) return;
         target.role = 'merchant';
         target.isApprovedMerchant = true;
         target.hasApprovedMerchantStore = true;
@@ -6091,6 +6020,19 @@ async function startServer() {
     }
   });
 
+  // Subscription selection: temporary test activation. Replace the assignment below with a verified Paystack webhook/transaction check when payments launch.
+  app.post("/api/digital-market/subscription", requireAuth(["merchant", "student", "user", "admin"]), async (req: any, res) => {
+    const plan = String(req.body?.plan || "default").toLowerCase();
+    if (!["default", "star", "pro"].includes(plan)) return res.status(400).json({ error: "Invalid subscription plan." });
+    const email = String(req.body?.studentEmail || req.user?.email || "").toLowerCase().trim();
+    const store = getStoreInstance();
+    const target = (store.digitalMarketStores || []).find((s: any) => s.studentEmail?.toLowerCase() === email || s.parentUserEmail?.toLowerCase() === email || s.userId === req.user?.id);
+    if (!target) return res.status(404).json({ error: "Active seller store not found." });
+    target.subscriptionPlan = plan; target.subscriptionStatus = "test_active"; target.subscriptionUpdatedAt = new Date().toISOString();
+    savePersistentStore(store); syncStore();
+    return res.json({ success: true, store: target, paymentRequired: false, paymentProvider: "paystack" });
+  });
+
   // Add Product to Store
   app.post("/api/digital-market/products", requireAuth(["merchant", "student", "user", "admin"]), async (req: any, res) => {
     try {
@@ -6155,9 +6097,24 @@ async function startServer() {
 
       const isServiceItem = Boolean(req.body.isService || category === 'Services' || String(category || '').toLowerCase().includes('service'));
 
+      const plan = String(targetStore.subscriptionPlan || "default").toLowerCase();
+      const limits = plan === "pro" ? { items: 200, services: 10, inventory: 900 } : plan === "star" ? { items: 100, services: 5, inventory: 600 } : { items: 20, services: 1, inventory: 200 };
+      const storeProducts = store.digitalMarketProducts.filter((p: any) => p.storeId === targetStore.id);
+      const existingItems = storeProducts.filter((p: any) => !Boolean(p.isService || String(p.category || "").toLowerCase().includes("service")));
+      const existingServices = storeProducts.filter((p: any) => Boolean(p.isService || String(p.category || "").toLowerCase().includes("service")));
+      const requestedStock = isServiceItem ? 0 : Math.max(1, Number(stockQuantity) || 1);
+      const inventoryUnits = existingItems.reduce((sum: number, p: any) => sum + Math.max(0, Number(p.stockQuantity) || 0), 0);
+      if ((!isServiceItem && existingItems.length >= limits.items) || (isServiceItem && existingServices.length >= limits.services)) return res.status(403).json({ error: `Your Pine ${plan === "star" ? "Star" : plan === "pro" ? "Pro" : "Default"} plan publishing limit has been reached.` });
+      if (!isServiceItem && inventoryUnits + requestedStock > limits.inventory) return res.status(403).json({ error: `Your plan allows up to ${limits.inventory} total inventory units.` });
+
       const newProduct = {
         id: `dmprod-${Date.now()}`,
         storeId: targetStore.id,
+        subscriptionPlan: plan,
+        isPineStar: plan === "star" || plan === "pro",
+        hasPriorityPlacement: plan === "star" || plan === "pro",
+        allowsAiImageTools: plan === "star" || plan === "pro",
+        allowsCustomAnimatedCard: plan === "pro",
         storeName: targetStore.storeName,
         sellerId: targetStore.userId,
         sellerEmail: targetStore.studentEmail || targetStore.parentUserEmail || cleanEmail,
@@ -6432,6 +6389,7 @@ async function startServer() {
 
       const markApproved = (u: any) => {
         const target = u.user || u;
+        if (target.roomKey || target.role === 'user' || !target.isDigitalMarketOnly) return;
         target.isVerified = true;
         target.verificationStatus = 'approved';
         target.isMerchantApplicant = false;
@@ -6755,7 +6713,7 @@ async function startServer() {
   });
 
   // Get orders for current user (as buyer or seller)
-  app.get("/api/digital-market/my-orders", async (req: any, res) => {
+  app.get("/api/digital-market/my-orders", requireAuth(), async (req: any, res) => {
     try {
       const userEmail = (req.query.email || '').toString().toLowerCase().trim();
       const userId = (req.query.userId || '').toString().trim();
@@ -6766,11 +6724,12 @@ async function startServer() {
       if (!store.digitalMarketRatings) store.digitalMarketRatings = [];
 
       const userOrders = store.digitalMarketOrders
-        .filter((o: any) =>
-          (storeId && o.storeId === storeId) ||
-          (userEmail && (o.buyerEmail?.toLowerCase() === userEmail || o.sellerEmail?.toLowerCase() === userEmail)) ||
-          (userId && (o.buyerId === userId || o.sellerId === userId))
-        )
+        .filter((o: any) => {
+          if (req.user.role === 'admin') return (!storeId || o.storeId === storeId);
+          const isBuyer = o.buyerId ? o.buyerId === req.user.id : req.user.role === 'user' && normalizeEmail(o.buyerEmail) === normalizeEmail(req.user.email);
+          const isSeller = req.user.role === 'merchant' && normalizeEmail(o.sellerEmail) === normalizeEmail(req.user.email);
+          return (!storeId || o.storeId === storeId) && (isBuyer || isSeller);
+        })
         .map((o: any) => {
           const ratingObj = store.digitalMarketRatings.find((r: any) =>
             r.orderId === o.id ||
@@ -6956,6 +6915,11 @@ async function startServer() {
         return res.status(404).json({ error: "Order not found." });
       }
 
+      const isSeller = req.user.role === 'merchant' && normalizeEmail(order.sellerEmail) === normalizeEmail(req.user.email);
+      const isBuyer = order.buyerId ? order.buyerId === req.user.id : req.user.role === 'user' && normalizeEmail(order.buyerEmail) === normalizeEmail(req.user.email);
+      const buyerCancellation = resolvedStatus.toLowerCase() === 'cancelled' && !resolvedPin && !action;
+      if (req.user.role !== 'admin' && !isSeller && !(isBuyer && buyerCancellation)) return res.status(403).json({ error: 'Only the authenticated seller can confirm or complete this order. Buyers can cancel their own order.' });
+
       const nowIso = new Date().toISOString();
 
       // ACTION 1: Seller Agrees to Location & Confirms Purchase
@@ -7090,27 +7054,23 @@ async function startServer() {
   });
 
   // GET: Retrieve private messages for digital market items/orders
-  app.get("/api/digital-market/messages", async (req: any, res) => {
+  app.get("/api/digital-market/messages", requireAuth(), async (req: any, res) => {
     try {
-      const email = (req.query.email || '').toString().toLowerCase().trim();
+      if (!['user', 'merchant', 'admin'].includes(req.user.role)) return res.status(403).json({ error: 'Use your primary account for shopping or your market password for seller messages.' });
+      const email = normalizeEmail(req.query.email || req.user.email);
+      if (req.user.role !== 'admin' && email !== normalizeEmail(req.user.email)) return res.status(403).json({ error: 'You cannot view another account’s messages.' });
       const otherEmail = (req.query.otherEmail || '').toString().toLowerCase().trim();
       const orderId = (req.query.orderId || '').toString().trim();
       const productId = (req.query.productId || '').toString().trim();
 
       const store = getStoreInstance();
       if (!store.digitalMarketMessages) store.digitalMarketMessages = [];
+      if (req.user.role === 'user' && store.digitalMarketStores?.some(s => normalizeEmail(s.studentEmail) === email)) return res.status(403).json({ error: 'Sign in with your market password to read messages sent to your store email.' });
 
       // Look up associated emails for the current user
       const emailsToCheck = new Set<string>();
       if (email) {
         emailsToCheck.add(email);
-        const targetStore = store.digitalMarketStores?.find((s: any) =>
-          s.studentEmail?.toLowerCase() === email || s.parentUserEmail?.toLowerCase() === email
-        );
-        if (targetStore) {
-          if (targetStore.studentEmail) emailsToCheck.add(targetStore.studentEmail.toLowerCase().trim());
-          if (targetStore.parentUserEmail) emailsToCheck.add(targetStore.parentUserEmail.toLowerCase().trim());
-        }
       }
 
       // Look up associated emails for the other user in conversation
@@ -7163,9 +7123,11 @@ async function startServer() {
   });
 
   // POST: Send a private message or logistic inquiry
-  app.post("/api/digital-market/messages", async (req: any, res) => {
+  app.post("/api/digital-market/messages", requireAuth(), async (req: any, res) => {
     try {
+      if (!['user', 'merchant', 'admin'].includes(req.user.role)) return res.status(403).json({ error: 'Use your primary account for shopping or your market password for seller messages.' });
       const { orderId, productId, productTitle, senderEmail, senderName, recipientEmail, recipientName, content } = req.body;
+      if (normalizeEmail(senderEmail) !== normalizeEmail(req.user.email)) return res.status(403).json({ error: 'You cannot send messages as another account.' });
       
       if (!senderEmail || !recipientEmail || !content || !content.trim()) {
         return res.status(400).json({ error: "Sender email, recipient email, and message content are required." });
@@ -7173,6 +7135,7 @@ async function startServer() {
 
       const store = getStoreInstance();
       if (!store.digitalMarketMessages) store.digitalMarketMessages = [];
+      if (req.user.role === 'user' && store.digitalMarketStores?.some(s => normalizeEmail(s.studentEmail) === normalizeEmail(senderEmail))) return res.status(403).json({ error: 'Sign in with your market password to send messages from your store email.' });
 
       const newMessage = {
         id: `msg-${Date.now()}`,
@@ -11081,6 +11044,52 @@ async function startServer() {
   // DIGITAL ROOM KEYS ENDPOINTS
   // ==========================================
 
+  function freshRoomKey(room: any, reserved: Set<string>): string {
+    let code: string;
+    do { code = generateHostelRoomKeyCode(room.hostelName, room.blockName); } while (reserved.has(code));
+    reserved.add(code);
+    return code;
+  }
+
+  // Release occupancy, revoke the room identity, and retire the old activation key.
+  app.post('/api/room-keys/:id/release', requireAuth(['manager', 'admin']), (req: any, res) => {
+    const store = getStoreInstance();
+    const room = (store.roomKeys || []).find(r => r.id === req.params.id);
+    if (!room) return res.status(404).json({ error: 'Room not found.' });
+    const hostel = hostels.find(h => h.id === room.hostelId);
+    if (!canManageHostel(req.user, hostel)) return res.status(403).json({ error: 'You can only release rooms in your own residence.' });
+    if (req.body.confirm !== true) return res.status(400).json({ error: 'Confirm that the resident’s room account and access will be removed.' });
+    if (!room.isAssigned) return res.status(409).json({ error: 'This room is already available.' });
+    const reserved = new Set<string>([...(store.retiredRoomKeys || []), ...(store.roomKeys || []).map(r => r.roomKey)]);
+    releaseRoom(store, room, [store.users, MOCK_USERS, persistentData.users], freshRoomKey(room, reserved));
+    syncStore();
+    return res.json({ success: true, room, message: 'Occupant removed, room account revoked, and replacement key generated.' });
+  });
+
+  app.post('/api/hostels/:id/reshuffle-room-keys', requireAuth(['manager', 'admin']), (req: any, res) => {
+    const store = getStoreInstance();
+    const hostel = hostels.find(h => h.id === req.params.id);
+    if (!hostel) return res.status(404).json({ error: 'Residence not found.' });
+    if (!canManageHostel(req.user, hostel)) return res.status(403).json({ error: 'You can only reshuffle keys for your own residence.' });
+    const academicYear = String(req.body.academicYear || '');
+    const yearMatch = /^(\d{4})\/(\d{4})$/.exec(academicYear);
+    if (req.body.confirm !== true || !yearMatch || Number(yearMatch[2]) !== Number(yearMatch[1]) + 1) return res.status(400).json({ error: 'Confirm the reset and provide an academic year such as 2026/2027.' });
+    const rooms = (store.roomKeys || []).filter(room => room.hostelId === hostel.id);
+    if (!rooms.length) return res.status(400).json({ error: 'No rooms to reshuffle.' });
+    const reserved = new Set<string>([...(store.retiredRoomKeys || []), ...(store.roomKeys || []).map(r => r.roomKey)]);
+    // Generate every replacement before changing any occupancy.
+    const replacements = rooms.map(room => freshRoomKey(room, reserved));
+    const occupantsRemoved = rooms.filter(room => room.isAssigned).length;
+    rooms.forEach((room, index) => {
+      releaseRoom(store, room, [store.users, MOCK_USERS, persistentData.users], replacements[index]);
+      room.academicYear = academicYear;
+    });
+    hostel.roomKeysAcademicYear = academicYear;
+    hostel.roomKeysRotatedAt = new Date().toISOString();
+    syncStore();
+    return res.json({ success: true, count: rooms.length, occupantsRemoved, roomKeys: rooms, message: `Keys reshuffled for ${academicYear}. Previous room accounts and keys have been revoked.` });
+  });
+
   // Get Room Keys (Manager gets for their hostel; Admin gets all)
   app.get("/api/room-keys", requireAuth(["manager", "admin", "staff"]), async (req: any, res) => {
     try {
@@ -11093,6 +11102,7 @@ async function startServer() {
 
       if (requestedHostelId) {
         const targetHostel = allHostels.find(h => h.id === requestedHostelId);
+        if (userRole === 'manager' && !canManageHostel(req.user, targetHostel)) return res.status(403).json({ error: 'You can only view keys for your own residence.' });
         if (targetHostel) {
           await dbGenerateHostelRoomKeys(targetHostel);
         }
@@ -11108,13 +11118,6 @@ async function startServer() {
           (h.email && userEmail && h.email.toLowerCase().trim() === userEmail)
         );
 
-        // Fallback for default or newly registered manager
-        if (managerHostels.length === 0) {
-          const fallbackHostel = allHostels.find(h => h.id === 'hostel-1') || allHostels[0];
-          if (fallbackHostel) {
-            managerHostels = [fallbackHostel];
-          }
-        }
 
         // Ensure keys are generated for each manager property
         for (const mh of managerHostels) {
@@ -11169,6 +11172,7 @@ async function startServer() {
       if (!keyRecord) {
         return res.status(404).json({ error: `Room key "${cleanKey}" not found.` });
       }
+      if (!canManageHostel(req.user, hostels.find(h => h.id === keyRecord.hostelId))) return res.status(403).json({ error: 'You can only dispatch keys for your own residence.' });
 
       const dispatchInfo = {
         recipientEmail: recipientEmail ? recipientEmail.trim().toLowerCase() : '',
@@ -11315,7 +11319,7 @@ async function startServer() {
         )
       );
 
-      if (approvedStore) {
+      if (approvedStore && currentUser.role === 'merchant') {
         (responseUser as any).isApprovedMerchant = true;
         (responseUser as any).hasApprovedMerchantStore = true;
         (responseUser as any).merchantStoreId = approvedStore.id;
@@ -11416,315 +11420,34 @@ async function startServer() {
     }
   });
 
-  // Add additional room key to resident account (Max 5 rooms)
-  app.post("/api/student/add-room", requireAuth(["user", "student", "admin", "manager"]), async (req: any, res) => {
-    try {
-      const { roomKey } = req.body;
-      const currentUser = req.user;
-      const store = getStoreInstance();
-
-      if (!roomKey || typeof roomKey !== 'string' || roomKey.trim().length < 5) {
-        return res.status(400).json({ error: "Please enter a valid Digital Room Key code." });
-      }
-
-      const normalizedKey = roomKey.trim().toUpperCase();
-      const keyRecord = await dbGetRoomKeyByCode(normalizedKey);
-      
-      if (!keyRecord) {
-        return res.status(404).json({ error: `Digital Room Key "${normalizedKey}" not found.` });
-      }
-
-      if (keyRecord.isAssigned || keyRecord.status === 'Occupied') {
-        return res.status(400).json({ error: `This Digital Room Key (${normalizedKey}) is already assigned/occupied. Room keys are single-use.` });
-      }
-
-      const userEmail = (currentUser.email || '').toLowerCase().trim();
-      const userId = (currentUser.id || currentUser.userId || '').trim();
-
-      // Check existing user rooms count across all matching criteria
-      const existingRooms = (store.roomKeys || []).filter((rk: any) => {
-        if (!rk.isAssigned) return false;
-        const assignedEmail = (rk.assignedStudentEmail || rk.studentEmail || rk.email || '').toLowerCase().trim();
-        const parentEmail = (rk.parentUserEmail || '').toLowerCase().trim();
-        const parentId = (rk.parentUserId || rk.claimedByUserId || '').trim();
-        return (userEmail && (assignedEmail === userEmail || parentEmail === userEmail)) ||
-               (userId && (parentId === userId || rk.assignedStudentId === userId || rk.claimedByUserId === userId));
-      });
-
-      if (existingRooms.length >= 5) {
-        return res.status(400).json({ error: "Maximum limit reached. You can register up to 5 rooms under your resident account." });
-      }
-
-      // Assign room key to this resident
-      const assignedRecord = await dbAssignRoomKey(normalizedKey, {
-        studentId: currentUser.studentId || currentUser.id,
-        studentName: currentUser.name,
-        studentEmail: currentUser.email,
-        studentPhone: currentUser.phone,
-        assignedResidentType: currentUser.residentType || 'student',
-        assignedProgram: currentUser.programOfStudy || '',
-        assignedDepartment: currentUser.department || '',
-        assignedInstitution: currentUser.institution || '',
-        parentUserId: userId || currentUser.id,
-        parentUserEmail: userEmail || currentUser.email,
-        claimedByUserId: userId || currentUser.id
-      });
-
-      // Update residentRooms in parent user record if present
-      const parentUser = (store.users || []).find((u: any) => 
-        (u.id && u.id === userId) || 
-        ((u.email || '').toLowerCase().trim() === userEmail)
-      );
-      if (parentUser) {
-        const pObj = parentUser.user || parentUser;
-        if (!pObj.registeredAccounts) pObj.registeredAccounts = {};
-        if (!Array.isArray(pObj.registeredAccounts.residentRooms)) {
-          pObj.registeredAccounts.residentRooms = [];
-        }
-        const exists = pObj.registeredAccounts.residentRooms.findIndex((r: any) => (r.roomKey || r.id)?.toUpperCase() === normalizedKey);
-        if (exists >= 0) {
-          pObj.registeredAccounts.residentRooms[exists] = assignedRecord || keyRecord;
-        } else {
-          pObj.registeredAccounts.residentRooms.push(assignedRecord || keyRecord);
-        }
-      }
-
-      const updatedRooms = (store.roomKeys || []).filter((rk: any) => {
-        if (!rk.isAssigned) return false;
-        const assignedEmail = (rk.assignedStudentEmail || rk.studentEmail || rk.email || '').toLowerCase().trim();
-        const parentEmail = (rk.parentUserEmail || '').toLowerCase().trim();
-        const parentId = (rk.parentUserId || rk.claimedByUserId || '').trim();
-        return (userEmail && (assignedEmail === userEmail || parentEmail === userEmail)) ||
-               (userId && (parentId === userId || rk.assignedStudentId === userId || rk.claimedByUserId === userId));
-      });
-
-      res.json({
-        success: true,
-        message: `Room ${keyRecord.roomNumber} (${keyRecord.blockName}) successfully added to your resident account.`,
-        addedRoom: assignedRecord || keyRecord,
-        rooms: updatedRooms
-      });
-    } catch (err: any) {
-      console.error("Error adding room key:", err);
-      res.status(500).json({ error: err.message || "Failed to add room key" });
-    }
+  // Legacy assignment endpoint cannot bypass primary-account activation.
+  app.post("/api/student/add-room", requireAuth(), (_req: any, res) => {
+    return res.status(403).json({ error: 'Room activation requires your primary account and a new, distinct room password. Use the Activate Room form instead.' });
   });
 
   // Unlink / Delete room key from resident account
-  app.post("/api/student/delete-room", requireAuth(["user", "student", "admin", "manager"]), async (req: any, res) => {
-    try {
-      const { roomKey, email, password } = req.body;
-      const currentUser = req.user;
-      const store = getStoreInstance();
-
-      if (!roomKey || !roomKey.trim()) {
-        return res.status(400).json({ error: "Room key is required." });
-      }
-      if (!email || !email.trim()) {
-        return res.status(400).json({ error: "Resident account email is required to delete room." });
-      }
-      if (!password || !password.trim()) {
-        return res.status(400).json({ error: "Resident account password is required to delete room." });
-      }
-
-      const cleanInputEmail = email.toLowerCase().trim();
-      const inputPassword = password.trim();
-      const normalizedKey = roomKey.trim().toUpperCase();
-
-      // 1. Locate the room key record in database
-      const rkIndex = (store.roomKeys || []).findIndex((rk: any) => rk.roomKey?.trim().toUpperCase() === normalizedKey);
-      if (rkIndex < 0) {
-        return res.status(404).json({ error: `Digital Room Key "${normalizedKey}" not found in database.` });
-      }
-
-      const targetRoom = store.roomKeys[rkIndex];
-      const assignedEmail = (targetRoom.assignedStudentEmail || targetRoom.studentEmail || '').toLowerCase().trim();
-      const parentEmail = (targetRoom.parentUserEmail || '').toLowerCase().trim();
-      const currentUserEmail = (currentUser.email || '').toLowerCase().trim();
-
-      // 2. Validate Email: Must match assigned student email or parent email or logged in user's email
-      if (cleanInputEmail !== assignedEmail && cleanInputEmail !== parentEmail && cleanInputEmail !== currentUserEmail) {
-        return res.status(400).json({ error: "Incorrect email. Please enter the email associated with this Resident account." });
-      }
-
-      // 3. Locate the specific resident/student user record for credential verification
-      const studentUserInStore = (store.users || []).find((u: any) => {
-        if (!u) return false;
-        const uRole = (u.role || u.user?.role || '').toLowerCase();
-        const uKey = (u.roomKey || u.user?.roomKey || '').toUpperCase().trim();
-        const uEmail = (u.email || u.user?.email || '').toLowerCase().trim();
-        return (uRole === 'student' || uRole === 'resident') &&
-               (uKey === normalizedKey || (cleanInputEmail && uEmail === cleanInputEmail));
-      });
-
-      const studentUserInMock = MOCK_USERS.find((u: any) => {
-        if (!u) return false;
-        const uRole = (u.role || u.user?.role || '').toLowerCase();
-        const uKey = (u.roomKey || u.user?.roomKey || '').toUpperCase().trim();
-        const uEmail = (u.email || u.user?.email || '').toLowerCase().trim();
-        return (uRole === 'student' || uRole === 'resident') &&
-               (uKey === normalizedKey || (cleanInputEmail && uEmail === cleanInputEmail));
-      });
-
-      const residentAccountObj = currentUser?.registeredAccounts?.residentAccount || currentUser?.user?.registeredAccounts?.residentAccount;
-
-      // Extract expected resident password
-      const expectedResidentPassword = 
-        studentUserInStore?.password ||
-        studentUserInStore?.plainPassword ||
-        (studentUserInStore?.user as any)?.password ||
-        studentUserInMock?.password ||
-        studentUserInMock?.plainPassword ||
-        (studentUserInMock?.user as any)?.password ||
-        residentAccountObj?.password ||
-        residentAccountObj?.plainPassword;
-
-      // Primary user's password (if current user logged in as primary user 'user')
-      const isPrimaryUser = (currentUser.role || currentUser.user?.role) === 'user';
-      const primaryUserPassword = isPrimaryUser ? (currentUser.password || (currentUser as any)?.localPassword || currentUser.user?.password || (currentUser as any)?.plainPassword) : null;
-
-      // Rule A: If user provided their primary user password and it is DIFFERENT from the resident account password, block it!
-      if (primaryUserPassword && expectedResidentPassword && inputPassword === primaryUserPassword && primaryUserPassword !== expectedResidentPassword) {
-        return res.status(400).json({ error: "Incorrect password. You entered your primary user password. You must enter the Resident account's password to delete this room." });
-      }
-
-      // Rule B: Verify password against expected resident account password
-      const hashedAttempt = crypto.createHash('sha256').update(inputPassword).digest('hex');
-      const isResidentPasswordValid = 
-        (expectedResidentPassword && (inputPassword === expectedResidentPassword || hashedAttempt === expectedResidentPassword));
-
-      if (!isResidentPasswordValid) {
-        return res.status(400).json({ error: "Incorrect Resident account password. You can only delete a room with the resident account credentials." });
-      }
-
-      // 4. Reset the room key record in store.roomKeys
-      store.roomKeys[rkIndex] = {
-        ...store.roomKeys[rkIndex],
-        isAssigned: false,
-        status: 'Available',
-        assignedStudentId: null,
-        assignedStudentName: null,
-        assignedStudentEmail: null,
-        assignedStudentPhone: null,
-        studentId: null,
-        studentName: null,
-        studentEmail: null,
-        studentPhone: null,
-        assignedAt: null,
-        parentUserId: null,
-        parentUserEmail: null,
-        claimedByUserId: null
-      };
-
-      // 5. Clean up from parent user's registeredAccounts & storeUser profile
-      const userEmail = cleanInputEmail || currentUserEmail;
-      const userId = (currentUser.id || currentUser.userId || '').trim();
-
-      const storeUser = store.users?.find((u: any) => 
-        (u.id && u.id === currentUser.id) ||
-        (u.email && userEmail && u.email.toLowerCase().trim() === userEmail)
-      );
-
-      if (storeUser) {
-        const uObj = storeUser.user ? storeUser.user : storeUser;
-        if (uObj.registeredAccounts) {
-          if (Array.isArray(uObj.registeredAccounts.residentRooms)) {
-            uObj.registeredAccounts.residentRooms = uObj.registeredAccounts.residentRooms.filter((r: any) => 
-              (r.roomKey || r.id)?.toUpperCase().trim() !== normalizedKey
-            );
-          }
-          if ((uObj.registeredAccounts.residentAccount?.roomKey || uObj.registeredAccounts.residentAccount?.id)?.toUpperCase().trim() === normalizedKey) {
-            uObj.registeredAccounts.residentAccount = uObj.registeredAccounts.residentRooms?.[0] || null;
-          }
-        }
-      }
-
-      if (currentUser && currentUser.registeredAccounts) {
-        if (Array.isArray(currentUser.registeredAccounts.residentRooms)) {
-          currentUser.registeredAccounts.residentRooms = currentUser.registeredAccounts.residentRooms.filter((r: any) => 
-            (r.roomKey || r.id)?.toUpperCase().trim() !== normalizedKey
-          );
-        }
-        if ((currentUser.registeredAccounts.residentAccount?.roomKey || currentUser.registeredAccounts.residentAccount?.id)?.toUpperCase().trim() === normalizedKey) {
-          currentUser.registeredAccounts.residentAccount = currentUser.registeredAccounts.residentRooms?.[0] || null;
-        }
-      }
-
-      // 6. Purge the student/resident user account created specifically for this room key
-      for (let i = MOCK_USERS.length - 1; i >= 0; i--) {
-        const u = MOCK_USERS[i];
-        if (!u) continue;
-        const uRole = (u.role || u.user?.role || '').toLowerCase();
-        const uKey = (u.roomKey || u.user?.roomKey || '').toUpperCase().trim();
-        if ((uRole === 'student' || uRole === 'resident') && uKey === normalizedKey) {
-          MOCK_USERS.splice(i, 1);
-        }
-      }
-
-      if (store.users) {
-        for (let i = store.users.length - 1; i >= 0; i--) {
-          const u = store.users[i];
-          if (!u) continue;
-          const uRole = (u.role || u.user?.role || '').toLowerCase();
-          const uKey = (u.roomKey || u.user?.roomKey || '').toUpperCase().trim();
-          if ((uRole === 'student' || uRole === 'resident') && uKey === normalizedKey) {
-            store.users.splice(i, 1);
-          }
-        }
-      }
-
-      if (persistentData && persistentData.users) {
-        for (let i = persistentData.users.length - 1; i >= 0; i--) {
-          const u = persistentData.users[i];
-          if (!u) continue;
-          const uRole = (u.role || u.user?.role || '').toLowerCase();
-          const uKey = (u.roomKey || u.user?.roomKey || '').toUpperCase().trim();
-          if ((uRole === 'student' || uRole === 'resident') && uKey === normalizedKey) {
-            persistentData.users.splice(i, 1);
-          }
-        }
-      }
-
-      // 7. Calculate remaining assigned rooms for the user
-      const remainingRooms = (store.roomKeys || []).filter((rk: any) => {
-        if (!rk.isAssigned) return false;
-        const rkAssignedEmail = (rk.assignedStudentEmail || rk.studentEmail || '').toLowerCase().trim();
-        const rkParentEmail = (rk.parentUserEmail || '').toLowerCase().trim();
-        const rkParentId = (rk.parentUserId || rk.claimedByUserId || '').trim();
-        return (userEmail && (rkAssignedEmail === userEmail || rkParentEmail === userEmail)) ||
-               (userId && (rkParentId === userId || rk.assignedStudentId === userId || rk.claimedByUserId === userId));
-      });
-
-      if (storeUser) {
-        if (remainingRooms.length > 0) {
-          storeUser.roomKey = remainingRooms[0].roomKey;
-          storeUser.hostelName = remainingRooms[0].hostelName;
-          storeUser.blockName = remainingRooms[0].blockName;
-          storeUser.roomNumber = remainingRooms[0].roomNumber;
-        } else {
-          storeUser.roomKey = '';
-          storeUser.hostelName = '';
-          storeUser.blockName = '';
-          storeUser.roomNumber = '';
-        }
-      }
-
-      savePersistentStore(store);
-      syncStore();
-
-      return res.json({
-        success: true,
-        message: `Room key ${normalizedKey} deleted and unlinked successfully from PineVela.`,
-        rooms: remainingRooms
-      });
-    } catch (err: any) {
-      console.error("Error unlinking/deleting room key:", err);
-      return res.status(500).json({ error: err.message || "Failed to delete room key" });
+  app.post("/api/student/delete-room", requireAuth(["user", "student", "resident"]), (req: any, res) => {
+    const store = getStoreInstance();
+    const key = String(req.body.roomKey || '').trim().toUpperCase();
+    const room = (store.roomKeys || []).find(r => String(r.roomKey).toUpperCase() === key && r.isAssigned);
+    if (!room) return res.status(404).json({ error: 'Active room not found.' });
+    const ownsRoom = req.user.role === 'user'
+      ? (room.parentUserId === req.user.id || normalizeEmail(room.parentUserEmail) === normalizeEmail(req.user.email))
+      : String(req.user.roomKey).toUpperCase() === key;
+    if (!ownsRoom) return res.status(403).json({ error: 'This room does not belong to your account.' });
+    const resident = [...store.users, ...MOCK_USERS].find(u => String(accountData(u).roomKey || u.roomKey || '').toUpperCase() === key && accountRole(u) !== 'user');
+    if (!resident || normalizeEmail(req.body.email) !== normalizeEmail(accountData(resident).email || resident.email) || !credentialValues(resident, false).some(hash => passwordsMatch(req.body.password, hash))) {
+      return res.status(400).json({ error: 'Enter the resident account email and password.' });
     }
+    const reserved = new Set<string>([...(store.retiredRoomKeys || []), ...(store.roomKeys || []).map(r => r.roomKey)]);
+    releaseRoom(store, room, [store.users, MOCK_USERS, persistentData.users], freshRoomKey(room, reserved));
+    syncStore();
+    const rooms = (store.roomKeys || []).filter(r => r.isAssigned && r.parentUserId === req.user.id);
+    return res.json({ success: true, rooms, message: 'Room account removed and room made available with a new key.' });
   });
 
   // Claim room key and complete resident onboarding & login
-  app.post(["/api/room-keys/claim", "/api/residents/onboard"], async (req: any, res) => {
+  app.post(["/api/room-keys/claim", "/api/residents/onboard"], requireAuth(["user"]), requirePrimaryAccount, async (req: any, res) => {
     try {
       const {
         roomKey,
@@ -11765,42 +11488,21 @@ async function startServer() {
         return res.status(404).json({ error: `Digital room key "${resolvedKey}" not found. Please double-check the key code.` });
       }
 
+      if (keyRecord.isAssigned || keyRecord.status === 'Occupied') return res.status(409).json({ error: 'This room is already occupied.' });
+      const rawPassword = password;
+      if (typeof rawPassword !== 'string' || rawPassword.length < 6) return res.status(400).json({ error: 'Create a room password with at least 6 characters.' });
+      const hashedPassword = hashCredential(rawPassword);
+
       // Assign the room key to this resident
       const store = getStoreInstance();
       if (!store.users) {
         store.users = [];
       }
 
-      // Check if the claiming entity is a primary user account
-      let parentUser: any = null;
-      const authHeader = req.headers.authorization;
-      if (authHeader && authHeader.startsWith('Bearer ')) {
-        const token = authHeader.split(' ')[1]?.trim();
-        if (token) {
-          parentUser = store.users.find((u: any) => (u.token === token || u.user?.token === token) && (u.role === 'user' || u.user?.role === 'user'));
-          if (!parentUser) {
-            const mMatch = MOCK_USERS.find(m => (m.token === token || m.user?.token === token) && (m.role === 'user' || m.user?.role === 'user'));
-            if (mMatch) parentUser = mMatch;
-          }
-        }
-      }
-      if (!parentUser && userId) {
-        parentUser = store.users.find((u: any) => u.id === userId || (u.user && u.user.id === userId));
-      }
-      if (!parentUser && req.body.parentUserEmail) {
-        const cleanPEmail = req.body.parentUserEmail.toLowerCase().trim();
-        parentUser = store.users.find((u: any) => {
-          const uRole = (u.user?.role || u.role || '').toLowerCase();
-          const uEmail = (u.user?.email || u.email || '').toLowerCase().trim();
-          return uRole === 'user' && uEmail === cleanPEmail;
-        });
-      }
-      if (!parentUser && req.user && req.user.role === 'user') {
-        parentUser = req.user;
-      }
-
-      const pUserId = parentUser ? (parentUser.user?.id || parentUser.id) : (userId || '');
-      const pUserEmail = parentUser ? (parentUser.user?.email || parentUser.email) : (req.body.parentUserEmail || '');
+      const parentUser = [...store.users, ...MOCK_USERS].find((u: any) => accountId(u) === req.user.id && accountRole(u) === 'user');
+      if (!parentUser) return res.status(403).json({ error: 'Activate a room from your primary user account.' });
+      const pUserId = accountId(parentUser);
+      const pUserEmail = accountData(parentUser).email || parentUser.email;
 
       const cleanParentEmail = (pUserEmail || '').toLowerCase().trim();
       if (cleanParentEmail && resolvedEmail === cleanParentEmail) {
@@ -11813,7 +11515,7 @@ async function startServer() {
           const rkParentId = (rk.parentUserId || rk.claimedByUserId || '').trim();
           const rkParentEmail = (rk.parentUserEmail || '').trim().toLowerCase();
           const isSameUser = (pUserId && rkParentId === pUserId) || (cleanParentEmail && rkParentEmail === cleanParentEmail);
-          return isSameUser && (rk.status === 'claimed' || rk.status === 'assigned' || rk.isClaimed);
+          return isSameUser && (rk.isAssigned || rk.status === 'Occupied' || rk.status === 'claimed' || rk.status === 'assigned' || rk.isClaimed);
         });
         if (existingActiveKey && (existingActiveKey.roomKey || '').toUpperCase().trim() !== resolvedKey) {
           return res.status(400).json({ error: "Users can now only activate one room per user account. You already have an active room on this account." });
@@ -11904,11 +11606,6 @@ async function startServer() {
       });
 
       const fallbackEmail = resolvedEmail;
-      const rawPassword = req.body.plainPassword || req.body.password || password;
-      if (!rawPassword) {
-        return res.status(400).json({ error: 'Password is required for resident onboarding.' });
-      }
-      const hashedPassword = crypto.createHash('sha256').update(rawPassword).digest('hex');
       const studentToken = createSessionToken('stu');
 
       if (!studentUser) {
@@ -11927,7 +11624,6 @@ async function startServer() {
           institution: resolvedInstitution,
           phone: resolvedPhone,
           password: hashedPassword,
-          plainPassword: rawPassword,
           hostelId: keyRecord.hostelId,
           hostelName: keyRecord.hostelName,
           blockName: keyRecord.blockName,
@@ -11960,8 +11656,7 @@ async function startServer() {
         targetUser.roomNumber = keyRecord.roomNumber;
         targetUser.roomKey = keyRecord.roomKey;
         targetUser.password = hashedPassword;
-        targetUser.plainPassword = rawPassword;
-        if (!targetUser.token) targetUser.token = studentToken;
+        targetUser.token = studentToken;
         targetUser.managerId = hostel?.managerId || targetUser.managerId || '';
         targetUser.managerName = hostel?.managerName || targetUser.managerName || 'Hostel Operations Manager';
         targetUser.managerPhone = hostel?.phone || hostel?.managerPhone || targetUser.managerPhone || '+233 24 000 0000';
@@ -11970,7 +11665,6 @@ async function startServer() {
         if (studentUser.user) {
           studentUser.email = fallbackEmail;
           studentUser.password = hashedPassword;
-          studentUser.plainPassword = rawPassword;
           studentUser.username = resolvedStudentId.toLowerCase().replace(/[^a-z0-9]/g, '');
         }
       }
@@ -12015,21 +11709,17 @@ async function startServer() {
           ...userProfile,
           phone: resolvedPhone || user.phone,
           password: hashedPassword,
-          plainPassword: rawPassword
         };
         MOCK_USERS[existingMockUserIndex].password = hashedPassword;
-        MOCK_USERS[existingMockUserIndex].plainPassword = rawPassword;
       } else {
         MOCK_USERS.push({
           email: fallbackEmail.toLowerCase(),
           username: user.username,
           password: hashedPassword,
-          plainPassword: rawPassword,
           user: {
             ...userProfile,
             phone: resolvedPhone,
             password: hashedPassword,
-            plainPassword: rawPassword
           }
         });
       }
@@ -12137,6 +11827,7 @@ async function startServer() {
       const hostel = hostelList.find(h => h.id === id);
       if (!hostel) return res.status(404).json({ error: "Hostel not found" });
 
+      if (!canManageHostel(req.user, hostel)) return res.status(403).json({ error: 'You can only generate keys for your own residence.' });
       const newKeys = await dbGenerateHostelRoomKeys(hostel);
       res.json({ success: true, count: newKeys.length, generatedKeys: newKeys });
     } catch (err: any) {
@@ -14907,225 +14598,6 @@ ${400 + streamLength}
     });
   });
 
-  // --- Dedicated Staff Account Registration Endpoint ---
-  app.post("/api/auth/register-staff", async (req, res) => {
-    try {
-      const {
-        name,
-        username,
-        email,
-        phone,
-        altPhone,
-        password,
-        role: staffRole,
-        specialization,
-        yearsExperience,
-        preferredShift,
-        address,
-        city,
-        region,
-        digitalAddress,
-        commutePreference,
-        nationalId,
-        idType,
-        idCardDoc,
-        cvData,
-        cvFileName,
-        qualifications,
-        experienceSummary,
-        declarationAccepted,
-        photoUrl
-      } = req.body;
-
-      if (!name || !email || !password) {
-        return res.status(400).json({ error: "Full Name, Email address, and Password are required." });
-      }
-
-      const cleanEmail = email.toLowerCase().trim();
-      const parentUserId = req.body.parentUserId || req.body.userId || (req as any).user?.id || null;
-      const parentUserEmail = (req.body.parentUserEmail || req.body.userEmail || (req as any).user?.email || '').toLowerCase().trim() || null;
-      const existingUserIndex = MOCK_USERS.findIndex(u => (u.email || u.user?.email || '').toLowerCase().trim() === cleanEmail);
-      const existingStaffRecord = staff.find(s => (s.email || '').toLowerCase().trim() === cleanEmail);
-
-      if (existingUserIndex >= 0 || existingStaffRecord) {
-        const existingUser = existingUserIndex >= 0 ? MOCK_USERS[existingUserIndex] : null;
-        const userRole = existingUser?.user?.role || existingUser?.role;
-        
-        if (userRole === 'staff' || existingStaffRecord) {
-          const statusVal = existingStaffRecord?.verificationStatus || existingUser?.user?.verificationStatus || 'Pending';
-          return res.status(400).json({ 
-            error: `You already have a registered Staff account under this email address (${cleanEmail}). Current Status: ${statusVal}. Creation of multiple Staff accounts is restricted to 1 account per user.` 
-          });
-        }
-      }
-
-      let baseUsername = (username || cleanEmail.split('@')[0])
-        .toLowerCase()
-        .trim()
-        .replace(/[^a-z0-9_]/g, '_')
-        .replace(/^_+|_+$/g, '');
-
-      if (!baseUsername) {
-        baseUsername = `staff_${Math.floor(1000 + Math.random() * 9000)}`;
-      }
-
-      // Auto-resolve username collisions if duplicate by generating next unique handle
-      let finalUsername = baseUsername;
-      let suffix = 1;
-      while (MOCK_USERS.some(u => (u.username || '').toLowerCase() === finalUsername.toLowerCase())) {
-        suffix += 1;
-        finalUsername = `${baseUsername}_${suffix}`;
-      }
-
-      let staffUserId = `staff-user-${Date.now()}`;
-      let token = `token_staff_${staffUserId}`;
-
-      const assignedSpecialization = specialization || staffRole || 'Facilities & Maintenance Technician';
-
-      const existingUser = existingUserIndex >= 0 ? MOCK_USERS[existingUserIndex] : null;
-      const resolvedParentUserId = parentUserId || existingUser?.id || existingUser?.user?.id || null;
-      const resolvedParentUserEmail = parentUserEmail || existingUser?.email || existingUser?.user?.email || cleanEmail;
-
-      const newStaffUser = {
-        email: cleanEmail,
-        parentUserId: resolvedParentUserId,
-        parentUserEmail: resolvedParentUserEmail,
-        username: finalUsername,
-        password,
-        user: {
-          id: staffUserId,
-          parentUserId: resolvedParentUserId,
-          parentUserEmail: resolvedParentUserEmail,
-          name: name.trim(),
-          username: finalUsername,
-          email: cleanEmail,
-          phone: phone || '',
-          altPhone: altPhone || '',
-          role: 'staff',
-          staffRole: assignedSpecialization,
-          specialization: assignedSpecialization,
-          yearsExperience: yearsExperience || '1 - 3 Years',
-          preferredShift: preferredShift || 'Day Shift (8 AM - 5 PM)',
-          address: address || '',
-          city: city || 'Accra',
-          region: region || 'Greater Accra',
-          digitalAddress: digitalAddress || '',
-          commutePreference: commutePreference || 'Daily Commuter',
-          nationalId: nationalId || '',
-          idType: idType || 'Ghana Card (National ID)',
-          idCardDoc: idCardDoc || '',
-          cvData: cvData || '',
-          cvFileName: cvFileName || '',
-          qualifications: qualifications || '',
-          experienceSummary: experienceSummary || '',
-          declarationAccepted: Boolean(declarationAccepted),
-          photo: photoUrl || '',
-          avatar: photoUrl || '',
-          verificationStatus: 'Pending',
-          isVerified: false,
-          token,
-          createdAt: new Date().toISOString()
-        }
-      };
-
-      // Clean up any existing duplicate entries for this email in MOCK_USERS, store, and staff
-      MOCK_USERS = MOCK_USERS.filter(u => (u.email || u.user?.email || '').toLowerCase().trim() !== cleanEmail);
-      const storeInstance = getStoreInstance();
-      if (storeInstance.users) {
-        storeInstance.users = storeInstance.users.filter((u: any) => (u.email || u.user?.email || '').toLowerCase().trim() !== cleanEmail);
-      }
-      staff = staff.filter(s => (s.email || '').toLowerCase().trim() !== cleanEmail);
-      if (storeInstance.staff) {
-        storeInstance.staff = storeInstance.staff.filter((s: any) => (s.email || '').toLowerCase().trim() !== cleanEmail);
-      }
-
-      MOCK_USERS.push(newStaffUser);
-      if (!storeInstance.users) storeInstance.users = [];
-      storeInstance.users.push(newStaffUser.user);
-
-      const returnedUserObj = newStaffUser.user;
-
-      if (existingUser) {
-        const uObj = existingUser.user || existingUser;
-        if (!uObj.registeredAccounts) uObj.registeredAccounts = {};
-        uObj.registeredAccounts.staffAccount = returnedUserObj;
-      }
-
-      // Add to staff collection so Admin and Managers can track verification status
-      const newStaffRecord = {
-        id: `staff-${staffUserId}`,
-        userId: staffUserId,
-        parentUserId: resolvedParentUserId,
-        parentUserEmail: resolvedParentUserEmail,
-        name: name.trim(),
-        username: finalUsername,
-        email: cleanEmail,
-        phone: phone || '',
-        role: assignedSpecialization,
-        staffRole: assignedSpecialization,
-        specialization: assignedSpecialization,
-        yearsExperience: yearsExperience || '1 - 3 Years',
-        nationalId: nationalId || '',
-        idType: idType || 'Ghana Card (National ID)',
-        idCardDoc: idCardDoc || '',
-        cvData: cvData || '',
-        cvFileName: cvFileName || '',
-        verificationStatus: 'Pending',
-        isVerified: false,
-        createdAt: new Date().toISOString()
-      };
-      staff.unshift(newStaffRecord);
-      if (!storeInstance.staff) storeInstance.staff = [];
-      storeInstance.staff.unshift(newStaffRecord);
-      savePersistentStore(storeInstance);
-
-      // Create Admin Notification for staff verification
-      notifications.unshift({
-        id: `notif-vrf-${Date.now()}`,
-        studentId: 'admin_001',
-        title: `Staff Registration Verification Required: ${name.trim()}`,
-        message: `Staff applicant "${name.trim()}" (@${finalUsername}) has registered and submitted CV & National ID for verification review.`,
-        type: 'verification',
-        date: new Date().toISOString().split('T')[0],
-        read: false
-      });
-
-      // Create User Notification for staff applicant
-      const userStaffNotif = {
-        id: `notif-stf-usr-${Date.now()}`,
-        studentId: staffUserId,
-        userId: staffUserId,
-        userEmail: cleanEmail,
-        recipientEmail: cleanEmail,
-        title: 'Staff Account Registration Submitted',
-        message: `Your Staff Account registration as "${assignedSpecialization}" has been submitted successfully. Current Status: Pending Administrative Verification.`,
-        type: 'verification',
-        date: new Date().toISOString().split('T')[0],
-        read: false
-      };
-      notifications.unshift(userStaffNotif);
-      await dbCreateNotification(userStaffNotif, notifications);
-
-      activities.unshift({
-        id: `act-${Date.now()}`,
-        text: `New staff account registered for "${name}" (@${finalUsername}) - Pending Verification`,
-        time: 'Just now',
-        type: 'warning'
-      });
-
-      syncStore();
-
-      return res.status(201).json({
-        success: true,
-        token,
-        user: returnedUserObj
-      });
-    } catch (err: any) {
-      console.error("Error registering staff account:", err);
-      return res.status(500).json({ error: err.message || "Failed to register staff account" });
-    }
-  });
-
   // --- Manager Account Settings Endpoints ---
   app.get("/api/manager/account-settings", requireAuth(["manager", "admin"]), async (req: any, res) => {
     try {
@@ -15150,38 +14622,14 @@ ${400 + streamLength}
   });
 
   // --- Change Password Endpoint ---
-  app.post("/api/auth/change-password", requireAuth(), async (req: any, res) => {
-    try {
-      const { currentPassword, newPassword } = req.body;
-      if (!newPassword || newPassword.length < 6) {
-        return res.status(400).json({ error: "New password must be at least 6 characters long." });
-      }
-
-      const userId = req.user.id;
-      const userIndex = MOCK_USERS.findIndex(u => (u.user && u.user.id === userId) || u.username === req.user.username);
-      if (userIndex === -1) {
-        return res.status(404).json({ error: "User account not found." });
-      }
-
-      const stored = MOCK_USERS[userIndex].password || MOCK_USERS[userIndex].plainPassword || MOCK_USERS[userIndex].user?.password;
-      if (!currentPassword || !passwordsMatch(currentPassword, stored, MOCK_USERS[userIndex].plainPassword, MOCK_USERS[userIndex].user?.password, MOCK_USERS[userIndex].user?.plainPassword)) {
-        return res.status(400).json({ error: "Incorrect current password." });
-      }
-
-      const hashed = hashPasswordSha256(newPassword);
-      MOCK_USERS[userIndex].password = hashed;
-      MOCK_USERS[userIndex].plainPassword = undefined;
-      if (MOCK_USERS[userIndex].user) {
-        MOCK_USERS[userIndex].user.password = hashed;
-        MOCK_USERS[userIndex].user.plainPassword = undefined;
-      }
-      syncStore();
-
-      return res.json({ success: true, message: "Password updated successfully." });
-    } catch (err: any) {
-      console.error("Password change error:", err);
-      return res.status(500).json({ error: err.message || "Failed to update password." });
-    }
+  app.post("/api/auth/change-password", requireAuth(), (req: any, res) => {
+    if (typeof req.body.newPassword !== 'string' || req.body.newPassword.length < 6) return res.status(400).json({ error: 'A new password of at least 6 characters is required.' });
+    const email = normalizeEmail(req.user.email), role = req.user.role;
+    const records = passwordRecords(email, role).filter(record => role === 'merchant' || accountId(record) === req.user.id);
+    if (!records.length) return res.status(404).json({ error: 'Account not found.' });
+    if (!records.some(record => credentialValues(record, false).some(hash => passwordsMatch(req.body.currentPassword, hash)))) return res.status(400).json({ error: 'Incorrect current password.' });
+    updateIdentityPassword(records, req.body.newPassword, email, role);
+    return res.json({ success: true, message: 'Password updated. Sign in again using the new password.' });
   });
 
   // --- Dynamic Meetings Endpoints (No static mockup data) ---
@@ -15436,64 +14884,19 @@ ${400 + streamLength}
 
     const userEmailsSet = new Set<string>();
     if (uEmail) userEmailsSet.add(uEmail);
-    if (user?.studentEmail) userEmailsSet.add(user.studentEmail.toLowerCase().trim());
-    if (user?.parentUserEmail) userEmailsSet.add(user.parentUserEmail.toLowerCase().trim());
-    if (user?.user?.email) userEmailsSet.add(user.user.email.toLowerCase().trim());
-    if (user?.user?.studentEmail) userEmailsSet.add(user.user.studentEmail.toLowerCase().trim());
-    if (user?.user?.parentUserEmail) userEmailsSet.add(user.user.parentUserEmail.toLowerCase().trim());
-    if (user?.managerEmail) userEmailsSet.add(user.managerEmail.toLowerCase().trim());
-    if (user?.staffEmail) userEmailsSet.add(user.staffEmail.toLowerCase().trim());
 
-    // Expand emails linked through Digital Market applications and stores
-    (store.digitalMarketApplications || []).forEach((a: any) => {
-      const aSEmail = (a.studentEmail || '').toLowerCase().trim();
-      const aPEmail = (a.parentUserEmail || '').toLowerCase().trim();
-      if ((uId && a.userId === uId) || (uEmail && (aPEmail === uEmail || aSEmail === uEmail))) {
-        if (aSEmail) userEmailsSet.add(aSEmail);
-        if (aPEmail) userEmailsSet.add(aPEmail);
-      }
-    });
-    (store.digitalMarketStores || []).forEach((s: any) => {
-      const sSEmail = (s.studentEmail || '').toLowerCase().trim();
-      const sPEmail = (s.parentUserEmail || '').toLowerCase().trim();
-      if ((uId && (s.userId === uId || s.merchantUserId === uId)) || (uEmail && (sPEmail === uEmail || sSEmail === uEmail))) {
-        if (sSEmail) userEmailsSet.add(sSEmail);
-        if (sPEmail) userEmailsSet.add(sPEmail);
-      }
-    });
-
-    // Expand emails linked through Manager verifications and requests
-    (store.managerVerifications || managerVerifications || []).forEach((v: any) => {
-      const vMEmail = (v.managerEmail || v.email || '').toLowerCase().trim();
-      const vPEmail = (v.parentUserEmail || '').toLowerCase().trim();
-      if ((uId && (v.managerId === uId || v.userId === uId)) || (uEmail && (vPEmail === uEmail || vMEmail === uEmail))) {
-        if (vMEmail) userEmailsSet.add(vMEmail);
-        if (vPEmail) userEmailsSet.add(vPEmail);
-      }
-    });
-
-    // Expand emails linked through Staff profiles
-    ([...staff, ...(store.staff || []), ...(store.staffApplications || [])]).forEach((s: any) => {
-      const sEmail = (s.email || s.userEmail || '').toLowerCase().trim();
-      const sPEmail = (s.parentUserEmail || '').toLowerCase().trim();
-      if ((uId && (s.userId === uId || s.id === uId)) || (uEmail && (sPEmail === uEmail || sEmail === uEmail))) {
-        if (sEmail) userEmailsSet.add(sEmail);
-        if (sPEmail) userEmailsSet.add(sPEmail);
-      }
-    });
-
+    // Notifications are account-scoped: do not expand a primary account into linked manager, resident, staff, or merchant identities.
     const userEmails = Array.from(userEmailsSet).filter(Boolean);
 
     const filtered = (list || []).filter((n: any) => {
       if (!n) return false;
       if (user?.role === 'admin' && (n.targetRole === 'admin' || n.targetRole === 'all')) return true;
 
-      if (n.studentId && (n.studentId === uId || n.studentId === user?.parentUserId)) return true;
-      if (n.userId && (n.userId === uId || n.userId === user?.parentUserId)) return true;
-      if (n.recipientId && (n.recipientId === uId || n.recipientId === user?.parentUserId)) return true;
-      if (n.parentUserId && (n.parentUserId === uId || n.parentUserId === user?.parentUserId)) return true;
-      if (n.managerId && (n.managerId === uId || n.managerId === user?.parentUserId)) return true;
-      if (n.staffId && (n.staffId === uId || n.staffId === user?.parentUserId)) return true;
+      if (n.studentId && (n.studentId === uId)) return true;
+      if (n.userId && (n.userId === uId)) return true;
+      if (n.recipientId && (n.recipientId === uId)) return true;
+      if (n.managerId && (n.managerId === uId)) return true;
+      if (n.staffId && (n.staffId === uId)) return true;
 
       // Match manager's hostels
       const mgrHostels = (hostels || []).filter((h: any) => 
@@ -15643,8 +15046,8 @@ ${400 + streamLength}
         (n.email || '').toLowerCase().trim()
       ].filter(e => e.length > 0);
 
-      const matches = (n.studentId && (n.studentId === uId || n.studentId === user?.parentUserId)) ||
-                      (n.userId && (n.userId === uId || n.userId === user?.parentUserId)) ||
+      const matches = (n.studentId && (n.studentId === uId)) ||
+                      (n.userId && (n.userId === uId)) ||
                       (n.recipientId && n.recipientId === uId) ||
                       (userEmails.length > 0 && userEmails.some(ue => nEmails.includes(ue)));
 
@@ -16128,7 +15531,7 @@ ${400 + streamLength}
   });
 
   // Vite integration middleware (development) or serving static build assets (production)
-  if (process.env.NODE_ENV !== "production") {
+  if (process.env.NODE_ENV !== "production" && process.env.NODE_ENV !== "test") {
     const vite = await createViteServer({
       server: {
         middlewareMode: true,
@@ -16139,7 +15542,7 @@ ${400 + streamLength}
       appType: "spa",
     });
     app.use(vite.middlewares);
-  } else {
+  } else if (process.env.NODE_ENV !== 'test') {
     const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath));
     app.get('*', (req, res) => {

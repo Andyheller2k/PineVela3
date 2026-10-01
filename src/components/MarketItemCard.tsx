@@ -97,7 +97,7 @@ export const MarketItemCard: React.FC<MarketItemCardProps> = memo(
       >
         <div>
           {/* Product Thumbnail Container with Lazy Loading */}
-          <div className="relative h-28 sm:h-44 bg-slate-100 overflow-hidden flex items-center justify-center p-1 border-b border-slate-100 select-none">
+          <div className={`relative h-28 sm:h-44 bg-slate-100 overflow-hidden flex items-center justify-center border-b border-slate-100 select-none ${isService ? "p-0 bg-slate-900" : "p-1"}`}> 
             <img 
               src={optimizeImageDisplayUrl(product.imageUrl, 180, 30)} 
               alt={product.title}
@@ -105,7 +105,7 @@ export const MarketItemCard: React.FC<MarketItemCardProps> = memo(
               decoding="async"
               fetchPriority="low"
               referrerPolicy="no-referrer"
-              className="w-full h-full object-contain transition-opacity duration-200" 
+              className={`w-full h-full ${isService ? "object-cover" : "object-contain"} transition-opacity duration-200`} 
             />
             
             {/* Category / PineVela (Service) Tag */}

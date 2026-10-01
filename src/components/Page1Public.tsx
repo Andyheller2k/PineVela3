@@ -4,8 +4,6 @@ import { Hostel } from '../types';
 import PineLogo from './PineLogo';
 import { Search, MapPin, Phone, Mail, Star, ArrowRight, X, Sparkles, Shield, User, MessageSquare, Landmark, Layers, ChevronDown, HelpCircle, Navigation, LogOut, ShieldCheck, Wifi, Zap, BedDouble, Building2, CheckCircle2, ChevronLeft, ChevronRight, Maximize2, ImageIcon, Briefcase, FileText, UploadCloud, CheckCircle, AlertCircle, RefreshCw, Home, Wrench, Clock, ShoppingBag } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import FAQAccordion from './FAQAccordion';
-import TestimonialsCarousel from './TestimonialsCarousel';
 import { useAuth } from '../context/AuthContext';
 import { apiFetch, safeJson } from '../lib/api';
 import LogoutConfirmationModal from './LogoutConfirmationModal';
@@ -17,9 +15,6 @@ import {
 } from '../utils/formValidation';
 
 import welcomeBg from '../../assets/welcome_bg.jpg';
-import hostelsBg from '../../assets/hostels_bg.jpg';
-import testimonialsBg from '../../assets/testimonials_bg.jpg';
-import faqAboutBg from '../../assets/faq_about_bg.jpg';
 
 interface Page1PublicProps {
   hostels: Hostel[];
@@ -38,10 +33,6 @@ export default function Page1Public({
 }: Page1PublicProps) {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedWing, setSelectedWing] = useState<'All' | 'Hostel' | 'Inn' | 'Hotel' | 'Estate'>('All');
-  const [scrollPercent, setScrollPercent] = useState(0);
-  const [activeSection, setActiveSection] = useState('welcome-section');
-  const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
 
   const { user, logout } = useAuth();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
@@ -475,27 +466,6 @@ export default function Page1Public({
     return ['https://images.unsplash.com/photo-1555854877-bab0e564b8d5?auto=format&fit=crop&w=1200&q=80'];
   };
 
-  useEffect(() => {
-    const handleScroll = () => {
-      const scrollTop = window.scrollY;
-      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
-      const percent = docHeight > 0 ? (scrollTop / docHeight) * 100 : 0;
-      setScrollPercent(percent);
-
-      const sections = ['welcome-section', 'hostels-section', 'testimonials-section', 'faq-about-section', 'footer-section'];
-      let current = 'welcome-section';
-      for (const sectionId of sections) {
-        const el = document.getElementById(sectionId);
-        if (el && el.getBoundingClientRect().top <= window.innerHeight * 0.45) current = sectionId;
-      }
-      if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 120) current = 'footer-section';
-      setActiveSection(current);
-    };
-
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    setTimeout(handleScroll, 100);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
 
   useEffect(() => {
     document.documentElement.classList.add('landing-page-scrollbar-hidden');
@@ -510,90 +480,11 @@ export default function Page1Public({
     const loc = (hostel.location || '').toLowerCase();
     const matchesSearch = name.includes(query) || loc.includes(query);
     
-    if (selectedWing === 'All') return matchesSearch;
-    return matchesSearch && hostel.wing === selectedWing;
+    return matchesSearch;
   });
 
   return (
     <div className="min-h-screen bg-transparent relative overflow-hidden font-sans pb-0">
-      {/* Dynamic Sidebar Scroll Tracker (Floating Indicator) */}
-      <motion.div 
-        onClick={() => setIsSidebarExpanded(!isSidebarExpanded)}
-        animate={{ width: isSidebarExpanded ? 220 : 56 }}
-        transition={{ type: "spring", stiffness: 260, damping: 25 }}
-        className="fixed right-6 top-1/2 -translate-y-1/2 z-50 hidden xl:flex flex-col items-center gap-5 bg-white/95 backdrop-blur-md p-4 py-6 rounded-2xl border border-slate-100 shadow-xl shadow-slate-200/50 cursor-pointer select-none overflow-hidden"
-      >
-        <div className="flex items-center gap-2 justify-between w-full border-b border-slate-100 pb-2">
-          {isSidebarExpanded ? (
-            <span className="text-[9px] font-black uppercase text-blue-900 tracking-wider">Navigation Map</span>
-          ) : (
-            <span className="text-[9px] font-black uppercase text-slate-400 tracking-widest text-center w-full">Nav</span>
-          )}
-        </div>
-
-        <div className="relative w-[3px] h-36 bg-slate-100 rounded-full flex flex-col justify-start overflow-hidden shrink-0">
-          <motion.div 
-            className="absolute top-0 left-0 w-full bg-blue-900 rounded-full origin-top"
-            style={{ height: `${scrollPercent}%` }}
-            transition={{ type: "tween", ease: "linear" }}
-          />
-        </div>
-
-        <div className="flex flex-col gap-3.5 w-full">
-          {[
-            { id: 'welcome-section', label: 'Welcome to PineVela' },
-            { id: 'hostels-section', label: 'Available Residences' },
-            { id: 'testimonials-section', label: 'Hear from Students' },
-            { id: 'faq-about-section', label: 'FAQ & About us' },
-            { id: 'footer-section', label: 'Footer Section' }
-          ].map((sec) => {
-            const isActive = activeSection === sec.id;
-            return (
-              <button
-                key={sec.id}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  document.getElementById(sec.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                }}
-                className="group relative flex items-center w-full cursor-pointer focus:outline-none py-1 rounded-lg hover:bg-slate-50 transition-colors"
-                title={sec.label}
-              >
-                <div className={`w-3.5 h-3.5 rounded-full flex items-center justify-center border-2 transition-all duration-300 shrink-0 ${
-                  isActive 
-                    ? 'border-blue-900 bg-white scale-110 shadow-sm shadow-blue-950/20' 
-                    : 'border-slate-200 bg-slate-100 group-hover:border-slate-300 group-hover:bg-slate-200'
-                }`}>
-                  {isActive && <div className="w-1.5 h-1.5 rounded-full bg-blue-900" />}
-                </div>
-
-                <AnimatePresence initial={false}>
-                  {isSidebarExpanded ? (
-                    <motion.span
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: -10 }}
-                      transition={{ duration: 0.2 }}
-                      className={`ml-3 text-[10px] font-bold text-left whitespace-nowrap overflow-hidden ${
-                        isActive ? 'text-blue-950 font-black' : 'text-slate-500'
-                      }`}
-                    >
-                      {sec.label}
-                    </motion.span>
-                  ) : (
-                    <span className="absolute right-10 bg-slate-900 text-white text-[10px] font-bold py-1.5 px-3 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap shadow-md z-50">
-                      {sec.label}
-                    </span>
-                  )}
-                </AnimatePresence>
-              </button>
-            );
-          })}
-        </div>
-
-        {!isSidebarExpanded && (
-          <span className="text-[8px] font-black text-slate-400 mt-1 uppercase tracking-tighter">Tap</span>
-        )}
-      </motion.div>
 
       {/* Decorative background shapes */}
       <div className="absolute top-0 right-0 w-96 h-96 bg-amber-100 rounded-full blur-3xl opacity-30 -z-10" />
@@ -602,7 +493,7 @@ export default function Page1Public({
       {/* Fixed Header Bar at top with frost/glassmorphism */}
       <header
         id="public-header"
-        className="fixed top-0 left-0 right-0 z-40 px-4 sm:px-6 md:px-12 py-3 bg-white/10 backdrop-blur-xl border-b border-white/30 shadow-none transition-all duration-300"
+        className="fixed top-0 left-0 right-0 z-40 px-4 sm:px-6 md:px-12 py-3 bg-transparent backdrop-blur-none border-b border-transparent shadow-none transition-all duration-300"
       >
         <div className="max-w-7xl mx-auto w-full flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
           <div className="cursor-pointer shrink-0" onClick={() => {
@@ -633,7 +524,7 @@ export default function Page1Public({
                   document.getElementById('hostels-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 }
               }}
-              className="w-full pl-10 pr-20 py-2 border border-white/60 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-900 bg-white/85 backdrop-blur-md text-slate-800 text-xs sm:text-sm font-semibold transition-all shadow-inner"
+              className="w-full pl-10 pr-20 py-2 border border-blue-400/85 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/70 bg-white/20 backdrop-blur-md text-slate-800 text-xs sm:text-sm font-semibold transition-all shadow-[0_0_0_1px_rgba(59,130,246,0.28),0_0_18px_rgba(59,130,246,0.32)]"
             />
             {searchQuery && (
               <button
@@ -833,74 +724,6 @@ export default function Page1Public({
                 </div>
               </div>
 
-              {/* Filters */}
-              <div className="flex flex-wrap items-center gap-2">
-                <div className="flex items-center gap-2 bg-blue-50/40 backdrop-blur-md p-1.5 rounded-xl border border-blue-200/30 shadow-sm">
-                  <button
-                    onClick={() => setSelectedWing('All')}
-                    className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                      selectedWing === 'All'
-                        ? 'bg-blue-900 text-white shadow-sm'
-                        : 'text-slate-600 hover:bg-blue-100/50'
-                    }`}
-                  >
-                    All Properties
-                  </button>
-                  <button
-                    onClick={() => setSelectedWing('Hostel')}
-                    className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                      selectedWing === 'Hostel'
-                        ? 'bg-blue-900 text-white shadow-sm'
-                        : 'text-slate-600 hover:bg-blue-100/50'
-                    }`}
-                  >
-                    Hostels
-                  </button>
-                  <button
-                    onClick={() => setSelectedWing('Inn')}
-                    className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                      selectedWing === 'Inn'
-                        ? 'bg-blue-900 text-white shadow-sm'
-                        : 'text-slate-650 hover:bg-blue-100/50'
-                    }`}
-                  >
-                    Inns
-                  </button>
-                  <button
-                    onClick={() => setSelectedWing('Hotel')}
-                    className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                      selectedWing === 'Hotel'
-                        ? 'bg-blue-900 text-white shadow-sm'
-                        : 'text-slate-650 hover:bg-blue-100/50'
-                    }`}
-                  >
-                    Hotels
-                  </button>
-                  <button
-                    onClick={() => setSelectedWing('Estate')}
-                    className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                      selectedWing === 'Estate'
-                        ? 'bg-blue-900 text-white shadow-sm'
-                        : 'text-slate-650 hover:bg-blue-100/50'
-                    }`}
-                  >
-                    Estates
-                  </button>
-                </div>
-
-                {(selectedWing !== 'All' || searchQuery.trim() !== '') && (
-                  <button
-                    onClick={() => {
-                      setSelectedWing('All');
-                      setSearchQuery('');
-                    }}
-                    className="bg-blue-50/40 backdrop-blur-md border border-blue-200/30 text-blue-900 font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-sm hover:bg-blue-50/70 transition-all cursor-pointer"
-                  >
-                    <X size={14} />
-                    <span>Clear filters</span>
-                  </button>
-                )}
-              </div>
             </div>
 
           {/* Grid of Hostels */}
@@ -1015,8 +838,8 @@ export default function Page1Public({
           {filteredHostels.length === 0 && (
             <div className="text-center py-12 bg-blue-50/80 backdrop-blur-lg rounded-3xl border border-blue-200/50 shadow-xl p-8 space-y-3">
               <p className="text-slate-700 font-semibold text-sm">No hostels found matching the filters.</p>
-              <button 
-                onClick={() => { setSearchQuery(''); setSelectedWing('All'); }} 
+              <button
+                onClick={() => setSearchQuery('')}
                 className="px-6 py-2.5 bg-blue-900 hover:bg-blue-800 text-white text-xs font-extrabold rounded-xl shadow-md transition-all cursor-pointer inline-block"
               >
                 Clear filters
@@ -1077,27 +900,6 @@ export default function Page1Public({
               boxShadow: "0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)"
             }}
           >
-            <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center text-amber-600">
-              <User size={20} />
-            </div>
-            <h4 className="font-extrabold text-slate-900 text-lg">Direct Communication</h4>
-            <p className="text-sm text-slate-700 font-medium leading-relaxed">
-              Connect directly with certified property managers for inquiries, viewing requests, and clarifications.
-            </p>
-          </motion.div>
-
-          <motion.div 
-            className="bg-blue-50/20 backdrop-blur-sm p-6 rounded-2xl border border-blue-200/20 shadow-md space-y-3 cursor-pointer"
-            variants={{
-              hidden: { opacity: 0, y: 30 },
-              visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: "easeOut" } }
-            }}
-            whileHover={{ 
-              y: -8, 
-              scale: 1.02,
-              boxShadow: "0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)"
-            }}
-          >
             <div className="w-10 h-10 rounded-xl bg-rose-50 flex items-center justify-center text-rose-500">
               <Landmark size={20} />
             </div>
@@ -1130,148 +932,7 @@ export default function Page1Public({
           </div>
         </motion.section>
 
-        {/* Testimonials Section with Horizontal Carousel */}
-        <motion.section 
-          id="testimonials-section" 
-          className="relative max-w-7xl mx-auto px-6 md:px-12 w-full mt-24 bg-transparent border-none shadow-none"
-          initial={{ opacity: 0.3, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: false, amount: 0.12 }}
-          transition={{ duration: 0.6, ease: "easeOut" }}
-        >
-          <div className="relative z-10 w-full">
-            <TestimonialsCarousel />
-          </div>
-        </motion.section>
 
-        {/* FAQ & About Us Side-by-Side Section */}
-        <motion.section 
-          id="faq-about-section" 
-          className="relative max-w-7xl mx-auto px-6 md:px-12 w-full mt-28 bg-transparent border-none shadow-none pb-12"
-          initial={{ opacity: 0.3, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: false, amount: 0.12 }}
-          transition={{ duration: 0.6, ease: "easeOut" }}
-        >
-          <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
-            
-            {/* Left Column: FAQ Accordion */}
-            <div className="lg:col-span-6 space-y-8">
-              <div className="space-y-3">
-                <div className="inline-flex items-center gap-2 bg-slate-100 text-slate-800 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider">
-                  <HelpCircle className="text-blue-900" size={12} />
-                  Onboarding Support
-                </div>
-                <h3 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-                  Frequently Asked Questions
-                </h3>
-                <p className="text-sm text-slate-500 max-w-xl">
-                  Everything you need to know about the modern PineVela booking, management, and student residency experience.
-                </p>
-              </div>
-
-              <FAQAccordion />
-            </div>
-
-            {/* Right Column: About Us */}
-            <div className="lg:col-span-6 space-y-8 bg-transparent p-0 border-none shadow-none">
-              <div className="space-y-4">
-                <span className="inline-flex items-center gap-1.5 text-xs font-extrabold tracking-widest text-blue-900 uppercase">
-                  Our Identity & Purpose
-                </span>
-                <h3 className="text-2xl md:text-3xl font-black text-slate-900 leading-tight">
-                  About PineVela
-                </h3>
-                <h4 className="text-base md:text-lg font-bold text-blue-950 leading-relaxed border-l-4 border-blue-900 pl-4">
-                  Connecting students with verified housing, property owners with smart management, and skilled workers with accredited jobs.
-                </h4>
-                <p className="text-xs md:text-sm text-slate-600 leading-relaxed">
-                  PineVela is a unified hostel living, management, and employment platform. We empower students to find safe accommodation, enable property managers to streamline hostel operations, and allow job seekers to discover accredited hostel employment opportunities.
-                </p>
-                <p className="text-xs md:text-sm text-slate-500 leading-relaxed">
-                  We believe finding student accommodation and securing hostel jobs should be seamless, verified, and accessible from a single trusted platform.
-                </p>
-              </div>
-
-              {/* Mission Card */}
-              <div className="bg-blue-50/20 p-6 rounded-2xl border border-blue-200/25 space-y-2 shadow-sm">
-                <span className="text-xs font-bold text-blue-900 uppercase tracking-wider block">Our Mission</span>
-                <p className="text-xs md:text-sm text-slate-700 leading-relaxed font-medium">
-                  To build a trusted digital ecosystem for KNUST students and residences where students can find accommodation, buy and sell items, access services, and connect directly with verified residence managers and staff.
-                </p>
-              </div>
-
-              {/* Built for Everyone */}
-              <div className="space-y-4">
-                <h5 className="text-sm font-black text-slate-900 uppercase tracking-wider">Built for Everyone</h5>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="bg-blue-50/20 p-5 rounded-xl border border-blue-200/25 space-y-1.5 shadow-2xs">
-                    <span className="text-xs font-black text-blue-900 flex items-center gap-1.5">
-                      <span className="w-1.5 h-1.5 rounded-full bg-blue-900" />
-                      For Students
-                    </span>
-                    <p className="text-[11px] md:text-xs text-slate-500 leading-relaxed">
-                      Discover approved hostels, compare available accommodation, apply for a room, manage payments, track allocations, and communicate with your hostel staff.
-                    </p>
-                  </div>
-
-                  <div className="bg-blue-50/20 p-5 rounded-xl border border-blue-200/25 space-y-1.5 shadow-2xs">
-                    <span className="text-xs font-black text-indigo-900 flex items-center gap-1.5">
-                      <span className="w-1.5 h-1.5 rounded-full bg-indigo-900" />
-                      For Managers
-                    </span>
-                    <p className="text-[11px] md:text-xs text-slate-500 leading-relaxed">
-                      Manage blocks, floors, rooms, and beds, handle applications, track allocation history, manage payments, and dispatch maintenance.
-                    </p>
-                  </div>
-
-                  <div className="bg-blue-50/20 p-5 rounded-xl border border-blue-200/25 space-y-1.5 shadow-2xs">
-                    <span className="text-xs font-black text-emerald-900 flex items-center gap-1.5">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-950" />
-                      For Job Seekers & Technicians
-                    </span>
-                    <p className="text-[11px] md:text-xs text-slate-500 leading-relaxed">
-                      Easily search and apply for verified hostel management, maintenance, plumbing, electrical, and administrative jobs directly on PineVela.
-                    </p>
-                  </div>
-
-                  <div className="bg-blue-50/20 p-5 rounded-xl border border-blue-200/25 space-y-1.5 shadow-2xs">
-                    <span className="text-xs font-black text-rose-900 flex items-center gap-1.5">
-                      <span className="w-1.5 h-1.5 rounded-full bg-rose-900" />
-                      For Maintenance Staff
-                    </span>
-                    <p className="text-[11px] md:text-xs text-slate-500 leading-relaxed">
-                      Stay organized and respond instantly to daily hostel operations such as maintenance tickets within your assigned property wings.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Trust Matters */}
-              <div className="space-y-2 border-t border-slate-200/80 pt-6">
-                <h5 className="text-xs font-black text-slate-900 uppercase tracking-wider">Trust Matters</h5>
-                <p className="text-xs md:text-sm text-slate-600 leading-relaxed">
-                  PineVela is designed with security and accountability at its foundation. Hostel approvals, manager verification, accommodation allocations, and financial activity are handled through controlled workflows rather than relying solely on user input.
-                </p>
-                <p className="text-xs md:text-sm text-blue-900 font-extrabold leading-relaxed">
-                  Our goal is to create a system where student marketing meets hostel management.</p>
-              </div>
-
-              {/* Vision Card */}
-              <div className="bg-blue-950/95 backdrop-blur-sm text-white p-6 rounded-2xl space-y-3 border border-blue-900/50 shadow-xl">
-                <span className="text-[10px] font-black uppercase tracking-widest text-blue-200 block">Our Vision</span>
-                <p className="text-xs md:text-sm text-slate-200 leading-relaxed">
-                  We envision a unified campus future where Properties, People, and Services connect seamlessly — empowering students with verified accommodations and digital marketplace trade, equipping property managers with effortless operational tools, and delivering trusted hiring and payment channels.
-                </p>
-                <span className="text-xs font-black text-blue-300 block pt-1">
-                  PineVela — Properties, People & Services, Connected.
-                </span>
-              </div>
-
-            </div>
-
-          </div>
-        </motion.section>
 
       </main>
 
@@ -1285,7 +946,7 @@ export default function Page1Public({
             <div className="space-y-4">
               <PineLogo />
               <p className="text-xs text-slate-650 leading-relaxed font-medium">
-                The complete ecosystem for student ease, property management, and verified job finding on PineVela.
+                Making student trade and Hostel management easier.
               </p>
             </div>
             <div className="space-y-3">
@@ -1442,14 +1103,7 @@ export default function Page1Public({
                     </h1>
                   </div>
 
-                  {/* Pricing Badge Overlay */}
-                  <div className="bg-white/15 backdrop-blur-xl border border-white/30 p-4 rounded-2xl flex flex-col items-start md:items-end shrink-0 shadow-2xl pointer-events-auto">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-200">Annual Academic Fee</span>
-                    <span className="text-2xl sm:text-3xl font-black text-amber-300">
-                      GHS {(selectedHostel.price || 3500).toLocaleString()}
-                    </span>
-                    <span className="text-[10px] text-slate-200 font-medium">Includes utility, maintenance & high-speed wifi</span>
-                  </div>
+                  <div className="bg-white/15 backdrop-blur-xl border border-white/30 p-4 rounded-2xl flex flex-col items-start md:items-end shrink-0 shadow-2xl pointer-events-auto"><span className="text-[10px] font-bold uppercase tracking-wider text-slate-200">Accredited residence</span><span className="text-sm font-black text-amber-300">Availability confirmed after approval</span></div>
                 </div>
               </div>
 
@@ -2599,7 +2253,6 @@ export default function Page1Public({
             </div>
 
             <div className="p-3 bg-amber-50 rounded-2xl border border-amber-200 text-xs text-amber-900 font-bold flex items-center justify-center gap-2">
-              <Sparkles className="w-4 h-4 text-amber-600 shrink-0" />
               <span>Sign up or log in to start hiring & reviewing!</span>
             </div>
 

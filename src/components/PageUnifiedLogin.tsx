@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { Mail, Key, Eye, EyeOff, ShieldCheck, ArrowRight, ShieldAlert, CheckCircle, CheckCircle2, RefreshCw, LogIn, ClipboardList, Building, MapPin, Lock, Phone, ChevronRight, ChevronLeft, Search, User, X, Clock, Briefcase, Home, Wrench, GraduationCap, School, BookOpen, Building2, Bell, HelpCircle, Info, AlertCircle } from 'lucide-react';
 import PineLogo from './PineLogo';
-import { Mail, Key, Eye, EyeOff, ShieldCheck, ArrowLeft, ArrowRight, ShieldAlert, CheckCircle, CheckCircle2, RefreshCw, Sparkles, LogIn, ClipboardList, Building, MapPin, Lock, Phone, ChevronRight, ChevronLeft, Search, User, X, Clock, Briefcase, Home, Wrench, GraduationCap, School, BookOpen, Building2, Bell, HelpCircle, Info, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   validateEmail,
@@ -56,6 +56,7 @@ export default function PageUnifiedLogin() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loadingLogin, setLoadingLogin] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
   const [pendingApprovalModal, setPendingApprovalModal] = useState<{ email: string; name?: string; message: string; pass?: string } | null>(null);
   const [blockedAccountModal, setBlockedAccountModal] = useState<{ email: string; name?: string; message: string; reason: string } | null>(null);
   const [approvingFromModal, setApprovingFromModal] = useState(false);
@@ -129,7 +130,6 @@ export default function PageUnifiedLogin() {
   const [registeredManagers, setRegisteredManagers] = useState<Array<{
     name: string;
     email: string;
-    password: string;
     organization?: string;
     savedAt?: string;
   }>>([]);
@@ -140,7 +140,9 @@ export default function PageUnifiedLogin() {
       if (raw) {
         const parsed = JSON.parse(raw);
         if (Array.isArray(parsed)) {
-          setRegisteredManagers(parsed.filter(Boolean));
+          const sanitized = parsed.filter(Boolean).map(({ password, plainPassword, ...manager }: any) => manager);
+          localStorage.setItem('pinevela_registered_managers', JSON.stringify(sanitized));
+          setRegisteredManagers(sanitized);
         }
       }
     } catch (e) {
@@ -165,7 +167,7 @@ export default function PageUnifiedLogin() {
 
   // Extended Manager Verification States (Phase 1)
   const [regCountry, setRegCountry] = useState('Ghana');
-  const [regDocumentType, setRegDocumentType] = useState('Ghana Card');
+  const [regDocumentType, setRegDocumentType] = useState('Passport');
   const [regFullNameOnId, setRegFullNameOnId] = useState('');
   const [regDob, setRegDob] = useState('1988-06-15');
   const [regIdExpiry, setRegIdExpiry] = useState('2032-11-20');
@@ -184,7 +186,7 @@ export default function PageUnifiedLogin() {
   const applySyntheticCard = (card: { idNumber: string; fullName: string; dob?: string; expiryDate?: string; status?: string }) => {
     if (!card) return;
     setSelectedSyntheticCardId(card.idNumber);
-    setRegDocumentType('Ghana Card');
+    setRegDocumentType('Passport');
     setRegCountry('Ghana');
     setRegNationalId(card.idNumber);
     setRegFullNameOnId(card.fullName);
@@ -415,15 +417,15 @@ export default function PageUnifiedLogin() {
 
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoginError(null);
     if (!usernameOrEmail || !password) {
-      triggerToast('Please provide both username/email and password', 'error');
+      setLoginError('Please provide both username/email and password.');
       return;
     }
 
     setLoadingLogin(true);
     try {
       const authenticatedUser = await login(usernameOrEmail, password);
-      triggerToast(`Authenticated successfully as ${authenticatedUser.name}!`, 'success');
 
       // Redirect based on role and digital market merchant status
       setTimeout(() => {
@@ -481,7 +483,7 @@ export default function PageUnifiedLogin() {
           pass: password
         });
       } else {
-        triggerToast(errMsg || 'Invalid credentials. Please try again.', 'error');
+        setLoginError(errMsg || 'Invalid credentials. Please try again.');
       }
     } finally {
       setLoadingLogin(false);
@@ -550,6 +552,7 @@ export default function PageUnifiedLogin() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email: verificationEmail,
+          password: regPass,
           code: verificationCodeInput.trim().toUpperCase()
         })
       });
@@ -619,6 +622,10 @@ export default function PageUnifiedLogin() {
   // Student/Resident Claim Room Key & Complete Onboarding Handler
   const handleClaimStudentKeySubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
+    if (user?.role !== 'user') {
+      triggerToast('Sign in with your primary user account to activate a room.', 'error');
+      return;
+    }
     if (!verifiedKeyDetails) {
       triggerToast('Please verify a valid digital room key first.', 'error');
       setStudentKeyStep(1);
@@ -649,7 +656,7 @@ export default function PageUnifiedLogin() {
     try {
       const res = await fetch('/api/room-keys/claim', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${user.token}` },
         body: JSON.stringify({
           roomKey: verifiedKeyDetails.roomKey,
           studentName: stuName.trim(),
@@ -760,7 +767,7 @@ export default function PageUnifiedLogin() {
     try {
       const res = await fetch('/api/auth/register-manager-account', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(user?.token ? { Authorization: `Bearer ${user.token}` } : {}) },
         body: JSON.stringify({
           name: regManagerName.trim(),
           managerName: regManagerName.trim(),
@@ -822,7 +829,7 @@ export default function PageUnifiedLogin() {
 
         const verifRes = await fetch('/api/manager-verifications/submit', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...(user?.token ? { Authorization: `Bearer ${user.token}` } : {}) },
           body: JSON.stringify(verifPayload)
         });
         if (verifRes.ok) {
@@ -840,7 +847,6 @@ export default function PageUnifiedLogin() {
         const newManagerEntry = {
           name: regManagerName.trim(),
           email: regManagerEmail.trim(),
-          password: regPassword,
           organization: regOrganization.trim() || 'Independent Residence',
           savedAt: new Date().toISOString()
         };
@@ -891,7 +897,7 @@ export default function PageUnifiedLogin() {
       )}
 
       {/* Header */}
-      <header className="bg-white/80 backdrop-blur-md border-b border-slate-100 px-6 py-4 flex items-center justify-between z-10 sticky top-0">
+      <header className="bg-transparent px-6 py-4 flex items-center justify-between z-10 sticky top-0">
         <div className="cursor-pointer" onClick={() => navigate('/')}>
           <PineLogo />
         </div>
@@ -907,12 +913,12 @@ export default function PageUnifiedLogin() {
       </header>
 
       {/* Main Container */}
-      <main className="flex-1 grid grid-cols-1 lg:grid-cols-12 items-start justify-center w-full px-5 sm:px-6 md:px-10 py-8 gap-8 lg:gap-12 z-10 max-w-[1380px] mx-auto">
+      <main className="flex-1 grid grid-cols-1 lg:grid-cols-12 items-center justify-center w-full px-5 sm:px-6 md:px-10 py-8 gap-8 lg:gap-12 z-10 max-w-[1380px] mx-auto">
         
         
         {/* Left Side: Enlarged Picture Card Showcase (Covers balanced half of the login page) */}
-        <div className="lg:col-span-6 hidden lg:flex flex-col items-stretch justify-start w-full lg:sticky lg:top-24 select-none">
-          <div className="bg-blue-50/85 backdrop-blur-xl rounded-3xl border border-blue-200/60 shadow-2xl p-8 sm:p-10 space-y-7 flex flex-col justify-between w-full">
+        <div className="lg:col-span-6 hidden lg:flex flex-col items-stretch justify-center w-full lg:sticky lg:top-24 select-none">
+          <div className="space-y-7 flex flex-col justify-between w-full">
             
             {/* Image Slider Section */}
             {(() => {
@@ -923,7 +929,19 @@ export default function PageUnifiedLogin() {
                 badge: "Hostel Manager"
               };
               return (
-                <div className="relative aspect-[16/10] w-full rounded-2xl overflow-hidden bg-slate-100 border border-slate-200/60 shadow-md">
+                <div
+                  className="relative aspect-[4/3] w-full rounded-2xl overflow-hidden cursor-pointer"
+                  role="button"
+                  tabIndex={0}
+                  aria-label="Show next feature"
+                  onClick={() => setCurrentSlide((prev) => (prev + 1) % slides.length)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault();
+                      setCurrentSlide((prev) => (prev + 1) % slides.length);
+                    }
+                  }}
+                >
                   <AnimatePresence mode="wait">
                     <motion.img
                       key={currentSlide}
@@ -942,25 +960,6 @@ export default function PageUnifiedLogin() {
                     {activeSlide.badge || 'PineVela'}
                   </div>
 
-                  {/* Quick Navigation Buttons (Prev/Next) */}
-                  <div className="absolute inset-y-0 left-3 right-3 flex items-center justify-between pointer-events-none">
-                    <button
-                      type="button"
-                      onClick={() => setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length)}
-                      className="p-2.5 rounded-full bg-white/90 hover:bg-white text-slate-800 pointer-events-auto shadow-md transition-all hover:scale-105 active:scale-95 cursor-pointer border border-slate-200"
-                      aria-label="Previous slide"
-                    >
-                      <ArrowLeft size={16} />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setCurrentSlide((prev) => (prev + 1) % slides.length)}
-                      className="p-2.5 rounded-full bg-white/90 hover:bg-white text-slate-800 pointer-events-auto shadow-md transition-all hover:scale-105 active:scale-95 cursor-pointer border border-slate-200"
-                      aria-label="Next slide"
-                    >
-                      <ArrowRight size={16} />
-                    </button>
-                  </div>
                 </div>
               );
             })()}
@@ -1009,7 +1008,7 @@ export default function PageUnifiedLogin() {
         </div>
 
         {/* Right Side: Login & Signup Box */}
-        <div className="lg:col-span-6 flex flex-col items-stretch justify-start w-full max-w-2xl mx-auto lg:max-w-none">
+        <div className="lg:col-span-6 flex flex-col items-stretch justify-center w-full max-w-2xl mx-auto lg:max-w-none">
           
           <div className="bg-blue-50/90 backdrop-blur-lg rounded-3xl border border-blue-200/70 shadow-2xl p-8 sm:p-10 space-y-6 relative overflow-hidden flex flex-col justify-between w-full">
             
@@ -1096,7 +1095,6 @@ export default function PageUnifiedLogin() {
                 {/* Simulated Verification Code display */}
                 <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-2xl text-xs space-y-1.5 text-amber-850">
                   <div className="font-black flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-amber-900">
-                    <Sparkles className="w-3.5 h-3.5" />
                     Simulated Sandbox Mail Delivery
                   </div>
                   <p className="text-[11px] text-slate-650 font-semibold leading-normal">
@@ -1176,7 +1174,10 @@ export default function PageUnifiedLogin() {
                       required
                       placeholder="e.g. student@pinevela.com"
                       value={usernameOrEmail}
-                      onChange={(e) => setUsernameOrEmail(e.target.value)}
+                      onChange={(e) => {
+                        setUsernameOrEmail(e.target.value);
+                        if (loginError) setLoginError(null);
+                      }}
                       className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-900 bg-white text-slate-800 text-xs sm:text-sm font-semibold transition-all shadow-xs"
                     />
                   </div>
@@ -1202,7 +1203,10 @@ export default function PageUnifiedLogin() {
                       required
                       placeholder="••••••••"
                       value={password}
-                      onChange={(e) => setPassword(e.target.value)}
+                      onChange={(e) => {
+                        setPassword(e.target.value);
+                        if (loginError) setLoginError(null);
+                      }}
                       className="w-full pl-10 pr-10 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-900 bg-white text-slate-800 text-xs sm:text-sm font-semibold transition-all shadow-xs"
                     />
                     <button
@@ -1233,6 +1237,15 @@ export default function PageUnifiedLogin() {
                   )}
                 </button>
 
+                {loginError && (
+                  <div
+                    className="flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2.5 text-xs font-semibold text-rose-800"
+                    role="alert"
+                  >
+                    <AlertCircle className="h-4 w-4 shrink-0" />
+                    <span>{loginError}</span>
+                  </div>
+                )}
 
 
               </form>
@@ -1414,7 +1427,7 @@ export default function PageUnifiedLogin() {
       </main>
 
       {/* Footer - Fixed Clean Base */}
-      <footer className="text-center py-4 text-[10px] text-slate-400 border-t border-slate-100 bg-white shrink-0 z-20">
+      <footer className="text-center py-4 text-[10px] text-slate-400 bg-transparent shrink-0 z-20">
         &copy; 2026 PineVela Residence Solutions.
       </footer>
 
@@ -1462,7 +1475,6 @@ export default function PageUnifiedLogin() {
                 <div className="bg-amber-50/80 border border-amber-200 rounded-2xl p-3 space-y-1.5 shadow-xs">
                   <div className="flex items-center justify-between">
                     <span className="text-[10px] font-black uppercase tracking-wider text-amber-800 flex items-center gap-1.5">
-                      <Sparkles size={12} className="text-amber-600" />
                       Synthetic NIA Ghana Card Registry ({testCards.length > 0 ? testCards.length : 300} Test Cards)
                     </span>
                     <span className="text-[10px] font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full border border-amber-200">
@@ -1497,7 +1509,6 @@ export default function PageUnifiedLogin() {
                       onClick={handleRandomCard}
                       className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 active:scale-95 text-white rounded-lg text-[10px] font-black uppercase tracking-wider shrink-0 transition-all shadow-xs flex items-center gap-1"
                     >
-                      <Sparkles size={11} />
                       Random Card
                     </button>
                   </div>
@@ -1593,7 +1604,6 @@ export default function PageUnifiedLogin() {
                       }}
                       className="w-full px-3 py-2.5 border border-slate-200 rounded-xl bg-slate-50 text-slate-800 text-xs font-semibold focus:ring-2 focus:ring-blue-900 focus:outline-none"
                     >
-                      <option value="Ghana Card">Ghana Card (GHA-XXXXXXXXX-X)</option>
                       <option value="Voter ID">National Voters ID (10 Digits — Numbers Only)</option>
                       <option value="NHIS Card">NHIS Health Card (8 Digits — Numbers Only)</option>
                       <option value="Passport">International Passport (Alphanumeric)</option>

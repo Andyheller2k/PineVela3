@@ -278,7 +278,7 @@ export default function CampusMeetupMapPicker({
   const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${currentLat},${currentLng}`;
 
   return (
-    <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+    <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl overflow-hidden flex flex-col max-h-[88dvh] w-full">
       {/* Header */}
       <div className="p-4 sm:p-5 bg-gradient-to-r from-slate-900 via-blue-950 to-slate-900 text-white flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -374,7 +374,7 @@ export default function CampusMeetupMapPicker({
       )}
 
       {/* Map Container */}
-      <div className="relative w-full h-72 sm:h-80 bg-slate-100">
+      <div className="relative w-full h-44 sm:h-80 bg-slate-100">
         <div ref={mapContainerRef} className="w-full h-full z-0" />
 
         {/* Floating Coordinates Chip */}

@@ -35,9 +35,7 @@ export default function ProtectedRoute({ children, allowedRoles }: ProtectedRout
   }
 
   if (allowedRoles) {
-    const isApprovedMerchant = user.role === 'merchant' || user.isApprovedMerchant || user.hasApprovedMerchantStore;
-    const isPermitted = allowedRoles.includes(user.role) || 
-      (isApprovedMerchant && (allowedRoles.includes('merchant') || allowedRoles.includes('student')));
+    const isPermitted = allowedRoles.includes(user.role);
 
     if (!isPermitted) {
       // Show a high-fidelity "Access Denied" view

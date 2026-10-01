@@ -381,7 +381,6 @@ export default function ItemImageCropModal({
             /* Live Card Preview Tab */
             <div className="space-y-4 animate-fadeIn">
               <div className="bg-blue-50/80 border border-blue-200/80 rounded-2xl p-3.5 text-xs text-blue-950 flex items-center gap-2.5">
-                <Sparkles className="w-4 h-4 text-blue-600 shrink-0" />
                 <p className="font-semibold leading-relaxed">
                   Below is a realistic preview of how your framed photo will look on buyer product grids on campus.
                 </p>

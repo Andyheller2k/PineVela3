@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import { accountKey, protectStoredCredentials } from './accountSecurity.js';
 
 export interface PersistentStore {
   hostels: any[];
@@ -29,6 +30,8 @@ export interface PersistentStore {
   jobOffers?: any[];
   staffBargains?: any[];
   roomKeys?: any[];
+  retiredRoomKeys?: string[];
+  accountSecurityVersion?: number;
   keyDispatches?: any[];
   studentMessages?: any[];
   platformSettings: {
@@ -58,12 +61,18 @@ function ensureDataDir(): void {
   }
 }
 
-function deduplicateById<T extends { id?: any; email?: any }>(arr: T[]): T[] {
+function deduplicateById<T extends { id?: any; email?: any }>(arr: T[], accounts = false): T[] {
   if (!Array.isArray(arr)) return [];
   const seenIds = new Set<string>();
   const seenEmails = new Set<string>();
   return arr.filter(item => {
     if (!item) return false;
+    if (accounts) {
+      const identity = accountKey(item);
+      if (seenIds.has(identity)) return false;
+      seenIds.add(identity);
+      return true;
+    }
     const itemId = item.id ? String(item.id) : '';
     const itemEmail = item.email ? String(item.email).toLowerCase().trim() : '';
     if (itemId) {
@@ -109,7 +118,7 @@ export function loadPersistentStore(defaultStore: PersistentStore): PersistentSt
       managerVerifications: deduplicateById(Array.isArray(parsed.managerVerifications) ? parsed.managerVerifications : (defaultStore.managerVerifications || [])),
       managerRequests: deduplicateById(Array.isArray(parsed.managerRequests) ? parsed.managerRequests : (defaultStore.managerRequests || [])),
       verificationAuditLogs: deduplicateById(Array.isArray(parsed.verificationAuditLogs) ? parsed.verificationAuditLogs : defaultStore.verificationAuditLogs),
-      users: deduplicateById((Array.isArray(parsed.users) ? parsed.users : defaultStore.users).filter((u: any) => u && u.email !== 'staff@pinevela.com' && u.username !== 'staff')),
+      users: deduplicateById((Array.isArray(parsed.users) ? parsed.users : defaultStore.users).filter((u: any) => u && u.email !== 'staff@pinevela.com' && u.username !== 'staff'), true),
       notifications: deduplicateById(Array.isArray(parsed.notifications) ? parsed.notifications : defaultStore.notifications),
       chatMessages: deduplicateById(Array.isArray(parsed.chatMessages) ? parsed.chatMessages : defaultStore.chatMessages),
       dmRooms: deduplicateById(Array.isArray(parsed.dmRooms) ? parsed.dmRooms : defaultStore.dmRooms),
@@ -125,6 +134,9 @@ export function loadPersistentStore(defaultStore: PersistentStore): PersistentSt
       staffReviews: deduplicateById(Array.isArray(parsed.staffReviews) ? parsed.staffReviews : (defaultStore.staffReviews || [])),
       jobOffers: deduplicateById(Array.isArray(parsed.jobOffers) ? parsed.jobOffers : (defaultStore.jobOffers || [])),
       roomKeys: deduplicateById(Array.isArray(parsed.roomKeys) ? parsed.roomKeys : (defaultStore.roomKeys || [])),
+      retiredRoomKeys: Array.isArray(parsed.retiredRoomKeys) ? parsed.retiredRoomKeys : [],
+      accountSecurityVersion: parsed.accountSecurityVersion,
+      keyDispatches: Array.isArray(parsed.keyDispatches) ? parsed.keyDispatches : [],
       studentMessages: deduplicateById(Array.isArray(parsed.studentMessages) ? parsed.studentMessages : (defaultStore.studentMessages || [])),
       platformSettings: parsed.platformSettings || defaultStore.platformSettings,
       managerRestrictions: deduplicateById(Array.isArray(parsed.managerRestrictions) ? parsed.managerRestrictions : (defaultStore.managerRestrictions || [])),
@@ -151,6 +163,7 @@ export function loadPersistentStore(defaultStore: PersistentStore): PersistentSt
  */
 export function savePersistentStore(store: PersistentStore): void {
   ensureDataDir();
+  protectStoredCredentials(store);
   const tmpPath = `${STORE_PATH}.tmp.${Date.now()}`;
   try {
     const jsonStr = JSON.stringify(store, null, 2);
@@ -165,5 +178,6 @@ export function savePersistentStore(store: PersistentStore): void {
     } catch (e) {
       // ignore
     }
+    throw err;
   }
 }

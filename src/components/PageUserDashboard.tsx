@@ -3,8 +3,9 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { queryClient, invalidateAllQueries } from '../lib/queryClient';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
-import { safeJson, hashPassword } from '../lib/api';
+import { safeJson } from '../lib/api';
 import { optimizeImageDisplayUrl } from '../lib/imageOptimizer';
+import { saveNavigationLayout, usesTopNavigation } from '../lib/navigationLayout';
 import PineLogo from './PineLogo';
 import UserAvatarSelector, { renderAvatarGraphic } from './UserAvatarSelector';
 import MarketItemCard, { getServiceActionLabel } from './MarketItemCard';
@@ -34,7 +35,6 @@ import {
   Plus, 
   RefreshCw, 
   LogOut, 
-  Sparkles, 
   FileText, 
   ArrowRight, 
   ArrowLeft, 
@@ -75,7 +75,9 @@ import {
   SlidersHorizontal,
   ArrowUpDown,
   RotateCcw,
-  Heart
+  Heart,
+  PanelLeftClose,
+  PanelLeftOpen
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { IssueReport, HostelRoomKey, StudentDirectMessage, DigitalMarketApplication, DigitalMarketStore, DigitalMarketProduct, DigitalMarketOrder } from '../types';
@@ -94,7 +96,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
 
   const queryTab = searchParams.get('tab') as any;
   const queryMode = searchParams.get('mode') as any;
-  const isMerchantUser = Boolean(user?.isApprovedMerchant || (user as any)?.hasApprovedMerchantStore || (user as any)?.merchantStoreId);
+  const isMerchantUser = user?.role === 'merchant';
 
   // Navigation tabs
   const [activeTab, setActiveTab] = useState<'home' | 'notifications' | 'options' | 'overview' | 'issues' | 'messages' | 'announcements' | 'settings' | 'register-resident' | 'become-staff' | 'login-room' | 'digital-market'>(
@@ -256,7 +258,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
       return;
     }
     const cleanGhanaCard = dmIdNumber.trim().toUpperCase();
-    const GHANA_CARD_REGEX = /^GHA-\d{9}-\d{1}$/i;
+    const GHANA_CARD_REGEX = /^[A-Z0-9][A-Z0-9\-\/]{3,31}$/i;
     if (!cleanGhanaCard || !GHANA_CARD_REGEX.test(cleanGhanaCard)) {
       setDmRegError("Invalid Ghana Card format. Format must strictly match official NIA Ghana Card: GHA-XXXXXXXXX-X (e.g. GHA-712345678-9).");
       return;
@@ -427,7 +429,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
   const fetchChatMessages = async () => {
     if (!currentUser?.email) return;
     try {
-      const res = await fetch(`/api/digital-market/messages?email=${encodeURIComponent(currentUser.email)}`);
+      const res = await fetch(`/api/digital-market/messages?email=${encodeURIComponent(currentUser.email)}`, { headers: { Authorization: `Bearer ${user?.token || ''}` } });
       if (res.ok) {
         const data = await res.json();
         setChatMessages(data);
@@ -490,7 +492,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
     try {
       const res = await fetch('/api/digital-market/messages', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${user?.token || ''}` },
         body: JSON.stringify({
           senderEmail: currentUser.email,
           senderName: currentUser.name || 'Student Buyer',
@@ -533,7 +535,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
     try {
       const res = await fetch('/api/digital-market/messages', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${user?.token || ''}` },
         body: JSON.stringify({
           productId: product.id,
           productTitle: product.title,
@@ -643,8 +645,12 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
   // Image zoom viewer modal
   const [zoomedImage, setZoomedImage] = useState<string | null>(null);
 
-  // Collapsible sidebar state (Disabled minimizing to prevent glitched overlapping)
-  const isSidebarCollapsed = false;
+  // Let desktop users switch to the compact, fixed top navigation when they need more room.
+  const [isSidebarHidden, setIsSidebarHidden] = useState(usesTopNavigation);
+
+  useEffect(() => {
+    saveNavigationLayout(isSidebarHidden);
+  }, [isSidebarHidden]);
 
   // Job Offer Form States & Client Identity Verification (same as Pinevela page)
   const [selectedStaffForOffer, setSelectedStaffForOffer] = useState<any | null>(null);
@@ -1221,13 +1227,11 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
       try {
         const profileData = await apiFetch('/api/student/my-profile').catch(() => null);
         if (profileData) {
-          if (profileData.roomKeyDetails) {
-            setRoomKeyDetails((prev: any) => JSON.stringify(prev) === JSON.stringify(profileData.roomKeyDetails) ? prev : profileData.roomKeyDetails);
-          }
+          setRoomKeyDetails((prev: any) => JSON.stringify(prev) === JSON.stringify(profileData.roomKeyDetails || null) ? prev : (profileData.roomKeyDetails || null));
           if (profileData.user) {
             setStudentProfile((prev: any) => JSON.stringify(prev) === JSON.stringify(profileData.user) ? prev : profileData.user);
           }
-          if (Array.isArray(profileData.rooms) && profileData.rooms.length > 0) {
+          if (Array.isArray(profileData.rooms)) {
             setUserRooms((prev: any) => JSON.stringify(prev) === JSON.stringify(profileData.rooms) ? prev : profileData.rooms);
           }
         }
@@ -1540,13 +1544,12 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
     }
 
     const rawPassword = claimPassword.trim();
-    const hashedPassword = await hashPassword(rawPassword);
 
     setSubmittingClaim(true);
     try {
       const res = await fetch('/api/room-keys/claim', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${user?.token || ''}` },
         body: JSON.stringify({
           roomKey: verifiedKeyInfo.roomKey,
           name: claimStudentName.trim(),
@@ -1557,8 +1560,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
           parentUserEmail: currentUser?.email || '',
           phone: claimStudentPhone.trim(),
           studentPhone: claimStudentPhone.trim(),
-          password: hashedPassword,
-          plainPassword: rawPassword,
+          password: rawPassword,
           userId: currentUser?.id
         })
       });
@@ -1804,6 +1806,8 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
 
   const unreadNotificationsCount = notifications.filter(n => !n.read).length;
 
+  const publicStaffFeaturesEnabled = false;
+
   const navItems = [
     { id: 'home', label: 'Home Tab', sub: 'Residents & Staff Hire', icon: Home },
     { 
@@ -1924,16 +1928,15 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
       }
 
       if (!dmFullName.trim() || dmFullName.trim().length < 3) {
-        setDmRegError("Please enter your full legal name as shown on your Ghana Card.");
+        setDmRegError("Please enter your full legal name as recorded by your university.");
         setDmWizardPhase(1);
         setSubmittingDMReg(false);
         return;
       }
 
-      const cleanGhanaCard = dmIdNumber.trim().toUpperCase();
-      const GHANA_CARD_REGEX = /^GHA-\d{9}-\d{1}$/i;
-      if (!cleanGhanaCard || !GHANA_CARD_REGEX.test(cleanGhanaCard)) {
-        setDmRegError("Invalid Ghana Card format. Format must strictly match official NIA Ghana Card: GHA-XXXXXXXXX-X (e.g. GHA-712345678-9).");
+      const cleanStudentId = dmIdNumber.trim().toUpperCase();
+      if (!cleanStudentId || !/^[A-Z0-9][A-Z0-9\-\/]{3,31}$/i.test(cleanStudentId)) {
+        setDmRegError("Enter a valid student ID or school-issued identification number (4–32 letters, numbers, hyphens, or slashes).");
         setDmWizardPhase(1);
         setSubmittingDMReg(false);
         return;
@@ -1987,7 +1990,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
         studentEmail: cleanEmail,
         password: dmPassword,
         categoryToSell: dmCategory,
-        idNumber: cleanGhanaCard,
+        idNumber: cleanStudentId,
         storeName: dmProposedStoreName.trim() || `${dmFullName.trim()}'s Campus Store`,
         parentUserEmail: currentUser?.email || user?.email || '',
         userId: currentUser?.id || user?.id || ''
@@ -2491,7 +2494,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
              </div>
 
              {/* 2. Staff / Artisan capability card */}
-             <div className="bg-white hover:bg-amber-50/20 border border-amber-150 rounded-3xl p-6 shadow-md hover:shadow-xl transition-all duration-200 flex flex-col justify-between">
+             <div className="hidden bg-white hover:bg-amber-50/20 border border-amber-150 rounded-3xl p-6 shadow-md hover:shadow-xl transition-all duration-200 flex flex-col justify-between">
                <div className="space-y-4">
                  <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-900 flex items-center justify-center shadow-sm">
                    <Wrench className="w-6 h-6" />
@@ -2554,7 +2557,6 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
            {/* Guidance Note */}
            <div className="p-5 bg-blue-50/50 border border-blue-100 rounded-3xl max-w-5xl flex items-start gap-4">
              <div className="p-2.5 bg-blue-100 text-blue-900 rounded-xl shrink-0">
-               <Sparkles className="w-5 h-5" />
              </div>
              <div className="space-y-1">
                <h4 className="text-sm font-black text-slate-800">Need help onboarding?</h4>
@@ -2568,7 +2570,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
 
          {/* MODALS */}
          {showClaimModal && (
-           <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-md flex items-center justify-center p-4">
+           <div className="fixed inset-0 z-[100] bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-4">
              <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-2xl border border-blue-200 space-y-5">
                <div className="flex items-start justify-between gap-3 pb-3 border-b border-blue-100">
                  <div className="flex items-start gap-3">
@@ -2649,7 +2651,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
 
          {/* SIGN OUT CONFIRMATION MODAL */}
          {showSignoutConfirmModal && (
-           <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-md flex items-center justify-center p-4">
+           <div className="fixed inset-0 z-[100] bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-4">
              <div className="bg-white rounded-3xl max-w-sm w-full p-6 text-center space-y-5 border border-slate-100 shadow-2xl">
                <div className="w-16 h-16 rounded-2xl bg-amber-50 border border-amber-200/60 flex items-center justify-center shadow-xs mx-auto">
                  <PineLogo size={36} hideText={true} />
@@ -2724,10 +2726,11 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
           </button>
           <button 
             onClick={() => setShowSignoutConfirmModal(true)} 
-            className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg cursor-pointer"
+            className="flex items-center gap-1.5 px-2 py-1.5 text-rose-600 hover:bg-rose-50 rounded-lg text-[10px] font-bold cursor-pointer"
             title="Sign Out"
           >
             <LogOut className="w-4 h-4" />
+            <span>Sign Out</span>
           </button>
         </div>
       </header>
@@ -2735,7 +2738,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
       {/* MOBILE BOTTOM NAV (lg:hidden) */}
       <nav className="mobile-bottom-nav lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/70 backdrop-blur-md border-t border-slate-200/60 shadow-[0_-10px_35px_rgba(0,0,0,0.06)]">
         <div className="flex items-center gap-1 overflow-x-auto px-2 py-2 pb-safe snap-x hide-scrollbar">
-          {navItems.map(tab => (
+          {navItems.filter(tab => tab.id !== 'become-staff').map(tab => (
             <button
               key={tab.id}
               onClick={() => handleNavClick(tab.id)}
@@ -2764,53 +2767,74 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
         </div>
       </nav>
 
-      {/* SIDEBAR: PURELY STATIC / FIXED ICE-BLUE FROSTY GLASS LOOK WITH CURVED EDGES & BLUE GLOW */}
-      <aside className={`hidden lg:flex ${isSidebarCollapsed ? 'w-20 p-4' : 'w-72 p-6'} my-6 ml-6 h-[calc(100vh-3rem)] bg-gradient-to-br from-sky-100/90 via-blue-100/85 to-amber-50/40 backdrop-blur-3xl border border-sky-200/80 shadow-2xl rounded-3xl flex flex-col justify-between shrink-0 overflow-y-auto z-20 transition-all duration-300 relative`}>
+      {/* Compact desktop equivalent of the mobile navigation. It stays above the scrolling content. */}
+      {isSidebarHidden && (
+        <nav className="hidden lg:block fixed top-3 left-1/2 -translate-x-1/2 z-50 w-[min(860px,calc(100vw-3rem))] bg-white/72 backdrop-blur-xl border border-white/80 rounded-2xl shadow-lg">
+          <div className="flex items-center justify-center gap-1 px-2 py-1.5">
+            {navItems.filter(tab => tab.id !== 'become-staff').map(tab => {
+              const Icon = tab.icon;
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => handleNavClick(tab.id)}
+                  title={tab.label}
+                  className={`flex-1 min-w-0 flex flex-col items-center justify-center gap-0.5 py-1.5 rounded-xl transition-all cursor-pointer ${isActive ? 'text-blue-700 bg-blue-100/65' : 'text-slate-500 hover:text-slate-800 hover:bg-white/70'}`}
+                >
+                  <span className="relative"><Icon className="w-4 h-4" />{tab.id === 'notifications' && unreadNotificationsCount > 0 && <span className="absolute -top-1 -right-1 w-1.5 h-1.5 rounded-full bg-rose-500 ring-1 ring-white" />}</span>
+                  <span className="max-w-full truncate text-[9px] font-bold">{tab.id === 'digital-market' ? 'Market' : tab.id === 'notifications' ? 'Alerts' : tab.id === 'options' ? 'Options' : tab.label.split(' ')[0]}</span>
+                </button>
+              );
+            })}
+            <button
+              onClick={() => setShowSignoutConfirmModal(true)}
+              title="Sign Out"
+              className="shrink-0 flex flex-col items-center gap-0.5 px-2 py-1.5 text-rose-600 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer"
+            >
+              <LogOut className="w-4 h-4" />
+              <span className="text-[9px] font-bold">Sign Out</span>
+            </button>
+            <button onClick={() => setIsSidebarHidden(false)} title="Show sidebar" className="shrink-0 p-2 text-slate-500 hover:text-blue-700 hover:bg-blue-50 rounded-xl transition-colors cursor-pointer">
+              <PanelLeftOpen className="w-4 h-4" />
+            </button>
+          </div>
+        </nav>
+      )}
+
+      {/* Desktop sidebar */}
+      {!isSidebarHidden && <aside className="hidden lg:flex w-72 p-6 my-6 ml-6 h-[calc(100vh-3rem)] bg-gradient-to-br from-sky-100/90 via-blue-100/85 to-amber-50/40 backdrop-blur-3xl border border-sky-200/80 shadow-2xl rounded-3xl flex flex-col justify-between shrink-0 overflow-y-auto z-10 relative">
 
         <div className="space-y-6">
           {/* Logo & Header */}
-          <div className={`flex items-center ${isSidebarCollapsed ? 'justify-center' : 'space-x-3 px-2'} cursor-pointer`} onClick={() => { setActiveTab('home'); navigate('/student/dashboard'); }}>
-            <PineLogo size={isSidebarCollapsed ? 30 : 36} hideText={isSidebarCollapsed} />
-            {!isSidebarCollapsed && (
+          <div className="flex items-center justify-between px-2">
+            <div className="flex items-center space-x-3 cursor-pointer" onClick={() => { setActiveTab('home'); navigate('/student/dashboard'); }}>
+              <PineLogo size={36} />
               <div>
-                <h1 className="text-sm font-extrabold tracking-tight bg-gradient-to-r from-blue-900 to-cyan-800 bg-clip-text text-transparent">
-                  PineVela Resident
-                </h1>
+                <h1 className="text-sm font-extrabold tracking-tight bg-gradient-to-r from-blue-900 to-cyan-800 bg-clip-text text-transparent">PineVela Resident</h1>
                 <p className="text-[10px] font-medium text-blue-600/70 uppercase tracking-widest">User Account</p>
               </div>
-            )}
+            </div>
+            <button onClick={() => setIsSidebarHidden(true)} title="Hide sidebar" className="p-2 text-slate-500 hover:text-blue-700 hover:bg-white/70 rounded-xl transition-colors cursor-pointer"><PanelLeftClose className="w-4 h-4" /></button>
           </div>
 
           {/* Student Profile Pill */}
-          <div className={`p-3 bg-white/70 border border-blue-200/60 rounded-2xl flex items-center ${isSidebarCollapsed ? 'justify-center' : 'justify-between'} shadow-xs overflow-hidden`}>
+          <div className="p-3 bg-white/70 border border-blue-200/60 rounded-2xl flex items-center justify-between shadow-xs overflow-hidden">
             <div className="flex items-center gap-3 overflow-hidden">
               {renderAvatarGraphic(currentUser?.avatar, "w-10 h-10 text-xs shrink-0")}
-              {!isSidebarCollapsed && (
-                <div className="overflow-hidden">
-                  <div className="text-xs font-bold text-slate-900 truncate">{currentUser?.name || 'PineVela User'}</div>
-                  <div className="text-[10px] font-semibold text-emerald-700 flex items-center gap-1">
-                    <CheckCircle2 className="w-3 h-3 text-emerald-600 inline shrink-0" />
-                    <span className="truncate">Verified Account</span>
-                  </div>
+              <div className="overflow-hidden">
+                <div className="text-xs font-bold text-slate-900 truncate">{currentUser?.name || 'PineVela User'}</div>
+                <div className="text-[10px] font-semibold text-emerald-700 flex items-center gap-1">
+                  <CheckCircle2 className="w-3 h-3 text-emerald-600 inline shrink-0" />
+                  <span className="truncate">Verified Account</span>
                 </div>
-              )}
-            </div>
-            {!isSidebarCollapsed && (
-              <div className="flex items-center gap-1 shrink-0">
-                <button
-                  onClick={() => setActiveTab('options')}
-                  title="Account Options"
-                  className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-100/50 rounded-lg transition-colors cursor-pointer"
-                >
-                  <Settings className="w-3.5 h-3.5" />
-                </button>
               </div>
-            )}
+            </div>
+            <div className="flex items-center gap-1 shrink-0"><button onClick={() => setActiveTab('options')} title="Account Options" className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-100/50 rounded-lg transition-colors cursor-pointer"><Settings className="w-3.5 h-3.5" /></button></div>
           </div>
 
           {/* Navigation Links */}
           <nav className="space-y-1.5">
-            {navItems.map(tab => {
+            {navItems.filter(tab => tab.id !== 'become-staff').map(tab => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
 
@@ -2819,7 +2843,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                   key={tab.id}
                   onClick={() => handleNavClick(tab.id)}
                   title={tab.label}
-                  className={`w-full flex items-center ${isSidebarCollapsed ? 'justify-center' : 'justify-between'} px-3.5 py-3 rounded-2xl transition-all duration-150 group cursor-pointer ${
+                  className={`w-full flex items-center justify-between px-3.5 py-3 rounded-2xl transition-all duration-150 group cursor-pointer ${
                     isActive
                       ? 'bg-blue-600 text-white shadow-md shadow-blue-500/25 ring-1 ring-blue-500'
                       : 'text-slate-600 hover:bg-white/60 hover:text-slate-900'
@@ -2834,16 +2858,12 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                         <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-rose-500 rounded-full ring-2 ring-white animate-pulse" />
                       )}
                     </div>
-                    {!isSidebarCollapsed && (
-                      <div className="text-left overflow-hidden">
-                        <div className="text-xs font-semibold tracking-wide flex items-center gap-1.5 truncate">
-                          {tab.label}
-                        </div>
-                        <div className={`text-[10px] font-normal truncate ${isActive ? 'text-blue-100' : 'text-slate-500'}`}>
-                          {tab.sub}
-                        </div>
+                    <div className="text-left overflow-hidden">
+                      <div className="text-xs font-semibold tracking-wide flex items-center gap-1.5 truncate">{tab.label}</div>
+                      <div className={`text-[10px] font-normal truncate ${isActive ? 'text-blue-100' : 'text-slate-500'}`}>
+                        {tab.sub}
                       </div>
-                    )}
+                    </div>
                   </div>
                 </button>
               );
@@ -2856,29 +2876,23 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
           <button
             onClick={() => setShowSignoutConfirmModal(true)}
             title="Sign Out"
-            className={`w-full flex items-center justify-center ${isSidebarCollapsed ? 'p-2.5' : 'space-x-2 px-4 py-2.5'} bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 rounded-2xl font-semibold text-xs transition-all shadow-xs cursor-pointer`}
+            className="w-full flex items-center justify-center space-x-2 px-4 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 rounded-2xl font-semibold text-xs transition-all shadow-xs cursor-pointer"
           >
             <LogOut className="w-4 h-4 shrink-0" />
-            {!isSidebarCollapsed && <span>Sign Out</span>}
+            <span>Sign Out</span>
           </button>
         </div>
-      </aside>
+      </aside>}
 
-      {/* GIANT WATERMARK PINEVELA LOGO — FIXED TO VIEWPORT (does not scroll with content) */}
-      <div className="fixed inset-0 flex items-center justify-center pointer-events-none select-none overflow-hidden z-0">
-        <div className="transform scale-[4.5] opacity-[0.14] blur-[0.4px]">
-          <PineLogo size={180} hideText={true} />
-        </div>
-      </div>
 
       {/* MAIN CONTENT AREA WITH PERSISTENT PINEVELA GIANT WATERMARK */}
-      <main ref={mainScrollRef} className="flex-1 p-6 pb-28 lg:p-10 lg:pb-10 space-y-8 overflow-y-auto h-full relative z-10">
+      <main ref={mainScrollRef} className={`user-dashboard-content flex-1 p-6 pb-28 lg:px-10 lg:pb-10 space-y-8 overflow-y-auto h-full relative z-10 ${activeTab === 'digital-market' ? 'hide-scrollbar' : ''} ${isSidebarHidden ? 'lg:pt-24 lg:w-[calc(100vw-22rem)] lg:max-w-[calc(100vw-22rem)] lg:mx-auto' : 'lg:pt-10'}`}>
 
         {/* TAB 0: HOME TAB (Residents View, Staff View & Gateways) */}
         {activeTab === 'home' && (
           <div className="space-y-8 animate-fadeIn relative z-10">
             {/* REAL-TIME HOME SEARCH & FILTER COMPONENT */}
-            <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-[0_4px_20px_rgba(0,0,0,0.02)]">
+            <div className="bg-white/45 backdrop-blur-xl p-4 rounded-2xl border border-white/70 shadow-[0_10px_30px_rgba(37,99,235,0.10)]">
               <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
                 {/* Search input field */}
                 <div className="md:col-span-8 relative">
@@ -2889,8 +2903,8 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                     type="text"
                     value={homeSearchQuery}
                     onChange={(e) => setHomeSearchQuery(e.target.value)}
-                    placeholder="Search by hostel, location, staff, manager, or marketplace item title/description..."
-                    className="w-full pl-10 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-blue-500 focus:bg-white transition-all shadow-xs"
+                    placeholder="Search hostels, marketplace items, or managers..."
+                    className="w-full pl-10 pr-10 py-2.5 bg-white/45 backdrop-blur-md border border-white/75 rounded-xl text-xs font-bold text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-blue-500 focus:bg-white/80 transition-all shadow-xs"
                   />
                   {homeSearchQuery && (
                     <button
@@ -2905,13 +2919,13 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                 </div>
 
                 {/* Filter Selector tabs */}
-                <div className="md:col-span-4 flex bg-slate-100 p-1 rounded-xl border border-slate-200/50">
+                <div className="md:col-span-4 flex bg-white/35 backdrop-blur-md p-1 rounded-xl border border-white/70">
                   <button
                     type="button"
                     onClick={() => setHomeFilterType('market')}
                     className={`flex-1 py-2 text-center text-[11px] font-black rounded-lg transition-all cursor-pointer ${
                       homeFilterType === 'market'
-                        ? 'bg-white text-slate-950 shadow-xs'
+                        ? 'bg-white/80 text-slate-950 shadow-xs'
                         : 'text-slate-500 hover:text-slate-800 hover:bg-white/40'
                     }`}
                   >
@@ -2919,21 +2933,10 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                   </button>
                   <button
                     type="button"
-                    onClick={() => setHomeFilterType('staff')}
-                    className={`flex-1 py-2 text-center text-[11px] font-black rounded-lg transition-all cursor-pointer ${
-                      homeFilterType === 'staff'
-                        ? 'bg-white text-slate-950 shadow-xs'
-                        : 'text-slate-500 hover:text-slate-800 hover:bg-white/40'
-                    }`}
-                  >
-                    Staff
-                  </button>
-                  <button
-                    type="button"
                     onClick={() => setHomeFilterType('hostels')}
                     className={`flex-1 py-2 text-center text-[11px] font-black rounded-lg transition-all cursor-pointer ${
                       homeFilterType === 'hostels'
-                        ? 'bg-white text-slate-950 shadow-xs'
+                        ? 'bg-white/80 text-slate-950 shadow-xs'
                         : 'text-slate-500 hover:text-slate-800 hover:bg-white/40'
                     }`}
                   >
@@ -2958,16 +2961,16 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                   </div>
 
                   {/* STICKY SEARCH & FILTER CONTROL BAR - Stays locked at top while scrolling cards */}
-                  <div className="sticky top-0 z-30 py-2.5 px-3.5 bg-white/95 backdrop-blur-md border border-slate-200/90 rounded-2xl shadow-sm transition-all flex flex-wrap items-center justify-between gap-2.5">
+                  <div className="sticky top-0 z-30 py-2.5 px-3.5 bg-white/45 backdrop-blur-xl border border-white/70 rounded-2xl shadow-[0_10px_30px_rgba(37,99,235,0.12)] transition-all flex flex-wrap items-center justify-between gap-2.5">
                     {/* Search Bar inside Marketplace */}
-                    <div className="relative w-full sm:w-64">
+                    <div className="relative w-full sm:w-64 group">
                       <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
                       <input
                         type="text"
                         placeholder="Search marketplace items..."
                         value={catalogSearch}
                         onChange={e => setCatalogSearch(e.target.value)}
-                        className="w-full pl-8 pr-8 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                        className="w-full pl-8 pr-8 py-1.5 bg-white/65 border border-blue-300/70 rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 shadow-[0_0_0_1px_rgba(59,130,246,0.18),0_0_18px_rgba(59,130,246,0.18)] focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-400 focus:shadow-[0_0_0_2px_rgba(96,165,250,0.24),0_0_28px_rgba(59,130,246,0.42)] transition-all"
                       />
                       {catalogSearch && (
                         <button
@@ -2988,7 +2991,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                         className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer border ${
                           showPriceFilterPanel || isPriceFiltered
                             ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
-                            : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200'
+                            : 'bg-white/55 text-slate-700 border-white/80 hover:bg-white/85'
                         }`}
                       >
                         <SlidersHorizontal className="w-3.5 h-3.5" />
@@ -3004,7 +3007,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                         <select
                           value={priceSortOption}
                           onChange={(e) => setPriceSortOption(e.target.value as any)}
-                          className="pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 text-slate-800 text-xs font-bold rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 cursor-pointer"
+                          className="pl-8 pr-3 py-1.5 bg-white/55 border border-white/80 text-slate-800 text-xs font-bold rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 cursor-pointer"
                         >
                           <option value="featured">Sort: Featured</option>
                           <option value="price-asc">Price: Low to High 📈</option>
@@ -3013,7 +3016,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                         </select>
                       </div>
 
-                      <span className="px-3 py-1 bg-blue-100 text-blue-900 font-black text-xs rounded-full shrink-0">
+                      <span className="px-3 py-1 bg-blue-100/70 text-blue-900 border border-blue-200/70 font-black text-xs rounded-full shrink-0">
                         {filteredProducts.length} {filteredProducts.length === 1 ? 'Item' : 'Items'}
                       </span>
                     </div>
@@ -3192,7 +3195,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                         Explore verified student residences and accommodations available across PineVela.
                       </p>
                     </div>
-                    <span className="px-3 py-1 bg-blue-100 text-blue-900 font-black text-xs rounded-full animate-pulse-subtle">
+                    <span className="px-3 py-1 bg-blue-100/70 text-blue-900 border border-blue-200/70 font-black text-xs rounded-full animate-pulse-subtle">
                       {filteredHostels.length} {filteredHostels.length === 1 ? 'Residence' : 'Residences'} Found
                     </span>
                   </div>
@@ -3248,12 +3251,6 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                                   <span className="text-slate-400 font-medium">Manager:</span>
                                   <span className="font-bold text-slate-800 truncate max-w-[150px]">{managerName}</span>
                                 </div>
-                                {hostel.price && (
-                                  <div className="pt-1.5 flex items-center justify-between text-xs">
-                                    <span className="text-slate-400 font-medium">Fee / Bed:</span>
-                                    <span className="font-black text-emerald-700">GHS {hostel.price}</span>
-                                  </div>
-                                )}
                               </div>
                             </div>
 
@@ -3293,7 +3290,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
             )}
 
             {/* Staff & Hire Staff Section (Staff View) */}
-            {homeFilterType === 'staff' && (
+            {publicStaffFeaturesEnabled && homeFilterType === 'staff' && (
                 <div id="home-staff-section" className="bg-transparent border-0 rounded-3xl p-0 shadow-none space-y-6 animate-fadeIn">
                   <div className="flex items-center justify-between border-b border-slate-100 pb-4">
                     <div>
@@ -3858,7 +3855,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                     Official notices, digital room key clearances, and maintenance updates.
                   </p>
                 </div>
-                <span className="px-3 py-1 bg-blue-100 text-blue-900 font-black text-xs rounded-full">
+                <span className="px-3 py-1 bg-blue-100/70 text-blue-900 border border-blue-200/70 font-black text-xs rounded-full">
                   Live Feed
                 </span>
               </div>
@@ -3866,7 +3863,6 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
               <div className="space-y-3">
                 <div className="p-4 bg-blue-50/70 border border-blue-200/80 rounded-2xl flex items-start gap-3.5">
                   <div className="p-2.5 rounded-xl bg-blue-600 text-white shrink-0">
-                    <Sparkles className="w-4 h-4" />
                   </div>
                   <div className="space-y-1 w-full">
                     <div className="flex items-center justify-between">
@@ -4077,7 +4073,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
         )}
 
         {/* TAB 4: BECOME A STAFF TAB */}
-        {activeTab === 'become-staff' && (
+        {publicStaffFeaturesEnabled && activeTab === 'become-staff' && (
           <div className="space-y-6 animate-fadeIn relative z-10 max-w-4xl">
             {registeredAccounts.staffAccount ? (
               <div className="bg-white/95 border border-amber-300 rounded-3xl p-6 sm:p-8 shadow-xl space-y-6 backdrop-blur-md">
@@ -4554,8 +4550,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                   <div className="bg-white/90 border border-slate-200/80 rounded-3xl p-6 sm:p-10 shadow-xl space-y-8 backdrop-blur-md">
                     <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 pb-6 border-b border-slate-100">
                       <div>
-                        <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-100 text-blue-900 text-xs font-bold rounded-full mb-3">
-                          <Sparkles className="w-3.5 h-3.5 text-blue-700" />
+                        <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-100/70 text-blue-900 border border-blue-200/70 text-xs font-bold rounded-full mb-3">
                           <span>Student Digital Store Gateway</span>
                         </div>
                         <h2 className="text-2xl font-black text-slate-900">Own Your Digital Market Platform</h2>
@@ -4713,7 +4708,6 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                     {/* Progress Pipeline */}
                     <div className="bg-blue-50/70 border border-blue-200/90 rounded-2xl p-5 space-y-4">
                       <div className="text-xs font-black text-blue-950 uppercase tracking-wider flex items-center gap-2">
-                        <Sparkles className="w-4 h-4 text-blue-700" />
                         <span>Platform Verification & Activation Pipeline</span>
                       </div>
 
@@ -5283,18 +5277,18 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
 
         {/* PENDING APPROVAL WARM POPUP */}
         {showPendingModal && (
-          <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-md flex items-center justify-center p-4">
-            <div className="bg-white rounded-3xl max-w-md w-full p-6 text-center space-y-5 shadow-2xl border border-slate-200 animate-scaleIn">
-              <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto text-amber-600">
+          <div className="fixed inset-0 z-[100] bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-4">
+            <div className="bg-gradient-to-br from-white via-sky-50 to-indigo-100 rounded-[2rem] max-w-md w-full p-7 text-center space-y-5 shadow-2xl border border-blue-200/80 animate-scaleIn relative overflow-hidden">
+              <div className="w-16 h-16 bg-gradient-to-br from-blue-600 to-indigo-800 rounded-2xl flex items-center justify-center mx-auto text-cyan-100 shadow-lg shadow-blue-500/30">
                 <Clock className="w-8 h-8 animate-pulse" />
               </div>
 
               <div>
-                <h3 className="text-lg font-black text-slate-900">Application Submitted!</h3>
+                <h3 className="text-xl font-black text-blue-950">Application Submitted!</h3>
                 <p className="text-xs text-slate-600 font-medium mt-2 leading-relaxed">
                   Your Digital Student Market platform application has been submitted successfully and is currently <strong>awaiting Admin review and approval</strong>.
                 </p>
-                <p className="text-[11px] text-amber-700 font-bold mt-2 bg-amber-50 p-2.5 rounded-xl border border-amber-200">
+                <p className="text-[11px] text-blue-900 font-bold mt-3 bg-white/80 p-3 rounded-2xl border border-blue-200 shadow-sm">
                   You can check back later. Once approved, you can log in and set up your student store inventory!
                 </p>
               </div>
@@ -5302,7 +5296,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
               <button
                 type="button"
                 onClick={() => setShowPendingModal(false)}
-                className="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl transition-all cursor-pointer"
+                className="w-full py-3 bg-gradient-to-r from-blue-700 to-indigo-800 hover:from-blue-600 hover:to-indigo-700 text-white font-black text-xs rounded-xl transition-all cursor-pointer shadow-lg shadow-blue-700/20"
               >
                 Understood, I will check back later
               </button>
@@ -5317,7 +5311,6 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
               <div className="flex items-center justify-between border-b border-slate-100 pb-3.5">
                 <div className="flex items-center gap-2.5">
                   <div className="p-2 rounded-xl bg-emerald-100 text-emerald-700">
-                    <Sparkles className="w-5 h-5" />
                   </div>
                   <div>
                     <h3 className="text-base font-black text-slate-900">Student Store Setup & Activation</h3>
@@ -5496,7 +5489,6 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                       </>
                     ) : (
                       <>
-                        <Sparkles className="w-4 h-4" />
                         <span>Authorize 50 GHS & Activate Platform</span>
                       </>
                     )}
@@ -5509,7 +5501,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
 
         {/* DIGITAL STORE LOGIN MODAL */}
         {showMerchantStoreLoginModal && (
-          <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-[100] bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-4">
             <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-slate-200 space-y-6 animate-scaleIn">
               <div className="flex items-center justify-between pb-3 border-b border-slate-100">
                 <div className="flex items-center gap-2.5">
@@ -5610,7 +5602,6 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                   </div>
                   <div>
                     <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-blue-100 text-blue-900 text-[10px] font-black uppercase tracking-wider mb-1">
-                      <Sparkles className="w-3 h-3 text-blue-700" />
                       <span>PineVela Digital Market Onboarding • Phase {onboardStep} of 3</span>
                     </div>
                     <h3 className="text-lg sm:text-xl font-black text-slate-900">
@@ -5838,7 +5829,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
 
         {/* ADD PRODUCT MODAL */}
         {showAddProductModal && (
-          <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-[100] bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-4">
             <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4 animate-scaleIn">
               <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                 <h3 className="text-sm font-black text-slate-900 flex items-center gap-2">
@@ -5947,8 +5938,8 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
           const serviceCallLine = (selectedProductForBuy as any).callLine || selectedProductForBuy.sellerPhone;
 
           return (
-            <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-md flex items-center justify-center p-4">
-              <div className="bg-white rounded-3xl max-w-lg w-full max-h-[92vh] overflow-y-auto p-6 shadow-2xl border border-slate-200 space-y-4 animate-scaleIn">
+            <div className="fixed inset-0 z-[100] bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-2 sm:p-4">
+              <div className="bg-white rounded-3xl max-w-[calc(100vw-1rem)] sm:max-w-lg w-full max-h-[88dvh] sm:max-h-[92vh] overflow-y-auto p-3 sm:p-6 shadow-2xl border border-slate-200 space-y-3 sm:space-y-4 animate-scaleIn">
                 <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                   <div className="flex items-center gap-2 min-w-0 pr-2">
                     <h3 className="text-base font-black text-slate-900 truncate">{selectedProductForBuy.title}</h3>
@@ -5965,14 +5956,14 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                 </div>
 
                 <div className="space-y-3">
-                  <div className="relative w-full h-56 bg-slate-900/5 rounded-2xl overflow-hidden border border-slate-200 flex items-center justify-center p-1.5">
+                  <div className="relative w-full h-32 sm:h-56 bg-slate-900/5 rounded-2xl overflow-hidden border border-slate-200 flex items-center justify-center p-0 sm:p-1.5">
                     <img 
                       src={optimizeImageDisplayUrl(selectedProductForBuy.imageUrl, 500, 60)} 
                       alt={selectedProductForBuy.title}
                       loading="lazy"
                       decoding="async"
                       referrerPolicy="no-referrer"
-                      className="w-full h-full object-contain" 
+                      className={`w-full h-full ${isSelectedService ? "object-cover" : "object-contain"}`} 
                     />
                     {isSelectedService && (
                       <div className="absolute top-2.5 left-2.5 px-2.5 py-1 bg-gradient-to-r from-blue-700 via-blue-600 to-indigo-700 text-white text-[10px] font-black rounded-md shadow-xs flex items-center gap-1 border border-blue-400/30 tracking-wide pointer-events-none">
@@ -6002,7 +5993,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
 
                   {/* Price Categories Selection in Inspect Modal */}
                   {Array.isArray((selectedProductForBuy as any).priceCategories) && (selectedProductForBuy as any).priceCategories.length > 0 && (
-                    <div className="p-3 bg-blue-50/70 border border-blue-200/90 rounded-2xl space-y-2">
+                    <div className="p-2 sm:p-3 bg-blue-50/70 border border-blue-200/90 rounded-2xl space-y-2">
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-black text-slate-900 flex items-center gap-1.5">
                           <Tag className="w-3.5 h-3.5 text-blue-600" />
@@ -6012,7 +6003,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                           In Cedis (GH₵)
                         </span>
                       </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <div className="grid grid-cols-2 gap-2">
                         {(selectedProductForBuy as any).priceCategories.map((cat: any, idx: number) => {
                           const isSelected = selectedPriceCategory?.name === cat.name;
                           return (
@@ -6050,7 +6041,6 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                   {isSelectedService && (displayLoc || serviceCallLine) && (
                     <div className="p-3 bg-blue-50/70 border border-blue-200/80 rounded-xl space-y-2">
                       <div className="text-[10px] font-black text-blue-900 uppercase tracking-wider flex items-center gap-1">
-                        <Sparkles className="w-3 h-3 text-blue-600" />
                         <span>Campus Service Provider Info</span>
                       </div>
                       {displayLoc && (
@@ -6076,7 +6066,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                     </div>
                   )}
 
-                  <p className="text-xs text-slate-600 leading-relaxed font-medium">
+                  <p className="text-[11px] sm:text-xs text-slate-600 leading-relaxed line-clamp-3 sm:line-clamp-none font-medium">
                     {selectedProductForBuy.description || 'No description provided.'}
                   </p>
 
@@ -6181,9 +6171,9 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
             : selectedProdForOrder.price;
 
           return (
-            <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-md flex items-center justify-center p-2 sm:p-4">
+            <div className="fixed inset-0 z-[200] bg-slate-950/75 backdrop-blur-xl flex items-center justify-center p-2 sm:p-4">
               <div className={`bg-white rounded-3xl w-full p-4 sm:p-6 shadow-2xl border border-slate-200 space-y-4 animate-scaleIn max-h-[calc(100dvh-1rem)] sm:max-h-[90vh] overflow-y-auto overscroll-contain scroll-pb-24 ${
-                isOrderService ? 'max-w-4xl pb-[calc(1.5rem+env(safe-area-inset-bottom))] sm:pb-6' : 'max-w-md'
+                isOrderService ? 'max-w-[calc(100vw-1rem)] sm:max-w-2xl lg:max-w-4xl pb-[calc(1.5rem+env(safe-area-inset-bottom))] sm:pb-6' : 'max-w-md'
               }`}>
                 <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                   <div>
@@ -6483,7 +6473,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
 
         {/* TAB 2: OPTIONS TAB */}
         {activeTab === 'options' && (
-          <div className="space-y-6 animate-fadeIn relative z-10 max-w-4xl">
+          <div className="space-y-6 animate-fadeIn relative z-10 max-w-[1400px]">
             <div className="bg-white/90 border border-slate-200/80 rounded-3xl p-6 sm:p-8 shadow-xl space-y-6 backdrop-blur-md">
               <div className="flex items-center justify-between border-b border-slate-100 pb-4">
                 <div>
@@ -6497,8 +6487,10 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                 </div>
               </div>
 
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+              <div className="space-y-4">
               {/* USER AVATAR SELECTOR & DISPLAY COMPONENT */}
-              <UserAvatarSelector 
+              <UserAvatarSelector
                 onAvatarSave={(avatarUrl) => {
                   setStudentProfile((prev: any) => ({
                     ...(prev || {}),
@@ -6535,6 +6527,12 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
 
 
 
+              </div>
+
+
+              </div>
+
+              <div className="space-y-4 pt-4 xl:pt-0 xl:border-t-0 border-t border-slate-100">
                 {/* REGISTERED RESIDENT ACCOUNT MANAGEMENT */}
                 {(roomKeyDetails || currentUser?.roomKey || registeredAccounts.residentAccount) && (
                   <div className="p-5 bg-gradient-to-br from-blue-50/80 to-indigo-50/60 border border-blue-200 rounded-2xl space-y-4">
@@ -6707,6 +6705,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                   </div>
                 </div>
               </div>
+              </div>
             </div>
           </div>
         )}
@@ -6718,7 +6717,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
       {/* MODAL 1: REPORT MAINTENANCE ISSUE (WITH PICTURE PROOF & GLASSY FINISH) */}
       {/* ========================================================================= */}
       {showNewIssueModal && (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-md flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[100] bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-4">
           <div className="bg-white/95 backdrop-blur-2xl rounded-3xl max-w-xl w-full p-6 sm:p-7 shadow-2xl border border-sky-200/80 space-y-5 animate-in fade-in zoom-in-95 duration-150 max-h-[90vh] overflow-y-auto">
             
             {/* Header */}
@@ -6938,7 +6937,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
       {/* MODAL 2: STUDENT CONFIRMATION OF COMPLETED TASK */}
       {/* ========================================================================= */}
       {selectedIssueForConfirm && (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-md flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[100] bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-4">
           <div className="bg-white/95 backdrop-blur-2xl rounded-3xl max-w-lg w-full p-6 sm:p-7 shadow-2xl border border-emerald-200 space-y-5 animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-start justify-between gap-3 pb-3 border-b border-emerald-100">
               <div className="flex items-start gap-3">
@@ -7032,7 +7031,6 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
           <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl border border-blue-100 space-y-6 animate-in fade-in zoom-in-95 duration-200">
             <div className="flex items-start justify-between gap-3">
               <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 text-white flex items-center justify-center shrink-0 shadow-lg shadow-blue-600/30">
-                <Sparkles className="w-7 h-7" />
               </div>
               <button
                 type="button"
@@ -7474,7 +7472,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
       {/* MODAL: RESET REGISTERED ACCOUNT PASSWORD */}
       {/* ========================================================================= */}
       {showResetPasswordModal && (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-150">
+        <div className="fixed inset-0 z-[100] bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-4 animate-in fade-in duration-150">
           <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-2xl border border-slate-200 space-y-5">
             <div className="flex items-start justify-between gap-3 pb-3 border-b border-slate-100">
               <div className="flex items-start gap-3">
@@ -7569,7 +7567,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
       {/* MODAL: DELETE REGISTERED ACCOUNT (ALLOWS RE-REGISTRATION) */}
       {/* ========================================================================= */}
       {showDeleteAccountModal && (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-150">
+        <div className="fixed inset-0 z-[100] bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-4 animate-in fade-in duration-150">
           <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-2xl border border-rose-200 space-y-5">
             <div className="flex items-start justify-between gap-3 pb-3 border-b border-rose-100">
               <div className="flex items-start gap-3">
@@ -7715,7 +7713,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
       {/* MODAL 5: SIGN OUT CONFIRMATION MODAL */}
       {/* ========================================================================= */}
       {showSignoutConfirmModal && (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-md flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[100] bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-sm w-full p-6 text-center space-y-5 border border-slate-100 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
             <div className="w-16 h-16 rounded-2xl bg-amber-50 border border-amber-200/60 flex items-center justify-center shadow-xs mx-auto">
               <PineLogo size={36} hideText={true} />
@@ -7755,7 +7753,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
       {/* MODAL 6: HOSTEL ACCOMMODATION DETAILS MODAL */}
       {/* ========================================================================= */}
       {viewingHostelModal && (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-md flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[100] bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-xl w-full max-h-[90vh] overflow-y-auto border border-slate-100 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
             
             {/* Gallery header */}
@@ -7834,11 +7832,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
               </div>
 
               {/* Price & Capacity Summary */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 text-xs bg-emerald-50/80 p-3.5 rounded-2xl border border-emerald-200/80">
-                <div>
-                  <span className="text-[10px] font-bold text-slate-500 uppercase block">Fee per Bed</span>
-                  <span className="font-black text-emerald-800 text-sm">GHS {viewingHostelModal?.price || viewingHostelModal?.defaultFee || 'Standard Rate'}</span>
-                </div>
+              <div className="grid grid-cols-2 gap-2.5 text-xs bg-emerald-50/80 p-3.5 rounded-2xl border border-emerald-200/80">
                 <div>
                   <span className="text-[10px] font-bold text-slate-500 uppercase block">Open Bedspaces</span>
                   <span className="font-extrabold text-blue-900">{viewingHostelModal?.availableSpaces ?? viewingHostelModal?.bedsLeft ?? viewingHostelModal?.totalCapacity ?? 10} Open</span>
@@ -8325,7 +8319,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                       onChange={e => setDmFullName(e.target.value)}
                       className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-xs sm:text-sm text-slate-800 font-semibold focus:outline-none focus:ring-2 focus:ring-blue-800 focus:border-blue-800 transition-all"
                     />
-                    <p className="text-[11px] text-slate-500 font-medium">Must strictly match the legal name on your Ghana Card.</p>
+                    <p className="text-[11px] text-slate-500 font-medium">Use the name recorded by your university.</p>
                   </div>
 
                   <div className="space-y-1.5">
@@ -8354,20 +8348,20 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                     </select>
                   </div>
 
-                  {/* Ghana Card Input */}
+                  {/* Student identification input */}
                   <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
                     <div className="flex items-center justify-between">
                       <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider">
-                        Ghana Card (National ID) <span className="text-rose-500">*</span>
+                        Student ID or School-issued ID <span className="text-rose-500">*</span>
                       </label>
                       {dmIdNumber && (
-                        /^GHA-\d{9}-\d{1}$/i.test(dmIdNumber) ? (
+                        /^[A-Z0-9][A-Z0-9\-\/]{3,31}$/i.test(dmIdNumber) ? (
                           <span className="text-[10px] font-black text-blue-900 bg-blue-100 px-2.5 py-0.5 rounded-full flex items-center gap-1 border border-blue-300">
-                            <Check className="w-3 h-3" /> Valid NIA Format
+                            <Check className="w-3 h-3" /> Valid ID format
                           </span>
                         ) : (
                           <span className="text-[10px] font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-300">
-                            {dmIdNumber.length}/15 chars
+                            {dmIdNumber.length}/32 chars
                           </span>
                         )
                       )}
@@ -8376,18 +8370,18 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                     <input
                       type="text"
                       required
-                      maxLength={15}
-                      placeholder="GHA-712345678-9"
+                      maxLength={32}
+                      placeholder="e.g. KNUST/2024/00123"
                       value={dmIdNumber}
-                      onChange={e => handleGhanaCardFormat(e.target.value)}
+                      onChange={e => setDmIdNumber(e.target.value.toUpperCase())}
                       className={`w-full bg-white border rounded-2xl px-4 py-3 text-xs sm:text-sm font-bold font-mono tracking-wider transition-all ${
-                        dmIdNumber && /^GHA-\d{9}-\d{1}$/i.test(dmIdNumber)
+                        dmIdNumber && /^[A-Z0-9][A-Z0-9\-\/]{3,31}$/i.test(dmIdNumber)
                           ? 'border-blue-600 text-blue-950 focus:outline-none'
                           : 'border-slate-200 text-slate-800 placeholder-slate-400 focus:ring-2 focus:ring-blue-800'
                       }`}
                     />
                     <p className="text-[11px] text-slate-500 font-medium">
-                      🔒 Format must strictly match <span className="font-mono text-blue-900 font-bold">GHA-XXXXXXXXX-X</span>.
+                      Use your active university Student ID or another school-issued ID.
                     </p>
                   </div>
                 </div>
@@ -8632,7 +8626,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
 
     {/* STORE RATING & REVIEW MODAL FOR BUYERS */}
     {ratingOrderTarget && (
-      <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-md flex items-center justify-center p-4">
+      <div className="fixed inset-0 z-[100] bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-4">
         <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4 animate-scaleIn">
           <div className="flex items-center justify-between border-b border-slate-100 pb-3">
             <div>

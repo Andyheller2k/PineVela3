@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { queryClient, invalidateAllQueries } from '../lib/queryClient';
 import { useAuth } from '../context/AuthContext';
 import { safeJson } from '../lib/api';
+import { saveNavigationLayout, usesTopNavigation } from '../lib/navigationLayout';
 import { useNotifications } from '../context/NotificationContext';
 import PineLogo from './PineLogo';
 import ResidentOnboardingWizard from './ResidentOnboardingWizard';
@@ -18,13 +19,13 @@ import {
   Bell, MessageSquare, Send, X, FileText, File, Download, Lock, Unlock, FileCheck,
   ChevronRight, ShieldAlert, RefreshCw, Ban, ExternalLink, CreditCard,
   Image as ImageIcon, MapPin, Camera,
-  ShoppingBag, Store, Package
+  ShoppingBag, Store, Package, PanelLeftClose, PanelLeftOpen
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 export default function PageAdminDashboard() {
   const { user, logout, apiFetch } = useAuth();
-  const { refreshNotifications } = useNotifications();
+  const { notifications, unreadCount, markAsRead, refreshNotifications } = useNotifications();
   const navigate = useNavigate();
 
   const [activeTab, setActiveTab] = useState<'overview' | 'residences' | 'managers' | 'staff_verification' | 'digital_market' | 'notifications' | 'settings' | 'user_accounts'>('overview');
@@ -59,6 +60,11 @@ export default function PageAdminDashboard() {
   const [banningStoreTarget, setBanningStoreTarget] = useState<any | null>(null);
   // Collapsible sidebar state (Disabled minimizing to prevent glitched overlapping)
   const isSidebarCollapsed = false;
+  const [isSidebarTopNav, setIsSidebarTopNav] = useState(usesTopNavigation);
+
+  useEffect(() => {
+    saveNavigationLayout(isSidebarTopNav);
+  }, [isSidebarTopNav]);
   const [loading, setLoading] = useState(true);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
@@ -1034,7 +1040,6 @@ export default function PageAdminDashboard() {
             exit={{ opacity: 0, y: -20 }}
             className="fixed top-6 right-6 z-50 bg-blue-600 text-white px-6 py-3 rounded-2xl shadow-2xl flex items-center space-x-3 border border-blue-400/30 backdrop-blur-md"
           >
-            <Sparkles className="w-5 h-5 text-cyan-200" />
             <span className="font-medium text-sm">{toastMessage}</span>
           </motion.div>
         )}
@@ -1050,8 +1055,9 @@ export default function PageAdminDashboard() {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <button onClick={() => setShowLogoutConfirm(true)} className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg">
+          <button onClick={() => setShowLogoutConfirm(true)} className="flex items-center gap-1.5 px-2 py-1.5 text-[10px] font-bold text-rose-600 hover:bg-rose-50 rounded-lg" title="Sign Out">
             <LogOutIcon className="w-4 h-4" />
+            <span>Sign Out</span>
           </button>
         </div>
       </header>
@@ -1093,7 +1099,11 @@ export default function PageAdminDashboard() {
 
       {/* SIDEBAR: PURELY STATIC / FIXED ICE-BLUE FROSTY BLUE WITH CURVED EDGES & BLUE GLOW */}
 
-      <aside className={`hidden lg:flex ${isSidebarCollapsed ? 'w-20 p-4' : 'w-72 p-6'} my-6 ml-6 h-[calc(100vh-3rem)] bg-gradient-to-br from-sky-100/90 via-blue-100/85 to-amber-50/40 backdrop-blur-3xl border border-sky-200/80 shadow-2xl rounded-3xl flex flex-col justify-between shrink-0 overflow-y-auto transition-all duration-300 relative`}>
+      {isSidebarTopNav && <nav className="hidden lg:block fixed top-3 left-1/2 -translate-x-1/2 z-50 w-[min(760px,calc(100vw-3rem))] bg-white/72 backdrop-blur-xl border border-white/80 rounded-2xl shadow-lg"><div className="flex items-center gap-1 px-2 py-1.5">{[
+        { id: 'overview', label: 'Overview', icon: ShieldCheck }, { id: 'user_accounts', label: 'Accounts', icon: Users }, { id: 'residences', label: 'Residences', icon: Building2 }, { id: 'managers', label: 'Managers', icon: Users }, { id: 'staff_verification', label: 'Staff', icon: FileCheck }, { id: 'digital_market', label: 'Market', icon: ShoppingBag }, { id: 'notifications', label: 'Alerts', icon: Bell }, { id: 'settings', label: 'Settings', icon: Edit3 }
+      ].map(tab => <button key={tab.id} onClick={() => setActiveTab(tab.id as any)} className={`flex-1 min-w-0 flex flex-col items-center gap-0.5 py-1.5 rounded-xl text-[9px] font-bold cursor-pointer ${activeTab === tab.id ? 'text-blue-700 bg-blue-100/65' : 'text-slate-500 hover:bg-white/70'}`}><tab.icon className="w-4 h-4" /><span className="truncate max-w-full">{tab.label}</span></button>)}<button onClick={() => setShowLogoutConfirm(true)} title="Sign Out" className="shrink-0 flex flex-col items-center gap-0.5 px-2 py-1.5 text-[9px] font-bold text-rose-600 hover:bg-rose-50 rounded-xl cursor-pointer"><LogOutIcon className="w-4 h-4" /><span>Sign Out</span></button><button onClick={() => setIsSidebarTopNav(false)} title="Show sidebar" className="p-2 text-slate-500 hover:text-blue-700 cursor-pointer"><PanelLeftOpen className="w-4 h-4" /></button></div></nav>}
+      {!isSidebarTopNav && <aside className={`hidden lg:flex ${isSidebarCollapsed ? 'w-20 p-4' : 'w-72 p-6'} my-6 ml-6 h-[calc(100vh-3rem)] bg-gradient-to-br from-sky-100/90 via-blue-100/85 to-amber-50/40 backdrop-blur-3xl border border-sky-200/80 shadow-2xl rounded-3xl flex flex-col justify-between shrink-0 overflow-y-auto transition-all duration-300 relative`}>
+        <button onClick={() => setIsSidebarTopNav(true)} title="Use top navigation" className="absolute top-3 right-3 p-2 rounded-xl text-slate-500 hover:text-blue-700 hover:bg-white/70 cursor-pointer"><PanelLeftClose className="w-4 h-4" /></button>
 
         <div className="space-y-8">
           {/* Logo & Header */}
@@ -1180,17 +1190,11 @@ export default function PageAdminDashboard() {
             {!isSidebarCollapsed && <span>Sign Out</span>}
           </button>
         </div>
-      </aside>
+      </aside>}
 
-      {/* GIANT WATERMARK PINEVELA LOGO — FIXED TO VIEWPORT (does not scroll with content) */}
-      <div className="fixed inset-0 flex items-center justify-center pointer-events-none select-none overflow-hidden z-0">
-        <div className="transform scale-[4.5] opacity-[0.18] blur-[0.4px]">
-          <PineLogo size={180} hideText={true} />
-        </div>
-      </div>
 
       {/* MAIN CONTENT AREA */}
-      <main className="flex-1 p-6 lg:p-10 space-y-8 overflow-y-auto h-full relative">
+      <main className={`dashboard-centered-content flex-1 p-6 lg:p-10 space-y-8 overflow-y-auto h-full relative ${isSidebarTopNav ? 'lg:pt-24 lg:w-[calc(100vw-22rem)] lg:max-w-[calc(100vw-22rem)] lg:mx-auto' : ''}`}>
 
         {/* TAB 1: OVERVIEW */}
         {activeTab === 'overview' && (
@@ -1657,11 +1661,6 @@ export default function PageAdminDashboard() {
                           <div className="grid grid-cols-2 gap-2 pt-2 border-t border-blue-100 text-xs">
                             <div>
                               <span className="text-slate-400 block text-[10px] uppercase font-semibold">Capacity</span>
-                              <span className="font-bold text-slate-800">{residence.totalCapacity || 100} beds</span>
-                            </div>
-                            <div>
-                              <span className="text-slate-400 block text-[10px] uppercase font-semibold">Price / Year</span>
-                              <span className="font-bold text-blue-600">GHS {residence.price || 3500}</span>
                             </div>
                           </div>
 
@@ -1837,16 +1836,7 @@ export default function PageAdminDashboard() {
                   <ShieldCheck className="w-3.5 h-3.5" />
                   <span>Field Officers ({verificationTeams.length})</span>
                 </button>
-
-                <button
-                  type="button"
-                  onClick={() => setManagerSubTab('cooldowns')}
-                  className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                    managerSubTab === 'cooldowns'
-                      ? 'bg-blue-900 text-white shadow-sm'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                  }`}
-                >
+                <button type="button" onClick={() => setManagerSubTab("cooldowns")} className="px-3.5 py-2 rounded-xl text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-all cursor-pointer flex items-center gap-1.5">
                   <Clock className="w-3.5 h-3.5" />
                   <span>Restrictions ({managerRestrictions.length})</span>
                 </button>
@@ -2399,37 +2389,7 @@ export default function PageAdminDashboard() {
             </div>
 
             <form onSubmit={handleSaveSettings} className="bg-sky-50/20 border border-sky-200/50 p-8 rounded-3xl backdrop-blur-2xl shadow-xl space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-xs font-bold text-slate-800 mb-2 text-outline-sm">Standard Residency Registration Fee (GHS ₵)</label>
-                  <div className="relative">
-                    <span className="absolute left-4 top-3.5 text-xs font-bold text-blue-700">₵</span>
-                    <input
-                      type="text"
-                      value={registrationFeeGHS}
-                      onChange={(e) => setRegistrationFeeGHS(e.target.value)}
-                      className="w-full pl-8 pr-4 py-3 bg-sky-100/40 border border-sky-200/60 rounded-2xl text-xs text-slate-900 font-semibold focus:outline-none focus:border-blue-600 backdrop-blur-md"
-                      placeholder="3500"
-                    />
-                  </div>
-                  <p className="text-[10px] text-slate-500 mt-1">Applied across all student hostel and hotel bookings in cedis.</p>
-                </div>
 
-                <div>
-                  <label className="block text-xs font-bold text-slate-800 mb-2 text-outline-sm">Platform Commission Rate (%)</label>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      value={platformCommission}
-                      onChange={(e) => setPlatformCommission(e.target.value)}
-                      className="w-full px-4 py-3 bg-sky-100/40 border border-sky-200/60 rounded-2xl text-xs text-slate-900 font-semibold focus:outline-none focus:border-blue-600 backdrop-blur-md"
-                      placeholder="5"
-                    />
-                    <span className="absolute right-4 top-3.5 text-xs font-bold text-slate-600">%</span>
-                  </div>
-                  <p className="text-[10px] text-slate-500 mt-1">Deducted per successful transaction.</p>
-                </div>
-              </div>
 
               <div>
                 <label className="block text-xs font-bold text-slate-800 mb-2 text-outline-sm">Global System Announcement Banner</label>
@@ -2566,6 +2526,7 @@ export default function PageAdminDashboard() {
               </div>
             </div>
 
+            {notifications.length > 0 && <section className="rounded-3xl border border-blue-100 bg-white/75 p-5 shadow-sm backdrop-blur-xl"><div className="mb-3 flex items-center justify-between"><p className="flex items-center gap-2 text-sm font-extrabold text-slate-900"><Bell className="h-4 w-4 text-blue-600" />Live operational alerts {unreadCount > 0 && <span className="rounded-full bg-blue-600 px-2 py-0.5 text-[10px] text-white">{unreadCount} new</span>}</p><button onClick={() => refreshNotifications()} className="text-xs font-bold text-blue-700">Refresh</button></div><div className="space-y-2">{notifications.slice(0, 6).map((notification: any) => <button key={notification.id} onClick={() => markAsRead(notification.id)} className="block w-full rounded-2xl border border-blue-100 bg-blue-50/60 p-3 text-left"><p className="text-xs font-bold text-slate-900">{notification.title}</p><p className="mt-1 text-xs text-slate-600">{notification.message}</p></button>)}</div></section>}
             {/* PENDING RESIDENCE VERIFICATION ALERTS */}
             {pendingHostelsCount > 0 && (
               <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 p-6 rounded-3xl backdrop-blur-xl shadow-lg space-y-4">
@@ -2605,13 +2566,8 @@ export default function PageAdminDashboard() {
                             Manager: <strong className="text-slate-800">{res.managerName || 'Assigned Manager'}</strong> ({res.managerPhone || '+233 24 123 4567'})
                           </p>
                         </div>
+                      <div className="flex items-center justify-between pt-2 border-t border-slate-100"><span className="text-xs font-semibold text-blue-600">{res.totalCapacity || 100} Beds</span><div className="flex items-center gap-2">
                       </div>
-
-                      <div className="flex items-center justify-between pt-2 border-t border-slate-100">
-                        <span className="text-xs font-semibold text-blue-600">
-                          {res.totalCapacity || 100} Beds • GHS {res.price || 3500}/yr
-                        </span>
-                        <div className="flex items-center gap-2">
                           <button
                             onClick={() => {
                               setInspectingResidenceModal(res);
@@ -4005,16 +3961,6 @@ export default function PageAdminDashboard() {
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="p-3.5 bg-blue-50/70 border border-blue-200 rounded-xl text-center">
-                  <span className="text-[10px] font-bold text-slate-500 uppercase">Total Capacity</span>
-                  <span className="block text-xl font-black text-blue-900 mt-0.5">{inspectingResidenceModal.totalCapacity || inspectingResidenceModal.maximumCapacity || 0} Beds</span>
-                </div>
-                <div className="p-3.5 bg-blue-50/70 border border-blue-200 rounded-xl text-center">
-                  <span className="text-[10px] font-bold text-slate-500 uppercase">Standard Room Fee</span>
-                  <span className="block text-xl font-black text-emerald-800 mt-0.5">GHS {inspectingResidenceModal.price || inspectingResidenceModal.defaultFee || 0}</span>
-                </div>
-                <div className="p-3.5 bg-blue-50/70 border border-blue-200 rounded-xl text-center">
-                  <span className="text-[10px] font-bold text-slate-500 uppercase">Security Deposit</span>
-                  <span className="block text-xl font-black text-slate-800 mt-0.5">GHS {inspectingResidenceModal.securityDeposit || 0}</span>
                 </div>
               </div>
 

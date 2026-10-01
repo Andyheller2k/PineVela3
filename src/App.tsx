@@ -16,7 +16,6 @@ import PageManagerOnboarding from './components/PageManagerOnboarding';
 import PageAdminDashboard from './components/PageAdminDashboard';
 import PageManagerDashboard from './components/PageManagerDashboard';
 import PageStaffDashboard from './components/PageStaffDashboard';
-import PageStaffRegister from './components/PageStaffRegister';
 import PageUserDashboard from './components/PageUserDashboard';
 import PageResidentDashboard from './components/PageResidentDashboard';
 import PageDigitalMarket from './components/PageDigitalMarket';
@@ -61,10 +60,7 @@ function StudentDashboardRouter() {
   }
 
   // If user is authenticated as a merchant or has approved digital market store:
-  const isMerchant = user?.role === 'merchant' || 
-    (user as any)?.isDigitalMarketOnly || 
-    user?.isApprovedMerchant === true || 
-    user?.hasApprovedMerchantStore === true;
+  const isMerchant = user?.role === 'merchant';
 
   if (isMerchant) {
     if (user?.merchantSetupCompleted === false || !user?.merchantRegistrationFeePaid) {
@@ -194,15 +190,6 @@ function AppContent() {
         />
 
         {/* 2E. STAFF REGISTRATION ROUTE */}
-        <Route
-          path="/staff/register"
-          element={
-            <PageWrapper>
-              <PageStaffRegister />
-            </PageWrapper>
-          }
-        />
-
         {/* 2F. STAFF DASHBOARD ROUTE */}
         <Route
           path="/staff/dashboard"
@@ -216,13 +203,6 @@ function AppContent() {
         />
 
         {/* 2G. STAFF APPLY ALIAS */}
-        <Route
-          path="/staff/apply"
-          element={
-            <Navigate to="/staff/dashboard" replace />
-          }
-        />
-
         {/* 2H. STUDENT CONSOLE ROUTE */}
         <Route
           path="/student/dashboard"
@@ -251,7 +231,7 @@ function AppContent() {
         <Route
           path="/digital-market"
           element={
-            <ProtectedRoute allowedRoles={['merchant', 'student', 'user']}>
+            <ProtectedRoute allowedRoles={['merchant']}>
               <PageWrapper>
                 <PageDigitalMarket />
               </PageWrapper>
@@ -261,7 +241,7 @@ function AppContent() {
         <Route
           path="/digital-market/onboard"
           element={
-            <ProtectedRoute allowedRoles={['merchant', 'student', 'user']}>
+            <ProtectedRoute allowedRoles={['merchant']}>
               <PageWrapper>
                 <PageDigitalMarketOnboard />
               </PageWrapper>

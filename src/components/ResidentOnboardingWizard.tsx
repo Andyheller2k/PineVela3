@@ -17,7 +17,6 @@ import {
   Eye, 
   EyeOff, 
   Check, 
-  Sparkles,
   UserPlus,
   Briefcase,
   DollarSign,
@@ -76,7 +75,7 @@ export default function ResidentOnboardingWizard({
   const [landmark, setLandmark] = useState('');
 
   // Phase 3: Identification & Student Records
-  const [idType, setIdType] = useState('Ghana Card (National ID)');
+  const [idType, setIdType] = useState('University Student ID');
   const [idNumber, setIdNumber] = useState('');
   const [institution, setInstitution] = useState('');
   const [docFileName, setDocFileName] = useState<string | null>(null);
@@ -428,7 +427,7 @@ export default function ResidentOnboardingWizard({
               <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
                 <div 
                   className="bg-blue-900 h-full transition-all duration-300 rounded-full"
-                  style={{ width: `${(phase / 5) * 100}%` }}
+                  style={{ width: `${10 + ((phase - 1) / 4) * 90}%` }}
                 />
               </div>
             </div>
@@ -636,7 +635,6 @@ export default function ResidentOnboardingWizard({
                         }}
                         className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-medium text-slate-800 focus:outline-none focus:border-blue-600"
                       >
-                        <option value="Ghana Card (National ID)">Ghana Card (GHA-XXXXXXXXX-X)</option>
                         <option value="University Student ID">University Student ID (Alphanumeric)</option>
                         <option value="Voter ID Card">Voter ID Card (10 Digits — Numbers Only)</option>
                         <option value="NHIS Card (Health Insurance)">NHIS Card (8 Digits — Numbers Only)</option>
@@ -708,7 +706,7 @@ export default function ResidentOnboardingWizard({
                       <label htmlFor="residentDocUpload" className="cursor-pointer flex flex-col items-center">
                         <UploadCloud className="w-8 h-8 text-blue-600 mb-1.5" />
                         <span className="text-xs font-bold text-slate-800">
-                          {docFileName ? docFileName : 'Click to upload Student ID or Ghana Card photo'}
+                          {docFileName ? docFileName : 'Click to upload Student ID or another accepted ID photo'}
                         </span>
                         <span className="text-[10px] text-slate-400 mt-0.5">PDF, PNG, JPG up to 5MB</span>
                       </label>
@@ -959,7 +957,6 @@ export default function ResidentOnboardingWizard({
                   {/* SUMMARY REVIEW CARD */}
                   <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 space-y-3">
                     <h4 className="text-xs font-extrabold uppercase text-slate-900 tracking-wider flex items-center gap-2">
-                      <Sparkles className="w-4 h-4 text-amber-500" />
                       <span>Onboarding Summary Dossier</span>
                     </h4>
 

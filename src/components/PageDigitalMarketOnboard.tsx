@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Store, 
-  Sparkles, 
   ArrowRight, 
   ArrowLeft, 
   CheckCircle2, 
@@ -81,7 +80,7 @@ export default function PageDigitalMarketOnboard() {
       try {
         const targetEmail = user?.email || '';
         const targetId = user?.id || '';
-        const res = await fetch(`/api/digital-market/status?email=${encodeURIComponent(targetEmail)}&userId=${encodeURIComponent(targetId)}`);
+        const res = await fetch(`/api/digital-market/status?email=${encodeURIComponent(targetEmail)}&userId=${encodeURIComponent(targetId)}`, { headers: { Authorization: `Bearer ${user?.token || ''}` } });
         if (res.ok) {
           const data = await safeJson(res);
           if (data) {
@@ -167,7 +166,7 @@ export default function PageDigitalMarketOnboard() {
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ duration: 0.3 }}
-      className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/40 to-indigo-50/50 text-slate-900 flex flex-col justify-between p-4 sm:p-8"
+      className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/40 to-indigo-50/50 text-slate-900 flex flex-col justify-center gap-8 p-4 sm:p-8"
     >
       {/* Top Bar */}
       <div className="max-w-4xl mx-auto w-full flex items-center justify-between pb-6 border-b border-blue-100">
@@ -193,12 +192,11 @@ export default function PageDigitalMarketOnboard() {
       </div>
 
       {/* Main Container */}
-      <div className="max-w-3xl mx-auto w-full my-8 bg-white/95 border border-blue-200/90 rounded-3xl p-6 sm:p-10 shadow-2xl backdrop-blur-md space-y-8 animate-fadeIn">
+      <div className="max-w-3xl mx-auto w-full my-0 bg-white/95 border border-blue-200/90 rounded-3xl p-6 sm:p-10 shadow-2xl backdrop-blur-md space-y-8 animate-fadeIn">
         {/* Wizard Header & Progress */}
         <div className="space-y-4 pb-6 border-b border-blue-100">
           <div className="flex items-center justify-between">
             <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-100 text-blue-900 text-xs font-black rounded-full">
-              <Sparkles className="w-3.5 h-3.5 text-blue-700" />
               <span>Phase {phase} of 3 • Store Activation Wizard</span>
             </div>
             <div className="text-xs font-bold text-slate-400">

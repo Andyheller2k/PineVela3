@@ -16,7 +16,6 @@ import {
   ArrowLeft,
   Save,
   RotateCcw,
-  Sparkles,
   AlertCircle,
   Plus,
   Trash2,
@@ -156,13 +155,13 @@ export default function HostelRegistration({
     campusProximity: '5-10 Mins Walk',
     campusProximityDetails: 'Shuttle & walking routes',
 
-    // Step 3: Map Location
+    // Step 2: Map Location
     latitude: 6.6745,
     longitude: -1.5716,
     formattedAddress: 'KNUST Campus, Ayeduase, Kumasi',
     isLocationConfirmed: true,
 
-    // Step 4: Image
+    // Step 3: Image
     imageFile: null,
     imageUrl: '',
     imagePreviewUrl: '',
@@ -170,22 +169,22 @@ export default function HostelRegistration({
     imageStorageType: 'local',
     gallery: [],
 
-    // Step 5: Capacity
+    // Step 4: Capacity
     totalBlocks: 2,
     totalFloors: 4,
     totalRooms: 40,
     totalBeds: 120,
     maximumCapacity: 120,
     blocksList: [
-      { id: 'block-1', name: 'Block A (Alpha)', floors: 4, totalRooms: 20, roomPrefix: 'A', startNum: 101, bedsPerRoom: 3, pricePerBlock: 3500 },
-      { id: 'block-2', name: 'Block B (Beta)', floors: 4, totalRooms: 20, roomPrefix: 'B', startNum: 201, bedsPerRoom: 3, pricePerBlock: 3800 }
+      { id: 'block-1', name: 'Block A (Alpha)', floors: 4, totalRooms: 20, roomPrefix: 'A', startNum: 101, bedsPerRoom: 3 },
+      { id: 'block-2', name: 'Block B (Beta)', floors: 4, totalRooms: 20, roomPrefix: 'B', startNum: 201, bedsPerRoom: 3 }
     ],
 
-    // Step 6: Facilities
+    // Step 5: Facilities
     facilities: [],
     customFacilities: [],
 
-    // Step 7: Rules
+    // Step 6: Rules
     checkInTime: '10:00 AM',
     checkOutTime: '02:00 PM',
     minStay: '1 Semester',
@@ -198,21 +197,21 @@ export default function HostelRegistration({
     cancellationPolicy: 'Full refund 14 days before semester commencement, 50% thereafter',
     customRules: [],
 
-    // Step 8: Pricing
+    // Step 7: Pricing
     defaultFee: 3500,
     paymentFrequency: 'Per Academic Year',
     securityDeposit: 300,
     applicationFee: 50,
     currency: 'GHS',
 
-    // Step 9: Manager
+    // Step 8: Manager
     assignedManagerId: '',
     managerName: '',
     managerEmail: '',
     managerPhone: '',
     isNewManager: true,
 
-    // Step 9: Confirmation
+    // Step 8: Confirmation
     agreeTerms: false,
     accuracyCertified: false
   };
@@ -236,14 +235,11 @@ export default function HostelRegistration({
   // Step names & icons definition
   const STEPS = [
     { num: 1, title: 'Basic Info', icon: Building2, desc: 'Identity & category' },
-    { num: 2, title: 'Address', icon: MapPin, desc: 'Street, city & region' },
-    { num: 3, title: 'Map Pin', icon: Compass, desc: 'Coordinates & entrance' },
-    { num: 4, title: 'Image Upload', icon: ImageIcon, desc: 'Property photograph' },
-    { num: 5, title: 'Capacity', icon: Users, desc: 'Blocks, rooms & beds' },
-    { num: 6, title: 'Facilities', icon: ShieldCheck, desc: 'Amenities & utilities' },
-    { num: 7, title: 'Policies', icon: FileText, desc: 'Curfew, rules & refund' },
-    { num: 8, title: 'Pricing', icon: DollarSign, desc: 'Fees & payment cycles' },
-    { num: 9, title: 'Review & Submit', icon: CheckCircle2, desc: 'Verification & commitment' }
+    { num: 2, title: 'Map Pin', icon: Compass, desc: 'Location, address & entrance' },
+    { num: 3, title: 'Image Upload', icon: ImageIcon, desc: 'Property photograph' },
+    { num: 4, title: 'Capacity', icon: Users, desc: 'Blocks, rooms & beds' },
+    { num: 5, title: 'Facilities', icon: ShieldCheck, desc: 'Amenities & utilities' },
+    { num: 6, title: 'Policies', icon: FileText, desc: 'Curfew, rules & refund' }
   ];
 
   // 1. Load draft from localStorage on mount
@@ -315,42 +311,20 @@ export default function HostelRegistration({
         errors.contactEmail = 'Valid contact email is required';
       }
       if (!formData.contactPhone.trim()) errors.contactPhone = 'Contact phone number is required';
-    } else if (step === 2) {
-      const streetCheck = validateHostelStreetAddress(formData.addressLine1);
-      if (!streetCheck.isValid) {
-        errors.addressLine1 = streetCheck.error!;
-      }
-      if (!formData.city.trim()) errors.city = 'City is required';
-      if (!formData.region.trim()) errors.region = 'Region is required';
-    } else if (step === 4) {
+    } else if (step === 3) {
       if (!formData.imageUrl && !formData.imagePreviewUrl) {
         errors.image = 'You must upload an actual photograph of your residence exterior.';
       }
       const galleryCount = (formData.gallery || []).length;
-      if (galleryCount < 3) {
-        errors.image = (errors.image ? errors.image + ' ' : '') + `You must upload a minimum of 3 interior or relevant residence photos (currently ${galleryCount}/3 uploaded, max 5).`;
-      } else if (galleryCount > 5) {
-        errors.image = `A maximum of 5 interior or relevant residence photos is allowed (currently ${galleryCount}/5 uploaded).`;
+      if (galleryCount < 1) {
+        errors.image = (errors.image ? errors.image + ' ' : '') + `You must upload a minimum of 1 interior or relevant residence photo (currently ${galleryCount}/1 uploaded, max 3).`;
+      } else if (galleryCount > 3) {
+        errors.image = `A maximum of 3 interior or relevant residence photos is allowed (currently ${galleryCount}/3 uploaded).`;
       }
-    } else if (step === 5) {
+    } else if (step === 4) {
       if (!formData.maximumCapacity || formData.maximumCapacity <= 0) {
         errors.maximumCapacity = 'Total capacity must be greater than 0. Please configure room types with bedspaces.';
       }
-      for (const b of formData.blocksList) {
-        for (const rt of b.roomTypes || []) {
-          if (!rt.pricePerBed || rt.pricePerBed <= 0) {
-            errors.maximumCapacity = `Bedspace fee for "${rt.typeName}" in ${b.name || 'Block'} must be a valid amount greater than 0.`;
-            break;
-          }
-        }
-      }
-    } else if (step === 8) {
-      if (!formData.defaultFee || formData.defaultFee <= 0) {
-        errors.defaultFee = 'Standard room fee must be a valid positive amount greater than 0.';
-      }
-    } else if (step === 9) {
-      if (!formData.agreeTerms) errors.agreeTerms = 'You must confirm the registration policies';
-      if (!formData.accuracyCertified) errors.accuracyCertified = 'You must certify the accuracy of all entered data';
     }
 
     setValidationErrors(errors);
@@ -359,7 +333,7 @@ export default function HostelRegistration({
 
   const handleNext = () => {
     if (validateStep(currentStep)) {
-      if (currentStep < 9) {
+      if (currentStep < 6) {
         setCurrentStep((prev) => prev + 1);
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }
@@ -400,7 +374,6 @@ export default function HostelRegistration({
           typeName: `${b.bedsPerRoom || 2} in 1 Room`,
           bedsPerRoom: b.bedsPerRoom || 2,
           totalRooms: b.totalRooms || 10,
-          pricePerBed: b.pricePerBlock ?? formData.defaultFee ?? 3500
         }
       ];
 
@@ -441,10 +414,9 @@ export default function HostelRegistration({
       roomPrefix: blockLetter,
       startNum: nextIdx * 100 + 1,
       bedsPerRoom: 2,
-      pricePerBlock: formData.defaultFee || 3500,
       roomTypes: [
-        { id: `rt-${Date.now()}-1`, typeName: '2 in 1 Room', bedsPerRoom: 2, totalRooms: 10, pricePerBed: formData.defaultFee || 3500 },
-        { id: `rt-${Date.now()}-2`, typeName: '1 in 1 Room', bedsPerRoom: 1, totalRooms: 5, pricePerBed: (formData.defaultFee || 3500) + 1000 }
+        { id: `rt-${Date.now()}-1`, typeName: '2 in 1 Room', bedsPerRoom: 2, totalRooms: 10 },
+        { id: `rt-${Date.now()}-2`, typeName: '1 in 1 Room', bedsPerRoom: 1, totalRooms: 5 }
       ]
     };
     const nextBlocks = [...formData.blocksList, newBlock];
@@ -478,7 +450,6 @@ export default function HostelRegistration({
           typeName: `${nextBeds} in 1 Room`,
           bedsPerRoom: nextBeds,
           totalRooms: 5,
-          pricePerBed: formData.defaultFee || 3500
         };
         return { ...b, roomTypes: [...currentTypes, newRt] };
       }
@@ -656,13 +627,6 @@ export default function HostelRegistration({
           cancellationPolicy: formData.cancellationPolicy,
           customRules: formData.customRules
         },
-        pricing: {
-          defaultFee: formData.defaultFee,
-          paymentFrequency: formData.paymentFrequency,
-          securityDeposit: formData.securityDeposit,
-          applicationFee: formData.applicationFee,
-          currency: formData.currency
-        },
         managerId: currentUserId || user?.id || `MGR-${Date.now()}`,
         managerName: user?.name || formData.managerName || 'Anthony Davis',
         managerEmail: user?.email || formData.managerEmail || 'manager@pinevela.com',
@@ -806,7 +770,6 @@ export default function HostelRegistration({
         <div className="bg-amber-50 border border-amber-200/80 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-left">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-xl bg-amber-100 text-amber-900 shrink-0">
-              <Sparkles size={18} />
             </div>
             <div>
               <p className="text-xs font-bold text-amber-900">
@@ -847,7 +810,7 @@ export default function HostelRegistration({
               Multi-Step Resident Onboarding
             </h2>
             <p className="text-xs text-slate-500 mt-0.5">
-              Complete all 9 registration steps. Submission commits atomically to the persistent database on final step.
+              Complete all 6 registration steps. Submission commits atomically to the persistent database on the final step.
             </p>
           </div>
 
@@ -872,7 +835,7 @@ export default function HostelRegistration({
           </div>
         </div>
 
-        {/* 9 Step Progress Nav */}
+        {/* 6 Step Progress Nav */}
         <div className="overflow-x-auto pb-2 -mx-2 px-2 no-scrollbar">
           <div className="flex items-center gap-2 min-w-max">
             {STEPS.map((s) => {
@@ -933,7 +896,7 @@ export default function HostelRegistration({
             {/* STEP 1: BASIC INFORMATION */}
             {currentStep === 1 && (
               <div className="space-y-6">
-                <div>
+                <div className="space-y-4">
                   <h3 className="text-lg font-black text-slate-900 tracking-tight">Step 1: Basic Information</h3>
                   <p className="text-xs text-slate-500">Provide the property name, legal category, and public contact information.</p>
                 </div>
@@ -999,18 +962,6 @@ export default function HostelRegistration({
                     </select>
                   </div>
 
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-700">Gender Allocation Category</label>
-                    <select
-                      value={formData.genderCategory}
-                      onChange={(e: any) => updateFormData({ genderCategory: e.target.value })}
-                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-900 text-slate-800"
-                    >
-                      <option value="Mixed">Mixed (All-Gender / Separate wings)</option>
-                      <option value="Male">All Male Only</option>
-                      <option value="Female">All Female Only</option>
-                    </select>
-                  </div>
 
                   <div className="sm:col-span-2 space-y-1.5">
                     <label className="text-xs font-bold text-slate-700">
@@ -1034,65 +985,6 @@ export default function HostelRegistration({
                     )}
                   </div>
 
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-700">Property Classification Type</label>
-                    <select
-                      value={formData.hostelType}
-                      onChange={(e: any) => updateFormData({ hostelType: e.target.value })}
-                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-900 text-slate-800"
-                    >
-                      {formData.wing === 'Hostel' ? (
-                        <>
-                          <option value="Student accommodation">Student accommodation</option>
-                          <option value="University hostel">University hostel</option>
-                          <option value="Private hostel">Private hostel</option>
-                          <option value="Residential hostel">Residential hostel</option>
-                        </>
-                      ) : formData.wing === 'Inn' ? (
-                        <>
-                          <option value="Guesthouse / Inn">Guesthouse / Inn</option>
-                          <option value="Bed & Breakfast">Bed & Breakfast</option>
-                          <option value="Motel">Motel</option>
-                        </>
-                      ) : formData.wing === 'Hotel' ? (
-                        <>
-                          <option value="Hotel / Commercial">Hotel / Commercial</option>
-                          <option value="Boutique Hotel">Boutique Hotel</option>
-                          <option value="Luxury Hotel">Luxury Hotel</option>
-                        </>
-                      ) : (
-                        <>
-                          <option value="Residential Estate / Apartment">Residential Estate / Apartment</option>
-                          <option value="Condominium">Condominium</option>
-                          <option value="Townhouse Complex">Townhouse Complex</option>
-                        </>
-                      )}
-                      <option value="Other">Other Category</option>
-                    </select>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-700">Operational Status</label>
-                    <select
-                      value={formData.status}
-                      onChange={(e: any) => updateFormData({ status: e.target.value })}
-                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-900 text-slate-800"
-                    >
-                      <option value="Open">Open (Accepting Student Bookings)</option>
-                      <option value="Full">Full (At Maximum Capacity)</option>
-                      <option value="Under Maintenance">Under Maintenance</option>
-                    </select>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-700">Year Established</label>
-                    <input
-                      type="number"
-                      value={formData.yearEstablished}
-                      onChange={(e) => updateFormData({ yearEstablished: parseInt(e.target.value) || 2026 })}
-                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-900 text-slate-800"
-                    />
-                  </div>
 
                   <div className="space-y-1.5">
                     <label className="text-xs font-bold text-slate-700">
@@ -1141,175 +1033,15 @@ export default function HostelRegistration({
                     />
                   </div>
 
-                  <div className="sm:col-span-2 space-y-1.5">
-                    <label className="text-xs font-bold text-slate-700">Official Website or Portal (Optional)</label>
-                    <input
-                      type="url"
-                      placeholder="https://pinecrestresidency.com"
-                      value={formData.website}
-                      onChange={(e) => updateFormData({ website: e.target.value })}
-                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-900 text-slate-800"
-                    />
-                  </div>
-
-                  <div className="sm:col-span-2 space-y-1.5">
-                    <label className="text-xs font-bold text-slate-700">Public Description & Student Value Proposition</label>
-                    <textarea
-                      rows={3}
-                      placeholder="Describe the atmosphere, study spaces, campus proximity, transport amenities..."
-                      value={formData.description}
-                      onChange={(e) => updateFormData({ description: e.target.value })}
-                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-900 text-slate-800"
-                    />
-                  </div>
                 </div>
               </div>
             )}
 
-            {/* STEP 2: ADDRESS & REGIONAL DETAILS */}
+            {/* STEP 2: INTERACTIVE MAP LOCATION */}
             {currentStep === 2 && (
-              <div className="space-y-6">
+                <div className="space-y-4">
                 <div>
-                  <h3 className="text-lg font-black text-slate-900 tracking-tight">Step 2: Address & Regional Details</h3>
-                  <p className="text-xs text-slate-500">Specify physical location, city, region, and recognizable landmarks.</p>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="sm:col-span-2 space-y-1.5">
-                    <label className="text-xs font-bold text-slate-700">
-                      Street Address Line 1 <span className="text-rose-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="e.g. 14 University Avenue, Off Legon Bypass"
-                      value={formData.addressLine1}
-                      onChange={(e) => updateFormData({ addressLine1: e.target.value })}
-                      className={`w-full px-3.5 py-2.5 bg-slate-50 border rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-900 text-slate-800 ${
-                        validationErrors.addressLine1 ? 'border-rose-400 bg-rose-50/30' : 'border-slate-200'
-                      }`}
-                    />
-                    {validationErrors.addressLine1 && (
-                      <p className="text-[11px] text-rose-600 font-semibold">{validationErrors.addressLine1}</p>
-                    )}
-                  </div>
-
-                  <div className="sm:col-span-2 space-y-1.5">
-                    <label className="text-xs font-bold text-slate-700">Address Line 2 (Optional)</label>
-                    <input
-                      type="text"
-                      placeholder="Block name, Suite, or Gate entrance note"
-                      value={formData.addressLine2}
-                      onChange={(e) => updateFormData({ addressLine2: e.target.value })}
-                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-900 text-slate-800"
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-700">
-                      City / Metropolitan Area <span className="text-rose-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Accra, Kumasi, Cape Coast"
-                      value={formData.city}
-                      onChange={(e) => updateFormData({ city: e.target.value })}
-                      className={`w-full px-3.5 py-2.5 bg-slate-50 border rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-900 text-slate-800 ${
-                        validationErrors.city ? 'border-rose-400 bg-rose-50/30' : 'border-slate-200'
-                      }`}
-                    />
-                    {validationErrors.city && (
-                      <p className="text-[11px] text-rose-600 font-semibold">{validationErrors.city}</p>
-                    )}
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-700">
-                      Region / State <span className="text-rose-500">*</span>
-                    </label>
-                    <select
-                      value={formData.region}
-                      onChange={(e) => updateFormData({ region: e.target.value })}
-                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-900 text-slate-800"
-                    >
-                      <option value="Greater Accra">Greater Accra</option>
-                      <option value="Ashanti">Ashanti</option>
-                      <option value="Central">Central</option>
-                      <option value="Eastern">Eastern</option>
-                      <option value="Western">Western</option>
-                      <option value="Volta">Volta</option>
-                      <option value="Northern">Northern</option>
-                      <option value="Other">Other Region / International</option>
-                    </select>
-                    {formData.region === 'Other' && (
-                      <div className="mt-2 space-y-1 animate-fadeIn">
-                        <label className="text-[10px] font-bold text-slate-500 block">Specify Region / State *</label>
-                        <input
-                          type="text"
-                          required
-                          placeholder="e.g. London / California"
-                          value={formData.customRegion || ''}
-                          onChange={(e) => updateFormData({ customRegion: e.target.value })}
-                          className="w-full px-3.5 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-900 text-slate-800"
-                        />
-                      </div>
-                    )}
-                  </div>
-
-                   <div className="sm:col-span-2 space-y-1.5">
-                    <label className="text-xs font-bold text-slate-700">
-                      {formData.wing === 'Hostel' ? 'Nearby Campus Landmark' :
-                       formData.wing === 'Inn' || formData.wing === 'Hotel' ? 'Nearby City/Transit Landmark' : 'Nearby Primary Local Landmark'}
-                    </label>
-                    <input
-                      type="text"
-                      placeholder={formData.wing === 'Hostel' ? 'e.g. 200m from University Stadium Gate, Opposite Central Library' :
-                                   formData.wing === 'Inn' || formData.wing === 'Hotel' ? 'e.g. 10min from Airport Terminal, Opposite Central Metro' : 'e.g. Near Royal Palms Golf Course, Gated Security Gate'}
-                      value={formData.landmark}
-                      onChange={(e) => updateFormData({ landmark: e.target.value })}
-                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-900 text-slate-800"
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-700">
-                      {formData.wing === 'Hostel' ? 'Campus Proximity Time/Walk' :
-                       formData.wing === 'Inn' || formData.wing === 'Hotel' ? 'Transit/Airport Proximity Time' : 'Business District Proximity'} <span className="text-rose-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      placeholder={formData.wing === 'Hostel' ? 'e.g. 5-10 Mins Walk' :
-                                   formData.wing === 'Inn' || formData.wing === 'Hotel' ? 'e.g. 15 Mins Drive / Taxi' : 'e.g. 20 Mins from Central Business District'}
-                      value={formData.campusProximity || ''}
-                      onChange={(e) => updateFormData({ campusProximity: e.target.value })}
-                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-900 text-slate-800"
-                      required
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-700">
-                      {formData.wing === 'Hostel' ? 'Campus Proximity Details' :
-                       formData.wing === 'Inn' || formData.wing === 'Hotel' ? 'Transit/Airport Proximity Details' : 'Business District Proximity Details'} <span className="text-rose-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      placeholder={formData.wing === 'Hostel' ? 'e.g. Shuttle & walking routes' :
-                                   formData.wing === 'Inn' || formData.wing === 'Hotel' ? 'e.g. Taxi rank outside, direct airport shuttle' : 'e.g. Direct ring road highway access'}
-                      value={formData.campusProximityDetails || ''}
-                      onChange={(e) => updateFormData({ campusProximityDetails: e.target.value })}
-                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-900 text-slate-800"
-                      required
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* STEP 3: INTERACTIVE MAP PICKER */}
-            {currentStep === 3 && (
-              <div className="space-y-4">
-                <div>
-                  <h3 className="text-lg font-black text-slate-900 tracking-tight">Step 3: Interactive Map Location</h3>
+                  <h3 className="text-lg font-black text-slate-900 tracking-tight">Step 2: Interactive Map Location</h3>
                   <p className="text-xs text-slate-500">
                     Pinpoint the exact physical entrance using the Leaflet OpenStreetMap view. {formData.wing === 'Hostel' ? 'Students' : formData.wing === 'Inn' || formData.wing === 'Hotel' ? 'Guests' : 'Residents'} will use this for real navigation.
                   </p>
@@ -1319,11 +1051,14 @@ export default function HostelRegistration({
                   latitude={formData.latitude}
                   longitude={formData.longitude}
                   initialAddressHint={`${formData.addressLine1}, ${formData.city}`}
-                  onLocationSelect={({ lat, lng, addressSnippet }) => {
+                  onLocationSelect={({ lat, lng, addressSnippet, city, region }) => {
                     updateFormData({
                       latitude: lat,
                       longitude: lng,
                       formattedAddress: addressSnippet || formData.formattedAddress,
+                      addressLine1: addressSnippet || formData.addressLine1,
+                      city: city || formData.city,
+                      region: region || formData.region,
                       isLocationConfirmed: true
                     });
                   }}
@@ -1332,13 +1067,11 @@ export default function HostelRegistration({
             )}
 
             {/* STEP 4: HOSTEL IMAGE UPLOADER */}
-            {currentStep === 4 && (
+            {currentStep === 3 && (
               <div className="space-y-6">
-                <div>
-                  <h3 className="text-lg font-black text-slate-900 tracking-tight">Step 4: Hostel Exterior Photograph</h3>
-                  <p className="text-xs text-slate-500">
-                    Attach a clear, welcoming exterior image. It is held locally in draft and uploaded on final submission.
-                  </p>
+                <div className="space-y-4">
+                  <h3 className="text-lg font-black text-slate-900 tracking-tight">Step 3: Residence Photos</h3>
+
                 </div>
 
                 {validationErrors.image && (
@@ -1376,11 +1109,11 @@ export default function HostelRegistration({
             )}
 
             {/* STEP 5: CAPACITY & BLOCK STRUCTURE */}
-            {currentStep === 5 && (
+            {currentStep === 4 && (
               <div className="space-y-6">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
                   <div>
-                    <h3 className="text-lg font-black text-slate-900 tracking-tight">Step 5: Capacity & Block Structure</h3>
+                    <h3 className="text-lg font-black text-slate-900 tracking-tight">Step 4: Capacity & Block Structure</h3>
                     <p className="text-xs text-slate-500">
                       Configure residential blocks, gender designation per block, and specific room types / bedspaces (1 in 1, 2 in 1, 3 in 1, etc.).
                     </p>
@@ -1604,20 +1337,6 @@ export default function HostelRegistration({
                                     />
                                   </div>
 
-                                  {/* Price per Bedspace */}
-                                  <div className="sm:col-span-3 space-y-1">
-                                    <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">
-                                      Bedspace Fee ({formData.currency})
-                                    </label>
-                                    <input
-                                      type="text"
-                                      inputMode="numeric"
-                                      value={renderNumberInputValue(rt.pricePerBed)}
-                                      onChange={(e) => handleRoomTypeChange(block.id, rt.id, 'pricePerBed', parseCleanNumberInput(e.target.value))}
-                                      placeholder="Fee"
-                                      className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-emerald-800 focus:ring-2 focus:ring-emerald-700"
-                                    />
-                                  </div>
 
                                   {/* Action */}
                                   <div className="sm:col-span-1 flex items-center justify-end pt-3 sm:pt-0">
@@ -1650,7 +1369,7 @@ export default function HostelRegistration({
                     </span>
                     <span className="text-[11px] text-blue-800">
                       Block & Gender summary:{' '}
-                      {formData.blocksList.map((b) => `${b.name || 'Block'}: ${b.gender || 'Mixed'} (${(b.roomTypes || []).map(rt => `${rt.typeName}: ${formData.currency} ${(rt.pricePerBed || 0).toLocaleString()}`).join(', ')})`).join(' • ')}
+                      {formData.blocksList.map((b) => `:  ()`).join(' • ')}
                     </span>
                   </div>
                   <div className="text-right shrink-0">
@@ -1662,10 +1381,10 @@ export default function HostelRegistration({
             )}
 
             {/* STEP 6: FACILITIES & AMENITIES */}
-            {currentStep === 6 && (
+            {currentStep === 5 && (
               <div className="space-y-6">
-                <div>
-                  <h3 className="text-lg font-black text-slate-900 tracking-tight">Step 6: Facilities & Amenities</h3>
+                <div className="space-y-4">
+                  <h3 className="text-lg font-black text-slate-900 tracking-tight">Step 5: Facilities & Amenities</h3>
                   <p className="text-xs text-slate-500">
                     Select verified facilities and utilities provided on the hostel property.
                   </p>
@@ -1725,10 +1444,10 @@ export default function HostelRegistration({
             )}
 
             {/* STEP 7: RULES & POLICIES */}
-            {currentStep === 7 && (
+            {currentStep === 6 && (
               <div className="space-y-6">
-                <div>
-                  <h3 className="text-lg font-black text-slate-900 tracking-tight">Step 7: Rules & Policies</h3>
+                <div className="space-y-4">
+                  <h3 className="text-lg font-black text-slate-900 tracking-tight">Step 6: Rules & Policies</h3>
                   <p className="text-xs text-slate-500">Define curfew times, visitor guidelines, quiet hours, and cancellation terms.</p>
                 </div>
 
@@ -1850,575 +1569,6 @@ export default function HostelRegistration({
               </div>
             )}
 
-            {/* STEP 8: PRICING & PAYMENT */}
-            {currentStep === 8 && (
-              <div className="space-y-6">
-                <div>
-                  <h3 className="text-lg font-black text-slate-900 tracking-tight">Step 8: Pricing & Payment Terms</h3>
-                  <p className="text-xs text-slate-500">Set base room rates, security deposit, and billing periods.</p>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-700">Currency</label>
-                    <select
-                      value={formData.currency}
-                      onChange={(e: any) => updateFormData({ currency: e.target.value })}
-                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-900 text-slate-800"
-                    >
-                      <option value="GHS">GHS (Ghanaian Cedi)</option>
-                      <option value="USD">USD (US Dollar)</option>
-                      <option value="EUR">EUR (Euro)</option>
-                      <option value="GBP">GBP (British Pound)</option>
-                    </select>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-700">Billing Frequency</label>
-                    <select
-                      value={formData.paymentFrequency}
-                      onChange={(e: any) => updateFormData({ paymentFrequency: e.target.value })}
-                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-900 text-slate-800"
-                    >
-                      {getBillingFrequenciesForPropertyType(formData.wing || formData.hostelType).map(opt => (
-                        <option key={opt.value} value={opt.value}>
-                          {opt.label}
-                        </option>
-                      ))}
-                    </select>
-                    <p className="text-[11px] text-slate-500 font-medium">
-                      {formData.wing === 'Hotel' ? 'Hotel billing cycle (Daily, nightly, or extended stay)' :
-                       formData.wing === 'Inn' ? 'Inn / Guesthouse billing cycle (Nightly, daily, or weekend)' :
-                       formData.wing === 'Estate' ? 'Residential lease cycle (Monthly, quarterly, or annual rent)' :
-                       'Academic residence cycle (Per academic year, per semester, or monthly)'}
-                    </p>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-700">
-                      {formData.wing === 'Hotel' ? `Standard Room Rate (${formData.currency})` :
-                       formData.wing === 'Inn' ? `Standard Room Rate (${formData.currency})` :
-                       formData.wing === 'Estate' ? `Standard Unit Rent (${formData.currency})` :
-                       `Standard Room Fee (${formData.currency})`} <span className="text-rose-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      value={renderNumberInputValue(formData.defaultFee)}
-                      onChange={(e) => updateFormData({ defaultFee: parseCleanNumberInput(e.target.value) })}
-                      placeholder="e.g. 3500"
-                      className={`w-full px-3.5 py-2.5 bg-slate-50 border rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-900 text-slate-800 ${
-                        validationErrors.defaultFee ? 'border-rose-400 bg-rose-50/30' : 'border-slate-200'
-                      }`}
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-700">Refundable Security Deposit ({formData.currency})</label>
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      value={renderNumberInputValue(formData.securityDeposit)}
-                      onChange={(e) => updateFormData({ securityDeposit: parseCleanNumberInput(e.target.value) })}
-                      placeholder="e.g. 500"
-                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-900 text-slate-800"
-                    />
-                  </div>
-                </div>
-
-                {/* Configured Block Specific Rates */}
-                <div className="space-y-3 pt-3 border-t border-slate-200">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <span className="text-xs font-extrabold text-slate-800 uppercase tracking-wider block">
-                        Individual Block Pricing ({formData.blocksList.length} Blocks)
-                      </span>
-                      <span className="text-[11px] text-slate-500">
-                        Customize or fine-tune the exact fee for each residential block.
-                      </span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const updated = formData.blocksList.map(b => ({ ...b, pricePerBlock: formData.defaultFee }));
-                        updateFormData({ blocksList: updated });
-                      }}
-                      className="text-[11px] font-bold text-blue-900 hover:text-blue-700 underline cursor-pointer"
-                    >
-                      Apply standard fee to all blocks
-                    </button>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {formData.blocksList.map((block, idx) => {
-                      const currentPrice = block.pricePerBlock !== undefined ? block.pricePerBlock : formData.defaultFee;
-                      return (
-                        <div
-                          key={block.id}
-                          className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between gap-3"
-                        >
-                          <div className="space-y-0.5">
-                            <span className="text-xs font-bold text-slate-900 block">{block.name || `Block ${idx + 1}`}</span>
-                            <span className="text-[10px] text-slate-500 font-semibold">
-                              {block.bedsPerRoom} {formData.wing === 'Hostel' ? 'Beds' : 'Guests'}/Room • {block.totalRooms * block.bedsPerRoom} Total {formData.wing === 'Hostel' ? 'Beds' : 'Capacity'}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-1.5 w-36">
-                            <span className="text-[11px] font-bold text-slate-500">{formData.currency}</span>
-                            <input
-                              type="text"
-                              inputMode="numeric"
-                              value={renderNumberInputValue(currentPrice)}
-                              onChange={(e) => handleBlockChange(block.id, 'pricePerBlock', parseCleanNumberInput(e.target.value))}
-                              placeholder="Price"
-                              className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold text-emerald-800 focus:outline-none focus:ring-2 focus:ring-emerald-700"
-                            />
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <div className="p-4 bg-emerald-50 rounded-2xl border border-emerald-200 flex items-center justify-between text-xs font-bold text-emerald-900">
-                  <span>Gross Initial Payment per {formData.wing === 'Hostel' ? 'Student' : formData.wing === 'Inn' || formData.wing === 'Hotel' ? 'Guest Booking' : 'Tenant Lease'}:</span>
-                  <span className="text-base font-black">
-                    {formData.currency} {(formData.defaultFee + formData.securityDeposit).toLocaleString()}
-                  </span>
-                </div>
-              </div>
-            )}
-
-            {/* STEP 10: REVIEW, CERTIFICATION & SUBMIT */}
-            {currentStep === 9 && (
-              <div className="space-y-6">
-                <div>
-                  <h3 className="text-lg font-black text-slate-900 tracking-tight">Step 9: Final Review & Atomic Submission</h3>
-                  <p className="text-xs text-slate-500">
-                    Verify all property data before executing atomic database insertion and image upload.
-                  </p>
-                </div>
-
-                {submitError && (
-                  <div className="p-4 bg-rose-50 border border-rose-200 rounded-2xl text-rose-800 text-xs font-bold flex items-start gap-2">
-                    <AlertCircle size={16} className="shrink-0 mt-0.5" />
-                    <span>{submitError}</span>
-                  </div>
-                )}
-
-                {/* Review Summary Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Property Card */}
-                  <div className="bg-slate-50 rounded-2xl border border-slate-200 p-4 space-y-3">
-                    <div className="flex items-center gap-3">
-                      <img
-                        src={formData.imageUrl || 'https://images.unsplash.com/photo-1555854877-bab0e564b8d5?auto=format&fit=crop&w=400&q=80'}
-                        alt="Property preview"
-                        className="w-16 h-16 rounded-xl object-cover border border-slate-200 shrink-0"
-                      />
-                      <div className="truncate">
-                        <h4 className="font-extrabold text-slate-900 text-sm truncate">{formData.name || 'Untitled Hostel'}</h4>
-                        <p className="text-[11px] text-slate-500 truncate">{formData.addressLine1}, {formData.city}</p>
-                        <span className="inline-block mt-1 text-[10px] font-bold bg-blue-100 text-blue-900 px-2 py-0.5 rounded">
-                          {formData.hostelType} • {formData.genderCategory}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="border-t border-slate-200/80 pt-2 grid grid-cols-2 gap-2 text-xs">
-                      <div>
-                        <span className="text-slate-400 block text-[10px] uppercase font-bold">Total Capacity</span>
-                        <span className="font-black text-slate-800">{formData.maximumCapacity} Beds</span>
-                      </div>
-                      <div>
-                        <span className="text-slate-400 block text-[10px] uppercase font-bold">Pricing</span>
-                        <span className="font-black text-slate-800">
-                          {formData.currency} {formData.defaultFee.toLocaleString()} / {formData.paymentFrequency}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Manager Card */}
-                  <div className="bg-slate-50 rounded-2xl border border-slate-200 p-4 space-y-3">
-                    <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">
-                      Assigned Management
-                    </span>
-                    <div>
-                      <p className="text-sm font-extrabold text-slate-900">{user?.name || 'Unknown Manager'}</p>
-                      <p className="text-xs text-slate-600">{user?.email || 'No email associated'}</p>
-                    </div>
-                    <div className="border-t border-slate-200/80 pt-2 text-xs">
-                      <span className="text-slate-400 block text-[10px] uppercase font-bold">GPS Coordinates</span>
-                      <span className="font-mono text-[11px] text-blue-900">
-                        {formData.latitude.toFixed(6)}, {formData.longitude.toFixed(6)}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Blocks & Pricing Breakdown Summary */}
-                <div className="bg-slate-50 rounded-2xl border border-slate-200 p-4 space-y-2.5">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">
-                      Block Structure & Individual Rates ({formData.blocksList.length} Blocks)
-                    </span>
-                    <span className="text-[11px] font-bold text-blue-900">
-                      Total: {formData.maximumCapacity} Beds
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {formData.blocksList.map((b, idx) => (
-                      <div key={b.id || idx} className="p-2.5 rounded-xl bg-white border border-slate-200/80 flex items-center justify-between text-xs">
-                        <div>
-                          <span className="font-bold text-slate-900 block">{b.name || `Block ${idx + 1}`}</span>
-                          <span className="text-[10px] text-slate-500 font-semibold">
-                            {b.floors} Floors • {b.totalRooms} Rooms ({b.bedsPerRoom} beds/rm = {b.totalRooms * b.bedsPerRoom} beds)
-                          </span>
-                        </div>
-                        <span className="font-extrabold text-emerald-800 text-xs">
-                          {formData.currency} {(b.pricePerBlock ?? formData.defaultFee).toLocaleString()}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Facilities Summary */}
-                <div className="bg-slate-50 rounded-2xl border border-slate-200 p-4 space-y-2">
-                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">
-                    Verified Facilities ({formData.facilities.length})
-                  </span>
-                  <div className="flex flex-wrap gap-1.5">
-                    {formData.facilities.map((fac) => (
-                      <span
-                        key={fac}
-                        className="px-2 py-1 rounded-lg bg-white border border-slate-200 text-slate-700 text-[11px] font-bold"
-                      >
-                        {fac}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-
-                {/* COMPREHENSIVE TERMS, PROPERTY OWNERSHIP & OPERATOR CODE OF CONDUCT */}
-                <div className="rounded-2xl border border-slate-200 bg-slate-50/70 overflow-hidden text-left">
-                  <div className="p-4 bg-slate-100/90 border-b border-slate-200 flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-xl bg-blue-900 text-white flex items-center justify-center shrink-0 shadow-sm">
-                        <Scale size={16} />
-                      </div>
-                      <div>
-                        <h4 className="text-xs font-black text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
-                          <span>Operator Agreement & Legal Terms</span>
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-900 normal-case">
-                            Mandatory Review
-                          </span>
-                        </h4>
-                        <p className="text-[11px] text-slate-500">
-                          Ghana Student Housing Standards, Ownership Certification & PineVela Service Rules
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setShowTermsModal(true)}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 hover:text-blue-900 hover:border-blue-300 text-[11px] font-bold transition-all shadow-sm"
-                      >
-                        <BookOpen size={13} className="text-blue-900" />
-                        <span>Read Full Agreement</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setIsTermsExpanded(!isTermsExpanded)}
-                        className="p-1.5 rounded-lg bg-white border border-slate-200 text-slate-600 hover:text-slate-900 text-xs transition-colors"
-                        title={isTermsExpanded ? "Collapse terms overview" : "Expand terms overview"}
-                      >
-                        {isTermsExpanded ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
-                      </button>
-                    </div>
-                  </div>
-
-                  {isTermsExpanded && (
-                    <div className="p-4.5 space-y-4 max-h-72 overflow-y-auto divide-y divide-slate-200 text-xs text-slate-700 bg-white">
-                      {/* Section 1: Property Ownership */}
-                      <div className="pt-2 first:pt-0 space-y-1.5">
-                        <div className="flex items-center gap-2 text-slate-900 font-extrabold text-xs">
-                          <Building2 size={14} className="text-blue-900 shrink-0" />
-                          <span>1. Lawful Property Ownership & Authorized Operation</span>
-                        </div>
-                        <p className="text-[11px] text-slate-600 leading-relaxed pl-5">
-                          The registrant explicitly warrants and declares that they are the lawful freehold/leasehold titleholder or officially authorized administrator/managing agent with full legal power of attorney to list, administer, and lease student accommodation at this facility. The property holds all mandatory municipal assembly building permits, Ghana National Fire Service safety certificates, and statutory sanitation compliance certifications.
-                        </p>
-                      </div>
-
-                      {/* Section 2: Responsibility for Submitted Data */}
-                      <div className="pt-3 space-y-1.5">
-                        <div className="flex items-center gap-2 text-slate-900 font-extrabold text-xs">
-                          <ShieldCheck size={14} className="text-emerald-700 shrink-0" />
-                          <span>2. Responsibility, Truthfulness & Accuracy of Information</span>
-                        </div>
-                        <p className="text-[11px] text-slate-600 leading-relaxed pl-5">
-                          The operator assumes sole and absolute legal and operational responsibility for the complete veracity and timeliness of all submitted data—including total capacity, available beds, room matrices, exterior/interior photographs, GPS coordinates, management contacts, and fee structures. Deliberate misrepresentation, phantom room inventories, deceptive amenities, or unauthorized price markups will result in immediate de-listing, forfeiture of onboarding credentials, and civil liability.
-                        </p>
-                      </div>
-
-                      {/* Section 3: Adhering to Rules of Service */}
-                      <div className="pt-3 space-y-1.5">
-                        <div className="flex items-center gap-2 text-slate-900 font-extrabold text-xs">
-                          <FileCheck size={14} className="text-indigo-700 shrink-0" />
-                          <span>3. Adherence to PineVela Service Rules & Tenant Welfare</span>
-                        </div>
-                        <div className="text-[11px] text-slate-600 leading-relaxed pl-5 space-y-1">
-                          <p>
-                            <strong>A. Resident Safety & Utilities:</strong> Maintain 24/7 on-site security, continuous potable water supply, functional lighting in corridors/stairwells, and operational standby backup electricity.
-                          </p>
-                          <p>
-                            <strong>B. 24-Hour Maintenance SLA:</strong> Promptly log and remediate urgent physical repairs (plumbing leaks, electrical hazards, lock malfunctions) within 24 hours of notification.
-                          </p>
-                          <p>
-                            <strong>C. Non-Discrimination & Welfare:</strong> Strict zero-tolerance for harassment, illegal eviction without due process, ethnic/religious discrimination, or arbitrary off-platform fee extortion.
-                          </p>
-                          <p>
-                            <strong>D. Booking Fulfillment:</strong> Honor all verified student reservations confirmed through PineVela with guaranteed room allocation as specified.
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Section 4: Platform Legal Terms & Compliance */}
-                      <div className="pt-3 space-y-1.5">
-                        <div className="flex items-center gap-2 text-slate-900 font-extrabold text-xs">
-                          <Scale size={14} className="text-amber-700 shrink-0" />
-                          <span>4. Platform Legal Terms, Verification Audits & Indemnification</span>
-                        </div>
-                        <p className="text-[11px] text-slate-600 leading-relaxed pl-5">
-                          PineVela verification officers and university residential boards retain the right to perform scheduled and unannounced physical compliance audits. The operator agrees to indemnify, defend, and hold harmless PineVela, its officers, and partners against any claims, damages, or fines arising from operational negligence or policy breaches. Resident data must be handled in strict accordance with the Ghana Data Protection Act (Act 843) and platform privacy policies.
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="px-4 py-2 bg-slate-100/70 border-t border-slate-200 text-[10px] text-slate-500 flex items-center justify-between">
-                    <span>Ghana Residential Premises Act & PineVela Operator Standards (v2026.1)</span>
-                    <span className="font-semibold text-slate-700">Digital Execution Binding</span>
-                  </div>
-                </div>
-
-                {/* Two Mandatory Certification Checkboxes */}
-                <div className="space-y-3 pt-1">
-                  {/* Checkbox 1: Ownership & Information Responsibility */}
-                  <label
-                    className={`flex items-start gap-3.5 p-4 rounded-2xl border transition-all cursor-pointer text-left ${
-                      formData.accuracyCertified
-                        ? 'border-emerald-300 bg-emerald-50/60 shadow-sm'
-                        : 'border-slate-200 bg-white hover:bg-slate-50'
-                    }`}
-                  >
-                    <div className="pt-0.5 shrink-0">
-                      <input
-                        type="checkbox"
-                        checked={formData.accuracyCertified}
-                        onChange={(e) => updateFormData({ accuracyCertified: e.target.checked })}
-                        className="w-5 h-5 rounded border-slate-300 text-blue-900 focus:ring-blue-900 focus:ring-offset-0 cursor-pointer"
-                      />
-                    </div>
-                    <div className="text-xs space-y-1">
-                      <p className="font-black text-slate-900 text-xs flex items-center gap-1.5">
-                        <span>1. Certification of Legal Property Ownership & Information Responsibility</span>
-                        {formData.accuracyCertified && (
-                          <span className="text-[10px] font-extrabold bg-emerald-600 text-white px-2 py-0.5 rounded-full">
-                            Accepted
-                          </span>
-                        )}
-                      </p>
-                      <p className="text-slate-600 text-[11px] leading-relaxed">
-                        I solemnly declare under penalty of immediate platform de-listing and legal recourse that I hold lawful title, ownership, or authorized property management power of attorney for this hostel. I accept full and sole legal responsibility for the accuracy, authenticity, and completeness of all capacity figures, pricing schedules, photographs, GPS coordinates, and management contact details submitted.
-                      </p>
-                    </div>
-                  </label>
-                  {validationErrors.accuracyCertified && (
-                    <p className="text-[11px] text-rose-600 font-semibold pl-2 flex items-center gap-1">
-                      <AlertCircle size={13} />
-                      <span>{validationErrors.accuracyCertified}</span>
-                    </p>
-                  )}
-
-                  {/* Checkbox 2: Adhering to Service Rules & Terms and Conditions */}
-                  <label
-                    className={`flex items-start gap-3.5 p-4 rounded-2xl border transition-all cursor-pointer text-left ${
-                      formData.agreeTerms
-                        ? 'border-emerald-300 bg-emerald-50/60 shadow-sm'
-                        : 'border-slate-200 bg-white hover:bg-slate-50'
-                    }`}
-                  >
-                    <div className="pt-0.5 shrink-0">
-                      <input
-                        type="checkbox"
-                        checked={formData.agreeTerms}
-                        onChange={(e) => updateFormData({ agreeTerms: e.target.checked })}
-                        className="w-5 h-5 rounded border-slate-300 text-blue-900 focus:ring-blue-900 focus:ring-offset-0 cursor-pointer"
-                      />
-                    </div>
-                    <div className="text-xs space-y-1">
-                      <p className="font-black text-slate-900 text-xs flex items-center gap-1.5">
-                        <span>2. Acceptance of PineVela Terms & Conditions & Operator Code of Conduct</span>
-                        {formData.agreeTerms && (
-                          <span className="text-[10px] font-extrabold bg-emerald-600 text-white px-2 py-0.5 rounded-full">
-                            Accepted
-                          </span>
-                        )}
-                      </p>
-                      <p className="text-slate-600 text-[11px] leading-relaxed">
-                        I have read, understood, and agreed to all 4 sections of the PineVela Platform Terms & Conditions. I commit to strictly adhering to all service rules, including tenant safety protocols, reliable utility delivery, 24-hour maintenance SLAs, non-discrimination policies, physical audit rights, and authorize atomic registration into the live database.
-                      </p>
-                    </div>
-                  </label>
-                  {validationErrors.agreeTerms && (
-                    <p className="text-[11px] text-rose-600 font-semibold pl-2 flex items-center gap-1">
-                      <AlertCircle size={13} />
-                      <span>{validationErrors.agreeTerms}</span>
-                    </p>
-                  )}
-                </div>
-
-                {/* Submission State Banner */}
-                {(!formData.accuracyCertified || !formData.agreeTerms) && (
-                  <div className="p-3.5 bg-amber-50/90 border border-amber-200 rounded-2xl flex items-center gap-3 text-amber-900 text-xs font-semibold">
-                    <Lock size={16} className="shrink-0 text-amber-700" />
-                    <span>
-                      Please check both certification boxes above to unlock the <strong>Submit & Register Hostel</strong> button.
-                    </span>
-                  </div>
-                )}
-
-                {formData.accuracyCertified && formData.agreeTerms && !isSubmitting && (
-                  <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-center gap-2.5 text-emerald-900 text-xs font-bold">
-                    <CheckCircle2 size={16} className="shrink-0 text-emerald-600" />
-                    <span>All legal certifications and platform terms accepted. You may now submit your property.</span>
-                  </div>
-                )}
-
-                {isSubmitting && (
-                  <div className="p-4 bg-blue-50 border border-blue-200 rounded-2xl flex items-center gap-3 text-blue-900 text-xs font-bold">
-                    <div className="w-5 h-5 border-2 border-blue-900 border-t-transparent rounded-full animate-spin shrink-0" />
-                    <span>{submissionProgress}</span>
-                  </div>
-                )}
-              </div>
-            )}
-          </motion.div>
-        </AnimatePresence>
-
-        {/* Full Terms & Conditions Modal */}
-        <AnimatePresence>
-          {showTermsModal && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm">
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95, y: 10 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-3xl w-full max-h-[85vh] flex flex-col overflow-hidden text-left"
-              >
-                {/* Modal Header */}
-                <div className="p-6 bg-slate-900 text-white flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-2xl bg-blue-600/30 border border-blue-400/30 flex items-center justify-center text-blue-300">
-                      <Scale size={20} />
-                    </div>
-                    <div>
-                      <h3 className="text-base font-black tracking-tight">Hostel Operator Agreement & Terms of Service</h3>
-                      <p className="text-xs text-slate-300">Ghana Student Accommodation Regulatory Framework & Platform Policies</p>
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setShowTermsModal(false)}
-                    className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white transition-colors"
-                  >
-                    <X size={18} />
-                  </button>
-                </div>
-
-                {/* Modal Scrollable Content */}
-                <div className="p-6 overflow-y-auto space-y-6 text-xs text-slate-700 leading-relaxed divide-y divide-slate-100">
-                  <div className="space-y-2">
-                    <h4 className="text-sm font-extrabold text-slate-900 flex items-center gap-2">
-                      <span className="w-6 h-6 rounded-lg bg-blue-100 text-blue-900 flex items-center justify-center text-xs font-black">1</span>
-                      Representation of Legal Property Ownership & Authorized Operation
-                    </h4>
-                    <p className="text-slate-600 pl-8">
-                      By registering a property on PineVela, the Registrant warrants that they hold lawful freehold or leasehold title, or possess an executed, unrevoked Power of Attorney / Management Mandate from the lawful titleholder. The Registrant guarantees that the property possesses valid municipal habitation permits, Ghana National Fire Service safety approvals, and conforms to all relevant zoning regulations.
-                    </p>
-                  </div>
-
-                  <div className="pt-4 space-y-2">
-                    <h4 className="text-sm font-extrabold text-slate-900 flex items-center gap-2">
-                      <span className="w-6 h-6 rounded-lg bg-emerald-100 text-emerald-900 flex items-center justify-center text-xs font-black">2</span>
-                      Absolute Responsibility for Truthfulness & Submitted Data
-                    </h4>
-                    <p className="text-slate-600 pl-8">
-                      The Registrant assumes full legal, regulatory, and financial responsibility for the accuracy, completeness, and veracity of all submitted details—including total bed capacity, room configurations, pricing structures, amenity checklists, GPS coordinates, and photographic media. The operator agrees to update room occupancy figures immediately upon offline changes to prevent double-booking. Any deliberate misstatement constitutes a breach of contract and grounds for immediate de-listing.
-                    </p>
-                  </div>
-
-                  <div className="pt-4 space-y-2">
-                    <h4 className="text-sm font-extrabold text-slate-900 flex items-center gap-2">
-                      <span className="w-6 h-6 rounded-lg bg-indigo-100 text-indigo-900 flex items-center justify-center text-xs font-black">3</span>
-                      Adherence to PineVela Service Rules & Resident Welfare Standards
-                    </h4>
-                    <div className="pl-8 space-y-2 text-slate-600">
-                      <p>
-                        <strong>3.1 Resident Safety & Security:</strong> The operator must maintain standard physical security, including certified security personnel, well-lit perimeter pathways, emergency contact mechanisms, and secure entryways.
-                      </p>
-                      <p>
-                        <strong>3.2 Critical Utilities & SLAs:</strong> Uninterrupted supply of water and power (via main grid and standby power generation) must be maintained. Critical maintenance faults (water outage, electrical fault, security compromise) must be addressed within a 24-hour service level agreement.
-                      </p>
-                      <p>
-                        <strong>3.3 Student Rights & Fair Dealing:</strong> Operators agree to respect resident rights, adhere to statutory notice periods for room inspections, and strictly prohibit harassment, discriminatory allocation, or uncontracted mid-tenancy surcharge demands.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="pt-4 space-y-2">
-                    <h4 className="text-sm font-extrabold text-slate-900 flex items-center gap-2">
-                      <span className="w-6 h-6 rounded-lg bg-amber-100 text-amber-900 flex items-center justify-center text-xs font-black">4</span>
-                      Platform Legal Terms, Audits, Indemnification & Limitation of Liability
-                    </h4>
-                    <div className="pl-8 space-y-2 text-slate-600">
-                      <p>
-                        <strong>4.1 Physical Verification Audits:</strong> PineVela verification officers and university residential liaisons reserve the right to perform physical inspections prior to or during the listing period.
-                      </p>
-                      <p>
-                        <strong>4.2 Indemnity:</strong> The operator indemnifies and holds harmless PineVela, its officers, employees, and technological partners from any third-party claims, tenant disputes, bodily injury, property loss, or penalties arising from the operation of the accommodation.
-                      </p>
-                      <p>
-                        <strong>4.3 Data Protection:</strong> All resident information collected via PineVela must be stored securely and utilized strictly for residency administration in compliance with the Data Protection Act (Act 843).
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Modal Footer */}
-                <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
-                  <span className="text-[11px] text-slate-500">Official Document v2026.1 • Legal Counsel Approved</span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      updateFormData({ accuracyCertified: true, agreeTerms: true });
-                      setShowTermsModal(false);
-                    }}
-                    className="px-5 py-2.5 rounded-xl bg-blue-900 hover:bg-blue-800 text-white text-xs font-bold shadow-md transition-all flex items-center gap-2"
-                  >
-                    <CheckCircle2 size={15} />
-                    <span>Accept All & Close</span>
-                  </button>
-                </div>
-              </motion.div>
-            </div>
-          )}
-        </AnimatePresence>
-
         {/* Bottom Navigation Buttons */}
         <div className="border-t border-slate-100 pt-6 mt-6 flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="flex items-center gap-2 w-full sm:w-auto">
@@ -2449,7 +1599,7 @@ export default function HostelRegistration({
           </div>
 
           <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
-            {currentStep < 9 ? (
+            {currentStep < 6 ? (
               <button
                 type="button"
                 onClick={handleNext}
@@ -2462,15 +1612,15 @@ export default function HostelRegistration({
               <button
                 type="button"
                 onClick={handleFinalSubmit}
-                disabled={isSubmitting || !formData.accuracyCertified || !formData.agreeTerms}
+                disabled={isSubmitting}
                 className={`w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-3 rounded-xl text-xs font-extrabold transition-all ${
-                  isSubmitting || !formData.accuracyCertified || !formData.agreeTerms
+                  isSubmitting
                     ? 'bg-slate-200 text-slate-400 border border-slate-300 cursor-not-allowed shadow-none'
                     : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/30 hover:scale-102 cursor-pointer'
                 }`}
                 title={
-                  !formData.accuracyCertified || !formData.agreeTerms
-                    ? 'Please accept both required certifications above to enable registration'
+                  isSubmitting
+                    ? 'Please wait while the registration is submitted'
                     : 'Submit and register hostel'
                 }
               >
@@ -2479,7 +1629,7 @@ export default function HostelRegistration({
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                     <span>Processing Atomic Submission...</span>
                   </>
-                ) : !formData.accuracyCertified || !formData.agreeTerms ? (
+                ) : isSubmitting ? (
                   <>
                     <Lock size={15} className="text-slate-400" />
                     <span>Submit & Register Hostel (Locked)</span>
@@ -2494,7 +1644,9 @@ export default function HostelRegistration({
             )}
           </div>
         </div>
-      </div>
+      </motion.div>
+        </AnimatePresence>
+    </div>
     </div>
   );
 }

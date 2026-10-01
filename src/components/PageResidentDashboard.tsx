@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { queryClient, invalidateAllQueries } from '../lib/queryClient';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
+import { saveNavigationLayout, usesTopNavigation } from '../lib/navigationLayout';
 import PineLogo from './PineLogo';
 import UserAvatarSelector, { renderAvatarGraphic } from './UserAvatarSelector';
 import { 
@@ -49,7 +50,7 @@ import {
   ImageIcon,
   Star,
   ShoppingBag,
-  ArrowRight
+  ArrowRight, PanelLeftClose, PanelLeftOpen
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { IssueReport, HostelRoomKey, StudentDirectMessage } from '../types';
@@ -63,6 +64,11 @@ export default function PageResidentDashboard() {
   const [activeTab, setActiveTab] = useState<'room' | 'complaints' | 'alerts' | 'settings'>('room');
   // Collapsible sidebar state (Disabled minimizing to prevent glitched overlapping)
   const isSidebarCollapsed = false;
+  const [isSidebarTopNav, setIsSidebarTopNav] = useState(usesTopNavigation);
+
+  useEffect(() => {
+    saveNavigationLayout(isSidebarTopNav);
+  }, [isSidebarTopNav]);
 
   // Data states
   const [issueReports, setIssueReports] = useState<IssueReport[]>([]);
@@ -449,15 +455,19 @@ export default function PageResidentDashboard() {
           </button>
           <button 
             onClick={() => setShowSignoutConfirmModal(true)} 
-            className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg cursor-pointer"
+            className="flex items-center gap-1.5 px-2 py-1.5 text-[10px] font-bold text-rose-600 hover:bg-rose-50 rounded-lg cursor-pointer"
+            title="Sign Out"
           >
             <LogOut className="w-4 h-4" />
+            <span>Sign Out</span>
           </button>
         </div>
       </header>
 
       {/* SIDEBAR: PURELY STATIC / FIXED ICE-BLUE FROSTY GLASS LOOK WITH CURVED EDGES & BLUE GLOW */}
-      <aside className={`hidden lg:flex ${isSidebarCollapsed ? 'w-20 p-4' : 'w-72 p-6'} my-6 ml-6 h-[calc(100vh-3rem)] bg-gradient-to-br from-sky-100/90 via-blue-100/85 to-amber-50/40 backdrop-blur-3xl border border-sky-200/80 shadow-2xl rounded-3xl flex flex-col justify-between shrink-0 overflow-y-auto z-20 transition-all duration-300 relative`}>
+      {isSidebarTopNav && <nav className="hidden lg:block fixed top-3 left-1/2 -translate-x-1/2 z-50 w-[min(620px,calc(100vw-3rem))] bg-white/72 backdrop-blur-xl border border-white/80 rounded-2xl shadow-lg"><div className="flex items-center gap-1 px-2 py-1.5">{[{ id: 'room', label: 'Room', icon: Home }, { id: 'complaints', label: 'Issues', icon: Wrench }, { id: 'alerts', label: 'Alerts', icon: Bell }, { id: 'settings', label: 'Settings', icon: Settings }].map(tab => <button key={tab.id} onClick={() => setActiveTab(tab.id as any)} className={`flex-1 min-w-0 flex flex-col items-center gap-0.5 py-1.5 rounded-xl text-[9px] font-bold cursor-pointer ${activeTab === tab.id ? 'text-blue-700 bg-blue-100/65' : 'text-slate-500 hover:bg-white/70'}`}><tab.icon className="w-4 h-4" /><span className="truncate max-w-full">{tab.label}</span></button>)}<button onClick={() => setShowSignoutConfirmModal(true)} className="shrink-0 flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-xl text-[9px] font-bold text-rose-600 hover:bg-rose-50 cursor-pointer" title="Sign Out"><LogOut className="w-4 h-4" /><span>Sign Out</span></button><button onClick={() => setIsSidebarTopNav(false)} title="Show sidebar" className="p-2 text-slate-500 hover:text-blue-700 cursor-pointer"><PanelLeftOpen className="w-4 h-4" /></button></div></nav>}
+      {!isSidebarTopNav && <aside className={`hidden lg:flex ${isSidebarCollapsed ? 'w-20 p-4' : 'w-72 p-6'} my-6 ml-6 h-[calc(100vh-3rem)] bg-gradient-to-br from-sky-100/90 via-blue-100/85 to-amber-50/40 backdrop-blur-3xl border border-sky-200/80 shadow-2xl rounded-3xl flex flex-col justify-between shrink-0 overflow-y-auto z-20 transition-all duration-300 relative`}>
+        <button onClick={() => setIsSidebarTopNav(true)} title="Use top navigation" className="absolute top-3 right-3 p-2 rounded-xl text-slate-500 hover:text-blue-700 hover:bg-white/70 cursor-pointer"><PanelLeftClose className="w-4 h-4" /></button>
 
         <div className="space-y-6">
           {/* Logo & Header */}
@@ -584,7 +594,7 @@ export default function PageResidentDashboard() {
           <LogOut className="w-4 h-4 shrink-0" />
           {!isSidebarCollapsed && <span>Sign Out</span>}
         </button>
-      </aside>
+      </aside>}
 
       {/* MOBILE BOTTOM NAVIGATION */}
       <nav className="mobile-bottom-nav lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200/80 flex items-center justify-around py-2 shadow-lg">
@@ -634,15 +644,9 @@ export default function PageResidentDashboard() {
         </button>
       </nav>
 
-      {/* GIANT WATERMARK PINEVELA LOGO — FIXED TO VIEWPORT (does not scroll with content) */}
-      <div className="fixed inset-0 flex items-center justify-center pointer-events-none select-none overflow-hidden z-0">
-        <div className="transform scale-[4.5] opacity-[0.14] blur-[0.4px]">
-          <PineLogo size={180} hideText={true} />
-        </div>
-      </div>
 
       {/* MAIN CONTENT WORKSPACE WITH PERSISTENT PINEVELA GIANT WATERMARK */}
-      <main className="flex-1 overflow-y-auto p-5 sm:p-8 pb-24 lg:pb-8 flex flex-col space-y-6 relative z-10">
+      <main className={`dashboard-centered-content flex-1 overflow-y-auto p-5 sm:p-8 pb-24 lg:pb-8 flex flex-col space-y-6 relative z-10 ${isSidebarTopNav ? 'lg:pt-24 lg:w-[calc(100vw-22rem)] lg:max-w-[calc(100vw-22rem)] lg:mx-auto' : ''}`}>
         
         {/* ROOM TAB */}
         {activeTab === 'room' && (
@@ -1009,6 +1013,7 @@ export default function PageResidentDashboard() {
                 )}
               </div>
 
+              {!activeComplaint && <button onClick={() => setShowNewIssueModal(true)} className="sm:hidden fixed bottom-20 right-4 z-40 flex items-center gap-2 rounded-full border border-white bg-blue-700 px-5 py-3 text-xs font-black text-white shadow-xl shadow-blue-700/30 transition-all hover:bg-white hover:text-blue-800 active:scale-95"><Plus size={16} />Log maintenance</button>}
               {/* Active Ticket Banner Notification */}
               {activeComplaint && (
                 <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-2xl flex items-start gap-3 text-xs text-amber-900 shadow-2xs">

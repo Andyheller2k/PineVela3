@@ -80,17 +80,11 @@ export default function UserAvatarSelector({ onAvatarSave }: UserAvatarSelectorP
     return user?.avatar || user?.photo || user?.photoUrl || user?.avatarUrl || user?.profilePicture || localStorage.getItem(storageKey) || localStorage.getItem('pinevela_user_avatar') || 'preset:pine-classic';
   });
 
-  const [activeTab, setActiveTab] = useState<'presets' | 'camera' | 'upload'>('presets');
+  const [activeTab, setActiveTab] = useState<"presets" | "upload">("presets");
   const [selectedPresetId, setSelectedPresetId] = useState<string>(() => {
     return currentAvatar.startsWith('preset:') ? currentAvatar.replace('preset:', '') : 'pine-classic';
   });
 
-  // Camera state
-  const [isCameraActive, setIsCameraActive] = useState(false);
-  const [cameraError, setCameraError] = useState<string | null>(null);
-  const [capturedImage, setCapturedImage] = useState<string | null>(null);
-  const videoRef = useRef<HTMLVideoElement | null>(null);
-  const mediaStreamRef = useRef<MediaStream | null>(null);
 
   // File upload state
   const [uploadPreview, setUploadPreview] = useState<string | null>(null);
@@ -110,98 +104,27 @@ export default function UserAvatarSelector({ onAvatarSave }: UserAvatarSelectorP
     }
   }, [user?.avatar, user?.photo, user?.photoUrl, user?.avatarUrl, user?.profilePicture, storageKey]);
 
-  // Clean up camera stream on unmount or tab change
-  useEffect(() => {
-    return () => {
-      stopCamera();
-    };
-  }, []);
-
-  const stopCamera = () => {
-    if (mediaStreamRef.current) {
-      mediaStreamRef.current.getTracks().forEach(track => track.stop());
-      mediaStreamRef.current = null;
-    }
-    setIsCameraActive(false);
-  };
-
-  const startCamera = async () => {
-    setCameraError(null);
-    setCapturedImage(null);
-    try {
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        throw new Error("Camera API is not supported by your browser environment.");
-      }
-      
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          width: { ideal: 640 },
-          height: { ideal: 640 },
-          facingMode: 'user'
-        },
-        audio: false
-      });
-      
-      mediaStreamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.play();
-      }
-      setIsCameraActive(true);
-    } catch (err: any) {
-      console.error("Camera access error:", err);
-      setCameraError(
-        err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError'
-          ? "Camera permission was denied. Please allow camera access in your browser permissions."
-          : err.message || "Failed to start camera. Please ensure device camera is connected."
-      );
-      setIsCameraActive(false);
-    }
-  };
-
-  const capturePhoto = () => {
-    if (!videoRef.current) return;
-    const video = videoRef.current;
-    const maxDimension = 360;
-    const sourceWidth = video.videoWidth || 400;
-    const sourceHeight = video.videoHeight || 400;
-    const scale = Math.min(1, maxDimension / Math.max(sourceWidth, sourceHeight));
-    const canvas = document.createElement('canvas');
-    canvas.width = Math.max(1, Math.round(sourceWidth * scale));
-    canvas.height = Math.max(1, Math.round(sourceHeight * scale));
-
-    const ctx = canvas.getContext('2d');
-    if (ctx) {
-      // Mirror image horizontally for natural selfie feel.
-      ctx.translate(canvas.width, 0);
-      ctx.scale(-1, 1);
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
-      setCapturedImage(dataUrl);
-      stopCamera();
-    }
-  };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
-      setCameraError('Please choose a valid image file.');
+      console.warn("Please choose a valid image file.");
       return;
     }
     if (file.size > 5 * 1024 * 1024) {
-      setCameraError('File size exceeds 5MB limit. Please choose a smaller photo.');
+      console.warn("File size exceeds 5MB limit. Please choose a smaller photo.");
       return;
     }
 
-    setCameraError(null);
+
     try {
       // Keep the persisted avatar safely below browser-storage and API payload limits.
       setUploadPreview(await compressImageFileToLowRes(file, 360, 0.55));
     } catch (err) {
       console.error('Profile photo compression failed:', err);
-      setCameraError('We could not prepare that photo. Please try a different image.');
+      console.error("We could not prepare that photo. Please try a different image.");
     }
   };
 
@@ -295,7 +218,6 @@ export default function UserAvatarSelector({ onAvatarSave }: UserAvatarSelectorP
           <div className="relative group">
             {renderAvatarGraphic(currentAvatar, "w-20 h-20 text-3xl")}
             <div className="absolute -bottom-1 -right-1 p-1.5 bg-blue-900 text-amber-300 rounded-full border-2 border-white shadow-xs">
-              <Sparkles className="w-4 h-4" />
             </div>
           </div>
 
@@ -307,7 +229,7 @@ export default function UserAvatarSelector({ onAvatarSave }: UserAvatarSelectorP
               </span>
             </div>
             <p className="text-xs text-slate-500 font-medium mt-0.5">
-              Select a system avatar, upload your own photo, or take a selfie with your camera.
+              Select a system avatar or upload your own photo.
             </p>
           </div>
         </div>
@@ -325,7 +247,7 @@ export default function UserAvatarSelector({ onAvatarSave }: UserAvatarSelectorP
         <button
           type="button"
           onClick={() => {
-            stopCamera();
+
             setActiveTab('presets');
           }}
           className={`flex-1 py-2.5 rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer ${
@@ -336,24 +258,11 @@ export default function UserAvatarSelector({ onAvatarSave }: UserAvatarSelectorP
           <span>System Icons</span>
         </button>
 
-        <button
-          type="button"
-          onClick={() => {
-            setActiveTab('camera');
-            startCamera();
-          }}
-          className={`flex-1 py-2.5 rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer ${
-            activeTab === 'camera' ? 'bg-white text-blue-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
-          }`}
-        >
-          <Camera className="w-4 h-4 text-blue-600" />
-          <span>Take Selfie Camera</span>
-        </button>
 
         <button
           type="button"
           onClick={() => {
-            stopCamera();
+
             setActiveTab('upload');
           }}
           className={`flex-1 py-2.5 rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer ${
@@ -407,99 +316,6 @@ export default function UserAvatarSelector({ onAvatarSave }: UserAvatarSelectorP
         </div>
       )}
 
-      {/* TAB CONTENT 2: LIVE CAMERA SNAPSHOT */}
-      {activeTab === 'camera' && (
-        <div className="space-y-4 animate-in fade-in duration-150">
-          <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-            Device Camera Profile Capture
-          </div>
-
-          {cameraError ? (
-            <div className="p-4 bg-rose-50 border border-rose-200 rounded-2xl space-y-3 text-center">
-              <AlertCircle className="w-8 h-8 text-rose-600 mx-auto" />
-              <div className="text-xs font-bold text-rose-900">{cameraError}</div>
-              <button
-                type="button"
-                onClick={startCamera}
-                className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-2"
-              >
-                <RotateCcw className="w-4 h-4" />
-                <span>Try Camera Again</span>
-              </button>
-            </div>
-          ) : capturedImage ? (
-            <div className="space-y-4 text-center">
-              <div className="relative max-w-xs mx-auto">
-                <img 
-                  src={capturedImage} 
-                  alt="Captured Selfie" 
-                  className="w-48 h-48 rounded-full object-cover border-4 border-blue-600 shadow-xl mx-auto" 
-                />
-                <div className="absolute bottom-2 right-12 p-2 bg-emerald-500 text-white rounded-full shadow-md">
-                  <Check className="w-5 h-5" />
-                </div>
-              </div>
-
-              <div className="flex items-center justify-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setCapturedImage(null);
-                    startCamera();
-                  }}
-                  className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-all cursor-pointer flex items-center gap-2 border border-slate-200"
-                >
-                  <RotateCcw className="w-4 h-4" />
-                  <span>Retake Photo</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => applyAvatar(capturedImage)}
-                  className="px-5 py-2.5 bg-blue-900 hover:bg-blue-800 text-white font-extrabold text-xs rounded-xl shadow-md transition-all cursor-pointer flex items-center gap-2"
-                >
-                  <Check className="w-4 h-4" />
-                  <span>Use This Camera Photo</span>
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-4 text-center">
-              <div className="relative w-64 h-64 mx-auto rounded-full overflow-hidden border-4 border-blue-600 shadow-xl bg-slate-900 flex items-center justify-center">
-                <video
-                  ref={videoRef}
-                  autoPlay
-                  playsInline
-                  muted
-                  className="w-full h-full object-cover scale-x-[-1]"
-                />
-                
-                {!isCameraActive && (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center p-4 bg-slate-900 text-white space-y-2">
-                    <Camera className="w-8 h-8 animate-pulse text-blue-400" />
-                    <span className="text-xs font-bold">Initializing camera stream...</span>
-                  </div>
-                )}
-
-                {/* Circular face guide overlay */}
-                <div className="absolute inset-0 border-2 border-white/40 rounded-full pointer-events-none" />
-              </div>
-
-              <div className="flex items-center justify-center gap-3">
-                <button
-                  type="button"
-                  onClick={capturePhoto}
-                  disabled={!isCameraActive}
-                  className="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white font-black text-xs rounded-2xl shadow-lg transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
-                >
-                  <Camera className="w-4 h-4" />
-                  <span>Capture Snapshot</span>
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
 
       {/* TAB CONTENT 3: FILE UPLOAD */}
       {activeTab === 'upload' && (
