@@ -56,6 +56,28 @@ const CAMPUS_HUBS: { name: string; university: string; lat: number; lng: number;
   }
 ];
 
+function coordinatesLabel(lat: number, lng: number) {
+  return `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+}
+
+function addressLabel(result: { display_name?: string; name?: string; address?: Record<string, string> }) {
+  const address = result.address || {};
+  const landmark = address.building || address.shop || address.amenity || address.tourism || result.name;
+  const street = [address.house_number, address.road || address.pedestrian].filter(Boolean).join(' ');
+  const area = address.neighbourhood || address.suburb || address.city_district || address.village || address.town || address.city;
+  return [...new Set([landmark, street, area].filter(Boolean))].join(', ') || result.display_name || '';
+}
+
+function locationPopup(label: string) {
+  const content = document.createElement('div');
+  const title = document.createElement('strong');
+  title.textContent = '📍 Meetup Location';
+  const address = document.createElement('div');
+  address.textContent = label;
+  content.append(title, address);
+  return content;
+}
+
 export default function CampusMeetupMapPicker({
   latitude,
   longitude,
@@ -68,6 +90,7 @@ export default function CampusMeetupMapPicker({
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const markerRef = useRef<L.Marker | null>(null);
+  const lookupRef = useRef<AbortController | null>(null);
 
   // Auto-detect default center based on preferred university or coordinates
   const defaultHub = CAMPUS_HUBS.find(h => 
@@ -80,7 +103,7 @@ export default function CampusMeetupMapPicker({
   const [currentLng, setCurrentLng] = useState<number>(
     longitude && !isNaN(longitude) && longitude !== 0 ? longitude : defaultHub.lng
   );
-  const [locationName, setLocationName] = useState<string>(initialLocationName || defaultHub.spots[0]);
+  const [locationName, setLocationName] = useState<string>(initialLocationName || coordinatesLabel(currentLat, currentLng));
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [isGeolocating, setIsGeolocating] = useState<boolean>(false);
   const [isReverseGeocoding, setIsReverseGeocoding] = useState<boolean>(false);
@@ -111,7 +134,7 @@ export default function CampusMeetupMapPicker({
         title: readOnly ? 'Meetup Location' : 'Drag to adjust exact meetup location'
       }).addTo(map);
 
-      marker.bindPopup(`<b>📍 Campus Meetup Spot</b><br/>${locationName || 'Selected Location'}`);
+      marker.bindPopup(locationPopup(locationName));
 
       if (!readOnly) {
         marker.on('dragend', () => {
@@ -135,6 +158,7 @@ export default function CampusMeetupMapPicker({
       observer.observe(mapContainerRef.current);
 
       return () => {
+        lookupRef.current?.abort();
         observer.disconnect();
         map.remove();
         mapInstanceRef.current = null;
@@ -143,41 +167,56 @@ export default function CampusMeetupMapPicker({
     }
   }, []);
 
+  useEffect(() => {
+    markerRef.current?.setPopupContent(locationPopup(locationName));
+  }, [locationName]);
+
+  const cancelLookup = () => {
+    lookupRef.current?.abort();
+    lookupRef.current = null;
+    setIsReverseGeocoding(false);
+  };
+
   const handleCoordsChanged = async (lat: number, lng: number) => {
+    cancelLookup();
     setCurrentLat(lat);
     setCurrentLng(lng);
+    // Never retain an address belonging to the previous pin when lookup fails.
+    setLocationName(coordinatesLabel(lat, lng));
 
     if (markerRef.current) {
       markerRef.current.setLatLng([lat, lng]);
-      markerRef.current.setPopupContent(`<b>📍 Campus Meetup Spot</b><br/>Lat: ${lat.toFixed(5)}, Lng: ${lng.toFixed(5)}`);
     }
 
     if (!readOnly) {
       // Reverse geocode via OpenStreetMap Nominatim
       setIsReverseGeocoding(true);
+      const controller = new AbortController();
+      lookupRef.current = controller;
       try {
-        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`);
+        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`, { signal: controller.signal });
         if (res.ok) {
           const data = await res.json();
-          if (data && data.display_name) {
-            const shortName = data.address?.amenity || data.address?.building || data.address?.road || data.address?.suburb || data.display_name.split(',')[0];
-            if (shortName && (!locationName || locationName.includes('Library') || locationName.includes('Car Park'))) {
-              setLocationName(shortName);
-            }
+          if (!controller.signal.aborted && data) {
+            setLocationName(addressLabel(data) || coordinatesLabel(lat, lng));
           }
         }
       } catch (err) {
-        console.warn('Reverse geocode error:', err);
+        if (!controller.signal.aborted) console.warn('Reverse geocode error:', err);
       } finally {
-        setIsReverseGeocoding(false);
+        if (lookupRef.current === controller) {
+          lookupRef.current = null;
+          setIsReverseGeocoding(false);
+        }
       }
     }
   };
 
   const handleSelectCampusHub = (hub: typeof CAMPUS_HUBS[0], spot?: string) => {
+    cancelLookup();
     const lat = hub.lat;
     const lng = hub.lng;
-    const loc = spot || hub.spots[0];
+    const loc = spot || hub.name;
 
     setCurrentLat(lat);
     setCurrentLng(lng);
@@ -186,7 +225,7 @@ export default function CampusMeetupMapPicker({
     if (mapInstanceRef.current && markerRef.current) {
       mapInstanceRef.current.setView([lat, lng], 17);
       markerRef.current.setLatLng([lat, lng]);
-      markerRef.current.setPopupContent(`<b>📍 ${loc}</b><br/>${hub.name}`);
+      markerRef.current.setPopupContent(locationPopup(loc));
       markerRef.current.openPopup();
     }
   };
@@ -202,14 +241,9 @@ export default function CampusMeetupMapPicker({
         setIsGeolocating(false);
         const lat = pos.coords.latitude;
         const lng = pos.coords.longitude;
-        setCurrentLat(lat);
-        setCurrentLng(lng);
-        setLocationName('My Current Live Campus Location');
-
         if (mapInstanceRef.current && markerRef.current) {
           mapInstanceRef.current.setView([lat, lng], 17);
           markerRef.current.setLatLng([lat, lng]);
-          markerRef.current.setPopupContent('<b>📍 Your Current Location</b>');
           markerRef.current.openPopup();
         }
         handleCoordsChanged(lat, lng);
@@ -230,22 +264,28 @@ export default function CampusMeetupMapPicker({
     }
     if (!searchQuery.trim()) return;
 
+    cancelLookup();
+    const controller = new AbortController();
+    lookupRef.current = controller;
+    setIsReverseGeocoding(true);
     try {
-      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery + ' Ghana')}&limit=1`);
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery + ' Ghana')}&limit=1&addressdetails=1`, { signal: controller.signal });
       if (res.ok) {
         const data = await res.json();
+        if (controller.signal.aborted) return;
         if (data && data.length > 0) {
           const first = data[0];
           const lat = parseFloat(first.lat);
           const lng = parseFloat(first.lon);
           setCurrentLat(lat);
           setCurrentLng(lng);
-          setLocationName(searchQuery);
+          const label = addressLabel(first) || coordinatesLabel(lat, lng);
+          setLocationName(label);
 
           if (mapInstanceRef.current && markerRef.current) {
             mapInstanceRef.current.setView([lat, lng], 17);
             markerRef.current.setLatLng([lat, lng]);
-            markerRef.current.setPopupContent(`<b>📍 ${searchQuery}</b>`);
+            markerRef.current.setPopupContent(locationPopup(label));
             markerRef.current.openPopup();
           }
         } else {
@@ -253,7 +293,12 @@ export default function CampusMeetupMapPicker({
         }
       }
     } catch (err) {
-      console.warn('Search error:', err);
+      if (!controller.signal.aborted) console.warn('Search error:', err);
+    } finally {
+      if (lookupRef.current === controller) {
+        lookupRef.current = null;
+        setIsReverseGeocoding(false);
+      }
     }
   };
 
@@ -265,9 +310,10 @@ export default function CampusMeetupMapPicker({
   };
 
   const handleConfirmLocation = () => {
+    if (isReverseGeocoding) return;
     if (onLocationSelect) {
       onLocationSelect({
-        locationName: locationName.trim() || 'Designated Campus Meetup Spot',
+        locationName: locationName.trim() || coordinatesLabel(currentLat, currentLng),
         latitude: currentLat,
         longitude: currentLng
       });
@@ -366,7 +412,7 @@ export default function CampusMeetupMapPicker({
                 onClick={() => handleSelectCampusHub(hub)}
                 className="px-2.5 py-1 bg-white hover:bg-blue-50 hover:border-blue-300 border border-slate-200 rounded-lg text-[10px] font-bold text-slate-700 shrink-0 transition-colors cursor-pointer"
               >
-                {hub.name.split(' - ')[0]}
+                {hub.name.replace('KNUST - ', '')}
               </button>
             ))}
           </div>
@@ -423,7 +469,7 @@ export default function CampusMeetupMapPicker({
             <input
               type="text"
               value={locationName}
-              onChange={(e) => setLocationName(e.target.value)}
+              onChange={(e) => { cancelLookup(); setLocationName(e.target.value); }}
               placeholder="e.g. KNUST Commercial Area near CalBank ATM"
               className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
@@ -435,6 +481,7 @@ export default function CampusMeetupMapPicker({
               </div>
             </div>
           )}
+          {isReverseGeocoding && <p className="text-[11px] text-blue-600" role="status">Finding the selected location’s address…</p>}
         </div>
 
         {/* Buttons */}
@@ -458,7 +505,8 @@ export default function CampusMeetupMapPicker({
               <button
                 type="button"
                 onClick={handleConfirmLocation}
-                className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
+                disabled={isReverseGeocoding}
+                className="px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-wait text-white text-xs font-bold rounded-xl shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
               >
                 <CheckCircle2 className="w-4 h-4" />
                 <span>Confirm & Attach Location</span>

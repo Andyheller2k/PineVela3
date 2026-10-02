@@ -1,7 +1,7 @@
-import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ArrowUpRight, ChevronDown, X } from 'lucide-react';
-import { motion, useAnimationControls, useReducedMotion, useScroll, useSpring, useTransform } from 'motion/react';
+import { motion, useAnimationControls, useReducedMotion } from 'motion/react';
 import PineLogo from './PineLogo';
 import { companyContacts, companySections, CompanySection } from './companyStoryContent';
 import './CompanyStory.css';
@@ -18,24 +18,16 @@ function StorySection({ section, index, container, controls }: {
   section: CompanySection; index: number; container: React.RefObject<HTMLDivElement>;
   controls: ReturnType<typeof useAnimationControls>;
 }) {
-  const target = useRef<HTMLElement>(null);
   const reduced = useReducedMotion();
-  const { scrollYProgress } = useScroll({ container, target, offset: ['start end', 'end start'] });
-  const progress = useSpring(scrollYProgress, { stiffness: 140, damping: 30, restDelta: 0.0001 });
-  const x = useTransform(progress, [0, 0.18, 0.82, 1], ['4vw', '0vw', '0vw', '-4vw']);
-  const opacity = useTransform(progress, [0, 0.12, 0.88, 1], [0, 1, 1, 0]);
-  const scale = useTransform(progress, [0, 0.18, 0.82, 1], [0.98, 1, 1, 0.98]);
-  const rotateY = useTransform(progress, [0, 0.18, 0.82, 1], [1.5, 0, 0, -1.5]);
-  const imageY = useTransform(progress, [0, 0.18, 0.82, 1], [10, 0, 0, -10]);
 
   return (
-    <section ref={target} id={`story-${section.id}`} className={`company-chapter ${index % 2 ? 'company-chapter-reversed' : ''} ${section.id === 'contact-us' ? 'company-chapter-contact' : ''}`} aria-labelledby={`title-${section.id}`}>
+    <section id={`story-${section.id}`} className={`company-chapter ${index % 2 ? 'company-chapter-reversed' : ''} ${section.id === 'contact-us' ? 'company-chapter-contact' : ''}`} aria-labelledby={`title-${section.id}`}>
       <motion.div className="company-chapter-transition" animate={controls} initial={false}>
-        <motion.div className="company-chapter-grid" style={reduced ? { x: 0, opacity: 1, scale: 1, rotateY: 0 } : { x, opacity, scale, rotateY }}>
+        <div className="company-chapter-grid">
           {section.image ? (
-            <motion.div className={`company-image-card company-image-${section.id}`} style={{ y: reduced ? 0 : imageY }}>
+            <div className={`company-image-card company-image-${section.id}`}>
               <img src={`/images/company/${section.image}`} alt={section.alt} width="1024" height="1024" loading={index === 0 ? 'eager' : 'lazy'} />
-            </motion.div>
+            </div>
           ) : null}
           <div className="company-copy">
             <p className="company-eyebrow">{section.eyebrow}</p>
@@ -57,7 +49,7 @@ function StorySection({ section, index, container, controls }: {
               </ContactDestination>)}
             </div>}
           </div>
-        </motion.div>
+        </div>
       </motion.div>
     </section>
   );
@@ -79,6 +71,9 @@ export default function CompanyStory({ onClose, initialSection = 'about-us' }: {
   const closing = useRef(false);
   const switching = useRef(false);
   const mounted = useRef(false);
+  const activeSection = useRef(active);
+  const settledScrollTop = useRef(0);
+  const transitionScrollTop = useRef(0);
 
   useLayoutEffect(() => {
     mounted.current = true;
@@ -108,38 +103,16 @@ export default function CompanyStory({ onClose, initialSection = 'about-us' }: {
     return () => document.removeEventListener('pointerdown', dismiss);
   }, [menuOpen]);
 
-  useEffect(() => {
-    const root = container.current;
-    if (!root) return;
-    let frame = 0;
-    const update = () => {
-      cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(() => {
-        const top = root.scrollTop > 2;
-        const bottom = root.scrollTop + root.clientHeight < root.scrollHeight - 2;
-        setFogEdges(previous => previous.top === top && previous.bottom === bottom ? previous : { top, bottom });
-        const line = root.getBoundingClientRect().top + root.clientHeight * 0.35;
-        const chapters = Array.from(root.querySelectorAll<HTMLElement>('.company-chapter'));
-        const current = chapters.findIndex(chapter => {
-          const bounds = chapter.getBoundingClientRect();
-          return bounds.top <= line && bounds.bottom > line;
-        });
-        if (current >= 0 && !switching.current) setActive(current);
-      });
-    };
-    root.addEventListener('scroll', update, { passive: true });
-    const resize = new ResizeObserver(update);
-    resize.observe(root);
-    update();
-    return () => { root.removeEventListener('scroll', update); resize.disconnect(); cancelAnimationFrame(frame); };
-  }, []);
-
-  const goToSection = async (index: number) => {
+  const goToSection = useCallback(async (index: number, source: 'menu' | 'scroll' = 'menu') => {
     if (switching.current || closing.current) return;
-    switching.current = true;
     setMenuOpen(false);
+    if (index === activeSection.current) return;
+    switching.current = true;
+    const root = container.current;
+    // Hold the outgoing section in place until its shared exit animation finishes.
+    transitionScrollTop.current = source === 'scroll' ? settledScrollTop.current : (root?.scrollTop ?? 0);
+    if (root) root.scrollTop = transitionScrollTop.current;
     try {
-      const root = container.current;
       const chapter = root?.querySelector<HTMLElement>(`#story-${companySections[index].id}`);
       const photo = chapter?.querySelector<HTMLImageElement>('.company-image-card img');
       if (photo) {
@@ -147,16 +120,68 @@ export default function CompanyStory({ onClose, initialSection = 'about-us' }: {
         await photo.decode().catch(() => {});
       }
       if (!mounted.current || closing.current) return;
-      // Animate individual chapter frames so long copy does not distort the scroll height.
       if (!reduced) await controls.start({ opacity: 0, scale: 0.86, z: -160, rotateX: 5, transition: { duration: 0.3, ease: [0.4, 0, 0.6, 1] } });
       if (!mounted.current || closing.current) return;
-      if (root && chapter) root.scrollTo({ top: chapter.offsetTop, behavior: 'instant' });
+      if (root && chapter) {
+        transitionScrollTop.current = chapter.offsetTop;
+        root.scrollTo({ top: transitionScrollTop.current, behavior: 'instant' });
+      }
+      activeSection.current = index;
       setActive(index);
-      chapter?.querySelector<HTMLElement>('h2')?.focus({ preventScroll: true });
+      if (source === 'menu') chapter?.querySelector<HTMLElement>('h2')?.focus({ preventScroll: true });
       if (!reduced) controls.set({ opacity: 0, scale: 0.9, z: -120, rotateX: -3 });
       await controls.start({ opacity: 1, scale: 1, z: 0, rotateX: 0, transition: { duration: reduced ? 0 : 0.55, ease: [0.16, 1, 0.3, 1] } });
-    } finally { switching.current = false; }
-  };
+    } finally {
+      settledScrollTop.current = root?.scrollTop ?? 0;
+      switching.current = false;
+    }
+  }, [controls, reduced]);
+
+  useEffect(() => {
+    const root = container.current;
+    if (!root) return;
+    settledScrollTop.current = root.scrollTop;
+    let frame = 0;
+    const update = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        if (switching.current && root.scrollTop !== transitionScrollTop.current) {
+          root.scrollTop = transitionScrollTop.current;
+        }
+        const top = root.scrollTop > 2;
+        const bottom = root.scrollTop + root.clientHeight < root.scrollHeight - 2;
+        setFogEdges(previous => previous.top === top && previous.bottom === bottom ? previous : { top, bottom });
+        if (switching.current || closing.current) return;
+        const line = root.getBoundingClientRect().top + root.clientHeight * 0.35;
+        const chapters = Array.from(root.querySelectorAll<HTMLElement>('.company-chapter'));
+        const current = chapters.findIndex(chapter => {
+          const bounds = chapter.getBoundingClientRect();
+          return bounds.top <= line && bounds.bottom > line;
+        });
+        if (current >= 0 && current !== activeSection.current) {
+          void goToSection(current, 'scroll');
+        } else {
+          settledScrollTop.current = root.scrollTop;
+        }
+      });
+    };
+    const holdTransition = (event: Event) => {
+      if (switching.current) event.preventDefault();
+    };
+    root.addEventListener('scroll', update, { passive: true });
+    root.addEventListener('wheel', holdTransition, { passive: false });
+    root.addEventListener('touchmove', holdTransition, { passive: false });
+    const resize = new ResizeObserver(update);
+    resize.observe(root);
+    update();
+    return () => {
+      root.removeEventListener('scroll', update);
+      root.removeEventListener('wheel', holdTransition);
+      root.removeEventListener('touchmove', holdTransition);
+      resize.disconnect();
+      cancelAnimationFrame(frame);
+    };
+  }, [goToSection]);
 
   const requestClose = async () => {
     if (closing.current) return;
