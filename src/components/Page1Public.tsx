@@ -7,6 +7,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '../context/AuthContext';
 import { apiFetch, safeJson } from '../lib/api';
 import LogoutConfirmationModal from './LogoutConfirmationModal';
+import CompanyStory from './CompanyStory';
+import type { CompanySection } from './companyStoryContent';
 import {
   validateEmail,
   cleanPhoneNumber,
@@ -36,6 +38,7 @@ export default function Page1Public({
 
   const { user, logout } = useAuth();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [companyStorySection, setCompanyStorySection] = useState<CompanySection['id'] | null>(null);
 
   // Light-box gallery states
   const [activeImageIndex, setActiveImageIndex] = useState(0);
@@ -574,9 +577,17 @@ export default function Page1Public({
                 </button>
               </div>
             )}
+            <button
+              onClick={() => setCompanyStorySection('about-us')}
+              aria-haspopup="dialog"
+              className="px-3 py-2 bg-white/85 hover:bg-white text-slate-800 border border-white/80 font-semibold rounded-xl text-xs backdrop-blur-md cursor-pointer flex items-center gap-1.5 whitespace-nowrap"
+            >
+              About Us <ChevronDown size={14} aria-hidden="true" />
+            </button>
           </div>
         </div>
       </header>
+      {companyStorySection && <CompanyStory initialSection={companyStorySection} onClose={() => setCompanyStorySection(null)} />}
 
       {/* Top Section Container holding Welcome Section with Welcome Background Image covering entire top */}
       <div className="relative overflow-hidden rounded-b-[4.5rem] w-full border-none shadow-none pt-24 sm:pt-28 md:pt-32">
@@ -949,23 +960,17 @@ export default function Page1Public({
                 Making student trade and Hostel management easier.
               </p>
             </div>
-            <div className="space-y-3">
+            <div className="space-y-3 md:col-start-3">
               <h5 className="font-extrabold text-slate-900 text-sm tracking-wide">Company</h5>
               <ul className="space-y-2 text-xs text-slate-600 font-semibold">
-                <li><a href="#" className="hover:text-blue-900 transition-colors">About Us</a></li>
-                <li><a href="#" className="hover:text-blue-900 transition-colors">Contact</a></li>
-                <li><a href="#" className="hover:text-blue-900 transition-colors">Partner with Us</a></li>
+                <li><button type="button" onClick={() => setCompanyStorySection('about-us')} aria-haspopup="dialog" className="hover:text-blue-900 transition-colors cursor-pointer">About Us</button></li>
+                <li><button type="button" onClick={() => setCompanyStorySection('our-vision')} aria-haspopup="dialog" className="hover:text-blue-900 transition-colors cursor-pointer">Our Vision</button></li>
+                <li><button type="button" onClick={() => setCompanyStorySection('partner-with-us')} aria-haspopup="dialog" className="hover:text-blue-900 transition-colors cursor-pointer">Partner with Us</button></li>
+                <li><button type="button" onClick={() => setCompanyStorySection('contact-us')} aria-haspopup="dialog" className="hover:text-blue-900 transition-colors cursor-pointer">Contact</button></li>
               </ul>
             </div>
 
-            <div className="space-y-3">
-              <h5 className="font-extrabold text-slate-900 text-sm tracking-wide">Follow Us</h5>
-              <div className="flex gap-4 text-slate-400">
-                <span className="p-2 bg-white/60 hover:bg-white/95 rounded-lg cursor-pointer text-slate-650 shadow-xs border border-slate-200/30 transition-colors">🔍</span>
-                <span className="p-2 bg-white/60 hover:bg-white/95 rounded-lg cursor-pointer text-slate-650 shadow-xs border border-slate-200/30 transition-colors">🔔</span>
-                <span className="p-2 bg-white/60 hover:bg-white/95 rounded-lg cursor-pointer text-slate-650 shadow-xs border border-slate-200/30 transition-colors">❓</span>
-              </div>
-            </div>
+
           </div>
 
           <div className="w-full pt-6 flex flex-col sm:flex-row items-center justify-between text-[11px] text-slate-500 font-medium gap-4">

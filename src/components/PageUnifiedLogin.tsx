@@ -23,26 +23,17 @@ const slides = [
   {
     image: manager2Img,
     title: "Hostel Management Simplified",
-    description: "PineVela - Manage your hostel seamlessly from anywhere. No worries, just connect.",
-    badge: "Hostel Manager"
+    description: "PineVela - Manage your hostel seamlessly from anywhere. No worries, just connect."
   },
   {
     image: plumberImg,
     title: "Stay Connected Instantly",
-    description: "PineVela - Stay in touch with your manager from anywhere, anytime.",
-    badge: "Connected System"
+    description: "PineVela - Stay in touch with your manager from anywhere, anytime."
   },
   {
     image: girlsImg,
     title: "Student Digital Marketplace",
-    description: "A secure digital marketplace where students and other verified entities can easily engage in trade, exchange goods, and access student commerce.",
-    badge: "Student Digital Marketplace"
-  },
-  {
-    image: "https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&w=1200&q=80",
-    title: "Accredited Job Opportunities",
-    description: "Easily search and apply for jobs on PineVela.",
-    badge: "Careers & Jobs"
+    description: "A secure digital marketplace where students and other verified entities can easily engage in trade, exchange goods, and access student commerce."
   }
 ];
 
@@ -925,8 +916,7 @@ export default function PageUnifiedLogin() {
               const activeSlide = slides[currentSlide] || slides[0] || {
                 image: manager2Img,
                 title: "Hostel Management Simplified",
-                description: "PineVela - Manage your hostel seamlessly from anywhere.",
-                badge: "Hostel Manager"
+                description: "PineVela - Manage your hostel seamlessly from anywhere."
               };
               return (
                 <div
@@ -955,11 +945,6 @@ export default function PageUnifiedLogin() {
                     />
                   </AnimatePresence>
 
-                  {/* Floating Badge */}
-                  <div className="absolute top-4 left-4 bg-blue-900/90 backdrop-blur-md text-white text-[10px] font-black uppercase tracking-wider px-3.5 py-1.5 rounded-full shadow-md z-10 border border-white/10">
-                    {activeSlide.badge || 'PineVela'}
-                  </div>
-
                 </div>
               );
             })()}
@@ -969,8 +954,7 @@ export default function PageUnifiedLogin() {
               const activeSlide = slides[currentSlide] || slides[0] || {
                 image: manager2Img,
                 title: "Hostel Management Simplified",
-                description: "PineVela - Manage your hostel seamlessly from anywhere.",
-                badge: "Hostel Manager"
+                description: "PineVela - Manage your hostel seamlessly from anywhere."
               };
               return (
                 <div className="space-y-4 px-1">

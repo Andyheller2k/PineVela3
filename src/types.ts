@@ -836,6 +836,8 @@ export interface DigitalMarketProduct {
   imageUrl: string;
   isAvailable: boolean;
   isService?: boolean;
+  /** Required for newly published services; legacy services behave as flexible. */
+  serviceLocationMode?: 'flexible' | 'fixed' | 'hybrid';
   serviceCategory?: string;
   priceCategories?: ServicePriceCategory[];
   callLine?: string;
@@ -881,6 +883,8 @@ export interface DigitalMarketOrder {
   meetingLocation: string;
   meetingLatitude?: number;
   meetingLongitude?: number;
+  /** How the service appointment will be fulfilled. */
+  serviceLocationOption?: 'seller-location' | 'buyer-location';
   sellerConfirmed?: boolean;
   sellerAgreedLocation?: boolean;
   sellerAgreedAt?: string;
@@ -891,5 +895,4 @@ export interface DigitalMarketOrder {
   updatedAt: string;
   timeline: DigitalMarketOrderTimeline[];
 }
-
 

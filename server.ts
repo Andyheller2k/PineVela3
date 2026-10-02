@@ -6096,6 +6096,13 @@ async function startServer() {
       targetStore.isBanned = false;
 
       const isServiceItem = Boolean(req.body.isService || category === 'Services' || String(category || '').toLowerCase().includes('service'));
+      const serviceLocationMode = String(req.body.serviceLocationMode || '').toLowerCase();
+      if (isServiceItem && !['flexible', 'fixed', 'hybrid'].includes(serviceLocationMode)) {
+        return res.status(400).json({ error: 'Choose Flexible, Fixed, or Hybrid service location before publishing.' });
+      }
+      if (isServiceItem && ['fixed', 'hybrid'].includes(serviceLocationMode) && !String(req.body.location || meetingLocation || '').trim()) {
+        return res.status(400).json({ error: 'Fixed and Hybrid services require the seller to pin a service location.' });
+      }
 
       const plan = String(targetStore.subscriptionPlan || "default").toLowerCase();
       const limits = plan === "pro" ? { items: 200, services: 10, inventory: 900 } : plan === "star" ? { items: 100, services: 5, inventory: 600 } : { items: 20, services: 1, inventory: 200 };
@@ -6138,6 +6145,7 @@ async function startServer() {
         closingTime: req.body.closingTime || '08:00 PM',
         callLine: req.body.callLine || targetStore.phone || req.body.sellerPhone || '0244-123-456',
         isService: isServiceItem,
+        serviceLocationMode: isServiceItem ? serviceLocationMode : undefined,
         serviceCategory: req.body.serviceCategory || (isServiceItem ? 'Campus Service' : ''),
         priceCategories: Array.isArray(req.body.priceCategories) ? req.body.priceCategories : [],
         isAvailable: true,
@@ -6162,7 +6170,7 @@ async function startServer() {
   app.put("/api/digital-market/products/:id", requireAuth(["merchant", "student", "user", "admin"]), async (req: any, res) => {
     try {
       const { id } = req.params;
-      const { title, description, price, stockQuantity, isAvailable, category, imageUrl, meetingLocation, location, callLine, isService, serviceCategory, workingDays, openingTime, closingTime, lat, lng } = req.body;
+      const { title, description, price, stockQuantity, isAvailable, category, imageUrl, meetingLocation, location, callLine, isService, serviceCategory, serviceLocationMode, workingDays, openingTime, closingTime, lat, lng } = req.body;
       const store = getStoreInstance();
       if (!store.digitalMarketProducts) store.digitalMarketProducts = [];
 
@@ -6181,6 +6189,12 @@ async function startServer() {
       if (callLine !== undefined) product.callLine = callLine;
       if (isService !== undefined) product.isService = Boolean(isService);
       if (serviceCategory !== undefined) product.serviceCategory = serviceCategory;
+      if (serviceLocationMode !== undefined) {
+        const normalizedMode = String(serviceLocationMode).toLowerCase();
+        if (!['flexible', 'fixed', 'hybrid'].includes(normalizedMode)) return res.status(400).json({ error: 'Invalid service location mode.' });
+        if (['fixed', 'hybrid'].includes(normalizedMode) && !String(location ?? product.location ?? meetingLocation ?? product.meetingLocation ?? '').trim()) return res.status(400).json({ error: 'Fixed and Hybrid services require a seller location.' });
+        product.serviceLocationMode = normalizedMode;
+      }
       if (req.body.priceCategories !== undefined) product.priceCategories = Array.isArray(req.body.priceCategories) ? req.body.priceCategories : [];
       if (workingDays !== undefined) product.workingDays = workingDays;
       if (openingTime !== undefined) product.openingTime = openingTime;
@@ -6612,7 +6626,7 @@ async function startServer() {
   // Place Order / Request Campus Meetup
   app.post("/api/digital-market/orders", async (req: any, res) => {
     try {
-      const { productId, quantity, buyerName, buyerEmail, buyerPhone, meetingLocation, meetingLatitude, meetingLongitude, buyerId } = req.body;
+      const { productId, quantity, buyerName, buyerEmail, buyerPhone, meetingLocation, meetingLatitude, meetingLongitude, buyerId, serviceLocationOption } = req.body;
       const store = getStoreInstance();
       if (!store.digitalMarketOrders) store.digitalMarketOrders = [];
       if (!store.digitalMarketProducts) store.digitalMarketProducts = [];
@@ -6632,6 +6646,19 @@ async function startServer() {
         return res.status(403).json({ error: "Cannot order from a disabled/banned store." });
       }
 
+      const isServiceOrder = Boolean(product.isService || String(product.category || '').toLowerCase().includes('service'));
+      const locationMode = isServiceOrder ? String(product.serviceLocationMode || 'flexible').toLowerCase() : 'flexible';
+      const requestedLocationOption = serviceLocationOption === 'seller-location' ? 'seller-location' : 'buyer-location';
+      if (isServiceOrder && locationMode === 'fixed' && requestedLocationOption !== 'seller-location') {
+        return res.status(400).json({ error: 'This service is only available at the provider\'s fixed location.' });
+      }
+      if (isServiceOrder && (locationMode === 'fixed' || (locationMode === 'hybrid' && requestedLocationOption === 'seller-location')) && !String(product.location || product.meetingLocation || '').trim()) {
+        return res.status(400).json({ error: 'The provider has not set a fixed service location yet.' });
+      }
+      if (isServiceOrder && (locationMode === 'flexible' || (locationMode === 'hybrid' && requestedLocationOption === 'buyer-location')) && !String(meetingLocation || '').trim()) {
+        return res.status(400).json({ error: 'Choose your meetup or delivery location to book this service.' });
+      }
+
       const orderQty = Number(quantity) || 1;
       const unitPrice = (req.body.price !== undefined && !isNaN(Number(req.body.price)) && Number(req.body.price) >= 0) ? Number(req.body.price) : product.price;
       const totalAmount = unitPrice * orderQty;
@@ -6639,8 +6666,10 @@ async function startServer() {
       const finalProductTitle = priceCatName ? `${product.title} (${priceCatName})` : product.title;
       const otpPin = Math.floor(1000 + Math.random() * 9000).toString();
 
-      const parsedLat = meetingLatitude !== undefined && meetingLatitude !== null && !isNaN(Number(meetingLatitude)) ? Number(meetingLatitude) : undefined;
-      const parsedLng = meetingLongitude !== undefined && meetingLongitude !== null && !isNaN(Number(meetingLongitude)) ? Number(meetingLongitude) : undefined;
+      const usesSellerLocation = isServiceOrder && (locationMode === 'fixed' || (locationMode === 'hybrid' && requestedLocationOption === 'seller-location'));
+      const finalMeetingLocation = usesSellerLocation ? (product.location || product.meetingLocation) : (meetingLocation || 'KNUST Main Library Car Park');
+      const parsedLat = usesSellerLocation ? Number(product.lat) || undefined : (meetingLatitude !== undefined && meetingLatitude !== null && !isNaN(Number(meetingLatitude)) ? Number(meetingLatitude) : undefined);
+      const parsedLng = usesSellerLocation ? Number(product.lng) || undefined : (meetingLongitude !== undefined && meetingLongitude !== null && !isNaN(Number(meetingLongitude)) ? Number(meetingLongitude) : undefined);
 
       const nowIso = new Date().toISOString();
       const newOrder = {
@@ -6661,9 +6690,10 @@ async function startServer() {
         storeId: product.storeId,
         storeName: product.storeName,
         university: product.sellerUniversity,
-        meetingLocation: meetingLocation || 'KNUST Main Library Car Park',
+        meetingLocation: finalMeetingLocation,
         meetingLatitude: parsedLat,
         meetingLongitude: parsedLng,
+        serviceLocationOption: isServiceOrder ? (usesSellerLocation ? 'seller-location' : 'buyer-location') : undefined,
         sellerConfirmed: false,
         sellerAgreedLocation: false,
         sellerAgreedAt: null,
@@ -6677,7 +6707,7 @@ async function startServer() {
             status: 'Awaiting Seller Confirmation',
             title: 'Campus Meetup Location Proposed & Escrow PIN Generated',
             timestamp: nowIso,
-            notes: `Buyer proposed meetup spot: ${meetingLocation || 'Campus Library Area'}${parsedLat ? ` (GPS: ${parsedLat.toFixed(5)}, ${parsedLng?.toFixed(5)})` : ''}. Awaiting merchant location agreement.`
+            notes: `${usesSellerLocation ? 'Provider fixed service location selected' : 'Buyer proposed meetup spot'}: ${finalMeetingLocation}${parsedLat ? ` (GPS: ${parsedLat.toFixed(5)}, ${parsedLng?.toFixed(5)})` : ''}.${usesSellerLocation ? ' Booking is set at the provider location.' : ' Awaiting merchant location agreement.'}`
           }
         ]
       };
@@ -6693,7 +6723,7 @@ async function startServer() {
         userEmail: product.sellerEmail,
         recipientEmail: product.sellerEmail,
         title: `New Buy Request for ${product.title}! 📍`,
-        message: `Student ${buyerName} wants to purchase ${product.title} (GHS ${totalAmount}) and proposed meetup at: ${meetingLocation}. Click to inspect map coordinates and confirm.`,
+        message: `Student ${buyerName} wants to book ${product.title} (GHS ${totalAmount}) at: ${finalMeetingLocation}.${usesSellerLocation ? ' Your fixed service location was selected.' : ' Click to inspect map coordinates and confirm.'}`,
         type: 'info',
         category: 'market',
         scope: 'market',

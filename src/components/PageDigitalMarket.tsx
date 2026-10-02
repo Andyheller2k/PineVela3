@@ -88,10 +88,13 @@ interface MarketProduct {
   meetingLocation?: string;
   isAvailable: boolean;
   isService?: boolean;
+  serviceLocationMode?: 'flexible' | 'fixed' | 'hybrid';
   serviceCategory?: string;
   priceCategories?: Array<{ id?: string; name: string; price: number; description?: string }>;
   callLine?: string;
   location?: string;
+  lat?: number;
+  lng?: number;
   workingDays?: string;
   openingTime?: string;
   closingTime?: string;
@@ -381,6 +384,7 @@ export default function PageDigitalMarket() {
   const [servPrice, setServPrice] = useState('');
   const [servPriceCategories, setServPriceCategories] = useState<Array<{ id: string; name: string; price: number | string }>>([]);
   const [servLocation, setServLocation] = useState('KNUST Campus Enclave / Hostel Delivery');
+  const [servLocationMode, setServLocationMode] = useState<'flexible' | 'fixed' | 'hybrid'>('flexible');
   const [servCallLine, setServCallLine] = useState('');
   const [servImageUrl, setServImageUrl] = useState('');
   const [servIsAvailable, setServIsAvailable] = useState(true);
@@ -390,6 +394,7 @@ export default function PageDigitalMarket() {
   const [servIsOpen247, setServIsOpen247] = useState(false);
   const [servLat, setServLat] = useState(6.6745);
   const [servLng, setServLng] = useState(-1.5716);
+  const [servLocationPinned, setServLocationPinned] = useState(false);
   const [isMapLocationPickerOpen, setIsMapLocationPickerOpen] = useState(false);
   const [viewingServiceMap, setViewingServiceMap] = useState<any | null>(null);
   const [viewingServiceReviews, setViewingServiceReviews] = useState<any | null>(null);
@@ -976,6 +981,7 @@ export default function PageDigitalMarket() {
     setServPrice('');
     setServPriceCategories([]);
     setServLocation(storeData?.location || 'KNUST Campus Enclave / Hostel Delivery');
+    setServLocationMode('flexible');
     setServCallLine(storeData?.phone || (user as any)?.phone || '');
     setServImageUrl('');
     setServIsAvailable(true);
@@ -985,6 +991,7 @@ export default function PageDigitalMarket() {
     setServIsOpen247(false);
     setServLat(6.6745);
     setServLng(-1.5716);
+    setServLocationPinned(false);
     setShowServiceModal(true);
   };
 
@@ -1004,6 +1011,7 @@ export default function PageDigitalMarket() {
         : []
     );
     setServLocation((service as any).location || service.meetingLocation || storeData?.location || '');
+    setServLocationMode((service as any).serviceLocationMode || 'flexible');
     setServCallLine((service as any).callLine || storeData?.phone || (user as any)?.phone || '');
     setServImageUrl(service.imageUrl || '');
     setServIsAvailable(service.isAvailable !== false);
@@ -1013,6 +1021,7 @@ export default function PageDigitalMarket() {
     setServIsOpen247(Boolean((service as any).isOpen247));
     setServLat(Number((service as any).lat) || 6.6745);
     setServLng(Number((service as any).lng) || -1.5716);
+    setServLocationPinned(Boolean((service as any).lat && (service as any).lng));
     setShowServiceModal(true);
   };
 
@@ -1093,8 +1102,12 @@ export default function PageDigitalMarket() {
       triggerToast("Please provide a detailed description of what you offer.", "error");
       return;
     }
-    if (!servLocation.trim()) {
+    if ((servLocationMode === 'fixed' || servLocationMode === 'hybrid') && !servLocation.trim()) {
       triggerToast("Please specify or select your campus location on the map.", "error");
+      return;
+    }
+    if ((servLocationMode === 'fixed' || servLocationMode === 'hybrid') && !servLocationPinned) {
+      triggerToast("Fixed and Hybrid services require a location pin selected on the map.", "error");
       return;
     }
     if (!servCallLine.trim()) {
@@ -1128,6 +1141,7 @@ export default function PageDigitalMarket() {
         serviceCategory: servSubCategory,
         priceCategories: validPriceCategories,
         isService: true,
+        serviceLocationMode: servLocationMode,
         stockQuantity: 999,
         imageUrl: servImageUrl.trim(),
         userEmail: email,
@@ -1627,7 +1641,7 @@ export default function PageDigitalMarket() {
 
   // REDESIGNED MERCHANT MANAGEMENT WORKBENCH (GLOSSY LIGHT-BLUE VIBE)
   return (
-    <div className="min-h-screen bg-gradient-to-tr from-sky-50 via-slate-50 to-blue-50 text-slate-800 pb-24 relative">
+    <div className="seller-frosty-background min-h-screen text-slate-800 pb-24 relative">
 
       {/* Toast */}
       {toastMessage && (
@@ -3476,7 +3490,30 @@ export default function PageDigitalMarket() {
                 )}
               </div>
 
-              {/* Campus Location & Call Line with Map Location Picker */}
+              {/* Mandatory service fulfilment location policy */}
+              <fieldset className="space-y-2 rounded-2xl border border-blue-200 bg-blue-50/70 p-3.5">
+                <legend className="px-1 text-xs font-black text-slate-800">Service location policy <span className="text-red-500">*</span></legend>
+                <p className="text-[10px] font-medium text-slate-600">Choose how students book this service. This setting is required and is shown during booking.</p>
+                <div className="grid gap-2 sm:grid-cols-3">
+                  {[
+                    { value: 'flexible', title: 'Flexible', text: 'Buyer chooses a meetup or delivery location.' },
+                    { value: 'fixed', title: 'Fixed', text: 'Buyer can only view and use your pinned location.' },
+                    { value: 'hybrid', title: 'Hybrid', text: 'Buyer chooses your base or requests delivery.' }
+                  ].map(option => (
+                    <label key={option.value} className={`cursor-pointer rounded-xl border p-2.5 transition-all ${servLocationMode === option.value ? 'border-blue-600 bg-white ring-2 ring-blue-200' : 'border-blue-100 bg-white/60 hover:border-blue-300'}`}>
+                      <input type="radio" name="service-location-mode" value={option.value} checked={servLocationMode === option.value} onChange={() => setServLocationMode(option.value as 'flexible' | 'fixed' | 'hybrid')} className="sr-only" />
+                      <span className="block text-[11px] font-black text-slate-900">{option.title}</span>
+                      <span className="mt-0.5 block text-[10px] leading-snug text-slate-600">{option.text}</span>
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+
+              {servLocationMode === 'flexible' ? (
+                <div className="rounded-2xl border border-dashed border-blue-200 bg-sky-50/70 p-3 text-xs text-blue-950">
+                  <strong>Flexible location:</strong> no seller map pin is required. Each buyer must choose their preferred meetup or delivery location when placing a booking.
+                </div>
+              ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <div className="flex items-center justify-between">
@@ -3496,7 +3533,7 @@ export default function PageDigitalMarket() {
                   <div className="flex items-center gap-2">
                     <input
                       type="text"
-                      required
+                      required={servLocationMode !== 'flexible'}
                       placeholder="Search or pick on map e.g. Unity Hall Block B, Room 14"
                       value={servLocation}
                       onChange={(e) => setServLocation(e.target.value)}
@@ -3512,6 +3549,9 @@ export default function PageDigitalMarket() {
                       <span className="hidden sm:inline">Map</span>
                     </button>
                   </div>
+                  <p className={`text-[10px] font-bold ${servLocationPinned ? 'text-emerald-700' : 'text-slate-500'}`}>
+                    {servLocationPinned ? '✓ Map pin attached to this service location.' : 'Select on Map is required for this location policy.'}
+                  </p>
                 </div>
 
                 <div className="space-y-1">
@@ -3529,6 +3569,7 @@ export default function PageDigitalMarket() {
                   />
                 </div>
               </div>
+              )}
 
               {/* Working Days & Opening/Closing Hours */}
               <div className="p-3.5 bg-slate-50 border border-slate-200/80 rounded-2xl space-y-3">
@@ -3969,6 +4010,7 @@ export default function PageDigitalMarket() {
                 setServLocation(locationName);
                 setServLat(latitude);
                 setServLng(longitude);
+                setServLocationPinned(true);
                 setIsMapLocationPickerOpen(false);
                 triggerToast(`Location pin set to "${locationName}"`, "success");
               }}

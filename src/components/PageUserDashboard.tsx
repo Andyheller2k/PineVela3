@@ -7,6 +7,7 @@ import { safeJson } from '../lib/api';
 import { optimizeImageDisplayUrl } from '../lib/imageOptimizer';
 import { saveNavigationLayout, usesTopNavigation } from '../lib/navigationLayout';
 import PineLogo from './PineLogo';
+import DashboardOverlay from './DashboardOverlay';
 import UserAvatarSelector, { renderAvatarGraphic } from './UserAvatarSelector';
 import MarketItemCard, { getServiceActionLabel } from './MarketItemCard';
 import { 
@@ -135,6 +136,17 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
     }
   }, [initialMarketMode, queryMode]);
 
+  // Keep the user-facing market scrollable while removing the browser's side gutter.
+  useEffect(() => {
+    const root = document.documentElement;
+    if (activeTab === 'digital-market') {
+      root.classList.add('marketplace-scrollbar-hidden');
+    } else {
+      root.classList.remove('marketplace-scrollbar-hidden');
+    }
+    return () => root.classList.remove('marketplace-scrollbar-hidden');
+  }, [activeTab]);
+
   // Forward only direct merchant-only accounts to their digital onboarding or registered store
   useEffect(() => {
     const isDedicatedMerchantAccount = user?.role === 'merchant' && (user as any)?.isDigitalMarketOnly === true;
@@ -153,6 +165,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
   const [orderMeetupLocation, setOrderMeetupLocation] = useState<string>('KNUST Main Library Car Park');
   const [orderMeetupLat, setOrderMeetupLat] = useState<number | null>(6.6745);
   const [orderMeetupLng, setOrderMeetupLng] = useState<number | null>(-1.5716);
+  const [serviceLocationOption, setServiceLocationOption] = useState<'seller-location' | 'buyer-location'>('buyer-location');
   const [showMeetupMapModal, setShowMeetupMapModal] = useState<boolean>(false);
   const [viewingOrderMap, setViewingOrderMap] = useState<DigitalMarketOrder | null>(null);
   const [confirmingLocationId, setConfirmingLocationId] = useState<string | null>(null);
@@ -2224,7 +2237,8 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
         meetingLocation: orderMeetupLocation,
         meetingLatitude: orderMeetupLat,
         meetingLongitude: orderMeetupLng,
-        buyerId: currentUser?.id || user?.id || ''
+        buyerId: currentUser?.id || user?.id || '',
+        serviceLocationOption
       };
 
       const res = await apiFetch('/api/digital-market/orders', {
@@ -2570,7 +2584,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
 
          {/* MODALS */}
          {showClaimModal && (
-           <div className="fixed inset-0 z-[100] bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-4">
+           <DashboardOverlay className="fixed inset-0 bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-4">
              <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-2xl border border-blue-200 space-y-5">
                <div className="flex items-start justify-between gap-3 pb-3 border-b border-blue-100">
                  <div className="flex items-start gap-3">
@@ -2646,12 +2660,12 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                  )}
                </div>
              </div>
-           </div>
+           </DashboardOverlay>
          )}
 
          {/* SIGN OUT CONFIRMATION MODAL */}
          {showSignoutConfirmModal && (
-           <div className="fixed inset-0 z-[100] bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-4">
+           <DashboardOverlay className="fixed inset-0 bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-4">
              <div className="bg-white rounded-3xl max-w-sm w-full p-6 text-center space-y-5 border border-slate-100 shadow-2xl">
                <div className="w-16 h-16 rounded-2xl bg-amber-50 border border-amber-200/60 flex items-center justify-center shadow-xs mx-auto">
                  <PineLogo size={36} hideText={true} />
@@ -2683,7 +2697,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                  </button>
                </div>
              </div>
-           </div>
+           </DashboardOverlay>
          )}
       </div>
     );
@@ -2886,7 +2900,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
 
 
       {/* MAIN CONTENT AREA WITH PERSISTENT PINEVELA GIANT WATERMARK */}
-      <main ref={mainScrollRef} className={`user-dashboard-content flex-1 p-6 pb-28 lg:px-10 lg:pb-10 space-y-8 overflow-y-auto h-full relative z-10 ${activeTab === 'digital-market' ? 'hide-scrollbar' : ''} ${isSidebarHidden ? 'lg:pt-24 lg:w-[calc(100vw-22rem)] lg:max-w-[calc(100vw-22rem)] lg:mx-auto' : 'lg:pt-10'}`}>
+      <main ref={mainScrollRef} className={`user-dashboard-content hide-scrollbar flex-1 p-6 pb-28 lg:px-10 lg:pb-10 space-y-8 overflow-y-auto h-full relative z-10 ${isSidebarHidden ? 'lg:pt-24 lg:w-[calc(100vw-22rem)] lg:max-w-[calc(100vw-22rem)] lg:mx-auto' : 'lg:pt-10'}`}>
 
         {/* TAB 0: HOME TAB (Residents View, Staff View & Gateways) */}
         {activeTab === 'home' && (
@@ -3410,7 +3424,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
 
               {/* Staff Reviews Modal */}
               {selectedStaffForReviews && (
-                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
+                <DashboardOverlay className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
                   <div className="bg-white rounded-3xl p-6 max-w-lg w-full shadow-2xl border border-amber-200 space-y-4 max-h-[85vh] overflow-y-auto">
                     <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                       <div className="flex items-center gap-2.5">
@@ -3530,12 +3544,12 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                       </div>
                     </form>
                   </div>
-                </div>
+                </DashboardOverlay>
               )}
 
               {/* Job Offer Proposal Modal */}
               {selectedStaffForOffer && (
-                <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4">
+                <DashboardOverlay className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4">
                   <div className="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl border border-slate-200 space-y-6 max-h-[92vh] overflow-y-auto">
                     <div className="flex items-center justify-between pb-4 border-b border-slate-100">
                       <div className="flex items-center gap-3">
@@ -3836,7 +3850,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                       </div>
                     </form>
                   </div>
-                </div>
+                </DashboardOverlay>
               )}
           </div>
         )}
@@ -5277,7 +5291,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
 
         {/* PENDING APPROVAL WARM POPUP */}
         {showPendingModal && (
-          <div className="fixed inset-0 z-[100] bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-4">
+          <DashboardOverlay className="fixed inset-0 bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-4">
             <div className="bg-gradient-to-br from-white via-sky-50 to-indigo-100 rounded-[2rem] max-w-md w-full p-7 text-center space-y-5 shadow-2xl border border-blue-200/80 animate-scaleIn relative overflow-hidden">
               <div className="w-16 h-16 bg-gradient-to-br from-blue-600 to-indigo-800 rounded-2xl flex items-center justify-center mx-auto text-cyan-100 shadow-lg shadow-blue-500/30">
                 <Clock className="w-8 h-8 animate-pulse" />
@@ -5301,12 +5315,12 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                 Understood, I will check back later
               </button>
             </div>
-          </div>
+          </DashboardOverlay>
         )}
 
         {/* STORE SETUP & 50 GHS DUMMY PAYMENT MODAL */}
         {showStoreSetupModal && (
-          <div className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
+          <DashboardOverlay className="fixed inset-0 bg-slate-950/75 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
             <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-7 shadow-2xl border border-slate-200 space-y-5 animate-scaleIn my-8">
               <div className="flex items-center justify-between border-b border-slate-100 pb-3.5">
                 <div className="flex items-center gap-2.5">
@@ -5496,12 +5510,12 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                 </div>
               </form>
             </div>
-          </div>
+          </DashboardOverlay>
         )}
 
         {/* DIGITAL STORE LOGIN MODAL */}
         {showMerchantStoreLoginModal && (
-          <div className="fixed inset-0 z-[100] bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-4">
+          <DashboardOverlay className="fixed inset-0 bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-4">
             <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-slate-200 space-y-6 animate-scaleIn">
               <div className="flex items-center justify-between pb-3 border-b border-slate-100">
                 <div className="flex items-center gap-2.5">
@@ -5588,12 +5602,12 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                 </div>
               </form>
             </div>
-          </div>
+          </DashboardOverlay>
         )}
 
         {/* MULTI-PHASE DIGITAL MARKET STORE ONBOARDING WIZARD MODAL */}
         {storeOnboardingModalOpen && (
-          <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
+          <DashboardOverlay className="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
             <div className="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-10 shadow-2xl border border-blue-200 space-y-8 my-8 animate-scaleIn">
               <div className="flex items-center justify-between pb-6 border-b border-blue-100">
                 <div className="flex items-center gap-3.5">
@@ -5824,12 +5838,12 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                 )}
               </form>
             </div>
-          </div>
+          </DashboardOverlay>
         )}
 
         {/* ADD PRODUCT MODAL */}
         {showAddProductModal && (
-          <div className="fixed inset-0 z-[100] bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-4">
+          <DashboardOverlay className="fixed inset-0 bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-4">
             <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4 animate-scaleIn">
               <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                 <h3 className="text-sm font-black text-slate-900 flex items-center gap-2">
@@ -5922,7 +5936,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                 </div>
               </form>
             </div>
-          </div>
+          </DashboardOverlay>
         )}
 
         {/* BUY / INSPECT / SERVICE PRODUCT MODAL */}
@@ -5936,13 +5950,18 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
           const serviceActionLabel = isSelectedService ? getServiceActionLabel(selectedProductForBuy as any) : 'Request to Buy';
           const displayLoc = (selectedProductForBuy as any).location || (selectedProductForBuy as any).meetingLocation;
           const serviceCallLine = (selectedProductForBuy as any).callLine || selectedProductForBuy.sellerPhone;
+          const serviceSchedule = (selectedProductForBuy as any).isOpen247
+            ? 'Available 24/7'
+            : [(selectedProductForBuy as any).workingDays,
+               [(selectedProductForBuy as any).openingTime, (selectedProductForBuy as any).closingTime].filter(Boolean).join(' – ')
+              ].filter(Boolean).join(' · ');
 
           return (
-            <div className="fixed inset-0 z-[100] bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-2 sm:p-4">
+            <DashboardOverlay className="fixed inset-0 bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-2 sm:p-4">
               <div className="bg-white rounded-3xl max-w-[calc(100vw-1rem)] sm:max-w-lg w-full max-h-[88dvh] sm:max-h-[92vh] overflow-y-auto p-3 sm:p-6 shadow-2xl border border-slate-200 space-y-3 sm:space-y-4 animate-scaleIn">
                 <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                   <div className="flex items-center gap-2 min-w-0 pr-2">
-                    <h3 className="text-base font-black text-slate-900 truncate">{selectedProductForBuy.title}</h3>
+                    <h3 className="text-base font-black text-slate-900 break-words">{selectedProductForBuy.title}</h3>
                     {isSelectedService && (
                       <span className="px-2 py-0.5 bg-gradient-to-r from-blue-700 via-blue-600 to-indigo-700 text-white text-[9px] font-black rounded-md shadow-2xs shrink-0 flex items-center gap-1 border border-blue-400/30">
                         <span className="text-blue-200">PineVela</span>
@@ -6038,11 +6057,14 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                   )}
 
                   {/* Campus Service Details: Location & Call Line */}
-                  {isSelectedService && (displayLoc || serviceCallLine) && (
+                  {isSelectedService && (displayLoc || serviceCallLine || serviceSchedule) && (
                     <div className="p-3 bg-blue-50/70 border border-blue-200/80 rounded-xl space-y-2">
                       <div className="text-[10px] font-black text-blue-900 uppercase tracking-wider flex items-center gap-1">
                         <span>Campus Service Provider Info</span>
                       </div>
+                      {serviceSchedule && (
+                        <p className="text-xs text-slate-700 font-semibold break-words">Hours: {serviceSchedule}</p>
+                      )}
                       {displayLoc && (
                         <div className="flex items-center gap-1.5 text-xs text-slate-700 font-semibold">
                           <MapPin className="w-3.5 h-3.5 text-blue-600 shrink-0" />
@@ -6066,7 +6088,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                     </div>
                   )}
 
-                  <p className="text-[11px] sm:text-xs text-slate-600 leading-relaxed line-clamp-3 sm:line-clamp-none font-medium">
+                  <p className="text-[11px] sm:text-xs text-slate-600 leading-relaxed whitespace-pre-wrap break-words font-medium">
                     {selectedProductForBuy.description || 'No description provided.'}
                   </p>
 
@@ -6143,6 +6165,19 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                         setSelectedProdForOrder(selectedProductForBuy);
                         setOrderQtyInput(1);
                         setBuyerPhoneInput(currentUser?.phone || '');
+                        const isService = Boolean((selectedProductForBuy as any).isService || selectedProductForBuy.category === 'Services' || (selectedProductForBuy as any).serviceCategory);
+                        const serviceMode = (selectedProductForBuy as any).serviceLocationMode || 'flexible';
+                        const useSellerLocation = isService && (serviceMode === 'fixed' || serviceMode === 'hybrid');
+                        setServiceLocationOption(useSellerLocation ? 'seller-location' : 'buyer-location');
+                        if (useSellerLocation) {
+                          setOrderMeetupLocation((selectedProductForBuy as any).location || selectedProductForBuy.meetingLocation || 'Provider service location');
+                          setOrderMeetupLat(Number((selectedProductForBuy as any).lat) || 6.6745);
+                          setOrderMeetupLng(Number((selectedProductForBuy as any).lng) || -1.5716);
+                        } else if (isService) {
+                          setOrderMeetupLocation('');
+                          setOrderMeetupLat(null);
+                          setOrderMeetupLng(null);
+                        }
                         setSelectedProductForBuy(null);
                       }}
                       className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-md cursor-pointer flex items-center gap-1.5"
@@ -6153,7 +6188,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                   </div>
                 </div>
               </div>
-            </div>
+            </DashboardOverlay>
           );
         })()}
 
@@ -6169,9 +6204,11 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
           const activeOrderUnitPrice = (selectedPriceCategory && selectedPriceCategory.price !== undefined)
             ? Number(selectedPriceCategory.price)
             : selectedProdForOrder.price;
+          const serviceLocationMode = isOrderService ? ((selectedProdForOrder as any).serviceLocationMode || 'flexible') : 'flexible';
+          const buyerChoosesLocation = !isOrderService || serviceLocationMode === 'flexible' || (serviceLocationMode === 'hybrid' && serviceLocationOption === 'buyer-location');
 
           return (
-            <div className="fixed inset-0 z-[200] bg-slate-950/75 backdrop-blur-xl flex items-center justify-center p-2 sm:p-4">
+            <DashboardOverlay layer={200} className="fixed inset-0 bg-slate-950/75 backdrop-blur-xl flex items-center justify-center p-2 sm:p-4">
               <div className={`bg-white rounded-3xl w-full p-4 sm:p-6 shadow-2xl border border-slate-200 space-y-4 animate-scaleIn max-h-[calc(100dvh-1rem)] sm:max-h-[90vh] overflow-y-auto overscroll-contain scroll-pb-24 ${
                 isOrderService ? 'max-w-[calc(100vw-1rem)] sm:max-w-2xl lg:max-w-4xl pb-[calc(1.5rem+env(safe-area-inset-bottom))] sm:pb-6' : 'max-w-md'
               }`}>
@@ -6266,10 +6303,19 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                   </div>
 
                   <div className="space-y-2">
+                    {isOrderService && serviceLocationMode === 'hybrid' && (
+                      <div className="rounded-2xl border border-blue-200 bg-blue-50/70 p-3 space-y-2">
+                        <p className="text-xs font-black text-slate-800">Choose how you want this service fulfilled</p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          <button type="button" onClick={() => { setServiceLocationOption('seller-location'); setOrderMeetupLocation((selectedProdForOrder as any).location || selectedProdForOrder.meetingLocation || 'Provider service location'); setOrderMeetupLat(Number((selectedProdForOrder as any).lat) || 6.6745); setOrderMeetupLng(Number((selectedProdForOrder as any).lng) || -1.5716); }} className={`rounded-xl border p-2 text-left text-[11px] font-bold ${serviceLocationOption === 'seller-location' ? 'border-blue-600 bg-white text-blue-900' : 'border-blue-100 bg-white/60 text-slate-600'}`}>Meet at provider's fixed location</button>
+                          <button type="button" onClick={() => setServiceLocationOption('buyer-location')} className={`rounded-xl border p-2 text-left text-[11px] font-bold ${serviceLocationOption === 'buyer-location' ? 'border-blue-600 bg-white text-blue-900' : 'border-blue-100 bg-white/60 text-slate-600'}`}>Request delivery / choose my location</button>
+                        </div>
+                      </div>
+                    )}
                     <div className="flex items-center justify-between">
                       <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
                         <MapPin className="w-3.5 h-3.5 text-blue-600" />
-                        <span>{isOrderService ? 'Service / Meetup Location on Campus' : 'Proposed Campus Meetup Location'}</span>
+                        <span>{!buyerChoosesLocation ? 'Provider\'s Fixed Service Location' : (isOrderService ? 'Your Service / Delivery Location' : 'Proposed Campus Meetup Location')}</span>
                       </label>
                       <button
                         type="button"
@@ -6277,13 +6323,14 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                         className="px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg text-[10px] font-bold transition-all flex items-center gap-1 cursor-pointer shadow-2xs"
                       >
                         <Compass className="w-3 h-3 text-blue-600" />
-                        <span>{orderMeetupLat ? '📍 Update Map Coordinates' : '🗺️ Select on Campus Map'}</span>
+                        <span>{buyerChoosesLocation ? (orderMeetupLat ? '📍 Update Map Coordinates' : '🗺️ Select on Campus Map') : '🗺️ View on Map'}</span>
                       </button>
                     </div>
 
                     <input
                       type="text"
-                      required
+                      required={buyerChoosesLocation}
+                      readOnly={!buyerChoosesLocation}
                       value={orderMeetupLocation}
                       onChange={e => setOrderMeetupLocation(e.target.value)}
                       placeholder="e.g. Unity Hall Block B, Room 14 / KNUST Commercial Area"
@@ -6296,16 +6343,16 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                           <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
                           <span>Exact GPS Coordinates: <span className="font-mono">{orderMeetupLat.toFixed(4)}, {orderMeetupLng.toFixed(4)}</span></span>
                         </div>
-                        <button
+                        {buyerChoosesLocation && <button
                           type="button"
                           onClick={() => setShowMeetupMapModal(true)}
                           className="text-[10px] text-emerald-700 underline font-bold hover:text-emerald-900 cursor-pointer"
                         >
                           Adjust Pin
-                        </button>
+                        </button>}
                       </div>
                     ) : (
-                      <p className="text-[10px] text-slate-400 font-medium">Click <strong>"🗺️ Select on Campus Map"</strong> to pin the exact place and transmit coordinates to the provider.</p>
+                      <p className="text-[10px] text-slate-400 font-medium">{buyerChoosesLocation ? <>Click <strong>"🗺️ Select on Campus Map"</strong> to pin the exact place and transmit coordinates to the provider.</> : 'This provider requires bookings at their pinned service location. You can view it on the map.'}</p>
                     )}
                   </div>
 
@@ -6341,19 +6388,20 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                   </div>
                 </form>
               </div>
-            </div>
+            </DashboardOverlay>
           );
         })()}
 
         {/* CAMPUS MEETUP MAP PICKER MODAL */}
         {showMeetupMapModal && (
-          <div className="fixed inset-0 z-[70] bg-slate-950/75 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 animate-fadeIn">
+          <DashboardOverlay layer={300} className="fixed inset-0 bg-slate-950/75 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 animate-fadeIn">
             <div className="max-w-2xl w-full">
               <CampusMeetupMapPicker
                 latitude={orderMeetupLat || 6.6745}
                 longitude={orderMeetupLng || -1.5716}
                 initialLocationName={orderMeetupLocation}
                 preferredUniversity={selectedProdForOrder?.sellerUniversity || currentUser?.hostelName || 'KNUST'}
+                readOnly={Boolean(selectedProdForOrder && ((selectedProdForOrder as any).serviceLocationMode === 'fixed' || ((selectedProdForOrder as any).serviceLocationMode === 'hybrid' && serviceLocationOption === 'seller-location')))}
                 onLocationSelect={(data) => {
                   setOrderMeetupLocation(data.locationName);
                   setOrderMeetupLat(data.latitude);
@@ -6364,12 +6412,12 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                 onClose={() => setShowMeetupMapModal(false)}
               />
             </div>
-          </div>
+          </DashboardOverlay>
         )}
 
         {/* VIEW ORDER PINNED MEETUP SPOT MODAL */}
         {viewingOrderMap && (
-          <div className="fixed inset-0 z-[70] bg-slate-950/75 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 animate-fadeIn">
+          <DashboardOverlay className="fixed inset-0 bg-slate-950/75 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 animate-fadeIn">
             <div className="max-w-2xl w-full">
               <CampusMeetupMapPicker
                 latitude={viewingOrderMap.meetingLatitude || 6.6745}
@@ -6380,12 +6428,12 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                 onClose={() => setViewingOrderMap(null)}
               />
             </div>
-          </div>
+          </DashboardOverlay>
         )}
 
         {/* VERIFY DELIVERY / BUYER PIN MODAL */}
         {verifyingOrderTarget && (
-          <div className="fixed inset-0 z-[70] bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
+          <DashboardOverlay className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
             <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-slate-100 space-y-6 animate-scaleIn">
               <div className="flex items-center justify-between pb-3 border-b border-slate-100">
                 <div className="flex items-center gap-2.5">
@@ -6468,7 +6516,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                 </div>
               </form>
             </div>
-          </div>
+          </DashboardOverlay>
         )}
 
         {/* TAB 2: OPTIONS TAB */}
@@ -6717,7 +6765,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
       {/* MODAL 1: REPORT MAINTENANCE ISSUE (WITH PICTURE PROOF & GLASSY FINISH) */}
       {/* ========================================================================= */}
       {showNewIssueModal && (
-        <div className="fixed inset-0 z-[100] bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-4">
+        <DashboardOverlay className="fixed inset-0 bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-4">
           <div className="bg-white/95 backdrop-blur-2xl rounded-3xl max-w-xl w-full p-6 sm:p-7 shadow-2xl border border-sky-200/80 space-y-5 animate-in fade-in zoom-in-95 duration-150 max-h-[90vh] overflow-y-auto">
             
             {/* Header */}
@@ -6930,14 +6978,14 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
               </div>
             </form>
           </div>
-        </div>
+        </DashboardOverlay>
       )}
 
       {/* ========================================================================= */}
       {/* MODAL 2: STUDENT CONFIRMATION OF COMPLETED TASK */}
       {/* ========================================================================= */}
       {selectedIssueForConfirm && (
-        <div className="fixed inset-0 z-[100] bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-4">
+        <DashboardOverlay className="fixed inset-0 bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-4">
           <div className="bg-white/95 backdrop-blur-2xl rounded-3xl max-w-lg w-full p-6 sm:p-7 shadow-2xl border border-emerald-200 space-y-5 animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-start justify-between gap-3 pb-3 border-b border-emerald-100">
               <div className="flex items-start gap-3">
@@ -7020,14 +7068,14 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
               </button>
             </div>
           </div>
-        </div>
+        </DashboardOverlay>
       )}
 
       {/* ========================================================================= */}
       {/* MODAL 2.5: WELCOME POPUP */}
       {/* ========================================================================= */}
       {showWelcomePopup && (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4">
+        <DashboardOverlay className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl border border-blue-100 space-y-6 animate-in fade-in zoom-in-95 duration-200">
             <div className="flex items-start justify-between gap-3">
               <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 text-white flex items-center justify-center shrink-0 shadow-lg shadow-blue-600/30">
@@ -7063,14 +7111,14 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
               </button>
             </div>
           </div>
-        </div>
+        </DashboardOverlay>
       )}
 
       {/* ========================================================================= */}
       {/* MODAL 3: LINK / CLAIM DIGITAL ROOM KEY */}
       {/* ========================================================================= */}
       {showClaimModal && (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+        <DashboardOverlay className="fixed inset-0 bg-slate-950/70 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
           <div className="bg-white/95 backdrop-blur-2xl rounded-3xl max-w-lg w-full p-5 sm:p-7 shadow-2xl border border-blue-200 space-y-5 animate-in fade-in zoom-in-95 duration-150">
             
             {/* Modal Header */}
@@ -7465,14 +7513,14 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
             )}
 
           </div>
-        </div>
+        </DashboardOverlay>
       )}
 
       {/* ========================================================================= */}
       {/* MODAL: RESET REGISTERED ACCOUNT PASSWORD */}
       {/* ========================================================================= */}
       {showResetPasswordModal && (
-        <div className="fixed inset-0 z-[100] bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-4 animate-in fade-in duration-150">
+        <DashboardOverlay className="fixed inset-0 bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-4 animate-in fade-in duration-150">
           <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-2xl border border-slate-200 space-y-5">
             <div className="flex items-start justify-between gap-3 pb-3 border-b border-slate-100">
               <div className="flex items-start gap-3">
@@ -7560,14 +7608,14 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
               </div>
             </form>
           </div>
-        </div>
+        </DashboardOverlay>
       )}
 
       {/* ========================================================================= */}
       {/* MODAL: DELETE REGISTERED ACCOUNT (ALLOWS RE-REGISTRATION) */}
       {/* ========================================================================= */}
       {showDeleteAccountModal && (
-        <div className="fixed inset-0 z-[100] bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-4 animate-in fade-in duration-150">
+        <DashboardOverlay className="fixed inset-0 bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-4 animate-in fade-in duration-150">
           <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-2xl border border-rose-200 space-y-5">
             <div className="flex items-start justify-between gap-3 pb-3 border-b border-rose-100">
               <div className="flex items-start gap-3">
@@ -7687,15 +7735,15 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
               </div>
             </form>
           </div>
-        </div>
+        </DashboardOverlay>
       )}
 
       {/* ========================================================================= */}
       {/* MODAL 4: IMAGE ZOOM VIEWER */}
       {/* ========================================================================= */}
       {zoomedImage && (
-        <div 
-          className="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4 cursor-zoom-out"
+        <DashboardOverlay
+          className="fixed inset-0 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4 cursor-zoom-out"
           onClick={() => setZoomedImage(null)}
         >
           <div className="relative max-w-4xl max-h-[90vh] overflow-hidden rounded-2xl shadow-2xl">
@@ -7707,13 +7755,13 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
               <X className="w-5 h-5" />
             </button>
           </div>
-        </div>
+        </DashboardOverlay>
       )}
       {/* ========================================================================= */}
       {/* MODAL 5: SIGN OUT CONFIRMATION MODAL */}
       {/* ========================================================================= */}
       {showSignoutConfirmModal && (
-        <div className="fixed inset-0 z-[100] bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-4">
+        <DashboardOverlay className="fixed inset-0 bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-sm w-full p-6 text-center space-y-5 border border-slate-100 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
             <div className="w-16 h-16 rounded-2xl bg-amber-50 border border-amber-200/60 flex items-center justify-center shadow-xs mx-auto">
               <PineLogo size={36} hideText={true} />
@@ -7747,13 +7795,13 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
               </button>
             </div>
           </div>
-        </div>
+        </DashboardOverlay>
       )}
       {/* ========================================================================= */}
       {/* MODAL 6: HOSTEL ACCOMMODATION DETAILS MODAL */}
       {/* ========================================================================= */}
       {viewingHostelModal && (
-        <div className="fixed inset-0 z-[100] bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-4">
+        <DashboardOverlay className="fixed inset-0 bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-xl w-full max-h-[90vh] overflow-y-auto border border-slate-100 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
             
             {/* Gallery header */}
@@ -7886,12 +7934,12 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
               </div>
             </div>
           </div>
-        </div>
+        </DashboardOverlay>
       )}
 
       {/* ADD ADDITIONAL ROOM MODAL */}
       {showAddRoomModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
+        <DashboardOverlay className="fixed inset-0 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
           <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-lg w-full shadow-2xl border border-slate-200 space-y-5 animate-scaleUp">
             <div className="flex items-center justify-between border-b border-slate-100 pb-4">
               <div className="flex items-center gap-3">
@@ -8049,12 +8097,12 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
               </div>
             </form>
           </div>
-        </div>
+        </DashboardOverlay>
       )}
 
       {/* DELETE / UNLINK ROOM CONFIRMATION MODAL */}
       {deletingRoomTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
+        <DashboardOverlay className="fixed inset-0 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
           <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl border border-slate-200 space-y-5 animate-scaleUp">
             <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
               <div className="p-3 rounded-2xl bg-rose-100 text-rose-700 font-bold">
@@ -8180,12 +8228,12 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
               </button>
             </div>
           </div>
-        </div>
+        </DashboardOverlay>
       )}
 
       {/* PINEVELA FULL-SCREEN STUDENT MERCHANT ONBOARDING WIZARD (WHITE FROSTY THEME & ROOT Z-INDEX) */}
       {showDMRegModal && (
-        <div className="fixed inset-0 z-[99999] h-full w-full bg-slate-50/95 backdrop-blur-md flex flex-col items-center justify-start p-3 sm:p-6 overflow-hidden font-sans text-slate-800 animate-fadeIn">
+        <DashboardOverlay layer={99999} className="fixed inset-0 h-full w-full bg-slate-50/95 backdrop-blur-md flex flex-col items-center justify-start p-3 sm:p-6 overflow-hidden font-sans text-slate-800 animate-fadeIn">
           
           {/* Ambient background blur shapes */}
           <div className="absolute top-0 right-0 w-96 h-96 bg-blue-100/60 rounded-full blur-3xl opacity-30 -z-10 pointer-events-none fixed" />
@@ -8621,12 +8669,12 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
             </div>
           </div>
         </div>
-      </div>
+      </DashboardOverlay>
     )}
 
     {/* STORE RATING & REVIEW MODAL FOR BUYERS */}
     {ratingOrderTarget && (
-      <div className="fixed inset-0 z-[100] bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-4">
+      <DashboardOverlay className="fixed inset-0 bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-4">
         <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4 animate-scaleIn">
           <div className="flex items-center justify-between border-b border-slate-100 pb-3">
             <div>
@@ -8725,7 +8773,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
             </div>
           </div>
         </div>
-      </div>
+      </DashboardOverlay>
     )}
     </div>
   );
