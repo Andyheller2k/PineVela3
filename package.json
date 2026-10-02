@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit",
-    "test:security": "tsx --test tests/accountSecurity.test.ts tests/accountIsolation.integration.test.ts"
+    "test:security": "tsx --test tests/accountSecurity.test.ts tests/accountIsolation.integration.test.ts tests/credentialExposure.test.ts",
+    "check:private-data": "node scripts/check-private-data.cjs"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",

@@ -6,3 +6,9 @@ coverage/
 *.log
 .env*
 !.env.example
+
+# Private runtime records, uploads and local incident-recovery artifacts.
+/data/
+/uploads/
+/.security/
+**/pinevela_store.json*

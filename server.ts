@@ -471,36 +471,8 @@ let onboardingPayments: any[] = [
   }
 ];
 
-let verificationTeams: any[] = [
-  {
-    id: 'vt-101',
-    officerId: 'PV-INSP-2026-01',
-    fullName: 'Samuel Mensah',
-    email: 'inspector.mensah@pinevela.com',
-    password: 'inspector123',
-    phone: '+233 24 555 7890',
-    assignedZone: 'Greater Accra - Legon, Madina & East Legon Zone',
-    status: 'active',
-    role: 'verification_team',
-    token: createSessionToken('vt'),
-    createdAt: new Date(Date.now() - 86400000 * 20).toISOString(),
-    totalInspectionsCompleted: 14
-  },
-  {
-    id: 'vt-102',
-    officerId: 'PV-INSP-2026-02',
-    fullName: 'Grace Addo-Quaye',
-    email: 'inspector.grace@pinevela.com',
-    password: 'inspector123',
-    phone: '+233 20 889 1234',
-    assignedZone: 'Kumasi - KNUST & Ayeduase Zone',
-    status: 'active',
-    role: 'verification_team',
-    token: createSessionToken('vt'),
-    createdAt: new Date(Date.now() - 86400000 * 15).toISOString(),
-    totalInspectionsCompleted: 9
-  }
-];
+// Officers must be registered explicitly; never recreate accounts with source-known passwords.
+let verificationTeams: any[] = [];
 
 const DEFAULT_INSPECTIONS: any[] = [
   {
@@ -856,6 +828,14 @@ const LEAKED_DEMO_TOKENS = new Set([
 ]);
 for (const entry of MOCK_USERS) {
   if (!entry) continue;
+  if (entry.requiresPasswordReset || entry.user?.requiresPasswordReset || String(entry.password || entry.user?.password || '').startsWith('!LOCKED_')) {
+    for (const target of [entry, entry.user].filter(Boolean)) {
+      delete target.token;
+      delete target.merchantToken;
+      delete target.sessionToken;
+    }
+    continue;
+  }
   if (entry.password && !/^[a-f0-9]{64}$/i.test(entry.password) && !entry.password.startsWith('!LOCKED_') && !entry.password.startsWith('scrypt-sha256$')) {
     entry.password = hashPasswordSha256(entry.password);
   }
@@ -883,6 +863,10 @@ for (const entry of MOCK_USERS) {
   }
 }
 for (const officer of verificationTeams) {
+  if (officer.requiresPasswordReset || String(officer.password || '').startsWith('!LOCKED_')) {
+    delete officer.token;
+    continue;
+  }
   if (officer?.password && !/^[a-f0-9]{64}$/i.test(officer.password) && !officer.password.startsWith('scrypt-sha256$')) {
     officer.password = hashPasswordSha256(officer.password);
   }

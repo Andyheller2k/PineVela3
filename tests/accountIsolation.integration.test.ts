@@ -29,6 +29,7 @@ test('account isolation, password reuse, release, reshuffle and restart persiste
   const room = (id: string, key: string, assigned = false, hostelId = 'hostel') => ({ id, hostelId, hostelName: 'Synthetic Residence', blockName: 'Block A', roomNumber: id, roomKey: key, isAssigned: assigned, status: assigned ? 'Occupied' : 'Available', ...(assigned ? { assignedStudentEmail: studentEmail, parentUserId: 'primary', parentUserEmail: 'primary@example.test' } : {}) });
   const primary = { id: 'primary', email: 'primary@example.test', role: 'user', name: 'Synthetic Primary', password: hashCredential(primaryPassword), token: 'primary-fixture', registeredAccounts: { residentAccount: { roomKey: 'SYN-AA-100001' }, residentRooms: [{ roomKey: 'SYN-AA-100001' }] } };
   const fixture = {
+    credentialExposureVersion: 1,
     accountSecurityVersion: 0,
     users: [primary,
       { id: 'resident', role: 'merchant', isDigitalMarketOnly: true, isApprovedMerchant: true, email: studentEmail, name: 'Synthetic Resident', roomKey: 'SYN-AA-100001', hostelId: 'hostel', parentUserId: primary.id, parentUserEmail: primary.email, password: hashCredential(roomPassword), token: 'mixed-old-session' },

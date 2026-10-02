@@ -1,6 +1,8 @@
+import 'dotenv/config';
 import fs from 'fs';
 import path from 'path';
 import { accountKey, protectStoredCredentials } from './accountSecurity.js';
+import { CREDENTIAL_EXPOSURE_VERSION, revokeExposedCredentials } from './credentialExposure.js';
 
 export interface PersistentStore {
   hostels: any[];
@@ -32,6 +34,8 @@ export interface PersistentStore {
   roomKeys?: any[];
   retiredRoomKeys?: string[];
   accountSecurityVersion?: number;
+  credentialExposureVersion?: number;
+  credentialsRevokedAt?: string;
   keyDispatches?: any[];
   studentMessages?: any[];
   platformSettings: {
@@ -52,12 +56,12 @@ export interface PersistentStore {
   verificationInspections?: any[];
 }
 
-const DATA_DIR = path.join(process.cwd(), 'data');
+const DATA_DIR = path.resolve(process.env.PINEVELA_DATA_DIR || path.join(process.cwd(), 'data'));
 const STORE_PATH = path.join(DATA_DIR, 'pinevela_store.json');
 
 function ensureDataDir(): void {
   if (!fs.existsSync(DATA_DIR)) {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
+    fs.mkdirSync(DATA_DIR, { recursive: true, mode: 0o700 });
   }
 }
 
@@ -95,6 +99,7 @@ export function loadPersistentStore(defaultStore: PersistentStore): PersistentSt
 
   if (!fs.existsSync(STORE_PATH)) {
     try {
+      defaultStore.credentialExposureVersion = CREDENTIAL_EXPOSURE_VERSION;
       savePersistentStore(defaultStore);
       console.log('[PineVela Database] Initialized local persistent store at:', STORE_PATH);
       return defaultStore;
@@ -104,9 +109,17 @@ export function loadPersistentStore(defaultStore: PersistentStore): PersistentSt
     }
   }
 
+  let containingCredentials = false;
   try {
     const raw = fs.readFileSync(STORE_PATH, 'utf8');
     const parsed = JSON.parse(raw);
+    containingCredentials = true;
+    const containment = revokeExposedCredentials(parsed);
+    if (containment.changed) {
+      savePersistentStore(parsed);
+      console.log('[PineVela Security] Exposed sessions revoked; existing credentials require recovery.');
+    }
+    containingCredentials = false;
     
     const result: PersistentStore = {
       hostels: deduplicateById(Array.isArray(parsed.hostels) ? parsed.hostels : defaultStore.hostels),
@@ -136,6 +149,8 @@ export function loadPersistentStore(defaultStore: PersistentStore): PersistentSt
       roomKeys: deduplicateById(Array.isArray(parsed.roomKeys) ? parsed.roomKeys : (defaultStore.roomKeys || [])),
       retiredRoomKeys: Array.isArray(parsed.retiredRoomKeys) ? parsed.retiredRoomKeys : [],
       accountSecurityVersion: parsed.accountSecurityVersion,
+      credentialExposureVersion: parsed.credentialExposureVersion,
+      credentialsRevokedAt: parsed.credentialsRevokedAt,
       keyDispatches: Array.isArray(parsed.keyDispatches) ? parsed.keyDispatches : [],
       studentMessages: deduplicateById(Array.isArray(parsed.studentMessages) ? parsed.studentMessages : (defaultStore.studentMessages || [])),
       platformSettings: parsed.platformSettings || defaultStore.platformSettings,
@@ -153,6 +168,7 @@ export function loadPersistentStore(defaultStore: PersistentStore): PersistentSt
     console.log(`[PineVela Database] Loaded persistent store: ${result.hostels.length} hostels, ${result.users.length} users, ${result.hostelVerifications.length} verifications`);
     return result;
   } catch (err) {
+    if (containingCredentials) throw new Error('Credential containment could not be persisted. Refusing to load exposed sessions.', { cause: err });
     console.error('[PineVela Database] Error reading persistent store, falling back to defaults:', err);
     return defaultStore;
   }
@@ -167,7 +183,7 @@ export function savePersistentStore(store: PersistentStore): void {
   const tmpPath = `${STORE_PATH}.tmp.${Date.now()}`;
   try {
     const jsonStr = JSON.stringify(store, null, 2);
-    fs.writeFileSync(tmpPath, jsonStr, 'utf8');
+    fs.writeFileSync(tmpPath, jsonStr, { encoding: 'utf8', mode: 0o600, flag: 'wx' });
     fs.renameSync(tmpPath, STORE_PATH);
   } catch (err) {
     console.error('[PineVela Database] Failed to write persistent store:', err);
