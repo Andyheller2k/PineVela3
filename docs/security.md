@@ -18,7 +18,7 @@ See [S22/S26 verification](audits/S22-S26-remediation-2026-10-03.md).
 ## Attempt and Resource Budgets
 
 API/upload traffic is bounded before parsing. Photo uploads require an administrator or
-approved manager before accepting their large JSON body. General bodies are 4MB; login,
+approved manager for housing photos, or a merchant for marketplace photos, before accepting their large JSON body. General bodies are 4MB; login,
 password and simple signup bodies are 256KB; authenticated photo JSON is 28MB. Compressed
 bodies and excessive nesting are rejected. Login variants share durable identity/IP budgets
 (20/account identity, 30/IP per 15 minutes); successful attempts also count. Valid authenticated
@@ -44,6 +44,13 @@ It accepts only explicitly declared JPEG, PNG or WebP, strict base64, and matchi
 signatures. A full pixel decode and lossless PNG encoding strip original metadata and
 appended bytes; SVG and document formats never reach the decoder. Limits are 20MB input,
 25 million pixels, 16,384 pixels per dimension, 100MB output and five seconds of processing.
+`POST /api/storage/upload-market-image` applies the same decoder, pre-auth size limits,
+worker limits, persistent daily quotas, disk capacity and safe serving policy to active seller
+uploads. Marketplace photos are resized to at most 1600 pixels per side. New extra and
+price-option images must reference the publishing account's saved uploads; another seller's
+upload, arbitrary URL or inline active content is rejected. Image ownership records persist
+in `marketMedia` during the JSON migration period.
+
 Generated UUID `.png` names replace all submitted filenames. Failed uploads stop property
 registration rather than silently using an unvalidated preview.
 
@@ -79,6 +86,10 @@ single-process JSON backend. PostgreSQL migration needs a unique order constrain
 transactional upserts and RLS preserving the same completed-purchase/ownership policy.
 
 ## Marketplace Order Prices and Quantities
+
+Own-store purchase/review rejection uses persisted store, application and linked merchant
+relationships. Client-supplied identity is never proof of ownership. Notification recipients
+for new marketplace messages, reviews and status changes are exact accounts or seller stores.
 
 Order prices, totals and category snapshots come from the stored product, never a browser
 price. Optional category selectors must identify exactly one stored category; an ID/name
@@ -308,3 +319,38 @@ Generic detail updates cannot write workflow fields. Resident sign-off requires 
 manager closure of resident reports requires that sign-off. Concurrent confirmation must not
 create duplicate repair reviews. Administrator management access does not permit staff or
 resident impersonation.
+
+
+## Meeting and Notification Record Access
+
+Meeting list, update and delete share one record policy. Managers access meetings for
+currently assigned residences; explicit residence IDs take precedence over stored manager
+names or contact emails. Direct manager-only meetings require their exact manager ID or
+an unambiguous legacy manager email. Meetings without a resolvable manager or residence
+are excluded from manager lists; administrators can manage them.
+Active managed staff retain access to meetings for their residence or their own requests;
+requesters can list their own meetings. Route role restrictions still apply to mutations.
+
+Notification list, individual read and bulk read use the same recipient policy. Explicit
+account IDs, target roles and seller store IDs take precedence over contact aliases.
+Legacy staff roster IDs resolve through the current active roster/account relationship.
+Email-only legacy recipients must resolve unambiguously within the specified role;
+linked accounts do not inherit alerts from another role. A notification is not an
+administrator-accessible private record merely because the actor is an administrator.
+
+Read acknowledgements are persisted per `(role, account ID)` in `readBy`, including for
+shared administrator alerts. API responses omit `readBy` and expose only the current
+account's `read`/`isRead`. Historical global read flags are preserved. Browser read/toast
+caches are scoped by account; UI read state follows successful server acknowledgement.
+
+
+## JSON Storage Safety During Migration
+
+Corrupt/unreadable existing databases fail startup; default initialization is only for a
+new database with no recovery artifacts. Database/backup errors must not log record contents.
+A kernel writer lease, digest fencing, structural validation and a configurable size bound
+protect the single local JSON snapshot. Offline tools take the same lease. Vite must deny
+the real data directory, including configured custom directories and recovery artifacts.
+Backup restoration is offline, preserves the original, and revokes restored sessions and
+pending challenges rather than silently reviving old credentials. PostgreSQL transactions
+and recipient/ownership RLS remain required for future multi-worker deployments.

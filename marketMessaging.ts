@@ -106,7 +106,7 @@ export function installMarketMessaging(app: any, requireAuth: any, getStore: () 
     const merchant = (store.users || []).find((u: any) => accountRole(u) === 'merchant' && normalizeEmail(accountData(u).email) === normalizeEmail(seller.studentEmail));
     const targetAccountId = actor.role === 'merchant' ? buyer.id : merchant ? accountId(merchant) : `merchant:${application?.id || seller.id}`;
     store.notifications ||= [];
-    store.notifications.unshift({ id: crypto.randomUUID(), marketChat: true, targetRole: actor.role === 'merchant' ? 'user' : 'merchant', targetAccountId,
+    store.notifications.unshift({ id: crypto.randomUUID(), marketChat: true, messageId: message.id, buyerId: buyer.id, sellerStoreId: seller.id, targetRole: actor.role === 'merchant' ? 'user' : 'merchant', targetAccountId,
       userId: targetAccountId, recipientEmail: message.recipientEmail, title: 'New marketplace message',
       message: `${actor.name}: ${message.content.slice(0, 100)}`, type: 'info', date: message.createdAt, read: false });
     syncStore(); return res.status(201).json({ success: true, message });

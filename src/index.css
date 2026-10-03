@@ -238,3 +238,9 @@ html.marketplace-scrollbar-hidden::-webkit-scrollbar {
     margin-right: auto;
   }
 }
+
+/* Dashboard overlays supply their own frosted backdrop; native dialogs provide inertness. */
+@layer base {
+  dialog[data-dashboard-overlay] { padding: 0; color: inherit; }
+}
+dialog[data-dashboard-overlay]::backdrop { background: transparent; }

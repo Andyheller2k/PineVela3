@@ -1,5 +1,5 @@
 import { sessionFetch as fetch } from './lib/session';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { HashRouter, Routes, Route, Navigate, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { QueryClientProvider, useQuery } from '@tanstack/react-query';
 import { queryClient, invalidateAllQueries, setupRealtimeQuerySync } from './lib/queryClient';
@@ -12,23 +12,41 @@ import { motion, AnimatePresence } from 'motion/react';
 
 // Component imports
 import Page1Public from './components/Page1Public';
-import PageUnifiedLogin from './components/PageUnifiedLogin';
-import PageManagerOnboarding from './components/PageManagerOnboarding';
-import PageAdminDashboard from './components/PageAdminDashboard';
-import PageManagerDashboard from './components/PageManagerDashboard';
-import PageStaffDashboard from './components/PageStaffDashboard';
-import PageUserDashboard from './components/PageUserDashboard';
-import PageResidentDashboard from './components/PageResidentDashboard';
-import PageDigitalMarket from './components/PageDigitalMarket';
-import PageDigitalMarketOnboard from './components/PageDigitalMarketOnboard';
-import PageVerificationTeamPortal from './components/PageVerificationTeamPortal';
+const PageUnifiedLogin = lazy(() => import('./components/PageUnifiedLogin'));
+const PageManagerOnboarding = lazy(() => import('./components/PageManagerOnboarding'));
+const PageAdminDashboard = lazy(() => import('./components/PageAdminDashboard'));
+const PageManagerDashboard = lazy(() => import('./components/PageManagerDashboard'));
+const PageStaffDashboard = lazy(() => import('./components/PageStaffDashboard'));
+const PageUserDashboard = lazy(() => import('./components/PageUserDashboard'));
+const PageResidentDashboard = lazy(() => import('./components/PageResidentDashboard'));
+const PageDigitalMarket = lazy(() => import('./components/PageDigitalMarket'));
+const PageDigitalMarketOnboard = lazy(() => import('./components/PageDigitalMarketOnboard'));
+const PageVerificationTeamPortal = lazy(() => import('./components/PageVerificationTeamPortal'));
 
 // Elegant wrapper for transition animations
+function RouteLoading() {
+  return <div role="status" aria-live="polite" className="flex min-h-screen w-full items-center justify-center bg-slate-50 text-blue-900">
+    <span className="font-semibold">Loading PineVela…</span>
+  </div>;
+}
+
+class RouteLoadBoundary extends React.Component<{ children: React.ReactNode }, { failed: boolean }> {
+  state = { failed: false };
+  static getDerivedStateFromError() { return { failed: true }; }
+  render() {
+    if (this.state.failed) return <div role="alert" className="flex min-h-screen flex-col items-center justify-center gap-4 bg-slate-50 p-6 text-slate-900">
+      <p>This page could not load. Check your connection and try again.</p>
+      <button type="button" onClick={() => window.location.reload()} className="rounded-xl bg-blue-600 px-5 py-3 font-semibold text-white">Reload page</button>
+    </div>;
+    return this.props.children;
+  }
+}
+
 function PageWrapper({ children, noAnimation = false }: { children: React.ReactNode; noAnimation?: boolean }) {
   if (noAnimation) {
     return (
       <div className="flex-1 flex flex-col w-full min-h-screen">
-        {children}
+        <RouteLoadBoundary><Suspense fallback={<RouteLoading />}>{children}</Suspense></RouteLoadBoundary>
       </div>
     );
   }
@@ -40,7 +58,7 @@ function PageWrapper({ children, noAnimation = false }: { children: React.ReactN
       transition={{ duration: 0.12, ease: 'easeOut' }}
       className="flex-1 flex flex-col w-full min-h-screen"
     >
-      {children}
+      <RouteLoadBoundary><Suspense fallback={<RouteLoading />}>{children}</Suspense></RouteLoadBoundary>
     </motion.div>
   );
 }

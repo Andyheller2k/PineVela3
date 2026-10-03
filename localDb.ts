@@ -27,6 +27,11 @@ export function getStore(defaults?: Partial<PersistentStore> | any): PersistentS
       notifications: [], boardRequests: [],
       staff: [],
       staffAuditLogs: [],
+      ratings: [],
+      staffBargains: [],
+      digitalMarketServiceReviews: [],
+      onboardingPayments: [],
+      managerProfiles: [],
       platformSettings: {
         registrationFee: 3500,
         commission: 5,
@@ -445,18 +450,17 @@ export async function dbCreateNotification(notifData: any, ..._args: any[]): Pro
   return newNotif;
 }
 
-export async function dbMarkNotificationRead(id: string, ..._args: any[]): Promise<any> {
+export async function dbMarkNotificationRead(id: string, readerKey: string): Promise<any> {
   const store = getStore();
   if (store.notifications) {
     const n = store.notifications.find((item: any) => item.id === id);
     if (n) {
-      n.isRead = true;
-      n.read = true;
+      n.readBy = Array.from(new Set([...(Array.isArray(n.readBy) ? n.readBy : []), readerKey]));
       persistStore();
       return n;
     }
   }
-  return { id, isRead: true, read: true };
+  return undefined;
 }
 
 // 8. Ratings
@@ -583,12 +587,12 @@ export async function dbCleanupPlaceholderHostels(fallbackHostels?: any[], ..._a
 // 14. Manager Requests & Profiles
 export async function dbSaveManagerProfile(profile: any, ..._args: any[]): Promise<any> {
   const store = getStore();
-  if (!(store as any).managerProfiles) (store as any).managerProfiles = [];
-  const idx = (store as any).managerProfiles.findIndex((p: any) => p.email === profile.email);
+  if (!store.managerProfiles) store.managerProfiles = [];
+  const idx = store.managerProfiles.findIndex((p: any) => p.email === profile.email);
   if (idx >= 0) {
-    (store as any).managerProfiles[idx] = { ...(store as any).managerProfiles[idx], ...profile };
+    store.managerProfiles[idx] = { ...store.managerProfiles[idx], ...profile };
   } else {
-    (store as any).managerProfiles.push(profile);
+    store.managerProfiles.push(profile);
   }
   persistStore();
   return profile;
@@ -735,9 +739,9 @@ export async function dbGetVerificationAuditLogs(..._args: any[]): Promise<any[]
 
 export async function dbCreateOnboardingPayment(payment: any, ..._args: any[]): Promise<any> {
   const store = getStore();
-  if (!(store as any).onboardingPayments) (store as any).onboardingPayments = [];
+  if (!store.onboardingPayments) store.onboardingPayments = [];
   const newPayment = { ...payment, id: payment.id || `pay-${Date.now()}`, timestamp: new Date().toISOString() };
-  (store as any).onboardingPayments.unshift(newPayment);
+  store.onboardingPayments.unshift(newPayment);
   persistStore();
   return newPayment;
 }

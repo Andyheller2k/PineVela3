@@ -1,3 +1,7 @@
+import TopNavBadge from './TopNavBadge';
+import MarketPhotoUpload from './MarketPhotoUpload';
+import { useNotifications } from '../context/NotificationContext';
+import { marketNoticeKind } from '../lib/marketNotifications';
 import { sessionFetch as fetch } from '../lib/session';
 import React, { useState, useEffect, useRef, useCallback, memo } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -89,13 +93,14 @@ interface MarketProduct {
   category: string;
   stockQuantity: number;
   imageUrl: string;
+  additionalImages?: string[];
   condition?: string;
   meetingLocation?: string;
   isAvailable: boolean;
   isService?: boolean;
   serviceLocationMode?: 'flexible' | 'fixed' | 'hybrid';
   serviceCategory?: string;
-  priceCategories?: Array<{ id?: string; name: string; price: number; description?: string }>;
+  priceCategories?: Array<{ id?: string; name: string; price: number; description?: string; imageUrl?: string }>;
   callLine?: string;
   location?: string;
   lat?: number;
@@ -296,7 +301,9 @@ export default function PageDigitalMarket() {
   const [applicationData, setApplicationData] = useState<any>(null);
   const [products, setProducts] = useState<MarketProduct[]>([]);
   const [orders, setOrders] = useState<MarketOrder[]>([]);
-  const [sellerNotifications, setSellerNotifications] = useState<any[]>([]);
+  const { notifications, markAsRead } = useNotifications();
+  const sellerNotifications = notifications.filter(n => marketNoticeKind(n) !== null);
+  const sellerMessageUnreadCount = sellerNotifications.filter(n => !n.read && marketNoticeKind(n) === 'chat').length;
   const [notifFilter, setNotifFilter] = useState<'all' | 'unread' | 'orders' | 'system'>('all');
   const [loading, setLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
@@ -372,6 +379,9 @@ export default function PageDigitalMarket() {
   const [prodStock, setProdStock] = useState('1');
   const [prodLocation, setProdLocation] = useState('KNUST Main Library Car Park');
   const [prodImageUrl, setProdImageUrl] = useState('');
+  const [prodAdditionalImages, setProdAdditionalImages] = useState<string[]>([]);
+  const [mediaUploads, setMediaUploads] = useState(0);
+  const mediaBusyChange = (busy: boolean) => setMediaUploads(n => Math.max(0, n + (busy ? 1 : -1)));
   const [prodDesc, setProdDesc] = useState('');
 
   // Item Image Crop Modal State
@@ -386,7 +396,7 @@ export default function PageDigitalMarket() {
   const [servSubCategory, setServSubCategory] = useState('Phone & Device Repairs');
   const [servDesc, setServDesc] = useState('');
   const [servPrice, setServPrice] = useState('');
-  const [servPriceCategories, setServPriceCategories] = useState<Array<{ id: string; name: string; price: number | string }>>([]);
+  const [servPriceCategories, setServPriceCategories] = useState<Array<{ id: string; name: string; price: number | string; imageUrl?: string }>>([]);
   const [servLocation, setServLocation] = useState('KNUST Campus Enclave / Hostel Delivery');
   const [servLocationMode, setServLocationMode] = useState<'flexible' | 'fixed' | 'hybrid'>('flexible');
   const [servCallLine, setServCallLine] = useState('');
@@ -542,73 +552,7 @@ export default function PageDigitalMarket() {
       const ordersRes: MarketOrder[] = await apiFetch(`/api/digital-market/my-orders?email=${encodeURIComponent(email)}&storeId=${encodeURIComponent(currentStoreId || '')}`).catch(() => []);
       setOrders(prev => JSON.stringify(prev) === JSON.stringify(ordersRes || []) ? prev : (ordersRes || []));
 
-      // 4. Fetch seller notifications (scoped strictly to Digital Market & E-Commerce)
-      const notifsRes: any[] = await apiFetch('/api/notifications?scope=market').catch(() => []);
-      
-      const isSellerMarketNotification = (n: any) => {
-        if (!n) return false;
-        if (n.marketChat || /^📩 New message from /.test(n.title || '')) return true;
-        if (n.scope === 'market' || n.category === 'market' || n.category === 'ecommerce' || n.module === 'digital_market' || n.targetRole === 'merchant') {
-          return true;
-        }
-        const title = (n.title || '').toLowerCase();
-        const msg = (n.message || '').toLowerCase();
-        const text = `${title} ${msg}`;
 
-        // Explicitly reject staff, hostel management, room key, and maintenance notifications
-        const nonMarketKeywords = [
-          'staff verification',
-          'staff account',
-          'staff profile',
-          'national id credentials',
-          'electrician',
-          'backup power',
-          'plumber',
-          'carpenter',
-          'hostel staff',
-          'room key',
-          'maintenance issue',
-          'damage deposit',
-          'hostel manager',
-          'manager account',
-          'property inspection',
-          'field officer',
-          'employment concluded',
-          'staff resignation',
-          'deal accepted by manager',
-          'bargain proposal'
-        ];
-
-        if (nonMarketKeywords.some(kw => text.includes(kw))) {
-          return false;
-        }
-
-        const marketKeywords = [
-          'merchant',
-          'digital market',
-          'campus store',
-          'store application',
-          'store accreditation',
-          'buy request',
-          'order',
-          'handover',
-          'escrow',
-          'delivery pin',
-          'meetup location',
-          'product',
-          'inventory',
-          'buyer',
-          'seller',
-          'item sold',
-          'e-commerce',
-          'marketplace'
-        ];
-
-        return marketKeywords.some(kw => text.includes(kw)) || (n.id && (String(n.id).startsWith('notif-dm') || String(n.id).startsWith('notif-ord')));
-      };
-
-      const marketNotifs = (notifsRes || []).filter(isSellerMarketNotification);
-      setSellerNotifications(prev => JSON.stringify(prev) === JSON.stringify(marketNotifs) ? prev : marketNotifs);
     } catch (err) {
       console.error("Error loading digital market data:", err);
     } finally {
@@ -620,14 +564,9 @@ export default function PageDigitalMarket() {
     }
   };
 
-  const handleMarkNotificationRead = async (notifId: string) => {
-    setSellerNotifications(prev => prev.map(n => n.id === notifId ? { ...n, read: true } : n));
-    await apiFetch(`/api/notifications/${notifId}/read`, { method: 'PUT' }).catch(() => {});
-  };
-
+  const handleMarkNotificationRead = markAsRead;
   const handleMarkAllNotificationsRead = async () => {
-    setSellerNotifications(prev => prev.map(n => ({ ...n, read: true })));
-    await apiFetch('/api/notifications/read-all', { method: 'PUT' }).catch(() => {});
+    await Promise.all(sellerNotifications.filter(n => !n.read).map(n => markAsRead(n.id)));
     triggerToast('All seller notifications marked as read', 'success');
   };
 
@@ -725,6 +664,7 @@ export default function PageDigitalMarket() {
   // Handle Add Product (MANDATORY Description and Image)
   const handleCreateProduct = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (mediaUploads) { triggerToast('Wait for your photographs to finish uploading.', 'error'); return; }
     
     if (!prodTitle.trim()) {
       triggerToast("Please provide a product title.", "error");
@@ -758,6 +698,7 @@ export default function PageDigitalMarket() {
           category: prodCategory,
           stockQuantity: parseInt(prodStock, 10) || 1,
           imageUrl: prodImageUrl.trim(),
+          additionalImages: prodAdditionalImages,
           userEmail: email,
           condition: prodCondition,
           meetingLocation: prodLocation
@@ -782,6 +723,7 @@ export default function PageDigitalMarket() {
         setProdDesc('');
         setProdStock('1');
         setProdImageUrl('');
+        setProdAdditionalImages([]);
         await loadData();
       } else {
         triggerToast(res?.error || "Failed to publish product.", "error");
@@ -1008,7 +950,8 @@ export default function PageDigitalMarket() {
         ? (service as any).priceCategories.map((c: any) => ({
             id: c.id || `pcat-${Math.random().toString(36).substr(2, 6)}`,
             name: c.name || '',
-            price: c.price !== undefined ? c.price : ''
+            price: c.price !== undefined ? c.price : '',
+            imageUrl: c.imageUrl || ''
           }))
         : []
     );
@@ -1045,6 +988,7 @@ export default function PageDigitalMarket() {
 
   const handleSaveService = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (mediaUploads) { triggerToast('Wait for your photographs to finish uploading.', 'error'); return; }
     if (!servTitle.trim()) {
       triggerToast("Please provide a service title.", "error");
       return;
@@ -1079,13 +1023,12 @@ export default function PageDigitalMarket() {
       const email = user?.studentEmail || user?.email || '';
       const storeId = storeData?.id || (user as any)?.merchantStoreId || `store-${Date.now()}`;
 
-      const validPriceCategories = servPriceCategories
-        .filter(c => c.name && c.name.trim() && c.price !== '' && !isNaN(Number(c.price)) && Number(c.price) >= 0)
-        .map(c => ({
-          id: c.id || `pcat-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
-          name: c.name.trim(),
-          price: Number(c.price)
-        }));
+      if (servPriceCategories.length > 4 || servPriceCategories.some(c => !c.name.trim() || c.price === '' || !Number.isFinite(Number(c.price)) || Number(c.price) < 0)) {
+        triggerToast('Add a name and valid price for every option (maximum four).', 'error'); return;
+      }
+      const validPriceCategories = servPriceCategories.map(c => ({
+        id: c.id, name: c.name.trim(), price: Number(c.price), ...(c.imageUrl ? { imageUrl: c.imageUrl } : {})
+      }));
 
       const payload = {
         storeId,
@@ -1771,7 +1714,7 @@ export default function PageDigitalMarket() {
                 )}
               </button>
 
-              <button type="button" onClick={() => setActiveTab('messages')} className={`px-4 py-2.5 rounded-xl text-xs font-black flex items-center gap-2 cursor-pointer ${activeTab === 'messages' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-600 hover:bg-blue-50'}`}><MessageSquare className="w-4 h-4" /><span>Messages</span></button>
+              <button type="button" onClick={() => setActiveTab('messages')} className={`px-4 py-2.5 rounded-xl text-xs font-black flex items-center gap-2 cursor-pointer ${activeTab === 'messages' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-600 hover:bg-blue-50'}`}><span className="relative inline-flex"><MessageSquare className="w-4 h-4" /><TopNavBadge count={sellerMessageUnreadCount} /></span><span>Messages</span></button>
               <button type="button" title="Upgrade your seller plan" aria-label="Upgrade your seller plan" onClick={() => setActiveTab("upgrade")} className={`px-3 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 cursor-pointer ${activeTab === "upgrade" ? "bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 shadow-md" : "text-amber-700 hover:bg-amber-50"}`}><CreditCard className="w-4 h-4" /><span className="sr-only">Upgrade</span></button>
               <button type="button" onClick={() => setActiveTab("profile")} className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 cursor-pointer ${activeTab === "profile" ? "bg-blue-600 text-white shadow-md" : "text-slate-600 hover:bg-slate-100/80 hover:text-slate-900"}`}><ShieldCheck className="w-4 h-4" /><span>Store Profile</span></button>
             </nav>
@@ -1882,7 +1825,7 @@ export default function PageDigitalMarket() {
                       {pendingOrders.map(order => {
                         const needsAgreement = order.status === 'Awaiting Seller Confirmation' || !order.sellerConfirmed;
                         return (
-                          <div key={order.id} className="py-4 space-y-3">
+                          <div key={order.id} id={`market-order-${order.id}`} className="py-4 space-y-3 scroll-mt-44">
                             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                               <div className="space-y-1">
                                 <div className="flex items-center gap-2">
@@ -2701,7 +2644,7 @@ export default function PageDigitalMarket() {
                             const notifMsg = (notif.message || '').toLowerCase();
                             const notifCombined = `${notifTitle} ${notifMsg}`;
 
-                            const matchedOrder = orders.find(o => 
+                            const matchedOrder = notif.orderId ? orders.find(o => o.id === notif.orderId) : orders.find(o =>
                               (notif.orderId && o.id === notif.orderId) ||
                               (notif.productId && o.productId === notif.productId) ||
                               (o.productTitle && notifCombined.includes(o.productTitle.toLowerCase())) ||
@@ -2739,22 +2682,19 @@ export default function PageDigitalMarket() {
                                 type="button"
                                 onClick={() => {
                                   if (!notif.read) handleMarkNotificationRead(notif.id);
-                                  const targetOrder = matchedOrder || pendingOrders[0];
+                                  const targetOrder = matchedOrder;
 
                                   setActiveTab('dashboard');
-                                  if (targetOrder && targetOrder.status !== 'Completed & Paid') {
-                                    setVerifyingOrder(targetOrder);
-                                    setPinInput('');
-                                  }
+                                  setVerifyingOrder(null);
                                   setTimeout(() => {
-                                    const el = document.getElementById('active-handover-orders');
+                                    const el = document.getElementById(targetOrder ? `market-order-${targetOrder.id}` : 'active-handover-orders');
                                     if (el) el.scrollIntoView({ behavior: 'smooth' });
                                     else window.scrollTo({ top: 0, behavior: 'smooth' });
                                   }, 100);
                                 }}
                                 className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black rounded-xl shadow-xs transition-all flex items-center gap-1 cursor-pointer"
                               >
-                                <span>View Orders</span>
+                                <span>View Order</span>
                                 <ArrowRight className="w-3.5 h-3.5" />
                               </button>
                             );
@@ -2909,7 +2849,7 @@ export default function PageDigitalMarket() {
                           <input
                             id="logo-upload-input"
                             type="file"
-                            accept="image/*"
+                            accept="image/jpeg,image/png,image/webp"
                             onChange={async (e) => {
                               const file = e.target.files?.[0];
                               if (file) {
@@ -3172,10 +3112,11 @@ export default function PageDigitalMarket() {
                             <input
                               id="file-upload-replace"
                               type="file"
-                              accept="image/*"
+                              accept="image/jpeg,image/png,image/webp"
                               onChange={(e) => {
                                 const file = e.target.files?.[0];
                                 if (file) {
+                                  if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 20 * 1024 * 1024) { triggerToast('Choose a JPEG, PNG or WebP photo up to 20MB.', 'error'); return; }
                                   const reader = new FileReader();
                                   reader.onloadend = () => {
                                     if (reader.result) {
@@ -3203,11 +3144,12 @@ export default function PageDigitalMarket() {
                               id="file-upload"
                               name="file-upload"
                               type="file"
-                              accept="image/*"
+                              accept="image/jpeg,image/png,image/webp"
                               required
                               onChange={(e) => {
                                 const file = e.target.files?.[0];
                                 if (file) {
+                                  if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 20 * 1024 * 1024) { triggerToast('Choose a JPEG, PNG or WebP photo up to 20MB.', 'error'); return; }
                                   const reader = new FileReader();
                                   reader.onloadend = () => {
                                     if (reader.result) {
@@ -3230,6 +3172,12 @@ export default function PageDigitalMarket() {
                 </div>
               </div>
 
+              <div className="space-y-3 rounded-2xl border border-blue-200 bg-blue-50/50 p-4">
+                <p className="text-xs font-black text-blue-950">Extra item photographs · {prodAdditionalImages.length}/3</p>
+                <p className="text-xs text-slate-500">Show other angles or details. JPEG, PNG or WebP, up to 20MB each.</p>
+                <div className="flex flex-wrap gap-3">{prodAdditionalImages.map((url, i) => <MarketPhotoUpload key={url} value={url} label={`Change extra photo ${i + 1}`} onBusyChange={mediaBusyChange} disabled={isSubmittingProduct} onChange={next => setProdAdditionalImages(prev => next ? prev.map((v, j) => j === i ? next : v) : prev.filter((_, j) => j !== i))} />)}
+                {prodAdditionalImages.length < 3 && <MarketPhotoUpload label="Add extra item photo" onBusyChange={mediaBusyChange} disabled={isSubmittingProduct || mediaUploads > 0} onChange={url => setProdAdditionalImages(prev => prev.length < 3 ? [...prev, url] : prev)} />}</div>
+              </div>
               {/* MANDATORY DESCRIPTION TEXTAREA */}
               <div id="add-group-desc">
                 <label className="block text-xs font-black text-slate-800 mb-1">Product Description * (Mandatory)</label>
@@ -3254,7 +3202,7 @@ export default function PageDigitalMarket() {
                 </button>
                 <button
                   type="submit"
-                  disabled={isSubmittingProduct}
+                  disabled={isSubmittingProduct || mediaUploads > 0}
                   className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-black shadow-lg shadow-blue-600/20 transition-all cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
                 >
                   {isSubmittingProduct ? "Publishing..." : "Publish to Campus Market"}
@@ -3370,8 +3318,9 @@ export default function PageDigitalMarket() {
                   </div>
 
                   <button
-                    type="button"
+                    type="button" disabled={servPriceCategories.length >= 4 || isSubmittingService}
                     onClick={() => {
+                      if (servPriceCategories.length >= 4) return;
                       setServPriceCategories(prev => [
                         ...prev,
                         { id: `pcat-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`, name: '', price: '' }
@@ -3380,7 +3329,7 @@ export default function PageDigitalMarket() {
                     className="self-start sm:self-auto px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shadow-xs active:scale-95 shrink-0"
                   >
                     <Plus className="w-3.5 h-3.5" />
-                    <span>Add Price</span>
+<span>{servPriceCategories.length >= 4 ? '4 price options maximum' : 'Add Price'}</span>
                   </button>
                 </div>
 
@@ -3389,9 +3338,9 @@ export default function PageDigitalMarket() {
                     {servPriceCategories.map((cat, idx) => (
                       <div
                         key={cat.id || idx}
-                        className="flex items-center gap-2 bg-white p-2.5 rounded-xl border border-slate-200 shadow-2xs animate-fadeIn"
+                        className="flex flex-wrap items-center gap-2 bg-white p-2.5 rounded-xl border border-slate-200 shadow-2xs animate-fadeIn"
                       >
-                        <div className="flex-1 space-y-1">
+                        <div className="min-w-0 flex-1 space-y-1">
                           <label className="text-[10px] font-extrabold text-slate-700 block">
                             Category Name <span className="text-red-500">*</span>
                           </label>
@@ -3428,6 +3377,7 @@ export default function PageDigitalMarket() {
                           </div>
                         </div>
 
+                        <MarketPhotoUpload value={cat.imageUrl} label={`Photo for price option ${idx + 1} (optional)`} onBusyChange={mediaBusyChange} disabled={isSubmittingService} onChange={url => setServPriceCategories(prev => prev.map(c => c.id === cat.id ? { ...c, imageUrl: url } : c))} />
                         <div className="pt-4 shrink-0">
                           <button
                             type="button"
@@ -3646,10 +3596,11 @@ export default function PageDigitalMarket() {
                           <input
                             id="serv-file-replace"
                             type="file"
-                            accept="image/*"
+                            accept="image/jpeg,image/png,image/webp"
                             onChange={(e) => {
                               const file = e.target.files?.[0];
                               if (file) {
+                                if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 20 * 1024 * 1024) { triggerToast('Choose a JPEG, PNG or WebP photo up to 20MB.', 'error'); return; }
                                 const reader = new FileReader();
                                 reader.onloadend = () => {
                                   if (reader.result) {
@@ -3682,10 +3633,11 @@ export default function PageDigitalMarket() {
                         <input
                           id="serv-file-upload"
                           type="file"
-                          accept="image/*"
+                          accept="image/jpeg,image/png,image/webp"
                           onChange={(e) => {
                             const file = e.target.files?.[0];
                             if (file) {
+                              if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 20 * 1024 * 1024) { triggerToast('Choose a JPEG, PNG or WebP photo up to 20MB.', 'error'); return; }
                               const reader = new FileReader();
                               reader.onloadend = () => {
                                 if (reader.result) {
@@ -3731,7 +3683,7 @@ export default function PageDigitalMarket() {
                 </button>
                 <button
                   type="submit"
-                  disabled={isSubmittingService}
+                  disabled={isSubmittingService || mediaUploads > 0}
                   className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-black rounded-xl shadow-md transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
                 >
                   {isSubmittingService && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
@@ -3939,7 +3891,7 @@ export default function PageDigitalMarket() {
           )}
         </button>
 
-        <button type="button" onClick={() => setActiveTab('messages')} className={`flex flex-col items-center gap-0.5 p-1 text-[9px] font-black rounded-xl min-w-0 ${activeTab === 'messages' ? 'text-blue-600' : 'text-slate-600'}`}><MessageSquare className="w-4.5 h-4.5" /><span>Messages</span></button>
+        <button type="button" onClick={() => setActiveTab('messages')} className={`flex flex-col items-center gap-0.5 p-1 text-[9px] font-black rounded-xl min-w-0 ${activeTab === 'messages' ? 'text-blue-600' : 'text-slate-600'}`}><span className="relative inline-flex"><MessageSquare className="w-4.5 h-4.5" /><TopNavBadge count={sellerMessageUnreadCount} /></span><span>Messages</span></button>
 
         <button
           type="button"

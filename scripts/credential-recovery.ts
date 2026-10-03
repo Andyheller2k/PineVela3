@@ -1,9 +1,13 @@
 import 'dotenv/config';
-import fs from 'node:fs';
+import { JsonStoreWriter } from '../jsonStoreSafety.js';
+import { protectStoredCredentials } from '../accountSecurity.js';
+import { removeRawSessions } from '../sessionSecurity.js';
 import path from 'node:path';
 import { recoverAccountPassword, revokeExposedCredentials } from '../credentialExposure.js';
 
-// Run with the application stopped so an older in-memory snapshot cannot overwrite recovery.
+const writer = new JsonStoreWriter(path.join(path.resolve(process.env.PINEVELA_DATA_DIR || 'data'), 'pinevela_store.json'));
+
+// Recovery takes the same lifetime writer lease as the application.
 async function hiddenPassword(prompt: string): Promise<string> {
   if (!process.stdin.isTTY) throw new Error('Use an interactive terminal; passwords must not be supplied as command arguments.');
   process.stderr.write(prompt);
@@ -35,9 +39,7 @@ async function main() {
   if (!['revoke', 'reset'].includes(action) || (action === 'reset' && (!identifier || !role))) {
     throw new Error('Usage: node --import tsx scripts/credential-recovery.ts revoke | reset <account-email-or-id> <role>. Stop the server first.');
   }
-  const storePath = path.join(path.resolve(process.env.PINEVELA_DATA_DIR || 'data'), 'pinevela_store.json');
-  const original = fs.readFileSync(storePath, 'utf8');
-  const store = JSON.parse(original);
+  const store = writer.load(true);
   const containment = revokeExposedCredentials(store);
   if (action === 'reset') {
     const password = await hiddenPassword('New password (hidden): ');
@@ -48,15 +50,10 @@ async function main() {
     console.log('Credential containment is already applied. No changes needed.');
     return;
   }
-  if (fs.readFileSync(storePath, 'utf8') !== original) throw new Error('Database changed during recovery. Stop the server and retry. No changes saved.');
-  const temp = `${storePath}.recovery-${process.pid}`;
-  try {
-    fs.writeFileSync(temp, JSON.stringify(store, null, 2), { mode: 0o600, flag: 'wx' });
-    fs.renameSync(temp, storePath);
-  } finally {
-    if (fs.existsSync(temp)) fs.unlinkSync(temp);
-  }
+  protectStoredCredentials(store);
+  removeRawSessions(store);
+  writer.save(store);
   console.log(action === 'reset' ? 'Password changed and account sessions revoked. Restart the server and log in normally.' : `Containment saved: ${containment.lockedRecords} credential records locked; ${containment.revokedSessions} session fields removed.`);
 }
 
-main().catch(error => { console.error(error.message); process.exitCode = 1; });
+main().catch(error => { console.error(error.message); process.exitCode = 1; }).finally(() => writer.close());

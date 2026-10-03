@@ -86,7 +86,7 @@ export default function PageManagerDashboard() {
   useEffect(() => {
     saveNavigationLayout(isSidebarTopNav);
   }, [isSidebarTopNav]);
-  const [loading, setLoading] = useState(true);
+
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [selectedBlock, setSelectedBlock] = useState<any | null>(null);
   const [showRegistration, setShowRegistration] = useState(false);
@@ -255,16 +255,15 @@ export default function PageManagerDashboard() {
   };
 
   // TanStack Query for manager server-state caching and automatic refetching
-  const { data: managerData } = useQuery({
+  const { data: managerData, isPending: managerPending, error: managerError, refetch: retryManagerData } = useQuery({
     queryKey: ['managerData', user?.id, user?.email],
     queryFn: async () => {
       // 1. Fetch properties from backend
-      const resProperties = await apiFetch('/api/hostels').catch(() => []);
-      const myHostelRes = await apiFetch('/api/manager/my-hostel').catch(() => null);
+      const resProperties = await apiFetch('/api/hostels');
+      const myHostelRes = await apiFetch('/api/manager/my-hostel');
       
       const cleanEmail = (user?.email || '').toLowerCase().trim();
       const userId = user?.id;
-      const cleanName = (user?.name || '').toLowerCase().trim();
 
       let managerProperties: any[] = [];
       if (Array.isArray(resProperties)) {
@@ -272,8 +271,7 @@ export default function PageManagerDashboard() {
           if (!p) return false;
           const matchEmail = p.managerEmail && cleanEmail && p.managerEmail.toLowerCase().trim() === cleanEmail;
           const matchId = (p.managerId && userId && p.managerId === userId) || (p.assignedManagerId && userId && p.assignedManagerId === userId);
-          const matchName = p.managerName && cleanName && p.managerName.toLowerCase().trim() === cleanName;
-          return matchEmail || matchId || matchName;
+          return matchEmail || matchId;
         });
       }
 
@@ -286,7 +284,7 @@ export default function PageManagerDashboard() {
       }
 
       // 3. Fetch issue reports / maintenance
-      const resIssues = await apiFetch('/api/issue-reports').catch(() => []);
+      const resIssues = await apiFetch('/api/issue-reports');
       let mappedIssues: any[] = [];
       if (Array.isArray(resIssues)) {
         const relevantIssues = managerProperties.length > 0
@@ -310,11 +308,11 @@ export default function PageManagerDashboard() {
       }
 
       // 4. Fetch staff members
-      const resStaff = await apiFetch('/api/staff').catch(() => []);
-      const resBargains = await apiFetch('/api/staff-bargains').catch(() => []);
-      const resBoard = await apiFetch('/api/board-requests').catch(() => []);
-      const resActivities = await apiFetch('/api/activities').catch(() => []);
-      const resRoomKeys = await apiFetch('/api/room-keys').catch(() => []);
+      const resStaff = await apiFetch('/api/staff');
+      const resBargains = await apiFetch('/api/staff-bargains');
+      const resBoard = await apiFetch('/api/board-requests');
+      const resActivities = await apiFetch('/api/activities');
+      const resRoomKeys = await apiFetch('/api/room-keys');
 
       return {
         managerProperties,
@@ -328,6 +326,17 @@ export default function PageManagerDashboard() {
     enabled: Boolean(user),
     refetchInterval: 8000,
   });
+
+  const loading = Boolean(user) && managerPending;
+  useEffect(() => {
+    setProperties(managerData?.managerProperties || []);
+    setMaintenanceIssues(managerData?.mappedIssues || []);
+    setStaffList(managerData?.staffList || []);
+    setStaffBargains(managerData?.staffBargains || []);
+    setActivities(managerData?.activities || []);
+    setBoardRequests(managerData?.boardRequests || []);
+    setRoomKeysList(managerData?.roomKeys || []);
+  }, [managerData, user?.id]);
 
   const fetchManagerData = async () => {
     await queryClient.invalidateQueries({ queryKey: ['managerData'] });
@@ -810,11 +819,11 @@ export default function PageManagerDashboard() {
   }, [user?.id, user?.email]);
 
   useEffect(() => {
-    if (!loading && user) {
-      const hasAnyHostel = properties.length > 0;
+    if (!loading && !managerError && user) {
+      const hasAnyHostel = (managerData?.managerProperties.length || properties.length) > 0;
       setShowWelcomePopup(!hasAnyHostel && !showRegistration);
     }
-  }, [loading, properties.length, showRegistration]);
+  }, [loading, managerError, managerData, properties.length, showRegistration]);
 
   const handleLogout = () => {
     setShowLogoutConfirm(true);
@@ -891,6 +900,14 @@ export default function PageManagerDashboard() {
     );
   }
 
+  if (managerError && !managerData) {
+    return <div className="min-h-screen flex flex-col items-center justify-center gap-4 p-6 text-blue-950">
+      <p role="alert">{managerError.message || 'Could not load your management dashboard.'}</p>
+      <button type="button" onClick={() => void retryManagerData()} className="rounded-xl bg-blue-900 px-5 py-3 text-white">Retry dashboard</button>
+      <button type="button" onClick={() => void confirmLogout()} className="text-sm underline">Sign out</button>
+    </div>;
+  }
+
   if (loading && properties.length === 0) {
     return (
       <div className="min-h-screen h-screen flex flex-col items-center justify-center bg-transparent">
@@ -913,6 +930,7 @@ export default function PageManagerDashboard() {
 
   return (
     <div className="min-h-screen h-screen flex flex-col lg:flex-row bg-transparent text-slate-800 overflow-hidden font-sans">
+      {managerError && <div role="alert" className="fixed top-2 left-1/2 -translate-x-1/2 z-50 rounded-xl bg-red-50 border border-red-200 px-4 py-2 text-sm text-red-800">Updates unavailable: {managerError.message} <button onClick={() => void retryManagerData()} className="underline">Retry</button></div>}
       {/* Toast Notification */}
       <AnimatePresence>
         {toastMessage && (

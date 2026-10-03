@@ -16,6 +16,7 @@ export interface MarketProductItem {
   currency?: string;
   category: string;
   imageUrl: string;
+  additionalImages?: string[];
   storeLogoUrl?: string;
   stockQuantity?: number;
   status?: string;
@@ -30,7 +31,7 @@ export interface MarketProductItem {
   openingTime?: string;
   closingTime?: string;
   isOpen247?: boolean;
-  priceCategories?: Array<{ id?: string; name: string; price: number; description?: string }>;
+  priceCategories?: Array<{ id?: string; name: string; price: number; description?: string; imageUrl?: string }>;
   rating?: number;
   reviewCount?: number;
 }

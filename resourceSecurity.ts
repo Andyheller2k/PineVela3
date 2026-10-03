@@ -115,6 +115,8 @@ const loginPaths = new Set(['/api/auth/login', '/api/digital-market/login', '/ap
 const credentialPaths = /(?:login|register|verify-unified|password|residents\/onboard|room-keys\/claim|manager-verifications\/submit|\/staff$|delete-registered-account|delete-room|clear-registered-accounts|\/verification-teams$)/;
 const smallBody = (route: string) => loginPaths.has(route) || /(?:password|verify-unified|register-unified)$/.test(route);
 export const UPLOAD_ROUTE = '/api/storage/upload-hostel-image';
+export const MARKET_UPLOAD_ROUTE = '/api/storage/upload-market-image';
+export const isImageUploadRoute = (route: string) => route === UPLOAD_ROUTE || route === MARKET_UPLOAD_ROUTE;
 
 export async function createResourceProtection(options: { actor: (req: Request) => string; loginIdentity: (req: Request) => string | string[]; dataDir?: string }) {
   const memory = new AttemptBudgets();
@@ -134,7 +136,7 @@ export async function createResourceProtection(options: { actor: (req: Request) 
           { scope: 'request-ip', identity: ipOf(req), maximum: 900, windowMs: 60000 },
           { scope: 'request-global', identity: 'all', maximum: 3000, windowMs: 60000 }
         ]);
-        const route = routeOf(req), credentials = !['GET', 'HEAD', 'OPTIONS'].includes(req.method) && credentialPaths.test(route), upload = route === UPLOAD_ROUTE;
+        const route = routeOf(req), credentials = !['GET', 'HEAD', 'OPTIONS'].includes(req.method) && credentialPaths.test(route), upload = isImageUploadRoute(route);
         const ip = ipOf(req), actor = options.actor(req);
         if (inFlight >= 32 || (ipRequests.get(ip) || 0) >= 12 || (actor && (actorRequests.get(actor) || 0) >= 16) || (credentials && (credentialRequests >= 4 || (ipCredentials.get(ip) || 0) >= 2)) || (upload && uploadRequests >= 2)) throw new ResourceLimitError(503, 2, 'Server request capacity is busy. Please try again shortly.');
         inFlight++; if (credentials) credentialRequests++; if (upload) uploadRequests++;
@@ -163,9 +165,9 @@ export async function createResourceProtection(options: { actor: (req: Request) 
     },
     parseBody(req: Request, res: Response, next: NextFunction) {
       const route = routeOf(req);
-      const parser = route === UPLOAD_ROUTE ? photo : smallBody(route) ? small : medium;
+      const parser = isImageUploadRoute(route) ? photo : smallBody(route) ? small : medium;
       const length = Number(req.headers['content-length']);
-      const maximum = route === UPLOAD_ROUTE ? 28 * 1024 * 1024 : smallBody(route) ? 256 * 1024 : 4 * 1024 * 1024;
+      const maximum = isImageUploadRoute(route) ? 28 * 1024 * 1024 : smallBody(route) ? 256 * 1024 : 4 * 1024 * 1024;
       if (Number.isFinite(length) && length > maximum) return res.status(413).set('Connection', 'close').json({ error: 'Request body exceeds the supported size.' });
       parser(req, res, error => error ? next(error) : form(req, res, next));
     },
@@ -184,7 +186,7 @@ export async function createResourceProtection(options: { actor: (req: Request) 
           { scope: 'write-global', identity: 'all', maximum: 180, windowMs: 60000 },
           ...(actor ? [{ scope: 'write-actor', identity: actor, maximum: 60, windowMs: 60000 }] : [])
         ]);
-        const bytes = route === UPLOAD_ROUTE ? 0 : Buffer.byteLength(JSON.stringify(req.body || {}));
+        const bytes = isImageUploadRoute(route) ? 0 : Buffer.byteLength(JSON.stringify(req.body || {}));
         durable.reserve([
           { scope: 'daily-write-ip', identity: ipOf(req), maximum: 2500, windowMs: 86400000 },
           { scope: 'daily-write-global', identity: 'all', maximum: 10000, windowMs: 86400000 },

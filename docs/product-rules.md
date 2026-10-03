@@ -2,6 +2,10 @@
 
 ## Marketplace Reviews
 
+A seller's linked primary account cannot buy or review its own store's items or services.
+Existing self-purchase reviews do not contribute to public reputation. Verified review
+notifications belong to the seller account and identify the buyer, purchase, score and review.
+
 A buyer may review and edit feedback for their own completed marketplace purchase through
 Purchases & Tracking. Separate purchases have separate reviews. Seller service pages display
 verified purchase reviews and offer no orderless review form. Stores/items without verified
@@ -17,6 +21,19 @@ PINs expire after 24 hours and lock after five failures. The buyer can obtain a 
 renew the reservation if capacity is still available. Expiry, rejection and cancellation
 release capacity; completed/rejected/cancelled orders cannot reopen. Seller PIN verification
 is not a payment processor operation; it records the existing physical handover/payment flow.
+
+## Marketplace Photographs and Alerts
+
+An item has one cover and up to three extra photographs. Services support up to four
+named price options, each with an optional photograph. Selecting a price option shows
+its photograph and records the corresponding catalog price/image in the order; options
+without photographs use the service cover. Inspecting a photo opens an accessible fullscreen
+gallery with close, keyboard, arrow and mobile swipe controls.
+
+Seller unread badges are red; primary buyer badges are blue. The buyer Market badge counts
+unread messages, order updates and merchant platform status notices. Opening a conversation
+acknowledges its incoming notices; opening tracking or merchant status acknowledges those
+notices. Viewing an order from a notification does not start delivery PIN verification.
 
 ## Users
 

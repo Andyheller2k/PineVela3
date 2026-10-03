@@ -1,7 +1,7 @@
 import type { RoomKeyLimitState } from './roomKeySecurity.js';
 import 'dotenv/config';
 import type { SignupState } from './signupSecurity.js';
-import fs from 'fs';
+import { JsonStoreWriter, DatabasePersistenceError } from './jsonStoreSafety.js';
 import { removeRawSessions } from './sessionSecurity.js';
 import path from 'path';
 import { accountKey, protectStoredCredentials } from './accountSecurity.js';
@@ -18,12 +18,14 @@ export interface PersistentStore {
   managerRegistrationRequests: any[];
   managerVerifications?: any[];
   managerRequests?: any[];
+  managerProfiles?: any[];
   verificationAuditLogs: any[];
   users: any[];
   notifications: any[];
   boardRequests?: any[];
   meetings?: any[];
   ratings?: any[];
+  onboardingPayments?: any[];
   managerAccountSettings?: Record<string, any>;
   staff?: any[];
   staffAuditLogs?: any[];
@@ -45,6 +47,7 @@ export interface PersistentStore {
   digitalMarketApplications?: any[];
   digitalMarketStores?: any[];
   digitalMarketProducts?: any[];
+  marketMedia?: { imageUrl: string; accountId: string; createdAt: string }[];
   digitalMarketOrders?: any[];
   digitalMarketMessages?: any[];
   digitalMarketRatings?: any[];
@@ -56,11 +59,7 @@ export interface PersistentStore {
 const DATA_DIR = path.resolve(process.env.PINEVELA_DATA_DIR || path.join(process.cwd(), 'data'));
 const STORE_PATH = path.join(DATA_DIR, 'pinevela_store.json');
 
-function ensureDataDir(): void {
-  if (!fs.existsSync(DATA_DIR)) {
-    fs.mkdirSync(DATA_DIR, { recursive: true, mode: 0o700 });
-  }
-}
+const writer = new JsonStoreWriter(STORE_PATH);
 
 function deduplicateById<T extends { id?: any; email?: any }>(arr: T[], accounts = false): T[] {
   if (!Array.isArray(arr)) return [];
@@ -92,24 +91,16 @@ function deduplicateById<T extends { id?: any; email?: any }>(arr: T[], accounts
  * Load persistent store from disk or initialize with defaults
  */
 export function loadPersistentStore(defaultStore: PersistentStore): PersistentStore {
-  ensureDataDir();
-
-  if (!fs.existsSync(STORE_PATH)) {
-    try {
-      defaultStore.credentialExposureVersion = CREDENTIAL_EXPOSURE_VERSION;
-      savePersistentStore(defaultStore);
-      console.log('[PineVela Database] Initialized local persistent store at:', STORE_PATH);
-      return defaultStore;
-    } catch (err) {
-      console.error('[PineVela Database] Failed to initialize persistent store:', err);
-      return defaultStore;
-    }
+  const parsed = writer.load();
+  if (parsed === undefined) {
+    defaultStore.credentialExposureVersion = CREDENTIAL_EXPOSURE_VERSION;
+    savePersistentStore(defaultStore);
+    console.log('[PineVela Database] Initialized local persistent store at:', STORE_PATH);
+    return defaultStore;
   }
 
   let containingCredentials = false;
   try {
-    const raw = fs.readFileSync(STORE_PATH, 'utf8');
-    const parsed = JSON.parse(raw);
     containingCredentials = true;
     const containment = revokeExposedCredentials(parsed);
     if (containment.changed) {
@@ -144,13 +135,17 @@ export function loadPersistentStore(defaultStore: PersistentStore): PersistentSt
       managerRegistrationRequests: deduplicateById(Array.isArray(parsed.managerRegistrationRequests) ? parsed.managerRegistrationRequests : defaultStore.managerRegistrationRequests),
       managerVerifications: deduplicateById(Array.isArray(parsed.managerVerifications) ? parsed.managerVerifications : (defaultStore.managerVerifications || [])),
       managerRequests: deduplicateById(Array.isArray(parsed.managerRequests) ? parsed.managerRequests : (defaultStore.managerRequests || [])),
+      managerProfiles: Array.isArray(parsed.managerProfiles) ? parsed.managerProfiles : (defaultStore.managerProfiles || []),
       verificationAuditLogs: deduplicateById(Array.isArray(parsed.verificationAuditLogs) ? parsed.verificationAuditLogs : defaultStore.verificationAuditLogs),
       users: deduplicateById((Array.isArray(parsed.users) ? parsed.users : defaultStore.users).filter((u: any) => u && u.email !== 'staff@pinevela.com' && u.username !== 'staff'), true),
       notifications: deduplicateById(Array.isArray(parsed.notifications) ? parsed.notifications : defaultStore.notifications), boardRequests: deduplicateById(Array.isArray(parsed.boardRequests) ? parsed.boardRequests : (defaultStore.boardRequests || [])),
       meetings: deduplicateById(Array.isArray(parsed.meetings) ? parsed.meetings : (defaultStore.meetings || [])),
+      ratings: Array.isArray(parsed.ratings) ? parsed.ratings : (defaultStore.ratings || []),
+      onboardingPayments: Array.isArray(parsed.onboardingPayments) ? parsed.onboardingPayments : (defaultStore.onboardingPayments || []),
       managerAccountSettings: managerSettings,
       staff: deduplicateById(Array.isArray(parsed.staff) ? parsed.staff : (defaultStore.staff || [])),
       staffAuditLogs: deduplicateById(Array.isArray(parsed.staffAuditLogs) ? parsed.staffAuditLogs : (defaultStore.staffAuditLogs || [])), staffReviews: deduplicateById(Array.isArray(parsed.staffReviews) ? parsed.staffReviews : (defaultStore.staffReviews || [])),
+      staffBargains: Array.isArray(parsed.staffBargains) ? parsed.staffBargains : (defaultStore.staffBargains || []),
       roomKeys: deduplicateById(Array.isArray(parsed.roomKeys) ? parsed.roomKeys : (defaultStore.roomKeys || [])),
       retiredRoomKeys: Array.isArray(parsed.retiredRoomKeys) ? parsed.retiredRoomKeys : [],
       accountSecurityVersion: parsed.accountSecurityVersion,
@@ -161,12 +156,13 @@ export function loadPersistentStore(defaultStore: PersistentStore): PersistentSt
       managerRestrictions: deduplicateById(Array.isArray(parsed.managerRestrictions) ? parsed.managerRestrictions : (defaultStore.managerRestrictions || [])),
       digitalMarketApplications: deduplicateById(Array.isArray(parsed.digitalMarketApplications) ? parsed.digitalMarketApplications : (defaultStore.digitalMarketApplications || [])),
       digitalMarketStores: deduplicateById(Array.isArray(parsed.digitalMarketStores) ? parsed.digitalMarketStores : (defaultStore.digitalMarketStores || [])),
+      marketMedia: Array.isArray(parsed.marketMedia) ? parsed.marketMedia.filter((m: any) => m && typeof m.imageUrl === 'string' && typeof m.accountId === 'string') : [],
       digitalMarketProducts: deduplicateById(Array.isArray(parsed.digitalMarketProducts) ? parsed.digitalMarketProducts : (defaultStore.digitalMarketProducts || [])),
       digitalMarketOrders: deduplicateById(Array.isArray(parsed.digitalMarketOrders) ? parsed.digitalMarketOrders : (defaultStore.digitalMarketOrders || [])),
       digitalMarketMessages: deduplicateById(Array.isArray(parsed.digitalMarketMessages) ? parsed.digitalMarketMessages : (defaultStore.digitalMarketMessages || [])),
       digitalMarketRatings: deduplicateById(Array.isArray(parsed.digitalMarketRatings) ? parsed.digitalMarketRatings : (defaultStore.digitalMarketRatings || [])),
       // Preserve legacy service reviews privately; only purchase-verified ratings are public.
-      digitalMarketServiceReviews: Array.isArray(parsed.digitalMarketServiceReviews) ? parsed.digitalMarketServiceReviews : [],
+      digitalMarketServiceReviews: Array.isArray(parsed.digitalMarketServiceReviews) ? parsed.digitalMarketServiceReviews : (defaultStore.digitalMarketServiceReviews || []),
       verificationTeams: deduplicateById(Array.isArray(parsed.verificationTeams) ? parsed.verificationTeams : (defaultStore.verificationTeams || [])),
       verificationInspections: deduplicateById(Array.isArray(parsed.verificationInspections) ? parsed.verificationInspections : (defaultStore.verificationInspections || [])),
     };
@@ -174,9 +170,9 @@ export function loadPersistentStore(defaultStore: PersistentStore): PersistentSt
     console.log(`[PineVela Database] Loaded persistent store: ${result.hostels.length} hostels, ${result.users.length} users, ${result.hostelVerifications.length} verifications`);
     return result;
   } catch (err) {
-    if (containingCredentials) throw new Error('Credential containment could not be persisted. Refusing to load exposed sessions.', { cause: err });
-    console.error('[PineVela Database] Error reading persistent store, falling back to defaults:', err);
-    return defaultStore;
+    if (containingCredentials) throw new DatabasePersistenceError('CONTAINMENT_FAILED', 'Credential containment could not be persisted. Refusing to load exposed sessions. Existing data must be inspected offline.');
+    if (err instanceof DatabasePersistenceError) throw err;
+    throw new DatabasePersistenceError('INVALID_DATABASE', 'Existing database could not be loaded. Refusing defaults; preserve the file and restore a validated backup offline.');
   }
 }
 
@@ -184,23 +180,7 @@ export function loadPersistentStore(defaultStore: PersistentStore): PersistentSt
  * Atomically save persistent store to disk
  */
 export function savePersistentStore(store: PersistentStore): void {
-  ensureDataDir();
   protectStoredCredentials(store);
   removeRawSessions(store);
-  const tmpPath = `${STORE_PATH}.tmp.${Date.now()}`;
-  try {
-    const jsonStr = JSON.stringify(store, null, 2);
-    fs.writeFileSync(tmpPath, jsonStr, { encoding: 'utf8', mode: 0o600, flag: 'wx' });
-    fs.renameSync(tmpPath, STORE_PATH);
-  } catch (err) {
-    console.error('[PineVela Database] Failed to write persistent store:', err);
-    try {
-      if (fs.existsSync(tmpPath)) {
-        fs.unlinkSync(tmpPath);
-      }
-    } catch (e) {
-      // ignore
-    }
-    throw err;
-  }
+  writer.save(store);
 }

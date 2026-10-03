@@ -1,3 +1,5 @@
+import MarketImageGallery from './MarketImageGallery';
+import { marketNoticeKind } from '../lib/marketNotifications';
 import { sessionFetch as fetch } from '../lib/session';
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -338,7 +340,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
   const [priceSortOption, setPriceSortOption] = useState<'featured' | 'price-asc' | 'price-desc' | 'newest'>('featured');
   const [showPriceFilterPanel, setShowPriceFilterPanel] = useState<boolean>(false);
   const [selectedProductForBuy, setSelectedProductForBuy] = useState<DigitalMarketProduct | null>(null);
-  const [selectedPriceCategory, setSelectedPriceCategory] = useState<{ id?: string; name: string; price: number } | null>(null);
+  const [selectedPriceCategory, setSelectedPriceCategory] = useState<{ id?: string; name: string; price: number; imageUrl?: string } | null>(null);
   const [showPendingModal, setShowPendingModal] = useState<boolean>(false);
 
   // Data states
@@ -1256,6 +1258,18 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
   };
 
   const unreadNotificationsCount = notifications.filter(n => !n.read).length;
+  const marketUnread = notifications.filter(n => !n.read && marketNoticeKind(n) !== null);
+  const marketUnreadCount = marketUnread.length;
+  const chatUnreadCount = marketUnread.filter(n => marketNoticeKind(n) === 'chat').length;
+  const orderUnreadCount = marketUnread.filter(n => marketNoticeKind(n) === 'order').length;
+  const vendorUnreadCount = marketUnread.filter(n => marketNoticeKind(n) === 'vendor').length;
+  const tabUnreadCount = (id: string) => id === 'notifications' ? unreadNotificationsCount : id === 'digital-market' ? marketUnreadCount : 0;
+  useEffect(() => {
+    if (activeTab !== 'digital-market' || !['orders', 'vendor'].includes(marketTabMode)) return;
+    const kind = marketTabMode === 'orders' ? 'order' : 'vendor';
+    void Promise.all(notifications.filter(n => !n.read && marketNoticeKind(n) === kind).map(n => markAsRead(n.id)));
+  }, [activeTab, marketTabMode, notifications, markAsRead]);
+
 
   const navItems = [
     { id: 'home', label: 'Home Tab', sub: 'Residents & Staff Hire', icon: Home },
@@ -1978,7 +1992,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
 
          {/* MODALS */}
          {showClaimModal && (
-           <DashboardOverlay className="fixed inset-0 bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-4">
+           <DashboardOverlay aria-label="Activate Digital Room Key" onClose={() => setShowClaimModal(false)} className="fixed inset-0 bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-4">
              <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-2xl border border-blue-200 space-y-5">
                <div className="flex items-start justify-between gap-3 pb-3 border-b border-blue-100">
                  <div className="flex items-start gap-3">
@@ -1990,7 +2004,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                      <p className="text-xs text-slate-500 font-medium">Provided exclusively by your manager</p>
                    </div>
                  </div>
-                 <button
+                 <button aria-label="Close dialog"
                    type="button"
                    onClick={() => setShowClaimModal(false)}
                    className="text-slate-400 hover:text-slate-700 p-1.5 rounded-xl hover:bg-slate-100 cursor-pointer"
@@ -2059,7 +2073,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
 
          {/* SIGN OUT CONFIRMATION MODAL */}
          {showSignoutConfirmModal && (
-           <DashboardOverlay className="fixed inset-0 bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-4">
+           <DashboardOverlay aria-label="Sign Out Confirmation" onClose={() => setShowSignoutConfirmModal(false)} className="fixed inset-0 bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-4">
              <div className="bg-white rounded-3xl max-w-sm w-full p-6 text-center space-y-5 border border-slate-100 shadow-2xl">
                <div className="w-16 h-16 rounded-2xl bg-amber-50 border border-amber-200/60 flex items-center justify-center shadow-xs mx-auto">
                  <PineLogo size={36} hideText={true} />
@@ -2156,9 +2170,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
             >
               <div className={`p-1.5 rounded-lg relative ${activeTab === tab.id ? 'bg-blue-100/50' : ''}`}>
                 <tab.icon className={`w-5 h-5 ${activeTab === tab.id ? 'scale-110 transition-transform' : ''}`} />
-                {tab.id === 'notifications' && unreadNotificationsCount > 0 && (
-                  <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-rose-500 rounded-full ring-2 ring-white animate-pulse" />
-                )}
+                <TopNavBadge inset color="blue" count={tabUnreadCount(tab.id)} />
               </div>
               <span className={`text-[9px] font-bold mt-0.5 ${activeTab === tab.id ? 'text-blue-700' : 'text-slate-500'}`}>
                 {tab.id === 'home' ? 'Home' :
@@ -2198,7 +2210,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                   title={tab.label}
                   className={`flex-1 min-w-0 flex flex-col items-center justify-center gap-0.5 py-1.5 rounded-xl transition-all cursor-pointer ${isActive ? 'text-blue-700 bg-blue-100/65' : 'text-slate-500 hover:text-slate-800 hover:bg-white/70'}`}
                 >
-                  <span className="relative inline-flex"><Icon className="w-4 h-4" /><TopNavBadge count={tab.id === 'notifications' ? unreadNotificationsCount : null} /></span>
+                  <span className="relative inline-flex"><Icon className="w-4 h-4" /><TopNavBadge color="blue" count={tabUnreadCount(tab.id)} /></span>
                   <span className="max-w-full truncate text-[9px] font-bold">{tab.id === 'digital-market' ? 'Market' : tab.id === 'notifications' ? 'Alerts' : tab.id === 'options' ? 'Options' : tab.label.split(' ')[0]}</span>
                 </button>
               );
@@ -2271,9 +2283,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                       isActive ? 'bg-white/20 text-white' : 'bg-blue-200/70 text-blue-700 group-hover:bg-blue-300/80'
                     }`}>
                       <Icon className="w-4 h-4" />
-                      {tab.id === 'notifications' && unreadNotificationsCount > 0 && (
-                        <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-rose-500 rounded-full ring-2 ring-white animate-pulse" />
-                      )}
+                      <TopNavBadge inset color="blue" count={tabUnreadCount(tab.id)} />
                     </div>
                     <div className="text-left overflow-hidden">
                       <div className="text-xs font-semibold tracking-wide flex items-center gap-1.5 truncate">{tab.label}</div>
@@ -3177,7 +3187,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                   }`}
                 >
                   <Package className="w-4 h-4" />
-                  <span>My Merchant Platform</span>
+                  <span>My Merchant Platform</span><span className="relative inline-flex ml-1 mr-3"><TopNavBadge color="blue" count={vendorUnreadCount} /></span>
                   {(digitalMarketStore?.status === 'active' || digitalMarketApp?.status === 'approved') ? (
                     <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 text-[10px] font-black rounded-full border border-emerald-300">
                       Verified & Active
@@ -3197,9 +3207,9 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                 >
                   <Clock className="w-4 h-4" />
                   <span>Purchases & Tracking</span>
-                  {digitalMarketOrders.length > 0 && (
+                  {orderUnreadCount > 0 && (
                     <span className="px-1.5 py-0.5 bg-blue-600 text-white text-[10px] font-black rounded-full">
-                      {digitalMarketOrders.length}
+                      {orderUnreadCount}
                     </span>
                   )}
                 </button>
@@ -3211,7 +3221,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                   }`}
                 >
                   <MessageSquare className="w-4 h-4" />
-                  <span>Chat & Logistics</span>
+                  <span>Chat & Logistics</span><span className="relative inline-flex ml-1 mr-3"><TopNavBadge color="blue" count={chatUnreadCount} /></span>
 
                 </button>
               </div>
@@ -3855,7 +3865,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
 
         {/* PENDING APPROVAL WARM POPUP */}
         {showPendingModal && (
-          <DashboardOverlay className="fixed inset-0 bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-4">
+          <DashboardOverlay aria-label="Application Submitted" onClose={() => setShowPendingModal(false)} className="fixed inset-0 bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-4">
             <div className="bg-gradient-to-br from-white via-sky-50 to-indigo-100 rounded-[2rem] max-w-md w-full p-7 text-center space-y-5 shadow-2xl border border-blue-200/80 animate-scaleIn relative overflow-hidden">
               <div className="w-16 h-16 bg-gradient-to-br from-blue-600 to-indigo-800 rounded-2xl flex items-center justify-center mx-auto text-cyan-100 shadow-lg shadow-blue-500/30">
                 <Clock className="w-8 h-8 animate-pulse" />
@@ -3884,7 +3894,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
 
         {/* STORE SETUP & 50 GHS DUMMY PAYMENT MODAL */}
         {showStoreSetupModal && (
-          <DashboardOverlay className="fixed inset-0 bg-slate-950/75 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
+          <DashboardOverlay aria-label="Student Store Setup & Activation" onClose={() => setShowStoreSetupModal(false)} className="fixed inset-0 bg-slate-950/75 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
             <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-7 shadow-2xl border border-slate-200 space-y-5 animate-scaleIn my-8">
               <div className="flex items-center justify-between border-b border-slate-100 pb-3.5">
                 <div className="flex items-center gap-2.5">
@@ -3895,7 +3905,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                     <p className="text-[11px] text-slate-500 font-medium">Final step to activate your verified digital merchant card</p>
                   </div>
                 </div>
-                <button 
+                <button aria-label="Close dialog"
                   type="button" 
                   onClick={() => setShowStoreSetupModal(false)} 
                   className="text-slate-400 hover:text-slate-600 cursor-pointer p-1 rounded-lg"
@@ -4079,7 +4089,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
 
         {/* DIGITAL STORE LOGIN MODAL */}
         {showMerchantStoreLoginModal && (
-          <DashboardOverlay className="fixed inset-0 bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-4">
+          <DashboardOverlay aria-label="Digital Store Secure Login" onClose={() => setShowMerchantStoreLoginModal(false)} className="fixed inset-0 bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-4">
             <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-slate-200 space-y-6 animate-scaleIn">
               <div className="flex items-center justify-between pb-3 border-b border-slate-100">
                 <div className="flex items-center gap-2.5">
@@ -4092,7 +4102,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                   </div>
                 </div>
 
-                <button
+                <button aria-label="Close dialog"
                   type="button"
                   onClick={() => setShowMerchantStoreLoginModal(false)}
                   className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center cursor-pointer transition-all"
@@ -4171,7 +4181,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
 
         {/* MULTI-PHASE DIGITAL MARKET STORE ONBOARDING WIZARD MODAL */}
         {storeOnboardingModalOpen && (
-          <DashboardOverlay className="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
+          <DashboardOverlay aria-label="Digital Market Store Onboarding" onClose={null} className="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
             <div className="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-10 shadow-2xl border border-blue-200 space-y-8 my-8 animate-scaleIn">
               <div className="flex items-center justify-between pb-6 border-b border-blue-100">
                 <div className="flex items-center gap-3.5">
@@ -4407,14 +4417,14 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
 
         {/* ADD PRODUCT MODAL */}
         {showAddProductModal && (
-          <DashboardOverlay className="fixed inset-0 bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-4">
+          <DashboardOverlay aria-label="List New Product" onClose={() => setShowAddProductModal(false)} className="fixed inset-0 bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-4">
             <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4 animate-scaleIn">
               <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                 <h3 className="text-sm font-black text-slate-900 flex items-center gap-2">
                   <Package className="w-4 h-4 text-emerald-600" />
                   List New Product
                 </h3>
-                <button type="button" onClick={() => setShowAddProductModal(false)} className="text-slate-400 hover:text-slate-600 cursor-pointer">
+                <button aria-label="Close dialog" type="button" onClick={() => setShowAddProductModal(false)} className="text-slate-400 hover:text-slate-600 cursor-pointer">
                   <X className="w-4 h-4" />
                 </button>
               </div>
@@ -4521,7 +4531,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
               ].filter(Boolean).join(' · ');
 
           return (
-            <DashboardOverlay className="fixed inset-0 bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-2 sm:p-4">
+            <DashboardOverlay aria-label={`Inspect ${selectedProductForBuy.title}`} onClose={() => setSelectedProductForBuy(null)} className="fixed inset-0 bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-2 sm:p-4">
               <div className="bg-white rounded-3xl max-w-[calc(100vw-1rem)] sm:max-w-lg w-full max-h-[88dvh] sm:max-h-[92vh] overflow-y-auto p-3 sm:p-6 shadow-2xl border border-slate-200 space-y-3 sm:space-y-4 animate-scaleIn">
                 <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                   <div className="flex items-center gap-2 min-w-0 pr-2">
@@ -4533,28 +4543,14 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                       </span>
                     )}
                   </div>
-                  <button type="button" onClick={() => setSelectedProductForBuy(null)} className="text-slate-400 hover:text-slate-600 cursor-pointer shrink-0">
+                  <button aria-label="Close dialog" type="button" onClick={() => setSelectedProductForBuy(null)} className="text-slate-400 hover:text-slate-600 cursor-pointer shrink-0">
                     <X className="w-5 h-5" />
                   </button>
                 </div>
 
                 <div className="space-y-3">
-                  <div className="relative w-full h-32 sm:h-56 bg-slate-900/5 rounded-2xl overflow-hidden border border-slate-200 flex items-center justify-center p-0 sm:p-1.5">
-                    <img 
-                      src={optimizeImageDisplayUrl(selectedProductForBuy.imageUrl, 500, 60)} 
-                      alt={selectedProductForBuy.title}
-                      loading="lazy"
-                      decoding="async"
-                      referrerPolicy="no-referrer"
-                      className={`w-full h-full ${isSelectedService ? "object-cover" : "object-contain"}`} 
-                    />
-                    {isSelectedService && (
-                      <div className="absolute top-2.5 left-2.5 px-2.5 py-1 bg-gradient-to-r from-blue-700 via-blue-600 to-indigo-700 text-white text-[10px] font-black rounded-md shadow-xs flex items-center gap-1 border border-blue-400/30 tracking-wide pointer-events-none">
-                        <span className="font-extrabold tracking-tight text-blue-200">PineVela</span>
-                        <span className="text-white font-black">(Service)</span>
-                      </div>
-                    )}
-                  </div>
+                  <MarketImageGallery title={selectedProductForBuy.title} imageUrl={selectedPriceCategory?.imageUrl || selectedProductForBuy.imageUrl}
+                    additionalImages={isSelectedService ? [selectedProductForBuy.imageUrl, ...(selectedProductForBuy.priceCategories || []).map(c => c.imageUrl || '')] : selectedProductForBuy.additionalImages} />
 
                   <div className="flex items-center justify-between">
                     <div className="flex items-baseline gap-1.5">
@@ -4600,6 +4596,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                                   : 'bg-white border-slate-200 text-slate-800 hover:border-blue-300 hover:bg-slate-50'
                               }`}
                             >
+                              {cat.imageUrl && <img src={cat.imageUrl} alt={cat.name} className="h-12 w-12 shrink-0 rounded-lg object-cover" />}
                               <div className="min-w-0">
                                 <div className={`text-xs font-black truncate ${isSelected ? 'text-white' : 'text-slate-900'}`}>
                                   {cat.name}
@@ -4772,7 +4769,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
           const buyerChoosesLocation = !isOrderService || serviceLocationMode === 'flexible' || (serviceLocationMode === 'hybrid' && serviceLocationOption === 'buyer-location');
 
           return (
-            <DashboardOverlay layer={200} className="fixed inset-0 bg-slate-950/75 backdrop-blur-xl flex items-center justify-center p-2 sm:p-4">
+            <DashboardOverlay aria-label="Request to Buy or Book" onClose={() => setSelectedProdForOrder(null)} layer={200} className="fixed inset-0 bg-slate-950/75 backdrop-blur-xl flex items-center justify-center p-2 sm:p-4">
               <div className={`bg-white rounded-3xl w-full p-4 sm:p-6 shadow-2xl border border-slate-200 space-y-4 animate-scaleIn max-h-[calc(100dvh-1rem)] sm:max-h-[90vh] overflow-y-auto overscroll-contain scroll-pb-24 ${
                 isOrderService ? 'max-w-[calc(100vw-1rem)] sm:max-w-2xl lg:max-w-4xl pb-[calc(1.5rem+env(safe-area-inset-bottom))] sm:pb-6' : 'max-w-md'
               }`}>
@@ -4783,7 +4780,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                     </h3>
                     <p className="text-[10px] text-slate-500 font-bold">{selectedProdForOrder.title}</p>
                   </div>
-                  <button type="button" onClick={() => setSelectedProdForOrder(null)} className="text-slate-400 hover:text-slate-600 cursor-pointer">
+                  <button aria-label="Close dialog" type="button" onClick={() => setSelectedProdForOrder(null)} className="text-slate-400 hover:text-slate-600 cursor-pointer">
                     <X className="w-5 h-5" />
                   </button>
                 </div>
@@ -4815,6 +4812,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                                   : 'bg-white border-slate-200 text-slate-800 hover:border-blue-300'
                               }`}
                             >
+                              {cat.imageUrl && <img src={cat.imageUrl} alt={cat.name} className="h-12 w-12 shrink-0 rounded-lg object-cover" />}
                               <span className={`text-[11px] font-black truncate ${isSelected ? 'text-white' : 'text-slate-900'}`}>{cat.name}</span>
                               <span className={`text-[11px] font-bold font-mono shrink-0 ${isSelected ? 'text-white' : 'text-emerald-700'}`}>
                                 GH₵ {cat.price}
@@ -4958,7 +4956,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
 
         {/* CAMPUS MEETUP MAP PICKER MODAL */}
         {showMeetupMapModal && (
-          <DashboardOverlay layer={300} className="fixed inset-0 bg-slate-950/75 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 animate-fadeIn">
+          <DashboardOverlay aria-label="Choose Meetup Location" onClose={() => setShowMeetupMapModal(false)} layer={300} className="fixed inset-0 bg-slate-950/75 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 animate-fadeIn">
             <div className="max-w-2xl w-full">
               <CampusMeetupMapPicker
                 latitude={orderMeetupLat || 6.6745}
@@ -4981,7 +4979,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
 
         {/* VIEW ORDER PINNED MEETUP SPOT MODAL */}
         {viewingOrderMap && (
-          <DashboardOverlay className="fixed inset-0 bg-slate-950/75 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 animate-fadeIn">
+          <DashboardOverlay aria-label="Order Meetup Location" onClose={() => setViewingOrderMap(null)} className="fixed inset-0 bg-slate-950/75 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 animate-fadeIn">
             <div className="max-w-2xl w-full">
               <CampusMeetupMapPicker
                 latitude={viewingOrderMap.meetingLatitude || 6.6745}
@@ -4997,7 +4995,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
 
         {/* VERIFY DELIVERY / BUYER PIN MODAL */}
         {verifyingOrderTarget && (
-          <DashboardOverlay className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
+          <DashboardOverlay aria-label="Verify Customer Pickup PIN" onClose={() => setVerifyingOrderTarget(null)} className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
             <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-slate-100 space-y-6 animate-scaleIn">
               <div className="flex items-center justify-between pb-3 border-b border-slate-100">
                 <div className="flex items-center gap-2.5">
@@ -5302,6 +5300,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                                 type="button"
                                 onClick={() => {
                                   setSelectedProductForBuy(product);
+                                  setSelectedPriceCategory(product.priceCategories?.[0] || null);
                                 }}
                                 className="w-full py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 text-[10px] font-black rounded-lg transition-colors text-center border border-rose-100 cursor-pointer"
                               >
@@ -5329,7 +5328,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
       {/* MODAL 1: REPORT MAINTENANCE ISSUE (WITH PICTURE PROOF & GLASSY FINISH) */}
       {/* ========================================================================= */}
       {showNewIssueModal && (
-        <DashboardOverlay className="fixed inset-0 bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-4">
+        <DashboardOverlay aria-label="Report Room Maintenance Issue" onClose={() => setShowNewIssueModal(false)} className="fixed inset-0 bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-4">
           <div className="bg-white/95 backdrop-blur-2xl rounded-3xl max-w-xl w-full p-6 sm:p-7 shadow-2xl border border-sky-200/80 space-y-5 animate-in fade-in zoom-in-95 duration-150 max-h-[90vh] overflow-y-auto">
             
             {/* Header */}
@@ -5345,7 +5344,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                   </p>
                 </div>
               </div>
-              <button
+              <button aria-label="Close dialog"
                 type="button"
                 onClick={() => setShowNewIssueModal(false)}
                 className="text-slate-400 hover:text-slate-700 p-1.5 rounded-xl hover:bg-slate-100 transition-colors"
@@ -5549,7 +5548,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
       {/* MODAL 2: STUDENT CONFIRMATION OF COMPLETED TASK */}
       {/* ========================================================================= */}
       {selectedIssueForConfirm && (
-        <DashboardOverlay className="fixed inset-0 bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-4">
+        <DashboardOverlay aria-label="Verify & Confirm Resolution" onClose={() => setSelectedIssueForConfirm(null)} className="fixed inset-0 bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-4">
           <div className="bg-white/95 backdrop-blur-2xl rounded-3xl max-w-lg w-full p-6 sm:p-7 shadow-2xl border border-emerald-200 space-y-5 animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-start justify-between gap-3 pb-3 border-b border-emerald-100">
               <div className="flex items-start gap-3">
@@ -5563,7 +5562,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                   </p>
                 </div>
               </div>
-              <button
+              <button aria-label="Close dialog"
                 type="button"
                 onClick={() => setSelectedIssueForConfirm(null)}
                 className="text-slate-400 hover:text-slate-700 p-1.5 rounded-xl hover:bg-slate-100"
@@ -5639,12 +5638,12 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
       {/* MODAL 2.5: WELCOME POPUP */}
       {/* ========================================================================= */}
       {showWelcomePopup && (
-        <DashboardOverlay className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4">
+        <DashboardOverlay aria-label="Welcome to PineVela" onClose={() => setShowWelcomePopup(false)} className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl border border-blue-100 space-y-6 animate-in fade-in zoom-in-95 duration-200">
             <div className="flex items-start justify-between gap-3">
               <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 text-white flex items-center justify-center shrink-0 shadow-lg shadow-blue-600/30">
               </div>
-              <button
+              <button aria-label="Close dialog"
                 type="button"
                 onClick={() => setShowWelcomePopup(false)}
                 className="w-10 h-10 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 flex items-center justify-center transition-colors"
@@ -5682,7 +5681,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
       {/* MODAL 3: LINK / CLAIM DIGITAL ROOM KEY */}
       {/* ========================================================================= */}
       {showClaimModal && (
-        <DashboardOverlay className="fixed inset-0 bg-slate-950/70 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+        <DashboardOverlay aria-label="Resident Room Registration" onClose={() => setShowClaimModal(false)} className="fixed inset-0 bg-slate-950/70 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
           <div className="bg-white/95 backdrop-blur-2xl rounded-3xl max-w-lg w-full p-5 sm:p-7 shadow-2xl border border-blue-200 space-y-5 animate-in fade-in zoom-in-95 duration-150">
             
             {/* Modal Header */}
@@ -5704,7 +5703,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                 </div>
               </div>
               {claimStep !== 3 && (
-                <button
+                <button aria-label="Close dialog"
                   type="button"
                   onClick={() => setShowClaimModal(false)}
                   className="text-slate-400 hover:text-slate-700 p-1 rounded-lg hover:bg-slate-100 cursor-pointer"
@@ -6084,7 +6083,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
       {/* MODAL: RESET REGISTERED ACCOUNT PASSWORD */}
       {/* ========================================================================= */}
       {showResetPasswordModal && (
-        <DashboardOverlay className="fixed inset-0 bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-4 animate-in fade-in duration-150">
+        <DashboardOverlay aria-label="Reset Registered Account Password" onClose={() => setShowResetPasswordModal(false)} className="fixed inset-0 bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-4 animate-in fade-in duration-150">
           <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-2xl border border-slate-200 space-y-5">
             <div className="flex items-start justify-between gap-3 pb-3 border-b border-slate-100">
               <div className="flex items-start gap-3">
@@ -6098,7 +6097,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                   <p className="text-xs text-slate-500 font-medium truncate max-w-xs">{resetTargetEmail}</p>
                 </div>
               </div>
-              <button
+              <button aria-label="Close dialog"
                 type="button"
                 onClick={() => setShowResetPasswordModal(false)}
                 className="text-slate-400 hover:text-slate-700 p-1.5 rounded-xl hover:bg-slate-100 cursor-pointer"
@@ -6179,7 +6178,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
       {/* MODAL: DELETE REGISTERED ACCOUNT (ALLOWS RE-REGISTRATION) */}
       {/* ========================================================================= */}
       {showDeleteAccountModal && (
-        <DashboardOverlay className="fixed inset-0 bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-4 animate-in fade-in duration-150">
+        <DashboardOverlay aria-label="Delete Registered Account" onClose={() => setShowDeleteAccountModal(false)} className="fixed inset-0 bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-4 animate-in fade-in duration-150">
           <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-2xl border border-rose-200 space-y-5">
             <div className="flex items-start justify-between gap-3 pb-3 border-b border-rose-100">
               <div className="flex items-start gap-3">
@@ -6193,7 +6192,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                   <p className="text-xs text-slate-500 font-medium truncate max-w-xs">{deleteTargetEmail}</p>
                 </div>
               </div>
-              <button
+              <button aria-label="Close dialog"
                 type="button"
                 onClick={() => setShowDeleteAccountModal(false)}
                 className="text-slate-400 hover:text-slate-700 p-1.5 rounded-xl hover:bg-slate-100 cursor-pointer"
@@ -6306,13 +6305,13 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
       {/* MODAL 4: IMAGE ZOOM VIEWER */}
       {/* ========================================================================= */}
       {zoomedImage && (
-        <DashboardOverlay
+        <DashboardOverlay aria-label="Maintenance Proof Photograph" onClose={() => setZoomedImage(null)}
           className="fixed inset-0 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4 cursor-zoom-out"
           onClick={() => setZoomedImage(null)}
         >
           <div className="relative max-w-4xl max-h-[90vh] overflow-hidden rounded-2xl shadow-2xl">
             <img src={zoomedImage} alt="Zoomed Proof" className="w-full h-full object-contain max-h-[85vh]" />
-            <button
+            <button aria-label="Close dialog"
               onClick={() => setZoomedImage(null)}
               className="absolute top-3 right-3 bg-black/60 hover:bg-black text-white p-2 rounded-full cursor-pointer transition-all"
             >
@@ -6325,7 +6324,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
       {/* MODAL 5: SIGN OUT CONFIRMATION MODAL */}
       {/* ========================================================================= */}
       {showSignoutConfirmModal && (
-        <DashboardOverlay className="fixed inset-0 bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-4">
+        <DashboardOverlay aria-label="Sign Out Confirmation" onClose={() => setShowSignoutConfirmModal(false)} className="fixed inset-0 bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-sm w-full p-6 text-center space-y-5 border border-slate-100 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
             <div className="w-16 h-16 rounded-2xl bg-amber-50 border border-amber-200/60 flex items-center justify-center shadow-xs mx-auto">
               <PineLogo size={36} hideText={true} />
@@ -6365,7 +6364,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
       {/* MODAL 6: HOSTEL ACCOMMODATION DETAILS MODAL */}
       {/* ========================================================================= */}
       {viewingHostelModal && (
-        <DashboardOverlay className="fixed inset-0 bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-4">
+        <DashboardOverlay aria-label="Hostel Accommodation Details" onClose={() => setViewingHostelModal(null)} className="fixed inset-0 bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-xl w-full max-h-[90vh] overflow-y-auto border border-slate-100 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
             
             {/* Gallery header */}
@@ -6396,7 +6395,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                       }}
                       className="w-full h-full object-cover transition-all"
                     />
-                    <button
+                    <button aria-label="Close dialog"
                       onClick={() => setViewingHostelModal(null)}
                       className="absolute top-3 right-3 bg-black/70 hover:bg-black text-white p-2 rounded-full cursor-pointer transition-all border border-white/20"
                     >
@@ -6503,7 +6502,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
 
       {/* ADD ADDITIONAL ROOM MODAL */}
       {showAddRoomModal && (
-        <DashboardOverlay className="fixed inset-0 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
+        <DashboardOverlay aria-label="Register Additional Room" onClose={() => setShowAddRoomModal(false)} className="fixed inset-0 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
           <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-lg w-full shadow-2xl border border-slate-200 space-y-5 animate-scaleUp">
             <div className="flex items-center justify-between border-b border-slate-100 pb-4">
               <div className="flex items-center gap-3">
@@ -6515,7 +6514,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                   <p className="text-xs text-slate-500 font-medium">Add up to 5 rooms under your resident account.</p>
                 </div>
               </div>
-              <button
+              <button aria-label="Close dialog"
                 type="button"
                 onClick={() => setShowAddRoomModal(false)}
                 className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 cursor-pointer"
@@ -6666,7 +6665,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
 
       {/* DELETE / UNLINK ROOM CONFIRMATION MODAL */}
       {deletingRoomTarget && (
-        <DashboardOverlay className="fixed inset-0 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
+        <DashboardOverlay aria-label="Delete Resident Room" onClose={() => { setDeletingRoomTarget(null); setDelRoomError(null); setDelRoomPasswordInput(''); }} className="fixed inset-0 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
           <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl border border-slate-200 space-y-5 animate-scaleUp">
             <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
               <div className="p-3 rounded-2xl bg-rose-100 text-rose-700 font-bold">
@@ -6797,7 +6796,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
 
       {/* PINEVELA FULL-SCREEN STUDENT MERCHANT ONBOARDING WIZARD (WHITE FROSTY THEME & ROOT Z-INDEX) */}
       {showDMRegModal && (
-        <DashboardOverlay layer={99999} className="fixed inset-0 h-full w-full bg-slate-50/95 backdrop-blur-md flex flex-col items-center justify-start p-3 sm:p-6 overflow-hidden font-sans text-slate-800 animate-fadeIn">
+        <DashboardOverlay aria-label="Digital Market Registration" onClose={() => { setShowDMRegModal(false); setDmWizardPhase(1); }} layer={99999} className="fixed inset-0 h-full w-full bg-slate-50/95 backdrop-blur-md flex flex-col items-center justify-start p-3 sm:p-6 overflow-hidden font-sans text-slate-800 animate-fadeIn">
           
           {/* Ambient background blur shapes */}
           <div className="absolute top-0 right-0 w-96 h-96 bg-blue-100/60 rounded-full blur-3xl opacity-30 -z-10 pointer-events-none fixed" />
@@ -7238,7 +7237,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
 
     {/* STORE RATING & REVIEW MODAL FOR BUYERS */}
     {ratingOrderTarget && (
-      <DashboardOverlay className="fixed inset-0 bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-4">
+      <DashboardOverlay aria-label="Rate Store & Seller" onClose={() => setRatingOrderTarget(null)} className="fixed inset-0 bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-4">
         <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4 animate-scaleIn">
           <div className="flex items-center justify-between border-b border-slate-100 pb-3">
             <div>

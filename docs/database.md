@@ -1,5 +1,13 @@
 # PineVela Database Model
 
+## Marketplace Media During Migration
+
+The current JSON backend persists `marketMedia` records containing `imageUrl`, `accountId`
+and `createdAt`. Products store up to three `additionalImages`; service `priceCategories`
+contain up to four options with optional `imageUrl`. The server validates upload ownership
+before accepting these references. Preserve these relationships when moving media to
+Supabase Storage/PostgreSQL, with account ownership enforced by RLS and server authorization.
+
 ## Marketplace Purchase Reviews During Migration
 
 `digitalMarketRatings` contains server-owned receipt, buyer, seller, store and item fields.
@@ -212,3 +220,74 @@ The transitional JSON persistence model has no active housing booking applicatio
 Legacy housing applications are retained privately under `retiredFeatureRecords.housingApplications`
 when old stores load and save. This archive has no API or operational workflow and must not
 be exposed as a public directory or silently discarded during the Supabase migration.
+
+
+## Transitional Notification Read State
+
+JSON notifications may include `readBy: string[]`, storing serialized `[role, accountId]`
+acknowledgements. Reads expose only the requesting account's `read` and `isRead`, not
+other reader identities. Historical global flags remain compatible. Preserve per-account
+read acknowledgements when migrating to PostgreSQL; shared alerts need a recipient/read
+relation with a unique `(notification_id, profile_id)` key and recipient-scoped RLS.
+
+
+## Collection Round-Trip Contract
+
+Every supported array declared in `PersistentStore` must survive load/save and server
+startup. Ratings, staff bargains, onboarding payments and manager profiles are explicitly
+loaded alongside legacy private service reviews. Separate historical records sharing an
+email are preserved in these collections; stored empty arrays remain empty. New onboarding
+payments are written once through the canonical database collection, without a parallel
+seeded payment list. Tests cover the declared collection contract and repeated real server
+restarts. Adding a collection requires declaring it, loading it, and preserving its defaults.
+
+
+## JSON Writer and Offline Recovery (B09/B10)
+
+The transitional JSON database permits one process per data directory. Linux `flock` is
+required, and the filesystem must be a supported local Linux filesystem (ext, XFS, Btrfs,
+F2FS, ZFS, overlay, tmpfs or ramfs). NFS, SMB, FUSE and other unsupported filesystems are
+rejected. This is not a cluster, shared network volume or multi-worker storage backend.
+Use transactional PostgreSQL before scaling to multiple workers. Memory filesystems are
+volatile and are suitable for isolated tests rather than durable deployment.
+
+The writer acquires a kernel lease before reading/initializing the database, keeps it for
+its in-memory snapshot lifetime, and uses the same lease for offline credential recovery.
+The OS releases it on process exit/crash; the `.lock` file remains. Never delete/rotate
+that inode to bypass a running writer. Writes also reject out-of-band file changes using
+an expected SHA-256 content digest. Stop all writers before editing/restoring runtime data.
+
+Existing JSON must be readable, valid UTF-8, an object with a users/hostels array, and have
+valid shapes for present supported collections/settings. Missing legacy collections may
+still use defaults. Present malformed fields now fail closed instead of B01's earlier
+fallback behavior. An invalid/unreadable existing file blocks startup without replacing it
+or its backup. A missing primary with recovery artifacts also blocks empty initialization.
+
+`PINEVELA_JSON_MAX_BYTES` defaults to 64 MiB and accepts 1–256 MiB. Oversized reads/writes
+are rejected; they are not truncated. Whole-store serialization, hashing and fsynced disk
+writes remain synchronous. The size bound is a guard, not a latency/throughput guarantee.
+The backend still needs PostgreSQL for large datasets and transactional multi-worker work.
+
+Each successful replacement preserves the prior validated snapshot as
+`pinevela_store.json.bak` using a private atomic, fsynced write. There is one rotating
+backup, not a history archive. File and directory fsync are used; database, backup,
+quarantine and temporary write artifacts are private, Git-ignored and denied by Vite's
+file-serving rules. Budget disk space for primary, backup and one temporary copy (roughly
+3 times the configured limit), plus one quarantine after recovery. Maintain separate
+operator backups for hardware failure, long-term retention and writes bypassing this tool.
+
+With the application stopped, from the project folder:
+
+```bash
+node --import tsx scripts/database-recovery.ts check
+node --import tsx scripts/database-recovery.ts restore
+```
+
+`check` validates the backup without changing records. `restore` validates it first,
+retains the existing primary bytes in `pinevela_store.json.quarantine`, replaces the
+primary, and revokes all restored sessions and pending signup challenges. It refuses
+invalid/oversized backups or an existing quarantine. Archive an existing quarantine
+securely before another restore; do not remove it blindly. Unreadable/oversized originals
+require an operator to preserve them offline before recovery. A last-good snapshot can
+predate recent operations; verify account approvals, room allocation and orders after
+restore. Credential recovery also refuses a missing database or a running writer.

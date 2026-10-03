@@ -1,3 +1,4 @@
+import { useNotifications } from '../context/NotificationContext';
 import { sessionFetch as fetch } from '../lib/session';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, MessageSquare, Send, RefreshCw } from 'lucide-react';
@@ -11,6 +12,7 @@ interface MarketMessage {
 }
 export default function MarketplaceInbox({ initialPeerEmail }: { initialPeerEmail?: string | null }) {
   const { user } = useAuth();
+  const { notifications, markAsRead } = useNotifications();
   const [messages, setMessages] = useState<MarketMessage[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
@@ -53,6 +55,14 @@ export default function MarketplaceInbox({ initialPeerEmail }: { initialPeerEmai
     if (initialPeerEmail) { const thread = threads.find(t => normalize(t.email) === normalize(initialPeerEmail)); if (thread) setSelected(thread.id); }
   }, [initialPeerEmail, threads.length]);
   const active = threads.find(t => t.id === selected);
+  useEffect(() => {
+    if (!active) return;
+    const ids = new Set(active.messages.map(m => m.id));
+    const notices = notifications.filter(n => !n.read && n.marketChat && (n.messageId ? ids.has(n.messageId) :
+      seller ? n.buyerId === active.buyerId : n.sellerStoreId === active.id));
+    void Promise.all(notices.map(n => markAsRead(n.id)));
+  }, [selected, active?.messages.length, notifications, markAsRead]);
+
   useEffect(() => { end.current?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'nearest' }); }, [selected, active?.messages.length]);
   const send = async (event: React.FormEvent) => {
     event.preventDefault(); if (!active || !draft.trim() || sending) return;

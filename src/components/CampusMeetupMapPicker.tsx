@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import { MapPin, Search, Navigation, CheckCircle2, Copy, Check, ExternalLink, Compass, School } from 'lucide-react';
 
 // Fix Leaflet default icon paths in modern Vite bundlers

@@ -7,6 +7,16 @@ import { Bell, CheckCircle2, AlertTriangle, Info, X } from 'lucide-react';
 
 export interface NotificationItem {
   id: string;
+  marketChat?: boolean;
+  messageId?: string;
+  buyerId?: string;
+  sellerStoreId?: string;
+  orderId?: string;
+  productId?: string;
+  scope?: string;
+  category?: string;
+  module?: string;
+  marketRatingId?: string;
   title: string;
   message: string;
   type?: 'success' | 'warning' | 'info' | 'error' | string;
@@ -89,27 +99,27 @@ class NotificationDeduplicatorService {
     return NotificationDeduplicatorService.instance;
   }
 
-  public isNotificationRead(id: string): boolean {
-    return Boolean(id && this.readNotificationIds.has(id));
+  public isNotificationRead(id: string, accountKey: string): boolean {
+    return Boolean(id && this.readNotificationIds.has(JSON.stringify([accountKey, id])));
   }
 
-  public markNotificationRead(id: string) {
+  public markNotificationRead(id: string, accountKey: string) {
     if (!id) return;
-    this.readNotificationIds.add(id);
+    this.readNotificationIds.add(JSON.stringify([accountKey, id]));
     this.saveToStorage();
   }
 
-  public shouldFireNotification(notif: NotificationItem, isPrimaryAccount: boolean): boolean {
+  public shouldFireNotification(notif: NotificationItem, isPrimaryAccount: boolean, accountKey: string): boolean {
     if (!notif) return false;
     // Popups are strictly restricted to the user's primary account (not manager, staff, or sub-accounts)
     if (!isPrimaryAccount) return false;
 
     // If marked as read or recorded as read, NEVER popup
-    if (notif.read || (notif.id && this.readNotificationIds.has(notif.id))) {
+    if (notif.read || this.isNotificationRead(notif.id, accountKey)) {
       return false;
     }
 
-    const key = `notif_${notif.id || ''}_${(notif.title || '').trim().toLowerCase()}_${(notif.message || '').trim().toLowerCase()}`;
+    const key = `${accountKey}_notif_${notif.id || ''}_${(notif.title || '').trim().toLowerCase()}_${(notif.message || '').trim().toLowerCase()}`;
     if (this.seenKeys.has(key)) {
       return false;
     }
@@ -176,6 +186,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
   // Check if current user session is strictly the Primary Account (not manager, staff, student/resident, or sub-account)
   const userRole = (user?.role || '').toLowerCase().trim();
+  const notificationAccountKey = JSON.stringify([userRole, user?.id || '']);
   const isPrimaryAccount = Boolean(
     user && (userRole === 'user' || userRole === '')
   );
@@ -279,11 +290,11 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         const seenMap = new Set<string>();
 
         for (const rawNotif of notifs) {
-          // Read status: check both raw server status and persistent local read status
-          const isRead = rawNotif.read || notificationServiceSingleton.isNotificationRead(rawNotif.id);
+          // Server read state is authoritative and specific to the current account.
+          const isRead = Boolean(rawNotif.read);
           const notif: NotificationItem = { ...rawNotif, read: isRead };
           if (isRead && rawNotif.id) {
-            notificationServiceSingleton.markNotificationRead(rawNotif.id);
+            notificationServiceSingleton.markNotificationRead(rawNotif.id, notificationAccountKey);
           }
 
           const key = `id_${notif.id}_key_${(notif.title || '').toLowerCase()}_${(notif.message || '').toLowerCase()}`;
@@ -292,7 +303,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
             uniqueNotifs.push(notif);
 
             // Popups strictly ONLY fire in the primary user account for brand new unread notifications
-            if (isPrimaryAccount && !isFirstLoadRef.current && !notif.read && notificationServiceSingleton.shouldFireNotification(notif, isPrimaryAccount)) {
+            if (isPrimaryAccount && !isFirstLoadRef.current && !notif.read && notificationServiceSingleton.shouldFireNotification(notif, isPrimaryAccount, notificationAccountKey)) {
               pushToast(notif.title, notif.message, notif.type === 'success' ? 'success' : notif.type === 'warning' ? 'warning' : 'info');
             }
           }
@@ -316,25 +327,25 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
   const markAsRead = useCallback(async (id: string) => {
     try {
-      notificationServiceSingleton.markNotificationRead(id);
+      await apiFetch(`/api/notifications/${id}/read`, { method: 'PUT' });
+      notificationServiceSingleton.markNotificationRead(id, notificationAccountKey);
       setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
-      await apiFetch(`/api/notifications/${id}/read`, { method: 'PUT' }).catch(() => {});
     } catch (e) {
       console.warn("Failed to mark notification as read:", e);
     }
-  }, [apiFetch]);
+  }, [apiFetch, notificationAccountKey]);
 
   const markAllAsRead = useCallback(async () => {
     try {
+      await apiFetch('/api/notifications/read-all', { method: 'PUT' });
       notifications.forEach(n => {
-        if (n.id) notificationServiceSingleton.markNotificationRead(n.id);
+        if (n.id) notificationServiceSingleton.markNotificationRead(n.id, notificationAccountKey);
       });
       setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-      await apiFetch('/api/notifications/read-all', { method: 'PUT' }).catch(() => {});
     } catch (e) {
       console.warn("Failed to mark all notifications as read:", e);
     }
-  }, [apiFetch, notifications]);
+  }, [apiFetch, notifications, notificationAccountKey]);
 
   // Centralized background real-time polling loop (every 6s) & window focus refresh
   useEffect(() => {
@@ -357,7 +368,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       window.removeEventListener('focus', handleFocus);
       document.removeEventListener('visibilitychange', handleFocus);
     };
-  }, [user?.id, user?.email]);
+  }, [user?.id, user?.email, user?.role]);
 
   const unreadCount = notifications.filter(n => !n.read).length;
 

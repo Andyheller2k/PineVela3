@@ -360,6 +360,8 @@ pay-onboarding-fee records paid solely from agreedToPay. Hostel submissions acce
 
 ### S28 — Medium: Managers can delete other managers’ meetings
 
+**Remediation update (2026-10-03):** Resolved in the current checkout. Meeting list/update/delete share current residence ownership checks; notification list/single-read/bulk-read share recipient authorization with account-specific read state. See [implementation and verification report](/home/wyse/Documents/PineVela3/docs/audits/S28-S29-remediation-2026-10-03.md). The evidence below records the original audit state.
+
 **Evidence:** Confirmed in isolated probe: foreign meeting DELETE returned 200.
 
 Meeting updates contain ownership checks, but DELETE /api/meetings/:id does not. GET meetings additionally exposes meetings without managerId to every manager. The deletion path does not use the more restrictive update policy.
@@ -369,6 +371,8 @@ Meeting updates contain ownership checks, but DELETE /api/meetings/:id does not.
 **Remediation direction, not applied:** Reuse the same ownership policy for list, update and delete operations.
 
 ### S29 — Medium: Notification read state can be changed for another user
+
+**Remediation update (2026-10-03):** Resolved in the current checkout. Meeting list/update/delete share current residence ownership checks; notification list/single-read/bulk-read share recipient authorization with account-specific read state. See [implementation and verification report](/home/wyse/Documents/PineVela3/docs/audits/S28-S29-remediation-2026-10-03.md). The evidence below records the original audit state.
 
 **Evidence:** Confirmed in isolated probe: foreign notification update returned 200.
 
@@ -441,6 +445,8 @@ Anyone can subscribe to /api/sync/events. Successful mutations broadcast API pat
 **Remediation direction, not applied:** Restrict subscribers and minimize event metadata; cap connections and timeouts.
 
 ### B01 — High: Restart discards four persisted collections
+
+**Remediation update (2026-10-03):** Resolved in the current checkout. The loader preserves ratings, staff bargains, onboarding payments and service reviews; the same omission in saved manager profiles was corrected. New onboarding records are inserted once into the canonical persisted collection. See [implementation and verification report](/home/wyse/Documents/PineVela3/docs/audits/B01-remediation-2026-10-03.md). The evidence below records the original audit state.
 
 **Evidence:** Confirmed with pre-seeded temporary database and startup snapshot.
 
@@ -534,6 +540,8 @@ Manager verification approve, reject, verify-doc and suspend aliases are registe
 
 ### B09 — High: Malformed database recovery can overwrite operational data with defaults
 
+**Remediation update (2026-10-03):** Resolved for the constrained local JSON backend: corrupt input fails closed; one writer is enforced before load; bounded private backup/offline recovery and stale-write fencing are implemented. Multi-worker/network storage requires PostgreSQL. See [implementation and verification report](/home/wyse/Documents/PineVela3/docs/audits/B09-B10-remediation-2026-10-03.md). The evidence below records the original audit state.
+
 **Evidence:** Source-confirmed risk; the real database was not corrupted.
 
 loadPersistentStore catches parse/read errors and returns defaultStore. Startup subsequently saves the active store. An unreadable or corrupted operational JSON file can therefore be replaced with default/empty data instead of failing safely and preserving the bad file for recovery. Atomic rename reduces partial-write exposure but does not address corrupt input handling.
@@ -543,6 +551,8 @@ loadPersistentStore catches parse/read errors and returns defaultStore. Startup 
 **Remediation direction, not applied:** Fail closed or quarantine corrupt data and restore from a validated backup rather than silently overwriting it.
 
 ### B10 — Medium: Whole-store synchronous persistence is unsuitable for concurrent workers
+
+**Remediation update (2026-10-03):** Resolved for the constrained local JSON backend: corrupt input fails closed; one writer is enforced before load; bounded private backup/offline recovery and stale-write fencing are implemented. Multi-worker/network storage requires PostgreSQL. See [implementation and verification report](/home/wyse/Documents/PineVela3/docs/audits/B09-B10-remediation-2026-10-03.md). The evidence below records the original audit state.
 
 **Evidence:** Architecture risk confirmed in source; no multi-worker or load test performed.
 
@@ -564,15 +574,19 @@ Every save serializes and synchronously writes the full JSON database. Each proc
 
 ### B12 — Medium: User dashboard popups lack modal keyboard/focus behavior
 
+**Remediation update (2026-10-03):** Resolved in the current checkout. Shared native modal dialogs provide named semantics, inert background/navigation, keyboard containment, nested Escape handling and focus restoration while preserving existing popup actions. See [implementation and verification report](/home/wyse/Documents/PineVela3/docs/audits/B12-B13-remediation-2026-10-03.md). The evidence below describes the original audit state.
+
 **Evidence:** Confirmed in source; visual layering checks previously passed, but this audit did not run a fresh assistive-technology session.
 
 DashboardOverlay portals a div above the navigation but has no dialog semantics, focus trap, background inertness, Escape handling or focus restoration. The dashboard popup implementations do not supply a shared equivalent. Visual blur does not prevent keyboard navigation to background controls. CompanyStory uses a native dialog and has separate focus logic; that distinction was preserved.
 
 **Locations:** [src/components/DashboardOverlay.tsx:1](/home/wyse/Documents/PineVela3/src/components/DashboardOverlay.tsx:1), [src/components/PageUserDashboard.tsx:5960](/home/wyse/Documents/PineVela3/src/components/PageUserDashboard.tsx:5960), [src/components/CompanyStory.tsx:83](/home/wyse/Documents/PineVela3/src/components/CompanyStory.tsx:83).
 
-**Remediation direction, not applied:** Add shared dialog semantics, keyboard containment and focus restoration without changing popup actions.
+**Original remediation direction (now implemented):** Add shared dialog semantics, keyboard containment and focus restoration without changing popup actions.
 
 ### B13 — Low: Large initial JavaScript bundle creates a performance risk
+
+**Remediation update (2026-10-03):** Resolved for the audited initial-bundle issue. Lazy routes and library splitting reduce initial landing JavaScript from 2.39 MB to 531 KB; the chunk warning is eliminated. Controlled mobile measurements are recorded; field performance remains unmeasured. See [implementation and verification report](/home/wyse/Documents/PineVela3/docs/audits/B12-B13-remediation-2026-10-03.md). The evidence below describes the original audit state.
 
 **Evidence:** Confirmed production build measurement; no field performance test performed.
 
@@ -580,7 +594,7 @@ The build emits one main JavaScript bundle of approximately 2.62 MB, about 646 K
 
 **Locations:** [src/App.tsx:1](/home/wyse/Documents/PineVela3/src/App.tsx:1), [vite.config.ts:1](/home/wyse/Documents/PineVela3/vite.config.ts:1).
 
-**Remediation direction, not applied:** Measure mobile load performance and split routes/heavy optional features where beneficial.
+**Original remediation direction (now implemented):** Measure mobile load performance and split routes/heavy optional features where beneficial.
 
 ## Current safeguards confirmed
 

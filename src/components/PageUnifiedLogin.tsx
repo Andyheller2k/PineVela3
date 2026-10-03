@@ -4,6 +4,11 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Mail, Key, Eye, EyeOff, ShieldCheck, ArrowRight, ShieldAlert, CheckCircle, CheckCircle2, RefreshCw, LogIn, ClipboardList, Building, MapPin, Lock, Phone, ChevronRight, ChevronLeft, Search, User, X, Clock, Briefcase, Home, Wrench, GraduationCap, School, BookOpen, Building2, Bell, HelpCircle, Info, AlertCircle } from 'lucide-react';
 import PineLogo from './PineLogo';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+import markerIconUrl from 'leaflet/dist/images/marker-icon.png';
+import markerRetinaUrl from 'leaflet/dist/images/marker-icon-2x.png';
+import markerShadowUrl from 'leaflet/dist/images/marker-shadow.png';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   validateEmail,
@@ -328,12 +333,6 @@ export default function PageUnifiedLogin() {
       const timer = setTimeout(() => {
         if (!mapContainerRef.current) return;
 
-        const L = (window as any).L;
-        if (!L) {
-          console.warn("Leaflet library not found on window.");
-          return;
-        }
-
         // Initialize map
         if (!mapInstanceRef.current) {
           const map = L.map(mapContainerRef.current).setView([mapCoordinates.lat, mapCoordinates.lng], 15);
@@ -344,7 +343,7 @@ export default function PageUnifiedLogin() {
           }).addTo(map);
 
           // Add marker
-          const marker = L.marker([mapCoordinates.lat, mapCoordinates.lng], { draggable: true }).addTo(map);
+          const marker = L.marker([mapCoordinates.lat, mapCoordinates.lng], { draggable: true, icon: L.icon({ iconUrl: markerIconUrl, iconRetinaUrl: markerRetinaUrl, shadowUrl: markerShadowUrl, iconSize: [25, 41], iconAnchor: [12, 41], shadowSize: [41, 41] }) }).addTo(map);
           markerInstanceRef.current = marker;
 
           // Drag end event listener

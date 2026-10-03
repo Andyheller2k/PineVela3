@@ -1,3 +1,4 @@
+import { ownsMarketStore } from './marketOwnership.js';
 import crypto from 'node:crypto';
 import { normalizeEmail } from './accountSecurity.js';
 import { isOrderBuyer } from './marketOrderWorkflow.js';
@@ -12,7 +13,8 @@ export function verifiedMarketRatings(store: any): any[] {
   const valid = (store.digitalMarketRatings || []).filter((r: any) => {
     if (!r || typeof r !== 'object') return false;
     const order = orders.get(r.orderId);
-    return r.purchaseVerifiedVersion === 1 && order?.status === 'Completed & Paid' &&
+    const seller = (store.digitalMarketStores || []).find((s: any) => s.id === order?.storeId) || { id: order?.storeId, studentEmail: order?.sellerEmail, userId: order?.sellerId };
+    return !ownsMarketStore({ id: order?.buyerId, email: order?.buyerEmail }, seller, store) && r.purchaseVerifiedVersion === 1 && order?.status === 'Completed & Paid' &&
       Boolean(order.buyerId && order.storeId && order.productId) && r.buyerId === order.buyerId &&
       r.storeId === order.storeId && r.productId === order.productId &&
       normalizeEmail(r.sellerEmail) === normalizeEmail(order.sellerEmail) &&
@@ -41,6 +43,8 @@ export function writePurchaseRating(actor: any, body: any, store: any, serviceId
   const order = (store.digitalMarketOrders || []).find((o: any) => o.id === body.orderId);
   if (!order) throw new MarketRatingError('Purchase order not found.', 404);
   if (!isOrderBuyer(actor, order)) throw new MarketRatingError('You cannot review another buyer’s order.', 403);
+  const seller = (store.digitalMarketStores || []).find((s: any) => s.id === order.storeId) || { id: order.storeId, studentEmail: order.sellerEmail, userId: order.sellerId };
+  if (ownsMarketStore(actor, seller, store)) throw new MarketRatingError('You cannot review purchases from your own store.', 403);
   if (order.status !== 'Completed & Paid') throw new MarketRatingError('Complete the purchase before submitting a review.', 409);
   if (!order.storeId || !order.productId || !order.sellerEmail || serviceId && order.productId !== serviceId) throw new MarketRatingError('The order does not belong to this item.', 409);
   if (!Number.isInteger(body.rating) || body.rating < 1 || body.rating > 5) throw new MarketRatingError('Rating must be an integer from 1 to 5.');
@@ -68,6 +72,17 @@ export function writePurchaseRating(actor: any, body: any, store: any, serviceId
   const product = (store.digitalMarketProducts || []).find((p: any) => p.id === record.productId);
   const productSummary = ratingSummary(verified.filter(r => r.productId === record.productId));
   if (product) Object.assign(product, { rating: productSummary.averageRating, reviewCount: productSummary.ratingCount });
+  if (!previous || previous.rating !== record.rating || previous.review !== record.review) {
+    store.notifications ||= [];
+    store.notifications = store.notifications.filter((n: any) => n.marketRatingId !== record.id);
+    const title = order.productTitle || product?.title || 'your item';
+    store.notifications.unshift({ id: crypto.randomUUID(), marketRatingId: record.id,
+      sellerStoreId: record.storeId, targetRole: 'merchant', scope: 'market', category: 'market',
+      title: previous ? 'Purchase review updated' : 'New verified purchase review',
+      message: `${record.buyerName} rated ${title} ${record.rating}/5.${record.review ? ` Review: ${record.review}` : ''}`,
+      buyerName: record.buyerName, productTitle: title, rating: record.rating, review: record.review,
+      orderId: order.id, productId: record.productId, read: false, date: now });
+  }
   return { record, summary, productSummary };
 }
 

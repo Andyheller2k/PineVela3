@@ -1,0 +1,108 @@
+{
+  "before": {
+    "conditions": "375x900 viewport; 4x CPU slowdown; 1.6 Mbps download, 150 ms latency; cold browser cache; external fonts blocked consistently; three runs",
+    "samples": [
+      {
+        "firstContentfulPaintMs": 5596,
+        "js": [
+          {
+            "file": "index-BX3DZwYl.js",
+            "bytes": 2393411,
+            "encodedBytes": 587057
+          }
+        ],
+        "horizontalOverflow": false
+      },
+      {
+        "firstContentfulPaintMs": 8192,
+        "js": [
+          {
+            "file": "index-BX3DZwYl.js",
+            "bytes": 2393411,
+            "encodedBytes": 587057
+          }
+        ],
+        "horizontalOverflow": false
+      },
+      {
+        "firstContentfulPaintMs": 8192,
+        "js": [
+          {
+            "file": "index-BX3DZwYl.js",
+            "bytes": 2393411,
+            "encodedBytes": 587057
+          }
+        ],
+        "horizontalOverflow": false
+      }
+    ]
+  },
+  "after": {
+    "conditions": "375x900 viewport; 4x CPU slowdown; 1.6 Mbps download, 150 ms latency; cold browser cache; external fonts blocked consistently; three runs",
+    "samples": [
+      {
+        "firstContentfulPaintMs": 2240,
+        "js": [
+          {
+            "file": "index-B3Mo0JLh.js",
+            "bytes": 307156,
+            "encodedBytes": 96280
+          },
+          {
+            "file": "_commonjsHelpers-CqkleIqs.js",
+            "bytes": 116,
+            "encodedBytes": 116
+          },
+          {
+            "file": "react-core-D0zisx0S.js",
+            "bytes": 223590,
+            "encodedBytes": 69798
+          }
+        ],
+        "horizontalOverflow": false
+      },
+      {
+        "firstContentfulPaintMs": 1600,
+        "js": [
+          {
+            "file": "index-B3Mo0JLh.js",
+            "bytes": 307156,
+            "encodedBytes": 96280
+          },
+          {
+            "file": "_commonjsHelpers-CqkleIqs.js",
+            "bytes": 116,
+            "encodedBytes": 116
+          },
+          {
+            "file": "react-core-D0zisx0S.js",
+            "bytes": 223590,
+            "encodedBytes": 69798
+          }
+        ],
+        "horizontalOverflow": false
+      },
+      {
+        "firstContentfulPaintMs": 1700,
+        "js": [
+          {
+            "file": "index-B3Mo0JLh.js",
+            "bytes": 307156,
+            "encodedBytes": 96280
+          },
+          {
+            "file": "_commonjsHelpers-CqkleIqs.js",
+            "bytes": 116,
+            "encodedBytes": 116
+          },
+          {
+            "file": "react-core-D0zisx0S.js",
+            "bytes": 223590,
+            "encodedBytes": 69798
+          }
+        ],
+        "horizontalOverflow": false
+      }
+    ]
+  }
+}

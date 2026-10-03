@@ -25,10 +25,10 @@ function rasterFormat(bytes: Buffer): string | undefined {
 }
 
 /** Decode pixels and construct new PNG bytes; never publish submitted bytes or metadata. */
-export async function normalizeRasterImage(bytes: Buffer): Promise<Buffer> {
-  return imageWorkers.run(() => decodeRasterPixels(bytes));
+export async function normalizeRasterImage(bytes: Buffer, maxDimension?: number): Promise<Buffer> {
+  return imageWorkers.run(() => decodeRasterPixels(bytes, maxDimension));
 }
-async function decodeRasterPixels(bytes: Buffer): Promise<Buffer> {
+async function decodeRasterPixels(bytes: Buffer, maxDimension?: number): Promise<Buffer> {
   const expectedFormat = rasterFormat(bytes);
   if (!expectedFormat) throw new ImageUploadError(415, 'Only decoded JPEG, PNG and WebP photographs are supported.');
   try {
@@ -40,8 +40,10 @@ async function decodeRasterPixels(bytes: Buffer): Promise<Buffer> {
     if (!metadata.width || !metadata.height || metadata.width > MAX_IMAGE_DIMENSION || metadata.height > MAX_IMAGE_DIMENSION || metadata.width * metadata.height > MAX_IMAGE_PIXELS) {
       throw new ImageUploadError(413, 'Image dimensions exceed the supported limit.');
     }
-    // Sharp strips EXIF, XMP and other original metadata by default. Preserve pixel resolution.
-    const output = await image.rotate().png().timeout({ seconds: 5 }).toBuffer();
+    // Sharp strips original metadata. Only callers requesting a size cap resize the decoded pixels.
+    const pipeline = image.rotate();
+    if (maxDimension) pipeline.resize(maxDimension, maxDimension, { fit: 'inside', withoutEnlargement: true });
+    const output = await pipeline.png().timeout({ seconds: 5 }).toBuffer();
     if (output.length > MAX_IMAGE_OUTPUT_BYTES) throw new ImageUploadError(413, 'Decoded image exceeds the supported size.');
     return output;
   } catch (error) {
@@ -50,7 +52,7 @@ async function decodeRasterPixels(bytes: Buffer): Promise<Buffer> {
   }
 }
 
-export async function decodeImageUpload(body: any): Promise<Buffer> {
+export async function decodeImageUpload(body: any, maxDimension?: number): Promise<Buffer> {
   const format = typeof body?.fileType === 'string' ? MIME_FORMATS[body.fileType.toLowerCase()] : undefined;
   if (!format) throw new ImageUploadError(415, 'Specify JPEG, PNG or WebP as the image type.');
   if (typeof body?.fileData !== 'string' || !body.fileData) throw new ImageUploadError(400, 'Image file data is required.');
@@ -66,7 +68,7 @@ export async function decodeImageUpload(body: any): Promise<Buffer> {
   if (bytes.toString('base64') !== encoded) throw new ImageUploadError(400, 'Invalid base64 image data.');
   if (bytes.length > MAX_IMAGE_INPUT_BYTES) throw new ImageUploadError(413, 'Image exceeds the 20MB limit.');
   if (rasterFormat(bytes) !== format) throw new ImageUploadError(415, 'Image content does not match its declared type.');
-  return normalizeRasterImage(bytes);
+  return normalizeRasterImage(bytes, maxDimension);
 }
 
 function mediaOrigin(value: string, publicOrigin: string): string {
@@ -145,8 +147,8 @@ export function createImageStorage(options: { root?: string; mediaOrigin?: strin
       next();
     },
     router,
-    async save(body: any, reserveQuota?: (bytes: number) => Promise<void>) {
-      const output = await decodeImageUpload(body);
+    async save(body: any, reserveQuota?: (bytes: number) => Promise<void>, maxDimension?: number) {
+      const output = await decodeImageUpload(body, maxDimension);
       const used = await storageUsage();
       if (used.bytes + output.length > capacityBytes || used.files >= capacityFiles) throw new ResourceLimitError(507, 3600, 'Photograph storage is full. Contact an administrator.');
       // Reserve synchronously before yielding, preventing concurrent writes from overspending.

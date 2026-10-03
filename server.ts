@@ -1,6 +1,11 @@
+import { DatabasePersistenceError } from './jsonStoreSafety.js';
+import { realpathSync } from 'node:fs';
+import { meetingVisible, notificationVisible, notificationReaderKey, notificationForActor } from './recordAccessSecurity.js';
+import { ownsMarketStore } from './marketOwnership.js';
+import { marketMediaFields, MarketMediaError } from './marketMediaSecurity.js';
 import { createSessionToken, setRecordSession, clearRecordSession, sessionMatches, requestSessionToken, revokeMatchingSessions, cookieSessionRequest, setSessionCookie, clearSessionCookie, sessionOriginGuard, sessionLifetimeMs } from './sessionSecurity.js';
 import { createImageStorage, ImageUploadError } from './imageUploadSecurity.js';
-import { createResourceProtection, EventConnections, guardAsyncRoutes, ResourceLimitError, resourceFailure, trustedProxyAddresses, UPLOAD_ROUTE } from './resourceSecurity.js';
+import { createResourceProtection, EventConnections, guardAsyncRoutes, ResourceLimitError, resourceFailure, trustedProxyAddresses, UPLOAD_ROUTE, MARKET_UPLOAD_ROUTE, isImageUploadRoute } from './resourceSecurity.js';
 import { installMarketRatings, verifiedMarketRatings, publicMarketRating, ratingSummary } from './marketRatingSecurity.js';
 import { issueDeliveryPin, checkDeliveryPin, publicMarketOrder, orderAction, authorizeOrderAction, isOrderBuyer, isOrderSeller } from './marketOrderWorkflow.js';
 import { catalogOrderTerms, checkOrderStock, consumeOrderStock, activeOrderReservation, terminalMarketOrder, MarketOrderError } from './marketOrderSecurity.js';
@@ -20,7 +25,7 @@ import { SignupGuard, signupInput } from "./signupSecurity.js";
 import { signupProviderConfig, sendSignupVerification, confirmSignupVerification, SignupError } from "./supabaseSignup.js";
 import { developmentSignupRequest, isDevelopmentSignup } from "./developmentSignup.js";
 import { managerIsApproved, managerRecordMatches, managerForDossier, managerOnboardingRequest } from "./managerApprovalSecurity.js";
-import { installMarketMessaging, marketNotificationVisible, isMarketMessageNotification } from './marketMessaging.js';
+import { installMarketMessaging, isMarketMessageNotification, sellerStore } from './marketMessaging.js';
 import { installStaffManagement, activeResidentRoom, activeManagedStaff } from './staffManagement.js';
 import { hostelVerificationSubmission, OnboardingSubmissionError } from './onboardingSubmissionSecurity.js';
 import express from "express";
@@ -161,6 +166,7 @@ process.on('uncaughtException', (err) => {
     return;
   }
   console.error('[CRITICAL] Uncaught Exception:', err);
+  if (err instanceof DatabasePersistenceError) process.exitCode = 1;
   // Note: For truly unknown fatal errors, we log and keep running, 
   // but in a production environment one might consider a graceful shutdown.
 });
@@ -427,22 +433,7 @@ let verificationAuditLogs: any[] = [
   }
 ];
 
-let onboardingPayments: any[] = [
-  {
-    id: 'pay-001',
-    hostelId: 'hostel-pending-001',
-    hostelName: 'Heritage Palace Residency',
-    managerId: 'manager_101',
-    managerName: 'Anthony Davis',
-    amount: 50.00,
-    currency: 'GHS',
-    status: 'paid',
-    reference: 'PAY-PV50-2026-99120',
-    agreementAcknowledged: true,
-    paymentMethod: 'Manual Confirmation (Direct Agreement)',
-    paidAt: new Date(Date.now() - 3600000 * 6).toISOString()
-  }
-];
+let onboardingPayments: any[] = [];
 
 // Officers must be registered explicitly; never recreate accounts with source-known passwords.
 let verificationTeams: any[] = [];
@@ -632,6 +623,7 @@ verificationInspections = ((persistentData as any).verificationInspections && (p
 notifications = persistentData.notifications || [];
 staffReviews = persistentData.staffReviews || [];
 ratings = persistentData.ratings || [];
+onboardingPayments = persistentData.onboardingPayments || [];
 
 // Ensure all seeded/retained accounts are written back safely to the database
 const initStore = getStoreInstance();
@@ -802,7 +794,7 @@ for (const officer of verificationTeams) {
   }
 
 }
-try { syncStore(); } catch (_) {}
+syncStore();
 
 async function startServer() {
   const app = express();
@@ -843,9 +835,17 @@ async function startServer() {
   app.use((req, res, next) => req.path.toLowerCase().startsWith('/api/') || req.path.toLowerCase().startsWith('/uploads/') ? resources.beforeBody(req, res, next) : next());
   app.use('/api', sessionOriginGuard);
   app.use((req, res, next) => {
-    if (req.method !== 'POST' || req.path.toLowerCase().replace(/\/+$/, '') !== UPLOAD_ROUTE) return next();
+    if (req.method !== 'POST' || !isImageUploadRoute(req.path.toLowerCase().replace(/\/+$/, ''))) return next();
     res.set('Connection', 'close');
-    return requireAuth(['admin', 'manager'])(req, res, next);
+    const marketUpload = req.path.toLowerCase().replace(/\/+$/, '') === MARKET_UPLOAD_ROUTE;
+    return requireAuth(marketUpload ? ['merchant', 'admin'] : ['admin', 'manager'])(req, res, () => {
+      const actor = (req as any).user;
+      if (marketUpload && actor.role !== 'admin') {
+        const seller = sellerStore(actor, getStoreInstance());
+        if (!seller || seller.isBanned || seller.status !== 'active') return res.status(403).json({ error: 'An active seller store is required to upload marketplace photographs.' });
+      }
+      return next();
+    });
   });
   app.use((req, res, next) => req.path.toLowerCase().startsWith('/api/') ? resources.parseBody(req, res, next) : next());
   app.use((req, res, next) => req.path.toLowerCase().startsWith('/api/') ? resources.afterBody(req, res, next) : next());
@@ -5524,6 +5524,7 @@ async function startServer() {
       if (!store.digitalMarketProducts) store.digitalMarketProducts = [];
       if (!store.digitalMarketStores) store.digitalMarketStores = [];
 
+      const mediaFields = marketMediaFields(req.body, req.user, store);
       const cleanEmail = (userEmail || '').toLowerCase().trim();
       let targetStore = store.digitalMarketStores.find((s: any) => 
         s.id === storeId || (cleanEmail && (s.studentEmail?.toLowerCase() === cleanEmail || s.parentUserEmail?.toLowerCase() === cleanEmail))
@@ -5597,6 +5598,7 @@ async function startServer() {
       if ((!isServiceItem && existingItems.length >= limits.items) || (isServiceItem && existingServices.length >= limits.services)) return res.status(403).json({ error: `Your Pine ${plan === "star" ? "Star" : plan === "pro" ? "Pro" : "Default"} plan publishing limit has been reached.` });
       if (!isServiceItem && inventoryUnits + requestedStock > limits.inventory) return res.status(403).json({ error: `Your plan allows up to ${limits.inventory} total inventory units.` });
 
+      const safeImageUrl = await saveMarketCover(imageUrl, req);
       const newProduct = {
         id: `dmprod-${Date.now()}`,
         storeId: targetStore.id,
@@ -5617,7 +5619,7 @@ async function startServer() {
         currency: 'GHS',
         category: category || (isServiceItem ? 'Services' : (targetStore.category || 'Electronics')),
         stockQuantity: isServiceItem ? (Number(stockQuantity) || 999) : (Number(stockQuantity) || 1),
-        imageUrl: imageUrl || (isServiceItem ? 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=600&auto=format&fit=crop&q=60' : 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&auto=format&fit=crop&q=60'),
+        imageUrl: safeImageUrl,
         condition: condition || 'Like New',
         meetingLocation: meetingLocation || req.body.location || targetStore.location || 'Campus Enclave',
         location: req.body.location || meetingLocation || targetStore.location || 'Campus Enclave',
@@ -5630,7 +5632,8 @@ async function startServer() {
         isService: isServiceItem,
         serviceLocationMode: isServiceItem ? serviceLocationMode : undefined,
         serviceCategory: req.body.serviceCategory || (isServiceItem ? 'Campus Service' : ''),
-        priceCategories: Array.isArray(req.body.priceCategories) ? req.body.priceCategories : [],
+        priceCategories: mediaFields.priceCategories || [],
+        additionalImages: mediaFields.additionalImages || [],
         isAvailable: true,
         rating: 5.0,
         reviewCount: 0,
@@ -5644,6 +5647,8 @@ async function startServer() {
 
       return res.status(201).json({ success: true, product: newProduct, message: isServiceItem ? "Service published to Digital Market!" : "Product listed on Digital Market!" });
     } catch (err: any) {
+      if (err instanceof MarketMediaError || err instanceof ImageUploadError) return res.status(err.status).json({ error: err.message });
+      if (err instanceof ResourceLimitError) return resourceFailure(res, err);
       console.error("Error adding product:", err);
       return res.status(500).json({ error: "Failed to add product." });
     }
@@ -5662,11 +5667,13 @@ async function startServer() {
         return res.status(404).json({ error: "Product not found." });
       }
 
+      const mediaFields = marketMediaFields(req.body, req.user, store);
+      const safeImageUrl = imageUrl === undefined ? undefined : imageUrl === product.imageUrl ? imageUrl : await saveMarketCover(imageUrl, req);
       if (title !== undefined) product.title = title;
       if (description !== undefined) product.description = description;
       if (price !== undefined) product.price = Number(price);
       if (category !== undefined) product.category = category;
-      if (imageUrl !== undefined) product.imageUrl = imageUrl;
+      if (safeImageUrl !== undefined) product.imageUrl = safeImageUrl;
       if (meetingLocation !== undefined) product.meetingLocation = meetingLocation;
       if (location !== undefined) product.location = location;
       if (callLine !== undefined) product.callLine = callLine;
@@ -5678,7 +5685,7 @@ async function startServer() {
         if (['fixed', 'hybrid'].includes(normalizedMode) && !String(location ?? product.location ?? meetingLocation ?? product.meetingLocation ?? '').trim()) return res.status(400).json({ error: 'Fixed and Hybrid services require a seller location.' });
         product.serviceLocationMode = normalizedMode;
       }
-      if (req.body.priceCategories !== undefined) product.priceCategories = Array.isArray(req.body.priceCategories) ? req.body.priceCategories : [];
+      Object.assign(product, mediaFields);
       if (workingDays !== undefined) product.workingDays = workingDays;
       if (openingTime !== undefined) product.openingTime = openingTime;
       if (closingTime !== undefined) product.closingTime = closingTime;
@@ -5700,6 +5707,8 @@ async function startServer() {
 
       return res.json({ success: true, product, message: "Product updated successfully." });
     } catch (err: any) {
+      if (err instanceof MarketMediaError || err instanceof ImageUploadError) return res.status(err.status).json({ error: err.message });
+      if (err instanceof ResourceLimitError) return resourceFailure(res, err);
       console.error("Error updating product:", err);
       return res.status(500).json({ error: "Failed to update product." });
     }
@@ -6011,6 +6020,20 @@ async function startServer() {
       targetStore.isBanned = !targetStore.isBanned;
       targetStore.status = targetStore.isBanned ? 'disabled' : 'active';
       if (banReason) targetStore.banReason = banReason;
+      const now = new Date().toISOString();
+      const title = targetStore.isBanned ? 'Merchant platform disabled' : 'Merchant platform restored';
+      const message = `Your Digital Market store (${targetStore.storeName}) is ${targetStore.status}.${targetStore.isBanned && targetStore.banReason ? ` Reason: ${targetStore.banReason}` : ''}`;
+      const linkedIds = new Set([targetStore.userId, targetStore.parentUserId,
+        ...(store.digitalMarketApplications || []).filter((a: any) => normalizeEmail(a.studentEmail) === normalizeEmail(targetStore.studentEmail)).flatMap((a: any) => [a.userId, a.parentUserId]),
+        ...(store.users || []).map(accountData).filter((u: any) => u.role === 'merchant' && u.merchantStoreId === targetStore.id).map((u: any) => u.parentUserId)].filter(Boolean));
+      const primaries = (store.users || []).map(accountData).filter((u: any) => u.role === 'user' && linkedIds.has(u.id));
+      store.notifications ||= [];
+      store.notifications.unshift({ id: crypto.randomUUID(), sellerStoreId: targetStore.id, targetRole: 'merchant',
+        title, message, scope: 'market', type: targetStore.isBanned ? 'warning' : 'success', read: false, date: now });
+      for (const primary of primaries) store.notifications.unshift({ id: crypto.randomUUID(), targetRole: 'user', targetAccountId: primary.id, userId: primary.id,
+        title, message, scope: 'market', type: targetStore.isBanned ? 'warning' : 'success', read: false, date: now });
+      syncManagedStore();
+
 
       savePersistentStore(store);
       syncStore();
@@ -6043,6 +6066,8 @@ async function startServer() {
         return res.status(404).json({ error: "Product not found or no longer available." });
       }
 
+      const seller = store.digitalMarketStores.find((s: any) => s.id === product.storeId) || { id: product.storeId, studentEmail: product.sellerEmail, userId: product.sellerId };
+      if (ownsMarketStore(req.user, seller, store)) return res.status(403).json({ error: 'You cannot order items or services from your own store.' });
       const terms = catalogOrderTerms(product, req.body);
       checkOrderStock(product, terms.quantity, store.digitalMarketOrders);
 
@@ -6079,7 +6104,7 @@ async function startServer() {
         productPrice: unitPrice,
         priceCategory: priceCatName,
         priceCategoryId: terms.priceCategoryId,
-        productImage: product.imageUrl,
+        productImage: (terms.priceCategory ? product.priceCategories?.find((c: any) => terms.priceCategoryId ? c.id === terms.priceCategoryId : c.name === terms.priceCategory)?.imageUrl : undefined) || product.imageUrl,
         quantity: orderQty,
         totalAmount: totalAmount,
         buyerId,
@@ -6118,7 +6143,8 @@ async function startServer() {
       syncStore();
 
       const sellerNotif = {
-        id: `notif-ord-${Date.now()}`,
+        id: `notif-ord-${crypto.randomUUID()}`,
+        orderId: newOrder.id, productId: product.id, sellerStoreId: product.storeId,
         studentId: product.sellerEmail,
         userId: product.sellerEmail,
         userEmail: product.sellerEmail,
@@ -6245,7 +6271,8 @@ async function startServer() {
 
         // Notify Buyer
         const buyerNotif = {
-          id: `notif-agree-${Date.now()}`,
+          id: `notif-agree-${crypto.randomUUID()}`,
+          orderId: order.id, targetAccountId: order.buyerId,
           studentId: order.buyerEmail,
           userId: order.buyerEmail,
           userEmail: order.buyerEmail,
@@ -6256,7 +6283,7 @@ async function startServer() {
           category: 'market',
           scope: 'market',
           module: 'digital_market',
-          targetRole: 'student',
+          targetRole: 'user',
           date: new Date().toISOString().split('T')[0],
           read: false
         };
@@ -6286,7 +6313,8 @@ async function startServer() {
 
         // Notify Buyer
         const buyerNotif = {
-          id: `notif-rej-${Date.now()}`,
+          id: `notif-rej-${crypto.randomUUID()}`,
+          orderId: order.id, targetAccountId: order.buyerId,
           studentId: order.buyerEmail,
           userId: order.buyerEmail,
           userEmail: order.buyerEmail,
@@ -6297,7 +6325,7 @@ async function startServer() {
           category: 'market',
           scope: 'market',
           module: 'digital_market',
-          targetRole: 'student',
+          targetRole: 'user',
           date: new Date().toISOString().split('T')[0],
           read: false
         };
@@ -6335,8 +6363,14 @@ async function startServer() {
         notes: isCompletionStatus ? 'Delivery PIN verified. Item inspected, delivered and paid.' : (notes || 'Order cancelled.')
       });
 
-      savePersistentStore(store);
-      syncStore();
+      store.notifications ||= [];
+      store.notifications.unshift({ id: `notif-ord-${crypto.randomUUID()}`, orderId: order.id,
+        ...(req.user.role === 'merchant' ? { targetRole: 'user', targetAccountId: order.buyerId, userId: order.buyerId }
+          : { targetRole: 'merchant', sellerStoreId: order.storeId }),
+        title: isCompletionStatus ? 'Purchase completed' : 'Order cancelled',
+        message: `${order.productTitle}: ${finalStatus}.`, scope: 'market', category: 'market',
+        type: isCompletionStatus ? 'success' : 'info', date: nowIso, read: false });
+      syncManagedStore();
 
       return res.json({ success: true, order: publicMarketOrder(order, req.user), message: `Order updated to ${finalStatus}!` });
     } catch (err: any) {
@@ -7730,7 +7764,6 @@ async function startServer() {
         paidAt: now
       };
 
-      onboardingPayments.unshift(paymentRecord);
       await dbCreateOnboardingPayment(paymentRecord);
 
       // Audit log
@@ -8619,6 +8652,38 @@ async function startServer() {
   });
 
   // Dedicated image upload endpoint - Admin & Managers
+  async function saveMarketCover(imageUrl: unknown, req: any): Promise<string> {
+    if (typeof imageUrl !== 'string' || !imageUrl.trim()) throw new MarketMediaError('A product or service photograph is required.');
+    if (imageUrl.startsWith('data:')) {
+      const fileType = imageUrl.match(/^data:(image\/(?:png|jpeg|webp));base64,/)?.[1];
+      if (!fileType) throw new MarketMediaError('Use a JPEG, PNG or WebP photograph.');
+      return (await persistMarketPhoto({ fileType, fileData: imageUrl }, req)).imageUrl;
+    }
+    if ((getStoreInstance().marketMedia || []).some((m: any) => m.imageUrl === imageUrl && (m.accountId === req.user.id || req.user.role === 'admin'))) return imageUrl;
+    // Existing hosted raster covers remain compatible. New extra/category images use owned uploads only.
+    if (/^https:\/\//i.test(imageUrl) && !/\.(?:svg|html?)(?:[?#]|$)/i.test(imageUrl) || /^\/images\/[\w/.-]+\.(?:png|jpe?g|webp)$/i.test(imageUrl)) return imageUrl;
+    throw new MarketMediaError('Choose a supported photograph.');
+  }
+  async function persistMarketPhoto(body: any, req: any) {
+    const result = await imageStorage.save(body, bytes => resources.reserveUpload(`${req.user.role}:${req.user.id}`, req.ip || req.socket.remoteAddress || 'unknown', bytes), 1600);
+    const store = getStoreInstance();
+    store.marketMedia ||= [];
+    store.marketMedia.push({ imageUrl: result.imageUrl, accountId: req.user.id, createdAt: new Date().toISOString() });
+    syncManagedStore();
+    return result;
+  }
+  app.post(MARKET_UPLOAD_ROUTE, requireAuth(['merchant', 'admin']), async (req: any, res) => {
+    try {
+      const seller = sellerStore(req.user, getStoreInstance());
+      if (req.user.role !== 'admin' && (!seller || seller.isBanned || seller.status !== 'active')) return res.status(403).json({ error: 'An active seller store is required to upload marketplace photographs.' });
+      return res.json(await persistMarketPhoto(req.body, req));
+    } catch (err: any) {
+      if (err instanceof ResourceLimitError) return resourceFailure(res, err);
+      if (err instanceof ImageUploadError) return res.status(err.status).json({ error: err.message });
+      return res.status(500).json({ error: 'Could not save marketplace photograph.' });
+    }
+  });
+
   app.post("/api/storage/upload-hostel-image", requireAuth(["admin", "manager"]), async (req: any, res) => {
     try {
       return res.json(await imageStorage.save(req.body, bytes => resources.reserveUpload(`${req.user.role}:${req.user.id}`, req.ip || req.socket.remoteAddress || 'unknown', bytes)));
@@ -11358,48 +11423,7 @@ async function startServer() {
   app.get("/api/meetings", requireAuth(), async (req: any, res) => {
     try {
       const list = await dbGetMeetings(meetings);
-      const userRole = req.user.role;
-      const userId = req.user.id;
-      const userEmail = (req.user.email || '').toLowerCase().trim();
-
-      if (userRole === 'admin') {
-        return res.json(list);
-      }
-
-      if (userRole === 'staff') {
-        const staffRecord = staff.find((s: any) => s.userId === userId || (s.email && s.email.toLowerCase().trim() === userEmail));
-        if (!staffRecord || !staffRecord.hostelId) {
-          // If staff is not assigned to any hostel, only let them see meetings they requested
-          const filtered = list.filter((m: any) => m.requesterId === userId || m.studentId === userId);
-          return res.json(filtered);
-        }
-        const filtered = list.filter((m: any) => 
-          m.hostelId === staffRecord.hostelId || 
-          (m.hostelName && staffRecord.hostelName && m.hostelName.toLowerCase().trim() === staffRecord.hostelName.toLowerCase().trim()) ||
-          m.requesterId === userId ||
-          m.studentId === userId
-        );
-        return res.json(filtered);
-      }
-
-      if (userRole === 'manager') {
-        // Find meetings associated with this manager
-        const filtered = list.filter((m: any) => 
-          m.managerId === userId || 
-          !m.managerId || 
-          (m.managerEmail && userEmail && m.managerEmail.toLowerCase().trim() === userEmail)
-        );
-        return res.json(filtered);
-      }
-
-      // If student, return meetings created by or involving them
-      const userMeetings = list.filter((m: any) => 
-        m.studentId === userId || 
-        m.requesterId === userId ||
-        (m.requesterEmail && userEmail && m.requesterEmail.toLowerCase().trim() === userEmail) ||
-        (m.studentEmail && userEmail && m.studentEmail.toLowerCase().trim() === userEmail)
-      );
-      return res.json(userMeetings);
+      return res.json(list.filter((meeting: any) => meetingVisible(req.user, meeting, getStoreInstance())));
     } catch (err: any) {
       console.error("Error fetching meetings:", err);
       res.status(500).json({ error: "Failed to fetch meeting records" });
@@ -11491,44 +11515,8 @@ async function startServer() {
         return res.status(404).json({ error: "Meeting log not found" });
       }
 
-      const userRole = req.user.role;
-      const userId = req.user.id;
-      const userEmail = (req.user.email || '').toLowerCase().trim();
-
-      // Enforce stricter authorization check for staff: they can only update meetings in their assigned hostel or if they were the requester
-      if (userRole === 'staff') {
-        const staffRecord = staff.find((s: any) => s.userId === userId || (s.email && s.email.toLowerCase().trim() === userEmail));
-        if (!staffRecord || !staffRecord.hostelId) {
-          if (targetMeeting.requesterId !== userId) {
-            return res.status(403).json({ error: "Access Denied: You can only update meetings for your assigned hostel or those you scheduled." });
-          }
-        } else {
-          const isAssignedHostel = (targetMeeting.hostelId === staffRecord.hostelId) ||
-            (targetMeeting.hostelName && staffRecord.hostelName && targetMeeting.hostelName.toLowerCase().trim() === staffRecord.hostelName.toLowerCase().trim()) ||
-            (targetMeeting.requesterId === userId);
-          if (!isAssignedHostel) {
-            return res.status(403).json({ error: "Access Denied: You are not authorized to update meeting logs for this hostel." });
-          }
-        }
-      }
-
-      // Enforce authorization check for manager
-      if (userRole === 'manager') {
-        const managerHostels = hostels.filter(h => 
-          h.managerId === userId || 
-          h.assignedManagerId === userId ||
-          (h.managerEmail && h.managerEmail.toLowerCase().trim() === userEmail)
-        );
-        const hostelIds = new Set(managerHostels.map(h => h.id));
-        const hostelNames = new Set(managerHostels.map(h => h.name?.toLowerCase().trim()));
-
-        const isAuthorizedManager = hostelIds.has(targetMeeting.hostelId) || 
-          (targetMeeting.hostelName && hostelNames.has(targetMeeting.hostelName.toLowerCase().trim())) ||
-          targetMeeting.managerId === userId ||
-          (targetMeeting.managerEmail && targetMeeting.managerEmail.toLowerCase().trim() === userEmail);
-        if (!isAuthorizedManager) {
-          return res.status(403).json({ error: "Access Denied: You can only update meetings for hostels you operate." });
-        }
+      if (!meetingVisible(req.user, targetMeeting, getStoreInstance())) {
+        return res.status(403).json({ error: "You can only update meetings for your authorized residence or account." });
       }
 
       const updates: any = {};
@@ -11584,6 +11572,12 @@ async function startServer() {
   app.delete("/api/meetings/:id", requireAuth(["admin", "manager"]), async (req: any, res) => {
     try {
       const { id } = req.params;
+      const list = await dbGetMeetings(meetings);
+      const targetMeeting = list.find((meeting: any) => meeting.id === id);
+      if (!targetMeeting) return res.status(404).json({ error: "Meeting record not found." });
+      if (!meetingVisible(req.user, targetMeeting, getStoreInstance())) {
+        return res.status(403).json({ error: "You can only delete meetings for your authorized residence or account." });
+      }
       const success = await dbDeleteMeeting(id, meetings);
       if (!success) {
         return res.status(404).json({ error: "Meeting record not found or could not be removed" });
@@ -11605,62 +11599,9 @@ async function startServer() {
   app.get("/api/notifications", requireAuth(), async (req: any, res) => {
     const list = await dbGetNotifications(notifications);
     const user = req.user;
-    const uId = user?.id || '';
-    const uUsername = (user?.username || '').toLowerCase().trim();
-    const uEmail = (user?.email || '').toLowerCase().trim();
     const store = getStoreInstance();
-
-    const userEmailsSet = new Set<string>();
-    if (uEmail) userEmailsSet.add(uEmail);
-
-    // Notifications are account-scoped: do not expand a primary account into linked manager, resident, staff, or merchant identities.
-    const userEmails = Array.from(userEmailsSet).filter(Boolean);
-
-    const filtered = (list || []).filter((n: any) => {
-      if (!n) return false;
-      if (isRetiredNotification(n)) return false;
-      if (isMarketMessageNotification(n)) return marketNotificationVisible(user, n, getStoreInstance());
-      if (user?.role === 'admin' && (n.targetRole === 'admin' || n.targetRole === 'all')) return true;
-
-      if (n.studentId && (n.studentId === uId)) return true;
-      if (n.userId && (n.userId === uId)) return true;
-      if (n.recipientId && (n.recipientId === uId)) return true;
-      if (n.managerId && (n.managerId === uId)) return true;
-      if (n.staffId && (n.staffId === uId)) return true;
-
-      // Match manager's hostels
-      const mgrHostels = (hostels || []).filter((h: any) => 
-        h && (
-          (uId && (h.managerId === uId || h.assignedManagerId === uId)) || 
-          (uEmail && h.managerEmail && h.managerEmail.toLowerCase().trim() === uEmail)
-        )
-      );
-      if (mgrHostels.length > 0 && n.hostelId) {
-        const mgrHostelIds = new Set(mgrHostels.map((h: any) => h.id));
-        if (mgrHostelIds.has(n.hostelId) && (n.targetRole === 'manager' || !n.targetRole || n.type === 'issue_report')) {
-          return true;
-        }
-      }
-
-      if (userEmails.length > 0) {
-        const nEmails = [
-          (n.studentId || '').toLowerCase().trim(),
-          (n.userId || '').toLowerCase().trim(),
-          (n.recipientEmail || '').toLowerCase().trim(),
-          (n.userEmail || '').toLowerCase().trim(),
-          (n.targetEmail || '').toLowerCase().trim(),
-          (n.parentUserEmail || '').toLowerCase().trim(),
-          (n.managerEmail || '').toLowerCase().trim(),
-          (n.staffEmail || '').toLowerCase().trim(),
-          (n.email || '').toLowerCase().trim()
-        ].filter(e => e.length > 0);
-
-        if (userEmails.some(ue => nEmails.includes(ue))) return true;
-      }
-
-      if (uUsername && n.username && (n.username || '').toLowerCase().trim() === uUsername) return true;
-      return false;
-    });
+    const filtered = (list || []).filter((n: any) => !isRetiredNotification(n) && notificationVisible(user, n, store))
+      .map((n: any) => notificationForActor(n, user));
 
     // Deduplicate by ID and by normalized title + message + date
     const seenMap = new Set<string>();
@@ -11753,50 +11694,25 @@ async function startServer() {
   app.put("/api/notifications/read-all", requireAuth(), async (req: any, res) => {
     const list = await dbGetNotifications(notifications);
     const user = req.user;
-    const uId = user?.id || '';
-    const userEmails = Array.from(new Set([
-      (user?.email || '').toLowerCase().trim(),
-      (user?.studentEmail || '').toLowerCase().trim(),
-      (user?.parentUserEmail || '').toLowerCase().trim(),
-      (user?.user?.email || '').toLowerCase().trim(),
-      (user?.managerEmail || '').toLowerCase().trim(),
-      (user?.staffEmail || '').toLowerCase().trim(),
-    ].filter(Boolean)));
-
+    const store = getStoreInstance();
+    const readerKey = notificationReaderKey(user);
     for (const n of list) {
-      if (!n || isRetiredNotification(n)) continue;
-      const nEmails = [
-        (n.studentId || '').toLowerCase().trim(),
-        (n.userId || '').toLowerCase().trim(),
-        (n.recipientEmail || '').toLowerCase().trim(),
-        (n.userEmail || '').toLowerCase().trim(),
-        (n.targetEmail || '').toLowerCase().trim(),
-        (n.parentUserEmail || '').toLowerCase().trim(),
-        (n.managerEmail || '').toLowerCase().trim(),
-        (n.staffEmail || '').toLowerCase().trim(),
-        (n.email || '').toLowerCase().trim()
-      ].filter(e => e.length > 0);
-
-      const matches = (n.studentId && (n.studentId === uId)) ||
-                      (n.userId && (n.userId === uId)) ||
-                      (n.recipientId && n.recipientId === uId) ||
-                      (userEmails.length > 0 && userEmails.some(ue => nEmails.includes(ue)));
-
-      if (isMarketMessageNotification(n) ? marketNotificationVisible(user, n, getStoreInstance()) : matches) {
-        n.read = true;
-        await dbMarkNotificationRead(n.id, notifications);
+      if (!isRetiredNotification(n) && notificationVisible(user, n, store)) {
+        await dbMarkNotificationRead(n.id, readerKey);
       }
     }
-    syncStore();
     res.json({ success: true, message: "All notifications marked as read." });
   });
 
-  app.put("/api/notifications/:id/read", requireAuth(), async (req, res) => {
+  app.put("/api/notifications/:id/read", requireAuth(), async (req: any, res) => {
     const { id } = req.params;
-    const notification = notifications.find(n => n.id === id);
-    if (isRetiredNotification(notification)) return res.status(404).json({ error: "Notification no longer available." });
-    if (isMarketMessageNotification(notification) && !marketNotificationVisible((req as any).user, notification, getStoreInstance())) return res.status(403).json({ error: 'This message notification belongs to another account.' });
-    await dbMarkNotificationRead(id, notifications);
+    const list = await dbGetNotifications(notifications);
+    const notification = list.find((n: any) => n.id === id);
+    if (!notification || isRetiredNotification(notification)) return res.status(404).json({ error: "Notification no longer available." });
+    if (!notificationVisible(req.user, notification, getStoreInstance())) {
+      return res.status(403).json({ error: 'This notification belongs to another account.' });
+    }
+    await dbMarkNotificationRead(id, notificationReaderKey(req.user));
     res.json({ success: true });
   });
 
@@ -11855,7 +11771,9 @@ async function startServer() {
         middlewareMode: true,
         fs: {
           // Preserve Vite's default secret-file exclusions and deny raw upload access.
-          deny: ['.env', '.env.*', '*.{crt,pem}', '**/.git/**', '**/uploads/**', `${path.resolve(process.env.PINEVELA_UPLOADS_DIR || path.join(process.cwd(), 'uploads'))}/**`],
+          deny: ['.env', '.env.*', '*.{crt,pem}', '**/.git/**', '**/uploads/**', '**/data/**', '**/.security/**',
+            `${realpathSync(path.resolve(process.env.PINEVELA_DATA_DIR || path.join(process.cwd(), 'data')))}/**`,
+            `${path.resolve(process.env.PINEVELA_UPLOADS_DIR || path.join(process.cwd(), 'uploads'))}/**`],
         },
         watch: {
           ignored: ['**/data/**', '**/*.json', '**/*.log', '**/*.tmp*', '**/scratch/**'],
@@ -11903,4 +11821,5 @@ async function startServer() {
 
 startServer().catch(err => {
   console.error("Failed to start fullstack server:", err);
+  process.exitCode = 1;
 });

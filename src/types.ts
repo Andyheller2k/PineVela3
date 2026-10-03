@@ -761,6 +761,7 @@ export interface DigitalMarketStore {
 }
 
 export interface ServicePriceCategory {
+  imageUrl?: string;
   id: string;
   name: string; // e.g. "Indomie Assorted"
   price: number; // in Cedis, e.g. 50
@@ -789,6 +790,7 @@ export interface DigitalMarketProduct {
   serviceLocationMode?: 'flexible' | 'fixed' | 'hybrid';
   serviceCategory?: string;
   priceCategories?: ServicePriceCategory[];
+  additionalImages?: string[];
   callLine?: string;
   location?: string;
   meetingLocation?: string;
