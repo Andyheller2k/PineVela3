@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Navigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import PineLogo from './PineLogo';
+import RouteSkeleton from './RouteSkeleton';
 import LogoutConfirmationModal from './LogoutConfirmationModal';
 
 interface ProtectedRouteProps {
@@ -14,19 +14,7 @@ export default function ProtectedRoute({ children, allowedRoles }: ProtectedRout
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center font-sans">
-        <div className="flex flex-col items-center gap-4 animate-pulse">
-          <PineLogo size={80} hideText={true} />
-          <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-blue-900 animate-bounce" />
-            <span className="w-2.5 h-2.5 rounded-full bg-blue-900 animate-bounce delay-100" />
-            <span className="w-2.5 h-2.5 rounded-full bg-blue-900 animate-bounce delay-200" />
-          </div>
-          <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Verifying Security Session...</span>
-        </div>
-      </div>
-    );
+    return <RouteSkeleton />;
   }
 
   if (!user) {

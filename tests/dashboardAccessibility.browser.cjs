@@ -62,6 +62,7 @@ async function main() {
     assert(target, chromeLogs); socket = new WebSocket(target.webSocketDebuggerUrl);
     await new Promise((resolve, reject) => { socket.onopen = resolve; socket.onerror = reject; });
     let sequence = 0; const pending = new Map(), exceptions = [], apiErrors = [];
+    const heldChunks = new Set();
     command = (method, params = {}) => new Promise((resolve, reject) => {
       const id = ++sequence, timer = setTimeout(() => { pending.delete(id); reject(new Error(`Browser command timed out: ${method}`)); }, 20000);
       pending.set(id, { resolve, reject, timer }); socket.send(JSON.stringify({ id, method, params }));
@@ -69,7 +70,10 @@ async function main() {
     socket.onclose = () => { for (const request of pending.values()) { clearTimeout(request.timer); request.reject(new Error('Browser connection closed')); } pending.clear(); };
     socket.onmessage = event => {
       const message = JSON.parse(event.data);
-      if (message.method === 'Fetch.requestPaused') { void command('Fetch.fulfillRequest', { requestId: message.params.requestId, responseCode: 503, responseHeaders: [{ name: 'Content-Type', value: 'application/json' }], body: Buffer.from(JSON.stringify({ error: 'Isolated dashboard retry check' })).toString('base64') }); return; }
+      if (message.method === 'Fetch.requestPaused') {
+        if (process.argv.includes('--skeleton')) { heldChunks.add(message.params.requestId); return; }
+        void command('Fetch.fulfillRequest', { requestId: message.params.requestId, responseCode: 503, responseHeaders: [{ name: 'Content-Type', value: 'application/json' }], body: Buffer.from(JSON.stringify({ error: 'Isolated dashboard retry check' })).toString('base64') }); return;
+      }
       if (message.id) { const request = pending.get(message.id); if (!request) return; pending.delete(message.id); clearTimeout(request.timer); message.error ? request.reject(new Error(message.error.message)) : request.resolve(message.result); }
       else if (message.method === 'Runtime.exceptionThrown') exceptions.push(message.params.exceptionDetails.exception?.description || message.params.exceptionDetails.text);
       else if (message.method === 'Runtime.consoleAPICalled' && message.params.type === 'error') exceptions.push(message.params.args.map(item => item.value || item.description).join(' '));
@@ -100,6 +104,34 @@ async function main() {
       const found = await command('DOM.querySelector', { nodeId: doc.root.nodeId, selector });
       await command('DOM.setFileInputFiles', { nodeId: found.nodeId, files: [file] });
     };
+    if (process.argv.includes('--skeleton')) {
+      await command('Network.setCacheDisabled', { cacheDisabled: true });
+      await command('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'reduce' }] });
+      for (const width of [375, 768, 1440]) {
+        await viewport(width);
+        for (const [token, route, layout, ready] of [
+          [buyer.token, '/#/login', 'form', "document.querySelector('input[type=password]') !== null"],
+          [buyer.token, '/#/register-manager', 'form', "document.querySelector('input') !== null"],
+          [buyer.token, '/#/user/dashboard', 'dashboard', "document.body.innerText.includes('Inspect')"],
+          [seller.token, '/#/digital-market', 'dashboard', `${matchingButton('Messages')} !== undefined`],
+        ]) {
+          heldChunks.clear();
+          await command('Fetch.enable', { patterns: [{ urlPattern: '*/assets/Page*.js' }] });
+          await switchAccount(token, route);
+          await until(`document.querySelector('[data-route-skeleton="${layout}"]') !== null`, 'Route skeleton visible');
+          assert(await evaluate(`(()=>{const root=document.querySelector('[data-route-skeleton]');return root.getAttribute('role')==='status' && root.getAttribute('aria-busy')==='true' && root.querySelector('[aria-hidden="true"]')!==null && !document.body.innerText.includes('Loading PineVela') && [...root.querySelectorAll('[class*="motion-safe:animate-pulse"]')].every(el=>getComputedStyle(el).animationName==='none');})()`), 'Accessible skeleton respects reduced motion');
+          await noOverflow(`${width}px ${route} skeleton`);
+          await command('Fetch.disable');
+          await until(ready, 'Real page replaces skeleton');
+          assert(await evaluate("document.querySelector('[data-route-skeleton]') === null"), 'Skeleton removed after load');
+          await noOverflow(`${width}px ${route} loaded`);
+          console.log(`${width}px ${route}: skeleton, reduced motion and real page verified.`);
+        }
+      }
+      assert.deepEqual(exceptions, [], 'No browser errors');
+      assert.deepEqual(apiErrors, [], 'No API errors');
+      return;
+    }
     if (process.argv.includes('--measure')) {
     await command('Network.setCacheDisabled', { cacheDisabled: true });
     await command('Network.setBlockedURLs', { urls: ['*://fonts.googleapis.com/*', '*://fonts.gstatic.com/*'] });

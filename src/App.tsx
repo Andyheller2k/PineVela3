@@ -6,6 +6,7 @@ import { queryClient, invalidateAllQueries, setupRealtimeQuerySync } from './lib
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { NotificationProvider, useNotifications } from './context/NotificationContext';
 import ProtectedRoute from './components/ProtectedRoute';
+import RouteSkeleton from './components/RouteSkeleton';
 import { Hostel, IssueReport } from './types';
 import { safeJson } from './lib/api';
 import { motion, AnimatePresence } from 'motion/react';
@@ -24,12 +25,6 @@ const PageDigitalMarketOnboard = lazy(() => import('./components/PageDigitalMark
 const PageVerificationTeamPortal = lazy(() => import('./components/PageVerificationTeamPortal'));
 
 // Elegant wrapper for transition animations
-function RouteLoading() {
-  return <div role="status" aria-live="polite" className="flex min-h-screen w-full items-center justify-center bg-slate-50 text-blue-900">
-    <span className="font-semibold">Loading PineVela…</span>
-  </div>;
-}
-
 class RouteLoadBoundary extends React.Component<{ children: React.ReactNode }, { failed: boolean }> {
   state = { failed: false };
   static getDerivedStateFromError() { return { failed: true }; }
@@ -46,7 +41,7 @@ function PageWrapper({ children, noAnimation = false }: { children: React.ReactN
   if (noAnimation) {
     return (
       <div className="flex-1 flex flex-col w-full min-h-screen">
-        <RouteLoadBoundary><Suspense fallback={<RouteLoading />}>{children}</Suspense></RouteLoadBoundary>
+        <RouteLoadBoundary><Suspense fallback={<RouteSkeleton />}>{children}</Suspense></RouteLoadBoundary>
       </div>
     );
   }
@@ -58,7 +53,7 @@ function PageWrapper({ children, noAnimation = false }: { children: React.ReactN
       transition={{ duration: 0.12, ease: 'easeOut' }}
       className="flex-1 flex flex-col w-full min-h-screen"
     >
-      <RouteLoadBoundary><Suspense fallback={<RouteLoading />}>{children}</Suspense></RouteLoadBoundary>
+      <RouteLoadBoundary><Suspense fallback={<RouteSkeleton />}>{children}</Suspense></RouteLoadBoundary>
     </motion.div>
   );
 }
