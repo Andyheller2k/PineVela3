@@ -12,3 +12,4 @@ coverage/
 /uploads/
 /.security/
 **/pinevela_store.json*
+**/request-limits.json*

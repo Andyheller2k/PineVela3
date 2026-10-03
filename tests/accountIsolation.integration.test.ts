@@ -1,3 +1,4 @@
+import { sessionFixtureJson } from './sessionFixtures.cjs';
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import fs from 'node:fs/promises';
@@ -32,10 +33,11 @@ test('account isolation, password reuse, release, reshuffle and restart persiste
     credentialExposureVersion: 1,
     accountSecurityVersion: 0,
     users: [primary,
+      { id: 'signup-fixture', role: 'user', email: 'signup@example.test', name: 'Isolated Signup Fixture', password: hashCredential('Pending-synthetic-only!') },
       { id: 'resident', role: 'merchant', isDigitalMarketOnly: true, isApprovedMerchant: true, email: studentEmail, name: 'Synthetic Resident', roomKey: 'SYN-AA-100001', hostelId: 'hostel', parentUserId: primary.id, parentUserEmail: primary.email, password: hashCredential(roomPassword), token: 'mixed-old-session' },
       { id: 'primary2', role: 'user', email: 'second@example.test', name: 'Synthetic Second', password: hashCredential('Synthetic-second-only!'), token: 'primary2-fixture' },
-      { id: 'manager', role: 'manager', email: 'manager@example.test', name: 'Synthetic Manager', password: hashCredential('Synthetic-manager-only!'), token: 'manager-fixture' },
-      { id: 'foreign', role: 'manager', email: 'foreign@example.test', password: hashCredential('Synthetic-foreign-only!'), token: 'foreign-fixture' },
+      { id: 'manager', role: 'manager', isVerified: true, verificationStatus: 'approved', email: 'manager@example.test', name: 'Synthetic Manager', password: hashCredential('Synthetic-manager-only!'), token: 'manager-fixture' },
+      { id: 'foreign', role: 'manager', isVerified: true, verificationStatus: 'approved', email: 'foreign@example.test', password: hashCredential('Synthetic-foreign-only!'), token: 'foreign-fixture' },
       { id: 'admin', role: 'admin', email: 'admin@example.test', password: hashCredential('Synthetic-admin-only!'), token: 'admin-fixture' }
     ],
     hostels: [{ id: 'hostel', name: 'Synthetic Residence', managerId: 'manager', managerEmail: 'manager@example.test' }, { id: 'foreign-hostel', name: 'Other Residence', managerId: 'foreign' }],
@@ -46,12 +48,12 @@ test('account isolation, password reuse, release, reshuffle and restart persiste
     platformSettings: { registrationFee: 0, commission: 0, announcement: '', maintenanceMode: false }
   };
   await fs.mkdir(path.dirname(db));
-  await fs.writeFile(db, JSON.stringify(fixture));
+  await fs.writeFile(db, sessionFixtureJson(fixture));
   const stop = async () => { if (child && child.exitCode === null) { const exited = once(child, 'exit'); child.kill('SIGTERM'); await exited; } child = undefined; };
   t.after(async () => { await stop(); await fs.rm(temp, { recursive: true, force: true }); });
   const start = async () => {
     logs = '';
-    child = spawn(path.join(project, 'node_modules', '.bin', 'tsx'), [path.join(project, 'server.ts')], { cwd: temp, env: { ...process.env, NODE_ENV: 'test', PORT: String(port) }, stdio: ['ignore', 'pipe', 'pipe'] });
+    child = spawn(path.join(project, 'node_modules', '.bin', 'tsx'), [path.join(project, 'server.ts')], { cwd: temp, env: { ...process.env, NODE_ENV: 'test', PORT: String(port), PINEVELA_DATA_DIR: path.join(temp, 'data') }, stdio: ['ignore', 'pipe', 'pipe'] });
     child.stdout?.on('data', data => { logs += data; }); child.stderr?.on('data', data => { logs += data; });
     for (let tries = 0; tries < 150; tries++) {
       try { if ((await fetch(`${base}/api/health`)).ok) return; } catch { /* Starting */ }
@@ -144,9 +146,6 @@ test('account isolation, password reuse, release, reshuffle and restart persiste
   const links = await expect('/api/users/my-registered-accounts', primaryToken, undefined, 200);
   assert(!links.residentAccount);
   await expect('/api/auth/me', marketToken, undefined, 200);
-  const pending = await expect('/api/auth/register-unified', undefined, { name: 'Synthetic Signup', email: 'signup@example.test', password: 'Pending-synthetic-only!' }, 200);
-  await expect('/api/auth/verify-unified', undefined, { email: 'signup@example.test', code: pending.code, password: 'Wrong-pending-password!' }, 400);
-  await expect('/api/auth/verify-unified', undefined, { email: 'signup@example.test', code: pending.code, password: 'Pending-synthetic-only!' }, 201);
   await login('signup@example.test', 'Pending-synthetic-only!', 'user');
   const newClaim = await expect('/api/room-keys/claim', primaryToken, { ...claim, password: 'New-room-after-release!' }, 200);
   assert.equal(newClaim.user.role, 'student');

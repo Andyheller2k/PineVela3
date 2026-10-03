@@ -1,3 +1,4 @@
+import { sessionFetch as fetch, clearLegacySessionStorage } from '../lib/session';
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { safeJson } from '../lib/api';
 import { invalidateAllQueries } from '../lib/queryClient';
@@ -50,7 +51,6 @@ export interface AuthenticatedUser {
   registeredAccounts?: {
     residentAccount?: any;
     managerAccount?: any;
-    staffAccount?: any;
     [key: string]: any;
   };
   plainPassword?: string;
@@ -64,7 +64,7 @@ interface AuthContextType {
   login: (usernameOrEmail: string, password: string) => Promise<AuthenticatedUser>;
   setSessionUser: (user: AuthenticatedUser) => void;
   updateUser?: (updatedFields: Partial<AuthenticatedUser>) => void;
-  logout: () => void;
+  logout: () => Promise<boolean>;
   apiFetch: (url: string, options?: RequestInit) => Promise<any>;
 }
 
@@ -86,15 +86,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthenticatedUser | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
-  // Synchronize with local storage and verify with backend on startup
+  // Restore only through the server-validated HttpOnly session cookie.
   useEffect(() => {
     const initAuth = async () => {
-      const savedToken = localStorage.getItem('pinevela_session_token') || localStorage.getItem('token') || localStorage.getItem('pinevela_auth_token');
-      if (savedToken) {
+      clearLegacySessionStorage();
+      {
         try {
           const res = await fetch('/api/auth/me', {
             headers: {
-              'Authorization': `Bearer ${savedToken}`,
               'Content-Type': 'application/json'
             }
           });
@@ -115,8 +114,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               try {
                 const hostelRes = await fetch('/api/manager/my-hostel', {
                   headers: {
-                    'Authorization': `Bearer ${savedToken}`,
-                    'Content-Type': 'application/json'
+                          'Content-Type': 'application/json'
                   }
                 });
                 if (hostelRes.ok) {
@@ -145,7 +143,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             const resolvedAvatar = userData.avatar || userData.photo || userData.photoUrl || userData.avatarUrl || userData.profilePicture || storedAvatar || undefined;
             setUser({
               ...userData,
-              token: savedToken,
+              token: '',
               hasApprovedHostel,
               hostelStatus,
               avatar: resolvedAvatar,
@@ -156,9 +154,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             });
           } else {
             // Token is invalid/expired
-            localStorage.removeItem('pinevela_session_token');
-            localStorage.removeItem('token');
-            localStorage.removeItem('pinevela_auth_token');
+            clearLegacySessionStorage();
           }
         } catch (err) {
           console.error("Auth sync error:", err);
@@ -167,6 +163,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(false);
     };
     initAuth();
+  }, []);
+
+  useEffect(() => {
+    const clear = () => { clearLegacySessionStorage(); setUser(null); invalidateAllQueries(); };
+    const channel = new BroadcastChannel('pinevela-session');
+    channel.onmessage = event => { if (event.data === 'logout') clear(); };
+    window.addEventListener('pinevela-session-expired', clear);
+    return () => { channel.close(); window.removeEventListener('pinevela-session-expired', clear); };
   }, []);
 
   const login = async (usernameOrEmail: string, password: string): Promise<AuthenticatedUser> => {
@@ -198,7 +202,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         const hostelRes = await fetch('/api/manager/my-hostel', {
           headers: {
-            'Authorization': `Bearer ${userData.token}`,
             'Content-Type': 'application/json'
           }
         });
@@ -224,6 +227,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const finalUser = {
       ...userData,
+      token: '',
       hasApprovedHostel,
       hostelStatus,
       avatar: resolvedAvatar,
@@ -233,23 +237,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       profilePicture: resolvedAvatar
     };
 
-    localStorage.setItem('pinevela_session_token', userData.token);
-    localStorage.setItem('token', userData.token);
-    localStorage.setItem('pinevela_auth_token', userData.token);
     cacheAvatar(cleanEmail, resolvedAvatar);
     setUser(finalUser);
     return finalUser;
   };
 
   const setSessionUser = (newSessionUser: AuthenticatedUser) => {
-    if (newSessionUser?.token) {
-      localStorage.setItem("pinevela_session_token", newSessionUser.token);
-      localStorage.setItem("token", newSessionUser.token);
-      localStorage.setItem("pinevela_auth_token", newSessionUser.token);
-    }
     const newPic = newSessionUser?.avatar || newSessionUser?.photo || newSessionUser?.photoUrl || newSessionUser?.avatarUrl || newSessionUser?.profilePicture;
     cacheAvatar(newSessionUser?.email, newPic);
-    setUser(newSessionUser);
+    clearLegacySessionStorage();
+    setUser({ ...newSessionUser, token: '' });
   };
 
   const updateUser = (updatedFields: Partial<AuthenticatedUser>) => {
@@ -262,18 +259,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
   };
 
-  const logout = () => {
-    localStorage.removeItem("pinevela_session_token");
-    localStorage.removeItem("token");
-    localStorage.removeItem("pinevela_auth_token");
-    setUser(null);
+  const logout = async (): Promise<boolean> => {
+    try {
+      const res = await fetch('/api/auth/logout', { method: 'POST', keepalive: true });
+      if (!res.ok) throw new Error('Server did not confirm sign out.');
+      clearLegacySessionStorage();
+      setUser(null);
+      invalidateAllQueries();
+      const channel = new BroadcastChannel('pinevela-session');
+      channel.postMessage('logout');
+      channel.close();
+      return true;
+    } catch {
+      window.alert('Could not sign out of the server. Please check your connection and try again.');
+      return false;
+    }
   };
 
   const apiFetch = async (url: string, options: RequestInit = {}): Promise<any> => {
-    const currentToken = user?.token || localStorage.getItem('pinevela_session_token') || localStorage.getItem('token') || localStorage.getItem('pinevela_auth_token') || '';
     const headers = {
       'Content-Type': 'application/json',
-      ...(currentToken ? { 'Authorization': `Bearer ${currentToken}` } : {}),
       ...(options.headers || {})
     };
 

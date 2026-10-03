@@ -1,12 +1,14 @@
+import { sessionFetch as fetch } from '../lib/session';
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { queryClient, invalidateAllQueries } from '../lib/queryClient';
+import { queryClient, } from '../lib/queryClient';
 import { useAuth } from '../context/AuthContext';
 import { safeJson } from '../lib/api';
 import { saveNavigationLayout, usesTopNavigation } from '../lib/navigationLayout';
 import { useNotifications } from '../context/NotificationContext';
 import PineLogo from './PineLogo';
+import TopNavBadge from './TopNavBadge';
 import ResidentOnboardingWizard from './ResidentOnboardingWizard';
 import HostelRegistration from './HostelRegistration';
 import EditResidenceModal from './EditResidenceModal';
@@ -14,12 +16,11 @@ import LogoutConfirmationModal from './LogoutConfirmationModal';
 import { getPdfBlobUrl, downloadPdfDocument } from '../utils/pdfHelper';
 import { 
   Building2, Users, DollarSign, CheckCircle2, XCircle, Clock, Plus, 
-  ShieldCheck, LogOut as LogOutIcon, Search, Filter, Home, Hotel, Coffee, UserPlus, 
-  AlertCircle, Check, Trash2, Edit3, Eye, Sparkles, ArrowRight,
-  Bell, MessageSquare, Send, X, FileText, File, Download, Lock, Unlock, FileCheck,
-  ChevronRight, ShieldAlert, RefreshCw, Ban, ExternalLink, CreditCard,
+  ShieldCheck, LogOut as LogOutIcon, Search, UserPlus,
+  AlertCircle, Check, Trash2, Edit3, Eye, ArrowRight,
+  Bell, MessageSquare, X, FileText, Download, Lock, Unlock, FileCheck, ShieldAlert, Ban, ExternalLink, CreditCard,
   Image as ImageIcon, MapPin, Camera,
-  ShoppingBag, Store, Package, PanelLeftClose, PanelLeftOpen
+  ShoppingBag, Store, PanelLeftClose, PanelLeftOpen
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -28,7 +29,7 @@ export default function PageAdminDashboard() {
   const { notifications, unreadCount, markAsRead, refreshNotifications } = useNotifications();
   const navigate = useNavigate();
 
-  const [activeTab, setActiveTab] = useState<'overview' | 'residences' | 'managers' | 'staff_verification' | 'digital_market' | 'notifications' | 'settings' | 'user_accounts'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'residences' | 'managers' | 'digital_market' | 'notifications' | 'settings' | 'user_accounts'>('overview');
   
   // All Registered User Accounts State
   const [allUsersData, setAllUsersData] = useState<{
@@ -65,7 +66,6 @@ export default function PageAdminDashboard() {
   useEffect(() => {
     saveNavigationLayout(isSidebarTopNav);
   }, [isSidebarTopNav]);
-  const [loading, setLoading] = useState(true);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // Edit Residence State
@@ -75,18 +75,6 @@ export default function PageAdminDashboard() {
   const [residenceRejectionReason, setResidenceRejectionReason] = useState('');
   const [inspectActiveImage, setInspectActiveImage] = useState<string>('');
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
-
-  // Rejection Reason Modal State for Staff Verification
-  const [rejectStaffModal, setRejectStaffModal] = useState<{ id: string; name: string } | null>(null);
-  const [rejectionReasonText, setRejectionReasonText] = useState('');
-
-  // Verified Staff Options & Account Action Modals
-  const [selectedVerifiedStaffModal, setSelectedVerifiedStaffModal] = useState<any | null>(null);
-  const [staffStatusActionModal, setStaffStatusActionModal] = useState<{ staff: any; action: 'disable' | 'ban' | 'activate' } | null>(null);
-  const [actionReasonText, setActionReasonText] = useState('');
-
-  // Search Query States across Sections
-  const [staffSearchQuery, setStaffSearchQuery] = useState('');
   const [managerSearchQuery, setManagerSearchQuery] = useState('');
   const [residentSearchQuery, setResidentSearchQuery] = useState('');
 
@@ -149,10 +137,7 @@ export default function PageAdminDashboard() {
   const [boardFilter, setBoardFilter] = useState<'all' | 'pending' | 'acknowledged' | 'resolved'>('all');
   const [replyingRequestId, setReplyingRequestId] = useState<string | null>(null);
   const [replyNotes, setReplyNotes] = useState('');
-
-  // Verified Staffs Review State
-  const [staffVerifications, setStaffVerifications] = useState<any[]>([]);
-  const [notifSubTab, setNotifSubTab] = useState<'verified_staffs' | 'manager_requests'>('verified_staffs');
+  const [notifSubTab, setNotifSubTab] = useState<'manager_requests'>('manager_requests');
   const [docPreviewModal, setDocPreviewModal] = useState<{
     title: string;
     type: 'cv' | 'id';
@@ -193,23 +178,9 @@ export default function PageAdminDashboard() {
 
   // Manual Resident Registration Modal / Form State
   const [showAddResidentModal, setShowAddResidentModal] = useState(false);
-  const [newResidentName, setNewResidentName] = useState('');
-  const [newResidentEmail, setNewResidentEmail] = useState('');
-  const [newResidentPhone, setNewResidentPhone] = useState('');
-  const [newResidentType, setNewResidentType] = useState<'Hostel' | 'Hotel' | 'Lounge'>('Hostel');
-  const [newResidentResidenceName, setNewResidentResidenceName] = useState('');
-  const [newResidentRoom, setNewResidentRoom] = useState('');
-  const [newResidentFeePaid, setNewResidentFeePaid] = useState(true);
-  const [newResidentFeeAmount, setNewResidentFeeAmount] = useState('3500');
 
   // Manual Residence Registration Modal / Form State
   const [showAddResidenceModal, setShowAddResidenceModal] = useState(false);
-  const [newResName, setNewResName] = useState('');
-  const [newResType, setNewResType] = useState<'Hostel' | 'Hotel' | 'Lounge'>('Hostel');
-  const [newResLocation, setNewResLocation] = useState('');
-  const [newResCapacity, setNewResCapacity] = useState('100');
-  const [newResPrice, setNewResPrice] = useState('4000');
-  const [newResManager, setNewResManager] = useState('');
 
   // Ensure every tab change in Admin Dashboard starts strictly from the top
   useEffect(() => {
@@ -270,22 +241,6 @@ export default function PageAdminDashboard() {
       const resBoard = await apiFetch('/api/board-requests').catch(() => []);
       const resActs = await apiFetch('/api/activities').catch(() => []);
 
-      const resStaffVrf = await apiFetch('/api/admin/staff-verifications').catch(() => []);
-      const rawStaffList = Array.isArray(resStaffVrf) && resStaffVrf.length > 0
-        ? resStaffVrf
-        : await apiFetch('/api/staff').catch(() => []);
-      
-      let staffList: any[] = [];
-      if (Array.isArray(rawStaffList)) {
-        const seen = new Set<string>();
-        staffList = rawStaffList.filter((s: any) => {
-          const key = (s.email || s.username || s.id || s.userId || '').toLowerCase().trim();
-          if (!key || seen.has(key)) return false;
-          seen.add(key);
-          return true;
-        });
-      }
-
       const marketAppsRes = await apiFetch('/api/admin/digital-market/applications').catch(() => []);
       const marketStoresRes = await apiFetch('/api/admin/digital-market/stores').catch(() => []);
       const vtRes = await apiFetch('/api/verification-teams').catch(() => []);
@@ -297,9 +252,7 @@ export default function PageAdminDashboard() {
         managerRequests: mergedMgrs,
         managerRestrictions: Array.isArray(resRestrictions) ? resRestrictions : [],
         boardRequests: Array.isArray(resBoard) ? resBoard : [],
-        activities: Array.isArray(resActs) ? resActs : [],
-        staffVerifications: staffList,
-        digitalMarketApps: Array.isArray(marketAppsRes) ? marketAppsRes : [],
+        activities: Array.isArray(resActs) ? resActs : [], digitalMarketApps: Array.isArray(marketAppsRes) ? marketAppsRes : [],
         digitalMarketStores: Array.isArray(marketStoresRes) ? marketStoresRes : [],
         verificationTeams: Array.isArray(vtRes) ? vtRes : (vtRes?.verificationTeams || []),
         verificationInspections: Array.isArray(inspectionsRes) ? inspectionsRes : [],
@@ -309,7 +262,6 @@ export default function PageAdminDashboard() {
     refetchInterval: 8000,
   });
 
-  // Sync state with TanStack Query cache
   useEffect(() => {
     if (!adminData) return;
     setResidences(adminData.residences);
@@ -317,25 +269,11 @@ export default function PageAdminDashboard() {
     setManagerRestrictions(adminData.managerRestrictions);
     setBoardRequests(adminData.boardRequests);
     setActivities(adminData.activities);
-    setStaffVerifications(adminData.staffVerifications);
     setDigitalMarketApps(adminData.digitalMarketApps);
     setDigitalMarketStores(adminData.digitalMarketStores);
     setVerificationTeams(adminData.verificationTeams);
     setVerificationInspections(adminData.verificationInspections);
-    if (adminData.allUsersData) {
-      setAllUsersData(adminData.allUsersData);
-    }
-
-    const savedResidents = localStorage.getItem('pinevela_admin_residents');
-    if (savedResidents) {
-      try { setResidents(JSON.parse(savedResidents)); } catch (e) {}
-    }
-    const savedFees = localStorage.getItem('pinevela_admin_fees');
-    if (savedFees) {
-      try { setFeesPaid(JSON.parse(savedFees)); } catch (e) {}
-    }
-
-    setLoading(false);
+    if (adminData.allUsersData) setAllUsersData(adminData.allUsersData);
   }, [adminData]);
 
   const fetchAdminData = async () => {
@@ -487,28 +425,6 @@ export default function PageAdminDashboard() {
     }
   };
 
-  const handleStaffVerificationDecision = async (staffId: string, status: 'Verified' | 'Rejected', staffName: string, reviewNotes?: string) => {
-    try {
-      await apiFetch(`/api/admin/staff-verifications/${staffId}/decision`, {
-        method: 'PUT',
-        body: JSON.stringify({ status, reviewNotes: reviewNotes || '' })
-      });
-      setStaffVerifications(prev => prev.map(s => (s.id === staffId || s.userId === staffId) ? {
-        ...s,
-        verificationStatus: status,
-        isVerified: status === 'Verified',
-        reviewNotes: reviewNotes || s.reviewNotes
-      } : s));
-      triggerToast(`Staff applicant "${staffName}" ${status === 'Verified' ? 'Approved & Verified' : 'Rejected'}.`);
-      setRejectStaffModal(null);
-      setRejectionReasonText('');
-      fetchAdminData();
-      refreshNotifications();
-    } catch (err: any) {
-      triggerToast(err.message || 'Failed to update staff verification status.');
-    }
-  };
-
   const handleApproveBypass = async (id: string, userEmail: string) => {
     try {
       await apiFetch(`/api/admin/manager-restrictions/${id}/approve`, {
@@ -532,43 +448,6 @@ export default function PageAdminDashboard() {
       fetchAdminData();
     } catch (err: any) {
       triggerToast(err.message || 'Failed to reject bypass request.');
-    }
-  };
-
-  const handleStaffStatusChange = async (staffId: string, accountStatus: 'Active' | 'Disabled' | 'Banned', reason?: string) => {
-    try {
-      const res = await apiFetch(`/api/admin/staff-verifications/${staffId}/status`, {
-        method: 'PUT',
-        body: JSON.stringify({ accountStatus, reason: reason || '' })
-      });
-      setStaffVerifications(prev => prev.map(s => {
-        if (s.id === staffId || s.userId === staffId) {
-          return {
-            ...s,
-            accountStatus,
-            status: accountStatus,
-            isDisabled: accountStatus === 'Disabled',
-            isBanned: accountStatus === 'Banned'
-          };
-        }
-        return s;
-      }));
-
-      if (selectedVerifiedStaffModal && (selectedVerifiedStaffModal.id === staffId || selectedVerifiedStaffModal.userId === staffId)) {
-        setSelectedVerifiedStaffModal((prev: any) => prev ? {
-          ...prev,
-          accountStatus,
-          status: accountStatus,
-          isDisabled: accountStatus === 'Disabled',
-          isBanned: accountStatus === 'Banned'
-        } : null);
-      }
-
-      triggerToast(res.message || `Staff account set to ${accountStatus}.`);
-      setStaffStatusActionModal(null);
-      setActionReasonText('');
-    } catch (err: any) {
-      triggerToast(err.message || `Failed to update staff account status.`);
     }
   };
 
@@ -839,7 +718,7 @@ export default function PageAdminDashboard() {
       return;
     }
 
-    if (!window.confirm('CRITICAL WARNING: This will permanently delete all registered users, residences, student markets, products, orders, chat messages, and everything else in PineVela. Are you absolutely sure you want to proceed?')) {
+    if (!window.confirm('CRITICAL WARNING: This will permanently delete all registered users, residences, student markets, products, orders, marketplace messages, and everything else in PineVela. Are you absolutely sure you want to proceed?')) {
       return;
     }
 
@@ -859,7 +738,6 @@ export default function PageAdminDashboard() {
         localStorage.removeItem('pinevela_admin_residents');
         localStorage.removeItem('pinevela_admin_fees');
         localStorage.removeItem('pinevela_registered_managers');
-        localStorage.removeItem('pinevela_registered_staff');
 
         // Refresh local dashboard states to match the clean database
         setResidences([]);
@@ -868,7 +746,6 @@ export default function PageAdminDashboard() {
         setVerificationInspections([]);
         setDigitalMarketApps([]);
         setDigitalMarketStores([]);
-        setStaffVerifications([]);
         setActivities([]);
         setBoardRequests([]);
         setFeesPaid([]);
@@ -895,70 +772,12 @@ export default function PageAdminDashboard() {
     });
   }, []);
 
-  const handleManualRegisterResident = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newResidentName || !newResidentEmail || !newResidentResidenceName) {
-      triggerToast('Please fill in all required resident details.');
-      return;
-    }
-
-    const newResObj = {
-      id: `res-${Date.now()}`,
-      name: newResidentName,
-      email: newResidentEmail,
-      phone: newResidentPhone || '+233 24 000 0000',
-      category: newResidentType,
-      residenceName: newResidentResidenceName,
-      roomNumber: newResidentRoom || 'Room 101',
-      feePaid: newResidentFeePaid,
-      feeAmount: newResidentFeeAmount,
-      status: 'Live & Approved'
-    };
-
-    const updated = [newResObj, ...residents];
-    saveResidentsToStorage(updated);
-    setShowAddResidentModal(false);
-    setNewResidentName('');
-    setNewResidentEmail('');
-    setNewResidentPhone('');
-    setNewResidentResidenceName('');
-    setNewResidentRoom('');
-    triggerToast(`Resident ${newResidentName} registered and live on PineVela!`);
-  };
-
-  const handleManualRegisterResidence = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newResName || !newResLocation) {
-      triggerToast('Please fill in residence name and location.');
-      return;
-    }
-
-    const newResidenceObj = {
-      id: `residence-${Date.now()}`,
-      name: newResName,
-      hostel_type: newResType,
-      location: newResLocation,
-      totalCapacity: Number(newResCapacity) || 100,
-      price: Number(newResPrice) || 4000,
-      managerName: newResManager || 'Admin Direct',
-      status: 'Open',
-      image: 'https://images.unsplash.com/photo-1555854877-bab0e564b8d5?auto=format&fit=crop&w=800&q=80'
-    };
-
-    setResidences(prev => [newResidenceObj, ...prev]);
-    setShowAddResidenceModal(false);
-    setNewResName('');
-    setNewResLocation('');
-    setNewResManager('');
-    triggerToast(`Residence ${newResName} registered successfully!`);
-  };
-
   const handleLogout = () => {
     setShowLogoutConfirm(true);
   };
 
-  const confirmLogout = () => {
-    logout();
+  const confirmLogout = async () => {
+    if (!await logout()) return;
     navigate('/login', { replace: true });
   };
 
@@ -1008,7 +827,7 @@ export default function PageAdminDashboard() {
   )).length;
 
   const pendingBoardRequestsCount = boardRequests.filter(r => r.status === 'Pending').length;
-  const pendingStaffCount = staffVerifications.filter(s => s.verificationStatus === 'Pending' || s.verificationStatus === 'pending' || (!s.isVerified && s.verificationStatus !== 'Rejected' && s.verificationStatus !== 'rejected')).length;
+  const adminAlertCount = pendingBoardRequestsCount + pendingHostelsCount + unreadCount;
 
   const availableManagersList = [
     {
@@ -1069,9 +888,8 @@ export default function PageAdminDashboard() {
             { id: 'overview', label: 'Overview', icon: ShieldCheck },
             { id: 'residences', label: 'Residences', icon: Building2, badge: pendingHostelsCount },
             { id: 'managers', label: 'Managers', icon: Users, badge: pendingManagersCount },
-            { id: 'staff_verification', label: 'Staffs', icon: FileCheck, badge: pendingStaffCount },
             { id: 'digital_market', label: 'Market', icon: ShoppingBag, badge: digitalMarketApps.filter(a => a.status === 'pending').length || null },
-            { id: 'notifications', label: 'Alerts', icon: Bell, badge: (pendingBoardRequestsCount + pendingHostelsCount) },
+            { id: 'notifications', label: 'Alerts', icon: Bell, badge: adminAlertCount },
             { id: 'settings', label: 'Settings', icon: Edit3 }
           ].map(tab => (
             <button
@@ -1099,9 +917,16 @@ export default function PageAdminDashboard() {
 
       {/* SIDEBAR: PURELY STATIC / FIXED ICE-BLUE FROSTY BLUE WITH CURVED EDGES & BLUE GLOW */}
 
-      {isSidebarTopNav && <nav className="hidden lg:block fixed top-3 left-1/2 -translate-x-1/2 z-50 w-[min(760px,calc(100vw-3rem))] bg-white/72 backdrop-blur-xl border border-white/80 rounded-2xl shadow-lg"><div className="flex items-center gap-1 px-2 py-1.5">{[
-        { id: 'overview', label: 'Overview', icon: ShieldCheck }, { id: 'user_accounts', label: 'Accounts', icon: Users }, { id: 'residences', label: 'Residences', icon: Building2 }, { id: 'managers', label: 'Managers', icon: Users }, { id: 'staff_verification', label: 'Staff', icon: FileCheck }, { id: 'digital_market', label: 'Market', icon: ShoppingBag }, { id: 'notifications', label: 'Alerts', icon: Bell }, { id: 'settings', label: 'Settings', icon: Edit3 }
-      ].map(tab => <button key={tab.id} onClick={() => setActiveTab(tab.id as any)} className={`flex-1 min-w-0 flex flex-col items-center gap-0.5 py-1.5 rounded-xl text-[9px] font-bold cursor-pointer ${activeTab === tab.id ? 'text-blue-700 bg-blue-100/65' : 'text-slate-500 hover:bg-white/70'}`}><tab.icon className="w-4 h-4" /><span className="truncate max-w-full">{tab.label}</span></button>)}<button onClick={() => setShowLogoutConfirm(true)} title="Sign Out" className="shrink-0 flex flex-col items-center gap-0.5 px-2 py-1.5 text-[9px] font-bold text-rose-600 hover:bg-rose-50 rounded-xl cursor-pointer"><LogOutIcon className="w-4 h-4" /><span>Sign Out</span></button><button onClick={() => setIsSidebarTopNav(false)} title="Show sidebar" className="p-2 text-slate-500 hover:text-blue-700 cursor-pointer"><PanelLeftOpen className="w-4 h-4" /></button></div></nav>}
+      {isSidebarTopNav && <nav className="hidden lg:block fixed top-3 left-1/2 -translate-x-1/2 z-50 w-[min(760px,calc(100vw-3rem))] bg-white/72 backdrop-blur-xl border border-white/80 rounded-2xl shadow-lg"><div className="flex items-center gap-1 px-2 py-1.5">
+        {/* Profile avatar button — left end */}
+        <button onClick={() => setActiveTab('settings')} title="Profile & Settings" className="shrink-0 flex flex-col items-center gap-0.5 py-1 px-1.5 rounded-xl hover:bg-white/70 cursor-pointer">
+          <img src={user?.photo || user?.avatar || (user as any)?.photoUrl || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80'} alt="Profile" className="w-6 h-6 rounded-full object-cover ring-2 ring-white shadow-sm" />
+          <span className="text-[9px] font-bold text-slate-500">Profile</span>
+        </button>
+        <div className="w-px h-6 bg-slate-200/70 shrink-0" />
+        {[
+        { id: 'overview', label: 'Overview', icon: ShieldCheck }, { id: 'user_accounts', label: 'Accounts', icon: Users, badge: allUsersData.totalUsers }, { id: 'residences', label: 'Residences', icon: Building2, badge: pendingHostelsCount }, { id: 'managers', label: 'Managers', icon: Users, badge: pendingManagersCount }, { id: 'digital_market', label: 'Market', icon: ShoppingBag, badge: digitalMarketApps.filter(a => a.status === 'pending').length }, { id: 'notifications', label: 'Alerts', icon: Bell, badge: adminAlertCount }, { id: 'settings', label: 'Settings', icon: Edit3 }
+      ].map(tab => <button key={tab.id} onClick={() => setActiveTab(tab.id as any)} aria-label={`${tab.label}${tab.badge ? ` (${tab.badge})` : ''}`} className={`flex-1 min-w-0 flex flex-col items-center gap-0.5 py-1.5 rounded-xl text-[9px] font-bold cursor-pointer ${activeTab === tab.id ? 'text-blue-700 bg-blue-100/65' : 'text-slate-500 hover:bg-white/70'}`}><span className="relative inline-flex"><tab.icon className="w-4 h-4" /><TopNavBadge count={tab.badge} /></span><span className="truncate max-w-full">{tab.label}</span></button>)}<button onClick={() => setShowLogoutConfirm(true)} title="Sign Out" className="shrink-0 flex flex-col items-center gap-0.5 px-2 py-1.5 text-[9px] font-bold text-rose-600 hover:bg-rose-50 rounded-xl cursor-pointer"><LogOutIcon className="w-4 h-4" /><span>Sign Out</span></button><button onClick={() => setIsSidebarTopNav(false)} title="Show sidebar" className="p-2 text-slate-500 hover:text-blue-700 cursor-pointer"><PanelLeftOpen className="w-4 h-4" /></button></div></nav>}
       {!isSidebarTopNav && <aside className={`hidden lg:flex ${isSidebarCollapsed ? 'w-20 p-4' : 'w-72 p-6'} my-6 ml-6 h-[calc(100vh-3rem)] bg-gradient-to-br from-sky-100/90 via-blue-100/85 to-amber-50/40 backdrop-blur-3xl border border-sky-200/80 shadow-2xl rounded-3xl flex flex-col justify-between shrink-0 overflow-y-auto transition-all duration-300 relative`}>
         <button onClick={() => setIsSidebarTopNav(true)} title="Use top navigation" className="absolute top-3 right-3 p-2 rounded-xl text-slate-500 hover:text-blue-700 hover:bg-white/70 cursor-pointer"><PanelLeftClose className="w-4 h-4" /></button>
 
@@ -1129,9 +954,8 @@ export default function PageAdminDashboard() {
               { id: 'user_accounts', label: 'All Registered Accounts', icon: Users, badge: allUsersData.totalUsers || null, sub: 'Residents, Managers, Staff & Officers' },
               { id: 'residences', label: 'Available Residences', icon: Building2, badge: pendingHostelsCount || null, sub: 'Hostels, Hotels & Lounges' },
               { id: 'managers', label: 'Managers & Staffs', icon: Users, badge: pendingManagersCount || null, sub: 'Approvals, contact & history' },
-              { id: 'staff_verification', label: 'Staff Verification', icon: FileCheck, badge: pendingStaffCount || null, isRedDot: pendingStaffCount > 0, sub: 'Review staff CVs & National IDs' },
               { id: 'digital_market', label: 'Student Digital Market', icon: ShoppingBag, badge: digitalMarketApps.filter(a => a.status === 'pending').length || null, sub: 'Stores, products & applications' },
-              { id: 'notifications', label: 'Notifications', icon: Bell, badge: (pendingBoardRequestsCount + pendingHostelsCount) || null, sub: 'Manager requests & alerts' },
+              { id: 'notifications', label: 'Notifications', icon: Bell, badge: adminAlertCount || null, sub: 'Manager requests & alerts' },
               { id: 'settings', label: 'Admin Settings', icon: Edit3, sub: 'Fees, commission & controls' }
             ].map(tab => {
               const Icon = tab.icon;
@@ -1152,7 +976,7 @@ export default function PageAdminDashboard() {
                       isActive ? 'bg-white/20 text-white' : 'bg-blue-200/70 text-blue-700 group-hover:bg-blue-300/80'
                     }`}>
                       <Icon className="w-4 h-4" />
-                      {tab.isRedDot && (
+                      {false && (
                         <span className="absolute -top-1 -right-1 w-3 h-3 bg-rose-500 rounded-full border-2 border-white animate-ping" />
                       )}
                     </div>
@@ -1160,7 +984,7 @@ export default function PageAdminDashboard() {
                       <div className="overflow-hidden">
                         <div className="text-xs font-semibold tracking-wide flex items-center gap-1.5 truncate">
                           <span>{tab.label}</span>
-                          {tab.isRedDot && (
+                          {false && (
                             <span className="w-2 h-2 rounded-full bg-rose-500 inline-block" />
                           )}
                         </div>
@@ -1212,8 +1036,8 @@ export default function PageAdminDashboard() {
               {[
                 { 
                   label: 'All Registered User Accounts', 
-                  value: allUsersData.totalUsers || (totalResidents + totalManagers + staffVerifications.length + verificationTeams.length + activeMerchantCount + 1), 
-                  sub: `${allUsersData.breakdown.residents || totalResidents} Residents, ${allUsersData.breakdown.managers || totalManagers} Managers, ${allUsersData.breakdown.staff || staffVerifications.length} Staff, ${allUsersData.breakdown.officers || verificationTeams.length} Officers, ${allUsersData.breakdown.merchants || activeMerchantCount} Merchants`, 
+                  value: allUsersData.totalUsers || (totalResidents + totalManagers + allUsersData.breakdown.staff + verificationTeams.length + activeMerchantCount + 1),
+                  sub: `${allUsersData.breakdown.residents || totalResidents} Residents, ${allUsersData.breakdown.managers || totalManagers} Managers, ${allUsersData.breakdown.staff || 0} Staff, ${allUsersData.breakdown.officers || verificationTeams.length} Officers, ${allUsersData.breakdown.merchants || activeMerchantCount} Merchants`,
                   icon: Users, 
                   color: 'bg-emerald-600 text-white' 
                 },
@@ -2448,7 +2272,7 @@ export default function PageAdminDashboard() {
                 <ul className="list-disc pl-4 space-y-1 text-[11px] text-slate-600">
                   <li>Purges all registered student, manager, staff, and officer accounts completely.</li>
                   <li>Wipes all hostel property listings, student digital store fronts, products, and active orders.</li>
-                  <li>Deletes all student service logs, key dispatches, bookings, issue reports, chat history, and audit records.</li>
+                  <li>Deletes all student service logs, key dispatches, issue reports, marketplace message history, and audit records.</li>
                   <li><strong className="text-red-900">Protected Profile Exemption:</strong> Verified system administrator accounts are locked and will NOT be deleted.</li>
                 </ul>
               </div>
@@ -2616,25 +2440,9 @@ export default function PageAdminDashboard() {
               </div>
             )}
 
-            {/* Sub-Tabs: Verified Staffs vs Manager Requests */}
+            {/* Manager Requests */}
             <div className="flex items-center gap-2 p-1.5 bg-slate-200/70 border border-slate-300/60 rounded-2xl w-fit">
-              <button
-                type="button"
-                onClick={() => setNotifSubTab('verified_staffs')}
-                className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-extrabold text-xs transition-all cursor-pointer ${
-                  notifSubTab === 'verified_staffs'
-                    ? 'bg-blue-900 text-white shadow-md'
-                    : 'text-slate-700 hover:text-slate-900 hover:bg-white/50'
-                }`}
-              >
-                <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                <span>Verified Staffs (Credential Review)</span>
-                {staffVerifications.filter(s => s.verificationStatus === 'Pending' || s.verificationStatus === 'pending' || !s.isVerified).length > 0 && (
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-400 text-amber-950 animate-pulse">
-                    {staffVerifications.filter(s => s.verificationStatus === 'Pending' || s.verificationStatus === 'pending' || !s.isVerified).length} Pending
-                  </span>
-                )}
-              </button>
+
 
               <button
                 type="button"
@@ -2654,236 +2462,7 @@ export default function PageAdminDashboard() {
             </div>
 
             {/* VERIFIED STAFFS CREDENTIAL REVIEW SECTION */}
-            {notifSubTab === 'verified_staffs' && (
-              <div className="bg-white/90 border border-blue-200/80 p-6 rounded-3xl backdrop-blur-xl shadow-xl space-y-5">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-blue-100 pb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-2xl bg-emerald-600 text-white flex items-center justify-center font-bold shadow-md shadow-emerald-500/30">
-                      <ShieldCheck className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <h4 className="text-base font-extrabold text-slate-900 flex items-center gap-2">
-                        <span>Staff Credentials Verification Desk</span>
-                        <span className="px-2.5 py-0.5 rounded-full text-xs font-black bg-emerald-100 text-emerald-800">
-                          {staffVerifications.length} Staff Records
-                        </span>
-                      </h4>
-                      <p className="text-xs text-slate-500">Review staff CVs, National ID documents, and verify credentials before staff can apply for hostel positions.</p>
-                    </div>
-                  </div>
-                </div>
 
-                {/* Search Bar for Staff Verification Desk */}
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-slate-50 p-3 rounded-2xl border border-blue-100">
-                  <div className="relative flex-1">
-                    <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                    <input
-                      type="text"
-                      placeholder="Search staff by name, email, phone, role specialization, ID number..."
-                      value={staffSearchQuery}
-                      onChange={(e) => setStaffSearchQuery(e.target.value)}
-                      className="w-full pl-10 pr-9 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-xs"
-                    />
-                    {staffSearchQuery && (
-                      <button onClick={() => setStaffSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer">
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    )}
-                  </div>
-                  <span className="text-xs font-bold text-slate-500 shrink-0 px-2">
-                    Showing {staffVerifications.filter(s => {
-                      if (!staffSearchQuery.trim()) return true;
-                      const q = staffSearchQuery.toLowerCase();
-                      return (
-                        s.name?.toLowerCase().includes(q) ||
-                        s.email?.toLowerCase().includes(q) ||
-                        s.phone?.toLowerCase().includes(q) ||
-                        (s.role || s.specialization)?.toLowerCase().includes(q) ||
-                        (s.nationalId || s.idNumber)?.toLowerCase().includes(q)
-                      );
-                    }).length} of {staffVerifications.length} staff
-                  </span>
-                </div>
-
-                {staffVerifications.length === 0 ? (
-                  <div className="text-center py-12 bg-slate-50/70 border border-slate-200/60 rounded-2xl space-y-2">
-                    <Users className="w-10 h-10 text-slate-300 mx-auto" />
-                    <p className="text-xs font-semibold text-slate-700">No staff members registered yet</p>
-                    <p className="text-[11px] text-slate-400">Staff registrations will appear here with submitted CV and National ID documents for Admin review.</p>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {staffVerifications
-                      .filter(s => {
-                        if (!staffSearchQuery.trim()) return true;
-                        const q = staffSearchQuery.toLowerCase();
-                        return (
-                          s.name?.toLowerCase().includes(q) ||
-                          s.email?.toLowerCase().includes(q) ||
-                          s.phone?.toLowerCase().includes(q) ||
-                          (s.role || s.specialization)?.toLowerCase().includes(q) ||
-                          (s.nationalId || s.idNumber)?.toLowerCase().includes(q)
-                        );
-                      })
-                      .map((staff, idx) => {
-                      const isVerified = staff.isVerified || staff.verificationStatus === 'Verified' || staff.verificationStatus === 'verified';
-                      const isRejected = staff.verificationStatus === 'Rejected' || staff.verificationStatus === 'rejected';
-                      const isPending = !isVerified && !isRejected;
-
-                      return (
-                        <div
-                          key={`${staff.id || 'stf'}-${idx}`}
-                          className={`p-5 rounded-2xl border flex flex-col justify-between space-y-4 transition-all ${
-                            isPending
-                              ? 'bg-amber-50/60 border-amber-300 shadow-sm'
-                              : isVerified
-                              ? 'bg-emerald-50/40 border-emerald-200'
-                              : 'bg-rose-50/40 border-rose-200'
-                          }`}
-                        >
-                          <div className="space-y-3">
-                            <div className="flex items-start justify-between gap-2">
-                              <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-2xl bg-blue-900 text-white flex items-center justify-center font-black text-sm uppercase shadow-md">
-                                  {staff.name?.charAt(0) || 'S'}
-                                </div>
-                                <div>
-                                  <h5 className="text-sm font-black text-slate-900">{staff.name}</h5>
-                                  <p className="text-xs text-slate-500">@{staff.username || 'staff'} • {staff.email}</p>
-                                </div>
-                              </div>
-
-                              <span className={`px-2.5 py-1 rounded-full text-[10px] font-black ${
-                                isVerified
-                                  ? 'bg-emerald-600 text-white'
-                                  : isRejected
-                                  ? 'bg-rose-600 text-white'
-                                  : 'bg-amber-500 text-white animate-pulse'
-                              }`}>
-                                {isVerified ? 'Verified Staff' : isRejected ? 'Verification Rejected' : 'Pending Review'}
-                              </span>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-2 text-xs text-slate-700 bg-white/80 p-3 rounded-xl border border-slate-200/60">
-                              <div>
-                                <span className="text-[10px] text-slate-400 font-bold block uppercase">Role Specialization</span>
-                                <span className="font-extrabold text-blue-900">{staff.role || staff.specialization || 'Maintenance Staff'}</span>
-                              </div>
-                              <div>
-                                <span className="text-[10px] text-slate-400 font-bold block uppercase">Phone Contact</span>
-                                <span className="font-bold">{staff.phone || 'N/A'}</span>
-                              </div>
-                              <div>
-                                <span className="text-[10px] text-slate-400 font-bold block uppercase">Experience</span>
-                                <span className="font-semibold">{staff.yearsExperience || '1-3 Years'}</span>
-                              </div>
-                              <div>
-                                <span className="text-[10px] text-slate-400 font-bold block uppercase">National ID</span>
-                                <span className="font-mono text-[11px] font-bold text-slate-900">{staff.nationalId || staff.idNumber || 'GHA-00000000-0'}</span>
-                              </div>
-                            </div>
-
-                            {/* DOCUMENT VIEW BUTTONS */}
-                            <div className="flex items-center gap-2 pt-1">
-                              <button
-                                type="button"
-                                onClick={() => setDocPreviewModal({
-                                  title: `National ID Document - ${staff.name}`,
-                                  name: staff.name,
-                                  type: 'id',
-                                  data: staff.idCardDoc || 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?auto=format&fit=crop&w=600&q=80',
-                                  fileName: staff.nationalId || 'National_ID_Card.png'
-                                })}
-                                className="flex-1 py-2 px-3 bg-slate-100 hover:bg-slate-200 border border-slate-300/80 rounded-xl text-xs font-bold text-slate-800 flex items-center justify-center gap-1.5 transition-all cursor-pointer"
-                              >
-                                <Eye className="w-3.5 h-3.5 text-blue-600" />
-                                <span>View ID Document</span>
-                              </button>
-
-                              <button
-                                type="button"
-                                onClick={() => setDocPreviewModal({
-                                  title: `Curriculum Vitae (CV) - ${staff.name}`,
-                                  name: staff.name,
-                                  type: 'cv',
-                                  data: staff.cvData || `CURRICULUM VITAE\n\nName: ${staff.name}\nEmail: ${staff.email}\nPhone: ${staff.phone}\nRole: ${staff.role}\nExperience: ${staff.yearsExperience || '3 Years'}\n\nQualifications & Summary:\nCertified technician with experience in electrical, plumbing, and residence facilities maintenance.`,
-                                  fileName: staff.cvFileName || `${staff.name}_CV.pdf`,
-                                  endpoint: `/api/staff-applications/${staff.id}/cv`
-                                })}
-                                className="flex-1 py-2 px-3 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-xl text-xs font-bold text-blue-900 flex items-center justify-center gap-1.5 transition-all cursor-pointer"
-                              >
-                                <FileText className="w-3.5 h-3.5 text-blue-700" />
-                                <span>Review Staff CV</span>
-                              </button>
-                            </div>
-                          </div>
-
-                          {/* DECISION / VERIFIED BUTTONS */}
-                          <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-200/80">
-                            {isVerified ? (
-                              <button
-                                type="button"
-                                onClick={() => setSelectedVerifiedStaffModal(staff)}
-                                className={`px-4 py-2 font-black text-xs rounded-xl shadow-md transition-all cursor-pointer flex items-center gap-1.5 ${
-                                  staff.accountStatus === 'Banned' || staff.isBanned
-                                    ? 'bg-rose-700 hover:bg-rose-800 text-white'
-                                    : staff.accountStatus === 'Disabled' || staff.isDisabled
-                                    ? 'bg-amber-600 hover:bg-amber-700 text-white'
-                                    : 'bg-emerald-600 hover:bg-emerald-700 text-white'
-                                }`}
-                              >
-                                <ShieldCheck className="w-4 h-4 text-white" />
-                                <span>
-                                  {staff.accountStatus === 'Banned' || staff.isBanned
-                                    ? 'Verified Staff (Banned)'
-                                    : staff.accountStatus === 'Disabled' || staff.isDisabled
-                                    ? 'Verified Staff (Disabled)'
-                                    : 'Verified Staff'}
-                                </span>
-                                <ChevronRight className="w-3.5 h-3.5 text-white/80" />
-                              </button>
-                            ) : isRejected ? (
-                              <div className="flex items-center gap-2">
-                                <span className="px-3 py-1.5 bg-rose-100 border border-rose-200 text-rose-800 font-bold text-xs rounded-xl">
-                                  Registration Rejected & Logged
-                                </span>
-                                <button
-                                  type="button"
-                                  onClick={() => handleStaffVerificationDecision(staff.id || staff.userId, 'Verified', staff.name)}
-                                  className="px-3 py-1.5 bg-slate-100 hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 border border-slate-200 text-xs font-bold rounded-xl transition-all cursor-pointer"
-                                >
-                                  Re-approve
-                                </button>
-                              </div>
-                            ) : (
-                              <>
-                                <button
-                                  type="button"
-                                  onClick={() => setRejectStaffModal({ id: staff.id || staff.userId, name: staff.name })}
-                                  className="px-3 py-2 bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 font-bold text-xs rounded-xl transition-all cursor-pointer flex items-center gap-1"
-                                >
-                                  <X className="w-3.5 h-3.5" />
-                                  <span>Reject Credentials</span>
-                                </button>
-
-                                <button
-                                  type="button"
-                                  onClick={() => handleStaffVerificationDecision(staff.id || staff.userId, 'Verified', staff.name)}
-                                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs rounded-xl shadow-md transition-all cursor-pointer flex items-center gap-1.5"
-                                >
-                                  <ShieldCheck className="w-4 h-4" />
-                                  <span>Approve & Verify Staff</span>
-                                </button>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            )}
 
             {/* MANAGER REQUESTS TO ADMIN BOARD */}
             {notifSubTab === 'manager_requests' && (
@@ -3205,301 +2784,7 @@ export default function PageAdminDashboard() {
         )}
 
         {/* TAB: STAFF VERIFICATION DESK */}
-        {activeTab === 'staff_verification' && (
-          <div className="space-y-8 animate-fadeIn relative z-10">
-            {/* Header Banner */}
-            <div className="bg-gradient-to-br from-sky-100/90 via-blue-100/85 to-indigo-100/60 border border-sky-200/80 p-8 rounded-3xl backdrop-blur-3xl shadow-xl relative overflow-hidden text-slate-900">
-              <div className="absolute right-0 top-0 w-80 h-80 bg-cyan-400/20 rounded-full blur-3xl pointer-events-none" />
-              <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <span className="px-3 py-1 rounded-full bg-blue-600/15 text-blue-900 text-xs font-black uppercase tracking-wider border border-blue-300/60">
-                      Super Admin Desk
-                    </span>
-                    {pendingStaffCount > 0 && (
-                      <span className="px-3 py-1 rounded-full bg-rose-500 text-white text-xs font-black uppercase tracking-wider shadow-sm animate-pulse">
-                        {pendingStaffCount} New Applicants Waiting
-                      </span>
-                    )}
-                  </div>
-                  <h2 className="text-2xl lg:text-3xl font-black tracking-tight text-slate-900">
-                    Staff Credential Verification Console
-                  </h2>
-                  <p className="text-xs text-slate-600 font-medium max-w-2xl leading-relaxed mt-1">
-                    Review incoming staff registrations, inspect compulsory PDF Curriculum Vitae (CV) and Dual Ghana National ID cards (Front & Back), and approve or reject staff credentials.
-                  </p>
-                </div>
-              </div>
-            </div>
 
-            {/* Verification Desk Card Container */}
-            <div className="bg-white/90 border border-blue-200/80 p-6 rounded-3xl backdrop-blur-xl shadow-xl space-y-5">
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-blue-100 pb-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-2xl bg-emerald-600 text-white flex items-center justify-center font-bold shadow-md shadow-emerald-500/30">
-                    <FileCheck className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h4 className="text-base font-extrabold text-slate-900 flex items-center gap-2">
-                      <span>Staff Applications Desk</span>
-                      <span className="px-2.5 py-0.5 rounded-full text-xs font-black bg-emerald-100 text-emerald-800">
-                        {staffVerifications.length} Registered Applicants
-                      </span>
-                    </h4>
-                    <p className="text-xs text-slate-500">Only verified staff can apply for positions across accredited university hostels.</p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl text-xs font-bold">
-                  {(['all', 'pending', 'verified', 'rejected'] as const).map(tabF => (
-                    <button
-                      key={tabF}
-                      onClick={() => setApprovalTabFilter(tabF === 'verified' ? 'approved' : tabF as any)}
-                      className={`px-3.5 py-1.5 rounded-lg capitalize transition-all cursor-pointer ${
-                        (approvalTabFilter === tabF || (tabF === 'verified' && approvalTabFilter === 'approved'))
-                          ? 'bg-blue-900 text-white shadow-xs font-black'
-                          : 'text-slate-600 hover:text-slate-900'
-                      }`}
-                    >
-                      {tabF === 'pending' && pendingStaffCount > 0 ? (
-                        <span className="flex items-center gap-1.5">
-                          <span>Pending</span>
-                          <span className="w-2 h-2 rounded-full bg-rose-500 inline-block animate-ping" />
-                        </span>
-                      ) : (
-                        tabF
-                      )}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Search Bar for Verification Console */}
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-slate-50 p-3 rounded-2xl border border-blue-100">
-                <div className="relative flex-1">
-                  <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                  <input
-                    type="text"
-                    placeholder="Search staff applicants by name, email, phone, role, ID number..."
-                    value={staffSearchQuery}
-                    onChange={(e) => setStaffSearchQuery(e.target.value)}
-                    className="w-full pl-10 pr-9 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-xs"
-                  />
-                  {staffSearchQuery && (
-                    <button onClick={() => setStaffSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer">
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  )}
-                </div>
-                <span className="text-xs font-bold text-slate-500 shrink-0 px-2">
-                  Showing {staffVerifications.filter(staff => {
-                    const isV = staff.isVerified || staff.verificationStatus === 'Verified' || staff.verificationStatus === 'verified';
-                    const isR = staff.verificationStatus === 'Rejected' || staff.verificationStatus === 'rejected';
-                    const isP = !isV && !isR;
-                    if (approvalTabFilter === 'pending') if (!isP) return false;
-                    if ((approvalTabFilter as string) === 'approved' || (approvalTabFilter as string) === 'verified') if (!isV) return false;
-                    if (approvalTabFilter === 'rejected') if (!isR) return false;
-
-                    if (staffSearchQuery.trim()) {
-                      const q = staffSearchQuery.toLowerCase();
-                      const matchName = staff.name?.toLowerCase().includes(q);
-                      const matchEmail = staff.email?.toLowerCase().includes(q);
-                      const matchPhone = staff.phone?.toLowerCase().includes(q);
-                      const matchRole = (staff.role || staff.specialization)?.toLowerCase().includes(q);
-                      const matchId = (staff.idNumber || staff.nationalId)?.toLowerCase().includes(q);
-                      if (!matchName && !matchEmail && !matchPhone && !matchRole && !matchId) return false;
-                    }
-                    return true;
-                  }).length} of {staffVerifications.length} staff
-                </span>
-              </div>
-
-              {staffVerifications.length === 0 ? (
-                <div className="text-center py-12 bg-slate-50/70 border border-slate-200/60 rounded-2xl space-y-2">
-                  <Users className="w-10 h-10 text-slate-300 mx-auto" />
-                  <p className="text-xs font-semibold text-slate-700">No staff applicants registered yet</p>
-                  <p className="text-[11px] text-slate-400">Staff registrations will appear here with submitted CV and National ID documents for Admin review.</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {staffVerifications
-                    .filter(staff => {
-                      const isV = staff.isVerified || staff.verificationStatus === 'Verified' || staff.verificationStatus === 'verified';
-                      const isR = staff.verificationStatus === 'Rejected' || staff.verificationStatus === 'rejected';
-                      const isP = !isV && !isR;
-                      if (approvalTabFilter === 'pending') if (!isP) return false;
-                      if ((approvalTabFilter as string) === 'approved' || (approvalTabFilter as string) === 'verified') if (!isV) return false;
-                      if (approvalTabFilter === 'rejected') if (!isR) return false;
-
-                      if (staffSearchQuery.trim()) {
-                        const q = staffSearchQuery.toLowerCase();
-                        const matchName = staff.name?.toLowerCase().includes(q);
-                        const matchEmail = staff.email?.toLowerCase().includes(q);
-                        const matchPhone = staff.phone?.toLowerCase().includes(q);
-                        const matchRole = (staff.role || staff.specialization)?.toLowerCase().includes(q);
-                        const matchId = (staff.idNumber || staff.nationalId)?.toLowerCase().includes(q);
-                        if (!matchName && !matchEmail && !matchPhone && !matchRole && !matchId) return false;
-                      }
-                      return true;
-                    })
-                    .map((staff, idx) => {
-                      const isVerified = staff.isVerified || staff.verificationStatus === 'Verified' || staff.verificationStatus === 'verified';
-                      const isRejected = staff.verificationStatus === 'Rejected' || staff.verificationStatus === 'rejected';
-                      const isPending = !isVerified && !isRejected;
-
-                      return (
-                        <div
-                          key={`${staff.id || 'stf'}-${idx}`}
-                          className={`p-5 rounded-2xl border flex flex-col justify-between space-y-4 transition-all ${
-                            isPending
-                              ? 'bg-amber-50/60 border-amber-300 shadow-sm ring-2 ring-amber-400/20'
-                              : isVerified
-                              ? 'bg-emerald-50/40 border-emerald-200'
-                              : 'bg-rose-50/40 border-rose-200'
-                          }`}
-                        >
-                          <div className="space-y-3">
-                            <div className="flex items-start justify-between gap-2">
-                              <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-2xl bg-blue-900 text-white flex items-center justify-center font-black text-sm uppercase shadow-md">
-                                  {staff.name?.charAt(0) || 'S'}
-                                </div>
-                                <div>
-                                  <div className="flex items-center gap-2">
-                                    <span className="font-extrabold text-sm text-slate-900">{staff.name}</span>
-                                    {isPending && (
-                                      <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping" title="New Applicant Verification Pending" />
-                                    )}
-                                  </div>
-                                  <span className="text-xs text-blue-700 font-bold block">{staff.role || 'Facilities Technician'}</span>
-                                </div>
-                              </div>
-
-                              <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
-                                isVerified
-                                  ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
-                                  : isRejected
-                                  ? 'bg-rose-100 text-rose-800 border border-rose-200'
-                                  : 'bg-amber-100 text-amber-900 border border-amber-300 animate-pulse'
-                              }`}>
-                                {isVerified ? '✓ Verified Staff' : isRejected ? '✕ Rejected' : '● Verification Pending'}
-                              </span>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-2 p-3 bg-white/90 rounded-xl border border-slate-200/80 text-xs">
-                              <div>
-                                <span className="text-[10px] text-slate-400 font-bold block uppercase">Email</span>
-                                <span className="font-semibold text-slate-800 truncate block">{staff.email}</span>
-                              </div>
-                              <div>
-                                <span className="text-[10px] text-slate-400 font-bold block uppercase">Phone Contact</span>
-                                <span className="font-bold text-slate-800">{staff.phone || 'N/A'}</span>
-                              </div>
-                              <div>
-                                <span className="text-[10px] text-slate-400 font-bold block uppercase">Experience</span>
-                                <span className="font-semibold text-slate-800">{staff.yearsExperience || '1-3 Years'}</span>
-                              </div>
-                              <div>
-                                <span className="text-[10px] text-slate-400 font-bold block uppercase">National ID Number</span>
-                                <span className="font-mono text-[11px] font-bold text-blue-900">{staff.idNumber || staff.nationalId || 'GHA-Card'}</span>
-                              </div>
-                            </div>
-
-                            {/* DOCUMENT VIEW BUTTONS */}
-                            <div className="flex items-center gap-2 pt-1">
-                              <button
-                                type="button"
-                                onClick={() => setDocPreviewModal({
-                                  title: `Ghana National ID (Front & Back) - ${staff.name}`,
-                                  name: staff.name,
-                                  type: 'id',
-                                  data: staff.idCardDoc || 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?auto=format&fit=crop&w=600&q=80',
-                                  fileName: staff.idNumber || 'Ghana_Card_Front_Back.png'
-                                })}
-                                className="flex-1 py-2 px-3 bg-slate-100 hover:bg-slate-200 border border-slate-300/80 rounded-xl text-xs font-bold text-slate-800 flex items-center justify-center gap-1.5 transition-all cursor-pointer"
-                              >
-                                <Eye className="w-3.5 h-3.5 text-blue-600" />
-                                <span>View Front & Back ID</span>
-                              </button>
-
-                              <button
-                                type="button"
-                                onClick={() => setDocPreviewModal({
-                                  title: `Curriculum Vitae (PDF) - ${staff.name}`,
-                                  name: staff.name,
-                                  type: 'cv',
-                                  data: staff.cvData || `CURRICULUM VITAE\n\nName: ${staff.name}\nEmail: ${staff.email}\nPhone: ${staff.phone}\nRole: ${staff.role}\nExperience: ${staff.yearsExperience || '3 Years'}\n\nQualifications & Summary:\nCertified technician with experience in electrical, plumbing, and residence facilities maintenance.`,
-                                  fileName: staff.cvFileName || `${staff.name}_CV.pdf`,
-                                  endpoint: `/api/staff-verifications/${staff.userId || staff.id}/cv`
-                                })}
-                                className="flex-1 py-2 px-3 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-xl text-xs font-bold text-blue-900 flex items-center justify-center gap-1.5 transition-all cursor-pointer"
-                              >
-                                <FileText className="w-3.5 h-3.5 text-blue-700" />
-                                <span>Review PDF CV</span>
-                              </button>
-                            </div>
-
-                            {staff.reviewNotes && (
-                              <div className="p-2.5 bg-rose-50 border border-rose-200 rounded-xl text-[11px] font-medium text-rose-900">
-                                <strong>Rejection Reason Sent:</strong> "{staff.reviewNotes}"
-                              </div>
-                            )}
-                          </div>
-
-                          {/* DECISION / VERIFIED BUTTONS */}
-                          <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-200/80">
-                            {isVerified ? (
-                              <button
-                                type="button"
-                                onClick={() => setSelectedVerifiedStaffModal(staff)}
-                                className={`px-4 py-2 font-black text-xs rounded-xl shadow-md transition-all cursor-pointer flex items-center gap-1.5 ${
-                                  staff.accountStatus === 'Banned' || staff.isBanned
-                                    ? 'bg-rose-700 hover:bg-rose-800 text-white'
-                                    : staff.accountStatus === 'Disabled' || staff.isDisabled
-                                    ? 'bg-amber-600 hover:bg-amber-700 text-white'
-                                    : 'bg-emerald-600 hover:bg-emerald-700 text-white'
-                                }`}
-                              >
-                                <ShieldCheck className="w-4 h-4 text-white" />
-                                <span>
-                                  {staff.accountStatus === 'Banned' || staff.isBanned
-                                    ? 'Verified Staff (Banned)'
-                                    : staff.accountStatus === 'Disabled' || staff.isDisabled
-                                    ? 'Verified Staff (Disabled)'
-                                    : 'Verified Staff'}
-                                </span>
-                                <ChevronRight className="w-3.5 h-3.5 text-white/80" />
-                              </button>
-                            ) : (
-                              <>
-                                <button
-                                  type="button"
-                                  onClick={() => setRejectStaffModal({ id: staff.id || staff.userId, name: staff.name })}
-                                  className="px-3 py-2 bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 font-bold text-xs rounded-xl transition-all cursor-pointer flex items-center gap-1"
-                                >
-                                  <X className="w-3.5 h-3.5" />
-                                  <span>Reject Credentials</span>
-                                </button>
-
-                                <button
-                                  type="button"
-                                  onClick={() => handleStaffVerificationDecision(staff.id || staff.userId, 'Verified', staff.name)}
-                                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs rounded-xl shadow-md transition-all cursor-pointer flex items-center gap-1.5"
-                                >
-                                  <ShieldCheck className="w-4 h-4" />
-                                  <span>Approve & Verify Staff</span>
-                                </button>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
 
         {/* TAB: STUDENT DIGITAL MARKET MANAGEMENT */}
         {activeTab === 'digital_market' && (
@@ -4212,12 +3497,8 @@ export default function PageAdminDashboard() {
         } catch (e) {}
 
         // Find request to resolve live status
-        const activeRequest = docPreviewModal.reqId ? managerRequests.find(r => r.id === docPreviewModal.reqId) : null;
+        const activeRequest = null;
         const liveDocStatus = activeRequest?.documentsVerified?.[docPreviewModal.docKey!] || 'pending';
-
-        // Find staff verification status
-        const activeStaff = !activeRequest && docPreviewModal.reqId ? staffVerifications.find(s => s.id === docPreviewModal.reqId || s.userId === docPreviewModal.reqId) : null;
-        const liveStaffStatus = activeStaff?.verificationStatus || 'Pending';
 
         return (
           <div className="fixed inset-0 z-[100] bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 md:p-6">
@@ -4366,7 +3647,7 @@ export default function PageAdminDashboard() {
                                   </div>
                                   <div>
                                     <span className="text-[10px] text-slate-400 uppercase font-black block">System Verification Status</span>
-                                    <span className="font-extrabold text-blue-900 uppercase">{docPreviewModal.reqId ? liveDocStatus : 'Pending approval'}</span>
+                                    <span className="font-extrabold text-blue-900 uppercase">{ 'Pending approval'}</span>
                                   </div>
                                   <div>
                                     <span className="text-[10px] text-slate-400 uppercase font-black block">Origin Host</span>
@@ -4442,16 +3723,6 @@ export default function PageAdminDashboard() {
                           }`}>
                             {liveDocStatus}
                           </span>
-                        ) : docPreviewModal.reqId ? (
-                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border ${
-                            liveStaffStatus === 'Verified'
-                              ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
-                              : liveStaffStatus === 'Rejected'
-                              ? 'bg-rose-100 text-rose-800 border-rose-300'
-                              : 'bg-amber-100 text-amber-800 border-amber-300'
-                          }`}>
-                            {liveStaffStatus}
-                          </span>
                         ) : (
                           <span className="bg-slate-200 text-slate-700 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider">Unregistered</span>
                         )}
@@ -4488,38 +3759,6 @@ export default function PageAdminDashboard() {
                           >
                             <X className="w-4 h-4" />
                             <span>{liveDocStatus === 'rejected' ? '✕ Document Rejected' : 'Reject Document'}</span>
-                          </button>
-                        </div>
-                      ) : docPreviewModal.reqId ? (
-                        <div className="space-y-1.5">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              handleStaffVerificationDecision(docPreviewModal.reqId!, 'Verified', docPreviewModal.name || 'Staff');
-                            }}
-                            className={`w-full py-2.5 px-3 text-xs font-black rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2 ${
-                              liveStaffStatus === 'Verified'
-                                ? 'bg-emerald-600 text-white shadow-md'
-                                : 'bg-slate-100 hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 border border-slate-200'
-                            }`}
-                          >
-                            <Check className="w-4 h-4" />
-                            <span>Verify Staff Member</span>
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => {
-                              handleStaffVerificationDecision(docPreviewModal.reqId!, 'Rejected', docPreviewModal.name || 'Staff');
-                            }}
-                            className={`w-full py-2.5 px-3 text-xs font-black rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2 ${
-                              liveStaffStatus === 'Rejected'
-                                ? 'bg-rose-600 text-white shadow-md'
-                                : 'bg-slate-100 hover:bg-rose-50 text-slate-700 hover:text-rose-700 border border-slate-200'
-                            }`}
-                          >
-                            <X className="w-4 h-4" />
-                            <span>Reject Staff Credentials</span>
                           </button>
                         </div>
                       ) : (
@@ -4567,317 +3806,13 @@ export default function PageAdminDashboard() {
       })()}
 
       {/* MODAL: REJECT STAFF CREDENTIALS WITH REASON */}
-      {rejectStaffModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white border border-rose-200 rounded-3xl p-6 max-w-md w-full space-y-5 shadow-2xl animate-fadeIn">
-            <div className="flex items-center justify-between border-b pb-3">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-rose-600 text-white flex items-center justify-center font-bold shadow-md shadow-rose-500/30">
-                  <X className="w-6 h-6" />
-                </div>
-                <div>
-                  <h4 className="text-base font-black text-slate-900">Reject Staff Credentials</h4>
-                  <p className="text-xs text-slate-500">Applicant: <strong>{rejectStaffModal.name}</strong></p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setRejectStaffModal(null)}
-                className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
 
-            <div className="space-y-3">
-              <label className="text-xs font-bold text-slate-700 block">
-                Provide Rejection Reason <span className="text-rose-500">* (Sent directly to staff member)</span>
-              </label>
-              <textarea
-                required
-                rows={4}
-                value={rejectionReasonText}
-                onChange={(e) => setRejectionReasonText(e.target.value)}
-                placeholder="e.g. CV is missing required certifications, or Ghana Card image is unreadable. Please re-upload a clear PDF CV and front/back National ID."
-                className="w-full p-3.5 border border-slate-300 rounded-2xl text-xs font-medium focus:ring-2 focus:ring-rose-500 focus:outline-none bg-slate-50"
-              />
-              <p className="text-[10px] text-slate-500 leading-normal">
-                This message will be instantly delivered to <strong>{rejectStaffModal.name}'s</strong> notifications tab so they understand why their application was rejected and what credentials to fix.
-              </p>
-            </div>
-
-            <div className="flex items-center justify-end gap-3 pt-3 border-t">
-              <button
-                type="button"
-                onClick={() => setRejectStaffModal(null)}
-                className="px-4 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  if (!rejectionReasonText.trim()) {
-                    triggerToast("Please type a rejection reason for the applicant.");
-                    return;
-                  }
-                  handleStaffVerificationDecision(rejectStaffModal.id, 'Rejected', rejectStaffModal.name, rejectionReasonText);
-                }}
-                className="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-black rounded-xl shadow-md transition-all cursor-pointer flex items-center gap-1.5"
-              >
-                <X className="w-4 h-4" />
-                <span>Confirm Rejection & Send Notice</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* MODAL: VERIFIED STAFF MANAGEMENT & DETAILS */}
-      {selectedVerifiedStaffModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white border border-blue-200 rounded-3xl p-6 max-w-xl w-full space-y-5 shadow-2xl animate-fadeIn max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b pb-4">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-2xl bg-blue-900 text-white flex items-center justify-center font-black text-base shadow-md">
-                  <ShieldCheck className="w-6 h-6 text-emerald-400" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h4 className="text-base font-black text-slate-900">{selectedVerifiedStaffModal.name}</h4>
-                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase ${
-                      selectedVerifiedStaffModal.accountStatus === 'Banned' || selectedVerifiedStaffModal.isBanned
-                        ? 'bg-rose-100 text-rose-800 border border-rose-300'
-                        : selectedVerifiedStaffModal.accountStatus === 'Disabled' || selectedVerifiedStaffModal.isDisabled
-                        ? 'bg-amber-100 text-amber-800 border border-amber-300'
-                        : 'bg-emerald-100 text-emerald-800 border border-emerald-300'
-                    }`}>
-                      {selectedVerifiedStaffModal.accountStatus || (selectedVerifiedStaffModal.isBanned ? 'Banned' : selectedVerifiedStaffModal.isDisabled ? 'Disabled' : 'Active On Duty')}
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-500">Official Accredited Staff Profile & Credentials Record</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setSelectedVerifiedStaffModal(null)}
-                className="p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
 
-            {/* Detailed Info Cards */}
-            <div className="space-y-4 text-xs text-slate-700">
-              <div className="grid grid-cols-2 gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-200">
-                <div>
-                  <span className="text-[10px] text-slate-400 font-bold block uppercase">Email Address</span>
-                  <span className="font-bold text-slate-900 break-all">{selectedVerifiedStaffModal.email}</span>
-                </div>
-                <div>
-                  <span className="text-[10px] text-slate-400 font-bold block uppercase">Phone Contact</span>
-                  <span className="font-bold text-slate-900">{selectedVerifiedStaffModal.phone || '+233 24 000 0000'}</span>
-                </div>
-                <div>
-                  <span className="text-[10px] text-slate-400 font-bold block uppercase">Role Specialization</span>
-                  <span className="font-extrabold text-blue-900">{selectedVerifiedStaffModal.role || selectedVerifiedStaffModal.specialization || 'Maintenance Specialist'}</span>
-                </div>
-                <div>
-                  <span className="text-[10px] text-slate-400 font-bold block uppercase">Years Experience</span>
-                  <span className="font-semibold text-slate-800">{selectedVerifiedStaffModal.yearsExperience || '1-3 Years'}</span>
-                </div>
-                <div>
-                  <span className="text-[10px] text-slate-400 font-bold block uppercase">Ghana National ID</span>
-                  <span className="font-mono text-xs font-black text-blue-900">{selectedVerifiedStaffModal.nationalId || selectedVerifiedStaffModal.idNumber || 'GHA-000000000-0'}</span>
-                </div>
-                <div>
-                  <span className="text-[10px] text-slate-400 font-bold block uppercase">Verification Status</span>
-                  <span className="font-bold text-emerald-700">✓ Verified & Approved</span>
-                </div>
-              </div>
-
-              {selectedVerifiedStaffModal.statusReason && (
-                <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 text-xs">
-                  <strong>Status Note / Action Reason:</strong> "{selectedVerifiedStaffModal.statusReason}"
-                </div>
-              )}
-
-              {/* Document Review Buttons */}
-              <div className="flex items-center gap-2 pt-1">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setDocPreviewModal({
-                      title: `Ghana National ID (Front & Back) - ${selectedVerifiedStaffModal.name}`,
-                      name: selectedVerifiedStaffModal.name,
-                      type: 'id',
-                      data: selectedVerifiedStaffModal.idCardDoc || 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?auto=format&fit=crop&w=600&q=80',
-                      fileName: selectedVerifiedStaffModal.idNumber || 'Ghana_Card_Front_Back.png'
-                    });
-                  }}
-                  className="flex-1 py-2.5 px-3 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-xl text-xs font-bold text-slate-800 flex items-center justify-center gap-1.5 transition-all cursor-pointer"
-                >
-                  <Eye className="w-4 h-4 text-blue-600" />
-                  <span>View ID Card (Front & Back)</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setDocPreviewModal({
-                      title: `Curriculum Vitae (PDF) - ${selectedVerifiedStaffModal.name}`,
-                      name: selectedVerifiedStaffModal.name,
-                      type: 'cv',
-                      data: selectedVerifiedStaffModal.cvData || `CURRICULUM VITAE\n\nName: ${selectedVerifiedStaffModal.name}\nEmail: ${selectedVerifiedStaffModal.email}\nPhone: ${selectedVerifiedStaffModal.phone}\nRole: ${selectedVerifiedStaffModal.role}\nExperience: ${selectedVerifiedStaffModal.yearsExperience || '3 Years'}\n\nQualifications & Summary:\nCertified technician with experience in electrical, plumbing, and residence facilities maintenance.`,
-                      fileName: selectedVerifiedStaffModal.cvFileName || `${selectedVerifiedStaffModal.name}_CV.pdf`,
-                      endpoint: `/api/staff-verifications/${selectedVerifiedStaffModal.userId || selectedVerifiedStaffModal.id}/cv`
-                    });
-                  }}
-                  className="flex-1 py-2.5 px-3 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-xl text-xs font-bold text-blue-900 flex items-center justify-center gap-1.5 transition-all cursor-pointer"
-                >
-                  <FileText className="w-4 h-4 text-blue-700" />
-                  <span>Review PDF CV</span>
-                </button>
-              </div>
-
-              {/* Administrative Security Controls */}
-              <div className="pt-3 border-t space-y-2">
-                <span className="text-[11px] font-black text-slate-500 uppercase tracking-wider block">Account Security Controls</span>
-                
-                <div className="flex flex-wrap items-center gap-2">
-                  {(selectedVerifiedStaffModal.accountStatus === 'Disabled' || selectedVerifiedStaffModal.accountStatus === 'Banned' || selectedVerifiedStaffModal.isDisabled || selectedVerifiedStaffModal.isBanned) ? (
-                    <button
-                      type="button"
-                      onClick={() => setStaffStatusActionModal({ staff: selectedVerifiedStaffModal, action: 'activate' })}
-                      className="flex-1 py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs rounded-xl shadow-md transition-all cursor-pointer flex items-center justify-center gap-1.5"
-                    >
-                      <RefreshCw className="w-4 h-4" />
-                      <span>Reactivate Account</span>
-                    </button>
-                  ) : (
-                    <>
-                      <button
-                        type="button"
-                        onClick={() => setStaffStatusActionModal({ staff: selectedVerifiedStaffModal, action: 'disable' })}
-                        className="flex-1 py-2.5 px-4 bg-amber-500 hover:bg-amber-600 text-white font-black text-xs rounded-xl shadow-md transition-all cursor-pointer flex items-center justify-center gap-1.5"
-                      >
-                        <ShieldAlert className="w-4 h-4" />
-                        <span>Disable Account</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => setStaffStatusActionModal({ staff: selectedVerifiedStaffModal, action: 'ban' })}
-                        className="flex-1 py-2.5 px-4 bg-rose-600 hover:bg-rose-700 text-white font-black text-xs rounded-xl shadow-md transition-all cursor-pointer flex items-center justify-center gap-1.5"
-                      >
-                        <Ban className="w-4 h-4" />
-                        <span>Ban Account</span>
-                      </button>
-                    </>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-end border-t pt-3">
-              <button
-                type="button"
-                onClick={() => setSelectedVerifiedStaffModal(null)}
-                className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl cursor-pointer"
-              >
-                Close Profile
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* MODAL: DISABLE / BAN / REACTIVATE STAFF ACCOUNT ACTION */}
-      {staffStatusActionModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white border border-slate-200 rounded-3xl p-6 max-w-md w-full space-y-5 shadow-2xl animate-fadeIn">
-            <div className="flex items-center justify-between border-b pb-3">
-              <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-2xl text-white flex items-center justify-center font-bold shadow-md ${
-                  staffStatusActionModal.action === 'ban'
-                    ? 'bg-rose-600 shadow-rose-500/30'
-                    : staffStatusActionModal.action === 'disable'
-                    ? 'bg-amber-500 shadow-amber-500/30'
-                    : 'bg-emerald-600 shadow-emerald-500/30'
-                }`}>
-                  {staffStatusActionModal.action === 'ban' ? <Ban className="w-5 h-5" /> : staffStatusActionModal.action === 'disable' ? <ShieldAlert className="w-5 h-5" /> : <RefreshCw className="w-5 h-5" />}
-                </div>
-                <div>
-                  <h4 className="text-base font-black text-slate-900 capitalize">
-                    {staffStatusActionModal.action} Staff Account
-                  </h4>
-                  <p className="text-xs text-slate-500">Staff: <strong>{staffStatusActionModal.staff.name}</strong></p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setStaffStatusActionModal(null)}
-                className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
 
-            <div className="space-y-3">
-              <label className="text-xs font-bold text-slate-700 block">
-                Reason for <span className="capitalize">{staffStatusActionModal.action}</span> Action <span className="text-slate-400 font-normal">(Optional note for audit log)</span>
-              </label>
-              <textarea
-                rows={3}
-                value={actionReasonText}
-                onChange={(e) => setActionReasonText(e.target.value)}
-                placeholder={
-                  staffStatusActionModal.action === 'ban'
-                    ? 'e.g. Severe breach of residence safety protocol or fraudulent identity submission.'
-                    : staffStatusActionModal.action === 'disable'
-                    ? 'e.g. Account temporarily paused pending routine background check update.'
-                    : 'e.g. Credentials re-verified upon administrator review.'
-                }
-                className="w-full p-3 border border-slate-300 rounded-2xl text-xs font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none bg-slate-50"
-              />
-            </div>
-
-            <div className="flex items-center justify-end gap-3 pt-3 border-t">
-              <button
-                type="button"
-                onClick={() => setStaffStatusActionModal(null)}
-                className="px-4 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  const targetStatus = staffStatusActionModal.action === 'disable'
-                    ? 'Disabled'
-                    : staffStatusActionModal.action === 'ban'
-                    ? 'Banned'
-                    : 'Active';
-                  handleStaffStatusChange(
-                    staffStatusActionModal.staff.id || staffStatusActionModal.staff.userId,
-                    targetStatus,
-                    actionReasonText
-                  );
-                }}
-                className={`px-5 py-2.5 text-white text-xs font-black rounded-xl shadow-md transition-all cursor-pointer flex items-center gap-1.5 ${
-                  staffStatusActionModal.action === 'ban'
-                    ? 'bg-rose-600 hover:bg-rose-700'
-                    : staffStatusActionModal.action === 'disable'
-                    ? 'bg-amber-600 hover:bg-amber-700'
-                    : 'bg-emerald-600 hover:bg-emerald-700'
-                }`}
-              >
-                <span className="capitalize">Confirm {staffStatusActionModal.action}</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* MODAL: DISPATCH PINEVELA VERIFICATION TEAM OFFICER */}
       {dispatchModalManager && (
@@ -5538,7 +4473,7 @@ export default function PageAdminDashboard() {
               <div className="space-y-2">
                 <h3 className="text-lg font-black text-slate-900">System Reset Successful! 🎉</h3>
                 <p className="text-xs text-slate-600 font-semibold leading-relaxed">
-                  All hostels, bookings, resident accounts, student digital marketplace products, orders, and chats have been purged. 
+                  All hostels, resident accounts, student digital marketplace products, orders, and marketplace messages have been purged.
                 </p>
                 <div className="p-3 bg-red-50 text-red-950 rounded-xl text-[11px] font-bold mt-2">
                   🛡️ Protected Administrator profiles were preserved and remain active in the system.

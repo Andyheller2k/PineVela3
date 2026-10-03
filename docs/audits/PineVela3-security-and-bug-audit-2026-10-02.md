@@ -73,7 +73,7 @@ PUT /api/hostels/:id has a role check but no residence ownership check. It merge
 
 ### S04 — Critical: Inspection reports can be forged without authentication
 
-**Remediation status, 2026-10-02:** Fixed and verified locally for report submission, with active-officer and assignment checks plus server-bound authorship. See [S04 remediation and test results](S04-remediation-2026-10-02.md). The evidence below describes the original audit state. S08 and the broader S22 session-revocation finding remain open.
+**Remediation status, 2026-10-02:** Fixed and verified locally for report submission, with active-officer and assignment checks plus server-bound authorship. See [S04 remediation and test results](S04-remediation-2026-10-02.md). The evidence below describes the original audit state. S08 read access has since been remediated; the broader S22 session-revocation finding remains open.
 
 **Evidence:** Confirmed in isolated probe: unauthenticated submission returned HTTP 200.
 
@@ -109,6 +109,8 @@ The legacy /api/auth/register-manager route is protected by the creation middlew
 
 ### S07 — High: Staff accounts have a fixed fallback password
 
+**Feature-retirement update (2026-10-02):** Resolved in the current checkout: manager-created staff require explicit credentials; fixed fallback passwords are removed. See [implementation and verification report](/home/wyse/Documents/PineVela3/docs/audits/retired-features-and-marketplace-messaging-2026-10-02.md). The evidence below records the original audit state.
+
 **Evidence:** Confirmed in isolated probes: staff creation without a password returned 201; login with the source-code fallback returned 200 as staff.
 
 POST /api/staff uses a fixed fallback password when a password is omitted. The password-creation middleware skips validation when no password field is supplied, so the fallback remains usable. Hashing that fallback does not make it secret. The probe used an administrator fixture, because manager staff creation is separately blocked by conflicting middleware.
@@ -118,6 +120,8 @@ POST /api/staff uses a fixed fallback password when a password is omitted. The p
 **Remediation direction, not applied:** Require a unique initial credential or secure invitation and eliminate default passwords.
 
 ### S08 — High: Verification records and the resident directory are public
+
+**Remediation status, 2026-10-02:** Fixed and verified locally. Verification lists require administrator access, officer lists are limited to active authenticated assignees, and resident directories require administrator or residence-scoped manager access. See [S08 remediation and test results](S08-remediation-2026-10-02.md). The evidence below describes the original audit state.
 
 **Evidence:** Confirmed by live unauthenticated GETs; only field names and counts recorded.
 
@@ -129,6 +133,8 @@ The admin inspection endpoint and officer my-inspections endpoint returned 200 w
 
 ### S09 — High: Room activation keys leak across residences
 
+**Remediation status, 2026-10-02:** Fixed and verified locally. Key listing/generation is residence-scoped, verification requires a primary-account session and a minimal preview, and verification/activation share persistent attempt limits. See [S09 remediation and test results](S09-remediation-2026-10-02.md). The evidence below describes the original audit state.
+
 **Evidence:** Confirmed in isolated probes: manager with no property received all keys; staff received keys across properties.
 
 GET /api/room-keys returns allKeys when a manager’s filtered result is empty. The staff branch generates/returns keys across all hostels without checking staff residence membership. These are activation secrets, not ordinary directory information. The public verify endpoint supplies detailed information for a guessed key and has no rate limit; key digits are cryptographically generated now, but the exposed key collection defeats that protection.
@@ -138,6 +144,8 @@ GET /api/room-keys returns allKeys when a manager’s filtered result is empty. 
 **Remediation direction, not applied:** Scope key access to owned/assigned residences and return an empty result when no authorized keys exist.
 
 ### S10 — High: Bookings lack tenant ownership and trusted identity
+
+**Remediation status, 2026-10-02:** Resolved by feature retirement: housing booking applications and their active APIs/models/UI integrations were removed; historical records are preserved privately in an inactive archive. See [implementation and verification report](S10-retirement-and-S12-remediation-2026-10-02.md). The evidence below describes the original audit state.
 
 **Evidence:** Confirmed in isolated probes: foreign booking read/change returned 200; forged booking creation returned 201.
 
@@ -149,6 +157,8 @@ All managers can list all bookings and update a booking identified by its ID. Cr
 
 ### S11 — High: Staff management and CV access lack tenant boundaries
 
+**Feature-retirement update (2026-10-02):** Retired application, CV and job-offer routes were removed; active staff creation, updates, deletion and roster reads now enforce residence/account ownership. See [implementation and verification report](/home/wyse/Documents/PineVela3/docs/audits/retired-features-and-marketplace-messaging-2026-10-02.md). The evidence below records the original audit state.
+
 **Evidence:** Confirmed in isolated probes: foreign staff edit, application rejection and CV retrieval returned 200.
 
 PUT/DELETE /api/staff/:id, staff application decisions and CV endpoints use role checks without checking that the target belongs to the manager’s residence. Staff creation also accepts a supplied hostelId without verifying ownership and falls back to hostels[0] when it cannot locate a manager’s property. CV routes expose documents to any permitted manager who knows a target ID.
@@ -158,6 +168,8 @@ PUT/DELETE /api/staff/:id, staff application decisions and CV endpoints use role
 **Remediation direction, not applied:** Use the target residence and application ownership in all employment/document authorization decisions.
 
 ### S12 — High: Maintenance workflow actions do not verify the actor’s relationship to the issue
+
+**Remediation status, 2026-10-02:** Fixed and verified locally: all maintenance workflow actions enforce issue-specific actor authorization, allowed fields and state transitions, including exact reporting-resident sign-off. See [implementation and verification report](S10-retirement-and-S12-remediation-2026-10-02.md). The evidence below describes the original audit state.
 
 **Evidence:** Confirmed in isolated probes: an unassigned primary user accepted a staff task and a non-owner confirmed a resident resolution, both HTTP 200.
 
@@ -169,6 +181,8 @@ accept-assignment and student-confirm allow actions on a guessed issue ID withou
 
 ### S13 — High: Orders can be created anonymously under another buyer’s identity
 
+**Remediation update (2026-10-02):** Securing S16 PIN creation requires a primary buyer session and session-derived buyer ID/name/email. Supplied identities cannot receive another buyer’s PIN or order access. See [S16/S17 report](/home/wyse/Documents/PineVela3/docs/audits/S16-S17-remediation-2026-10-02.md). The evidence below records the original audit state.
+
 **Evidence:** Confirmed in isolated probe: HTTP 201 without a token using a different buyerId/email.
 
 POST /api/digital-market/orders has no authentication middleware; buyerId, buyerEmail, buyerName and contact information come from the caller. This creates fake orders/notifications, spoofs buyers, and contaminates account-linked order history.
@@ -178,6 +192,8 @@ POST /api/digital-market/orders has no authentication middleware; buyerId, buyer
 **Remediation direction, not applied:** Require a buyer session and derive buyer identity from it.
 
 ### S14 — High: The client controls order price
+
+**Remediation update (2026-10-02):** Fixed in the current checkout. Server catalog prices/category metadata and strict quantities are enforced, and completion checks/consumes current stock synchronously. See [implementation and verification report](/home/wyse/Documents/PineVela3/docs/audits/S14-S15-remediation-2026-10-02.md). The evidence below records the original audit state.
 
 **Evidence:** Confirmed in isolated probe: a product priced at 100 was ordered at a supplied unit price of 1.
 
@@ -189,6 +205,8 @@ The order endpoint accepts req.body.price whenever it is numeric and non-negativ
 
 ### S15 — High: Negative quantities corrupt totals and inventory
 
+**Remediation update (2026-10-02):** Fixed in the current checkout. Server catalog prices/category metadata and strict quantities are enforced, and completion checks/consumes current stock synchronously. See [implementation and verification report](/home/wyse/Documents/PineVela3/docs/audits/S14-S15-remediation-2026-10-02.md). The evidence below records the original audit state.
+
 **Evidence:** Confirmed in isolated probes: quantity=-2 produced totalAmount=-2; completion increased stock from 2 to 4.
 
 The stock comparison and Number(quantity) || 1 conversion accept negative quantities, fractions and problematic numeric coercions. Completion subtracts order.quantity from stock, so negative quantities add inventory. Inputs are not constrained to finite positive integers.
@@ -198,6 +216,8 @@ The stock comparison and Number(quantity) || 1 conversion accept negative quanti
 **Remediation direction, not applied:** Require a finite positive integer quantity and validate stock atomically.
 
 ### S16 — High: Delivery PINs are exposed to the sellers who verify them
+
+**Remediation update (2026-10-02):** Fixed in the current checkout: buyer-only PIN projection, six cryptographic digits, 24-hour expiry, persistent five-attempt lockout and owner-only renewal. See [implementation and verification report](/home/wyse/Documents/PineVela3/docs/audits/S16-S17-remediation-2026-10-02.md). The evidence below records the original audit state.
 
 **Evidence:** Confirmed in isolated probe: seller my-orders response included otpPin.
 
@@ -209,6 +229,8 @@ my-orders spreads the complete order object for both buyers and sellers. The ord
 
 ### S17 — High: Order terminal states can be reopened and completion is not stock-safe
 
+**Remediation update (2026-10-02):** Fixed in the current single-process JSON backend: a closed actor/state policy, terminal guards before every action, 24-hour stock reservations and serialized stock consumption. Rejection, cancellation and expiry release reservations. Supabase migration still requires database transactions/row locking. See [implementation and verification report](/home/wyse/Documents/PineVela3/docs/audits/S16-S17-remediation-2026-10-02.md). The evidence below records the original audit state.
+
 **Evidence:** Confirmed in isolated probes: a completed order was reopened to Pending Meetup and completed again.
 
 agree-location/reject-location handlers run before completed/cancelled guards. A seller can reopen an order and complete it twice, repeating the inventory subtraction. The generic status path accepts arbitrary status strings. Stock is not reserved at order creation, and completion clamps stock to zero instead of rejecting insufficient stock, so concurrent outstanding orders can overcommit the same units. The last condition is source-confirmed, not a load-test result.
@@ -218,6 +240,8 @@ agree-location/reject-location handlers run before completed/cancelled guards. A
 **Remediation direction, not applied:** Use a closed transition graph, guard terminal states before actions, and reserve/consume stock transactionally.
 
 ### S18 — High: Marketplace ratings can be forged and overwritten anonymously
+
+**Remediation update (2026-10-02):** Fixed in the current checkout: both review submission routes require the exact authenticated buyer of a completed order; identity fields are server-owned and only that buyer can edit. Public reputation uses purchase-verified reviews only, with legacy unverified records retained privately. See [implementation and verification report](/home/wyse/Documents/PineVela3/docs/audits/S18-remediation-2026-10-02.md). The evidence below records the original audit state.
 
 **Evidence:** Confirmed in isolated probe: unauthenticated impersonated rating returned 200.
 
@@ -229,6 +253,11 @@ POST /api/digital-market/ratings trusts buyerEmail, buyerName, orderId, sellerEm
 
 ### S19 — High: Image uploads accept active content on the application origin
 
+**Remediation update (2026-10-02):** The current checkout validates and re-encodes raster uploads,
+removes raw static serving, sanitizes legacy photo responses and supports a distinct media
+origin. See [implementation and verification report](/home/wyse/Documents/PineVela3/docs/audits/S19-remediation-2026-10-02.md).
+The evidence below records the original audit state.
+
 **Evidence:** Confirmed in isolated probe: benign HTML bytes with an .html filename and image/png claim were accepted. Script execution was not attempted.
 
 The upload endpoint trusts fileType, allows it to be omitted, does not inspect content, accepts all image/* types including SVG, and preserves arbitrary filename extensions. Files are served publicly under /uploads on the application origin. This provides a credible stored-XSS path if a user opens a malicious uploaded HTML/SVG document. The actual upload acceptance is proven; exploit execution and production headers were not tested.
@@ -238,6 +267,8 @@ The upload endpoint trusts fileType, allows it to be omitted, does not inspect c
 **Remediation direction, not applied:** Validate decoded image content and safe formats, re-encode images, and isolate untrusted uploads from the app origin.
 
 ### S20 — High: Staff chat encryption uses public defaults and a repeated IV
+
+**Feature-retirement update (2026-10-02):** Retired: the staff/manager chat system, encryption helpers and configuration were removed. Historical stored messages have not been deleted. See [implementation and verification report](/home/wyse/Documents/PineVela3/docs/audits/retired-features-and-marketplace-messaging-2026-10-02.md). The evidence below records the original audit state.
 
 **Evidence:** Confirmed in source; no real messages decrypted.
 
@@ -249,6 +280,8 @@ The server derives AES-256-CBC key and IV from hard-coded defaults when environm
 
 ### S21 — High: Sessions have no server-enforced expiry or logout revocation
 
+**Remediation update (2026-10-02):** Fixed in the current checkout: absolute server-enforced expiry, hashed session storage, persistent logout revocation and HttpOnly cookie browser authentication. Historical indefinite tokens require fresh login. Cookie and bearer lookups share expiry and account authorization. See [implementation and verification report](/home/wyse/Documents/PineVela3/docs/audits/S21-remediation-2026-10-02.md). The evidence below records the original audit state.
+
 **Evidence:** Confirmed in source and route inventory.
 
 requireAuth compares persistent bearer tokens without checking an expiry timestamp. AuthContext.logout removes three browser storage keys and never calls a server revocation endpoint; no logout route exists. Tokens are stored in localStorage and persisted raw in JSON. HttpOnly cookies are set in some flows, but the API authenticates via the JavaScript-held Authorization bearer token. A copied token can remain usable after the user logs out.
@@ -259,6 +292,8 @@ requireAuth compares persistent bearer tokens without checking an expiry timesta
 
 ### S22 — High: Disabled officer and dismissed staff sessions are not consistently revoked
 
+**Remediation update (2026-10-03):** Current officer status/session and active staff employment are enforced on authenticated requests. Status changes, staff removal and resignation clear sessions; reactivation requires fresh login. See [S22/S26 implementation and verification](S22-S26-remediation-2026-10-03.md). Historical evidence follows.
+
 **Evidence:** Confirmed in source; no real account was disabled for testing.
 
 The officer status endpoint changes status without clearing issued tokens. requireAuth’s officer fallback and /verification-team/me accept a matching officer token without checking active status, although officer login does check it. Staff dismissal removes roster records without revoking the matching account/session, while requireAuth still accepts the staff role. Previously issued sessions can retain access after administrative removal.
@@ -268,6 +303,8 @@ The officer status endpoint changes status without clearing issued tokens. requi
 **Remediation direction, not applied:** Revoke sessions on status changes and recheck active employment/officer status during authorization.
 
 ### S23 — High: No attempt or resource limits protect expensive/public routes
+
+**Remediation update (2026-10-03):** Pre-body traffic/concurrency limits, shared persistent login budgets, bounded asynchronous credential/image work, daily write/upload quotas, physical photo-storage caps and bounded SSE connections are implemented. Existing challenge limits remain enforced. See [policy and verification report](/home/wyse/Documents/PineVela3/docs/audits/S23-remediation-2026-10-03.md). The evidence below records the original audit state; deployment and single-process JSON limits are documented in the report.
 
 **Evidence:** Source-confirmed risk; no brute force, flood or destructive load test performed.
 
@@ -299,6 +336,8 @@ pay-onboarding-fee records paid solely from agreedToPay. Hostel submissions acce
 
 ### S26 — Medium: Anonymous onboarding submissions can impersonate managers
 
+**Remediation update (2026-10-03):** Manager submissions bind identity to the session. Hostel verification requires an approved manager and an existing owned residence; author/property/validation fields are server-derived and duplicate/foreign submissions are rejected. Staff applications remain retired. See [S22/S26 implementation and verification](S22-S26-remediation-2026-10-03.md). Historical evidence follows.
+
 **Evidence:** Confirmed in source; live mutation endpoints were not exercised.
 
 /api/manager-requests and /api/hostel-verifications/submit do not require authentication. They accept caller-supplied manager IDs, names, emails and property/ownership metadata. The latter fills managerApproved and identityVerified with true. /staff-applications also permits guest submissions and uses supplied identity metadata. This allows spam and false attribution in administrative queues.
@@ -308,6 +347,8 @@ pay-onboarding-fee records paid solely from agreedToPay. Hostel submissions acce
 **Remediation direction, not applied:** Require authenticated submission and bind identity/validation fields to server results.
 
 ### S27 — High: General chat does not enforce channel/DM participation
+
+**Feature-retirement update (2026-10-02):** Retired: general/public chat and room DMs have no active routes, UI or database helpers. See [implementation and verification report](/home/wyse/Documents/PineVela3/docs/audits/retired-features-and-marketplace-messaging-2026-10-02.md). The evidence below records the original audit state.
 
 **Evidence:** Confirmed in isolated probes: a user posted into someone else’s DM and accepted that DM request.
 
@@ -379,6 +420,8 @@ The local server sends X-Powered-By: Express and no Content-Security-Policy, X-C
 
 ### S34 — Medium: Public staff review output includes resident context
 
+**Feature-retirement update (2026-10-02):** Resolved in the current checkout: public staff directory/review feeds were removed; active reviews require authenticated residence relationships. See [implementation and verification report](/home/wyse/Documents/PineVela3/docs/audits/retired-features-and-marketplace-messaging-2026-10-02.md). The evidence below records the original audit state.
+
 **Evidence:** Confirmed in source; no private review bodies were printed.
 
 /api/staff-reviews returns whole review records without authentication and accredited-staff embeds the same records. Maintenance-generated reviews include student names/emails, room/block/residence information and issue titles. A public reputation feed can therefore reveal private accommodation and maintenance context.
@@ -409,6 +452,8 @@ loadPersistentStore reconstructs a fixed object and omits ratings, staffBargains
 
 ### B02 — High: General chat GET does not retrieve the messages POST stores
 
+**Feature-retirement update (2026-10-02):** Retired: the affected general-chat GET/POST implementation was removed. See [implementation and verification report](/home/wyse/Documents/PineVela3/docs/audits/retired-features-and-marketplace-messaging-2026-10-02.md). The evidence below records the original audit state.
+
 **Evidence:** Confirmed in isolated probes: POST returned 201, subsequent valid-channel GET returned an empty array.
 
 The server stores channelType/channelId and calls dbGetChatMessages(channelType, channelId, ...). The adapter treats the first argument as roomId and filters m.roomId, ignoring channelId. Newly posted chat messages are therefore not retrieved under the matching channel.
@@ -418,6 +463,8 @@ The server stores channelType/channelId and calls dbGetChatMessages(channelType,
 **Remediation direction, not applied:** Align adapter and route schemas and test a send/read round trip.
 
 ### B03 — Medium: DM room participant schemas do not match
+
+**Feature-retirement update (2026-10-02):** Retired: the affected room-DM implementation was removed. See [implementation and verification report](/home/wyse/Documents/PineVela3/docs/audits/retired-features-and-marketplace-messaging-2026-10-02.md). The evidence below records the original audit state.
 
 **Evidence:** Confirmed in isolated probe: participant received an empty DM list.
 
@@ -429,6 +476,8 @@ DM requests create user1Id/user2Id, but dbGetDMRooms filters senderId/receiverId
 
 ### B04 — Medium: Chat profile updates spread nickname characters into object properties
 
+**Feature-retirement update (2026-10-02):** Retired: chat-profile editing was removed. See [implementation and verification report](/home/wyse/Documents/PineVela3/docs/audits/retired-features-and-marketplace-messaging-2026-10-02.md). The evidence below records the original audit state.
+
 **Evidence:** Confirmed in isolated probe: response had numeric properties and no nickname.
 
 dbUpdateChatProfile expects an object as its second parameter, but the route passes nickname/name as a string and avatar as a separate ignored argument. Spreading that string creates character-indexed properties instead of setting nickname and avatarUrl.
@@ -439,6 +488,8 @@ dbUpdateChatProfile expects an object as its second parameter, but the route pas
 
 ### B05 — Medium: Message reactions throw and leave requests hanging
 
+**Feature-retirement update (2026-10-02):** Retired: general-chat message reactions were removed. See [implementation and verification report](/home/wyse/Documents/PineVela3/docs/audits/retired-features-and-marketplace-messaging-2026-10-02.md). The evidence below records the original audit state.
+
 **Evidence:** Confirmed in isolated probe: request timed out after five seconds.
 
 Messages start with reactions={}, while dbReactToChatMessage assumes an array and calls .push. Express 4 does not automatically forward rejected async handler promises; this route lacks a try/catch or async wrapper. The process-level unhandled rejection logger does not finish the response, so the client waits rather than receiving a controlled error.
@@ -448,6 +499,8 @@ Messages start with reactions={}, while dbReactToChatMessage assumes an array an
 **Remediation direction, not applied:** Unify the reaction schema and consistently forward async errors to the Express error handler.
 
 ### B06 — Medium: Manager staff creation is rejected by conflicting middleware
+
+**Feature-retirement update (2026-10-02):** Resolved in the current checkout: an approved manager can create staff for their own approved residence; primary/admin/foreign-manager creation is denied. See [implementation and verification report](/home/wyse/Documents/PineVela3/docs/audits/retired-features-and-marketplace-messaging-2026-10-02.md). The evidence below records the original audit state.
 
 **Evidence:** Confirmed in isolated probe: manager POST /api/staff returned 403 before the route.
 

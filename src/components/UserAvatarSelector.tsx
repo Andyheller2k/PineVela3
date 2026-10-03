@@ -1,3 +1,4 @@
+import { sessionFetch as fetch } from '../lib/session';
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   Camera, 
@@ -139,31 +140,6 @@ export default function UserAvatarSelector({ onAvatarSave }: UserAvatarSelectorP
       console.warn('[UserAvatarSelector] Avatar could not be cached locally:', err);
     }
     
-    // Also sync pinevela_user in localStorage if present
-    try {
-      const storedUserRaw = localStorage.getItem('pinevela_user');
-      if (storedUserRaw) {
-        const storedUser = JSON.parse(storedUserRaw);
-        storedUser.avatar = newAvatarVal;
-        storedUser.photo = newAvatarVal;
-        storedUser.photoUrl = newAvatarVal;
-        storedUser.avatarUrl = newAvatarVal;
-        storedUser.profilePicture = newAvatarVal;
-        localStorage.setItem('pinevela_user', JSON.stringify(storedUser));
-      }
-    } catch (e) {}
-
-    // Update global auth state (in-memory)
-    if (updateUser) {
-      updateUser({
-        avatar: newAvatarVal,
-        avatarUrl: newAvatarVal,
-        photo: newAvatarVal,
-        photoUrl: newAvatarVal,
-        profilePicture: newAvatarVal
-      });
-    }
-
     if (onAvatarSave) {
       try {
         onAvatarSave(newAvatarVal);
@@ -174,8 +150,8 @@ export default function UserAvatarSelector({ onAvatarSave }: UserAvatarSelectorP
 
     // Persist avatar to backend so it survives logout/login
     try {
-      const token = user?.token || localStorage.getItem('pinevela_session_token') || localStorage.getItem('token') || localStorage.getItem('pinevela_auth_token');
-      if (token) {
+      const token = user?.token;
+      if (user) {
         const res = await fetch('/api/auth/profile', {
           method: 'PUT',
           headers: {

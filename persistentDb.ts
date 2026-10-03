@@ -1,12 +1,17 @@
+import type { RoomKeyLimitState } from './roomKeySecurity.js';
 import 'dotenv/config';
+import type { SignupState } from './signupSecurity.js';
 import fs from 'fs';
+import { removeRawSessions } from './sessionSecurity.js';
 import path from 'path';
 import { accountKey, protectStoredCredentials } from './accountSecurity.js';
 import { CREDENTIAL_EXPOSURE_VERSION, revokeExposedCredentials } from './credentialExposure.js';
 
 export interface PersistentStore {
+  signupVerification?: SignupState;
+  roomKeyAttempts?: RoomKeyLimitState;
   hostels: any[];
-  bookingRequests: any[];
+  retiredFeatureRecords?: Record<string, any[]>;
   issueReports: any[];
   activities: any[];
   hostelVerifications: any[];
@@ -16,20 +21,13 @@ export interface PersistentStore {
   verificationAuditLogs: any[];
   users: any[];
   notifications: any[];
-  chatMessages: any[];
-  dmRooms: any[];
-  chatProfiles: any[];
   boardRequests?: any[];
   meetings?: any[];
   ratings?: any[];
   managerAccountSettings?: Record<string, any>;
   staff?: any[];
-  staffApplications?: any[];
   staffAuditLogs?: any[];
-  staffChatRooms?: any[];
-  staffChatMessages?: any[];
   staffReviews?: any[];
-  jobOffers?: any[];
   staffBargains?: any[];
   roomKeys?: any[];
   retiredRoomKeys?: string[];
@@ -37,7 +35,6 @@ export interface PersistentStore {
   credentialExposureVersion?: number;
   credentialsRevokedAt?: string;
   keyDispatches?: any[];
-  studentMessages?: any[];
   platformSettings: {
     registrationFee: number;
     commission: number;
@@ -119,11 +116,28 @@ export function loadPersistentStore(defaultStore: PersistentStore): PersistentSt
       savePersistentStore(parsed);
       console.log('[PineVela Security] Exposed sessions revoked; existing credentials require recovery.');
     }
+    // Historical indefinite sessions must require fresh authentication.
+    if (removeRawSessions(parsed)) {
+      containingCredentials = true;
+      savePersistentStore(parsed);
+    }
     containingCredentials = false;
     
+    const managerSettings = (parsed.managerAccountSettings && typeof parsed.managerAccountSettings === 'object') ? parsed.managerAccountSettings : (defaultStore.managerAccountSettings || {});
+    for (const settings of Object.values(managerSettings) as any[]) {
+      if (settings?.notifications) settings.notifications = Object.fromEntries(
+        ['emailAlerts', 'smsAlerts', 'maintenanceTicketAlerts', 'meetingRequestAlerts'].filter(key => key in settings.notifications).map(key => [key, settings.notifications[key]])
+      );
+    }
     const result: PersistentStore = {
+      roomKeyAttempts: { limits: Array.isArray(parsed.roomKeyAttempts?.limits) ? parsed.roomKeyAttempts.limits : [] },
+      signupVerification: { pending: Array.isArray(parsed.signupVerification?.pending) ? parsed.signupVerification.pending : [], limits: Array.isArray(parsed.signupVerification?.limits) ? parsed.signupVerification.limits : [] },
       hostels: deduplicateById(Array.isArray(parsed.hostels) ? parsed.hostels : defaultStore.hostels),
-      bookingRequests: deduplicateById(Array.isArray(parsed.bookingRequests) ? parsed.bookingRequests : defaultStore.bookingRequests),
+      // Preserve retired housing applications privately without an active model or API.
+      retiredFeatureRecords: { ...(parsed.retiredFeatureRecords || {}), housingApplications: deduplicateById([
+        ...(parsed.retiredFeatureRecords?.housingApplications || []),
+        ...(Array.isArray(parsed.bookingRequests) ? parsed.bookingRequests : [])
+      ]) },
       issueReports: deduplicateById(Array.isArray(parsed.issueReports) ? parsed.issueReports : defaultStore.issueReports),
       activities: deduplicateById(Array.isArray(parsed.activities) ? parsed.activities : defaultStore.activities),
       hostelVerifications: deduplicateById(Array.isArray(parsed.hostelVerifications) ? parsed.hostelVerifications : defaultStore.hostelVerifications),
@@ -132,27 +146,17 @@ export function loadPersistentStore(defaultStore: PersistentStore): PersistentSt
       managerRequests: deduplicateById(Array.isArray(parsed.managerRequests) ? parsed.managerRequests : (defaultStore.managerRequests || [])),
       verificationAuditLogs: deduplicateById(Array.isArray(parsed.verificationAuditLogs) ? parsed.verificationAuditLogs : defaultStore.verificationAuditLogs),
       users: deduplicateById((Array.isArray(parsed.users) ? parsed.users : defaultStore.users).filter((u: any) => u && u.email !== 'staff@pinevela.com' && u.username !== 'staff'), true),
-      notifications: deduplicateById(Array.isArray(parsed.notifications) ? parsed.notifications : defaultStore.notifications),
-      chatMessages: deduplicateById(Array.isArray(parsed.chatMessages) ? parsed.chatMessages : defaultStore.chatMessages),
-      dmRooms: deduplicateById(Array.isArray(parsed.dmRooms) ? parsed.dmRooms : defaultStore.dmRooms),
-      chatProfiles: deduplicateById(Array.isArray(parsed.chatProfiles) ? parsed.chatProfiles : defaultStore.chatProfiles),
-      boardRequests: deduplicateById(Array.isArray(parsed.boardRequests) ? parsed.boardRequests : (defaultStore.boardRequests || [])),
+      notifications: deduplicateById(Array.isArray(parsed.notifications) ? parsed.notifications : defaultStore.notifications), boardRequests: deduplicateById(Array.isArray(parsed.boardRequests) ? parsed.boardRequests : (defaultStore.boardRequests || [])),
       meetings: deduplicateById(Array.isArray(parsed.meetings) ? parsed.meetings : (defaultStore.meetings || [])),
-      managerAccountSettings: (parsed.managerAccountSettings && typeof parsed.managerAccountSettings === 'object') ? parsed.managerAccountSettings : (defaultStore.managerAccountSettings || {}),
+      managerAccountSettings: managerSettings,
       staff: deduplicateById(Array.isArray(parsed.staff) ? parsed.staff : (defaultStore.staff || [])),
-      staffApplications: deduplicateById(Array.isArray(parsed.staffApplications) ? parsed.staffApplications : (defaultStore.staffApplications || [])),
-      staffAuditLogs: deduplicateById(Array.isArray(parsed.staffAuditLogs) ? parsed.staffAuditLogs : (defaultStore.staffAuditLogs || [])),
-      staffChatRooms: deduplicateById(Array.isArray(parsed.staffChatRooms) ? parsed.staffChatRooms : (defaultStore.staffChatRooms || [])),
-      staffChatMessages: deduplicateById(Array.isArray(parsed.staffChatMessages) ? parsed.staffChatMessages : (defaultStore.staffChatMessages || [])),
-      staffReviews: deduplicateById(Array.isArray(parsed.staffReviews) ? parsed.staffReviews : (defaultStore.staffReviews || [])),
-      jobOffers: deduplicateById(Array.isArray(parsed.jobOffers) ? parsed.jobOffers : (defaultStore.jobOffers || [])),
+      staffAuditLogs: deduplicateById(Array.isArray(parsed.staffAuditLogs) ? parsed.staffAuditLogs : (defaultStore.staffAuditLogs || [])), staffReviews: deduplicateById(Array.isArray(parsed.staffReviews) ? parsed.staffReviews : (defaultStore.staffReviews || [])),
       roomKeys: deduplicateById(Array.isArray(parsed.roomKeys) ? parsed.roomKeys : (defaultStore.roomKeys || [])),
       retiredRoomKeys: Array.isArray(parsed.retiredRoomKeys) ? parsed.retiredRoomKeys : [],
       accountSecurityVersion: parsed.accountSecurityVersion,
       credentialExposureVersion: parsed.credentialExposureVersion,
       credentialsRevokedAt: parsed.credentialsRevokedAt,
       keyDispatches: Array.isArray(parsed.keyDispatches) ? parsed.keyDispatches : [],
-      studentMessages: deduplicateById(Array.isArray(parsed.studentMessages) ? parsed.studentMessages : (defaultStore.studentMessages || [])),
       platformSettings: parsed.platformSettings || defaultStore.platformSettings,
       managerRestrictions: deduplicateById(Array.isArray(parsed.managerRestrictions) ? parsed.managerRestrictions : (defaultStore.managerRestrictions || [])),
       digitalMarketApplications: deduplicateById(Array.isArray(parsed.digitalMarketApplications) ? parsed.digitalMarketApplications : (defaultStore.digitalMarketApplications || [])),
@@ -161,6 +165,8 @@ export function loadPersistentStore(defaultStore: PersistentStore): PersistentSt
       digitalMarketOrders: deduplicateById(Array.isArray(parsed.digitalMarketOrders) ? parsed.digitalMarketOrders : (defaultStore.digitalMarketOrders || [])),
       digitalMarketMessages: deduplicateById(Array.isArray(parsed.digitalMarketMessages) ? parsed.digitalMarketMessages : (defaultStore.digitalMarketMessages || [])),
       digitalMarketRatings: deduplicateById(Array.isArray(parsed.digitalMarketRatings) ? parsed.digitalMarketRatings : (defaultStore.digitalMarketRatings || [])),
+      // Preserve legacy service reviews privately; only purchase-verified ratings are public.
+      digitalMarketServiceReviews: Array.isArray(parsed.digitalMarketServiceReviews) ? parsed.digitalMarketServiceReviews : [],
       verificationTeams: deduplicateById(Array.isArray(parsed.verificationTeams) ? parsed.verificationTeams : (defaultStore.verificationTeams || [])),
       verificationInspections: deduplicateById(Array.isArray(parsed.verificationInspections) ? parsed.verificationInspections : (defaultStore.verificationInspections || [])),
     };
@@ -180,6 +186,7 @@ export function loadPersistentStore(defaultStore: PersistentStore): PersistentSt
 export function savePersistentStore(store: PersistentStore): void {
   ensureDataDir();
   protectStoredCredentials(store);
+  removeRawSessions(store);
   const tmpPath = `${STORE_PATH}.tmp.${Date.now()}`;
   try {
     const jsonStr = JSON.stringify(store, null, 2);

@@ -4,13 +4,13 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "tsx server.ts",
+    "dev": "NODE_ENV=development tsx watch --include .env --exclude './data/**' --exclude './uploads/**' --exclude './dist/**' server.ts",
     "build": "vite build && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs",
     "start": "node dist/server.cjs",
     "preview": "vite preview",
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit",
-    "test:security": "tsx --test tests/accountSecurity.test.ts tests/accountIsolation.integration.test.ts tests/credentialExposure.test.ts",
+    "test:security": "tsx --test --test-concurrency=1 tests/accountSecurity.test.ts tests/accountIsolation.integration.test.ts tests/credentialExposure.test.ts tests/issueReportSecurity.test.ts tests/issueReportSecurity.integration.test.ts tests/hostelSecurity.test.ts tests/hostelSecurity.integration.test.ts tests/inspectionReportSecurity.test.ts tests/inspectionReportSecurity.integration.test.ts tests/signupSecurity.test.ts tests/signupSecurity.integration.test.ts tests/developmentSignup.test.ts tests/developmentSignup.integration.test.ts tests/managerApprovalSecurity.test.ts tests/managerApprovalSecurity.integration.test.ts tests/retiredFeatures.integration.test.ts tests/privateRecordAccess.integration.test.ts tests/roomKeySecurity.test.ts tests/roomKeySecurity.integration.test.ts tests/issueWorkflowSecurity.integration.test.ts tests/marketOrderSecurity.test.ts tests/marketOrderSecurity.integration.test.ts tests/marketOrderWorkflow.test.ts tests/marketOrderWorkflow.integration.test.ts tests/marketRatingSecurity.test.ts tests/marketRatingSecurity.integration.test.ts tests/sessionSecurity.test.ts tests/sessionSecurity.integration.test.ts tests/imageUploadSecurity.test.ts tests/imageUploadSecurity.integration.test.ts tests/resourceSecurity.test.ts tests/resourceSecurity.integration.test.ts tests/sessionRevocationOnboarding.integration.test.ts",
     "check:private-data": "node scripts/check-private-data.cjs"
   },
   "dependencies": {
@@ -33,6 +33,7 @@
     "react-easy-crop": "^6.2.3",
     "react-router-dom": "^7.18.0",
     "recharts": "^3.10.1",
+    "sharp": "0.35.5",
     "vite": "^6.2.3"
   },
   "devDependencies": {

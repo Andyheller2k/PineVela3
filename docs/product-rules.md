@@ -1,5 +1,23 @@
 # PineVela Product Rules
 
+## Marketplace Reviews
+
+A buyer may review and edit feedback for their own completed marketplace purchase through
+Purchases & Tracking. Separate purchases have separate reviews. Seller service pages display
+verified purchase reviews and offer no orderless review form. Stores/items without verified
+reviews appear unrated. Historical unverified reviews are preserved privately, without
+influencing public reputation.
+
+## Marketplace Handover
+
+A primary buyer creates an order using their authenticated identity. The order reserves
+stock for 24 hours. Its seller confirms the proposed location before completing handover;
+only the buyer sees the six-digit delivery PIN and shares it after inspecting the delivery.
+PINs expire after 24 hours and lock after five failures. The buyer can obtain a new PIN and
+renew the reservation if capacity is still available. Expiry, rejection and cancellation
+release capacity; completed/rejected/cancelled orders cannot reopen. Seller PIN verification
+is not a payment processor operation; it records the existing physical handover/payment flow.
+
 ## Users
 
 PineVela has several user categories:
@@ -46,7 +64,7 @@ There is no public staff hiring system.
 
 Residents may:
 
-* apply for housing
+* receive room activation keys from their authorized housing manager
 * receive housing allocations
 * report maintenance issues
 * review staff when the resident has an active/valid room relationship
@@ -127,3 +145,21 @@ Core rules:
 * A bed may have at most one active occupant.
 * Allocation must respect the hostel hierarchy.
 * Unauthorized users must not be able to manipulate another resident's allocation.
+
+
+## Housing Booking Applications
+
+Housing booking applications are retired. There is no accommodation application/approval
+workflow. Resident access uses the supported room-key activation flow. Marketplace service
+bookings and meeting appointments are separate supported features. Historical housing
+applications are retained only in a private inactive archive during migration.
+
+## Maintenance Workflow
+
+Only the active staff member assigned to a maintenance issue may accept, decline, request
+a reschedule or submit completion. Managers may dispatch and decide reschedules only for
+their authorized residence. Staff must accept before completion. The exact reporting
+resident must retain active room access to confirm a completed repair or request follow-up.
+Resident reports require resident sign-off before management closure; managers cannot
+manufacture that confirmation. Closed issues reject further workflow changes, and resident
+sign-off may create only one repair review per completion.

@@ -1,8 +1,28 @@
+import { createSessionToken, setRecordSession, clearRecordSession, sessionMatches, requestSessionToken, revokeMatchingSessions, cookieSessionRequest, setSessionCookie, clearSessionCookie, sessionOriginGuard, sessionLifetimeMs } from './sessionSecurity.js';
+import { createImageStorage, ImageUploadError } from './imageUploadSecurity.js';
+import { createResourceProtection, EventConnections, guardAsyncRoutes, ResourceLimitError, resourceFailure, trustedProxyAddresses, UPLOAD_ROUTE } from './resourceSecurity.js';
+import { installMarketRatings, verifiedMarketRatings, publicMarketRating, ratingSummary } from './marketRatingSecurity.js';
+import { issueDeliveryPin, checkDeliveryPin, publicMarketOrder, orderAction, authorizeOrderAction, isOrderBuyer, isOrderSeller } from './marketOrderWorkflow.js';
+import { catalogOrderTerms, checkOrderStock, consumeOrderStock, activeOrderReservation, terminalMarketOrder, MarketOrderError } from './marketOrderSecurity.js';
+import { authorizeIssueAction, needsResidentSignoff, IssueWorkflowError } from './issueWorkflowSecurity.js';
+import { authorizedKeyHostels, RoomKeyAttemptGuard, RoomKeyAttemptLimit, roomActivationPreview } from './roomKeySecurity.js';
+import { assignedInspectionRecords, privateResidentDirectory } from './privateRecordAccess.js';
+import { KNOWN_LEGACY_PASSWORDS, KNOWN_LEGACY_HASHES } from './legacyCredentialPolicy.js';
 import dotenv from "dotenv";
 dotenv.config();
 
 import crypto from "crypto";
-import { accountData, accountId, accountKey, accountRole, canManageHostel, credentialValues, hasActiveRoom, hashCredential, normalizeEmail, passwordIsReused, publicAccountData, releaseRoom, verifyCredential } from "./accountSecurity.js";
+import { accountData, accountId, accountKey, accountRole, canManageHostel, credentialValues, hasActiveRoom, hashCredentialAsync, normalizeEmail, passwordIsReusedAsync, publicAccountData, releaseRoom, verifyCredentialAsync, findAsync } from "./accountSecurity.js";
+import { buildIssueDetailsUpdate, canEditIssueDetails, IssueEditValidationError } from "./issueReportSecurity.js";
+import { buildHostelUpdate, canUpdateHostel, HostelUpdateValidationError } from "./hostelSecurity.js";
+import { activeOfficerAccount, buildInspectionReport, currentReportOfficer, inspectionSubmissionTarget, InspectionSubmissionError } from "./inspectionReportSecurity.js";
+import { SignupGuard, signupInput } from "./signupSecurity.js";
+import { signupProviderConfig, sendSignupVerification, confirmSignupVerification, SignupError } from "./supabaseSignup.js";
+import { developmentSignupRequest, isDevelopmentSignup } from "./developmentSignup.js";
+import { managerIsApproved, managerRecordMatches, managerForDossier, managerOnboardingRequest } from "./managerApprovalSecurity.js";
+import { installMarketMessaging, marketNotificationVisible, isMarketMessageNotification } from './marketMessaging.js';
+import { installStaffManagement, activeResidentRoom, activeManagedStaff } from './staffManagement.js';
+import { hostelVerificationSubmission, OnboardingSubmissionError } from './onboardingSubmissionSecurity.js';
 import express from "express";
 import compression from "compression";
 import path from "path";
@@ -14,9 +34,6 @@ import {
   dbGetHostels,
   dbCreateHostel,
   dbUpdateHostel,
-  dbGetBookingRequests,
-  dbCreateBookingRequest,
-  dbUpdateBookingRequest,
   dbGetIssueReports,
   dbCreateIssueReport,
   dbUpdateIssueReport,
@@ -35,16 +52,7 @@ import {
   dbGetRatings,
   dbCreateRating,
   dbGetActivities,
-  dbCreateActivity,
-  dbGetChatProfile,
-  dbUpdateChatProfile,
-  dbGetChatMessages,
-  dbCreateChatMessage,
-  dbReactToChatMessage,
-  dbGetDMRooms,
-  dbCreateDMRoom,
-  dbAcceptDMRoom,
-  dbRegisterHostelAtomic,
+  dbCreateActivity, dbRegisterHostelAtomic,
   dbCleanupPlaceholderHostels,
   dbSaveManagerProfile,
   dbGetManagerRequests,
@@ -71,10 +79,7 @@ import {
   dbGetRoomKeyByCode,
   dbAssignRoomKey,
   dbGenerateHostelRoomKeys,
-  dbRecordRoomKeyDispatch,
-  dbGetStudentMessages,
-  dbCreateStudentMessage,
-  generateHostelRoomKeyCode,
+  dbRecordRoomKeyDispatch, generateHostelRoomKeyCode,
   persistStore
 } from "./localDb.js";
 import {
@@ -86,35 +91,19 @@ import {
 } from "./verificationService.js";
 import { loadPersistentStore, savePersistentStore } from "./persistentDb.js";
 
-/** Cryptographically random session token (not derivable from user id/email). */
-function createSessionToken(prefix = "pv"): string {
-  return `${prefix}_${crypto.randomBytes(32).toString("hex")}`;
-}
-
 function hashPasswordSha256(password: string): string {
   return crypto.createHash("sha256").update(String(password)).digest("hex");
 }
 
 // Known legacy default credentials (plaintext and SHA-256 hashes) that must never authenticate
-const KNOWN_LEGACY_PASSWORDS = new Set([
-  '1782@HellerPine',
-  'admin123',
-  'HellerPine2k@'
-]);
-const KNOWN_LEGACY_HASHES = new Set([
-  'bcfcff2f3e5bd8bef762d480c8a8bc4f7da3af64cd059a5da1df0407bc7499f1', // sha256('1782@HellerPine')
-  '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9', // sha256('admin123')
-  '4e9dfd0fa367d264f3fb8f15dcf40e947171e5491136b856e408ec2367469a47', // sha256('HellerPine2k@')
-]);
-
-/** Accept stored plaintext or SHA-256 hash. Never accept locked legacy credentials or known default passwords. */
-function passwordsMatch(input: string, ...storedCandidates: Array<string | undefined | null>): boolean {
+/** Verify stored credentials while rejecting locked accounts and disabled legacy passwords. */
+async function passwordsMatch(input: string, ...storedCandidates: Array<string | undefined | null>): Promise<boolean> {
   if (!input) return false;
   const hashed = hashPasswordSha256(input);
   if (KNOWN_LEGACY_PASSWORDS.has(input) || KNOWN_LEGACY_HASHES.has(hashed)) {
     return false;
   }
-  return storedCandidates.some(c => verifyCredential(input, c));
+  return Boolean(await findAsync([...new Set(storedCandidates)], c => verifyCredentialAsync(input, c)));
 }
 
 /** Remove credential fields before sending user objects to clients. */
@@ -136,19 +125,16 @@ function stripSecrets<T extends Record<string, any>>(obj: T | null | undefined):
 
 function persistUserSessionToken(userEntry: any, token: string): void {
   if (!userEntry) return;
-  userEntry.token = token;
-  if (userEntry.user && typeof userEntry.user === "object") {
-    userEntry.user.token = token;
-  }
+  setRecordSession(userEntry, token);
   const email = (userEntry.email || userEntry.user?.email || '').toLowerCase().trim();
   const id = userEntry.id || userEntry.user?.id || userEntry.officerId || userEntry.user?.officerId;
-  if (email || id) {
+  if ((email || id) && accountRole(userEntry) === 'verification_team') {
     const vt = verificationTeams.find((t: any) => 
       (email && (t.email || '').toLowerCase() === email) ||
       (id && (t.id === id || t.officerId === id))
     );
     if (vt) {
-      vt.token = token;
+      setRecordSession(vt, token);
     }
   }
 }
@@ -184,7 +170,6 @@ const defaultHostels: any[] = [];
 
 const initialHostels: any[] = defaultHostels;
 
-const initialBookingRequests: any[] = [];
 
 const initialIssueReports: any[] = [];
 
@@ -192,27 +177,15 @@ const initialActivities: any[] = [];
 
 // Backend state containers
 let hostels = [...initialHostels];
-let bookingRequests = [...initialBookingRequests];
 let issueReports = [...initialIssueReports];
 let activities = [...initialActivities];
 let platformSettings: any;
 
 const initialStaff: any[] = [];
 let staff: any[] = [...initialStaff];
-let staffApplications: any[] = [];
 let staffAuditLogs: any[] = [];
-let staffChatRooms: any[] = [];
-let staffChatMessages: any[] = [];
 let staffReviews: any[] = [];
-let jobOffers: any[] = [];
 let staffBargains: any[] = [];
-
-// Chat state containers
-let chatProfiles: any[] = [];
-
-let dmRooms: any[] = [];
-
-let chatMessages: any[] = [];
 
 let meetings: any[] = [];
 
@@ -559,7 +532,6 @@ const persistentData = getStoreInstance({
 });
 
 hostels = persistentData.hostels;
-bookingRequests = persistentData.bookingRequests;
 issueReports = persistentData.issueReports;
 activities = persistentData.activities;
 hostelVerifications = persistentData.hostelVerifications;
@@ -626,7 +598,6 @@ if (!hasExistingAdmin) {
         email: bootstrapEmail,
         role: 'admin',
         password: bootstrapHash,
-        token: createSessionToken('admin'),
         user: {
           id: adminId,
           name: process.env.BOOTSTRAP_ADMIN_NAME || 'System Administrator',
@@ -634,7 +605,6 @@ if (!hasExistingAdmin) {
           email: bootstrapEmail,
           role: 'admin',
           password: bootstrapHash,
-          token: createSessionToken('admin')
         }
       };
       MOCK_USERS.push(newAdmin);
@@ -657,14 +627,10 @@ for (const s of (persistentData.staff || [])) {
 }
 staff = dedupedBootStaff;
 persistentData.staff = dedupedBootStaff;
-staffApplications = persistentData.staffApplications || [];
-jobOffers = persistentData.jobOffers || [];
 verificationTeams = ((persistentData as any).verificationTeams && (persistentData as any).verificationTeams.length > 0) ? (persistentData as any).verificationTeams : verificationTeams;
 verificationInspections = ((persistentData as any).verificationInspections && (persistentData as any).verificationInspections.length > 0) ? (persistentData as any).verificationInspections : [...DEFAULT_INSPECTIONS];
 notifications = persistentData.notifications || [];
-chatMessages = persistentData.chatMessages || [];
-dmRooms = persistentData.dmRooms || [];
-chatProfiles = persistentData.chatProfiles || [];
+staffReviews = persistentData.staffReviews || [];
 ratings = persistentData.ratings || [];
 
 // Ensure all seeded/retained accounts are written back safely to the database
@@ -680,17 +646,16 @@ if (initStore) {
       if (entry.role) entry.role = 'student';
       for (const target of [entry, entry.user].filter(Boolean)) {
         for (const field of ['isDigitalMarketOnly', 'isMerchantApplicant', 'isApprovedMerchant', 'hasApprovedMerchantStore', 'merchantStoreId', 'targetRedirect']) delete target[field];
-        if (migratingAccountIsolation) delete target.token;
+        if (migratingAccountIsolation) clearRecordSession(target);
       }
     } else if (migratingAccountIsolation && (accountRole(entry) === 'merchant' || data.isDigitalMarketOnly)) {
-      delete entry.token;
-      delete data.token;
+      clearRecordSession(entry);
+      clearRecordSession(data);
     }
   }
   if (migratingAccountIsolation) {
     for (const item of [...(initStore.digitalMarketApplications || []), ...(initStore.digitalMarketStores || [])]) {
-      delete item.token;
-      delete item.merchantToken;
+      clearRecordSession(item);
     }
     (initStore as any).accountSecurityVersion = 1;
   }
@@ -770,12 +735,6 @@ if (initStore) {
   if (!initStore.staff) {
     initStore.staff = [];
   }
-  if (!initStore.staffApplications) {
-    initStore.staffApplications = [];
-  }
-  if (!initStore.jobOffers) {
-    initStore.jobOffers = [];
-  }
   if (!(initStore as any).verificationTeams) {
     (initStore as any).verificationTeams = verificationTeams;
   }
@@ -788,7 +747,6 @@ staffBargains = persistentData.staffBargains || [];
 
 export function syncStore(): void {
   persistentData.hostels = hostels;
-  persistentData.bookingRequests = bookingRequests;
   persistentData.issueReports = issueReports;
   persistentData.activities = activities;
   persistentData.hostelVerifications = hostelVerifications;
@@ -800,17 +758,10 @@ export function syncStore(): void {
   (persistentData as any).verificationInspections = verificationInspections;
   persistentData.users = MOCK_USERS;
   persistentData.notifications = notifications;
-  persistentData.chatMessages = chatMessages;
-  persistentData.dmRooms = dmRooms;
-  persistentData.chatProfiles = chatProfiles;
   persistentData.platformSettings = platformSettings;
   persistentData.staff = staff;
-  persistentData.staffApplications = staffApplications;
   persistentData.staffAuditLogs = staffAuditLogs;
-  persistentData.staffChatRooms = staffChatRooms;
-  persistentData.staffChatMessages = staffChatMessages;
   persistentData.staffReviews = staffReviews;
-  persistentData.jobOffers = jobOffers;
   persistentData.staffBargains = staffBargains;
 
   savePersistentStore(persistentData);
@@ -818,21 +769,11 @@ export function syncStore(): void {
 
 
 // Hash seed account passwords at boot so plaintext is not compared forever in memory dumps of store
-const LEAKED_DEMO_TOKENS = new Set([
-  'token_admin_andyheller2k',
-  'token_admin_001',
-  'token_manager_101',
-  'token_student_882',
-  'token_staff_201',
-  'mock-token',
-]);
 for (const entry of MOCK_USERS) {
   if (!entry) continue;
   if (entry.requiresPasswordReset || entry.user?.requiresPasswordReset || String(entry.password || entry.user?.password || '').startsWith('!LOCKED_')) {
     for (const target of [entry, entry.user].filter(Boolean)) {
-      delete target.token;
-      delete target.merchantToken;
-      delete target.sessionToken;
+      clearRecordSession(target);
     }
     continue;
   }
@@ -849,47 +790,73 @@ for (const entry of MOCK_USERS) {
   if (nested?.plainPassword) {
     delete nested.plainPassword;
   }
-  // Invalidate well-known forgeable demo tokens from older builds
-  if (LEAKED_DEMO_TOKENS.has(entry.token) || LEAKED_DEMO_TOKENS.has(nested?.token)) {
-    const rotated = createSessionToken('admin');
-    entry.token = rotated;
-    if (nested) nested.token = rotated;
-  }
-  if (nested && !nested.token) {
-    nested.token = entry.token || createSessionToken('sess');
-  }
-  if (!entry.token && nested?.token) {
-    entry.token = nested.token;
-  }
+
 }
 for (const officer of verificationTeams) {
   if (officer.requiresPasswordReset || String(officer.password || '').startsWith('!LOCKED_')) {
-    delete officer.token;
+    clearRecordSession(officer);
     continue;
   }
   if (officer?.password && !/^[a-f0-9]{64}$/i.test(officer.password) && !officer.password.startsWith('scrypt-sha256$')) {
     officer.password = hashPasswordSha256(officer.password);
   }
-  if (!officer.token || LEAKED_DEMO_TOKENS.has(officer.token) || String(officer.token).startsWith('token_vt_')) {
-    officer.token = createSessionToken('vt');
-  }
+
 }
 try { syncStore(); } catch (_) {}
 
 async function startServer() {
   const app = express();
+  guardAsyncRoutes(app);
+  app.set('trust proxy', trustedProxyAddresses());
   const PORT = Number(process.env.PORT || 3000);
+  const resourceActor = (req: express.Request) => {
+    const token = requestSessionToken(req);
+    if (!token) return '';
+    const store = getStoreInstance();
+    const entry = [...MOCK_USERS, ...(store.users || []), ...(store.digitalMarketApplications || []), ...(store.digitalMarketStores || []), ...(store.verificationTeams || [])].find(record => sessionMatches(record, token));
+    return entry ? `${accountRole(entry) || 'merchant'}:${accountId(entry)}` : '';
+  };
+  const resources = await createResourceProtection({ actor: resourceActor, loginIdentity: req => {
+    const store = getStoreInstance();
+    const records = [...MOCK_USERS, ...(store.users || []), ...(store.digitalMarketApplications || []), ...(store.verificationTeams || [])];
+    // Charge every submitted identity: conflicting alias fields must not hide the targeted account.
+    const identifiers = [req.body.usernameOrEmail, req.body.studentEmail, req.body.email, req.body.officerId]
+      .filter(value => typeof value === 'string' && value.trim()).map(value => normalizeEmail(value).slice(0, 254));
+    return [...new Set(identifiers.map(identifier => {
+      const clean = identifier.replace(/[^a-z0-9]/g, '');
+      const matched = records.find(record => {
+        const profile = accountData(record);
+        const values = [profile?.email, record.email, record.studentEmail, profile?.username, record.username,
+          profile?.officerId, record.officerId, profile?.id, record.id, profile?.studentId, record.studentId,
+          profile?.residentId, record.residentId, profile?.phone, record.phone, profile?.roomKey, record.roomKey];
+        const officer = accountRole(record) === 'verification_team' || record.officerId || profile?.officerId;
+        if (officer) values.push(normalizeEmail(profile?.email || record.email).split('@')[0]);
+        return values.some(value => value && normalizeEmail(value) === identifier) || (clean.length > 2 &&
+          [profile?.username, record.username, profile?.studentId, record.studentId, profile?.residentId, record.residentId]
+            .some(value => value && normalizeEmail(value).replace(/[^a-z0-9]/g, '') === clean));
+      });
+      return normalizeEmail(accountData(matched)?.email || matched?.studentEmail || matched?.email) || identifier;
+    }))].concat(identifiers.length ? [] : ['missing']);
+  } });
 
-  // Support high-resolution hostel photograph uploads (up to 30MB)
+  // Reject excessive traffic and unauthorized large uploads before parsing submitted bytes.
+  app.use((req, res, next) => req.path.toLowerCase().startsWith('/api/') || req.path.toLowerCase().startsWith('/uploads/') ? resources.beforeBody(req, res, next) : next());
+  app.use('/api', sessionOriginGuard);
+  app.use((req, res, next) => {
+    if (req.method !== 'POST' || req.path.toLowerCase().replace(/\/+$/, '') !== UPLOAD_ROUTE) return next();
+    res.set('Connection', 'close');
+    return requireAuth(['admin', 'manager'])(req, res, next);
+  });
+  app.use((req, res, next) => req.path.toLowerCase().startsWith('/api/') ? resources.parseBody(req, res, next) : next());
+  app.use((req, res, next) => req.path.toLowerCase().startsWith('/api/') ? resources.afterBody(req, res, next) : next());
   app.use(compression() as any);
-  app.use(express.json({ limit: '30mb' }));
-  app.use(express.urlencoded({ extended: true, limit: '30mb' }));
 
   // Credentials and their hashes are never included in API responses.
+  sessionLifetimeMs(); // Validate lifetime configuration before accepting requests.
   app.use('/api', (req, res, next) => {
     const sendJson = res.json.bind(res);
-    const sessionResponse = ['/auth/login', '/auth/me', '/auth/verify-unified', '/digital-market/login', '/room-keys/claim', '/residents/onboard', '/verification-teams/login', '/auth/verification-team-login', '/auth/register-unified', '/users/register', '/auth/register-manager'].includes(req.path);
-    res.json = (value: any) => sendJson(publicAccountData(value, sessionResponse));
+    const sessionResponse = ['/auth/login', '/auth/verify-unified', '/digital-market/login', '/room-keys/claim', '/residents/onboard', '/verification-teams/login', '/auth/verification-team-login', '/auth/register-unified', '/users/register', '/auth/register-manager'].includes(req.path);
+    res.json = (value: any) => sendJson(publicAccountData(value, sessionResponse && !cookieSessionRequest(req)));
     next();
   });
 
@@ -911,8 +878,8 @@ async function startServer() {
     return [...new Set(users)];
   }
 
-  function updateIdentityPassword(records: any[], password: string, email: string, role: string): void {
-    const hash = hashCredential(password);
+  async function updateIdentityPassword(records: any[], password: string, email: string, role: string): Promise<void> {
+    const hash = await hashCredentialAsync(password);
     for (const record of records) {
       const previous = credentialValues(record);
       for (const target of [record, record.user].filter(Boolean)) {
@@ -921,14 +888,13 @@ async function startServer() {
         delete target.plainPassword;
         delete target.localPassword;
         delete target.userPropPassword;
-        delete target.token;
-        delete target.merchantToken;
+        clearRecordSession(target);
         target.requiresPasswordReset = false;
       }
     }
     if (role === 'merchant') {
       for (const item of getStoreInstance().digitalMarketStores || []) {
-        if (normalizeEmail(item.studentEmail) === email) { delete item.token; delete item.merchantToken; }
+        if (normalizeEmail(item.studentEmail) === email) { clearRecordSession(item); }
       }
     }
     syncStore();
@@ -941,23 +907,24 @@ async function startServer() {
     '/api/staff'
   ]);
   const passwordPaths = new Set(['/api/auth/change-password', '/api/users/reset-registered-account-password', '/api/admin/reset-user-password']);
-  app.use('/api', (req: any, res, next) => {
+  app.use('/api', async (req: any, res, next) => {
     const route = req.path;
     const fullPath = `/api${route}`;
     if (req.method !== 'POST' || (!creationPaths.has(fullPath) && !passwordPaths.has(fullPath))) return next();
     const store = getStoreInstance();
-    const token = String(req.headers.authorization || '').replace(/^Bearer\s+/i, '');
-    const actorEntry = token ? [...MOCK_USERS, ...(store.users || [])].find(u => u.token === token || u.user?.token === token) : null;
-    const merchantSession = token && [...(store.digitalMarketApplications || []), ...(store.digitalMarketStores || [])].some(m => m.token === token || m.merchantToken === token);
-    const merchantRecord = merchantSession ? [...(store.digitalMarketApplications || []), ...(store.digitalMarketStores || [])].find(m => m.token === token || m.merchantToken === token) : null;
+    const token = requestSessionToken(req);
+    const actorEntry = token ? [...MOCK_USERS, ...(store.users || [])].find(u => sessionMatches(u, token)) : null;
+    if (isDevelopmentSignup(actorEntry, store.users || []) && !developmentSignupRequest(req)) return res.status(401).json({ error: 'Development accounts are only available in local development.' });
+    const merchantSession = token && [...(store.digitalMarketApplications || []), ...(store.digitalMarketStores || [])].some(m => sessionMatches(m, token));
+    const merchantRecord = merchantSession ? [...(store.digitalMarketApplications || []), ...(store.digitalMarketStores || [])].find(m => sessionMatches(m, token)) : null;
     const actor = accountData(actorEntry) || (merchantRecord ? { id: `merchant:${merchantRecord.id}`, email: merchantRecord.studentEmail, parentUserId: merchantRecord.userId, parentUserEmail: merchantRecord.parentUserEmail, role: 'merchant' } : null);
     const ownManagerDocuments = fullPath === '/api/manager-verifications/submit' && actor?.role === 'manager' && !req.body.password && normalizeEmail(req.body.managerEmail || req.body.email) === normalizeEmail(actor.email);
     const creatingAccount = creationPaths.has(fullPath) && !ownManagerDocuments;
     if (fullPath === '/api/users/register' && req.body.role && !['user', 'manager'].includes(req.body.role)) return res.status(400).json({ error: 'Use the dedicated registration flow for this account type.' });
-    if (creatingAccount && (merchantSession || (actor && actor.role !== 'user' && !(actor.role === 'admin' && fullPath === '/api/staff')))) {
+    if (creatingAccount && (merchantSession || (actor && actor.role !== 'user' && !(actor.role === 'manager' && fullPath === '/api/staff')))) {
       return res.status(403).json({ error: 'Subaccounts cannot create other subaccounts. Sign in with your primary user account.' });
     }
-    const primaryCreation = ['/api/auth/register-manager', '/api/auth/register-manager-account', '/api/manager-verifications/submit', '/api/digital-market/register', '/api/room-keys/claim', '/api/residents/onboard'].includes(fullPath) || (fullPath === '/api/users/register' && req.body.role !== 'user');
+    const primaryCreation = ['/api/auth/register-manager', '/api/auth/register-manager-account', '/api/manager-verifications/submit', '/api/digital-market/register', '/api/room-keys/claim', '/api/residents/onboard', '/api/staff'].includes(fullPath) || (fullPath === '/api/users/register' && req.body.role !== 'user');
     if (creatingAccount && primaryCreation && !actor) return res.status(401).json({ error: 'Sign in with your primary account to create a subaccount.' });
     if (creatingAccount && actor?.role === 'user') {
       req.body.parentUserId = actor.id;
@@ -975,8 +942,8 @@ async function startServer() {
     const email = normalizeEmail(req.body.studentEmail || req.body.managerEmail || req.body.staffEmail || req.body.email || actor?.email);
     const intendedRole = fullPath.includes('manager') ? 'manager' : fullPath === '/api/staff' ? 'staff' : '';
     if (creatingAccount && intendedRole && [...MOCK_USERS, ...(store.users || [])].some(u => normalizeEmail(accountData(u).email || u.email) === email && accountRole(u) !== intendedRole)) return res.status(409).json({ error: 'This email belongs to a different account type. Choose a separate email for this subaccount.' });
-    const records = [...MOCK_USERS, ...(store.users || []), ...(store.digitalMarketApplications || []), ...(store.staffApplications || []), ...(store.managerVerifications || []), ...(store.managerRegistrationRequests || [])];
-    if (passwordIsReused(password, records, email, actor)) {
+    const records = [...MOCK_USERS, ...(store.users || []), ...(store.digitalMarketApplications || []), ...(store.managerVerifications || []), ...(store.managerRegistrationRequests || [])];
+    if (await passwordIsReusedAsync(password, records, email, actor)) {
       return res.status(409).json({ error: 'Choose a different password. This password is already used by your primary account, a linked subaccount, or a previous password.' });
     }
     delete req.body.plainPassword;
@@ -1006,8 +973,9 @@ async function startServer() {
     });
   });
 
-  // Static directory for uploaded hostel images
-  app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+  const imageStorage = createImageStorage();
+  app.use(imageStorage.mediaBoundary);
+  app.use('/uploads', imageStorage.router);
 
   // Health check endpoint
   app.get("/api/health", (req, res) => {
@@ -1015,40 +983,16 @@ async function startServer() {
   });
 
   // Real-time synchronization events (SSE) for TanStack Query invalidation across open tabs/windows
-  const sseSyncClients = new Set<express.Response>();
+  const sseConnections = new EventConnections();
 
   app.get("/api/sync/events", (req, res) => {
-    res.writeHead(200, {
-      "Content-Type": "text/event-stream",
-      "Cache-Control": "no-cache, no-transform",
-      "Connection": "keep-alive"
-    });
-    res.write("data: connected\n\n");
-    sseSyncClients.add(res);
-
-    const keepAlive = setInterval(() => {
-      try {
-        res.write(": ping\n\n");
-      } catch (e) {
-        clearInterval(keepAlive);
-      }
-    }, 25000);
-
-    req.on("close", () => {
-      clearInterval(keepAlive);
-      sseSyncClients.delete(res);
-    });
+    try { sseConnections.add(req, res, resourceActor(req)); }
+    catch (error) { if (error instanceof ResourceLimitError) return resourceFailure(res, error); throw error; }
   });
 
   function broadcastDataChange(entity: string, details?: any) {
     const payload = JSON.stringify({ entity, details, timestamp: Date.now() });
-    for (const client of sseSyncClients) {
-      try {
-        client.write(`data: ${payload}\n\n`);
-      } catch (e) {
-        sseSyncClients.delete(client);
-      }
-    }
+    sseConnections.broadcast(payload);
   }
 
   // Middleware: Automatically broadcast data change when mutating requests succeed
@@ -1137,7 +1081,6 @@ async function startServer() {
       counts: {
         hostels: hostels.length,
         users: MOCK_USERS.length,
-        bookingRequests: bookingRequests.length,
         issueReports: issueReports.length,
         hostelVerifications: hostelVerifications.length
       }
@@ -1153,7 +1096,6 @@ async function startServer() {
       tables: {
         hostels: { exists: true, count: hostels.length },
         users: { exists: true, count: MOCK_USERS.length },
-        bookingRequests: { exists: true, count: bookingRequests.length },
         issueReports: { exists: true, count: issueReports.length },
         hostelVerifications: { exists: true, count: hostelVerifications.length }
       }
@@ -1191,8 +1133,9 @@ async function startServer() {
 
     const allCandidates = await dbGetAllUsersByEmailOrUsername(usernameOrEmail, MOCK_USERS);
 
-    const checkCandidateValid = (cand: any) => {
+    const checkCandidateValid = async (cand: any) => {
       if (!cand) return false;
+      if (isDevelopmentSignup(cand, getStoreInstance().users || []) && !developmentSignupRequest(req)) return false;
       const candRaw = cand.user ? cand.user : cand;
       if (candRaw.roomKey || cand.roomKey) {
         if (!hasActiveRoom(cand, getStoreInstance().roomKeys || [])) return false;
@@ -1238,12 +1181,12 @@ async function startServer() {
       const marketStore = store.digitalMarketStores?.find(s => normalizeEmail(s.studentEmail) === cleanIdentifier);
       const storedPwd = marketApp?.password || marketApp?.plainPassword;
       const passMatch = storedPwd
-        ? passwordsMatch(password, storedPwd)
+        ? await passwordsMatch(password, storedPwd)
         : false;
 
       if (passMatch) {
         if (marketStore?.isBanned || ['rejected', 'banned', 'disabled'].includes(String(marketApp?.status))) return res.status(403).json({ error: 'This market account is not permitted to sign in.' });
-        if (allCandidates.some(candidate => (accountData(candidate)?.roomKey || candidate.roomKey || accountRole(candidate) === 'user') && checkCandidateValid(candidate))) {
+        if (await findAsync(allCandidates, async candidate => Boolean(accountData(candidate)?.roomKey || candidate.roomKey || accountRole(candidate) === 'user') && await checkCandidateValid(candidate))) {
           return res.status(409).json({ error: 'Your existing accounts share a password. Reset the room or market password to separate these accounts before signing in.', requiresPasswordReset: true });
         }
         if ((marketApp?.status === 'pending') && !approvedMerchantStore) {
@@ -1290,23 +1233,23 @@ async function startServer() {
       const isKnustStudentIdentifier = cleanIdentifier.endsWith('knust.edu.gh');
       if (isKnustStudentIdentifier) {
         // Prioritize student/resident role candidate
-        const stuCand = allCandidates.find(c => {
+        const stuCand = await findAsync(allCandidates, async c => {
           const r = (c.user?.role || c.role || '').toLowerCase();
-          return (r === 'student' || r === 'resident') && checkCandidateValid(c);
+          return (r === 'student' || r === 'resident') && await checkCandidateValid(c);
         });
         if (stuCand) matched = stuCand;
       } else {
         // Prioritize primary user / admin / manager / staff candidates
-        const nonStuCand = allCandidates.find(c => {
+        const nonStuCand = await findAsync(allCandidates, async c => {
           const r = (c.user?.role || c.role || '').toLowerCase();
-          return r !== 'student' && r !== 'resident' && checkCandidateValid(c);
+          return r !== 'student' && r !== 'resident' && await checkCandidateValid(c);
         });
         if (nonStuCand) matched = nonStuCand;
       }
 
       if (!matched) {
         for (const cand of allCandidates) {
-          if (checkCandidateValid(cand)) {
+          if (await checkCandidateValid(cand)) {
             matched = cand;
             break;
           }
@@ -1317,13 +1260,13 @@ async function startServer() {
     // Check verification team officers (Field Officers)
     if (!matched) {
       const allVT = [...verificationTeams, ...(store.verificationTeams || [])];
-      const matchedOfficer = allVT.find((t: any) => {
+      const matchedOfficer = await findAsync(allVT, async (t: any) => {
         if (!t) return false;
         const emailMatch = cleanIdentifier && (t.email || '').toLowerCase() === cleanIdentifier;
         const idMatch = cleanIdentifier && ((t.officerId || '').toLowerCase() === cleanIdentifier || (t.id || '').toLowerCase() === cleanIdentifier);
         const usernameMatch = cleanIdentifier && (t.email || '').split('@')[0].toLowerCase() === cleanIdentifier;
-        const plainMatch = passwordsMatch(password, t.password, t.plainPassword);
-        return (emailMatch || idMatch || usernameMatch) && plainMatch;
+        // Only derive credentials for the selected identity, never every officer in the directory.
+        return Boolean(emailMatch || idMatch || usernameMatch) && await passwordsMatch(password, t.password, t.plainPassword);
       });
       if (matchedOfficer) {
         if (matchedOfficer.status !== 'active') {
@@ -1338,7 +1281,7 @@ async function startServer() {
           phone: matchedOfficer.phone,
           role: 'verification_team',
           assignedZone: matchedOfficer.assignedZone,
-          token: matchedOfficer.token || createSessionToken('vt')
+          token: createSessionToken('vt')
         };
       }
     }
@@ -1346,7 +1289,7 @@ async function startServer() {
 
     if (!matched) {
       const fallback = await dbGetUserByEmailOrUsername(usernameOrEmail, MOCK_USERS);
-      if (checkCandidateValid(fallback)) {
+      if (await checkCandidateValid(fallback)) {
         matched = fallback;
       }
     }
@@ -1378,6 +1321,9 @@ async function startServer() {
 
     const userRole = matched.user?.role || matched.role || 'student';
     const rawUser = matched.user ? { ...matched.user } : { ...matched };
+    if (userRole === 'verification_team' && !activeOfficerAccount(matched, getStoreInstance().verificationTeams || [])) {
+      return res.status(403).json({ error: 'An active registered officer account is required.' });
+    }
 
     // Check if this student/applicant has an unapproved pending digital market application (only if role is student/merchant and not staff, manager, admin)
     if (userRole === 'merchant' || ((matched as any).isMerchantApplicant && userRole !== 'staff' && userRole !== 'manager' && userRole !== 'admin')) {
@@ -1406,50 +1352,8 @@ async function startServer() {
       }
     }
 
-    let isStaffApproved = false;
-    if (userRole === 'staff') {
-      const cleanStaffEmail = (rawUser.email || matched.email || cleanIdentifier).toLowerCase().trim();
-      const parentEmail = (rawUser.parentUserEmail || matched.parentUserEmail || matched.user?.parentUserEmail || '').toLowerCase().trim();
-      const cleanStaffId = String(rawUser.id || matched.id || rawUser.userId || matched.userId || '').trim();
-      const cleanParentId = String(rawUser.parentUserId || matched.parentUserId || matched.user?.parentUserId || '').trim();
-
-      const staffEmails = [cleanStaffEmail, parentEmail, `staff-${cleanStaffEmail}`].filter(Boolean);
-      const staffIds = [cleanStaffId, cleanParentId].filter(Boolean);
-
-      const store = getStoreInstance();
-      const allStaffCheckList = [
-        rawUser,
-        matched,
-        matched.user,
-        ...MOCK_USERS,
-        ...(store.users || []),
-        ...staff,
-        ...(store.staff || []),
-        ...staffApplications,
-        ...(store.staffApplications || [])
-      ];
-
-      isStaffApproved = allStaffCheckList.some((obj: any) => {
-        if (!obj) return false;
-        const target = obj.user || obj;
-        const e1 = (target.email || obj.email || '').toLowerCase().trim();
-        const e2 = (target.parentUserEmail || obj.parentUserEmail || '').toLowerCase().trim();
-        const e3 = (target.staffEmail || obj.staffEmail || '').toLowerCase().trim();
-        const id1 = String(target.id || obj.id || '').trim();
-        const id2 = String(target.userId || obj.userId || '').trim();
-        const id3 = String(target.parentUserId || obj.parentUserId || '').trim();
-
-        const emailMatch = staffEmails.some(e => e && (e1 === e || e2 === e || e3 === e || e1.endsWith(e) || e2.endsWith(e)));
-        const idMatch = staffIds.some(i => i && (id1 === i || id2 === i || id3 === i));
-
-        if (emailMatch || idMatch) {
-          const st = String(target.verificationStatus || obj.verificationStatus || target.status || obj.status || '').toLowerCase().trim();
-          const isV = Boolean(target.isVerified === true || obj.isVerified === true || target.isApproved === true || obj.isApproved === true);
-          return isV || st === 'verified' || st === 'approved';
-        }
-        return false;
-      });
-    }
+    const isStaffApproved = userRole === 'staff' && Boolean(activeManagedStaff(matched, getStoreInstance()));
+    if (userRole === 'staff' && !isStaffApproved) return res.status(403).json({ error: 'Your staff account must be active in a manager-created residence roster.' });
 
     const userObj = {
       ...rawUser,
@@ -1501,10 +1405,67 @@ async function startServer() {
       userObj.role = 'user';
     }
 
+    // Check manager approval and block status
+    if (userRole === 'manager') {
+      const store = getStoreInstance();
+      const cleanEmail = (matched.email || userObj.email || '').toLowerCase().trim();
+      const targetMgrId = userObj.id || matched.id;
+      const verif = managerVerifications.find(v => (v.managerEmail && v.managerEmail.toLowerCase().trim() === cleanEmail) || (targetMgrId && (v.managerId === targetMgrId || v.id === targetMgrId)));
+      const reqRecord = managerRequests.find(r => (r.managerEmail && r.managerEmail.toLowerCase().trim() === cleanEmail) || (targetMgrId && (r.managerId === targetMgrId || r.id === targetMgrId)));
+      const storedVerif = ((store as any).managerVerifications || []).find((v: any) => (v.managerEmail && v.managerEmail.toLowerCase().trim() === cleanEmail) || (targetMgrId && (v.managerId === targetMgrId || v.id === targetMgrId)));
+      const storedReq = (store.managerRegistrationRequests || []).find((r: any) => (r.managerEmail && r.managerEmail.toLowerCase().trim() === cleanEmail) || (targetMgrId && (r.managerId === targetMgrId || r.id === targetMgrId)));
+
+      const isBlocked =
+        userObj.isBlocked === true ||
+        userObj.status === 'blocked' ||
+        userObj.verificationStatus === 'blocked' ||
+        matched.user?.isBlocked === true ||
+        matched.isBlocked === true ||
+        verif?.status === 'blocked' ||
+        verif?.isBlocked === true ||
+        reqRecord?.status === 'blocked' ||
+        reqRecord?.isBlocked === true ||
+        storedVerif?.status === 'blocked' ||
+        storedVerif?.isBlocked === true ||
+        storedReq?.status === 'blocked' ||
+        storedReq?.isBlocked === true;
+
+      if (isBlocked) {
+        const restrictionReason = userObj.blockReason || verif?.blockReason || verif?.adminNotes || reqRecord?.blockReason || reqRecord?.adminNotes || storedVerif?.blockReason || storedReq?.blockReason || "Your manager account access has been restricted by administration.";
+        return res.status(403).json({
+          error: `Your manager account is blocked. Reason: ${restrictionReason}. Please wait until further notice or contact administration.`,
+          isBlocked: true,
+          restrictionReason: restrictionReason,
+          managerEmail: matched.email || userObj.email,
+          managerName: userObj.name
+        });
+      }
+
+      const isApproved = managerIsApproved(matched, store);
+
+      if (!isApproved) {
+        return res.status(403).json({
+          error: "A PineVela verification team will come and inspect the property before your account can be verified.",
+          isPendingApproval: true,
+          managerEmail: matched.email || userObj.email,
+          managerName: userObj.name
+        });
+      }
+
+      // Ensure user object reflects approval
+      userObj.isVerified = true;
+      userObj.verificationStatus = 'approved';
+      if (matched.user) {
+        (matched.user as any).isVerified = true;
+        (matched.user as any).verificationStatus = 'approved';
+      }
+    }
+
+
     // Rotate session token and persist so requireAuth only accepts issued tokens
     if (userRole === 'merchant') {
-      if (marketApp) marketApp.merchantToken = userObj.token;
-      if (approvedMerchantStore) approvedMerchantStore.merchantToken = userObj.token;
+      if (marketApp) setRecordSession(marketApp, userObj.token);
+      if (approvedMerchantStore) setRecordSession(approvedMerchantStore, userObj.token);
     }
     persistUserSessionToken(matched, userObj.token);
     if (matched.user) persistUserSessionToken(matched.user, userObj.token);
@@ -1584,86 +1545,25 @@ async function startServer() {
           return mRole === userRole && ((m.user && m.user.id === userObj.id) || m.id === userObj.id || (m.email && m.email.toLowerCase() === cleanEmail));
         });
         if (mockIdx >= 0) {
-          MOCK_USERS[mockIdx].token = userObj.token;
-          if (MOCK_USERS[mockIdx].user) MOCK_USERS[mockIdx].user.token = userObj.token;
+          persistUserSessionToken(MOCK_USERS[mockIdx], userObj.token);
         } else {
           MOCK_USERS.push({
             id: userObj.id,
             email: userObj.email,
             username: userObj.studentId || userObj.name,
             role: 'student',
-            token: userObj.token,
-            user: userObj
+            user: { ...userObj }
           });
         }
       }
     }
 
-    // Check manager approval and block status
-    if (userRole === 'manager') {
-      const store = getStoreInstance();
-      const cleanEmail = (matched.email || userObj.email || '').toLowerCase().trim();
-      const targetMgrId = userObj.id || matched.id;
-      const verif = managerVerifications.find(v => (v.managerEmail && v.managerEmail.toLowerCase().trim() === cleanEmail) || (targetMgrId && (v.managerId === targetMgrId || v.id === targetMgrId)));
-      const reqRecord = managerRequests.find(r => (r.managerEmail && r.managerEmail.toLowerCase().trim() === cleanEmail) || (targetMgrId && (r.managerId === targetMgrId || r.id === targetMgrId)));
-      const storedVerif = ((store as any).managerVerifications || []).find((v: any) => (v.managerEmail && v.managerEmail.toLowerCase().trim() === cleanEmail) || (targetMgrId && (v.managerId === targetMgrId || v.id === targetMgrId)));
-      const storedReq = (store.managerRegistrationRequests || []).find((r: any) => (r.managerEmail && r.managerEmail.toLowerCase().trim() === cleanEmail) || (targetMgrId && (r.managerId === targetMgrId || r.id === targetMgrId)));
-
-      const isBlocked = 
-        userObj.isBlocked === true ||
-        userObj.status === 'blocked' ||
-        userObj.verificationStatus === 'blocked' ||
-        matched.user?.isBlocked === true ||
-        matched.isBlocked === true ||
-        verif?.status === 'blocked' ||
-        verif?.isBlocked === true ||
-        reqRecord?.status === 'blocked' ||
-        reqRecord?.isBlocked === true ||
-        storedVerif?.status === 'blocked' ||
-        storedVerif?.isBlocked === true ||
-        storedReq?.status === 'blocked' ||
-        storedReq?.isBlocked === true;
-
-      if (isBlocked) {
-        const restrictionReason = userObj.blockReason || verif?.blockReason || verif?.adminNotes || reqRecord?.blockReason || reqRecord?.adminNotes || storedVerif?.blockReason || storedReq?.blockReason || "Your manager account access has been restricted by administration.";
-        return res.status(403).json({
-          error: `Your manager account is blocked. Reason: ${restrictionReason}. Please wait until further notice or contact administration.`,
-          isBlocked: true,
-          restrictionReason: restrictionReason,
-          managerEmail: matched.email || userObj.email,
-          managerName: userObj.name
-        });
-      }
-
-      const isApproved = 
-        userObj.isVerified === true ||
-        userObj.verificationStatus === 'approved' ||
-        verif?.status === 'approved' ||
-        reqRecord?.status === 'approved' ||
-        storedVerif?.status === 'approved' ||
-        storedReq?.status === 'approved' ||
-        cleanEmail === 'manager@pinevela.com' ||
-        cleanEmail === 'sarah.j@pinevela.com';
-
-      if (!isApproved) {
-        return res.status(403).json({
-          error: "A PineVela verification team will come and inspect the property before your account can be verified.",
-          isPendingApproval: true,
-          managerEmail: matched.email || userObj.email,
-          managerName: userObj.name
-        });
-      }
-
-      // Ensure user object reflects approval
-      userObj.isVerified = true;
-      userObj.verificationStatus = 'approved';
-      if (matched.user) {
-        (matched.user as any).isVerified = true;
-        (matched.user as any).verificationStatus = 'approved';
-      }
-    }
-
-    return res.json(stripSecrets(userObj));
+    const issuedToken = userObj.token;
+    const finalEntry = MOCK_USERS.find((u: any) => accountId(u) === userObj.id && accountRole(u) === userObj.role);
+    if (finalEntry) persistUserSessionToken(finalEntry, issuedToken);
+    syncStore();
+    setSessionCookie(res, issuedToken);
+    return res.json({ ...stripSecrets(userObj), token: issuedToken });
   });
 
   // Quick Resident Login for instant portal transition from user dashboard
@@ -1729,312 +1629,86 @@ async function startServer() {
     return { isValid: true };
   }
 
-  // Public Manager and Hostel registration endpoint (legacy support)
-  app.post("/api/auth/register-manager", async (req, res) => {
-    try {
-      const {
-        managerName,
-        managerEmail,
-        password,
-        managerPhone,
-        hostelName,
-        location,
-        wing,
-        totalCapacity,
-        description,
-        knustAccreditedConfirmed
-      } = req.body;
-
-      if (!managerName || !managerEmail || !password || !hostelName) {
-        return res.status(400).json({ error: "Missing required registration details" });
-      }
-
-      // Enforce work email domain requirement for manager registration
-      const managerEmailClean = managerEmail.toLowerCase().trim();
-      const disallowedDomainsReg = [
-        'gmail.com', 'googlemail.com', 'yahoo.com', 'yahoo.co.uk', 'ymail.com', 'rocketmail.com',
-        'hotmail.com', 'outlook.com', 'live.com', 'msn.com', 'icloud.com', 'me.com', 'mac.com',
-        'aol.com', 'proton.me', 'protonmail.com', 'zoho.com', 'gmx.com', 'mail.com', 'yandex.com'
-      ];
-      const emailDomainReg = managerEmailClean.split('@')[1] || '';
-      if (disallowedDomainsReg.includes(emailDomainReg)) {
-        return res.status(400).json({
-          error: `Manager registration requires an official work or organization email domain (e.g. manager@yourproperty.com, housing@institution.edu.gh). Personal consumer emails (@${emailDomainReg}) are not permitted.`
-        });
-      }
-
-      const locCheck = validateKumasiKnustLocation(location, knustAccreditedConfirmed);
-      if (!locCheck.isValid) {
-        return res.status(400).json({ error: locCheck.error });
-      }
-
-      // Create new manager user
-      const managerId = `manager-new-${Date.now()}`;
-      const username = managerEmail.split('@')[0] + Math.floor(Math.random() * 100);
-      const userToken = createSessionToken('mgr');
-
-      const newManagerUser = {
-        email: managerEmail.toLowerCase().trim(),
-        username,
-        password,
-        user: {
-          id: managerId,
-          name: managerName,
-          role: 'manager',
-          email: managerEmail.toLowerCase().trim(),
-          phone: managerPhone || '',
-          token: userToken
-        }
-      };
-
-      MOCK_USERS.push(newManagerUser);
-
-
-
-      // Create new hostel
-      const hostelId = `hostel-new-${Date.now()}`;
-      const newHostel = {
-        id: hostelId,
-        name: hostelName,
-        location: location || "Unknown Location",
-        wing: wing || "North Wing",
-        status: 'Open',
-        bedsLeft: Number(totalCapacity || 100),
-        totalCapacity: Number(totalCapacity || 100),
-        availableSpaces: Number(totalCapacity || 100),
-        image: 'https://images.unsplash.com/photo-1555854877-bab0e564b8d5?auto=format&fit=crop&w=800&q=80',
-        managerName,
-        managerPhone: managerPhone || "",
-        managerEmail,
-        managerId,
-        description: description || "Modern student residential community.",
-        rating: 5.0,
-        registrationDate: new Date().toISOString().split('T')[0],
-        subscriptionPaid: true,
-        isApproved: true,
-        approvalStatus: 'Approved'
-      };
-
-      const savedHostel = await dbCreateHostel(newHostel, hostels);
-      syncStore();
-
-      // Create admin activity logs
-      await dbCreateActivity({
-        id: `act-new-${Date.now()}`,
-        text: `New Manager "${managerName}" registered hostel "${hostelName}"`,
-        time: 'Just now',
-        type: 'success'
-      }, activities);
-
-      return res.status(201).json({
-        success: true,
-        user: newManagerUser.user,
-        hostel: savedHostel
-      });
-    } catch (err: any) {
-      console.error("Manager registration error:", err);
-      return res.status(500).json({ error: err.message || "Failed to register manager and hostel" });
-    }
+  // Legacy manager aliases share the pending-account policy and never publish a hostel.
+  app.post('/api/auth/register-manager', registerManagerAccount);
+  app.post('/api/users/register', async (req, res) => {
+    if (req.body.role === 'user') return beginUnifiedSignup(req, res);
+    if (req.body.role && req.body.role !== 'manager') return res.status(400).json({ error: 'Use the dedicated registration flow for this account type.' });
+    return registerManagerAccount(req, res);
   });
 
-  // User registration endpoint alias
-  app.post("/api/users/register", async (req, res) => {
+  // One email-confirmation policy for both public primary-account registration paths.
+  persistentData.signupVerification ||= { pending: [], limits: [] };
+  const signupGuard = new SignupGuard(persistentData.signupVerification, () => savePersistentStore(persistentData));
+  const signupCleanup = setInterval(() => {
+    try { signupGuard.cleanup(); } catch { console.error('[Signup] Expiry cleanup could not be persisted.'); }
+  }, 60000);
+  signupCleanup.unref();
+  const existingSignupEmail = (email: string) => MOCK_USERS.some(u => normalizeEmail(accountData(u).email || u.email) === email);
+  const signupFailure = (res: express.Response, error: unknown) => {
+    if (error instanceof SignupError) return res.status(error.status).json({ error: error.message });
+    // Provider payloads can contain credentials or tokens; do not log raw exceptions.
+    console.error('[Signup] Registration could not complete.');
+    return res.status(503).json({ error: 'Registration is temporarily unavailable. Please try again later.' });
+  };
+  async function beginUnifiedSignup(req: express.Request, res: express.Response) {
     try {
-      const { name, managerName, email, managerEmail, password, role, phone, managerPhone, hostelName, proposedHostelName } = req.body;
-      const resolvedName = (name || managerName || 'New User').trim();
-      const resolvedEmail = (email || managerEmail || '').toLowerCase().trim();
-      const resolvedPhone = (phone || managerPhone || '').trim();
-      const resolvedRole = role || 'manager';
-      if (!['user', 'manager'].includes(resolvedRole)) return res.status(400).json({ error: 'Use the dedicated registration flow for this account type.' });
-
-      if (!resolvedEmail || !password) {
-        return res.status(400).json({ error: "Email address and password are required." });
-      }
-
-      const existing = MOCK_USERS.find(u => (u.email || '').toLowerCase() === resolvedEmail);
-      if (existing) {
-        return res.status(400).json({ error: "An account with this email address already exists." });
-      }
-
-      const userId = `${resolvedRole}_${Date.now()}`;
-      const username = resolvedEmail.split('@')[0] + Math.floor(Math.random() * 100);
-      const token = createSessionToken('usr');
-
-      const newUserObj = {
-        email: resolvedEmail,
-        username,
-        password,
-        phone: resolvedPhone,
-        user: {
-          id: userId,
-          name: resolvedName,
-          role: resolvedRole,
-          email: resolvedEmail,
-          phone: resolvedPhone,
-          isVerified: resolvedRole === 'manager' ? false : true,
-          verificationStatus: resolvedRole === 'manager' ? 'pending' : 'approved',
-          token
+      const input = signupInput(req.body);
+      return await signupGuard.exclusive(input.email, async () => {
+        if (existingSignupEmail(input.email)) throw new SignupError(409, 'An account with this email already exists. Please sign in.');
+        if (developmentSignupRequest(req)) {
+          signupGuard.reserveSend(input.email, req.ip || req.socket.remoteAddress || 'unknown');
+          const { pending, code } = await signupGuard.rememberDevelopmentAsync(input);
+          return res.json({ success: true, signupId: pending.id, developmentCode: code, developmentOnly: true, message: 'Use this temporary local development code.', expiresIn: 900 });
         }
-      };
+        const config = signupProviderConfig();
+        signupGuard.reserveSend(input.email, req.ip || req.socket.remoteAddress || 'unknown');
+        const supabaseUserId = await sendSignupVerification(config, input.name, input.email, input.password);
+        const pending = await signupGuard.rememberAsync(input, supabaseUserId, config.url);
+        return res.json({ success: true, signupId: pending.id, message: 'Check your email for the confirmation link or code.', expiresIn: 900 });
+      });
+    } catch (error) { return signupFailure(res, error); }
+  }
+  app.post('/api/auth/register-unified', beginUnifiedSignup);
 
-      MOCK_USERS.push(newUserObj);
-
-      if (resolvedRole === 'manager') {
-        const nowIso = new Date().toISOString();
-        const initialManagerReq = {
-          id: `mreq-${Date.now()}`,
-          managerId: userId,
-          managerName: resolvedName,
-          managerEmail: resolvedEmail,
-          managerPhone: resolvedPhone,
-          nationalId: req.body.nationalId || 'GHA-VERIFIED-CARD',
-          organization: req.body.organization || 'Independent Residence',
-          roleTitle: req.body.roleTitle || 'Residence Director',
-          experienceYears: 1,
-          propertyName: hostelName || proposedHostelName || `${resolvedName}'s Hostel`,
-          proposedHostelName: hostelName || proposedHostelName || `${resolvedName}'s Hostel`,
-          hostelName: hostelName || proposedHostelName || `${resolvedName}'s Hostel`,
-          proposedLocation: 'Campus Area',
-          proposedCapacity: 120,
-          reason: 'Manager account registered via onboarding gateway.',
-          notes: 'Submitted via 5-phase onboarding gateway.',
-          status: 'pending' as const,
-          isApproved: false,
-          submittedAt: nowIso,
-          requestedAt: nowIso,
-          createdAt: nowIso,
-          updatedAt: nowIso
+  app.post('/api/auth/verify-unified', async (req, res) => {
+    try {
+      const email = typeof req.body.email === 'string' ? normalizeEmail(req.body.email) : '';
+      return await signupGuard.exclusive(email, async () => {
+        const pending = await signupGuard.verificationAsync(req.body, req.ip || req.socket.remoteAddress || 'unknown');
+        if (existingSignupEmail(pending.email)) throw new SignupError(409, 'This account already exists. Sign in instead.');
+        const development = pending.mode === 'development';
+        let confirmed: { id: string; email: string; verifiedAt: string } | undefined;
+        if (development) {
+          if (!developmentSignupRequest(req)) throw new SignupError(403, 'Development codes cannot activate accounts outside local development.');
+          signupGuard.confirmDevelopment(pending, req.body.code);
+        } else {
+          if (!pending.supabaseUserId || !pending.providerUrl) throw new SignupError(400, 'Start a new registration.');
+          confirmed = await confirmSignupVerification(signupProviderConfig(), { ...pending, supabaseUserId: pending.supabaseUserId, providerUrl: pending.providerUrl }, req.body.code);
+        }
+        if (pending.expiresAt <= Date.now()) throw new SignupError(400, 'Registration has expired. Please start again.');
+        const userToken = createSessionToken('usr');
+        const userProfile = {
+          id: `user_${crypto.randomUUID()}`, name: pending.name, email: pending.email, role: 'user' as const,
+          token: userToken, isVerified: !development, verificationStatus: development ? 'development' : 'approved',
+          emailVerificationProvider: development ? 'development' : 'supabase',
+          ...(confirmed ? { supabaseUserId: confirmed.id, emailVerifiedAt: confirmed.verifiedAt } : { developmentOnly: true })
         };
-        managerRequests.unshift(initialManagerReq);
-        await dbCreateManagerRequest(initialManagerReq);
-      }
-
-      return res.status(201).json({
-        success: true,
-        user: newUserObj.user,
-        token
+        const entry = { email: pending.email, username: pending.email.split('@')[0].replace(/[^a-z0-9]/g, ''), password: pending.passwordHash, user: userProfile };
+        setRecordSession(entry, userToken);
+        MOCK_USERS.push(entry);
+        persistentData.users = MOCK_USERS;
+        try { signupGuard.forget(pending.email); }
+        catch (error) { MOCK_USERS.splice(MOCK_USERS.indexOf(entry), 1); throw error; }
+        setSessionCookie(res, userToken);
+        return res.status(201).json({ success: true, user: userProfile, token: userToken, message: development ? 'Your local development account is ready.' : 'Your PineVela account has been verified and activated.' });
       });
-    } catch (err: any) {
-      console.error("User registration endpoint error:", err);
-      return res.status(500).json({ error: err.message || "User registration failed" });
-    }
-  });
-
-  // In-memory store for pending unified registration verification codes
-  const UNIFIED_SIGNUPS: Record<string, { name: string; email: string; password: string; code: string; expiresAt: number }> = {};
-
-  // Unified Base User Account Registration with temporary email verification token gating
-  app.post("/api/auth/register-unified", async (req, res) => {
-    try {
-      const { name, email, password } = req.body;
-      const resolvedName = (name || '').trim();
-      const resolvedEmail = (email || '').toLowerCase().trim();
-
-      if (!resolvedName || !resolvedEmail || !password) {
-        return res.status(400).json({ error: "Name, email, and password are required." });
-      }
-
-      // Check if user already exists
-      const existingUser = MOCK_USERS.find(u => 
-        (u.email || '').toLowerCase() === resolvedEmail || 
-        (u.user && (u.user.email || '').toLowerCase() === resolvedEmail)
-      );
-      if (existingUser) {
-        return res.status(400).json({ error: "An account with this email address already exists. Please log in instead." });
-      }
-
-      // Generate a clean 6-character alphanumeric code
-      const code = Math.random().toString(36).substring(2, 8).toUpperCase();
-      UNIFIED_SIGNUPS[resolvedEmail] = {
-        name: resolvedName,
-        email: resolvedEmail,
-        password: hashCredential(password),
-        code: code,
-        expiresAt: Date.now() + 15 * 60 * 1000 // 15 minutes validity
-      };
-
-      console.log(`[UNIFIED SIGNUP CODE] Verification code generated for ${resolvedEmail}: ${code}`);
-
-      return res.json({
-        success: true,
-        message: `Verification code generated successfully. Please check your simulated inbox or copy the code below.`,
-        code: code // sending code in response to display inside the mock verification dialog
-      });
-    } catch (err: any) {
-      console.error("Unified registration error:", err);
-      return res.status(500).json({ error: err.message || "Unified registration failed" });
-    }
-  });
-
-  // Verify temporary registration token and activate base PineVela user account
-  app.post("/api/auth/verify-unified", async (req, res) => {
-    try {
-      const { email, code, password } = req.body;
-      const resolvedEmail = (email || '').toLowerCase().trim();
-      const resolvedCode = (code || '').trim().toUpperCase();
-
-      if (!resolvedEmail || !resolvedCode) {
-        return res.status(400).json({ error: "Email and verification code are required." });
-      }
-
-      const signup = UNIFIED_SIGNUPS[resolvedEmail];
-      if (!signup || signup.code !== resolvedCode || signup.expiresAt < Date.now()) {
-        return res.status(400).json({ error: "Invalid or expired verification code. Please request a new one." });
-      }
-      if (!verifyCredential(password, signup.password)) return res.status(400).json({ error: 'Confirm the password chosen during registration.' });
-      if (MOCK_USERS.some(u => normalizeEmail(accountData(u).email || u.email) === resolvedEmail)) return res.status(409).json({ error: 'This account already exists. Sign in instead.' });
-
-      // Create new unified user
-      const newUserId = `user_${Date.now()}`;
-      const userToken = createSessionToken('usr');
-      
-      const userProfile = {
-        id: newUserId,
-        name: signup.name,
-        email: signup.email,
-        role: 'user' as const, // generic identity role
-        token: userToken,
-        isVerified: true,
-        verificationStatus: 'approved'
-      };
-
-      const newUserEntry = {
-        email: signup.email,
-        username: signup.email.split('@')[0].replace(/[^a-z0-9]/g, ''),
-        password: signup.password,
-        user: userProfile
-      };
-
-      MOCK_USERS.push(newUserEntry);
-      persistentData.users = MOCK_USERS;
-      savePersistentStore(persistentData);
-
-      // Remove from pending signup
-      delete UNIFIED_SIGNUPS[resolvedEmail];
-
-      res.cookie("pv_auth_token", userToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "lax",
-        maxAge: 7 * 24 * 60 * 60 * 1000
-      });
-
-      console.log(`[UNIFIED SIGNUP SUCCESS] Verified user ${signup.email}. Created account with generic identity.`);
-
-      return res.status(201).json({
-        success: true,
-        user: userProfile,
-        token: userToken,
-        message: "Your PineVela account has been successfully verified and activated."
-      });
-    } catch (err: any) {
-      console.error("Unified verification error:", err);
-      return res.status(500).json({ error: err.message || "Unified verification failed" });
-    }
+    } catch (error) { return signupFailure(res, error); }
   });
 
   // Dedicated Manager Account Registration with keen verification details
-  app.post("/api/auth/register-manager-account", async (req, res) => {
+  app.post("/api/auth/register-manager-account", registerManagerAccount);
+  async function registerManagerAccount(req: express.Request, res: express.Response) {
     try {
       const {
         managerName,
@@ -2055,7 +1729,7 @@ async function startServer() {
       const resolvedName = (managerName || name || '').trim();
       const resolvedEmail = (managerEmail || email || '').toLowerCase().trim();
       const resolvedPhone = (managerPhone || phone || '').trim();
-      const resolvedAddress = (address || operatingAddress || '').trim();
+      const resolvedAddress = (address || operatingAddress || req.body.location || '').trim();
       const resolvedNationalId = (nationalId || '').trim();
       const resolvedOrg = (organization || 'Independent Accommodation Management').trim();
       const resolvedTitle = (roleTitle || 'Hostel Manager').trim();
@@ -2107,34 +1781,35 @@ async function startServer() {
         }
       }
 
+      if (existingUserIndex >= 0) return res.status(409).json({ error: 'This manager account already exists. Submit documents through its existing onboarding flow.' });
+
       if (existingMgrVerif || existingMgrReq) {
         const statusVal = existingMgrVerif?.status || existingMgrReq?.status || 'pending';
         const statusDisplay = statusVal === 'approved' ? 'Approved' : (statusVal === 'rejected' ? 'Rejected' : 'Pending Admin Approval');
-        return res.status(400).json({ 
-          error: `You already have a registered Manager account under this work email address (${resolvedEmail}). Current Status: ${statusDisplay}. Creation of multiple Manager accounts is restricted to 1 account per user.` 
+        return res.status(400).json({
+          error: `You already have a registered Manager account under this work email address (${resolvedEmail}). Current Status: ${statusDisplay}. Creation of multiple Manager accounts is restricted to 1 account per user.`
         });
       }
 
-      let managerId = `manager_${Date.now()}`;
+      const managerId = `manager_${crypto.randomUUID()}`;
       let username = resolvedEmail.split('@')[0].replace(/[^a-z0-9]/g, '') + Math.floor(Math.random() * 100);
-      let userToken = createSessionToken('mgr');
 
       const parentUserId = req.body.userId || req.body.parentUserId || null;
       const parentUserEmail = incomingParentEmail || null;
 
       // Extract submitted documents
       const operatingCertificate = req.body.operatingCertificate || {
-        fileName: req.body.authorityEvidenceFileName || 'Business_Operating_Certificate.pdf',
+        fileName: req.body.authorityEvidenceFileName || null,
         url: req.body.authorityEvidenceUrl || null,
         documentType: 'OPERATING_CERTIFICATE_PDF'
       };
       const idFront = req.body.idFront || {
-        fileName: 'Ghana_Card_Front.jpg',
+        fileName: req.body.idFrontFileName || null,
         url: null,
         documentType: 'ID_FRONT'
       };
       const idBack = req.body.idBack || {
-        fileName: 'Ghana_Card_Back.jpg',
+        fileName: req.body.idBackFileName || null,
         url: null,
         documentType: 'ID_BACK'
       };
@@ -2143,7 +1818,7 @@ async function startServer() {
         { id: 'doc-id-front', name: 'National ID (Front)', fileName: idFront.fileName, type: 'IMAGE', status: 'pending' },
         { id: 'doc-id-back', name: 'National ID (Back)', fileName: idBack.fileName, type: 'IMAGE', status: 'pending' }
       ];
-      const documentsVerified = req.body.documentsVerified || {
+      const documentsVerified = {
         operatingCertificate: 'pending',
         idFront: 'pending',
         idBack: 'pending'
@@ -2186,7 +1861,7 @@ async function startServer() {
         password,
         parentUserId,
         parentUserEmail,
-        nationalId: resolvedNationalId || 'GHA-VERIFIED',
+        nationalId: resolvedNationalId || null,
         organization: resolvedOrg,
         roleTitle: resolvedTitle,
         experienceYears: resolvedExp,
@@ -2207,13 +1882,13 @@ async function startServer() {
           address: resolvedAddress,
           isVerified: false,
           verificationStatus: 'pending',
-          token: userToken
+
         }
       };
 
       MOCK_USERS.push(newManagerUser);
       if (!store.users) store.users = [];
-      store.users.push(newManagerUser.user);
+      store.users = MOCK_USERS;
       savePersistentStore(store);
 
       const returnedUserObj = newManagerUser.user;
@@ -2252,11 +1927,11 @@ async function startServer() {
         country: req.body.country || 'Ghana',
         idDocumentType: defaultDocType,
         hashedIdNumber: `hash_${resolvedNationalId || managerId}`,
-        maskedIdNumber: resolvedNationalId ? `${resolvedNationalId.slice(0, 4)}••••${resolvedNationalId.slice(-4)}` : 'GHA-••••-2026',
+        maskedIdNumber: resolvedNationalId ? `${resolvedNationalId.slice(0, 4)}••••${resolvedNationalId.slice(-4)}` : null,
         fullNameOnId: req.body.fullNameOnId || resolvedName,
-        dateOfBirth: req.body.dateOfBirth || req.body.dob || '1990-01-01',
-        idExpiryDate: req.body.expiryDate || req.body.idExpiryDate || '2030-01-01',
-        idVerificationStatus: 'verified',
+        dateOfBirth: req.body.dateOfBirth || req.body.dob || null,
+        idExpiryDate: req.body.expiryDate || req.body.idExpiryDate || null,
+        idVerificationStatus: 'pending',
         authorityRelationship: req.body.authorityRelationship || req.body.authorityRel || 'Authorized Manager',
         claimedOwnerName: req.body.claimedOwnerName || null,
         claimedOwnerPhone: req.body.claimedOwnerPhone || null,
@@ -2273,9 +1948,9 @@ async function startServer() {
         documents: documentsList,
         documentsVerified,
         systemChecks: {
-          identity: 'verified' as const,
-          phone: 'verified' as const,
-          email: 'verified' as const,
+          identity: 'pending' as const,
+          phone: 'pending' as const,
+          email: 'pending' as const,
           authorityEvidence: 'submitted' as const,
           informationConsistency: 'passed' as const,
           duplicateManager: 'clean' as const,
@@ -2305,14 +1980,14 @@ async function startServer() {
         managerName: resolvedName,
         managerEmail: resolvedEmail,
         managerPhone: resolvedPhone,
-        propertyName: `${resolvedName}'s Designated Residence`,
-        proposedHostelName: `${resolvedName}'s Designated Residence`,
-        hostelName: `${resolvedName}'s Designated Residence`,
+        propertyName: req.body.hostelName || req.body.propertyName || req.body.proposedHostelName || '',
+        proposedHostelName: req.body.hostelName || req.body.propertyName || req.body.proposedHostelName || '',
+        hostelName: req.body.hostelName || req.body.propertyName || req.body.proposedHostelName || '',
         proposedLocation: resolvedAddress || 'Legon Campus Area, Accra',
-        proposedCapacity: 120,
+        proposedCapacity: Number(req.body.totalCapacity || req.body.proposedCapacity || 0),
         proposedReason: 'Official university-affiliated student accommodation onboarding and management.',
         reason: 'Manager account registered. Awaiting administrative approval to unlock 10-step property onboarding.',
-        notes: 'Manager account registered with verified national ID. Ready for administrative review.',
+        notes: 'Manager account registered. Identity and property details await administrative review.',
         nationalId: resolvedNationalId,
         organization: resolvedOrg,
         roleTitle: resolvedTitle,
@@ -2370,7 +2045,6 @@ async function startServer() {
       await dbCreateNotification(mgrNotif, notifications);
 
       syncStore();
-
       return res.status(201).json({
         success: true,
         user: returnedUserObj,
@@ -2381,35 +2055,35 @@ async function startServer() {
       console.error("Manager account creation error:", err);
       return res.status(500).json({ error: err.message || "Failed to create manager account." });
     }
-  });
+  }
+
+  // Keep module mutations and legacy in-memory arrays synchronized before persistence.
+  function syncManagedStore() {
+    const store = getStoreInstance();
+    MOCK_USERS = store.users; staff = store.staff || [];
+    staffReviews = store.staffReviews || []; notifications = store.notifications || [];
+    syncStore();
+  }
 
   // Authentication validation middleware
   function requireAuth(allowedRoles?: ("student" | "manager" | "admin" | "staff" | "user" | "resident" | string)[]) {
     return async (req: any, res: any, next: any) => {
-      const authHeader = req.headers.authorization;
-      if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        return res.status(401).json({ error: 'Access Denied: No token provided' });
-      }
-      const token = authHeader.split(' ')[1]?.trim();
-      if (!token) {
-        return res.status(401).json({ error: 'Access Denied: No token provided' });
-      }
-      
+      const token = requestSessionToken(req);
+      if (!token) return res.status(401).json({ error: 'Access Denied: No valid session provided' });
+      res.set('Cache-Control', 'private, no-store');
       const dbUsers = await dbGetUsers(MOCK_USERS);
       const store = getStoreInstance();
       const combinedUsers = [...MOCK_USERS, ...dbUsers, ...(persistentData.users || []), ...(store.users || [])];
       
       // Match only against explicitly stored session tokens (never forge from user id / email).
-      let foundEntry = combinedUsers.find(u => {
-        if (!u) return false;
-        const uToken = u.token || u.user?.token;
-        return Boolean(uToken) && uToken === token;
-      });
+      let foundEntry = combinedUsers.find(u => sessionMatches(u, token));
+
+      if (isDevelopmentSignup(foundEntry, store.users || []) && !developmentSignupRequest(req)) return res.status(401).json({ error: 'Development accounts are only available in local development.' });
 
       // Search digital market applications/stores if token matches an issued merchant token
       if (!foundEntry) {
-        const mStore = store.digitalMarketStores?.find((s: any) => s.token === token || s.merchantToken === token);
-        const mApp = store.digitalMarketApplications?.find((a: any) => a.token === token || a.merchantToken === token);
+        const mStore = store.digitalMarketStores?.find((s: any) => sessionMatches(s, token));
+        const mApp = store.digitalMarketApplications?.find((a: any) => sessionMatches(a, token));
         if (mStore || mApp) {
           const matchedItem = mStore || mApp;
           const mEmail = (matchedItem.studentEmail || matchedItem.email || '').toLowerCase().trim();
@@ -2418,13 +2092,14 @@ async function startServer() {
             email: mEmail,
             studentEmail: mEmail,
             parentUserEmail: matchedItem.parentUserEmail || mEmail,
+            parentUserId: matchedItem.parentUserId || matchedItem.userId,
             name: matchedItem.fullName || matchedItem.storeName || 'Student Merchant',
             role: 'merchant',
             token: token,
             isVerified: true,
             isApprovedMerchant: true,
             hasApprovedMerchantStore: true,
-            merchantStoreId: mStore?.id || matchedItem.id,
+            merchantStoreId: mStore?.id || (() => { const matches = (store.digitalMarketStores || []).filter(s => normalizeEmail(s.studentEmail) === mEmail && (!matchedItem.userId || s.userId === matchedItem.userId)); return matches.length === 1 ? matches[0].id : undefined; })(),
             isDigitalMarketOnly: true,
             merchantSetupCompleted: Boolean(mStore?.setupCompleted && mStore?.registrationFeePaid),
             merchantRegistrationFeePaid: Boolean(mStore?.setupCompleted && mStore?.registrationFeePaid)
@@ -2434,14 +2109,14 @@ async function startServer() {
 
       // Verification team officers
       if (!foundEntry) {
-        const officer = verificationTeams.find((t: any) => t.token === token);
+        const officer = verificationTeams.find((t: any) => sessionMatches(t, token));
         if (officer) {
           foundEntry = {
             id: officer.id,
             email: officer.email,
             name: officer.fullName,
             role: 'verification_team',
-            token: officer.token,
+            token,
             officerId: officer.officerId
           };
         }
@@ -2451,8 +2126,17 @@ async function startServer() {
         return res.status(401).json({ error: 'Access Denied: Invalid session token' });
       }
 
+      if (isDevelopmentSignup(foundEntry, store.users || []) && !developmentSignupRequest(req)) return res.status(401).json({ error: 'Development accounts are only available in local development.' });
+
       const rawUser = foundEntry.user ? { ...foundEntry.user } : { ...foundEntry };
       const resolvedRole = rawUser.role || foundEntry.role || 'user';
+      if (resolvedRole === 'verification_team' && !currentReportOfficer({ ...rawUser, id: rawUser.id || foundEntry.id, role: resolvedRole, token }, store.verificationTeams || [])) {
+        return res.status(403).json({ error: 'Your officer account is no longer active or its session has ended.' });
+      }
+      if (resolvedRole === 'manager' && !managerIsApproved(foundEntry, store) && !managerOnboardingRequest(req.method, req.path)) {
+        return res.status(403).json({ error: 'Administrator approval is required before manager operations are available.', isPendingApproval: true });
+      }
+      if (resolvedRole === 'staff' && !activeManagedStaff(foundEntry, store)) return res.status(403).json({ error: 'Your staff account is no longer active in its manager’s roster.' });
       if (resolvedRole === 'merchant') {
         const app = store.digitalMarketApplications?.find(a => normalizeEmail(a.studentEmail) === normalizeEmail(rawUser.email));
         const market = store.digitalMarketStores?.find(s => normalizeEmail(s.studentEmail) === normalizeEmail(rawUser.email));
@@ -2467,7 +2151,7 @@ async function startServer() {
         id: rawUser.id || foundEntry.id,
         name: rawUser.name || foundEntry.name || foundEntry.full_name || 'Authenticated User',
         role: resolvedRole,
-        token: rawUser.token || foundEntry.token || token,
+        token,
         email: rawUser.email || foundEntry.email || '',
         phone: rawUser.phone || foundEntry.phone || '',
         studentId: rawUser.studentId || foundEntry.studentId || rawUser.residentId || foundEntry.residentId || '',
@@ -2532,53 +2216,6 @@ async function startServer() {
 
         let isAuthorized = user.role === 'admin' || allowed.has(user.role);
 
-        // If not directly authorized by session role, check if user has registered account matching the role
-        if (!isAuthorized && allowed.has('manager')) {
-          const userEmail = (user.email || '').toLowerCase().trim();
-          const userId = user.id;
-          const allVerifs = await dbGetManagerVerifications(managerVerifications);
-          const isApprovedMgr = allVerifs.some(v => 
-            ((v.managerEmail && v.managerEmail.toLowerCase().trim() === userEmail) || (v.managerId && v.managerId === userId)) &&
-            (v.status === 'approved' || v.status === 'Approved')
-          );
-          if (isApprovedMgr) {
-            isAuthorized = true;
-          }
-        }
-
-        if (!isAuthorized && (allowed.has('staff') || allowed.has('employee') || allowed.has('artisan'))) {
-          const userEmail = (user.email || '').toLowerCase().trim();
-          const userId = user.id;
-          const store = getStoreInstance();
-          const allStaff = [...staff, ...(store.staff || []), ...(persistentData.staff || [])];
-          const allApps = [...staffApplications, ...(store.staffApplications || []), ...(persistentData.staffApplications || [])];
-          const allReports = [...issueReports, ...(store.issueReports || [])];
-
-          const isAssigned = allReports.some((rep: any) =>
-            (rep.assignedStaffId && (rep.assignedStaffId === userId || rep.assignedStaffId === user.id)) ||
-            (rep.assignedStaffEmail && rep.assignedStaffEmail.toLowerCase().trim() === userEmail) ||
-            (rep.assignedStaffName && rep.assignedStaffName.toLowerCase().trim() === (user.name || '').toLowerCase().trim())
-          );
-
-          const isVerifiedStaff = allStaff.some(s => 
-            ((s.email && s.email.toLowerCase().trim() === userEmail) || (s.userId && s.userId === userId) || (s.id && s.id === userId))
-          ) || allApps.some(a =>
-            ((a.email && a.email.toLowerCase().trim() === userEmail) || (a.staffEmail && a.staffEmail.toLowerCase().trim() === userEmail) || (a.staffId && a.staffId === userId)) &&
-            (a.status === 'approved' || a.status === 'Approved' || a.status === 'hired' || a.status === 'active' || a.status === 'pending')
-          );
-
-          // Only staff-equivalent roles or verified/assigned staff — never grant via student/user/resident alone
-          if (
-            isVerifiedStaff ||
-            isAssigned ||
-            user.role === 'staff' ||
-            user.role === 'artisan' ||
-            user.role === 'employee'
-          ) {
-            isAuthorized = true;
-          }
-        }
-
         if (!isAuthorized) {
           console.log(`[AUTH] 403 Forbidden | Allowed: ${JSON.stringify(allowedRoles)} | Role: "${user.role}"`);
           return res.status(403).json({ error: `Access Denied: Unauthorized role "${user.role}"` });
@@ -2586,9 +2223,21 @@ async function startServer() {
       }
 
       req.user = user;
+      req.sessionToken = token;
       next();
     };
   }
+
+  app.post('/api/auth/logout', (req: any, res) => {
+    const token = requestSessionToken(req);
+    if (token) {
+      const store = getStoreInstance();
+      revokeMatchingSessions([MOCK_USERS, persistentData, store, verificationTeams], token);
+      syncStore();
+    }
+    clearSessionCookie(res);
+    return res.json({ success: true });
+  });
 
   // Get current session profile
   app.get("/api/auth/me", requireAuth(), (req: any, res) => {
@@ -2778,17 +2427,6 @@ async function startServer() {
         }
       }
 
-      // Update in chatProfiles
-      for (const cp of chatProfiles) {
-        if (
-          (userId && cp.userId === userId) ||
-          (cleanEmail && cp.email && cp.email.toLowerCase().trim() === cleanEmail)
-        ) {
-          cp.avatarUrl = updatedPhoto;
-          if (updatedName) cp.nickname = updatedName;
-        }
-      }
-
       // Sync across all registered hostels if user is manager or staff
       const currentHostels = await dbGetHostels(hostels);
       for (const h of currentHostels) {
@@ -2865,7 +2503,7 @@ async function startServer() {
         isAuthorized = true;
       } else if (destructiveSecret && password === destructiveSecret) {
         isAuthorized = true;
-      } else if (callerUser && passwordsMatch(password, callerUser.password, callerUser.user?.password)) {
+      } else if (callerUser && await passwordsMatch(password, callerUser.password, callerUser.user?.password)) {
         isAuthorized = true;
       }
 
@@ -2884,7 +2522,6 @@ async function startServer() {
       MOCK_USERS.push(...adminUsers);
 
       hostels.length = 0;
-      bookingRequests.length = 0;
       issueReports.length = 0;
       activities.length = 0;
       hostelVerifications.length = 0;
@@ -2895,23 +2532,19 @@ async function startServer() {
       verificationInspections.length = 0;
       verificationTeams.length = 0;
       notifications.length = 0;
-      chatMessages.length = 0;
-      dmRooms.length = 0;
-      chatProfiles.length = 0;
+
+
+
       staff.length = 0;
-      staffApplications.length = 0;
+
       if (typeof staffAuditLogs !== 'undefined' && staffAuditLogs) staffAuditLogs.length = 0;
-      if (typeof staffChatRooms !== 'undefined' && staffChatRooms) staffChatRooms.length = 0;
-      if (typeof staffChatMessages !== 'undefined' && staffChatMessages) staffChatMessages.length = 0;
       if (typeof staffReviews !== 'undefined' && staffReviews) staffReviews.length = 0;
-      if (typeof jobOffers !== 'undefined' && jobOffers) jobOffers.length = 0;
       if (typeof staffBargains !== 'undefined' && staffBargains) staffBargains.length = 0;
       meetings.length = 0;
 
       const store = getStoreInstance();
       store.users = [...adminUsers];
       store.hostels = [];
-      store.bookingRequests = [];
       store.issueReports = [];
       store.activities = [];
       store.hostelVerifications = [];
@@ -2923,25 +2556,17 @@ async function startServer() {
       store.verificationTeams = [];
       store.verificationInspections = [];
       store.notifications = [];
-      store.chatMessages = [];
-      store.dmRooms = [];
-      store.chatProfiles = [];
       store.boardRequests = [];
       (store as any).boardRequests = [];
       store.meetings = [];
       (store as any).meetings = [];
       store.managerAccountSettings = {};
       store.staff = [];
-      store.staffApplications = [];
       store.staffAuditLogs = [];
-      store.staffChatRooms = [];
-      store.staffChatMessages = [];
       store.staffReviews = [];
-      store.jobOffers = [];
       store.staffBargains = [];
       store.roomKeys = [];
       store.keyDispatches = [];
-      store.studentMessages = [];
       store.managerRestrictions = [];
       store.digitalMarketApplications = [];
       store.digitalMarketStores = [];
@@ -2954,7 +2579,7 @@ async function startServer() {
 
       return res.json({
         success: true,
-        message: "The entire database (all registered users, residences, student markets, products, orders, chat messages, issue reports, key dispatches, booking requests, etc.) has been cleared successfully. Admin accounts are preserved.",
+        message: "The entire database (all registered users, residences, student markets, products, orders, chat messages, issue reports, key dispatches, etc.) has been cleared successfully. Admin accounts are preserved.",
         remainingAdmins: adminUsers.map(u => u.email || u.user?.email)
       });
     } catch (err: any) {
@@ -2964,7 +2589,7 @@ async function startServer() {
   });
 
   // Secure administrator password reset endpoint for existing accounts
-  app.post("/api/admin/reset-user-password", requireAuth(["admin"]), (req: any, res) => {
+  app.post("/api/admin/reset-user-password", requireAuth(["admin"]), async (req: any, res) => {
     const email = normalizeEmail(req.body.email);
     const password = req.body.newPassword;
     if (!email || typeof password !== 'string' || password.length < 8) return res.status(400).json({ error: 'Target email and a new password of at least 8 characters are required.' });
@@ -2973,7 +2598,7 @@ async function startServer() {
     if (!role) return res.status(400).json({ error: 'This email has multiple accounts. Specify the account role to reset.' });
     const records = passwordRecords(email, role);
     if (!records.length) return res.status(404).json({ error: 'Account not found.' });
-    updateIdentityPassword(records, password, email, role);
+    await updateIdentityPassword(records, password, email, role);
     return res.json({ success: true, message: 'Password reset. Existing sessions for this account have been revoked.' });
   });
 
@@ -2985,13 +2610,13 @@ async function startServer() {
     const storedRequests = store.managerRegistrationRequests || [];
 
     // Merge verifications into managerRequests so Admin sees full dossiers with docs
-    const mergedList: any[] = [...currentRequests];
+    const mergedList: any[] = structuredClone(currentRequests);
 
     allVerifs.forEach(v => {
       const existing = mergedList.find(r => 
         r.id === v.id || 
         (r.managerId && v.managerId && r.managerId === v.managerId) ||
-        (r.managerEmail && v.managerEmail && r.managerEmail.toLowerCase() === v.managerEmail.toLowerCase())
+        (!r.managerId && !v.managerId && r.managerEmail && v.managerEmail && r.managerEmail.toLowerCase() === v.managerEmail.toLowerCase())
       );
       if (existing) {
         existing.operatingCertificate = existing.operatingCertificate || v.operatingCertificate || (v.authorityEvidenceFileName ? { fileName: v.authorityEvidenceFileName, url: v.authorityEvidenceUrl, documentType: 'OPERATING_CERTIFICATE_PDF' } : null);
@@ -3011,12 +2636,12 @@ async function startServer() {
           managerName: v.managerName,
           managerEmail: v.managerEmail,
           managerPhone: v.managerPhone,
-          propertyName: `${v.managerName}'s Designated Residence`,
-          proposedHostelName: `${v.managerName}'s Designated Residence`,
-          hostelName: `${v.managerName}'s Designated Residence`,
-          proposedLocation: 'Legon Campus Area, Accra',
-          proposedCapacity: 120,
-          notes: 'Manager registration dossier with verified identity credentials.',
+          propertyName: v.hostelName || v.propertyName || '',
+          proposedHostelName: v.hostelName || v.propertyName || '',
+          hostelName: v.hostelName || v.propertyName || '',
+          proposedLocation: v.location || v.address || '',
+          proposedCapacity: v.totalCapacity || null,
+          notes: 'Manager registration dossier awaiting administrative review.',
           status: v.status || 'pending',
           isApproved: v.status === 'approved',
           rejectionReason: v.rejectionReason || null,
@@ -3031,16 +2656,16 @@ async function startServer() {
       }
     });
 
-    const authHeader = req.headers.authorization;
+    const authHeader = requestSessionToken(req);
     if (authHeader) {
-      const token = authHeader.replace("Bearer ", "").trim();
-      const foundUser = MOCK_USERS.find(u => (u.user && u.user.token === token) || u.token === token);
+      const token = requestSessionToken(req);
+      const foundUser = MOCK_USERS.find(u => sessionMatches(u, token));
       const userRole = foundUser?.user?.role || foundUser?.role;
       const userId = foundUser?.user?.id || foundUser?.id;
       const userEmail = (foundUser?.user?.email || foundUser?.email || '').toLowerCase().trim();
       if (foundUser && userRole === 'manager') {
         const userReqs = mergedList.filter(
-          r => r.managerId === userId || (r.managerEmail && userEmail && r.managerEmail.toLowerCase() === userEmail)
+          r => managerRecordMatches(r, req.user, getStoreInstance().users || [])
         );
         return res.json(userReqs);
       }
@@ -3048,17 +2673,10 @@ async function startServer() {
     return res.json(mergedList);
   });
 
-  app.post("/api/manager-requests", async (req: any, res) => {
+  app.post("/api/manager-requests", requireAuth(["manager"]), async (req: any, res) => {
     try {
-      const authHeader = req.headers.authorization;
-      let authenticatedUser: any = null;
-      if (authHeader) {
-        const token = authHeader.replace("Bearer ", "").trim();
-        const foundUser = MOCK_USERS.find(u => u.user.token === token);
-        if (foundUser) {
-          authenticatedUser = foundUser.user;
-        }
-      }
+      const authenticatedUser = req.user;
+      if (authenticatedUser.role !== 'manager') return res.status(403).json({ error: 'Sign in with your manager account to submit this request.' });
 
       const {
         propertyName,
@@ -3080,23 +2698,25 @@ async function startServer() {
         proposedCapacity
       } = req.body;
 
-      const resolvedPropertyName = (propertyName || proposedHostelName || hostelName || name || '').trim();
+      const propertyValue = propertyName || proposedHostelName || hostelName || name || '';
+      if (typeof propertyValue !== 'string' || propertyValue.length > 200) return res.status(400).json({ error: 'A valid property name is required.' });
+      const resolvedPropertyName = propertyValue.trim();
 
       if (!resolvedPropertyName) {
         return res.status(400).json({ error: "Hostel property name is required." });
       }
 
-      const mgrId = authenticatedUser?.id || managerId || `mgr-${Date.now()}`;
-      const mgrEmail = authenticatedUser?.email || managerEmail || '';
-      const mgrName = authenticatedUser?.name || managerName || 'Hostel Manager';
-      const mgrPhone = managerPhone || authenticatedUser?.phone || '+233 24 123 4567';
+      const mgrId = authenticatedUser.id;
+      const mgrEmail = authenticatedUser.email;
+      const mgrName = authenticatedUser.name;
+      const mgrPhone = authenticatedUser.phone || '';
 
       // Check current requests from database and memory
       const currentReqs = await dbGetManagerRequests(managerRequests);
 
       // Check if this manager already has a pending or approved request
       const existingReq = currentReqs.find(
-        r => ((mgrId && r.managerId === mgrId) || (mgrEmail && r.managerEmail && (r.managerEmail || '').toLowerCase() === (mgrEmail || '').toLowerCase())) &&
+        r => r.managerId === mgrId &&
              ((r.status || '').toLowerCase() === 'pending' || (r.status || '').toLowerCase() === 'approved')
       );
 
@@ -3117,7 +2737,7 @@ async function startServer() {
         id: `req-mgr-${Date.now()}`,
         managerId: mgrId,
         managerName: mgrName,
-        managerEmail: mgrEmail || 'manager@pinevela.com',
+        managerEmail: mgrEmail,
         managerPhone: mgrPhone,
         nationalId: nationalId || authenticatedUser?.nationalId || 'GHA-VERIFIED-CARD',
         organization: organization || authenticatedUser?.organization || 'Independent Management',
@@ -3171,6 +2791,8 @@ async function startServer() {
         return res.status(404).json({ error: "Registration request or verification dossier not found." });
       }
 
+      const approvedManager = managerForDossier(target, store.users || []);
+      if (!approvedManager) return res.status(409).json({ error: 'The dossier does not identify a unique registered manager.' });
       // Mark all documents as approved/verified upon administrative sign-off
       if (!target.documentsVerified) target.documentsVerified = {};
       target.documentsVerified.operatingCertificate = 'verified';
@@ -3180,20 +2802,9 @@ async function startServer() {
       const now = new Date().toISOString();
       const cleanEmail = (target.managerEmail || '').toLowerCase().trim();
       const cleanParentEmail = ((target as any).parentUserEmail || '').toLowerCase().trim();
-      const targetMgrId = target.managerId || (target as any).userId;
+      const targetMgrId = accountId(approvedManager);
 
-      const matchesTarget = (obj: any) => {
-        if (!obj) return false;
-        const e1 = (obj.managerEmail || obj.email || '').toLowerCase().trim();
-        const e2 = (obj.parentUserEmail || '').toLowerCase().trim();
-        const id1 = obj.managerId || obj.userId || obj.id;
-        const id2 = obj.parentUserId;
-
-        const emailMatch = Boolean(cleanEmail) && (e1 === cleanEmail || e2 === cleanEmail);
-        const parentEmailMatch = Boolean(cleanParentEmail) && (e1 === cleanParentEmail || e2 === cleanParentEmail);
-        const idMatch = Boolean(targetMgrId) && (id1 === targetMgrId || id2 === targetMgrId);
-        return emailMatch || parentEmailMatch || idMatch || obj.id === id || obj.id === effectiveId;
-      };
+      const matchesTarget = (obj: any) => managerRecordMatches(obj, approvedManager, store.users || []);
 
       const verifiedDocsObj = { operatingCertificate: 'verified', idFront: 'verified', idBack: 'verified' };
 
@@ -3272,9 +2883,7 @@ async function startServer() {
         const uRole = (u.role || u.user?.role || '').toLowerCase();
 
         // ONLY update role and verification on the actual manager user account (never the parent user)
-        const isActualMgr = (uRole === 'manager' || (cleanEmail && uEmail === cleanEmail)) && 
-                            (!cleanParentEmail || uEmail !== cleanParentEmail) && 
-                            ((cleanEmail && uEmail === cleanEmail) || (targetMgrId && uId === targetMgrId));
+        const isActualMgr = accountRole(u) === 'manager' && accountId(u) === targetMgrId;
         if (isActualMgr) {
           if (u.user) {
             u.user.isVerified = true;
@@ -3288,9 +2897,9 @@ async function startServer() {
 
         // For parent user: ONLY update the registeredAccounts.managerAccount metadata! DO NOT change parent user's own role!
         const isParentUser = (cleanParentEmail && uEmail === cleanParentEmail) || (target.parentUserId && uId === target.parentUserId);
-        if (isParentUser || u.registeredAccounts?.managerAccount || u.user?.registeredAccounts?.managerAccount) {
+        if (isParentUser) {
           const targetAcc = u.registeredAccounts?.managerAccount || u.user?.registeredAccounts?.managerAccount;
-          if (targetAcc) {
+          if (targetAcc && String(targetAcc.managerId || targetAcc.id) === targetMgrId) {
             targetAcc.status = 'approved';
             targetAcc.isApproved = true;
             targetAcc.isVerified = true;
@@ -3310,31 +2919,7 @@ async function startServer() {
 
       const verifTarget = managerVerifications.find(matchesTarget);
 
-      // Also ensure any matching hostel for this manager is approved & active
-      const currentHostels = await dbGetHostels(hostels);
-      for (const h of currentHostels) {
-        const isMgr = (h.managerId && targetMgrId && h.managerId === targetMgrId) ||
-                      (h.assignedManagerId && targetMgrId && h.assignedManagerId === targetMgrId) ||
-                      (h.managerEmail && cleanEmail && h.managerEmail.toLowerCase().trim() === cleanEmail) ||
-                      (target.propertyName && h.name && h.name.toLowerCase().trim() === target.propertyName.toLowerCase().trim()) ||
-                      (target.proposedHostelName && h.name && h.name.toLowerCase().trim() === target.proposedHostelName.toLowerCase().trim());
-        if (isMgr) {
-          h.isApproved = true;
-          h.approvalStatus = 'Approved';
-          h.status = 'Open';
-          h.managerId = targetMgrId || h.managerId;
-          h.managerEmail = cleanEmail || h.managerEmail;
-          h.managerName = target.managerName || h.managerName;
-          await dbUpdateHostel(h.id, {
-            isApproved: true,
-            approvalStatus: 'Approved',
-            status: 'Open',
-            managerId: h.managerId,
-            managerEmail: h.managerEmail,
-            managerName: h.managerName
-          }, hostels);
-        }
-      }
+      // Account approval permits onboarding; property approval remains a separate administrator action.
 
       await dbCreateActivity({
         id: `act-new-${Date.now()}`,
@@ -3377,6 +2962,7 @@ async function startServer() {
 
       syncStore();
 
+      syncStore();
       return res.json({
         success: true,
         record: target,
@@ -4126,7 +3712,7 @@ async function startServer() {
   });
 
   // 3. Manager Verifications: Submit Manager Verification Request (Physical Verification Flow)
-  app.post("/api/manager-verifications/submit", async (req: any, res) => {
+  app.post("/api/manager-verifications/submit", requireAuth(["user", "manager"]), async (req: any, res) => {
     try {
       const {
         managerName,
@@ -4189,6 +3775,14 @@ async function startServer() {
         return res.status(400).json({ error: locCheck.error });
       }
 
+      const managerPasswordHash = password ? await hashCredentialAsync(password) : '';
+      const existingManager = MOCK_USERS.find(u => normalizeEmail(accountData(u)?.email || u.email) === resolvedEmail);
+      if (existingManager && (accountRole(existingManager) !== 'manager' ||
+          (req.user.role === 'manager' ? accountId(existingManager) !== req.user.id : String(accountData(existingManager)?.parentUserId || existingManager.parentUserId || '') !== req.user.id))) {
+        return res.status(403).json({ error: 'This manager identity belongs to another account.' });
+      }
+      if (req.user.role === 'manager' && !existingManager) return res.status(403).json({ error: 'Submit documents only for your own manager identity.' });
+
       // Check if manager email already registered in verification records
       const allVerifications = await dbGetManagerVerifications(managerVerifications);
       const existingRecord = allVerifications.find(
@@ -4203,11 +3797,11 @@ async function startServer() {
         });
       }
 
-      const managerId = `manager_${Date.now()}`;
+      const managerId = existingManager ? accountId(existingManager) : `manager_${crypto.randomUUID()}`;
       const verificationId = `mv-${Date.now()}`;
       const now = new Date().toISOString();
-      const parentUserId = req.body.parentUserId || req.body.userId || (req as any).user?.id || null;
-      const parentUserEmail = (req.body.parentUserEmail || req.body.userEmail || (req as any).user?.email || '').toLowerCase().trim() || null;
+      const parentUserId = req.user.role === 'user' ? req.user.id : (accountData(existingManager)?.parentUserId || existingManager?.parentUserId || null);
+      const parentUserEmail = req.user.role === 'user' ? req.user.email : (accountData(existingManager)?.parentUserEmail || existingManager?.parentUserEmail || null);
 
       const newRecord = {
         id: verificationId,
@@ -4249,7 +3843,6 @@ async function startServer() {
       await dbCreateManagerVerification(newRecord);
 
       // Create or update Manager User Account with isVerified: false
-      const userToken = createSessionToken('mgr');
       const existingUserIdx = MOCK_USERS.findIndex(u => (u.email || '').toLowerCase() === resolvedEmail);
       
       const userObj = {
@@ -4269,17 +3862,19 @@ async function startServer() {
         roleTitle: roleTitle || 'Hostel Manager',
         isVerified: false,
         verificationStatus: 'pending',
-        token: userToken
+
       };
 
       if (existingUserIdx >= 0) {
         MOCK_USERS[existingUserIdx].user = { ...MOCK_USERS[existingUserIdx].user, ...userObj };
-        if (password) MOCK_USERS[existingUserIdx].password = password;
+        clearRecordSession(MOCK_USERS[existingUserIdx]);
+        clearRecordSession(MOCK_USERS[existingUserIdx].user);
+        if (password) MOCK_USERS[existingUserIdx].password = managerPasswordHash;
       } else {
         MOCK_USERS.push({
           email: resolvedEmail,
           username: resolvedEmail.split('@')[0],
-          password: password ? hashPasswordSha256(password) : '',
+          password: managerPasswordHash,
           user: userObj
         });
       }
@@ -4315,7 +3910,7 @@ async function startServer() {
         phone: resolvedPhone,
         hostelName: resolvedHostelName,
         address: resolvedLocation,
-        password: password ? hashPasswordSha256(password) : ''
+        password: managerPasswordHash
       });
 
       // Write to verification audit log
@@ -4385,16 +3980,16 @@ async function startServer() {
   app.get("/api/manager-verifications", requireAuth(["admin", "manager"]), async (req: any, res) => {
     try {
       const records = await dbGetManagerVerifications(managerVerifications);
-      const authHeader = req.headers.authorization;
+      const authHeader = requestSessionToken(req);
       if (authHeader) {
-        const token = authHeader.replace("Bearer ", "").trim();
-        const foundUser = MOCK_USERS.find(u => (u.user && u.user.token === token) || u.token === token);
+        const token = requestSessionToken(req);
+        const foundUser = MOCK_USERS.find(u => sessionMatches(u, token));
         const userRole = foundUser?.user?.role || foundUser?.role;
         const userId = foundUser?.user?.id || foundUser?.id;
         const userEmail = (foundUser?.user?.email || foundUser?.email || '').toLowerCase().trim();
         if (foundUser && userRole === 'manager') {
           const filtered = records.filter(
-            v => v.managerId === userId || (v.managerEmail && userEmail && v.managerEmail.toLowerCase() === userEmail)
+            v => managerRecordMatches(v, req.user, getStoreInstance().users || [])
           );
           return res.json(filtered);
         }
@@ -4405,14 +4000,14 @@ async function startServer() {
     }
   });
 
-  // Fetch registered Manager & Staff account records for a user
+  // Fetch registered manager, resident and seller account records.
   app.get(["/api/users/my-registered-accounts", "/api/user/registered-accounts"], requireAuth(), async (req: any, res) => {
     try {
       let authUser: any = req.user;
-      const authHeader = req.headers.authorization;
+      const authHeader = requestSessionToken(req);
       if (authHeader) {
-        const token = authHeader.replace("Bearer ", "").trim();
-        const found = MOCK_USERS.find(u => (u.user?.token === token || u.token === token || (u.user as any)?.sessionToken === token));
+        const token = requestSessionToken(req);
+        const found = MOCK_USERS.find(u => sessionMatches(u, token));
         if (found) {
           authUser = found.user || found;
         }
@@ -4428,11 +4023,10 @@ async function startServer() {
       }
 
       if (!userEmail && !userId) {
-        return res.json({ managerAccount: null, staffAccount: null, residentAccount: null });
+        return res.json({ managerAccount: null, residentAccount: null });
       }
 
       let managerAccount: any = null;
-      let staffAccount: any = null;
 
       const store = getStoreInstance();
       const allVerifs = await dbGetManagerVerifications(managerVerifications);
@@ -4533,69 +4127,6 @@ async function startServer() {
           blockReason: blockReason,
           adminNotes: blockReason || matchedVerif?.rejectionReason || (matchedVerif as any)?.adminNotes || (matchedMgrReq as any)?.adminNotes || null,
           submittedAt: matchedVerif?.submittedAt || matchedVerif?.createdAt || new Date().toISOString().split('T')[0]
-        };
-      }
-
-      // Find Staff Account record
-      const allStaffList = [...staff, ...(store.staff || []), ...(staffApplications || []), ...(store.staffApplications || [])];
-      const matchedStaff = allStaffList.find(s => {
-        if (!s) return false;
-        const sEmail = (s.email || s.staffEmail || s.userEmail || '').toLowerCase().trim();
-        const sParentEmail = (s.parentUserEmail || '').toLowerCase().trim();
-        const sId = s.userId || s.staffId || s.id;
-        const sParentId = s.parentUserId;
-        return (
-          (userEmail && (sEmail === userEmail || sParentEmail === userEmail)) ||
-          (userId && (sId === userId || sParentId === userId))
-        );
-      });
-
-      const matchedStaffUser = allUsersList.find(u => {
-        if (!u) return false;
-        const uObj = u.user || u;
-        const uRole = u.role || uObj.role;
-        const uEmail = (u.email || uObj.email || '').toLowerCase().trim();
-        const uParentEmail = (u.parentUserEmail || uObj.parentUserEmail || '').toLowerCase().trim();
-        const uId = u.id || uObj.id;
-        const uParentId = u.parentUserId || uObj.parentUserId;
-        if (uRole !== 'staff') return false;
-        return (
-          (userEmail && (uEmail === userEmail || uParentEmail === userEmail)) ||
-          (userId && (uId === userId || uParentId === userId))
-        );
-      });
-
-      if (matchedStaff || matchedStaffUser) {
-        const rawStatus = matchedStaff?.verificationStatus || matchedStaffUser?.verificationStatus || matchedStaffUser?.user?.verificationStatus || 'Pending';
-        const isVerified = rawStatus.toLowerCase() === 'verified' || rawStatus.toLowerCase() === 'approved';
-        const isRejected = rawStatus.toLowerCase() === 'rejected';
-        const staffActualEmail = (
-          matchedStaff?.email ||
-          matchedStaff?.staffEmail ||
-          matchedStaffUser?.email ||
-          matchedStaffUser?.user?.email ||
-          matchedStaff?.userEmail ||
-          userEmail ||
-          ''
-        ).toLowerCase().trim();
-
-        staffAccount = {
-          id: matchedStaff?.id || matchedStaffUser?.id || `stf-rec-${Date.now()}`,
-          userId: matchedStaff?.userId || matchedStaffUser?.id,
-          name: matchedStaff?.name || matchedStaff?.applicantName || matchedStaffUser?.name || matchedStaffUser?.user?.name || 'Staff Member',
-          email: staffActualEmail,
-          parentUserEmail: userEmail,
-          specialization: matchedStaff?.assignedSpecialization || matchedStaff?.specialization || matchedStaffUser?.specialization || matchedStaffUser?.user?.specialization || 'Facilities & Maintenance Technician',
-          yearsExperience: matchedStaff?.yearsExperience || matchedStaffUser?.yearsExperience || '1 - 3 Years',
-          phone: matchedStaff?.phone || matchedStaffUser?.phone || matchedStaffUser?.user?.phone || 'N/A',
-          commutePreference: matchedStaff?.commutePreference || matchedStaffUser?.commutePreference || 'Daily Commuter',
-          status: isVerified ? 'Verified' : (isRejected ? 'Rejected' : 'Pending'),
-          rawStatus: rawStatus,
-          displayStatus: isVerified ? 'Verified & Accredited Staff' : (isRejected ? 'Rejected' : 'Pending Admin Verification'),
-          isVerified: isVerified,
-          isApproved: isVerified,
-          isRejected: isRejected,
-          submittedAt: matchedStaff?.createdAt || matchedStaff?.registeredAt || new Date().toISOString().split('T')[0]
         };
       }
 
@@ -4705,7 +4236,6 @@ async function startServer() {
 
       return res.json({
         managerAccount,
-        staffAccount,
         residentAccount,
         merchantAccount,
         residentRooms: userResidentRooms
@@ -4716,11 +4246,12 @@ async function startServer() {
     }
   });
 
-  // Reset password for registered Manager, Staff, or Resident account
-  app.post("/api/users/reset-registered-account-password", requireAuth(), (req: any, res) => {
+  // Reset password for a registered manager or resident account
+  app.post("/api/users/reset-registered-account-password", requireAuth(), async (req: any, res) => {
     if (typeof req.body.newPassword !== 'string' || req.body.newPassword.length < 6) return res.status(400).json({ error: 'A new password of at least 6 characters is required.' });
     const email = normalizeEmail(req.body.email);
     const role = String(req.body.role || '').toLowerCase();
+    if (!['manager', 'resident', 'student'].includes(role)) return res.status(403).json({ error: 'This account is not managed through primary-account controls.' });
     const candidates = passwordRecords(email, role);
     if (!candidates.length) return res.status(404).json({ error: 'Account not found.' });
     const owned = candidates.filter(record => {
@@ -4729,17 +4260,18 @@ async function startServer() {
         (req.user.role === 'user' && (data.parentUserId === req.user.id || data.userId === req.user.id || normalizeEmail(data.parentUserEmail) === normalizeEmail(req.user.email)));
     });
     if (!owned.length) return res.status(403).json({ error: 'You cannot reset another account.' });
-    const matched = owned.find(record => credentialValues(record, false).some(hash => passwordsMatch(req.body.currentPassword, hash)));
+    const matched = await findAsync(owned, async record => passwordsMatch(req.body.currentPassword, ...credentialValues(record, false)));
     if (!matched) return res.status(400).json({ error: 'Enter the current password for this subaccount.' });
     const records = owned.filter(record => accountId(record) === accountId(matched));
-    updateIdentityPassword(records, req.body.newPassword, email, role);
+    await updateIdentityPassword(records, req.body.newPassword, email, role);
     return res.json({ success: true, message: 'Password updated. Sign in again using the new password.' });
   });
 
-  // Delete registered Manager, Staff, or Resident account to allow restarting registration
+  // Delete a registered manager or resident account to allow restarting registration
   app.post("/api/users/delete-registered-account", requireAuth(), async (req: any, res) => {
     try {
       const { role, email, password, confirm, deletionReason } = req.body || {};
+      if (!["manager", "resident"].includes(role)) return res.status(403).json({ error: "Staff accounts are managed by their residence manager." });
       if (!role || !email) {
         return res.status(400).json({ error: "Role and email are required to delete account." });
       }
@@ -4785,7 +4317,7 @@ async function startServer() {
         const hashedPass = crypto.createHash('sha256').update(password).digest('hex');
         
         const isResidentPasswordValid = 
-          passwordsMatch(password, expectedResidentPassword);
+          await passwordsMatch(password, expectedResidentPassword);
           
         if (!isResidentPasswordValid) {
           return res.status(400).json({ error: "Incorrect Resident account password. You can only delete a resident account with the correct resident credentials." });
@@ -4867,7 +4399,7 @@ async function startServer() {
 
         const hashedPass = crypto.createHash('sha256').update(password).digest('hex');
         const isManagerPasswordValid = 
-          passwordsMatch(password, expectedManagerPassword);
+          await passwordsMatch(password, expectedManagerPassword);
 
         if (!isManagerPasswordValid && expectedManagerPassword) {
           return res.status(400).json({ error: "Incorrect Manager account password. You can only delete a manager account with the manager account's email and password." });
@@ -5034,27 +4566,6 @@ async function startServer() {
         });
 
         savePersistentStore(store);
-      } else if (role === 'staff') {
-        // Remove from staff roster
-        for (let i = staff.length - 1; i >= 0; i--) {
-          if ((staff[i].email || '').toLowerCase().trim() === cleanEmail) {
-            staff.splice(i, 1);
-          }
-        }
-        // Remove from staffApplications
-        for (let i = staffApplications.length - 1; i >= 0; i--) {
-          if ((staffApplications[i].staffEmail || staffApplications[i].email || '').toLowerCase().trim() === cleanEmail) {
-            staffApplications.splice(i, 1);
-          }
-        }
-        if (matchedUser && (matchedUser.user?.role === 'staff' || matchedUser.role === 'staff')) {
-          if (matchedUser.user) {
-            matchedUser.user.role = 'user';
-            matchedUser.user.isVerified = false;
-            matchedUser.user.verificationStatus = undefined;
-          }
-          matchedUser.role = 'user';
-        }
       } else if (role === 'resident') {
         const store = getStoreInstance();
         // Unassign room key in store
@@ -5378,6 +4889,7 @@ async function startServer() {
       if (!store.users) store.users = [];
 
       // Block duplicate applications or active store — matched by userId, parentUserEmail, or studentEmail
+      const cleanPassword = await hashCredentialAsync(password);
       const existingApp = store.digitalMarketApplications.find((a: any) =>
         (a.status === 'pending' || a.status === 'approved' || a.status === 'active') && (
           (cleanUserId && a.userId === cleanUserId) ||
@@ -5396,7 +4908,6 @@ async function startServer() {
         });
       }
 
-      const cleanPassword = hashCredential(password);
       if (!cleanPassword) {
         return res.status(400).json({ error: 'Password is required.' });
       }
@@ -5582,15 +5093,10 @@ async function startServer() {
       if (digitalStore) {
         if (!store.digitalMarketRatings) store.digitalMarketRatings = [];
         const cleanSId = (digitalStore.id || '').toString().trim();
-        const cleanSEmail = (digitalStore.studentEmail || digitalStore.parentUserEmail || '').toString().toLowerCase().trim();
-        const matchedRatings = store.digitalMarketRatings.filter((r: any) => {
-          if (cleanSId && r.storeId === cleanSId) return true;
-          if (cleanSEmail && r.sellerEmail?.toLowerCase() === cleanSEmail) return true;
-          return false;
-        });
+        const matchedRatings = verifiedMarketRatings(store).filter((r: any) => cleanSId && r.storeId === cleanSId);
         const ratingCount = matchedRatings.length;
         const totalScore = matchedRatings.reduce((sum: number, r: any) => sum + (Number(r.rating) || 0), 0);
-        const storeRating = ratingCount > 0 ? Math.round((totalScore / ratingCount) * 10) / 10 : (digitalStore.storeRating || 5.0);
+        const storeRating = ratingCount > 0 ? Math.round((totalScore / ratingCount) * 10) / 10 : 0;
 
         digitalStore = {
           ...digitalStore,
@@ -5638,14 +5144,14 @@ async function startServer() {
       // Check password
       const storedPwd = marketApp?.password || marketApp?.plainPassword;
       const hashedInput = crypto.createHash('sha256').update(password).digest('hex');
-      const passMatch = passwordsMatch(password, storedPwd);
+      const passMatch = await passwordsMatch(password, storedPwd);
 
       if (!passMatch) {
         return res.status(401).json({ error: "Incorrect Digital Market Store password." });
       }
 
       if (store.digitalMarketStores?.some(s => normalizeEmail(s.studentEmail) === cleanEmail && s.isBanned) || ['rejected', 'banned', 'disabled'].includes(String(marketApp?.status))) return res.status(403).json({ error: 'This market account is not permitted to sign in.' });
-      if ([...MOCK_USERS, ...(store.users || [])].some(u => normalizeEmail(accountData(u)?.email || u.email) === cleanEmail && (accountData(u)?.roomKey || accountRole(u) === 'user') && credentialValues(u).some(hash => passwordsMatch(password, hash)))) {
+      if (await findAsync([...MOCK_USERS, ...(store.users || [])], async u => normalizeEmail(accountData(u)?.email || u.email) === cleanEmail && Boolean(accountData(u)?.roomKey || accountRole(u) === 'user') && await passwordsMatch(password, ...credentialValues(u)))) {
         return res.status(409).json({ error: 'Your existing accounts share a password. Reset the room or market password before signing in.', requiresPasswordReset: true });
       }
 
@@ -5693,16 +5199,10 @@ async function startServer() {
         token: createSessionToken('merchant')
       };
 
-      // Set session auth cookie for persistence across tabs
-      res.cookie("pv_auth_token", merchantUser.token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: "lax",
-        maxAge: 7 * 24 * 60 * 60 * 1000
-      });
-
-      if (marketApp) marketApp.merchantToken = merchantUser.token;
-      if (approvedStore) approvedStore.merchantToken = merchantUser.token;
+      setSessionCookie(res, merchantUser.token);
+      if (marketApp) setRecordSession(marketApp, merchantUser.token);
+      if (approvedStore) setRecordSession(approvedStore, merchantUser.token);
+      for (const entry of MOCK_USERS) if (accountRole(entry) === 'merchant' && normalizeEmail(accountData(entry).email) === cleanEmail) setRecordSession(entry, merchantUser.token);
       savePersistentStore(store);
 
       const needsSetup = !isSetupCompleted;
@@ -5925,17 +5425,13 @@ async function startServer() {
       const cleanEmail = (sellerEmail || '').toString().toLowerCase().trim();
       const cleanStoreId = (storeId || '').toString().trim();
 
-      const getStoreRatingSummary = (sId?: string, sEmail?: string) => {
+      const verifiedRatings = verifiedMarketRatings(store);
+      const getStoreRatingSummary = (sId?: string) => {
         const cleanSId = (sId || '').trim();
-        const cleanSEmail = (sEmail || '').toLowerCase().trim();
-        const matched = store.digitalMarketRatings.filter((r: any) => {
-          if (cleanSId && r.storeId === cleanSId) return true;
-          if (cleanSEmail && r.sellerEmail?.toLowerCase() === cleanSEmail) return true;
-          return false;
-        });
+        const matched = verifiedRatings.filter((r: any) => cleanSId && r.storeId === cleanSId);
         const count = matched.length;
         if (count === 0) {
-          return { storeRating: 5.0, ratingCount: 0 };
+          return { storeRating: 0, ratingCount: 0 };
         }
         const total = matched.reduce((sum: number, r: any) => sum + (Number(r.rating) || 0), 0);
         const avg = Math.round((total / count) * 10) / 10;
@@ -5948,15 +5444,18 @@ async function startServer() {
             storeObj.id === p.storeId || 
             (p.sellerEmail && storeObj.studentEmail?.toLowerCase() === p.sellerEmail.toLowerCase())
           );
-          const ratingSummary = getStoreRatingSummary(p.storeId || s?.id, p.sellerEmail || s?.studentEmail);
+          const storeSummary = getStoreRatingSummary(p.storeId || s?.id);
+          const itemRating = ratingSummary(verifiedRatings.filter((r: any) => r.productId === p.id));
           return {
             ...p,
+            rating: itemRating.averageRating,
+            reviewCount: itemRating.ratingCount,
             storeName: s?.storeName || p.storeName,
             sellerName: s?.username || s?.storeName || p.sellerName,
             sellerPhone: s?.phone || p.sellerPhone,
             storeLogoUrl: s?.profilePicture || s?.logoUrl || '',
-            storeRating: ratingSummary.storeRating,
-            ratingCount: ratingSummary.ratingCount
+            storeRating: storeSummary.storeRating,
+            ratingCount: storeSummary.ratingCount
           };
         });
       };
@@ -6207,86 +5706,6 @@ async function startServer() {
   });
 
   // Service Reviews Endpoints
-  app.post("/api/digital-market/services/:id/reviews", requireAuth(["student", "user", "merchant", "admin"]), async (req: any, res) => {
-    try {
-      const { id } = req.params;
-      const { rating, review, reviewerName, reviewerAvatar } = req.body;
-      const numRating = Number(rating);
-
-      if (!numRating || numRating < 1 || numRating > 5) {
-        return res.status(400).json({ error: "Rating must be between 1 and 5 stars." });
-      }
-
-      const store = getStoreInstance();
-      if (!store.digitalMarketServiceReviews) store.digitalMarketServiceReviews = [];
-      if (!store.digitalMarketProducts) store.digitalMarketProducts = [];
-
-      const product = store.digitalMarketProducts.find((p: any) => p.id === id);
-      if (!product) {
-        return res.status(404).json({ error: "Service not found." });
-      }
-
-      const newReview = {
-        id: `servrev-${Date.now()}`,
-        serviceId: id,
-        reviewerName: reviewerName || req.user.name || 'Student Reviewer',
-        reviewerEmail: req.user.email || '',
-        reviewerAvatar: reviewerAvatar || req.user.avatar || req.user.photo || 'preset:pine-classic',
-        rating: Math.min(5, Math.max(1, numRating)),
-        review: (review || '').toString().trim(),
-        createdAt: new Date().toISOString()
-      };
-
-      store.digitalMarketServiceReviews.unshift(newReview);
-
-      // Re-calculate rating average for service
-      const serviceReviews = store.digitalMarketServiceReviews.filter((r: any) => r.serviceId === id);
-      const totalCount = serviceReviews.length;
-      const sum = serviceReviews.reduce((acc: number, item: any) => acc + (Number(item.rating) || 0), 0);
-      const avg = totalCount > 0 ? Math.round((sum / totalCount) * 10) / 10 : 5.0;
-
-      product.rating = avg;
-      product.reviewCount = totalCount;
-
-      savePersistentStore(store);
-      syncStore();
-
-      return res.status(201).json({
-        success: true,
-        review: newReview,
-        averageRating: avg,
-        reviewCount: totalCount,
-        message: "Thank you for reviewing this service!"
-      });
-    } catch (err: any) {
-      console.error("Error submitting service review:", err);
-      return res.status(500).json({ error: "Failed to submit service review." });
-    }
-  });
-
-  app.get("/api/digital-market/services/:id/reviews", async (req: any, res) => {
-    try {
-      const { id } = req.params;
-      const store = getStoreInstance();
-      if (!store.digitalMarketServiceReviews) store.digitalMarketServiceReviews = [];
-
-      const serviceReviews = store.digitalMarketServiceReviews.filter((r: any) => r.serviceId === id);
-      const totalCount = serviceReviews.length;
-      const sum = serviceReviews.reduce((acc: number, item: any) => acc + (Number(item.rating) || 0), 0);
-      const avg = totalCount > 0 ? Math.round((sum / totalCount) * 10) / 10 : 5.0;
-
-      return res.json({
-        serviceId: id,
-        averageRating: avg,
-        reviewCount: totalCount,
-        reviews: serviceReviews
-      });
-    } catch (err: any) {
-      console.error("Error fetching service reviews:", err);
-      return res.status(500).json({ error: "Failed to fetch service reviews." });
-    }
-  });
-
   // Delete Product
   app.delete("/api/digital-market/products/:id", requireAuth(["merchant", "student", "user", "admin"]), async (req: any, res) => {
     try {
@@ -6608,9 +6027,12 @@ async function startServer() {
   });
 
   // Place Order / Request Campus Meetup
-  app.post("/api/digital-market/orders", async (req: any, res) => {
+  app.post("/api/digital-market/orders", requireAuth(["user"]), async (req: any, res) => {
     try {
-      const { productId, quantity, buyerName, buyerEmail, buyerPhone, meetingLocation, meetingLatitude, meetingLongitude, buyerId, serviceLocationOption } = req.body;
+      res.set('Cache-Control', 'private, no-store');
+      if (req.user.role !== 'user') return res.status(403).json({ error: 'Sign in to your buyer account to place an order.' });
+      const { productId, buyerPhone, meetingLocation, meetingLatitude, meetingLongitude, serviceLocationOption } = req.body;
+      const buyerId = req.user.id, buyerEmail = req.user.email, buyerName = req.user.name;
       const store = getStoreInstance();
       if (!store.digitalMarketOrders) store.digitalMarketOrders = [];
       if (!store.digitalMarketProducts) store.digitalMarketProducts = [];
@@ -6621,9 +6043,8 @@ async function startServer() {
         return res.status(404).json({ error: "Product not found or no longer available." });
       }
 
-      if (product.stockQuantity < (quantity || 1)) {
-        return res.status(400).json({ error: "Requested quantity exceeds available stock." });
-      }
+      const terms = catalogOrderTerms(product, req.body);
+      checkOrderStock(product, terms.quantity, store.digitalMarketOrders);
 
       const targetStore = store.digitalMarketStores.find((s: any) => s.id === product.storeId);
       if (targetStore?.isBanned) {
@@ -6643,12 +6064,7 @@ async function startServer() {
         return res.status(400).json({ error: 'Choose your meetup or delivery location to book this service.' });
       }
 
-      const orderQty = Number(quantity) || 1;
-      const unitPrice = (req.body.price !== undefined && !isNaN(Number(req.body.price)) && Number(req.body.price) >= 0) ? Number(req.body.price) : product.price;
-      const totalAmount = unitPrice * orderQty;
-      const priceCatName = req.body.priceCategoryName ? String(req.body.priceCategoryName).trim() : (req.body.priceCategory ? String(req.body.priceCategory).trim() : undefined);
-      const finalProductTitle = priceCatName ? `${product.title} (${priceCatName})` : product.title;
-      const otpPin = Math.floor(1000 + Math.random() * 9000).toString();
+      const { quantity: orderQty, productPrice: unitPrice, totalAmount, priceCategory: priceCatName, productTitle: finalProductTitle } = terms;
 
       const usesSellerLocation = isServiceOrder && (locationMode === 'fixed' || (locationMode === 'hybrid' && requestedLocationOption === 'seller-location'));
       const finalMeetingLocation = usesSellerLocation ? (product.location || product.meetingLocation) : (meetingLocation || 'KNUST Main Library Car Park');
@@ -6657,17 +6073,18 @@ async function startServer() {
 
       const nowIso = new Date().toISOString();
       const newOrder = {
-        id: `ord-${Date.now()}`,
+        id: `ord-${crypto.randomUUID()}`,
         productId: product.id,
         productTitle: finalProductTitle,
         productPrice: unitPrice,
         priceCategory: priceCatName,
+        priceCategoryId: terms.priceCategoryId,
         productImage: product.imageUrl,
         quantity: orderQty,
         totalAmount: totalAmount,
-        buyerId: buyerId || `buyer-${Date.now()}`,
+        buyerId,
         buyerEmail: (buyerEmail || '').toLowerCase().trim(),
-        buyerName: buyerName || 'Student Buyer',
+        buyerName,
         buyerPhone: buyerPhone || '',
         sellerId: product.sellerId,
         sellerEmail: product.sellerEmail,
@@ -6681,7 +6098,6 @@ async function startServer() {
         sellerConfirmed: false,
         sellerAgreedLocation: false,
         sellerAgreedAt: null,
-        otpPin: otpPin,
         status: 'Awaiting Seller Confirmation',
         paymentMethod: 'Pay on Campus Delivery (PIN Escrow)',
         createdAt: nowIso,
@@ -6696,6 +6112,7 @@ async function startServer() {
         ]
       };
 
+      issueDeliveryPin(newOrder);
       store.digitalMarketOrders.unshift(newOrder);
       savePersistentStore(store);
       syncStore();
@@ -6719,8 +6136,9 @@ async function startServer() {
       notifications.unshift(sellerNotif);
       await dbCreateNotification(sellerNotif, notifications);
 
-      return res.status(201).json({ success: true, order: newOrder, message: "Order placed successfully! Proposed meetup transmitted to seller for confirmation." });
+      return res.status(201).json({ success: true, order: publicMarketOrder(newOrder, req.user), message: "Order placed successfully! Proposed meetup transmitted to seller for confirmation." });
     } catch (err: any) {
+      if (err instanceof MarketOrderError) return res.status(err.status).json({ error: err.message });
       console.error("Error creating digital market order:", err);
       return res.status(500).json({ error: "Failed to create order." });
     }
@@ -6729,30 +6147,22 @@ async function startServer() {
   // Get orders for current user (as buyer or seller)
   app.get("/api/digital-market/my-orders", requireAuth(), async (req: any, res) => {
     try {
-      const userEmail = (req.query.email || '').toString().toLowerCase().trim();
-      const userId = (req.query.userId || '').toString().trim();
+      res.set('Cache-Control', 'private, no-store');
       const storeId = (req.query.storeId || '').toString().trim();
 
       const store = getStoreInstance();
       if (!store.digitalMarketOrders) store.digitalMarketOrders = [];
       if (!store.digitalMarketRatings) store.digitalMarketRatings = [];
 
+      const verifiedRatings = verifiedMarketRatings(store);
       const userOrders = store.digitalMarketOrders
         .filter((o: any) => {
           if (req.user.role === 'admin') return (!storeId || o.storeId === storeId);
-          const isBuyer = o.buyerId ? o.buyerId === req.user.id : req.user.role === 'user' && normalizeEmail(o.buyerEmail) === normalizeEmail(req.user.email);
-          const isSeller = req.user.role === 'merchant' && normalizeEmail(o.sellerEmail) === normalizeEmail(req.user.email);
-          return (!storeId || o.storeId === storeId) && (isBuyer || isSeller);
+          return (!storeId || o.storeId === storeId) && (isOrderBuyer(req.user, o) || isOrderSeller(req.user, o, store));
         })
         .map((o: any) => {
-          const ratingObj = store.digitalMarketRatings.find((r: any) =>
-            r.orderId === o.id ||
-            (userEmail && r.buyerEmail?.toLowerCase() === userEmail && ((o.storeId && r.storeId === o.storeId) || (o.sellerEmail && r.sellerEmail?.toLowerCase() === o.sellerEmail.toLowerCase())))
-          );
-          return {
-            ...o,
-            userRating: ratingObj || null
-          };
+          const ratingObj = verifiedRatings.find((r: any) => r.orderId === o.id && r.buyerId === o.buyerId);
+          return { ...publicMarketOrder(o, req.user), userRating: ratingObj ? publicMarketRating(ratingObj) : null };
         });
 
       return res.json(userOrders);
@@ -6762,152 +6172,29 @@ async function startServer() {
     }
   });
 
-  // Store & Service Ratings & Reviews Endpoint
-  app.post("/api/digital-market/ratings", async (req: any, res) => {
+  installMarketRatings(app, requireAuth, getStoreInstance, syncManagedStore);
+
+  // Buyers alone may replace an exposed/expired/locked challenge and renew stock reservation.
+  app.post('/api/digital-market/orders/:id/renew-pin', requireAuth(['user']), (req: any, res) => {
+    res.set('Cache-Control', 'private, no-store');
     try {
-      const { orderId, storeId, serviceId, productId, sellerEmail, buyerEmail, buyerName, rating, review } = req.body;
-      const numRating = Number(rating);
-
-      if (!numRating || numRating < 1 || numRating > 5) {
-        return res.status(400).json({ error: "Rating must be a number between 1 and 5 stars." });
-      }
-
+      if (Object.keys(req.body || {}).length) throw new MarketOrderError('PIN renewal accepts no supplied fields.');
       const store = getStoreInstance();
-      if (!store.digitalMarketRatings) store.digitalMarketRatings = [];
-      if (!store.digitalMarketOrders) store.digitalMarketOrders = [];
-      if (!store.digitalMarketProducts) store.digitalMarketProducts = [];
-
-      const cleanBuyer = (buyerEmail || '').toString().toLowerCase().trim();
-      const cleanSeller = (sellerEmail || '').toString().toLowerCase().trim();
-      const cleanStoreId = (storeId || '').toString().trim();
-      const cleanOrderId = (orderId || '').toString().trim();
-      const cleanServiceId = (serviceId || productId || '').toString().trim();
-      const cleanBuyerName = (buyerName || '').toString().trim();
-
-      // Check if rating for this order/service or buyer-seller pair already exists
-      let existingIndex = -1;
-      if (cleanOrderId) {
-        existingIndex = store.digitalMarketRatings.findIndex((r: any) => r.orderId === cleanOrderId);
-      }
-      if (existingIndex < 0 && cleanServiceId && cleanBuyer) {
-        existingIndex = store.digitalMarketRatings.findIndex((r: any) =>
-          r.buyerEmail?.toLowerCase() === cleanBuyer && (r.serviceId === cleanServiceId || r.productId === cleanServiceId)
-        );
-      }
-      if (existingIndex < 0 && cleanBuyer && (cleanStoreId || cleanSeller)) {
-        existingIndex = store.digitalMarketRatings.findIndex((r: any) =>
-          r.buyerEmail?.toLowerCase() === cleanBuyer &&
-          ((cleanStoreId && r.storeId === cleanStoreId) || (cleanSeller && r.sellerEmail?.toLowerCase() === cleanSeller))
-        );
-      }
-
-      const nowIso = new Date().toISOString();
-      const ratingRecord = {
-        id: existingIndex >= 0 ? store.digitalMarketRatings[existingIndex].id : `rating-${Date.now()}`,
-        orderId: cleanOrderId || undefined,
-        serviceId: cleanServiceId || undefined,
-        productId: cleanServiceId || undefined,
-        storeId: cleanStoreId || undefined,
-        sellerEmail: cleanSeller || undefined,
-        buyerEmail: cleanBuyer || undefined,
-        buyerName: cleanBuyerName || (cleanBuyer ? cleanBuyer.split('@')[0] : 'Student Resident'),
-        rating: Math.min(5, Math.max(1, numRating)),
-        review: (review || '').toString().trim(),
-        createdAt: nowIso
-      };
-
-      if (existingIndex >= 0) {
-        store.digitalMarketRatings[existingIndex] = ratingRecord;
-      } else {
-        store.digitalMarketRatings.push(ratingRecord);
-      }
-
-      // Calculate new store average rating
-      const matchedStore = store.digitalMarketRatings.filter((r: any) => {
-        if (cleanStoreId && r.storeId === cleanStoreId) return true;
-        if (cleanSeller && r.sellerEmail?.toLowerCase() === cleanSeller) return true;
-        return false;
-      });
-      const storeCount = matchedStore.length;
-      const storeSum = matchedStore.reduce((s: number, r: any) => s + (Number(r.rating) || 0), 0);
-      const storeAvg = storeCount > 0 ? Math.round((storeSum / storeCount) * 10) / 10 : 5.0;
-
-      // Sync rating into digitalMarketStores
-      if (store.digitalMarketStores) {
-        const targetStoreIdx = store.digitalMarketStores.findIndex((s: any) =>
-          (cleanStoreId && s.id === cleanStoreId) ||
-          (cleanSeller && (s.studentEmail?.toLowerCase() === cleanSeller || s.parentUserEmail?.toLowerCase() === cleanSeller))
-        );
-        if (targetStoreIdx !== -1) {
-          store.digitalMarketStores[targetStoreIdx] = {
-            ...store.digitalMarketStores[targetStoreIdx],
-            storeRating: storeAvg,
-            ratingCount: storeCount
-          };
-        }
-      }
-
-      // Sync rating into digitalMarketProducts / service items
-      if (cleanServiceId && store.digitalMarketProducts) {
-        const matchedProdRatings = store.digitalMarketRatings.filter((r: any) =>
-          r.serviceId === cleanServiceId || r.productId === cleanServiceId
-        );
-        const prodCount = matchedProdRatings.length;
-        const prodSum = matchedProdRatings.reduce((s: number, r: any) => s + (Number(r.rating) || 0), 0);
-        const prodAvg = prodCount > 0 ? Math.round((prodSum / prodCount) * 10) / 10 : 5.0;
-
-        const targetProd = store.digitalMarketProducts.find((p: any) => p.id === cleanServiceId);
-        if (targetProd) {
-          targetProd.rating = prodAvg;
-          targetProd.reviewCount = prodCount;
-        }
-      }
-
+      const order = (store.digitalMarketOrders || []).find((o: any) => o.id === req.params.id);
+      if (!order) return res.status(404).json({ error: 'Order not found.' });
+      if (!isOrderBuyer(req.user, order)) return res.status(403).json({ error: 'Only the order buyer can renew its delivery PIN.' });
+      if (!['Awaiting Seller Confirmation', 'Pending Meetup'].includes(order.status) || terminalMarketOrder(order.status)) return res.status(409).json({ error: 'This order cannot renew its delivery PIN.' });
+      if (Date.parse(order.deliveryPinIssuedAt) > Date.now() - 60000) return res.status(429).json({ error: 'Wait one minute before requesting another delivery PIN.' });
+      const product = (store.digitalMarketProducts || []).find((p: any) => p.id === order.productId);
+      checkOrderStock(product, order.quantity, store.digitalMarketOrders || [], order.id);
+      issueDeliveryPin(order);
+      order.updatedAt = new Date().toISOString();
       savePersistentStore(store);
       syncStore();
-
-      return res.json({
-        success: true,
-        ratingRecord,
-        averageRating: storeAvg,
-        ratingCount: storeCount,
-        message: "Rating & review submitted successfully! ⭐"
-      });
+      return res.json({ success: true, order: publicMarketOrder(order, req.user) });
     } catch (err: any) {
-      console.error("Error rating digital market item:", err);
-      return res.status(500).json({ error: "Failed to submit rating." });
-    }
-  });
-
-  // GET Ratings for a store or service
-  app.get("/api/digital-market/ratings", async (req: any, res) => {
-    try {
-      const { storeId, sellerEmail, serviceId, productId } = req.query;
-      const store = getStoreInstance();
-      if (!store.digitalMarketRatings) store.digitalMarketRatings = [];
-
-      const cleanStoreId = (storeId || '').toString().trim();
-      const cleanSeller = (sellerEmail || '').toString().toLowerCase().trim();
-      const cleanServiceId = (serviceId || productId || '').toString().trim();
-
-      const matched = store.digitalMarketRatings.filter((r: any) => {
-        if (cleanServiceId && (r.serviceId === cleanServiceId || r.productId === cleanServiceId)) return true;
-        if (cleanStoreId && r.storeId === cleanStoreId) return true;
-        if (cleanSeller && r.sellerEmail?.toLowerCase() === cleanSeller) return true;
-        return false;
-      });
-
-      const count = matched.length;
-      const sum = matched.reduce((s: number, r: any) => s + (Number(r.rating) || 0), 0);
-      const avg = count > 0 ? Math.round((sum / count) * 10) / 10 : 5.0;
-
-      return res.json({
-        averageRating: avg,
-        ratingCount: count,
-        ratings: matched
-      });
-    } catch (err: any) {
-      return res.status(500).json({ error: "Failed to fetch ratings." });
+      if (err instanceof MarketOrderError) return res.status(err.status).json({ error: err.message });
+      return res.status(500).json({ error: 'Failed to renew delivery PIN.' });
     }
   });
 
@@ -6915,10 +6202,9 @@ async function startServer() {
   app.post("/api/digital-market/orders/:id/update-status", requireAuth(["merchant", "student", "user", "admin"]), async (req: any, res) => {
     try {
       const { id } = req.params;
-      // Accept various action/status payloads
-      const { newStatus, status, inputPin, otpPin, notes, action } = req.body;
-      const resolvedStatus = (newStatus || status || '').trim();
-      const resolvedPin = (inputPin || otpPin || '').trim();
+      res.set('Cache-Control', 'private, no-store');
+      const action = orderAction(req.body);
+      const { inputPin, otpPin, notes } = req.body;
 
       const store = getStoreInstance();
       if (!store.digitalMarketOrders) store.digitalMarketOrders = [];
@@ -6929,15 +6215,17 @@ async function startServer() {
         return res.status(404).json({ error: "Order not found." });
       }
 
-      const isSeller = req.user.role === 'merchant' && normalizeEmail(order.sellerEmail) === normalizeEmail(req.user.email);
-      const isBuyer = order.buyerId ? order.buyerId === req.user.id : req.user.role === 'user' && normalizeEmail(order.buyerEmail) === normalizeEmail(req.user.email);
-      const buyerCancellation = resolvedStatus.toLowerCase() === 'cancelled' && !resolvedPin && !action;
-      if (req.user.role !== 'admin' && !isSeller && !(isBuyer && buyerCancellation)) return res.status(403).json({ error: 'Only the authenticated seller can confirm or complete this order. Buyers can cancel their own order.' });
+      authorizeOrderAction(req.user, order, store, action);
+      if (action === 'confirm') {
+        if (!activeOrderReservation(order)) return res.status(409).json({ error: 'Reservation expired or unavailable. Ask the buyer to renew their delivery PIN.' });
+        const product = store.digitalMarketProducts.find((p: any) => p.id === order.productId);
+        checkOrderStock(product, order.quantity, store.digitalMarketOrders, order.id);
+      }
 
       const nowIso = new Date().toISOString();
 
       // ACTION 1: Seller Agrees to Location & Confirms Purchase
-      if (action === 'agree-location' || action === 'confirm-location' || resolvedStatus === 'agree-location') {
+      if (action === 'confirm') {
         order.sellerConfirmed = true;
         order.sellerAgreedLocation = true;
         order.sellerAgreedAt = nowIso;
@@ -6963,7 +6251,7 @@ async function startServer() {
           userEmail: order.buyerEmail,
           recipientEmail: order.buyerEmail,
           title: `Meetup Location Agreed! Purchase Confirmed 📍`,
-          message: `The seller accepted your meetup location at ${order.meetingLocation} for "${order.productTitle}". Have your 4-digit PIN ready for pickup.`,
+          message: `The seller accepted your meetup location at ${order.meetingLocation} for "${order.productTitle}". Have your six-digit PIN ready for pickup.`,
           type: 'success',
           category: 'market',
           scope: 'market',
@@ -6975,11 +6263,11 @@ async function startServer() {
         notifications.unshift(buyerNotif);
         await dbCreateNotification(buyerNotif, notifications);
 
-        return res.json({ success: true, order, message: "Meetup location agreed! Purchase confirmed." });
+        return res.json({ success: true, order: publicMarketOrder(order, req.user), message: "Meetup location agreed! Purchase confirmed." });
       }
 
       // ACTION 2: Seller Declines / Rejects Proposed Location
-      if (action === 'reject-location' || resolvedStatus === 'Location Rejected') {
+      if (action === 'reject') {
         order.sellerConfirmed = false;
         order.sellerAgreedLocation = false;
         order.status = 'Location Rejected';
@@ -7016,37 +6304,27 @@ async function startServer() {
         notifications.unshift(buyerNotif);
         await dbCreateNotification(buyerNotif, notifications);
 
-        return res.json({ success: true, order, message: "Proposed location declined." });
+        return res.json({ success: true, order: publicMarketOrder(order, req.user), message: "Proposed location declined." });
       }
 
-      // Treat 'completed' and 'Completed & Paid' as the same final status
-      const isCompletionStatus = ['Completed & Paid', 'completed', 'Completed'].includes(resolvedStatus);
-      const finalStatus = isCompletionStatus ? 'Completed & Paid' : resolvedStatus;
-
-      // Guard: block updating already-completed or cancelled orders
-      if (order.status === 'Completed & Paid' && isCompletionStatus) {
-        return res.status(400).json({ error: "This order has already been completed and cannot be updated again." });
-      }
-      if (order.status === 'Cancelled' && resolvedStatus !== 'Cancelled') {
-        return res.status(400).json({ error: "Cancelled orders cannot be updated." });
-      }
-
+      const isCompletionStatus = action === 'complete';
+      const finalStatus = isCompletionStatus ? 'Completed & Paid' : 'Cancelled';
       if (isCompletionStatus) {
-        if (!resolvedPin) {
-          return res.status(400).json({ error: "Delivery PIN is required to complete this order. Confirm the 4-digit PIN with the buyer." });
-        }
-        if (resolvedPin !== String(order.otpPin || '').trim()) {
-          return res.status(400).json({ error: "Invalid Delivery PIN. Please confirm the 4-digit PIN with the buyer." });
+        const pinError = checkDeliveryPin(order, inputPin ?? otpPin);
+        if (pinError) {
+          savePersistentStore(store);
+          syncStore();
+          return res.status(pinError.status).json({ error: pinError.message });
         }
         const product = store.digitalMarketProducts.find((p: any) => p.id === order.productId);
-        if (product && product.stockQuantity > 0) {
-          product.stockQuantity = Math.max(0, product.stockQuantity - order.quantity);
-          if (product.stockQuantity <= 0) product.isAvailable = false;
-          product.updatedAt = new Date().toISOString();
-        }
+        // No await between the current-stock check, deduction, order completion and save.
+        // Concurrent requests in this single-process JSON backend cannot oversell stock.
+        consumeOrderStock(product, order, store.digitalMarketOrders);
       }
 
       order.status = finalStatus;
+      // Invalidate completed/cancelled challenges; terminal status also releases reservations.
+      delete order.otpPin;
       order.updatedAt = nowIso;
 
       if (!order.timeline) order.timeline = [];
@@ -7054,149 +6332,21 @@ async function startServer() {
         status: finalStatus,
         title: `Order status updated to: ${finalStatus}`,
         timestamp: nowIso,
-        notes: notes || (isCompletionStatus ? 'PIN verified. Item inspected, delivered & paid in cash/momo.' : '')
+        notes: isCompletionStatus ? 'Delivery PIN verified. Item inspected, delivered and paid.' : (notes || 'Order cancelled.')
       });
 
       savePersistentStore(store);
       syncStore();
 
-      return res.json({ success: true, order, message: `Order updated to ${finalStatus}!` });
+      return res.json({ success: true, order: publicMarketOrder(order, req.user), message: `Order updated to ${finalStatus}!` });
     } catch (err: any) {
+      if (err instanceof MarketOrderError) return res.status(err.status).json({ error: err.message });
       console.error("Error updating order status:", err);
       return res.status(500).json({ error: "Failed to update order status." });
     }
   });
+  installMarketMessaging(app, requireAuth, getStoreInstance, syncManagedStore);
 
-  // GET: Retrieve private messages for digital market items/orders
-  app.get("/api/digital-market/messages", requireAuth(), async (req: any, res) => {
-    try {
-      if (!['user', 'merchant', 'admin'].includes(req.user.role)) return res.status(403).json({ error: 'Use your primary account for shopping or your market password for seller messages.' });
-      const email = normalizeEmail(req.query.email || req.user.email);
-      if (req.user.role !== 'admin' && email !== normalizeEmail(req.user.email)) return res.status(403).json({ error: 'You cannot view another account’s messages.' });
-      const otherEmail = (req.query.otherEmail || '').toString().toLowerCase().trim();
-      const orderId = (req.query.orderId || '').toString().trim();
-      const productId = (req.query.productId || '').toString().trim();
-
-      const store = getStoreInstance();
-      if (!store.digitalMarketMessages) store.digitalMarketMessages = [];
-      if (req.user.role === 'user' && store.digitalMarketStores?.some(s => normalizeEmail(s.studentEmail) === email)) return res.status(403).json({ error: 'Sign in with your market password to read messages sent to your store email.' });
-
-      // Look up associated emails for the current user
-      const emailsToCheck = new Set<string>();
-      if (email) {
-        emailsToCheck.add(email);
-      }
-
-      // Look up associated emails for the other user in conversation
-      const otherEmailsToCheck = new Set<string>();
-      if (otherEmail) {
-        otherEmailsToCheck.add(otherEmail);
-        const otherStore = store.digitalMarketStores?.find((s: any) =>
-          s.studentEmail?.toLowerCase() === otherEmail || s.parentUserEmail?.toLowerCase() === otherEmail
-        );
-        if (otherStore) {
-          if (otherStore.studentEmail) otherEmailsToCheck.add(otherStore.studentEmail.toLowerCase().trim());
-          if (otherStore.parentUserEmail) otherEmailsToCheck.add(otherStore.parentUserEmail.toLowerCase().trim());
-        }
-      }
-
-      let filtered = store.digitalMarketMessages;
-
-      // Filter by current user involvement
-      if (email) {
-        filtered = filtered.filter((m: any) => 
-          emailsToCheck.has(m.senderEmail?.toLowerCase()) || emailsToCheck.has(m.recipientEmail?.toLowerCase())
-        );
-      }
-
-      // Filter by the other side of conversation if provided
-      if (otherEmail) {
-        filtered = filtered.filter((m: any) => 
-          otherEmailsToCheck.has(m.senderEmail?.toLowerCase()) || otherEmailsToCheck.has(m.recipientEmail?.toLowerCase())
-        );
-      }
-
-      // Filter by order context
-      if (orderId) {
-        filtered = filtered.filter((m: any) => m.orderId === orderId);
-      }
-
-      // Filter by product context
-      if (productId) {
-        filtered = filtered.filter((m: any) => m.productId === productId);
-      }
-
-      // Sort oldest first to show scrollable timeline
-      filtered.sort((a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-
-      return res.json(filtered);
-    } catch (err: any) {
-      console.error("Error fetching private messages:", err);
-      return res.status(500).json({ error: "Failed to load messages." });
-    }
-  });
-
-  // POST: Send a private message or logistic inquiry
-  app.post("/api/digital-market/messages", requireAuth(), async (req: any, res) => {
-    try {
-      if (!['user', 'merchant', 'admin'].includes(req.user.role)) return res.status(403).json({ error: 'Use your primary account for shopping or your market password for seller messages.' });
-      const { orderId, productId, productTitle, senderEmail, senderName, recipientEmail, recipientName, content } = req.body;
-      if (normalizeEmail(senderEmail) !== normalizeEmail(req.user.email)) return res.status(403).json({ error: 'You cannot send messages as another account.' });
-      
-      if (!senderEmail || !recipientEmail || !content || !content.trim()) {
-        return res.status(400).json({ error: "Sender email, recipient email, and message content are required." });
-      }
-
-      const store = getStoreInstance();
-      if (!store.digitalMarketMessages) store.digitalMarketMessages = [];
-      if (req.user.role === 'user' && store.digitalMarketStores?.some(s => normalizeEmail(s.studentEmail) === normalizeEmail(senderEmail))) return res.status(403).json({ error: 'Sign in with your market password to send messages from your store email.' });
-
-      const newMessage = {
-        id: `msg-${Date.now()}`,
-        orderId: orderId || '',
-        productId: productId || '',
-        productTitle: productTitle || '',
-        senderEmail: senderEmail.toLowerCase().trim(),
-        senderName: senderName || 'Anonymous',
-        recipientEmail: recipientEmail.toLowerCase().trim(),
-        recipientName: recipientName || 'Merchant',
-        content: content.trim(),
-        createdAt: new Date().toISOString()
-      };
-
-      store.digitalMarketMessages.push(newMessage);
-      savePersistentStore(store);
-      syncStore();
-
-      // Find if recipient has an associated digital store to attach student and parent emails
-      const recipientStore = store.digitalMarketStores?.find((s: any) =>
-        s.studentEmail?.toLowerCase() === recipientEmail.toLowerCase().trim() ||
-        s.parentUserEmail?.toLowerCase() === recipientEmail.toLowerCase().trim()
-      );
-
-      // Trigger a real-time notification to the recipient inside their general notifications
-      const recipientNotif = {
-        id: `notif-msg-${Date.now()}`,
-        studentId: recipientEmail.toLowerCase().trim(),
-        userId: recipientEmail.toLowerCase().trim(),
-        userEmail: recipientEmail.toLowerCase().trim(),
-        recipientEmail: recipientEmail.toLowerCase().trim(),
-        parentUserEmail: recipientStore ? recipientStore.parentUserEmail?.toLowerCase().trim() : '',
-        title: `📩 New message from ${senderName}`,
-        message: `Inquiry about: ${productTitle || 'Campus Order'}. "${content.substring(0, 50)}${content.length > 50 ? '...' : ''}"`,
-        type: 'info',
-        date: new Date().toISOString().split('T')[0],
-        read: false
-      };
-      notifications.unshift(recipientNotif);
-      await dbCreateNotification(recipientNotif, notifications);
-
-      return res.status(201).json({ success: true, message: newMessage });
-    } catch (err: any) {
-      console.error("Error sending private message:", err);
-      return res.status(500).json({ error: "Failed to send message." });
-    }
-  });
 
   // 5. Manager Verifications: Admin Approves Manager
   app.put("/api/manager-verifications/:id/approve", requireAuth(["admin"]), async (req: any, res) => {
@@ -7702,6 +6852,8 @@ async function startServer() {
       }
 
       const cleanEmail = email.toLowerCase().trim();
+      const plaintextPassword = password.trim();
+      const hashedPassword = await hashCredentialAsync(plaintextPassword);
       const existing = verificationTeams.find(t => t.email.toLowerCase() === cleanEmail);
       if (existing) {
         return res.status(400).json({ error: "A verification team officer with this email already exists." });
@@ -7712,22 +6864,16 @@ async function startServer() {
       const id = `vt-${Date.now()}`;
       const now = new Date().toISOString();
 
-      const plaintextPassword = password.trim();
-      const hashedPassword = hashPasswordSha256(plaintextPassword);
-      const sessionToken = createSessionToken('vt');
-
       const newOfficer = {
         id,
         officerId,
         fullName: fullName.trim(),
         email: cleanEmail,
         password: hashedPassword,
-        plainPassword: plaintextPassword,
         phone: (phone || '').trim(),
         assignedZone: (assignedZone || 'Greater Accra Region').trim(),
         status: 'active' as const,
         role: 'verification_team' as const,
-        token: sessionToken,
         createdAt: now,
         totalInspectionsCompleted: 0
       };
@@ -7739,9 +6885,7 @@ async function startServer() {
         email: cleanEmail,
         username: cleanEmail.split('@')[0],
         officerId: newOfficer.officerId,
-        password: plaintextPassword,
-        plainPassword: plaintextPassword,
-        token: sessionToken,
+        password: hashedPassword,
         user: {
           id: newOfficer.id,
           name: newOfficer.fullName,
@@ -7751,8 +6895,7 @@ async function startServer() {
           phone: newOfficer.phone,
           officerId: newOfficer.officerId,
           assignedZone: newOfficer.assignedZone,
-          token: sessionToken,
-          status: 'active',
+            status: 'active',
           isVerified: true
         }
       };
@@ -7803,16 +6946,29 @@ async function startServer() {
     try {
       const { id } = req.params;
       const { status } = req.body;
+      if (!['active', 'suspended', 'inactive'].includes(status) || Object.keys(req.body).some(key => key !== 'status')) return res.status(400).json({ error: 'Choose active, suspended or inactive.' });
       const officer = verificationTeams.find(t => t.id === id || t.officerId === id);
       if (!officer) {
         return res.status(404).json({ error: "Verification team officer not found." });
       }
 
+      const revoke = status !== 'active' || officer.status !== 'active';
+      const store = getStoreInstance();
+      for (const entry of [...MOCK_USERS, ...(store.users || []), ...(persistentData.users || [])]) {
+        if (accountRole(entry) !== 'verification_team' || accountId(entry) !== officer.id) continue;
+        accountData(entry).status = status;
+        if (revoke) clearRecordSession(entry);
+      }
+      for (const entry of [...verificationTeams, ...(store.verificationTeams || [])]) {
+        if (entry.id !== officer.id) continue;
+        entry.status = status;
+        if (revoke) clearRecordSession(entry);
+      }
       officer.status = status;
       officer.updatedAt = new Date().toISOString();
       syncStore();
 
-      return res.json({ success: true, officer: stripSecrets(officer), message: `Officer status updated to ${status}.` });
+      return res.json({ success: true, officer: publicAccountData(officer), message: `Officer status updated to ${status}.` });
     } catch (err: any) {
       return res.status(500).json({ error: "Failed to update officer status." });
     }
@@ -7829,7 +6985,7 @@ async function startServer() {
       const store = getStoreInstance();
       const allVT = [...verificationTeams, ...(store.verificationTeams || [])];
 
-      const matchedOfficer = allVT.find(t => {
+      const matchedOfficer = await findAsync(allVT, async t => {
         if (!t) return false;
         const emailMatch = cleanEmail && t.email?.toLowerCase() === cleanEmail;
         const idMatch = cleanOfficerId && (
@@ -7838,23 +6994,24 @@ async function startServer() {
           t.id === cleanOfficerId
         );
         const usernameMatch = cleanEmail && t.email?.split('@')[0].toLowerCase() === cleanEmail;
-        return (emailMatch || idMatch || usernameMatch) && passwordsMatch(cleanPassword, t.password, t.plainPassword);
+        return Boolean(emailMatch || idMatch || usernameMatch) && await passwordsMatch(cleanPassword, t.password, t.plainPassword);
       });
 
       if (!matchedOfficer) {
         return res.status(401).json({ error: "Invalid officer credentials. Please check your official email/Officer ID and password." });
       }
 
-      if (matchedOfficer.status && matchedOfficer.status !== 'active') {
+      if (!activeOfficerAccount({ ...matchedOfficer, role: 'verification_team' }, store.verificationTeams || [])) {
         return res.status(403).json({ error: `Officer account is currently ${matchedOfficer.status}. Please contact PineVela Administration.` });
       }
 
       const newToken = createSessionToken('vt');
-      matchedOfficer.token = newToken;
+      setRecordSession(matchedOfficer, newToken);
       
       // Also update in verificationTeams in-memory array and mock users
       const inMem = verificationTeams.find(t => t.id === matchedOfficer.id || t.officerId === matchedOfficer.officerId);
-      if (inMem) inMem.token = newToken;
+      if (inMem) setRecordSession(inMem, newToken);
+      for (const entry of MOCK_USERS) if (accountRole(entry) === 'verification_team' && accountId(entry) === matchedOfficer.id) setRecordSession(entry, newToken);
       
       persistUserSessionToken(matchedOfficer, newToken);
       syncStore();
@@ -7873,6 +7030,7 @@ async function startServer() {
         token: newToken
       };
 
+      setSessionCookie(res, newToken);
       return res.json({
         success: true,
         user: userObj,
@@ -7885,15 +7043,12 @@ async function startServer() {
   });
 
   // 5. Verification Team: Get Current Officer profile
-  app.get("/api/verification-team/me", async (req: any, res) => {
+  app.get("/api/verification-team/me", requireAuth(["verification_team"]), async (req: any, res) => {
     try {
-      const authHeader = req.headers.authorization;
-      if (!authHeader) return res.status(401).json({ error: "Unauthorized" });
-      const token = authHeader.replace("Bearer ", "").trim();
-      const officer = verificationTeams.find(t => t.token === token) || (getStoreInstance().verificationTeams || []).find((t: any) => t.token === token);
+      const officer = currentReportOfficer(req.user, getStoreInstance().verificationTeams || []);
       if (!officer) return res.status(401).json({ error: "Officer session expired or invalid" });
 
-      return res.json({ success: true, officer: stripSecrets(officer) });
+      return res.json({ success: true, officer: publicAccountData(officer) });
     } catch (err: any) {
       return res.status(500).json({ error: "Failed to fetch officer session" });
     }
@@ -7993,60 +7148,30 @@ async function startServer() {
     });
 
     const unifiedList = Array.from(map.values());
-    // Keep in-memory array in sync
-    verificationInspections.length = 0;
-    verificationInspections.push(...unifiedList);
+    // Display merges must never rewrite the authoritative officer assignments.
     return unifiedList;
   };
 
-  // 6. Admin & Officers: Get all verification inspections
-  app.get(["/api/admin/verification-inspections", "/api/verification-inspections"], async (req: any, res) => {
+  // 6. Admin: Get all verification inspections
+  app.get(["/api/admin/verification-inspections", "/api/verification-inspections"], requireAuth(["admin"]), async (req: any, res) => {
     try {
       const allInspections = getAllUnifiedInspections();
-      return res.json(allInspections);
+      res.set("Cache-Control", "private, no-store");
+      return res.json(publicAccountData(allInspections));
     } catch (err: any) {
       return res.status(500).json({ error: "Failed to fetch inspections." });
     }
   });
 
   // 7. Officer: Get inspections assigned to the logged-in officer
-  app.get("/api/verification-team/my-inspections", async (req: any, res) => {
+  app.get("/api/verification-team/my-inspections", requireAuth(["verification_team"]), async (req: any, res) => {
     try {
-      const authHeader = req.headers.authorization;
-      const officerEmail = (req.query.email || '').toString().toLowerCase().trim();
-      const officerIdParam = (req.query.officerId || '').toString().trim();
       const store = getStoreInstance();
-
-      const allOfficers = [
-        ...verificationTeams,
-        ...(store.verificationTeams || []),
-        ...((persistentData as any).verificationTeams || [])
-      ];
-
-      let matchedOfficer = allOfficers.find((t: any) => 
-        (officerEmail && t.email?.toLowerCase() === officerEmail) ||
-        (officerIdParam && (t.id === officerIdParam || t.officerId === officerIdParam))
-      );
-
-      if (!matchedOfficer && authHeader) {
-        const token = authHeader.replace("Bearer ", "").trim();
-        matchedOfficer = allOfficers.find((t: any) => t.token === token);
-      }
-
-      const allInspections = getAllUnifiedInspections();
-
-      if (matchedOfficer) {
-        const filtered = allInspections.filter((i: any) => 
-          i.assignedOfficerId === matchedOfficer.id || 
-          i.assignedOfficerId === matchedOfficer.officerId ||
-          (i.assignedOfficerEmail && matchedOfficer.email && i.assignedOfficerEmail.toLowerCase() === matchedOfficer.email.toLowerCase()) ||
-          (i.report && (i.report.officerId === matchedOfficer.id || i.report.officerId === matchedOfficer.officerId)) ||
-          (matchedOfficer.id === 'vt-101' && (!i.assignedOfficerId || i.assignedOfficerId === 'vt-101'))
-        );
-        return res.json(filtered);
-      }
-
-      return res.json(allInspections);
+      const officer = currentReportOfficer(req.user, store.verificationTeams || []);
+      if (!officer) return res.status(403).json({ error: "An active registered officer session is required" });
+      const assigned = assignedInspectionRecords(officer, store.verificationInspections || [], store.managerVerifications || []);
+      res.set("Cache-Control", "private, no-store");
+      return res.json(publicAccountData(assigned));
     } catch (err: any) {
       return res.status(500).json({ error: "Failed to fetch assigned inspections." });
     }
@@ -8178,208 +7303,86 @@ async function startServer() {
   });
 
   // 9. Verification Team Officer: Submit Physical Verification Report
-  app.post("/api/verification-team/inspections/:id/submit-report", async (req: any, res) => {
+  app.post("/api/verification-team/inspections/:id/submit-report", requireAuth(["verification_team"]), async (req: any, res) => {
     try {
-      const { id } = req.params;
-      const {
-        gpsCoordinates,
-        checklist,
-        propertyDetails,
-        photos,
-        observations,
-        recommendation,
-        inspectorSignature
-      } = req.body;
-
-      const allUnified = getAllUnifiedInspections();
-      let inspection = allUnified.find(i => i.id === id || i.managerVerificationId === id || i.id === `insp-${id}` || (id.startsWith('insp-') && i.managerVerificationId === id.replace('insp-', '')));
-      
-      if (!inspection) {
-        inspection = verificationInspections.find(i => i.id === id || i.managerVerificationId === id);
+      const store = getStoreInstance();
+      const officer = currentReportOfficer(req.user, store.verificationTeams || []);
+      if (!officer) {
+        return res.status(403).json({ error: "An active registered officer session is required" });
       }
-
-      if (!inspection) {
-        // Create inspection dynamically if responding to a manager verification record
-        const store = getStoreInstance();
-        const verifRecord = managerVerifications.find(v => v.id === id || v.id === id.replace('insp-', '')) || (store.managerVerifications || []).find((v: any) => v.id === id || v.id === id.replace('insp-', ''));
-        if (verifRecord) {
-          inspection = {
-            id: `insp-${verifRecord.id}`,
-            managerVerificationId: verifRecord.id,
-            managerName: verifRecord.managerName,
-            managerEmail: verifRecord.managerEmail,
-            managerPhone: verifRecord.managerPhone,
-            hostelName: verifRecord.hostelName || verifRecord.residenceName || 'Hostel Property',
-            location: verifRecord.location || verifRecord.address || 'Address provided by manager',
-            digitalAddress: verifRecord.digitalAddress || '',
-            dispatchedAt: verifRecord.dispatchedAt || new Date().toISOString(),
-            dispatchedBy: 'Admin',
-            assignedOfficerId: verifRecord.assignedOfficerId || 'vt-101',
-            assignedOfficerName: verifRecord.assignedOfficerName || 'Field Officer',
-            assignedOfficerEmail: verifRecord.assignedOfficerEmail || '',
-            status: 'report_submitted',
-            priority: verifRecord.priority || 'medium',
-            report: null
-          };
-          verificationInspections.unshift(inspection);
-        }
-      }
-
-      if (!inspection) {
-        return res.status(404).json({ error: "Inspection record not found." });
-      }
-
-      if (!observations || observations.trim().length < 10) {
-        return res.status(400).json({ error: "Detailed field inspection observations are required (minimum 10 characters)." });
-      }
-
-      const now = new Date().toISOString();
-
-      const report = {
-        submittedAt: now,
-        officerId: inspection.assignedOfficerId || 'vt-101',
-        officerName: inspection.assignedOfficerName || 'Samuel Mensah',
-        gpsCoordinates: gpsCoordinates || {
-          lat: 5.6505,
-          lng: -0.1869,
-          accuracyMeters: 5.0,
-          capturedAddress: inspection.location
-        },
-        timestamp: now,
-        checklist: {
-          residenceExists: checklist?.residenceExists ?? false,
-          managerConnected: checklist?.managerConnected ?? false,
-          basicPropertyInfoVerified: checklist?.basicPropertyInfoVerified ?? false,
-          managerAuthorityConfirmed: checklist?.managerAuthorityConfirmed ?? false,
-          generalLegitimacyConfirmed: checklist?.generalLegitimacyConfirmed ?? false,
-          safetyHabitableCompliance: checklist?.safetyHabitableCompliance ?? false
-        },
-        propertyDetails: {
-          estimatedRooms: Number(propertyDetails?.estimatedRooms) || 0,
-          estimatedBeds: Number(propertyDetails?.estimatedBeds) || 0,
-          buildingStructure: propertyDetails?.buildingStructure || '',
-          securityPresent: propertyDetails?.securityPresent ?? true,
-          utilitiesOperational: propertyDetails?.utilitiesOperational ?? true
-        },
-        photos: Array.isArray(photos) ? photos : [],
-        observations: observations.trim(),
-        recommendation: (recommendation || 'recommend_approval') as 'recommend_approval' | 'recommend_rejection' | 'requires_reinspection',
-        inspectorSignature: inspectorSignature || `${inspection.assignedOfficerName || 'Officer'} (Field Inspector)`
-      };
-
+      const { inspection, verification } = inspectionSubmissionTarget(
+        req.params.id, store.verificationInspections || [], store.managerVerifications || [], officer
+      );
+      const report = buildInspectionReport(req.body, officer);
+      const now = report.submittedAt;
       inspection.report = report;
       inspection.status = 'report_submitted';
       inspection.updatedAt = now;
 
-      // Update in-memory verificationInspections
-      const inMemIdx = verificationInspections.findIndex(i => i.id === inspection.id || (inspection.managerVerificationId && i.managerVerificationId === inspection.managerVerificationId));
-      if (inMemIdx >= 0) {
-        verificationInspections[inMemIdx] = inspection;
-      } else {
-        verificationInspections.unshift(inspection);
-      }
+      // Assignment IDs and all administrator dispatch metadata remain unchanged.
+      const list = store.verificationInspections || [];
+      const index = list.findIndex((entry: any) => entry.id === inspection.id);
+      if (index >= 0) list[index] = inspection;
+      else list.unshift(inspection);
+      store.verificationInspections = list;
+      verificationInspections = list;
 
-      // Update matching manager verification record
-      const verif = managerVerifications.find(v => v.id === inspection.managerVerificationId || (v.managerEmail && v.managerEmail.toLowerCase() === (inspection.managerEmail || '').toLowerCase()));
-      if (verif) {
-        verif.inspectionStatus = 'report_submitted';
-        verif.inspectionReport = report;
-        verif.verificationReport = report;
-        verif.updatedAt = now;
-      }
-
-      // Update matching manager request record
-      const mReq = managerRequests.find(r => r.id === inspection.managerVerificationId || (r.managerEmail && r.managerEmail.toLowerCase() === (inspection.managerEmail || '').toLowerCase()));
-      if (mReq) {
-        mReq.inspectionStatus = 'report_submitted';
-        mReq.inspectionReport = report;
-        mReq.verificationReport = report;
-        mReq.updatedAt = now;
-      }
-
-      // Sync into persistent database store
-      const store = getStoreInstance();
-      if (!(store as any).verificationInspections) {
-        (store as any).verificationInspections = [];
-      }
-      const inspIdx = (store as any).verificationInspections.findIndex((i: any) => i.id === inspection.id || (inspection.managerVerificationId && i.managerVerificationId === inspection.managerVerificationId));
-      if (inspIdx >= 0) {
-        (store as any).verificationInspections[inspIdx] = inspection;
-      } else {
-        (store as any).verificationInspections.unshift(inspection);
-      }
-
-      if ((store as any).managerVerifications) {
-        (store as any).managerVerifications.forEach((v: any) => {
-          if (v.id === inspection.managerVerificationId || (v.managerEmail && inspection.managerEmail && v.managerEmail.toLowerCase() === inspection.managerEmail.toLowerCase())) {
-            v.inspectionStatus = 'report_submitted';
-            v.inspectionReport = report;
-            v.verificationReport = report;
-            v.updatedAt = now;
-          }
-        });
-      }
-
-      if (store.managerRegistrationRequests) {
-        store.managerRegistrationRequests.forEach((r: any) => {
-          if (r.id === inspection.managerVerificationId || (r.managerEmail && inspection.managerEmail && r.managerEmail.toLowerCase() === inspection.managerEmail.toLowerCase())) {
-            r.inspectionStatus = 'report_submitted';
-            r.inspectionReport = report;
-            r.verificationReport = report;
-            r.updatedAt = now;
-          }
-        });
-      }
-
-      savePersistentStore(store);
-
-      // Update officer stats
-      const officer = verificationTeams.find(t => t.id === inspection.assignedOfficerId || t.officerId === inspection.assignedOfficerId);
-      if (officer) {
-        officer.totalInspectionsCompleted = (officer.totalInspectionsCompleted || 0) + 1;
-      }
-
-      // Notify Admin
-      const adminNotif = {
-        id: `notif-rep-sub-${Date.now()}`,
-        studentId: 'admin_001',
-        title: `Verification Report Submitted: ${inspection.hostelName}`,
-        message: `Officer ${inspection.assignedOfficerName || 'Samuel Mensah'} submitted an on-site verification report for "${inspection.hostelName}". Recommendation: ${report.recommendation === 'recommend_approval' ? 'APPROVED' : report.recommendation.toUpperCase()}.`,
-        type: 'verification',
-        date: now.split('T')[0],
-        read: false
+      const applyReport = (record: any) => {
+        record.inspectionStatus = 'report_submitted';
+        record.inspectionReport = report;
+        record.verificationReport = report;
+        record.updatedAt = now;
       };
-      notifications.unshift(adminNotif);
+      if (verification) applyReport(verification);
+      managerVerifications = store.managerVerifications || [];
 
-      // Audit Log
-      const auditLog = {
-        id: `val-rep-${Date.now()}`,
+      // Prefer an explicit request link; legacy manager-ID linkage must be unique.
+      // A shared email alone never authorizes overwriting another request's report.
+      managerRequests = store.managerRegistrationRequests || [];
+      const directlyLinked = managerRequests.filter((request: any) =>
+        request.id === inspection.managerVerificationId ||
+        request.managerVerificationId === inspection.managerVerificationId ||
+        verification?.managerRequestId && request.id === verification.managerRequestId
+      );
+      const linkedRequests = directlyLinked.length ? directlyLinked : managerRequests.filter((request: any) =>
+        verification?.managerId && request.managerId === verification.managerId
+      );
+      if (linkedRequests.length === 1) applyReport(linkedRequests[0]);
+
+      officer.totalInspectionsCompleted = (officer.totalInspectionsCompleted || 0) + 1;
+      verificationTeams = store.verificationTeams || [];
+      for (const admin of store.users.map(accountData).filter((account: any) => account?.role === 'admin' && account.id)) {
+        notifications.unshift({
+          id: `notif-rep-sub-${crypto.randomUUID()}`,
+          studentId: admin.id, userId: admin.id, recipientEmail: admin.email,
+          title: `Verification Report Submitted: ${inspection.hostelName}`,
+          message: `Officer ${report.officerName} submitted an on-site verification report for "${inspection.hostelName}". Recommendation: ${report.recommendation}.`,
+          type: 'verification', date: now.split('T')[0], read: false
+        });
+      }
+      verificationAuditLogs.unshift({
+        id: `val-rep-${crypto.randomUUID()}`,
         action: 'VERIFICATION_REPORT_SUBMITTED',
-        targetType: 'manager',
-        targetId: inspection.managerVerificationId,
+        targetType: 'manager', targetId: inspection.managerVerificationId,
         targetName: inspection.managerName,
-        performedBy: inspection.assignedOfficerName || 'Samuel Mensah',
+        performedBy: report.officerName, performedById: officer.id,
         role: 'verification_team',
         details: {
+          officerId: officer.id, officerCode: officer.officerId,
           hostelName: inspection.hostelName,
-          recommendation: report.recommendation,
-          gps: report.gpsCoordinates
+          recommendation: report.recommendation, gps: report.gpsCoordinates
         },
         timestamp: now
-      };
-      verificationAuditLogs.unshift(auditLog);
-
+      });
       syncStore();
-
       return res.json({
-        success: true,
-        inspection,
-        report,
+        success: true, inspection, report,
         message: "Physical verification report submitted successfully! Admin has been notified for final review."
       });
     } catch (err: any) {
+      if (err instanceof InspectionSubmissionError) return res.status(err.status).json({ error: err.message });
       console.error("Error submitting verification report:", err);
-      return res.status(500).json({ error: err.message || "Failed to submit verification report." });
+      return res.status(500).json({ error: "Failed to submit verification report" });
     }
   });
 
@@ -8757,154 +7760,37 @@ async function startServer() {
   });
 
   // 11. Hostel Verification: Submit Hostel for Admin Review (Phase 2)
-  app.post("/api/hostel-verifications/submit", async (req: any, res) => {
+  app.post("/api/hostel-verifications/submit", requireAuth(["manager"]), async (req: any, res) => {
     try {
-      const {
-        hostelId,
-        hostelName,
-        location,
-        campusZone,
-        addressLine1,
-        digitalAddress,
-        totalCapacity,
-        totalRooms,
-        totalBlocks,
-        pricePerYear,
-        currency,
-        facilities,
-        imageUrl,
-        managerId,
-        managerName,
-        managerEmail,
-        managerPhone,
-        authorityRelationship,
-        ownerOperatorName,
-        ownerOperatorPhone,
-        ownerOperatorEmail,
-        proofOfOwnershipType,
-        proofOfOwnershipFileName,
-        proofOfOwnershipUrl,
-        paymentReference,
-        paymentStatus
-      } = req.body;
-
-      if (!hostelName) {
-        return res.status(400).json({ error: "Hostel name is required." });
-      }
-
-      const now = new Date().toISOString();
-      const verificationId = `hv-${Date.now()}`;
-      const resolvedHostelId = hostelId || `hostel-${Date.now()}`;
-
-      // System validation check
-      const gpsRegex = /^[A-Z]{2}-[0-9]{3,4}-[0-9]{4}$/i;
-      const isGpsValid = digitalAddress ? gpsRegex.test((digitalAddress || '').trim()) : true;
-
-      const systemValidation = {
-        missingInfo: false,
-        digitalAddressFormatValid: isGpsValid,
-        duplicateHostelCheck: 'clean' as const,
-        duplicateRegistrationCheck: 'clean' as const,
-        managerApproved: true,
-        identityVerified: true,
-        ownershipEvidencePresent: !!(proofOfOwnershipType || proofOfOwnershipFileName),
-        conflictingInfo: false,
-        capacityPricingValid: true
-      };
-
-      const newRecord = {
-        id: verificationId,
-        hostelId: resolvedHostelId,
-        hostelName,
-        location: location || 'Campus Area',
-        campusZone: campusZone || null,
-        addressLine1: addressLine1 || null,
-        digitalAddress: (digitalAddress || '').toUpperCase().trim(),
-        totalCapacity: Number(totalCapacity) || 100,
-        totalRooms: Number(totalRooms) || 30,
-        totalBlocks: Number(totalBlocks) || 2,
-        pricePerYear: Number(pricePerYear) || 3500,
-        currency: currency || 'GHS',
-        facilities: facilities || [],
-        imageUrl: imageUrl || 'https://images.unsplash.com/photo-1555854877-bab0e564b8d5?auto=format&fit=crop&w=800&q=80',
-        managerId: managerId || req.user?.id || 'mgr-101',
-        managerName: managerName || req.user?.name || 'Property Manager',
-        managerEmail: managerEmail || req.user?.email || 'manager@pinevela.com',
-        managerPhone: managerPhone || req.user?.phone || '+233 24 000 0000',
-        managerApproved: true,
-        authorityRelationship: authorityRelationship || 'Authorized Manager',
-        ownerOperatorName: ownerOperatorName || managerName || 'Property Owner',
-        ownerOperatorPhone: ownerOperatorPhone || managerPhone || '+233 24 000 0000',
-        ownerOperatorEmail: ownerOperatorEmail || null,
-        proofOfOwnershipType: proofOfOwnershipType || 'Indenture / Municipal Permit',
-        proofOfOwnershipFileName: proofOfOwnershipFileName || null,
-        proofOfOwnershipUrl: proofOfOwnershipUrl || null,
-        systemValidation,
-        validationPassed: isGpsValid,
-        paymentStatus: paymentStatus || 'paid',
-        paymentReference: paymentReference || `PAY-PV50-${Date.now().toString().slice(-6)}`,
-        paymentAmount: 50.00,
-        paymentDate: now,
-        status: 'under_admin_review', // Under Admin Review
-        adminNotes: 'Application submitted with GHS 50 onboarding fee. Pending administrator verification.',
-        submittedAt: now,
-        createdAt: now,
-        updatedAt: now
-      };
-
-      hostelVerifications.unshift(newRecord);
+      const newRecord = hostelVerificationSubmission(req.user, req.body, getStoreInstance());
       await dbCreateHostelVerification(newRecord);
-
-      // Also ensure the hostel in hostels table is marked isApproved: false, approvalStatus: 'Pending Approval'
-      const matchedHostel = hostels.find(h => h.id === resolvedHostelId);
-      if (matchedHostel) {
-        matchedHostel.isApproved = false;
-        matchedHostel.approvalStatus = 'Pending Approval';
-        matchedHostel.digital_address = newRecord.digitalAddress;
-      }
-
-      // Audit log
+      hostelVerifications = getStoreInstance().hostelVerifications;
       const auditLog = {
-        id: `val-${Date.now()}`,
-        action: 'HOSTEL_VERIFICATION_SUBMITTED',
-        targetType: 'hostel',
-        targetId: resolvedHostelId,
-        targetName: hostelName,
-        performedBy: managerName || 'Manager',
-        role: 'manager',
-        details: {
-          digitalAddress: newRecord.digitalAddress,
-          paymentReference: newRecord.paymentReference,
-          proofType: proofOfOwnershipType
-        },
-        timestamp: now
+        id: `val-${newRecord.id}`, action: 'HOSTEL_VERIFICATION_SUBMITTED',
+        targetType: 'hostel', targetId: newRecord.hostelId, targetName: newRecord.hostelName,
+        performedBy: req.user.name, performedById: req.user.id, role: 'manager',
+        details: { digitalAddress: newRecord.digitalAddress, proofType: newRecord.proofOfOwnershipType },
+        timestamp: newRecord.createdAt
       };
-      verificationAuditLogs.unshift(auditLog);
       await dbCreateVerificationAuditLog(auditLog);
-
+      verificationAuditLogs = getStoreInstance().verificationAuditLogs;
       await dbCreateActivity({
-        id: `act-new-${Date.now()}`,
-        text: `New hostel "${hostelName}" submitted for verification with GHS 50 onboarding fee.`,
-        time: 'Just now',
-        type: 'info'
+        id: `act-${newRecord.id}`, text: `Hostel "${newRecord.hostelName}" submitted for verification.`,
+        time: 'Just now', type: 'info'
       }, activities);
-
-      return res.status(201).json({
-        success: true,
-        verification: newRecord,
-        message: "Hostel property successfully submitted for administrative verification!"
-      });
-    } catch (err: any) {
-      console.error("Error submitting hostel verification:", err);
-      return res.status(500).json({ error: err.message || "Failed to submit hostel verification." });
+      return res.status(201).json({ success: true, verification: newRecord, message: 'Hostel property submitted for administrative verification.' });
+    } catch (error) {
+      if (error instanceof OnboardingSubmissionError) return res.status(error.status).json({ error: error.message });
+      return res.status(500).json({ error: 'Failed to submit hostel verification.' });
     }
   });
 
   // 12. Hostel Verification: Get all hostel verification applications
-  app.get("/api/hostel-verifications", async (req, res) => {
+  app.get("/api/hostel-verifications", requireAuth(["admin"]), async (req, res) => {
     try {
       const records = await dbGetHostelVerifications(hostelVerifications);
-      return res.json(records);
+      res.set("Cache-Control", "private, no-store");
+      return res.json(publicAccountData(records));
     } catch (err: any) {
       return res.status(500).json({ error: "Failed to fetch hostel verifications." });
     }
@@ -9180,11 +8066,11 @@ async function startServer() {
   app.get("/api/hostels", async (req, res) => {
     try {
       const list = await dbGetHostels(hostels);
-      const authHeader = req.headers.authorization;
+      const authHeader = requestSessionToken(req);
       let isAdmin = false;
       if (authHeader) {
-        const token = authHeader.replace("Bearer ", "").trim();
-        const foundUser = MOCK_USERS.find(u => (u.user && u.user.token === token) || u.token === token);
+        const token = requestSessionToken(req);
+        const foundUser = MOCK_USERS.find(u => sessionMatches(u, token));
         const userRole = (foundUser?.user?.role || foundUser?.role || '').toLowerCase();
         if (userRole === 'admin') isAdmin = true;
       }
@@ -9324,6 +8210,15 @@ async function startServer() {
       }
 
       const isManager = req.user.role === 'manager';
+      const existingId = registrationData.hostelId || registrationData.id;
+      if (existingId && (getStoreInstance().hostels || []).some(h => h.id === existingId)) return res.status(409).json({ error: 'This hostel already exists. Use its authorized edit route.' });
+      if (isManager) {
+        // Set protected fields before the first database write, not after insertion.
+        registrationData.isApproved = false;
+        registrationData.approvalStatus = 'Pending Approval';
+        registrationData.status = 'Pending Approval';
+        registrationData.subscriptionPaid = false;
+      }
 
       // If manager, enforce single hostel limit
       if (isManager) {
@@ -9339,10 +8234,10 @@ async function startServer() {
       if (isManager) {
         registrationData.assignedManagerId = req.user.id;
         registrationData.managerId = req.user.id;
-        registrationData.managerName = req.user.name || registrationData.managerName || 'Anthony Davis';
-        registrationData.managerEmail = req.user.email || registrationData.managerEmail || 'manager@pinevela.com';
-        registrationData.managerPhone = req.user.phone || registrationData.managerPhone || '+233 24 123 4567';
-        registrationData.managerPhoto = req.user.photo || req.user.avatar || (req.user as any).photoUrl || (req.user as any).avatarUrl || registrationData.managerPhoto || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80';
+        registrationData.managerName = req.user.name || '';
+        registrationData.managerEmail = req.user.email || '';
+        registrationData.managerPhone = req.user.phone || registrationData.managerPhone || null;
+        registrationData.managerPhoto = req.user.photo || req.user.avatar || (req.user as any).photoUrl || (req.user as any).avatarUrl || registrationData.managerPhoto || null;
       }
 
       const result = await dbRegisterHostelAtomic(registrationData, hostels, req.user?.id);
@@ -9374,36 +8269,36 @@ async function startServer() {
           id: `hv-${Date.now()}`,
           hostelId: result.hostel.id,
           hostelName: result.hostel.name,
-          location: result.hostel.location || `${result.hostel.city || 'Accra'}, Ghana`,
-          digitalAddress: result.hostel.digitalAddress || 'GA-183-9022',
+          location: result.hostel.location || registrationData.location || null,
+          digitalAddress: registrationData.digitalAddress || null,
           managerId: req.user.id,
           managerName: registrationData.managerName,
           managerEmail: registrationData.managerEmail,
           managerPhone: registrationData.managerPhone,
           managerPhoto: registrationData.managerPhoto,
-          proofOfOwnershipType: 'Land Title / Municipal Registration',
-          proofOfOwnershipDocumentUrl: result.hostel.imageUrl || result.hostel.image || 'https://images.unsplash.com/photo-1555854877-bab0e564b8d5?auto=format&fit=crop&w=400&q=80',
-          proofOfOwnershipDocumentFileName: 'property-deed.pdf',
-          authorityRelationship: 'Property Owner',
-          paymentStatus: 'paid',
-          paymentAmount: 50.00,
-          paymentReference: `PAY-PV50-${Date.now().toString().slice(-6)}`,
-          paymentMethod: 'direct_agreement',
-          paymentDate: now,
-          totalCapacity: result.hostel.totalCapacity || 100,
-          totalBlocks: result.hostel.totalBlocks || 1,
-          pricePerYear: result.hostel.price || 3500,
+          proofOfOwnershipType: registrationData.proofOfOwnershipType || null,
+          proofOfOwnershipDocumentUrl: registrationData.proofOfOwnershipDocumentUrl || null,
+          proofOfOwnershipDocumentFileName: registrationData.proofOfOwnershipDocumentFileName || null,
+          authorityRelationship: registrationData.authorityRelationship || null,
+          paymentStatus: 'pending',
+          paymentAmount: null,
+          paymentReference: null,
+          paymentMethod: null,
+          paymentDate: null,
+          totalCapacity: result.hostel.totalCapacity,
+          totalBlocks: registrationData.totalBlocks || null,
+          pricePerYear: registrationData.pricePerYear || result.hostel.price || null,
           currency: result.hostel.currency || 'GHS',
           imageUrl: result.hostel.imageUrl || result.hostel.image,
           image: result.hostel.image || result.hostel.imageUrl,
           status: 'under_admin_review',
           systemValidation: {
-            digitalAddressFormatValid: true,
-            ownershipEvidencePresent: true,
-            capacityConsistent: true,
-            duplicateHostelCheck: 'clean'
+            digitalAddressFormatValid: null,
+            ownershipEvidencePresent: Boolean(registrationData.proofOfOwnershipDocumentUrl),
+            capacityConsistent: null,
+            duplicateHostelCheck: 'pending'
           },
-          adminNotes: 'Manager completed 10-step wizard with fee agreement. Awaiting review.',
+          adminNotes: 'Property registration submitted. Awaiting administrator review and payment verification.',
           submittedAt: now,
           createdAt: now,
           updatedAt: now
@@ -9440,7 +8335,7 @@ async function startServer() {
       return res.status(201).json(result);
     } catch (err: any) {
       console.error("Hostel registration endpoint error:", err);
-      return res.status(500).json({ error: err.message || "Failed to complete hostel registration" });
+      return res.status(err.status || 500).json({ error: err.message || "Failed to complete hostel registration" });
     }
   });
 
@@ -9534,64 +8429,7 @@ async function startServer() {
             (matchedUser.user as any).isVerified = true;
             (matchedUser.user as any).verificationStatus = 'approved';
 
-            // Programmatically deliver a welcome message to the manager's messenger inbox from the admin
-            try {
-              const adminId = req.user?.id || 'admin_101';
-              const managerId = matchedUser.user?.id || matchedUser.id || mgrId;
-              
-              // Find or create DM room
-              let existingRoom = dmRooms.find(r => 
-                (r.user1Id === adminId && r.user2Id === managerId) ||
-                (r.user1Id === managerId && r.user2Id === adminId)
-              );
-              
-              let roomId;
-              if (existingRoom) {
-                roomId = existingRoom.id;
-                existingRoom.status = 'accepted';
-              } else {
-                roomId = `room-${adminId.substring(0, 5)}-${managerId.substring(0, 5)}-${Date.now()}`;
-                const newRoom = {
-                  id: roomId,
-                  user1Id: adminId,
-                  user2Id: managerId,
-                  status: 'accepted',
-                  createdAt: new Date().toISOString()
-                };
-                await dbCreateDMRoom(newRoom, dmRooms);
-              }
 
-              // Create welcome message
-              const welcomeContent = `Welcome to PineVela! Your hostel property "${target.name}" has been officially approved by the university housing board. You can now access your manager dashboard, view operational statistics, and start accepting direct student residence bookings. Let us know if you need any assistance managing your hostel.`;
-              
-              const newMsg = {
-                id: `msg-welcome-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-                channelType: 'dm',
-                channelId: roomId,
-                senderId: adminId,
-                senderName: req.user?.name || 'PineVela Admin',
-                senderAvatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
-                messageType: 'text',
-                content: welcomeContent,
-                reactions: {},
-                createdAt: new Date().toISOString()
-              };
-              
-              await dbCreateChatMessage(newMsg, chatMessages);
-
-              // Create system notification for the manager
-              await dbCreateNotification({
-                id: `notif-welcome-${Date.now()}`,
-                studentId: managerId,
-                title: 'Hostel Approved & Welcomed',
-                message: `Congratulations! Your hostel property "${target.name}" is approved. Check your messenger for the welcome message from PineVela Admin.`,
-                category: 'verification',
-                date: new Date().toISOString().split('T')[0],
-                read: false
-              }, notifications);
-            } catch (chatErr) {
-              console.error("Error creating welcome chat message for approved manager:", chatErr);
-            }
           }
 
           const mReq = managerRequests.find(r => 
@@ -9783,57 +8621,12 @@ async function startServer() {
   // Dedicated image upload endpoint - Admin & Managers
   app.post("/api/storage/upload-hostel-image", requireAuth(["admin", "manager"]), async (req: any, res) => {
     try {
-      const { fileName, fileType, fileData } = req.body;
-      if (!fileData) {
-        return res.status(400).json({ error: "No image file data provided" });
-      }
-
-      const cleanName = (fileName || 'hostel.jpg').replace(/[^a-zA-Z0-9._-]/g, '_');
-
-      // Decode base64 payload
-      let buffer: Buffer;
-      if (typeof fileData === 'string' && fileData.startsWith('data:')) {
-        const matches = fileData.match(/^data:([^;]+);base64,(.+)$/);
-        if (matches) {
-          buffer = Buffer.from(matches[2], 'base64');
-        } else {
-          buffer = Buffer.from(fileData, 'base64');
-        }
-      } else {
-        buffer = Buffer.from(fileData, 'base64');
-      }
-
-      // Store locally in /uploads/hostels and serve statically
-      const fs = await import('fs');
-      const uploadsDir = path.join(process.cwd(), 'uploads', 'hostels');
-      if (!fs.existsSync(uploadsDir)) {
-        fs.mkdirSync(uploadsDir, { recursive: true });
-      }
-      if (buffer.length > 30 * 1024 * 1024) {
-        return res.status(400).json({ error: "Image exceeds 30MB limit." });
-      }
-      const allowed = (fileType || '').toLowerCase();
-      if (allowed && !allowed.startsWith('image/')) {
-        return res.status(400).json({ error: "Only image uploads are allowed." });
-      }
-      const localFileName = `${Date.now()}-${cleanName}`;
-      const localFilePath = path.join(uploadsDir, localFileName);
-      // Ensure resolved path stays under uploadsDir (path traversal guard)
-      if (!localFilePath.startsWith(uploadsDir)) {
-        return res.status(400).json({ error: "Invalid file path." });
-      }
-      fs.writeFileSync(localFilePath, buffer);
-
-      const publicUrl = `/uploads/hostels/${localFileName}`;
-      return res.json({
-        success: true,
-        imageUrl: publicUrl,
-        imagePath: `uploads/hostels/${localFileName}`,
-        storageType: 'local-persistent'
-      });
+      return res.json(await imageStorage.save(req.body, bytes => resources.reserveUpload(`${req.user.role}:${req.user.id}`, req.ip || req.socket.remoteAddress || 'unknown', bytes)));
     } catch (err: any) {
-      console.error("Image upload route error:", err);
-      return res.status(500).json({ error: err.message || "Failed to upload image" });
+      if (err instanceof ResourceLimitError) return resourceFailure(res, err);
+      if (err instanceof ImageUploadError) return res.status(err.status).json({ error: err.message });
+      console.error('Image upload could not be persisted.');
+      return res.status(500).json({ error: 'Failed to save image. Please try again.' });
     }
   });
 
@@ -9910,65 +8703,28 @@ async function startServer() {
   });
 
   app.put("/api/hostels/:id", requireAuth(["admin", "manager"]), async (req: any, res) => {
-    const { id } = req.params;
-    const list = await dbGetHostels(hostels);
-    const existing = list.find(h => h.id === id) || hostels.find(h => h.id === id);
-    if (!existing) {
-      const newHostel = {
-        id,
-        name: req.body.name || 'Hostel Property',
-        location: req.body.location || 'Campus Road, Accra, Ghana',
-        wing: req.body.wing || 'North Wing',
-        status: req.body.status || 'Open',
-        bedsLeft: Number(req.body.bedsLeft ?? req.body.availableSpaces ?? 50),
-        totalCapacity: Number(req.body.totalCapacity ?? 100),
-        availableSpaces: Number(req.body.availableSpaces ?? req.body.bedsLeft ?? 50),
-        price: Number(req.body.price || 3500),
-        rating: 4.8,
-        ...req.body
-      };
-      const created = await dbCreateHostel(newHostel, hostels);
+    try {
+      const { id } = req.params;
+      const list = await dbGetHostels(hostels);
+      const existing = list.find(h => h.id === id);
+      if (!existing) return res.status(404).json({ error: "Hostel not found" });
+      if (!canUpdateHostel(req.user, existing)) {
+        return res.status(403).json({ error: "You are not authorized to update this hostel" });
+      }
+      const updates = buildHostelUpdate(req.body, req.user, existing);
+      const updated = await dbUpdateHostel(id, updates, hostels);
+      if (!updated) return res.status(404).json({ error: "Hostel not found" });
+      // syncStore must persist the updated authoritative list, not a stale copy.
+      hostels = list;
       syncStore();
-      return res.json(created.hostel || created || newHostel);
+      return res.json(updated);
+    } catch (err: any) {
+      if (err instanceof HostelUpdateValidationError) {
+        return res.status(400).json({ error: err.message });
+      }
+      console.error("Error updating hostel:", err);
+      return res.status(500).json({ error: "Failed to update hostel" });
     }
-    const updated = await dbUpdateHostel(id, req.body, hostels);
-    syncStore();
-    res.json(updated);
-  });
-
-  // --- Protected Booking Requests Endpoints ---
-  app.get("/api/booking-requests", requireAuth(["admin", "manager"]), async (req, res) => {
-    const list = await dbGetBookingRequests(bookingRequests);
-    res.json(list);
-  });
-
-  app.post("/api/booking-requests", requireAuth(["student"]), async (req: any, res) => {
-    const newRequest = {
-      id: `book-new-${Date.now()}`,
-      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
-      status: 'Pending',
-      ...req.body
-    };
-    const saved = await dbCreateBookingRequest(newRequest, bookingRequests);
-    await dbCreateActivity({
-      id: `act-new-${Date.now()}`,
-      text: `Booking request filed by ${saved.studentName} for ${saved.hostelName}`,
-      time: 'Just now',
-      type: 'info'
-    }, activities);
-    res.status(201).json(saved);
-  });
-
-  app.put("/api/booking-requests/:id", requireAuth(["admin", "manager"]), async (req: any, res) => {
-    const { id } = req.params;
-    const { status } = req.body;
-    const list = await dbGetBookingRequests(bookingRequests);
-    const reqIndex = list.findIndex(r => r.id === id);
-    if (reqIndex === -1) {
-      return res.status(404).json({ error: "Booking request not found" });
-    }
-    const updated = await dbUpdateBookingRequest(id, status, bookingRequests);
-    res.json(updated);
   });
 
   // --- Protected Issue Reports Endpoints ---
@@ -10278,11 +9034,12 @@ async function startServer() {
   app.post("/api/issue-reports/:id/assign", requireAuth(["manager", "admin"]), async (req: any, res) => {
     try {
       const { id } = req.params;
-      const { staffId, staffName, staffRole, staffEmail, staffPhone, staffPhoto, timeframe, customDeadline } = req.body;
 
       const list = await dbGetIssueReports(issueReports);
       const existing = list.find((i: any) => i.id === id);
       if (!existing) return res.status(404).json({ error: "Issue report not found" });
+      req.body = authorizeIssueAction("assign", req.user, existing, getStoreInstance(), req.body);
+      const { staffId, staffName, staffRole, staffEmail, staffPhone, staffPhoto, timeframe, customDeadline } = req.body;
 
       const assignedAt = new Date().toISOString();
       let deadline = customDeadline || null;
@@ -10318,10 +9075,12 @@ async function startServer() {
       const finalStaffPhone = staffPhone || matchedStaff?.phone || '';
       const finalStaffPhoto = staffPhoto || matchedStaff?.avatar || matchedStaff?.profilePicture || '';
 
-      const logs = existing.historyLogs || [];
+      const logs = [...(existing.historyLogs || [])];
       logs.push({
         action: 'Manager Reviewed & Assigned Staff',
         actor: req.user.name || 'Hostel Manager',
+        actorId: req.user.id,
+        actorRole: req.user.role,
         timestamp: new Date().toISOString(),
         note: `Manager reviewed complaint and assigned ${finalStaffName} (${finalStaffRole}) with a ${timeframe || '24h'} resolution deadline.`
       });
@@ -10349,6 +9108,9 @@ async function startServer() {
           staffRescheduleRequested: false,
           rescheduleRequested: false,
           rescheduleApproved: false,
+          rescheduleDeclined: false,
+          studentConfirmed: false,
+          studentAcceptedResolved: false,
           historyLogs: logs
         },
         issueReports
@@ -10357,7 +9119,7 @@ async function startServer() {
       // 1. Send notification to assigned staff member
       const staffNotif = {
         id: `notif-staff-${Date.now()}`,
-        userId: staffId,
+        userId: matchedStaff.userId,
         recipientEmail: finalStaffEmail,
         staffEmail: finalStaffEmail,
         type: 'task_assigned',
@@ -10392,23 +9154,27 @@ async function startServer() {
 
       res.json(updated);
     } catch (err: any) {
+      if (err instanceof IssueWorkflowError) return res.status(err.status).json({ error: err.message });
       console.error("Error assigning staff:", err);
       res.status(500).json({ error: "Failed to assign staff" });
     }
   });
 
   // Staff accepts task assignment
-  app.post("/api/issue-reports/:id/accept-assignment", requireAuth(["staff", "user", "admin", "manager", "resident", "student", "employee", "artisan"]), async (req: any, res) => {
+  app.post("/api/issue-reports/:id/accept-assignment", requireAuth(["staff"]), async (req: any, res) => {
     try {
       const { id } = req.params;
       const list = await dbGetIssueReports(issueReports);
       const existing = list.find((i: any) => i.id === id);
       if (!existing) return res.status(404).json({ error: "Issue report not found" });
+      req.body = authorizeIssueAction("accept-assignment", req.user, existing, getStoreInstance(), req.body);
 
-      const logs = existing.historyLogs || [];
+      const logs = [...(existing.historyLogs || [])];
       logs.push({
         action: 'Task Accepted by Staff',
         actor: req.user.name || 'Staff Member',
+        actorId: req.user.id,
+        actorRole: req.user.role,
         timestamp: new Date().toISOString(),
         note: 'Staff accepted task and is actively attending to the repair.'
       });
@@ -10469,24 +9235,28 @@ async function startServer() {
 
       res.json(updated);
     } catch (err: any) {
+      if (err instanceof IssueWorkflowError) return res.status(err.status).json({ error: err.message });
       console.error("Error accepting task:", err);
       res.status(500).json({ error: "Failed to accept task" });
     }
   });
 
   // Staff declines task assignment and gives reason why they cannot attend to it
-  app.post("/api/issue-reports/:id/staff-decline", requireAuth(["staff", "user", "admin", "manager", "resident", "student", "employee", "artisan"]), async (req: any, res) => {
+  app.post("/api/issue-reports/:id/staff-decline", requireAuth(["staff"]), async (req: any, res) => {
     try {
       const { id } = req.params;
       const { reason } = req.body;
       const list = await dbGetIssueReports(issueReports);
       const existing = list.find((i: any) => i.id === id);
       if (!existing) return res.status(404).json({ error: "Issue report not found" });
+      req.body = authorizeIssueAction("staff-decline", req.user, existing, getStoreInstance(), req.body);
 
-      const logs = existing.historyLogs || [];
+      const logs = [...(existing.historyLogs || [])];
       logs.push({
         action: 'Task Declined by Staff',
         actor: req.user.name || 'Staff Member',
+        actorId: req.user.id,
+        actorRole: req.user.role,
         timestamp: new Date().toISOString(),
         note: `Staff stated they cannot attend at the moment. Reason: ${reason || 'No reason specified'}`
       });
@@ -10528,27 +9298,31 @@ async function startServer() {
 
       res.json(updated);
     } catch (err: any) {
+      if (err instanceof IssueWorkflowError) return res.status(err.status).json({ error: err.message });
       console.error("Error declining task:", err);
       res.status(500).json({ error: "Failed to decline task" });
     }
   });
 
   // Staff requests rescheduling with explanation/reasons
-  app.post("/api/issue-reports/:id/staff-reschedule", requireAuth(["staff", "user", "admin", "manager", "resident", "student", "employee", "artisan"]), async (req: any, res) => {
+  app.post("/api/issue-reports/:id/staff-reschedule", requireAuth(["staff"]), async (req: any, res) => {
     try {
       const { id } = req.params;
       const { reason, requestedTimeframe, requestedDate } = req.body;
       const list = await dbGetIssueReports(issueReports);
       const existing = list.find((i: any) => i.id === id);
       if (!existing) return res.status(404).json({ error: "Issue report not found" });
+      req.body = authorizeIssueAction("staff-reschedule", req.user, existing, getStoreInstance(), req.body);
 
       const finalTimeframe = requestedTimeframe || '24h';
       const finalReason = reason || 'Required spare parts/special tools or scheduling clash';
 
-      const logs = existing.historyLogs || [];
+      const logs = [...(existing.historyLogs || [])];
       logs.push({
         action: 'Reschedule Requested by Staff',
         actor: req.user.name || existing.assignedStaffName || 'Staff Member',
+        actorId: req.user.id,
+        actorRole: req.user.role,
         timestamp: new Date().toISOString(),
         note: `Staff requested reschedule to timeframe: ${finalTimeframe}. Reason: ${finalReason}`
       });
@@ -10593,6 +9367,7 @@ async function startServer() {
 
       res.json(updated);
     } catch (err: any) {
+      if (err instanceof IssueWorkflowError) return res.status(err.status).json({ error: err.message });
       console.error("Error requesting reschedule:", err);
       res.status(500).json({ error: "Failed to request reschedule" });
     }
@@ -10607,6 +9382,7 @@ async function startServer() {
       const list = await dbGetIssueReports(issueReports);
       const existing = list.find((i: any) => i.id === id);
       if (!existing) return res.status(404).json({ error: "Issue report not found" });
+      req.body = authorizeIssueAction("approve-reschedule", req.user, existing, getStoreInstance(), req.body);
 
       const newTf = approvedTimeframe || existing.staffRequestedTimeframe || existing.requestedTimeframe || '24h';
       const now = new Date();
@@ -10627,10 +9403,12 @@ async function startServer() {
         newDeadline = new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString();
       }
 
-      const logs = existing.historyLogs || [];
+      const logs = [...(existing.historyLogs || [])];
       logs.push({
         action: 'Reschedule Approved by Manager',
         actor: req.user.name || 'Hostel Manager',
+        actorId: req.user.id,
+        actorRole: req.user.role,
         timestamp: new Date().toISOString(),
         note: `Manager approved extension. New allocated fix timeframe: ${newTf}. Deadline: ${new Date(newDeadline).toLocaleString()}`
       });
@@ -10691,6 +9469,7 @@ async function startServer() {
 
       res.json(updated);
     } catch (err: any) {
+      if (err instanceof IssueWorkflowError) return res.status(err.status).json({ error: err.message });
       console.error("Error approving reschedule:", err);
       res.status(500).json({ error: "Failed to approve reschedule" });
     }
@@ -10705,11 +9484,14 @@ async function startServer() {
       const list = await dbGetIssueReports(issueReports);
       const existing = list.find((i: any) => i.id === id);
       if (!existing) return res.status(404).json({ error: "Issue report not found" });
+      req.body = authorizeIssueAction("decline-reschedule", req.user, existing, getStoreInstance(), req.body);
 
-      const logs = existing.historyLogs || [];
+      const logs = [...(existing.historyLogs || [])];
       logs.push({
         action: 'Reschedule Declined by Manager',
         actor: req.user.name || 'Hostel Manager',
+        actorId: req.user.id,
+        actorRole: req.user.role,
         timestamp: new Date().toISOString(),
         note: `Manager declined extension request. Reason: ${reason || 'Current SLA timeline stands'}`
       });
@@ -10747,13 +9529,14 @@ async function startServer() {
 
       res.json(updated);
     } catch (err: any) {
+      if (err instanceof IssueWorkflowError) return res.status(err.status).json({ error: err.message });
       console.error("Error declining reschedule:", err);
       res.status(500).json({ error: "Failed to decline reschedule" });
     }
   });
 
   // Staff submits completion form with completion notes & photo proof
-  app.post("/api/issue-reports/:id/staff-complete", requireAuth(["staff", "user", "admin", "manager", "resident", "student", "employee", "artisan"]), async (req: any, res) => {
+  app.post("/api/issue-reports/:id/staff-complete", requireAuth(["staff"]), async (req: any, res) => {
     try {
       const { id } = req.params;
       const { completionNotes, completionPhoto, completionPhotos } = req.body;
@@ -10761,14 +9544,17 @@ async function startServer() {
       const list = await dbGetIssueReports(issueReports);
       const existing = list.find((i: any) => i.id === id);
       if (!existing) return res.status(404).json({ error: "Issue report not found" });
+      req.body = authorizeIssueAction("staff-complete", req.user, existing, getStoreInstance(), req.body);
 
       const finalPhotos = Array.isArray(completionPhotos) ? completionPhotos : (completionPhoto ? [completionPhoto] : []);
       const finalNotes = completionNotes || 'Repairs fully carried out and tested on site.';
 
-      const logs = existing.historyLogs || [];
+      const logs = [...(existing.historyLogs || [])];
       logs.push({
         action: 'Staff Marked Fix Complete',
         actor: req.user.name || existing.assignedStaffName || 'Staff Member',
+        actorId: req.user.id,
+        actorRole: req.user.role,
         timestamp: new Date().toISOString(),
         note: `Technician submitted fix details: "${finalNotes}". Awaiting resident verification.`
       });
@@ -10830,14 +9616,17 @@ async function startServer() {
 
       res.json(updated);
     } catch (err: any) {
+      if (err instanceof IssueWorkflowError) return res.status(err.status).json({ error: err.message });
       console.error("Error submitting staff completion:", err);
       res.status(500).json({ error: "Failed to submit completion form" });
     }
   });
 
   // Student confirms resolution, writes review and rates staff
-  app.post("/api/issue-reports/:id/student-confirm", requireAuth(["user", "student", "admin", "manager"]), async (req: any, res) => {
+  app.post("/api/issue-reports/:id/student-confirm", requireAuth(["student", "resident"]), async (req: any, res) => {
     try {
+      const room = activeResidentRoom(req.user, getStoreInstance());
+      if (!room) return res.status(403).json({ error: "Activate your room to review a repair." });
       const { id } = req.params;
       const { isResolved, feedback, studentAcceptedResolved, studentFeedback, rating, reviewText } = req.body;
       const resolvedFlag = isResolved !== undefined ? isResolved : (studentAcceptedResolved !== undefined ? studentAcceptedResolved : true);
@@ -10847,11 +9636,16 @@ async function startServer() {
       const list = await dbGetIssueReports(issueReports);
       const existing = list.find((i: any) => i.id === id);
       if (!existing) return res.status(404).json({ error: "Issue report not found" });
+      req.body = authorizeIssueAction("student-confirm", req.user, existing, getStoreInstance(), req.body);
 
-      const logs = existing.historyLogs || [];
+      if (existing.hostelId !== room.hostelId || !canEditIssueDetails(req.user, existing, hostels)) return res.status(403).json({ error: "Review only repairs reported by your activated room account." });
+      if (!Number.isInteger(starRating) || starRating < 1 || starRating > 5 || typeof feedbackText !== "string" || feedbackText.length > 3000) return res.status(400).json({ error: "Enter a rating from 1 to 5 and valid feedback." });
+      const logs = [...(existing.historyLogs || [])];
       logs.push({
         action: resolvedFlag ? 'Resident Confirmed Resolution & Rated Staff' : 'Resident Reported Incomplete Fix',
         actor: req.user.name || existing.studentName || 'Student Resident',
+        actorId: req.user.id,
+        actorRole: req.user.role,
         timestamp: new Date().toISOString(),
         note: resolvedFlag 
           ? `Resident verified repair as completed. Rating: ${starRating}/5 stars. Feedback: "${feedbackText || 'Work completed to satisfaction.'}"`
@@ -10888,6 +9682,7 @@ async function startServer() {
       const updated = await dbUpdateIssueReport(
         id,
         {
+          staffCompleted: resolvedFlag === true,
           studentAcceptedResolved: resolvedFlag === true,
           studentConfirmed: resolvedFlag === true,
           studentResolvedAt: new Date().toISOString(),
@@ -10946,6 +9741,7 @@ async function startServer() {
 
       res.json(updated);
     } catch (err: any) {
+      if (err instanceof IssueWorkflowError) return res.status(err.status).json({ error: err.message });
       console.error("Error confirming resolution by student:", err);
       res.status(500).json({ error: "Failed to confirm resolution" });
     }
@@ -10960,18 +9756,14 @@ async function startServer() {
       const list = await dbGetIssueReports(issueReports);
       const existing = list.find((i: any) => i.id === id);
       if (!existing) return res.status(404).json({ error: "Issue report not found" });
+      req.body = authorizeIssueAction("manager-close", req.user, existing, getStoreInstance(), req.body);
 
       if (existing.closedByManager) {
         return res.json(existing);
       }
 
       // STRICT VALIDATION: If filed by a resident/student, manager CANNOT override or close until the resident confirmed complete
-      const isResidentReport = Boolean(
-        existing.studentId || 
-        existing.studentEmail || 
-        existing.residentId || 
-        (existing.reportedBy && existing.reportedBy.toLowerCase().includes('resident'))
-      );
+      const isResidentReport = needsResidentSignoff(existing, getStoreInstance());
       const wasResidentConfirmed = Boolean(existing.studentConfirmed || existing.studentAcceptedResolved);
 
       if (isResidentReport && !wasResidentConfirmed) {
@@ -10980,10 +9772,12 @@ async function startServer() {
         });
       }
 
-      const logs = existing.historyLogs || [];
+      const logs = [...(existing.historyLogs || [])];
       logs.push({
         action: 'Work Order Closed & Archived by Manager (Success)',
         actor: req.user.name || 'Hostel Manager',
+        actorId: req.user.id,
+        actorRole: req.user.role,
         timestamp: new Date().toISOString(),
         note: managerNotes || (wasResidentConfirmed ? 'Issue verified with resident signoff, closed and archived permanently as success.' : 'Direct manager verification and signoff, closed and archived permanently as success.')
       });
@@ -10993,8 +9787,6 @@ async function startServer() {
         {
           status: 'Resolved',
           closedByManager: true,
-          studentConfirmed: true,
-          studentAcceptedResolved: true,
           closedAt: new Date().toISOString(),
           managerCloseNotes: managerNotes || 'Verified and closed by hostel management.',
           historyLogs: logs
@@ -11030,6 +9822,7 @@ async function startServer() {
 
       res.json(updated);
     } catch (err: any) {
+      if (err instanceof IssueWorkflowError) return res.status(err.status).json({ error: err.message });
       console.error("Error closing task:", err);
       res.status(500).json({ error: "Failed to close task" });
     }
@@ -11038,7 +9831,6 @@ async function startServer() {
   app.put("/api/issue-reports/:id", requireAuth(), async (req: any, res) => {
     try {
       const { id } = req.params;
-      const updates = req.body;
 
       const list = await dbGetIssueReports(issueReports);
       const existingIssue = list.find((i: any) => i.id === id);
@@ -11046,9 +9838,16 @@ async function startServer() {
         return res.status(404).json({ error: "Issue report not found" });
       }
 
+      if (!canEditIssueDetails(req.user, existingIssue, getStoreInstance().hostels || [])) {
+        return res.status(403).json({ error: "You are not authorized to edit this issue report" });
+      }
+      const updates = buildIssueDetailsUpdate(req.body, existingIssue, req.user);
       const updated = await dbUpdateIssueReport(id, updates, issueReports);
       res.json(updated);
     } catch (err: any) {
+      if (err instanceof IssueEditValidationError) {
+        return res.status(400).json({ error: err.message });
+      }
       console.error("Error updating issue report:", err);
       res.status(500).json({ error: "Failed to update issue report" });
     }
@@ -11059,10 +9858,11 @@ async function startServer() {
   // ==========================================
 
   function freshRoomKey(room: any, reserved: Set<string>): string {
-    let code: string;
-    do { code = generateHostelRoomKeyCode(room.hostelName, room.blockName); } while (reserved.has(code));
-    reserved.add(code);
-    return code;
+    for (let attempt = 0; attempt < 32; attempt++) {
+      const code = generateHostelRoomKeyCode(room.hostelName, room.blockName);
+      if (!reserved.has(code)) { reserved.add(code); return code; }
+    }
+    throw new ResourceLimitError(503, 60, 'Room-key capacity is busy. Contact an administrator.');
   }
 
   // Release occupancy, revoke the room identity, and retire the old activation key.
@@ -11104,58 +9904,28 @@ async function startServer() {
     return res.json({ success: true, count: rooms.length, occupantsRemoved, roomKeys: rooms, message: `Keys reshuffled for ${academicYear}. Previous room accounts and keys have been revoked.` });
   });
 
-  // Get Room Keys (Manager gets for their hostel; Admin gets all)
+  // Key listing is scoped before any authorized generation or read.
   app.get("/api/room-keys", requireAuth(["manager", "admin", "staff"]), async (req: any, res) => {
     try {
-      const userRole = req.user.role;
-      const userId = req.user.id;
-      const userEmail = (req.user.email || '').toLowerCase().trim();
-      const requestedHostelId = req.query.hostelId as string;
-
+      const store = getStoreInstance();
       const allHostels = await dbGetHostels(hostels);
-
-      if (requestedHostelId) {
-        const targetHostel = allHostels.find(h => h.id === requestedHostelId);
-        if (userRole === 'manager' && !canManageHostel(req.user, targetHostel)) return res.status(403).json({ error: 'You can only view keys for your own residence.' });
-        if (targetHostel) {
-          await dbGenerateHostelRoomKeys(targetHostel);
-        }
-        const keys = await dbGetRoomKeys(requestedHostelId);
-        return res.json(keys);
+      let permitted = authorizedKeyHostels(req.user, store, allHostels);
+      const requestedId = req.query.hostelId;
+      if (requestedId !== undefined) {
+        if (typeof requestedId !== 'string' || !requestedId.trim()) return res.status(400).json({ error: 'Provide a residence ID.' });
+        const selected = permitted.find(hostel => hostel.id === requestedId);
+        if (!selected) return res.status(req.user.role === 'admin' ? 404 : 403).json({ error: 'This residence is not available to your account.' });
+        permitted = [selected];
       }
-
-      if (userRole === 'manager') {
-        let managerHostels = allHostels.filter(h => 
-          (h.managerId && userId && h.managerId === userId) || 
-          (h.assignedManagerId && userId && h.assignedManagerId === userId) ||
-          (h.managerEmail && userEmail && h.managerEmail.toLowerCase().trim() === userEmail) ||
-          (h.email && userEmail && h.email.toLowerCase().trim() === userEmail)
-        );
-
-
-        // Ensure keys are generated for each manager property
-        for (const mh of managerHostels) {
-          await dbGenerateHostelRoomKeys(mh);
-        }
-
-        const hostelIds = managerHostels.map(h => h.id);
-        const allKeys = await dbGetRoomKeys();
-        const filtered = allKeys.filter(k => 
-          hostelIds.includes(k.hostelId) || 
-          managerHostels.some(h => h.name?.toLowerCase().trim() === k.hostelName?.toLowerCase().trim())
-        );
-        return res.json(filtered.length > 0 ? filtered : allKeys);
-      }
-
-      // Ensure all hostels have keys
-      for (const h of allHostels) {
-        await dbGenerateHostelRoomKeys(h);
-      }
-      const allKeys = await dbGetRoomKeys();
-      res.json(allKeys);
+      // Staff may read existing keys for their roster residence, but cannot generate keys.
+      if (req.user.role !== 'staff') for (const hostel of permitted) await dbGenerateHostelRoomKeys(hostel);
+      const ids = new Set(permitted.map(hostel => hostel.id));
+      const keys = (await dbGetRoomKeys()).filter(room => ids.has(room.hostelId));
+      res.set('Cache-Control', 'private, no-store');
+      return res.json(publicAccountData(keys));
     } catch (err: any) {
-      console.error("Error fetching room keys:", err);
-      res.status(500).json({ error: "Failed to load room keys" });
+      if (err instanceof ResourceLimitError) return resourceFailure(res, err);
+      return res.status(500).json({ error: "Failed to load room keys" });
     }
   });
 
@@ -11391,46 +10161,38 @@ async function startServer() {
     }
   });
 
-  // Verify a Digital Room Key (Public or during signup)
-  app.post("/api/room-keys/verify", async (req: any, res) => {
+  persistentData.roomKeyAttempts ||= { limits: [] };
+  const roomKeyGuard = new RoomKeyAttemptGuard(persistentData.roomKeyAttempts, () => savePersistentStore(persistentData));
+  const limitRoomKeyAttempts = (req: any, res: any, next: any) => {
+    res.set('Cache-Control', 'private, no-store');
     try {
-      const { roomKey } = req.body;
-      if (!roomKey || typeof roomKey !== 'string' || roomKey.trim().length < 5) {
-        return res.status(400).json({ valid: false, error: "Please provide a valid room key format (e.g. MAZE-A-123456)." });
+      roomKeyGuard.reserve(req.user.id, req.ip || req.socket.remoteAddress || 'unknown');
+      next();
+    } catch (error) {
+      if (error instanceof RoomKeyAttemptLimit) {
+        res.set('Retry-After', String(error.retryAfter));
+        return res.status(429).json({ valid: false, error: error.message });
       }
+      return res.status(500).json({ valid: false, error: 'Room activation is temporarily unavailable.' });
+    }
+  };
 
-      const keyRecord = await dbGetRoomKeyByCode(roomKey);
-      if (!keyRecord) {
-        return res.status(404).json({ valid: false, error: "Invalid Digital Room Key. No matching room found in our system." });
+  // Verify from the primary account used for activation, with a minimal preview.
+  app.post("/api/room-keys/verify", requireAuth(["user"]), requirePrimaryAccount, limitRoomKeyAttempts, async (req: any, res) => {
+    try {
+      const roomKey = req.body?.roomKey;
+      if (typeof roomKey !== 'string' || roomKey.trim().length < 5 || roomKey.length > 128) {
+        return res.status(400).json({ valid: false, error: "Please provide a valid room key." });
       }
-
-      if (keyRecord.isAssigned || keyRecord.status === 'Occupied') {
-        return res.status(400).json({ valid: false, error: "This Digital Room Key has already been claimed and used. Room keys can only be used once." });
-      }
-
-      // Check if hostel exists
+      const room = await dbGetRoomKeyByCode(roomKey);
       const hostelList = await dbGetHostels(hostels);
-      const hostel = hostelList.find(h => h.id === keyRecord.hostelId || h.name?.toLowerCase() === keyRecord.hostelName?.toLowerCase());
-
-      res.json({
-        valid: true,
-        roomKey: keyRecord.roomKey,
-        hostelId: keyRecord.hostelId,
-        hostelName: keyRecord.hostelName,
-        blockName: keyRecord.blockName,
-        blockInitial: keyRecord.blockInitial,
-        roomNumber: keyRecord.roomNumber,
-        floor: keyRecord.floor,
-        isAssigned: keyRecord.isAssigned,
-        status: keyRecord.status,
-        managerId: hostel?.managerId || '',
-        managerName: hostel?.managerName || 'Hostel Operations Manager',
-        managerPhone: hostel?.phone || hostel?.managerPhone || '+233 24 000 0000',
-        managerEmail: hostel?.managerEmail || hostel?.email || 'manager@pinevela.com'
-      });
+      const hostel = room && hostelList.find(hostel => hostel.id === room.hostelId);
+      if (!room || !hostel || room.isAssigned || ['occupied', 'claimed', 'assigned'].includes(String(room.status).toLowerCase())) {
+        return res.status(400).json({ valid: false, error: "This room key is unavailable. Check the key with your manager." });
+      }
+      return res.json(roomActivationPreview(room, hostel));
     } catch (err: any) {
-      console.error("Error verifying room key:", err);
-      res.status(500).json({ valid: false, error: "Server error verifying room key" });
+      return res.status(500).json({ valid: false, error: "Server error verifying room key" });
     }
   });
 
@@ -11440,7 +10202,7 @@ async function startServer() {
   });
 
   // Unlink / Delete room key from resident account
-  app.post("/api/student/delete-room", requireAuth(["user", "student", "resident"]), (req: any, res) => {
+  app.post("/api/student/delete-room", requireAuth(["user", "student", "resident"]), async (req: any, res) => {
     const store = getStoreInstance();
     const key = String(req.body.roomKey || '').trim().toUpperCase();
     const room = (store.roomKeys || []).find(r => String(r.roomKey).toUpperCase() === key && r.isAssigned);
@@ -11450,7 +10212,7 @@ async function startServer() {
       : String(req.user.roomKey).toUpperCase() === key;
     if (!ownsRoom) return res.status(403).json({ error: 'This room does not belong to your account.' });
     const resident = [...store.users, ...MOCK_USERS].find(u => String(accountData(u).roomKey || u.roomKey || '').toUpperCase() === key && accountRole(u) !== 'user');
-    if (!resident || normalizeEmail(req.body.email) !== normalizeEmail(accountData(resident).email || resident.email) || !credentialValues(resident, false).some(hash => passwordsMatch(req.body.password, hash))) {
+    if (!resident || normalizeEmail(req.body.email) !== normalizeEmail(accountData(resident).email || resident.email) || !await passwordsMatch(req.body.password, ...credentialValues(resident, false))) {
       return res.status(400).json({ error: 'Enter the resident account email and password.' });
     }
     const reserved = new Set<string>([...(store.retiredRoomKeys || []), ...(store.roomKeys || []).map(r => r.roomKey)]);
@@ -11461,7 +10223,7 @@ async function startServer() {
   });
 
   // Claim room key and complete resident onboarding & login
-  app.post(["/api/room-keys/claim", "/api/residents/onboard"], requireAuth(["user"]), requirePrimaryAccount, async (req: any, res) => {
+  app.post(["/api/room-keys/claim", "/api/residents/onboard"], requireAuth(["user"]), requirePrimaryAccount, limitRoomKeyAttempts, async (req: any, res) => {
     try {
       const {
         roomKey,
@@ -11497,7 +10259,7 @@ async function startServer() {
         return res.status(400).json({ error: "Only official KNUST student emails are allowed (e.g. yourname@st.knust.edu.gh or yourname@knust.edu.gh). This serves as your credential for logging into your digital room." });
       }
 
-      const keyRecord = await dbGetRoomKeyByCode(resolvedKey);
+      let keyRecord = await dbGetRoomKeyByCode(resolvedKey);
       if (!keyRecord) {
         return res.status(404).json({ error: `Digital room key "${resolvedKey}" not found. Please double-check the key code.` });
       }
@@ -11505,10 +10267,13 @@ async function startServer() {
       if (keyRecord.isAssigned || keyRecord.status === 'Occupied') return res.status(409).json({ error: 'This room is already occupied.' });
       const rawPassword = password;
       if (typeof rawPassword !== 'string' || rawPassword.length < 6) return res.status(400).json({ error: 'Create a room password with at least 6 characters.' });
-      const hashedPassword = hashCredential(rawPassword);
+      const hashedPassword = await hashCredentialAsync(rawPassword);
 
       // Assign the room key to this resident
       const store = getStoreInstance();
+      // Password derivation yields: refresh allocation state before the atomic assignment.
+      keyRecord = (store.roomKeys || []).find(r => String(r.roomKey).trim().toUpperCase() === resolvedKey);
+      if (!keyRecord || keyRecord.isAssigned || keyRecord.status === 'Occupied') return res.status(409).json({ error: 'This room is no longer available.' });
       if (!store.users) {
         store.users = [];
       }
@@ -11643,7 +10408,6 @@ async function startServer() {
           blockName: keyRecord.blockName,
           roomNumber: keyRecord.roomNumber,
           roomKey: keyRecord.roomKey,
-          token: studentToken,
           managerId: hostel?.managerId || '',
           managerName: hostel?.managerName || 'Hostel Operations Manager',
           managerPhone: hostel?.phone || hostel?.managerPhone || '+233 24 000 0000',
@@ -11670,7 +10434,6 @@ async function startServer() {
         targetUser.roomNumber = keyRecord.roomNumber;
         targetUser.roomKey = keyRecord.roomKey;
         targetUser.password = hashedPassword;
-        targetUser.token = studentToken;
         targetUser.managerId = hostel?.managerId || targetUser.managerId || '';
         targetUser.managerName = hostel?.managerName || targetUser.managerName || 'Hostel Operations Manager';
         targetUser.managerPhone = hostel?.phone || hostel?.managerPhone || targetUser.managerPhone || '+233 24 000 0000';
@@ -11682,13 +10445,14 @@ async function startServer() {
           studentUser.username = resolvedStudentId.toLowerCase().replace(/[^a-z0-9]/g, '');
         }
       }
+      setRecordSession(studentUser, studentToken);
       savePersistentStore(store);
 
       const user = studentUser;
 
       // Also register or update in MOCK_USERS strictly for student role
       const actualUser = user.user ? user.user : user;
-      const userToken = actualUser.token || createSessionToken('stu');
+      const userToken = studentToken;
       const existingMockUserIndex = MOCK_USERS.findIndex(u => {
         const uRole = (u.user?.role || u.role || '').toLowerCase();
         if (uRole !== 'student' && uRole !== 'resident') return false;
@@ -11738,6 +10502,10 @@ async function startServer() {
         });
       }
 
+      const roomEntry = MOCK_USERS.find((u: any) => accountId(u) === userProfile.id && accountRole(u) === 'student');
+      if (roomEntry) setRecordSession(roomEntry, userToken);
+      syncStore();
+
       // 1. Send minimalistic notification to the Manager
       const typeLabel = (resolvedType as string) === 'student' ? 'Student' : 'Resident';
       const notifMessage = `New ${typeLabel} Check-In: ${resolvedName} (${resolvedStudentId}) has unlocked ${keyRecord.blockName} - ${keyRecord.roomNumber} (${keyRecord.hostelName}). Program: ${resolvedProgram} at ${resolvedInstitution}. Contact: ${resolvedPhone || 'N/A'}.`;
@@ -11778,25 +10546,6 @@ async function startServer() {
         type: 'success'
       }, activities);
 
-      // 3. Create initial welcome direct message from the manager
-      try {
-        await dbCreateStudentMessage({
-          studentId: resolvedStudentId,
-          studentName: resolvedName,
-          studentEmail: fallbackEmail,
-          hostelId: keyRecord.hostelId || hostel?.id || '',
-          hostelName: keyRecord.hostelName || hostel?.name || 'PineVela Residence',
-          managerId: hostel?.managerId || '',
-          managerName: hostel?.managerName || 'Hostel Operations Manager',
-          managerEmail: hostel?.managerEmail || hostel?.email || '',
-          senderRole: 'manager',
-          message: `Welcome to ${keyRecord.hostelName}, ${resolvedName}! Your digital room key (${keyRecord.roomKey}) for ${keyRecord.blockName}, ${keyRecord.roomNumber} is now active. If you need any assistance, maintenance, or have questions, feel free to chat with me right here.`,
-          attachmentUrl: undefined
-        });
-      } catch (msgErr) {
-        console.warn("Welcome message error:", msgErr);
-      }
-
       const allUserRooms = (store.roomKeys || []).filter((rk: any) => {
         if (!rk || !rk.isAssigned) return false;
         const rkParentEmail = (rk.parentUserEmail || '').toLowerCase().trim();
@@ -11810,14 +10559,7 @@ async function startServer() {
                rkKey === resolvedKey;
       });
 
-      if (!parentUser) {
-        res.cookie("pv_auth_token", userToken, {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === "production",
-          sameSite: "lax",
-          maxAge: 7 * 24 * 60 * 60 * 1000
-        });
-      }
+      if (!parentUser || req.headers['x-pinevela-switch-session'] === 'true') setSessionCookie(res, userToken);
 
       res.json({
         success: true,
@@ -11845,570 +10587,13 @@ async function startServer() {
       const newKeys = await dbGenerateHostelRoomKeys(hostel);
       res.json({ success: true, count: newKeys.length, generatedKeys: newKeys });
     } catch (err: any) {
+      if (err instanceof ResourceLimitError) return resourceFailure(res, err);
       console.error("Error generating room keys:", err);
       res.status(500).json({ error: "Failed to generate room keys" });
     }
   });
+  installStaffManagement(app, requireAuth, getStoreInstance, syncManagedStore);
 
-  // ==========================================
-  // STUDENT DIRECT MESSAGING WITH MANAGER
-  // ==========================================
-
-  // Get direct messages for student or manager
-  app.get("/api/student-messages", requireAuth(["student", "manager", "admin", "resident", "user", "staff"]), async (req: any, res) => {
-    try {
-      const userRole = (req.user.role || '').toLowerCase();
-      const userEmail = (req.user.email || '').toLowerCase().trim();
-      const userId = (req.user.id || '').toString().trim();
-      const userName = (req.user.name || '').toLowerCase().trim();
-      const studentIdQuery = req.query.studentId as string;
-      const hostelIdQuery = req.query.hostelId as string;
-
-      // Staff accounts use encrypted staff-manager chat rooms (/api/staff-chat/*), never student direct messages
-      if (userRole === 'staff') {
-        return res.json([]);
-      }
-
-      if (userRole === 'student' || userRole === 'resident' || userRole === 'user') {
-        const myStudentId = (req.user.studentId || req.user.id || '').trim();
-        const myEmail = userEmail;
-        const myRoomKey = (req.user.roomKey || '').trim();
-        const myHostelId = (req.user.hostelId || '').trim();
-        const myHostelName = (req.user.hostelName || '').toLowerCase().trim();
-
-        const msgs = await dbGetStudentMessages({
-          studentId: myStudentId,
-          studentEmail: myEmail,
-          roomKey: myRoomKey,
-          userId: req.user.id,
-          exactStudentMatchOnly: true
-        });
-
-        // Ensure resident student messages are only where this resident is the participant and from their active or assigned hostel
-        const finalMsgs = msgs.filter((m: any) => {
-          const mStudentId = (m.studentId || '').toLowerCase().trim();
-          const mStudentEmail = (m.studentEmail || '').toLowerCase().trim();
-          const mUserId = (m.userId || '').toLowerCase().trim();
-          const mRoomKey = (m.roomKey || '').toUpperCase().trim();
-
-          const isMine = (myStudentId && mStudentId && mStudentId === myStudentId.toLowerCase()) ||
-                         (myEmail && mStudentEmail && mStudentEmail === myEmail) ||
-                         (userId && mUserId && mUserId === userId.toLowerCase()) ||
-                         (myRoomKey && mRoomKey && mRoomKey === myRoomKey.toUpperCase());
-
-          if (!isMine) {
-            return false;
-          }
-
-          if (myHostelId && m.hostelId && m.hostelId !== myHostelId) {
-            return false;
-          }
-          if (myHostelName && m.hostelName && m.hostelName.toLowerCase().trim() !== myHostelName) {
-            return false;
-          }
-          return true;
-        });
-
-        return res.json(finalMsgs);
-      }
-
-      if (userRole === 'manager') {
-        const allMsgs = await dbGetStudentMessages();
-        const allHostels = await dbGetHostels(hostels);
-        
-        // Find all hostels registered to or managed by this manager
-        const managerHostels = allHostels.filter(h => 
-          (h.managerId && (h.managerId === userId || h.managerId?.toString().toLowerCase() === userId.toLowerCase())) || 
-          (h.managerEmail && h.managerEmail.toLowerCase().trim() === userEmail) ||
-          (req.user.email && h.managerEmail && h.managerEmail.toLowerCase().trim() === req.user.email.toLowerCase().trim()) ||
-          (userName && h.managerName && h.managerName.toLowerCase().trim() === userName)
-        );
-        const managerHostelIds = new Set(managerHostels.map(h => (h.id || '').toString().toLowerCase().trim()));
-        const managerHostelNames = new Set(managerHostels.map(h => (h.name || '').toLowerCase().trim()));
-
-        // Filter messages strictly to this manager's domain
-        const filteredMsgs = allMsgs.filter((m: any) => {
-          const mHostelId = (m.hostelId || '').toString().toLowerCase().trim();
-          const mHostelName = (m.hostelName || '').toLowerCase().trim();
-          const mManagerId = (m.managerId || '').toString().toLowerCase().trim();
-          const mManagerEmail = (m.managerEmail || '').toLowerCase().trim();
-
-          const isDirectManagerMsg = (mManagerId && mManagerId === userId.toLowerCase()) || (mManagerEmail && mManagerEmail === userEmail);
-          const isManagerHostelMsg = (mHostelId && managerHostelIds.has(mHostelId)) || (mHostelName && managerHostelNames.has(mHostelName));
-
-          if (!isDirectManagerMsg && !isManagerHostelMsg) {
-            return false;
-          }
-
-          if (studentIdQuery) {
-            const sQuery = studentIdQuery.toLowerCase().trim();
-            const matchesStudent = (
-              (m.studentId || '').toLowerCase().trim() === sQuery || 
-              (m.studentEmail && m.studentEmail.toLowerCase().trim() === sQuery)
-            );
-            if (!matchesStudent) return false;
-          }
-
-          if (hostelIdQuery) {
-            const hQuery = hostelIdQuery.toLowerCase().trim();
-            if (mHostelId !== hQuery && mHostelName !== hQuery) return false;
-          }
-
-          return true;
-        });
-
-        return res.json(filteredMsgs);
-      }
-
-      if (userRole === 'admin') {
-        const allMsgs = await dbGetStudentMessages();
-        return res.json(allMsgs);
-      }
-
-      res.json([]);
-    } catch (err: any) {
-      console.error("Error fetching student messages:", err);
-      res.status(500).json({ error: "Failed to load messages" });
-    }
-  });
-
-  // Send a direct message
-  app.post("/api/student-messages", requireAuth(["student", "manager"]), async (req: any, res) => {
-    try {
-      const userRole = req.user.role;
-      const { message, attachmentUrl, studentId, studentName, studentEmail, hostelId, hostelName, managerId, managerName } = req.body;
-
-      if (!message || typeof message !== 'string' || !message.trim()) {
-        return res.status(400).json({ error: "Message content cannot be empty" });
-      }
-
-      const newMsg = await dbCreateStudentMessage({
-        studentId: userRole === 'student' ? (req.user.studentId || req.user.id) : (studentId || 'STUDENT'),
-        studentName: userRole === 'student' ? req.user.name : (studentName || 'Student Resident'),
-        studentEmail: userRole === 'student' ? (req.user.email || '') : (studentEmail || ''),
-        hostelId: hostelId || (userRole === 'manager' ? (req.user.hostelId || '') : (req.user.hostelId || '')),
-        hostelName: hostelName || (userRole === 'manager' ? (req.user.hostelName || 'PineVela Residence') : (req.user.hostelName || 'PineVela Residence')),
-        managerId: userRole === 'manager' ? req.user.id : (managerId || req.user.managerId || ''),
-        managerName: userRole === 'manager' ? req.user.name : (managerName || req.user.managerName || 'Hostel Operations Manager'),
-        managerEmail: userRole === 'manager' ? req.user.email : '',
-        senderRole: userRole,
-        message: message.trim(),
-        attachmentUrl: attachmentUrl || ''
-      });
-
-      res.status(201).json(newMsg);
-    } catch (err: any) {
-      console.error("Error sending student message:", err);
-      res.status(500).json({ error: "Failed to send message" });
-    }
-  });
-
-  // --- Protected Staff Endpoints ---
-  app.get("/api/staff", requireAuth(), async (req: any, res) => {
-    try {
-      const userRole = req.user.role;
-      const userEmail = (req.user.email || '').toLowerCase().trim();
-      const userId = req.user.id;
-
-      let listToReturn = staff;
-      if (userRole === 'manager') {
-        const managerHostels = hostels.filter(h => 
-          (h.id && (h.managerId === userId || (h.managerEmail && h.managerEmail.toLowerCase().trim() === userEmail)))
-        );
-        const hostelIds = new Set(managerHostels.map(h => h.id));
-        listToReturn = staff.filter((s: any) => 
-          (s.hostelId && hostelIds.has(s.hostelId)) || 
-          managerHostels.some(h => h.name && s.hostelName && h.name.toLowerCase().trim() === s.hostelName.toLowerCase().trim()) ||
-          s.managerId === userId ||
-          s.createdById === userId ||
-          (s.managerEmail && s.managerEmail.toLowerCase().trim() === userEmail) ||
-          (s.createdByEmail && s.createdByEmail.toLowerCase().trim() === userEmail)
-        );
-      }
-
-      // Deduplicate staff list by id and email so no duplicate cards ever appear
-      const seen = new Set<string>();
-      const deduped: any[] = [];
-      for (const item of listToReturn) {
-        if (!item) continue;
-        const key = item.id || `${item.email || ''}_${item.hostelId || ''}`;
-        if (!seen.has(key)) {
-          seen.add(key);
-          deduped.push(item);
-        }
-      }
-
-      return res.json(deduped);
-    } catch (err: any) {
-      res.json(staff);
-    }
-  });
-
-  app.post("/api/staff", requireAuth(["admin", "manager"]), async (req: any, res) => {
-    const userRole = req.user.role;
-    const userId = req.user.id;
-    const userEmail = (req.user.email || '').toLowerCase().trim();
-
-    // Determine manager's hostel to tie staff directly to it
-    let hostelId = req.body.hostelId;
-    let hostelName = req.body.hostelName;
-    if (!hostelId && userRole === 'manager') {
-      const managerHostel = hostels.find(h => 
-        (h.managerId && h.managerId === userId) ||
-        (h.managerEmail && h.managerEmail.toLowerCase().trim() === userEmail)
-      ) || hostels[0];
-      if (managerHostel) {
-        hostelId = managerHostel.id;
-        hostelName = managerHostel.name;
-      }
-    }
-
-    const staffId = req.body.id || `staff-new-${Date.now()}`;
-    const staffUserId = req.body.userId || `staff-user-${Date.now()}`;
-
-    // Staff created by managers are automatically verified, approved, active, and tied to hostel
-    const newStaff = {
-      ...req.body,
-      id: staffId,
-      userId: staffUserId,
-      hostelId: hostelId || '',
-      hostelName: hostelName || '',
-      managerId: userId,
-      managerEmail: userEmail,
-      createdById: userId,
-      createdByEmail: userEmail,
-      managerCreated: true,
-      isInternalStaff: true, // internal to hostel, excluded from public user home feed
-      isVerified: true, // auto-verified by the system, no waiting for admin
-      verificationStatus: 'Verified',
-      isApproved: true,
-      status: 'Active',
-      createdAt: new Date().toISOString()
-    };
-
-    const saved = await dbCreateStaff(newStaff);
-
-    // Prevent duplicate insertion into in-memory staff array
-    const existingIndex = staff.findIndex((s: any) => 
-      s.id === saved.id || 
-      (s.email && saved.email && s.email.toLowerCase().trim() === saved.email.toLowerCase().trim() && s.hostelId === saved.hostelId)
-    );
-    if (existingIndex !== -1) {
-      staff[existingIndex] = saved;
-    } else {
-      staff.unshift(saved);
-    }
-
-    // Set staff credentials with the manager's chosen password
-    const baseUsername = (saved?.name || 'staff').toLowerCase().replace(/[^a-z0-9]/g, '') || 'staff';
-    const username = (saved.username || `${baseUsername}${(saved?.id || '000').substring(Math.max(0, (saved?.id || '000').length - 3))}`).toLowerCase().trim();
-    const password = req.body.password && String(req.body.password).trim() ? String(req.body.password).trim() : 'staff123';
-    const email = (saved.email || `${username}@pinevela.com`).toLowerCase().trim();
-
-    const userRecord = {
-      id: saved.userId || saved.id,
-      name: saved.name,
-      role: 'staff',
-      phone: saved.phone || '',
-      email,
-      username,
-      hostelId: saved.hostelId,
-      hostelName: saved.hostelName,
-      managerId: userId,
-      managerEmail: userEmail,
-      isVerified: true,
-      verificationStatus: 'Verified',
-      isApproved: true,
-      status: 'Active',
-      managerCreated: true,
-      isInternalStaff: true,
-      password,
-      plainPassword: password,
-      token: createSessionToken('staff')
-    };
-
-    const existingUser = MOCK_USERS.find(u => 
-      (u.email && u.email.toLowerCase().trim() === email) ||
-      (u.username && u.username.toLowerCase().trim() === username) ||
-      (u.user && (u.user.id === saved.userId || u.user.id === saved.id))
-    );
-
-    if (existingUser) {
-      existingUser.password = password;
-      existingUser.plainPassword = password;
-      existingUser.user = { ...(existingUser.user || {}), ...userRecord };
-    } else {
-      MOCK_USERS.push({
-        email,
-        username,
-        password,
-        plainPassword: password,
-        user: userRecord
-      });
-    }
-
-    // Also synchronize into store.users
-    const store = getStoreInstance();
-    if (!store.users) store.users = [];
-    const storeIdx = store.users.findIndex((u: any) => 
-      (u.email && u.email.toLowerCase().trim() === email) ||
-      (u.username && u.username.toLowerCase().trim() === username) ||
-      u.id === userRecord.id
-    );
-    if (storeIdx !== -1) {
-      store.users[storeIdx] = { ...store.users[storeIdx], ...userRecord };
-    } else {
-      store.users.push(userRecord);
-    }
-
-    // Ensure a private encrypted staff-manager chat room exists for direct communication
-    const staffRoomId = `room-${saved.id}-${userId}`;
-    if (!staffChatRooms) staffChatRooms = [];
-    const existingRoom = staffChatRooms.find((r: any) => 
-      (r.staffId === saved.id || r.staffUserId === saved.userId || (r.staffEmail && r.staffEmail.toLowerCase() === email)) &&
-      (r.managerId === userId || (r.managerEmail && r.managerEmail.toLowerCase() === userEmail))
-    );
-    if (!existingRoom) {
-      staffChatRooms.push({
-        id: staffRoomId,
-        staffId: saved.id,
-        staffUserId: saved.userId,
-        staffName: saved.name,
-        staffRole: saved.role,
-        staffEmail: email,
-        managerId: userId,
-        managerName: req.user.name || 'Property Manager',
-        managerEmail: userEmail,
-        hostelId: saved.hostelId,
-        hostelName: saved.hostelName,
-        createdAt: new Date().toISOString()
-      });
-    }
-
-    syncStore();
-    res.status(201).json(saved);
-  });
-
-  // --- Staff Settings: Profile Sync with Manager's Staff Directory ---
-  app.put("/api/staff/profile", requireAuth(["staff", "manager", "admin"]), async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const { name, username, email, phone, profilePicture, avatar, photo } = req.body;
-      const pic = profilePicture || avatar || photo;
-
-      console.log(`[PROFILE UPDATE DEBUG] Updating profile for userId="${userId}" | req.user:`, JSON.stringify(req.user));
-
-      // 1. Find user in MOCK_USERS or store.users
-      let userIndex = MOCK_USERS.findIndex(u => 
-        (u.user && u.user.id === userId) || 
-        u.username === req.user.username || 
-        (u.email && req.user.email && u.email.toLowerCase() === req.user.email.toLowerCase())
-      );
-
-      console.log(`[PROFILE UPDATE DEBUG] userIndex in MOCK_USERS: ${userIndex}`);
-
-      if (userIndex === -1) {
-        const store = getStoreInstance();
-        const foundInStore = (store.users || []).find((u: any) =>
-          (u.user && u.user.id === userId) ||
-          u.username === req.user.username ||
-          (u.email && req.user.email && u.email.toLowerCase() === req.user.email.toLowerCase())
-        );
-        if (foundInStore) {
-          MOCK_USERS.push(foundInStore.user ? foundInStore : { user: foundInStore, email: req.user.email, id: userId, username: req.user.username });
-          userIndex = MOCK_USERS.length - 1;
-        } else {
-          MOCK_USERS.push({
-            id: userId,
-            email: req.user.email,
-            username: req.user.username || 'staff',
-            user: { ...req.user }
-          });
-          userIndex = MOCK_USERS.length - 1;
-        }
-      }
-
-      const existingUser = MOCK_USERS[userIndex];
-      if (!existingUser.user) {
-        existingUser.user = { ...existingUser };
-      }
-      const oldEmail = (existingUser.email || existingUser.user?.email || '').toLowerCase().trim();
-
-      if (username && username !== existingUser.username) {
-        const cleanUser = username.trim().toLowerCase();
-        const usernameTaken = MOCK_USERS.some(u => u !== existingUser && u.username?.toLowerCase() === cleanUser);
-        if (usernameTaken) {
-          return res.status(400).json({ error: "Username is already taken by another user." });
-        }
-        existingUser.username = cleanUser;
-        (existingUser.user as any).username = cleanUser;
-      }
-
-      if (email && email.toLowerCase().trim() !== oldEmail) {
-        const cleanMail = email.toLowerCase().trim();
-        const emailTaken = MOCK_USERS.some(u => u !== existingUser && u.email?.toLowerCase() === cleanMail);
-        if (emailTaken) {
-          return res.status(400).json({ error: "Email is already registered by another account." });
-        }
-        existingUser.email = cleanMail;
-        (existingUser.user as any).email = cleanMail;
-      }
-
-      if (name) existingUser.user.name = name.trim();
-      if (phone) (existingUser.user as any).phone = phone.trim();
-      if (pic) {
-        existingUser.avatar = pic;
-        existingUser.photo = pic;
-        existingUser.photoUrl = pic;
-        existingUser.avatarUrl = pic;
-        existingUser.profilePicture = pic;
-        (existingUser.user as any).avatar = pic;
-        (existingUser.user as any).photo = pic;
-        (existingUser.user as any).photoUrl = pic;
-        (existingUser.user as any).avatarUrl = pic;
-        (existingUser.user as any).profilePicture = pic;
-      }
-
-      // Also sync store.users
-      const store = getStoreInstance();
-      if (store.users) {
-        store.users.forEach((u: any) => {
-          if (
-            (userId && (u.id === userId || u.user?.id === userId)) ||
-            (oldEmail && (u.email?.toLowerCase().trim() === oldEmail || u.user?.email?.toLowerCase().trim() === oldEmail))
-          ) {
-            if (name) {
-              u.name = name.trim();
-              if (u.user) u.user.name = name.trim();
-            }
-            if (phone) {
-              u.phone = phone.trim();
-              if (u.user) u.user.phone = phone.trim();
-            }
-            if (pic) {
-              u.avatar = pic;
-              u.photo = pic;
-              u.photoUrl = pic;
-              u.avatarUrl = pic;
-              u.profilePicture = pic;
-              if (u.user) {
-                u.user.avatar = pic;
-                u.user.photo = pic;
-                u.user.photoUrl = pic;
-                u.user.avatarUrl = pic;
-                u.user.profilePicture = pic;
-              }
-            }
-          }
-        });
-      }
-
-      // 2. Directly update corresponding staff record in manager's staff directory
-      let updatedStaffRecord = null;
-      for (let i = 0; i < staff.length; i++) {
-        const s = staff[i];
-        const matchesStaff = 
-          s.userId === userId || 
-          s.id === userId || 
-          (oldEmail && s.email && s.email.toLowerCase() === oldEmail) ||
-          (email && s.email && s.email.toLowerCase() === email.toLowerCase().trim());
-
-        if (matchesStaff) {
-          staff[i] = {
-            ...staff[i],
-            name: name ? name.trim() : staff[i].name,
-            username: username || staff[i].username,
-            email: email ? email.toLowerCase().trim() : staff[i].email,
-            phone: phone ? phone.trim() : staff[i].phone,
-            photo: pic || staff[i].photo,
-            avatar: pic || staff[i].avatar,
-            updatedAt: new Date().toISOString()
-          };
-          updatedStaffRecord = staff[i];
-          break;
-        }
-      }
-
-      persistStore();
-      syncStore();
-
-      return res.json({
-        success: true,
-        user: existingUser.user,
-        staffRecord: updatedStaffRecord
-      });
-    } catch (err: any) {
-      console.error("Error updating staff profile:", err);
-      res.status(500).json({ error: err.message || "Failed to update profile" });
-    }
-  });
-
-  
-  app.put("/api/staff/:id", requireAuth(["admin", "manager"]), async (req: any, res) => {
-    const { id } = req.params;
-    const index = staff.findIndex(s => s.id === id || s.userId === id);
-    if (index === -1) {
-      return res.status(404).json({ error: "Staff member not found" });
-    }
-    staff[index] = { ...staff[index], ...req.body, updatedAt: new Date().toISOString() };
-    syncStore();
-    res.json(staff[index]);
-  });
-
-  app.delete("/api/staff/:id", requireAuth(["admin", "manager"]), async (req: any, res) => {
-    try {
-      const { id } = req.params;
-      const removalReason = req.body?.reason || 'Terminated by hostel management';
-      
-      const targetStaff = staff.find(s => s.id === id || s.userId === id);
-      const staffTargetId = targetStaff?.userId || targetStaff?.id || id;
-      const staffTargetEmail = (targetStaff?.email || '').toLowerCase().trim();
-      const staffName = targetStaff?.name || 'Staff Member';
-      const staffRole = targetStaff?.role || 'Staff Member';
-      const hostelName = targetStaff?.hostelName || 'Accredited Hostel';
-
-      // Update any approved applications for this staff to 'Dismissed' so application lock is lifted
-      staffApplications.forEach(a => {
-        const match = a.staffId === staffTargetId || a.staffId === id || (a.staffEmail && a.staffEmail.toLowerCase().trim() === staffTargetEmail);
-        if (match && (a.status === 'Approved' || a.status === 'approved')) {
-          a.status = 'Dismissed';
-          a.dismissedAt = new Date().toISOString();
-          a.dismissalReason = removalReason;
-        }
-      });
-
-      // Notify the staff member that they have been removed and can now apply elsewhere
-      if (staffTargetId) {
-        notifications.unshift({
-          id: `notif-${Date.now()}-dismissed`,
-          studentId: staffTargetId,
-          title: `Employment Concluded at ${hostelName}`,
-          message: `Your position as ${staffRole} at ${hostelName} has been concluded by the property manager (${removalReason}). Your application lock has been lifted and you are now eligible to apply for other hostel roles.`,
-          type: 'warning',
-          date: new Date().toISOString().split('T')[0],
-          read: false
-        });
-      }
-
-      activities.unshift({
-        id: `act-${Date.now()}`,
-        text: `Manager removed ${staffName} from position as ${staffRole} at ${hostelName}`,
-        time: 'Just now',
-        type: 'warning'
-      });
-
-      // Remove from active staff roster
-      staff = staff.filter(s => s.id !== id && s.userId !== id);
-      syncStore();
-      return res.status(200).json({ 
-        success: true, 
-        message: `Staff member ${staffName} successfully removed from roster. Staff application lock lifted.` 
-      });
-    } catch (err: any) {
-      console.error("Error removing staff member:", err);
-      return res.status(500).json({ error: err.message || "Failed to remove staff member" });
-    }
-  });
 
   // --- Staff Voluntary Resignation / Quit Job Endpoint ---
   app.post("/api/staff/resign", requireAuth(["staff"]), async (req: any, res) => {
@@ -12417,54 +10602,38 @@ async function startServer() {
       const userEmail = (req.user.email || '').toLowerCase().trim();
       const reason = req.body?.reason;
 
-      if (!reason || !reason.trim() || reason.trim().length < 5) {
-        return res.status(400).json({ 
-          error: "A valid reason explaining why you want to quit is mandatory before submitting your resignation to management." 
+      if (typeof reason !== 'string' || reason.trim().length < 5 || reason.length > 2000) {
+        return res.status(400).json({
+          error: "A valid reason explaining why you want to quit is mandatory before submitting your resignation to management."
         });
       }
 
       // Find active staff roster entry
-      const staffIdx = staff.findIndex(s => 
-        s.userId === userId || 
-        (s.email && s.email.toLowerCase() === userEmail) || 
-        s.id === userId
-      );
+      const staffIdx = staff.findIndex(s => s.userId === userId);
       const activeStaff = staffIdx !== -1 ? staff[staffIdx] : null;
 
       // Find approved application
-      const appIdx = staffApplications.findIndex(a => 
-        (a.staffId === userId || (a.staffEmail && a.staffEmail.toLowerCase() === userEmail)) &&
-        (a.status === 'Approved' || a.status === 'approved')
-      );
-      const activeApp = appIdx !== -1 ? staffApplications[appIdx] : null;
 
-      if (!activeStaff && !activeApp) {
-        return res.status(400).json({ 
-          error: "You do not have an active hostel employment record to resign from." 
+
+      if (!activeStaff) {
+        return res.status(400).json({
+          error: "You do not have an active hostel employment record to resign from."
         });
       }
 
-      const hostelId = activeStaff?.hostelId || activeApp?.hostelId;
-      const hostelName = activeStaff?.hostelName || activeApp?.hostelName || 'Accredited Hostel';
-      const role = activeStaff?.role || activeApp?.role || 'Staff Member';
-      const staffName = activeStaff?.name || activeApp?.applicantName || req.user.name || 'Staff Member';
+      const hostelId = activeStaff?.hostelId;
+      const hostelName = activeStaff?.hostelName || 'Accredited Hostel';
+      const role = activeStaff?.role || 'Staff Member';
+      const staffName = activeStaff?.name || req.user.name || 'Staff Member';
 
       // Remove from active staff list
       if (staffIdx !== -1) {
         staff.splice(staffIdx, 1);
       }
-
-      // Update all approved applications for this user to 'Resigned'
-      staffApplications.forEach(a => {
-        if (
-          (a.staffId === userId || (a.staffEmail && a.staffEmail.toLowerCase() === userEmail)) &&
-          (a.status === 'Approved' || a.status === 'approved')
-        ) {
-          a.status = 'Resigned';
-          a.resignedAt = new Date().toISOString();
-          a.resignationReason = reason.trim();
-        }
-      });
+      for (const entry of [...MOCK_USERS, ...(getStoreInstance().users || [])]) {
+        if (accountRole(entry) === 'staff' && accountId(entry) === userId) clearRecordSession(entry);
+      }
+      clearRecordSession(activeStaff);
 
       // Record in staffBargains for tracking
       const record = {
@@ -12474,7 +10643,7 @@ async function startServer() {
         staffEmail: userEmail,
         hostelId,
         hostelName,
-        managerId: activeStaff?.managerId || activeApp?.managerId,
+        managerId: activeStaff?.managerId,
         role,
         currentShift: activeStaff?.shift || 'Day Shift',
         currentBlock: activeStaff?.assignedBlock || 'All Wings',
@@ -12488,14 +10657,14 @@ async function startServer() {
 
       // Find target hostel / manager to notify
       const targetHostel = hostels.find(h => h.id === hostelId);
-      const managerId = targetHostel?.managerId || targetHostel?.assignedManagerId || activeApp?.managerId;
+      const managerId = targetHostel?.managerId || targetHostel?.assignedManagerId;
 
       if (managerId) {
         notifications.unshift({
           id: `notif-${Date.now()}-mgr-resign`,
           studentId: managerId,
           title: `Staff Resignation Notice`,
-          message: `${staffName} has resigned from their position as "${role}" at ${hostelName}. Reason provided: "${reason.trim()}". Their position is now open for recruitment.`,
+          message: `${staffName} has resigned from their position as "${role}" at ${hostelName}. Reason provided: "${reason.trim()}". The staff roster has been updated.`,
           type: 'warning',
           date: new Date().toISOString().split('T')[0],
           read: false
@@ -12599,51 +10768,36 @@ async function startServer() {
       }
 
       // Find active staff record
-      const staffIdx = staff.findIndex(s => 
-        s.userId === userId || 
-        (s.email && s.email.toLowerCase() === userEmail) || 
-        s.id === userId
-      );
+      const staffIdx = staff.findIndex(s => s.userId === userId);
       const activeStaff = staffIdx !== -1 ? staff[staffIdx] : null;
 
       // Find approved application
-      const appIdx = staffApplications.findIndex(a => 
-        (a.staffId === userId || (a.staffEmail && a.staffEmail.toLowerCase() === userEmail)) &&
-        (a.status === 'Approved' || a.status === 'approved')
-      );
-      const activeApp = appIdx !== -1 ? staffApplications[appIdx] : null;
 
-      if (!activeStaff && !activeApp) {
+
+      if (!activeStaff) {
         return res.status(400).json({ 
           error: "You do not have an active hostel appointment to quit or bargain for." 
         });
       }
 
-      const hostelId = activeStaff?.hostelId || activeApp?.hostelId;
-      const hostelName = activeStaff?.hostelName || activeApp?.hostelName || 'Accredited Hostel';
-      const role = activeStaff?.role || activeApp?.role || 'Staff Member';
-      const staffName = activeStaff?.name || activeApp?.applicantName || req.user.name || 'Staff Member';
+      const hostelId = activeStaff?.hostelId;
+      const hostelName = activeStaff?.hostelName || 'Accredited Hostel';
+      const role = activeStaff?.role || 'Staff Member';
+      const staffName = activeStaff?.name || req.user.name || 'Staff Member';
 
       // Find manager
       const targetHostel = hostels.find(h => h.id === hostelId);
-      const managerId = targetHostel?.managerId || targetHostel?.assignedManagerId || activeApp?.managerId;
+      const managerId = targetHostel?.managerId || targetHostel?.assignedManagerId;
 
       if (!isBargain) {
         // DIRECT QUIT with mandatory reason
         if (staffIdx !== -1) {
+          clearRecordSession(staff[staffIdx]);
           staff.splice(staffIdx, 1);
         }
-
-        staffApplications.forEach(a => {
-          if (
-            (a.staffId === userId || (a.staffEmail && a.staffEmail.toLowerCase() === userEmail)) &&
-            (a.status === 'Approved' || a.status === 'approved')
-          ) {
-            a.status = 'Resigned';
-            a.resignedAt = new Date().toISOString();
-            a.resignationReason = reasonToQuit.trim();
-          }
-        });
+        for (const entry of [...MOCK_USERS, ...(getStoreInstance().users || [])]) {
+          if (accountRole(entry) === 'staff' && accountId(entry) === userId) clearRecordSession(entry);
+        }
 
         const quitRecord = {
           id: `bargain-${Date.now()}`,
@@ -12669,7 +10823,7 @@ async function startServer() {
             id: `notif-${Date.now()}-mgr-quit`,
             studentId: managerId,
             title: `Staff Resignation Notice`,
-            message: `${staffName} has resigned from their position as "${role}" at ${hostelName}. Reason submitted: "${reasonToQuit.trim()}". Their position is now open for recruitment.`,
+            message: `${staffName} has resigned from their position as "${role}" at ${hostelName}. Reason submitted: "${reasonToQuit.trim()}". The staff roster has been updated.`,
             type: 'warning',
             date: new Date().toISOString().split('T')[0],
             read: false
@@ -12881,7 +11035,7 @@ async function startServer() {
         return res.status(404).json({ error: "Bargain proposal not found" });
       }
 
-      if (bargain.staffId !== userId && bargain.staffEmail?.toLowerCase() !== userEmail) {
+      if (bargain.staffId !== userId) {
         return res.status(403).json({ error: "Unauthorized. This proposal does not belong to you." });
       }
 
@@ -12894,32 +11048,21 @@ async function startServer() {
         bargain.resolvedAt = new Date().toISOString();
 
         // Finalize resignation
-        const staffIdx = staff.findIndex(s => 
-          s.userId === userId || 
-          (s.email && s.email.toLowerCase() === userEmail) || 
-          s.id === userId
-        );
+        const staffIdx = staff.findIndex(s => s.userId === userId);
         if (staffIdx !== -1) {
+          clearRecordSession(staff[staffIdx]);
           staff.splice(staffIdx, 1);
         }
-
-        staffApplications.forEach(a => {
-          if (
-            (a.staffId === userId || (a.staffEmail && a.staffEmail.toLowerCase() === userEmail)) &&
-            (a.status === 'Approved' || a.status === 'approved')
-          ) {
-            a.status = 'Resigned';
-            a.resignedAt = new Date().toISOString();
-            a.resignationReason = `Quit following rejected bargain: ${bargain.reasonToQuit}`;
-          }
-        });
+        for (const entry of [...MOCK_USERS, ...(getStoreInstance().users || [])]) {
+          if (accountRole(entry) === 'staff' && accountId(entry) === userId) clearRecordSession(entry);
+        }
 
         if (bargain.managerId) {
           notifications.unshift({
             id: `notif-${Date.now()}-mgr-quit-post`,
             studentId: bargain.managerId,
             title: `Staff Final Decision: Resigned`,
-            message: `${bargain.staffName} has decided to officially quit their position as ${bargain.role} at ${bargain.hostelName} following the declined bargain. Position is now open.`,
+            message: `${bargain.staffName} has decided to officially quit their position as ${bargain.role} at ${bargain.hostelName} following the declined bargain. The residence roster has been updated.`,
             type: 'warning',
             date: new Date().toISOString().split('T')[0],
             read: false
@@ -12997,68 +11140,15 @@ async function startServer() {
     }
   });
 
-  // --- Registered Residents Endpoint ---
-  app.get(["/api/registered-residents", "/api/public/registered-residents"], async (req, res) => {
+  // Both directory aliases are private; no public resident identity directory is supported.
+  app.get(["/api/registered-residents", "/api/public/registered-residents"], requireAuth(["admin", "manager"]), async (req: any, res) => {
     try {
-      const allKeys = await dbGetRoomKeys().catch(() => []);
-      const claimedKeys = (allKeys || []).filter((k: any) => k && (k.status === 'claimed' || k.studentName || k.assignedStudentId));
-
-      const dbUsers = await dbGetUsers(MOCK_USERS).catch(() => []);
       const store = getStoreInstance();
-      const combinedUsers = [...MOCK_USERS, ...(dbUsers || []), ...(persistentData.users || []), ...(store?.users || [])];
-
-      const residentsMap = new Map<string, any>();
-
-      // 1. Process claimed room keys
-      claimedKeys.forEach((k: any) => {
-        const id = k.assignedStudentId || k.studentId || k.id || `res-${k.roomKey}`;
-        const name = k.studentName || k.assignedStudentName;
-        if (name && !name.includes('Sarah Connor') && !name.includes('Marcus Wright') && !name.includes('Kyle Reese')) {
-          residentsMap.set(id, {
-            id,
-            studentName: name,
-            studentId: k.studentId || k.assignedStudentId || `STU-${id.slice(-4)}`,
-            hostelName: k.hostelName || 'PineVela Residence',
-            roomNumber: k.roomNumber || 'Room 101',
-            blockName: k.blockName || 'Block A',
-            assignedResidentType: 'Student Resident',
-            avatar: k.avatar || 'preset:pine-star'
-          });
-        }
-      });
-
-      // 2. Add authentic registered accounts (student / user / resident roles)
-      combinedUsers.forEach((u: any) => {
-        if (!u) return;
-        const usr = u.user || u;
-        if (!usr || typeof usr !== 'object') return;
-        const role = String(usr.role || '').toLowerCase();
-        const name = (usr.name || usr.username || '').trim();
-        const email = (usr.email || u.email || '').toLowerCase().trim();
-
-        if (name && (role === 'student' || role === 'user' || role === 'resident')) {
-          if (name.includes('Sarah Connor') || name.includes('Marcus Wright') || name.includes('Kyle Reese')) {
-            return;
-          }
-          const id = usr.id || usr.studentId || email || `user-${name}`;
-          if (!residentsMap.has(id)) {
-            residentsMap.set(id, {
-              id,
-              studentName: name,
-              studentId: usr.studentId || usr.id || `STU-${email ? email.split('@')[0].slice(0, 8).toUpperCase() : 'RES'}`,
-              hostelName: usr.hostelName || 'PineVela Residence',
-              roomNumber: usr.roomNumber || 'Room 101',
-              blockName: usr.blockName || 'Block A',
-              assignedResidentType: 'Verified Resident',
-              avatar: usr.avatar || usr.photoUrl || usr.photo || 'preset:pine-star'
-            });
-          }
-        }
-      });
-
-      return res.json(Array.from(residentsMap.values()));
+      const residences = await dbGetHostels(hostels);
+      const rooms = await dbGetRoomKeys();
+      res.set("Cache-Control", "private, no-store");
+      return res.json(privateResidentDirectory(req.user, residences, rooms || [], store.users || []));
     } catch (err: any) {
-      console.error("Error fetching registered residents:", err);
       return res.status(500).json({ error: "Failed to fetch registered residents" });
     }
   });
@@ -13071,7 +11161,7 @@ async function startServer() {
       const combinedUsers = [...MOCK_USERS, ...(dbUsers || []), ...(persistentData.users || []), ...(store?.users || [])];
       
       const mgrs = await dbGetManagerRequests().catch(() => []);
-      const staffList = (store as any)?.staffVerifications || (persistentData as any)?.staffVerifications || (store as any)?.staff || (persistentData as any)?.staff || [];
+      const staffList = (store as any)?.staff || (persistentData as any)?.staff || [];
       const officers = store?.verificationTeams || persistentData?.verificationTeams || [];
       const merchants = store?.digitalMarketStores || persistentData?.digitalMarketStores || [];
 
@@ -13207,1388 +11297,6 @@ async function startServer() {
     }
   });
 
-  // --- Accredited Staff & Job Offers Endpoints ---
-  app.get("/api/accredited-staff", async (req, res) => {
-    try {
-      const dbUsers = await dbGetUsers(MOCK_USERS).catch(() => []);
-      const store = getStoreInstance();
-      const combinedUsers = [...MOCK_USERS, ...(dbUsers || []), ...(persistentData.users || []), ...(store?.users || [])];
-      
-      const allStaffCandidates = [
-        ...(staff || []),
-        ...(persistentData.staff || []),
-        ...combinedUsers
-      ];
-
-      const verifiedStaff = allStaffCandidates.filter(u => {
-        if (!u) return false;
-        const usr = u.user || u;
-        if (!usr || typeof usr !== 'object') return false;
-
-        // Manager-created staff or internal hostel staff do NOT show up in the public users home feed
-        if (usr.managerCreated === true || u.managerCreated === true || usr.isInternalStaff === true || u.isInternalStaff === true) {
-          return false;
-        }
-
-        const vStatus = String(usr.verificationStatus || '').toLowerCase();
-        const username = String(usr.username || '').toLowerCase();
-        const email = String(usr.email || '').toLowerCase();
-        const role = String(usr.role || '').toLowerCase();
-        const staffRole = String(usr.staffRole || '').toLowerCase();
-
-        const isStaff = role === 'staff' || Boolean(staffRole) || username.includes('staff') || email.includes('staff') || usr.isStaff === true;
-        const isVerified = usr.isVerified === true || usr.isVerified === 'true' || vStatus === 'approved' || vStatus === 'verified' || usr.accountStatus === 'Active';
-        
-        return isStaff && isVerified;
-      }).map(u => {
-        const usr = u.user || u;
-        const staffId = usr.id || usr.userId || `staff-${usr.email || Math.random().toString(36).substr(2, 6)}`;
-        const reviews = (staffReviews || []).filter((r: any) => r && (r.staffId === staffId || r.staffEmail === usr.email));
-        const avgRating = reviews.length > 0 
-          ? Number((reviews.reduce((acc: number, r: any) => acc + (Number(r?.rating) || 5), 0) / reviews.length).toFixed(1))
-          : 5.0;
-
-        return {
-          id: staffId,
-          name: usr.name || usr.full_name || usr.managerName || 'Accredited Staff',
-          email: usr.email || usr.managerEmail || '',
-          phone: usr.phone || usr.managerPhone || '',
-          whatsapp: usr.whatsapp || usr.phone || usr.managerPhone || '',
-          specialization: usr.specialization || usr.roleTitle || usr.staffRole || 'General Property Operations',
-          yearsExperience: usr.yearsExperience || '2+ Years',
-          avatar: usr.avatar || usr.profilePicture || usr.photo || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
-          isVerified: true,
-          rating: avgRating,
-          reviewCount: reviews.length,
-          reviews: reviews
-        };
-      });
-
-      const uniqueStaffMap = new Map();
-      verifiedStaff.forEach(s => {
-        const cleanEmail = String(s.email || '').toLowerCase().trim();
-        const key = cleanEmail || s.id;
-        if (key && !uniqueStaffMap.has(key)) {
-          uniqueStaffMap.set(key, s);
-        }
-      });
-
-      res.json(Array.from(uniqueStaffMap.values()));
-    } catch (err: any) {
-      console.warn("Notice fetching accredited staff:", err);
-      res.json([]);
-    }
-  });
-
-  app.get("/api/staff-reviews", async (req: any, res) => {
-    try {
-      const { staffId, staffEmail } = req.query;
-      const store = getStoreInstance();
-      const allReviews = store.staffReviews || staffReviews || [];
-
-      if (staffId || staffEmail) {
-        const cleanEmail = String(staffEmail || '').toLowerCase().trim();
-        const filtered = allReviews.filter((r: any) => 
-          (staffId && (r.staffId === staffId || r.staffId === `staff-${staffId}`)) ||
-          (cleanEmail && r.staffEmail && r.staffEmail.toLowerCase().trim() === cleanEmail)
-        );
-        return res.json(filtered);
-      }
-
-      res.json(allReviews);
-    } catch (err: any) {
-      console.error("Error fetching staff reviews:", err);
-      res.status(500).json({ error: "Failed to fetch staff reviews" });
-    }
-  });
-
-  app.post("/api/staff-reviews", requireAuth(), async (req: any, res) => {
-    try {
-      const { staffId, rating, comment } = req.body;
-      if (!staffId || !rating) {
-        return res.status(400).json({ error: "Staff ID and rating are required" });
-      }
-
-      if (!staffReviews) staffReviews = [];
-      const newReview = {
-        id: `rev-${Date.now()}`,
-        staffId,
-        reviewerId: req.user.id,
-        reviewerName: req.user.name || 'Verified Manager',
-        rating: Number(rating),
-        comment: comment || '',
-        createdAt: new Date().toISOString()
-      };
-
-      staffReviews.unshift(newReview);
-      syncStore();
-      res.status(201).json(newReview);
-    } catch (err: any) {
-      console.error("Error creating staff review:", err);
-      res.status(500).json({ error: "Failed to submit review" });
-    }
-  });
-
-  app.post("/api/job-offers", requireAuth(["manager", "admin"]), async (req: any, res) => {
-    try {
-      let authUser: any = null;
-      const authHeader = req.headers.authorization;
-      if (authHeader && authHeader.startsWith('Bearer ')) {
-        const token = authHeader.split(' ')[1]?.trim();
-        if (token) {
-          const dbUsers = await dbGetUsers(MOCK_USERS).catch(() => []);
-          const combinedUsers = [...MOCK_USERS, ...dbUsers, ...(persistentData.users || [])];
-          const found = combinedUsers.find(u => {
-            if (!u) return false;
-            const uToken = u.token || u.user?.token;
-            return Boolean(uToken) && uToken === token;
-          });
-          if (found) {
-            authUser = found.user ? { ...found.user } : { ...found };
-          }
-        }
-      }
-
-      const {
-        staffId,
-        staffEmail,
-        staffName,
-        workCategory,
-        workOffered,
-        timeAndSchedule,
-        estimatedDuration,
-        location,
-        digitalAddress,
-        wageSalary,
-        paymentMethod,
-        equipmentProvided,
-        contact,
-        requesterName,
-        requesterCategory,
-        requesterNationalId,
-        requesterOrganization,
-        requesterContact,
-        requesterAltPhone,
-        requesterEmail,
-        safetyDeclarationConfirmed,
-        lat,
-        lng
-      } = req.body;
-
-      if (!authUser) {
-        return res.status(401).json({ error: "PineVela account required: Please log in or create an account to hire accredited staff or offer jobs." });
-      }
-
-      if (!staffId && !staffEmail) {
-        return res.status(400).json({ error: "Staff identifier (ID or Email) is required." });
-      }
-      if (!workOffered || !workOffered.trim()) {
-        return res.status(400).json({ error: "Work description is required." });
-      }
-
-      // Lookup staff candidate to ensure all IDs and email are captured for bulletproof delivery
-      const allStaffCandidates = [
-        ...(staff || []),
-        ...(persistentData.staff || []),
-        ...MOCK_USERS,
-        ...(persistentData.users || [])
-      ];
-      const cleanStaffEmail = (staffEmail || '').toLowerCase().trim();
-      const cleanStaffId = String(staffId || '');
-      
-      const matchedStaff = allStaffCandidates.find((c: any) => {
-        if (!c) return false;
-        const usr = c.user || c;
-        const cEmail = (usr.email || c.email || '').toLowerCase().trim();
-        const cId = String(usr.id || c.id || '');
-        const cUserId = String(usr.userId || c.userId || '');
-        return (cleanStaffEmail && cEmail === cleanStaffEmail) || (cleanStaffId && (cId === cleanStaffId || cUserId === cleanStaffId));
-      });
-
-      const targetStaffUser = matchedStaff ? (matchedStaff.user || matchedStaff) : null;
-      const finalStaffId = targetStaffUser ? (targetStaffUser.id || targetStaffUser.userId || cleanStaffId) : cleanStaffId;
-      const finalStaffEmail = targetStaffUser ? (targetStaffUser.email || cleanStaffEmail) : cleanStaffEmail;
-      const finalStaffName = targetStaffUser ? (targetStaffUser.name || staffName || 'Accredited Staff') : (staffName || 'Accredited Staff');
-      const finalStaffUserId = targetStaffUser ? (targetStaffUser.userId || targetStaffUser.id || cleanStaffId) : cleanStaffId;
-
-      if (!jobOffers) jobOffers = [];
-      const newOffer = {
-        id: `offer-${Date.now()}`,
-        staffId: finalStaffId,
-        staffUserId: finalStaffUserId,
-        staffEmail: finalStaffEmail,
-        staffName: finalStaffName,
-        requesterId: authUser?.id || `client-${Date.now()}`,
-        requesterName: requesterName || authUser?.name || 'Verified Client',
-        requesterCategory: requesterCategory || 'Verified Resident',
-        requesterNationalId: requesterNationalId || '',
-        requesterNationalIdMasked: requesterNationalId && requesterNationalId.length > 6 
-          ? `${requesterNationalId.substring(0, 4)}****${requesterNationalId.slice(-3)}` 
-          : (requesterNationalId || 'GHA-NIA-Verified'),
-        requesterOrganization: requesterOrganization || '',
-        requesterPhone: requesterContact || contact || authUser?.phone || '',
-        requesterAltPhone: requesterAltPhone || '',
-        requesterEmail: requesterEmail || authUser?.email || '',
-        digitalAddress: digitalAddress || '',
-        workCategory: workCategory || 'General Maintenance & Handyman',
-        workOffered: workOffered.trim(),
-        timeAndSchedule: timeAndSchedule || 'Immediate / Flexible',
-        estimatedDuration: estimatedDuration || '2 - 3 Hours',
-        location: location || 'Accra, Ghana',
-        lat: Number(lat) || 5.6037,
-        lng: Number(lng) || -0.1870,
-        wageSalary: wageSalary || 'GHS 250 (Negotiable)',
-        paymentMethod: paymentMethod || 'Mobile Money (MoMo) on Completion',
-        equipmentProvided: equipmentProvided || 'Standard site tools available',
-        safetyDeclarationConfirmed: safetyDeclarationConfirmed !== false,
-        contact: contact || requesterContact || authUser?.phone || '',
-        status: 'Pending',
-        createdAt: new Date().toISOString()
-      };
-
-      jobOffers.unshift(newOffer);
-
-      // Notify staff member via system notification
-      if (!notifications) notifications = [];
-      notifications.unshift({
-        id: `notif-offer-${Date.now()}`,
-        studentId: finalStaffId,
-        title: `⚡ New One-Time Job Offer: ${newOffer.workCategory}!`,
-        message: `Work: "${workOffered}" | Client: ${newOffer.requesterName} (${newOffer.requesterCategory}) | Wage: ${wageSalary} | Location: ${location} (${digitalAddress || 'Ghana'}). Check your Offers tab to review and accept.`,
-        type: 'success',
-        date: new Date().toISOString().split('T')[0],
-        read: false
-      });
-
-      syncStore();
-      res.status(201).json(newOffer);
-    } catch (err: any) {
-      console.error("Error creating job offer:", err);
-      res.status(500).json({ error: "Failed to send job offer" });
-    }
-  });
-
-  app.get("/api/staff-job-offers", requireAuth(["staff"]), async (req: any, res) => {
-    try {
-      const userId = String(req.user.id || '');
-      const userEmail = String(req.user.email || '').toLowerCase().trim();
-      const userName = String(req.user.name || '').toLowerCase().trim();
-      const username = String(req.user.username || '').toLowerCase().trim();
-
-      // Collect all possible identifiers for this staff member
-      const myIds = new Set<string>();
-      if (userId) myIds.add(userId);
-      if (req.user.userId) myIds.add(String(req.user.userId));
-      if (req.user.staffId) myIds.add(String(req.user.staffId));
-
-      // Also search staff array and persistentData.staff and staffApplications
-      const allStaffRecords = [...(staff || []), ...(persistentData.staff || [])];
-      allStaffRecords.forEach((s: any) => {
-        if (!s) return;
-        const sEmail = String(s.email || s.user?.email || '').toLowerCase().trim();
-        const sUserId = String(s.userId || s.user?.id || '');
-        const sId = String(s.id || '');
-        if ((sUserId && (sUserId === userId || myIds.has(sUserId))) || (sEmail && userEmail && sEmail === userEmail)) {
-          if (sId) myIds.add(sId);
-          if (sUserId) myIds.add(sUserId);
-        }
-      });
-
-      const allApps = [...(staffApplications || []), ...(persistentData.staffApplications || [])];
-      allApps.forEach((a: any) => {
-        if (!a) return;
-        const aEmail = String(a.email || '').toLowerCase().trim();
-        const aUserId = String(a.userId || '');
-        if ((aUserId && (aUserId === userId || myIds.has(aUserId))) || (aEmail && userEmail && aEmail === userEmail)) {
-          if (a.id) myIds.add(String(a.id));
-          if (aUserId) myIds.add(aUserId);
-        }
-      });
-
-      const offers = (jobOffers || []).filter((o: any) => {
-        if (!o) return false;
-        const oStaffId = String(o.staffId || '');
-        const oStaffUserId = String(o.staffUserId || '');
-        const oStaffEmail = String(o.staffEmail || '').toLowerCase().trim();
-        const oStaffName = String(o.staffName || '').toLowerCase().trim();
-        const oStaffUsername = String(o.staffUsername || '').toLowerCase().trim();
-
-        if (oStaffId && myIds.has(oStaffId)) return true;
-        if (oStaffUserId && myIds.has(oStaffUserId)) return true;
-        if (oStaffEmail && userEmail && oStaffEmail === userEmail) return true;
-        if (oStaffUsername && username && oStaffUsername === username) return true;
-        if (oStaffName && userName && oStaffName === userName) return true;
-
-        // Fallback: check if oStaffId starts with "staff-" and contains email handle
-        if (userEmail && oStaffId.startsWith('staff-') && oStaffId.toLowerCase().includes(userEmail.split('@')[0])) return true;
-
-        return false;
-      });
-
-      // Sort newest first
-      offers.sort((a: any, b: any) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
-
-      res.json(offers);
-    } catch (err: any) {
-      console.error("Error fetching job offers:", err);
-      res.status(500).json({ error: "Failed to fetch job offers" });
-    }
-  });
-
-  app.put("/api/job-offers/:id/accept", requireAuth(["staff"]), async (req: any, res) => {
-    try {
-      const { id } = req.params;
-      const userId = String(req.user.id || '');
-      const userEmail = String(req.user.email || '').toLowerCase().trim();
-
-      if (!jobOffers) jobOffers = [];
-      const offer = jobOffers.find((o: any) => {
-        if (!o || o.id !== id) return false;
-        const oStaffId = String(o.staffId || '');
-        const oStaffUserId = String(o.staffUserId || '');
-        const oStaffEmail = String(o.staffEmail || '').toLowerCase().trim();
-        return oStaffId === userId || oStaffUserId === userId || (userEmail && oStaffEmail === userEmail);
-      });
-
-      if (!offer) {
-        return res.status(404).json({ error: "Job offer not found or unauthorized." });
-      }
-
-      offer.status = 'Accepted';
-      offer.acceptedAt = new Date().toISOString();
-
-      // Notify requester
-      if (!notifications) notifications = [];
-      notifications.unshift({
-        id: `notif-accepted-${Date.now()}`,
-        studentId: offer.requesterId,
-        title: `✅ Job Offer Accepted by Staff!`,
-        message: `${req.user.name || 'PineVela Accredited Staff'} accepted your job offer for "${offer.workOffered}". Direct phone/WhatsApp: ${req.user.phone || '+233 24 123 4567'}.`,
-        type: 'success',
-        date: new Date().toISOString().split('T')[0],
-        read: false
-      });
-
-      syncStore();
-      res.json({ success: true, offer });
-    } catch (err: any) {
-      console.error("Error accepting job offer:", err);
-      res.status(500).json({ error: "Failed to accept job offer" });
-    }
-  });
-
-  app.put("/api/job-offers/:id/decline", requireAuth(["staff"]), async (req: any, res) => {
-    try {
-      const { id } = req.params;
-      const { reason } = req.body;
-      const userId = String(req.user.id || '');
-      const userEmail = String(req.user.email || '').toLowerCase().trim();
-
-      if (!jobOffers) jobOffers = [];
-      const offer = jobOffers.find((o: any) => {
-        if (!o || o.id !== id) return false;
-        const oStaffId = String(o.staffId || '');
-        const oStaffUserId = String(o.staffUserId || '');
-        const oStaffEmail = String(o.staffEmail || '').toLowerCase().trim();
-        return oStaffId === userId || oStaffUserId === userId || (userEmail && oStaffEmail === userEmail);
-      });
-
-      if (!offer) {
-        return res.status(404).json({ error: "Job offer not found or unauthorized." });
-      }
-
-      offer.status = 'Declined';
-      offer.declinedAt = new Date().toISOString();
-      offer.declineReason = reason || 'Staff is currently unavailable for this schedule.';
-
-      // Notify requester
-      if (!notifications) notifications = [];
-      notifications.unshift({
-        id: `notif-declined-${Date.now()}`,
-        studentId: offer.requesterId,
-        title: `Job Offer Update`,
-        message: `The staff member was unable to accept the job offer for "${offer.workOffered}". Reason: ${offer.declineReason}. You may hire another available accredited staff member.`,
-        type: 'info',
-        date: new Date().toISOString().split('T')[0],
-        read: false
-      });
-
-      syncStore();
-      res.json({ success: true, offer });
-    } catch (err: any) {
-      console.error("Error declining job offer:", err);
-      res.status(500).json({ error: "Failed to decline job offer" });
-    }
-  });
-
-  // --- Staff Recruitment & Open Vacancies on Hostels ---
-  app.put("/api/hostels/:id/recruitment", requireAuth(["manager", "admin"]), async (req: any, res) => {
-    try {
-      const { id } = req.params;
-      const { staffHiringOpen, openStaffRoles } = req.body;
-
-      const hostelIndex = hostels.findIndex(h => h.id === id);
-      if (hostelIndex === -1) {
-        return res.status(404).json({ error: "Hostel not found" });
-      }
-
-      hostels[hostelIndex] = {
-        ...hostels[hostelIndex],
-        staffHiringOpen: typeof staffHiringOpen === 'boolean' ? staffHiringOpen : true,
-        openStaffRoles: Array.isArray(openStaffRoles) ? openStaffRoles : []
-      };
-
-      await dbUpdateHostel(id, hostels[hostelIndex], hostels);
-      savePersistentStore(getStoreInstance());
-      syncStore();
-      return res.json({ success: true, hostel: hostels[hostelIndex] });
-    } catch (err: any) {
-      console.error("Error updating hostel recruitment:", err);
-      res.status(500).json({ error: "Failed to update recruitment settings" });
-    }
-  });
-
-  // --- Staff Applications: Apply, Review & Decisions ---
-  // --- Admin Staff Verification Endpoint ---
-  app.get("/api/admin/staff-verifications", requireAuth(["admin"]), async (req: any, res) => {
-    try {
-      const store = getStoreInstance();
-      const storeStaff = store.staff || [];
-      const storeUsers = store.users || [];
-
-      const allCandidates = [
-        ...staff,
-        ...storeStaff,
-        ...MOCK_USERS.map((u: any) => u.user || u),
-        ...storeUsers.map((u: any) => u.user || u)
-      ];
-
-      const staffMap = new Map<string, any>();
-
-      for (const item of allCandidates) {
-        if (!item) continue;
-        const role = (item.role || item.staffRole || '').toLowerCase();
-        if (role !== 'staff' && !item.specialization && !item.staffRole && !item.cvData && !item.nationalId) {
-          continue;
-        }
-
-        const email = (item.email || item.userEmail || '').toLowerCase().trim();
-        const username = (item.username || '').toLowerCase().trim();
-        const id = String(item.id || item.userId || '').trim();
-
-        // Primary key is normalized email, fallback to username or ID
-        const key = email || username || id;
-        if (!key) continue;
-
-        const isVerified = Boolean(
-          item.isVerified === true ||
-          item.verificationStatus === 'Verified' ||
-          item.verificationStatus === 'verified' ||
-          item.verificationStatus === 'approved'
-        );
-        const isRejected = item.verificationStatus === 'Rejected' || item.verificationStatus === 'rejected';
-        const verificationStatus = isVerified ? 'Verified' : (isRejected ? 'Rejected' : (item.verificationStatus || 'Pending'));
-
-        const existing = staffMap.get(key);
-        if (!existing) {
-          staffMap.set(key, {
-            id: id || `staff-${key}`,
-            userId: item.userId || id || `staff-${key}`,
-            name: item.name || item.fullName || 'Staff Member',
-            username: item.username || key.split('@')[0],
-            email: email || item.email || '',
-            phone: item.phone || '',
-            role: item.staffRole || item.specialization || item.role || 'Staff Specialist',
-            specialization: item.specialization || item.staffRole || item.role || 'Facilities & Maintenance',
-            yearsExperience: item.yearsExperience || '1-3 Years',
-            nationalId: item.nationalId || item.idNumber || '',
-            idType: item.idType || 'Ghana Card (National ID)',
-            idCardDoc: item.idCardDoc || '',
-            cvData: item.cvData || '',
-            cvFileName: item.cvFileName || '',
-            verificationStatus,
-            isVerified,
-            accountStatus: item.accountStatus || 'Active',
-            createdAt: item.createdAt || new Date().toISOString()
-          });
-        } else {
-          // Merge missing fields and respect the latest verified/rejected status
-          if (!existing.phone && item.phone) existing.phone = item.phone;
-          if (!existing.nationalId && (item.nationalId || item.idNumber)) existing.nationalId = item.nationalId || item.idNumber;
-          if (!existing.idCardDoc && item.idCardDoc) existing.idCardDoc = item.idCardDoc;
-          if (!existing.cvData && item.cvData) existing.cvData = item.cvData;
-          if (!existing.cvFileName && item.cvFileName) existing.cvFileName = item.cvFileName;
-          if (!existing.specialization && (item.specialization || item.staffRole)) existing.specialization = item.specialization || item.staffRole;
-          if (isVerified) {
-            existing.isVerified = true;
-            existing.verificationStatus = 'Verified';
-          } else if (isRejected && !existing.isVerified) {
-            existing.verificationStatus = 'Rejected';
-          }
-        }
-      }
-
-      const staffList = Array.from(staffMap.values());
-      res.json(staffList);
-    } catch (err: any) {
-      console.error("Error fetching staff verifications:", err);
-      res.status(500).json({ error: "Failed to fetch staff verifications" });
-    }
-  });
-
-  // --- Individual Staff Member Verification Status Check ---
-  app.get("/api/staff-verifications/my-status", requireAuth(), async (req: any, res) => {
-    try {
-      const user = req.user;
-      const userEmail = (user.email || '').toLowerCase().trim();
-      const userId = String(user.id || '').trim();
-      const parentUserEmail = (user.parentUserEmail || '').toLowerCase().trim();
-      const parentUserId = String(user.parentUserId || '').trim();
-
-      const store = getStoreInstance();
-      const allCandidates = [
-        ...staff,
-        ...(store.staff || []),
-        ...MOCK_USERS.map((u: any) => u.user || u),
-        ...(store.users || []).map((u: any) => u.user || u),
-        ...staffApplications,
-        ...(store.staffApplications || [])
-      ];
-
-      const matchesTarget = (item: any) => {
-        if (!item) return false;
-        const iEmail = (item.email || item.staffEmail || item.userEmail || '').toLowerCase().trim();
-        const iParentEmail = (item.parentUserEmail || '').toLowerCase().trim();
-        const iId = String(item.id || item.userId || item.staffId || '').trim();
-        const iParentId = String(item.parentUserId || '').trim();
-
-        if (userEmail && (iEmail === userEmail || iParentEmail === userEmail)) return true;
-        if (parentUserEmail && (iEmail === parentUserEmail || iParentEmail === parentUserEmail)) return true;
-        if (userId && (iId === userId || iParentId === userId)) return true;
-        if (parentUserId && (iId === parentUserId || iParentId === parentUserId)) return true;
-        return false;
-      };
-
-      const matchedRecords = allCandidates.filter(matchesTarget);
-
-      const hasApprovedRecord = matchedRecords.some(r => {
-        const status = String(r.verificationStatus || r.status || '').toLowerCase().trim();
-        return r.isVerified === true || status === 'verified' || status === 'approved';
-      });
-
-      const isUserDirectlyVerified = Boolean(
-        user.isVerified === true ||
-        String(user.verificationStatus || '').toLowerCase() === 'verified' ||
-        String(user.verificationStatus || '').toLowerCase() === 'approved'
-      );
-
-      const isVerified = hasApprovedRecord || isUserDirectlyVerified;
-      const verificationStatus = isVerified ? 'Verified' : 'Pending';
-
-      // Find primary staff record details to return
-      const primaryRecord = matchedRecords.find(r => r.role === 'staff' || r.specialization || r.staffRole) || matchedRecords[0] || null;
-
-      return res.json({
-        isVerified,
-        verificationStatus,
-        status: verificationStatus,
-        staffRecord: primaryRecord ? {
-          ...primaryRecord,
-          isVerified,
-          verificationStatus
-        } : null
-      });
-    } catch (err: any) {
-      console.error("Error checking staff verification status:", err);
-      return res.status(500).json({ error: "Failed to check verification status" });
-    }
-  });
-
-  // --- CV PDF Helper Functions ---
-  function convertTextToPdfBuffer(title: string, text: string): Buffer {
-    const safeTitle = (title || 'Curriculum Vitae').replace(/[()\\]/g, '');
-    const lines = (text || '').split('\n');
-    
-    let textCommands = `BT\n/F1 16 Tf\n40 790 Td\n(${safeTitle}) Tj\nET\nBT\n/F1 10 Tf\n`;
-    let currentY = 750;
-    for (const line of lines) {
-      if (currentY < 40) break;
-      const safeLine = line.replace(/[()\\]/g, '');
-      textCommands += `40 ${currentY} Td\n(${safeLine}) Tj\n0 -14 Td\n`;
-      currentY -= 14;
-    }
-    textCommands += `ET`;
-
-    const streamContent = textCommands;
-    const streamLength = Buffer.byteLength(streamContent, 'utf-8');
-
-    const pdfString = `%PDF-1.4
-1 0 obj
-<< /Type /Catalog /Pages 2 0 R >>
-endobj
-2 0 obj
-<< /Type /Pages /Kids [3 0 R] /Count 1 >>
-endobj
-3 0 obj
-<< /Type /Page /Parent 2 0 R /Resources << /Font << /F1 4 0 R >> >> /MediaBox [0 0 595 842] /Contents 5 0 R >>
-endobj
-4 0 obj
-<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
-endobj
-5 0 obj
-<< /Length ${streamLength} >>
-stream
-${streamContent}
-endstream
-endobj
-xref
-0 6
-0000000000 65535 f 
-0000000009 00000 n 
-0000000058 00000 n 
-0000000115 00000 n 
-0000000246 00000 n 
-0000000326 00000 n 
-trailer
-<< /Size 6 /Root 1 0 R >>
-startxref
-${400 + streamLength}
-%%EOF`;
-
-    return Buffer.from(pdfString, 'utf-8');
-  }
-
-  function parseCvPdfBuffer(cvData: string, applicantName: string): Buffer {
-    if (cvData && typeof cvData === 'string') {
-      let base64Content = cvData;
-      if (cvData.includes('base64,')) {
-        base64Content = cvData.split('base64,')[1];
-      }
-      try {
-        const buffer = Buffer.from(base64Content.trim(), 'base64');
-        if (buffer.length > 4 && buffer[0] === 0x25 && buffer[1] === 0x50 && buffer[2] === 0x44 && buffer[3] === 0x46) {
-          return buffer;
-        }
-      } catch (e) {
-        // Fallback below
-      }
-    }
-
-    const textContent = (cvData && !cvData.startsWith('data:')) 
-      ? cvData 
-      : `CURRICULUM VITAE\n\nApplicant Name: ${applicantName}\nOfficial Status: Accredited Staff Credentials\nDocument Type: PDF Document\n\nSummary:\nCertified technician with experience in electrical, plumbing, facilities, and hostel residence maintenance.`;
-
-    return convertTextToPdfBuffer(`${applicantName} - CV`, textContent);
-  }
-
-  // --- CV PDF Download & Inline Viewing Routes (Returns application/pdf) ---
-  app.get("/api/staff-verifications/:id/cv", requireAuth(["admin", "manager"]), (req: any, res: any) => {
-    try {
-      const { id } = req.params;
-      const userObj = MOCK_USERS.find(u => (u as any).user?.id === id || u.username === id || (u as any).user?.username === id) as any;
-      const staffObj = staff.find(s => s.userId === id || s.id === id);
-      const appObj = staffApplications.find(a => a.id === id || a.staffId === id);
-
-      const targetData = userObj?.user?.cvData || staffObj?.cvData || appObj?.cvData || '';
-      const targetFileName = userObj?.user?.cvFileName || staffObj?.cvFileName || appObj?.cvFileName || `${userObj?.user?.name || 'Applicant'}_CV.pdf`;
-      const name = userObj?.user?.name || staffObj?.name || appObj?.applicantName || 'Applicant';
-
-      const pdfBuffer = parseCvPdfBuffer(targetData, name);
-
-      res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(targetFileName)}"`);
-      res.setHeader('Content-Length', pdfBuffer.length.toString());
-      return res.send(pdfBuffer);
-    } catch (err: any) {
-      console.error("Error serving staff CV PDF:", err);
-      res.status(500).json({ error: "Failed to process CV PDF document" });
-    }
-  });
-
-  app.get("/api/staff-applications/:id/cv", requireAuth(["admin", "manager"]), (req: any, res: any) => {
-    try {
-      const { id } = req.params;
-      const appObj = staffApplications.find(a => a.id === id || a.staffId === id);
-      const userObj = MOCK_USERS.find(u => (u as any).user?.id === id || u.username === id) as any;
-
-      const targetData = appObj?.cvData || userObj?.user?.cvData || '';
-      const targetFileName = appObj?.cvFileName || userObj?.user?.cvFileName || 'Applicant_CV.pdf';
-      const name = appObj?.applicantName || userObj?.user?.name || 'Applicant';
-
-      const pdfBuffer = parseCvPdfBuffer(targetData, name);
-
-      res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(targetFileName)}"`);
-      res.setHeader('Content-Length', pdfBuffer.length.toString());
-      return res.send(pdfBuffer);
-    } catch (err: any) {
-      console.error("Error serving application CV PDF:", err);
-      res.status(500).json({ error: "Failed to process CV PDF document" });
-    }
-  });
-
-  app.put("/api/admin/staff-verifications/:id/decision", requireAuth(["admin"]), async (req: any, res) => {
-    try {
-      const { id } = req.params;
-      const { status, decision, reviewNotes } = req.body;
-      const finalStatus = status || decision || 'Verified';
-      const isApproved = String(finalStatus).toLowerCase() === 'verified' || String(finalStatus).toLowerCase() === 'approved';
-      const statusText = isApproved ? 'Verified' : 'Rejected';
-
-      const cleanId = String(id || '').trim().toLowerCase();
-      const cleanIdStripped = cleanId.replace(/^(stf-rec-|staff-user-|staff-)/, '');
-
-      const matchesEmail = (eVal: string) => {
-        if (!eVal) return false;
-        const eClean = eVal.toLowerCase().trim();
-        return (
-          eClean === cleanId ||
-          eClean === cleanIdStripped ||
-          cleanId === `staff-${eClean}` ||
-          cleanId.endsWith(eClean) ||
-          cleanIdStripped.endsWith(eClean)
-        );
-      };
-
-      const matchesStaffTarget = (obj: any) => {
-        if (!obj) return false;
-        const usr = obj.user || obj;
-        const e1 = (usr.email || obj.email || '').toLowerCase().trim();
-        const e2 = (usr.parentUserEmail || obj.parentUserEmail || '').toLowerCase().trim();
-        const e3 = (usr.staffEmail || obj.staffEmail || '').toLowerCase().trim();
-        const id1 = String(usr.id || obj.id || '').toLowerCase().trim();
-        const id2 = String(usr.userId || obj.userId || '').toLowerCase().trim();
-        const id3 = String(usr.parentUserId || obj.parentUserId || '').toLowerCase().trim();
-        const uName = String(usr.username || obj.username || '').toLowerCase().trim();
-
-        const matchesIdStr = (idVal: string) => {
-          if (!idVal) return false;
-          const cleanVal = idVal.toLowerCase().trim();
-          const strippedVal = cleanVal.replace(/^(stf-rec-|staff-user-|staff-)/, '');
-          return cleanVal === cleanId || (Boolean(cleanIdStripped) && strippedVal === cleanIdStripped);
-        };
-
-        return (
-          matchesIdStr(id1) ||
-          matchesIdStr(id2) ||
-          matchesIdStr(id3) ||
-          uName === cleanId ||
-          uName === cleanIdStripped ||
-          matchesEmail(e1) ||
-          matchesEmail(e2) ||
-          matchesEmail(e3)
-        );
-      };
-
-      let matchedStaffUser = MOCK_USERS.find(u => matchesStaffTarget(u) || matchesStaffTarget(u.user));
-      let matchedStaffRecord = staff.find(matchesStaffTarget) || staffApplications.find(matchesStaffTarget);
-
-      const targetUserObj = matchedStaffUser ? (matchedStaffUser.user || matchedStaffUser) : null;
-      const staffUserEmail = (targetUserObj?.email || matchedStaffRecord?.email || matchedStaffRecord?.staffEmail || cleanIdStripped).toLowerCase().trim();
-      const parentUserEmail = (targetUserObj?.parentUserEmail || matchedStaffRecord?.parentUserEmail || staffUserEmail).toLowerCase().trim();
-      const staffUserId = targetUserObj?.id || matchedStaffRecord?.userId || matchedStaffRecord?.id || id;
-      const parentUserId = targetUserObj?.parentUserId || matchedStaffRecord?.parentUserId || staffUserId;
-
-      const targetEmailsSet = new Set([staffUserEmail, parentUserEmail, cleanId, cleanIdStripped].filter(Boolean));
-      const targetIdsSet = new Set([staffUserId, parentUserId, cleanId, cleanIdStripped].filter(Boolean));
-
-      const isMatchingRecord = (obj: any) => {
-        if (!obj) return false;
-        if (matchesStaffTarget(obj) || matchesStaffTarget(obj.user)) return true;
-        const usr = obj.user || obj;
-        const e1 = (usr.email || obj.email || '').toLowerCase().trim();
-        const e2 = (usr.parentUserEmail || obj.parentUserEmail || '').toLowerCase().trim();
-        const e3 = (usr.staffEmail || obj.staffEmail || '').toLowerCase().trim();
-        const id1 = String(usr.id || obj.id || '').toLowerCase().trim();
-        const id2 = String(usr.userId || obj.userId || '').toLowerCase().trim();
-
-        if ([e1, e2, e3].some(e => e && (targetEmailsSet.has(e) || matchesEmail(e)))) return true;
-        if ([id1, id2].some(i => i && targetIdsSet.has(i))) return true;
-        return false;
-      };
-
-      // Update MOCK_USERS
-      MOCK_USERS.forEach(u => {
-        if (isMatchingRecord(u)) {
-          if (u.user) {
-            u.user.verificationStatus = statusText;
-            u.user.isVerified = isApproved;
-          }
-          u.verificationStatus = statusText;
-          u.isVerified = isApproved;
-        }
-      });
-
-      // Update staff list
-      staff.forEach(s => {
-        if (isMatchingRecord(s)) {
-          (s as any).verificationStatus = statusText;
-          (s as any).isVerified = isApproved;
-        }
-      });
-
-      // Update staffApplications list
-      staffApplications.forEach(a => {
-        if (isMatchingRecord(a)) {
-          (a as any).verificationStatus = statusText;
-          (a as any).isVerified = isApproved;
-        }
-      });
-
-      // Update persistent store
-      const store = getStoreInstance();
-      if (store.users) {
-        store.users.forEach((u: any) => {
-          if (isMatchingRecord(u)) {
-            if (u.user) {
-              u.user.verificationStatus = statusText;
-              u.user.isVerified = isApproved;
-            }
-            u.verificationStatus = statusText;
-            u.isVerified = isApproved;
-          }
-        });
-      }
-      if (store.staff) {
-        store.staff.forEach((s: any) => {
-          if (isMatchingRecord(s)) {
-            s.verificationStatus = statusText;
-            s.isVerified = isApproved;
-          }
-        });
-      }
-      if (store.staffApplications) {
-        store.staffApplications.forEach((a: any) => {
-          if (isMatchingRecord(a)) {
-            a.verificationStatus = statusText;
-            a.isVerified = isApproved;
-          }
-        });
-      }
-      savePersistentStore(store);
-
-      // Create live notifications for staff user AND parent user
-      const notifyEmails = Array.from(new Set([staffUserEmail, parentUserEmail].filter(Boolean)));
-      for (const emailToNotify of notifyEmails) {
-        const staffNotif = {
-          id: `notif-vrf-dec-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
-          studentId: staffUserId,
-          userId: staffUserId,
-          parentUserId: parentUserId,
-          userEmail: emailToNotify,
-          recipientEmail: emailToNotify,
-          targetEmail: emailToNotify,
-          parentUserEmail: parentUserEmail,
-          title: isApproved ? `Staff Verification Approved!` : `Staff Verification Status Update`,
-          message: isApproved
-            ? `Congratulations! Your staff profile, CV, and National ID credentials have been verified by PineVela Administration. You are now unlocked to apply for positions at accredited hostels.`
-            : `Your staff credential verification status has been updated to ${statusText}.${reviewNotes ? ` Reason: ${reviewNotes}` : ''}`,
-          type: isApproved ? 'success' : 'warning',
-          date: new Date().toISOString().split('T')[0],
-          read: false
-        };
-        notifications.unshift(staffNotif);
-        await dbCreateNotification(staffNotif, notifications);
-      }
-
-      const staffDisplayName = targetUserObj?.name || matchedStaffRecord?.name || 'Staff Member';
-      activities.unshift({
-        id: `act-${Date.now()}`,
-        text: `Staff verification for ${staffDisplayName} marked as ${statusText}`,
-        time: 'Just now',
-        type: isApproved ? 'success' : 'warning'
-      });
-
-      syncStore();
-      return res.json({
-        success: true,
-        user: targetUserObj,
-        message: `Staff member account ${statusText} successfully.`
-      });
-    } catch (err: any) {
-      console.error("Error processing staff verification decision:", err);
-      return res.status(500).json({ error: err.message || "Failed to process verification decision" });
-    }
-  });
-
-  // --- Admin Disable / Ban / Update Staff Account Status ---
-  app.put("/api/admin/staff-verifications/:id/status", requireAuth(["admin"]), async (req: any, res) => {
-    try {
-      const { id } = req.params;
-      const { accountStatus, reason } = req.body; // 'Active' | 'Disabled' | 'Banned'
-
-      if (!accountStatus || !['Active', 'Disabled', 'Banned'].includes(accountStatus)) {
-        return res.status(400).json({ error: "Invalid status. Must be 'Active', 'Disabled', or 'Banned'." });
-      }
-
-      const userIndex = MOCK_USERS.findIndex(u => (u as any).user?.id === id || u.username === id || (u as any).user?.username === id);
-      if (userIndex === -1) {
-        return res.status(404).json({ error: "Staff account not found" });
-      }
-
-      const staffUserObj = MOCK_USERS[userIndex] as any;
-      if (staffUserObj.user) {
-        staffUserObj.user.accountStatus = accountStatus;
-        staffUserObj.user.status = accountStatus;
-        if (accountStatus === 'Disabled') staffUserObj.user.isDisabled = true;
-        if (accountStatus === 'Banned') staffUserObj.user.isBanned = true;
-        if (accountStatus === 'Active') {
-          staffUserObj.user.isDisabled = false;
-          staffUserObj.user.isBanned = false;
-        }
-      }
-      staffUserObj.accountStatus = accountStatus;
-      staffUserObj.status = accountStatus;
-
-      // Update in staff list
-      const staffIdx = staff.findIndex(s => s.userId === id || s.id === id);
-      if (staffIdx !== -1) {
-        (staff[staffIdx] as any).accountStatus = accountStatus;
-        (staff[staffIdx] as any).status = accountStatus;
-      }
-
-      // Notify staff member
-      notifications.unshift({
-        id: `notif-stf-stat-${Date.now()}`,
-        studentId: staffUserObj.user ? staffUserObj.user.id : id,
-        title: `Account Access Status Update: ${accountStatus}`,
-        message: accountStatus === 'Active'
-          ? `Your staff account access has been restored to Active status by Administration.`
-          : `Your staff account access has been set to ${accountStatus}.${reason ? ` Reason: ${reason}` : ''}`,
-        type: accountStatus === 'Active' ? 'success' : 'danger',
-        date: new Date().toISOString().split('T')[0],
-        read: false
-      });
-
-      activities.unshift({
-        id: `act-stf-stat-${Date.now()}`,
-        text: `Staff account for ${staffUserObj.user?.name || id} set to ${accountStatus}`,
-        time: 'Just now',
-        type: accountStatus === 'Active' ? 'info' : 'warning'
-      });
-
-      syncStore();
-      return res.json({
-        success: true,
-        accountStatus,
-        user: staffUserObj.user,
-        message: `Staff member account marked as ${accountStatus}.`
-      });
-    } catch (err: any) {
-      console.error("Error updating staff account status:", err);
-      return res.status(500).json({ error: err.message || "Failed to update staff account status" });
-    }
-  });
-
-  app.get("/api/staff-applications", requireAuth(), async (req: any, res) => {
-    try {
-      const userRole = req.user.role;
-      const userId = req.user.id;
-      const userEmail = (req.user.email || '').toLowerCase().trim();
-      const userName = (req.user.name || '').toLowerCase().trim();
-
-      if (userRole === 'staff') {
-        const staffApps = staffApplications.filter(a => 
-          a.staffId === userId || 
-          (a.staffEmail && a.staffEmail.toLowerCase() === userEmail) ||
-          (a.email && a.email.toLowerCase() === userEmail)
-        );
-        return res.json(staffApps);
-      }
-
-      if (userRole === 'manager') {
-        // Look up approved hostels
-        const managerHostels = hostels.filter(h => 
-          h.managerId === userId || 
-          h.assignedManagerId === userId ||
-          (h.managerEmail && userEmail && h.managerEmail.toLowerCase().trim() === userEmail) ||
-          (h.managerName && userName && h.managerName.toLowerCase().trim() === userName)
-        );
-        
-        // Also look up pending hostel verifications to ensure pending managers can receive applications
-        const managerPendingHostels = hostelVerifications.filter(v =>
-          v.managerId === userId ||
-          (v.managerEmail && userEmail && v.managerEmail.toLowerCase().trim() === userEmail)
-        );
-
-        const hostelIds = new Set([
-          ...managerHostels.map(h => h.id),
-          ...managerPendingHostels.map(v => v.hostelId || v.id)
-        ]);
-        
-        const hostelNames = new Set([
-          ...managerHostels.map(h => h.name?.toLowerCase().trim()),
-          ...managerPendingHostels.map(v => v.hostelName?.toLowerCase().trim())
-        ].filter(Boolean));
-
-        const managerApps = staffApplications.filter(a => 
-          hostelIds.has(a.hostelId) || 
-          (a.managerId && a.managerId === userId) ||
-          (a.managerEmail && userEmail && a.managerEmail.toLowerCase().trim() === userEmail) ||
-          (a.hostelName && hostelNames.has(a.hostelName.toLowerCase().trim()))
-        );
-        return res.json(managerApps);
-      }
-
-      // Admin gets all
-      return res.json(staffApplications);
-    } catch (err: any) {
-      console.error("Error fetching staff applications:", err);
-      res.status(500).json({ error: "Failed to load staff applications" });
-    }
-  });
-
-  app.post("/api/staff-applications", async (req: any, res) => {
-    try {
-      let reqUser = null;
-      const authHeader = req.headers.authorization;
-      if (authHeader && authHeader.startsWith('Bearer ')) {
-        const token = authHeader.split(' ')[1]?.trim();
-        if (token) {
-          const dbUsers = await dbGetUsers(MOCK_USERS);
-          const combinedUsers = [...MOCK_USERS, ...dbUsers, ...(persistentData.users || [])];
-          const foundEntry = combinedUsers.find(u => {
-            if (!u) return false;
-            const uToken = u.token || u.user?.token;
-            const uId = u.id || u.user?.id;
-            return uToken === token || (u.user && u.user.token === token);
-          });
-          if (foundEntry) {
-            reqUser = foundEntry.user || foundEntry;
-          }
-        }
-      }
-
-      const userId = reqUser?.id || `guest-staff-${Date.now()}`;
-      const userEmail = (reqUser?.email || req.body.email || '').toLowerCase().trim();
-
-      // Check verification status: If the applicant is applying as or from a staff member, verify across all data stores
-      const checkObjVerified = (obj: any) => {
-        if (!obj) return false;
-        const target = obj.user || obj;
-        const st = String(target.verificationStatus || obj.verificationStatus || target.status || obj.status || '').toLowerCase().trim();
-        const isV = Boolean(target.isVerified === true || obj.isVerified === true || target.isApproved === true || obj.isApproved === true);
-        return isV || st === 'verified' || st === 'approved';
-      };
-
-      const applicantEmails = Array.from(new Set([
-        userEmail,
-        (reqUser?.email || '').toLowerCase().trim(),
-        (reqUser?.parentUserEmail || '').toLowerCase().trim(),
-        (req.body.email || '').toLowerCase().trim(),
-        (req.body.staffEmail || '').toLowerCase().trim()
-      ].filter(Boolean)));
-
-      const applicantIds = Array.from(new Set([
-        userId,
-        String(reqUser?.id || '').trim(),
-        String(reqUser?.parentUserId || '').trim(),
-        String(req.body.staffId || '').trim(),
-        String(req.body.userId || '').trim()
-      ].filter(Boolean)));
-
-      const matchesApplicant = (obj: any) => {
-        if (!obj) return false;
-        const target = obj.user || obj;
-        const objEmails = [
-          (target.email || '').toLowerCase().trim(),
-          (target.parentUserEmail || '').toLowerCase().trim(),
-          (target.staffEmail || '').toLowerCase().trim(),
-          (obj.email || '').toLowerCase().trim(),
-          (obj.parentUserEmail || '').toLowerCase().trim(),
-          (obj.staffEmail || '').toLowerCase().trim()
-        ].filter(Boolean);
-        const objIds = [
-          String(target.id || '').trim(),
-          String(target.userId || '').trim(),
-          String(target.parentUserId || '').trim(),
-          String(obj.id || '').trim(),
-          String(obj.userId || '').trim(),
-          String(obj.parentUserId || '').trim()
-        ].filter(Boolean);
-
-        const emailMatch = applicantEmails.some(ae => {
-          if (!ae) return false;
-          const aeStripped = ae.replace(/^(stf-rec-|staff-user-|staff-)/, '');
-          return objEmails.some(oe => {
-            if (!oe) return false;
-            const oeStripped = oe.replace(/^(stf-rec-|staff-user-|staff-)/, '');
-            return oe === ae || oeStripped === aeStripped || oe.endsWith(aeStripped) || ae.endsWith(oeStripped);
-          });
-        });
-
-        const idMatch = applicantIds.some(i => i && objIds.includes(i));
-        return emailMatch || idMatch;
-      };
-
-      const storeInst = getStoreInstance();
-      const allUserCandidates = [...MOCK_USERS, ...(storeInst.users || []), ...(persistentData.users || [])];
-      const allStaffCandidates = [...staff, ...(storeInst.staff || [])];
-      const allAppCandidates = [...staffApplications, ...(storeInst.staffApplications || [])];
-
-      const matchedUserCandidate = allUserCandidates.find(matchesApplicant);
-      const matchedStaffCandidate = allStaffCandidates.find(matchesApplicant);
-      const matchedAppCandidate = allAppCandidates.find(matchesApplicant);
-
-      const isApplicantVerified = Boolean(
-        checkObjVerified(reqUser) ||
-        checkObjVerified(matchedUserCandidate) ||
-        checkObjVerified(matchedStaffCandidate) ||
-        checkObjVerified(matchedAppCandidate)
-      );
-
-      const isStaffUser = Boolean(
-        (reqUser && reqUser.role === 'staff') ||
-        matchedStaffCandidate ||
-        (matchedUserCandidate && (matchedUserCandidate.role === 'staff' || matchedUserCandidate.user?.role === 'staff'))
-      );
-
-      if (isStaffUser && !isApplicantVerified) {
-        return res.status(403).json({
-          error: "Your staff account is currently pending administrative verification of your submitted CV and National ID credentials. You cannot submit job applications until an Administrator verifies your credentials."
-        });
-      }
-
-      // Check if applicant is already hired and active at an accredited hostel:
-      // Staff who are hired by one accredited hostel and verified cannot apply for any other jobs with the hostel again unless:
-      // 1. They're sacked or removed by their current manager
-      // 2. They quit the job.
-      // If not, then they remain in their job only and the option to apply is locked.
-      const activeStaffRoster = staff.find((s: any) => 
-        (s.userId === userId || (s.email && s.email.toLowerCase() === userEmail)) &&
-        s.hostelId &&
-        (s.status === 'Active' || s.status === 'Approved' || !s.status || (s.status !== 'Dismissed' && s.status !== 'Removed' && s.status !== 'Resigned' && s.status !== 'Terminated'))
-      );
-
-      const activeApprovedApp = staffApplications.find((a: any) => 
-        (a.staffId === userId || (a.staffEmail && a.staffEmail.toLowerCase() === userEmail) || (a.email && a.email.toLowerCase() === userEmail)) &&
-        (a.status === 'Approved' || a.status === 'approved')
-      );
-
-      if (activeStaffRoster || activeApprovedApp) {
-        const currentRole = activeStaffRoster?.role || activeApprovedApp?.role || 'Staff Member';
-        const currentHostel = activeStaffRoster?.hostelName || activeApprovedApp?.hostelName || 'an accredited hostel';
-        return res.status(400).json({
-          error: `Application Locked: You are already actively employed as "${currentRole}" at ${currentHostel}. Under PineVela accredited housing regulations, appointed staff remain in their active job and cannot apply for any other hostel jobs unless you quit/resign from your job or are removed by your manager. (One-time individual job offers remain accessible under your Offers tab).`
-        });
-      }
-
-      // Check if applicant already has a pending application
-      const activePending = staffApplications.find(a => 
-        (a.staffId === userId || (a.staffEmail && a.staffEmail.toLowerCase() === userEmail)) &&
-        a.status === 'pending'
-      );
-
-      if (activePending) {
-        return res.status(400).json({
-          error: `You already have an active staff application pending review for "${activePending.role}" at ${activePending.hostelName}. You cannot apply for another staff role until a decision is finalized.`
-        });
-      }
-
-      const {
-        applicantName,
-        phone,
-        email,
-        role,
-        hostelId,
-        hostelName,
-        nationalId,
-        idDocumentUrl,
-        cvUrl,
-        cvData,
-        cvFileName,
-        coverLetter
-      } = req.body;
-
-      if (!role || !hostelId || !phone) {
-        return res.status(400).json({ error: "Role, hostel, and phone number are required." });
-      }
-
-      const targetHostel = hostels.find(h => 
-        h.id === hostelId || 
-        (h.name && hostelName && h.name.toLowerCase().trim() === hostelName.toLowerCase().trim()) ||
-        (h.name && hostelId && h.name.toLowerCase().trim() === hostelId.toLowerCase().trim())
-      );
-      const finalHostelName = targetHostel?.name || hostelName || "Accredited Hostel";
-
-      const newApp = {
-        id: `stf-app-${Date.now()}`,
-        staffId: userId,
-        staffUsername: reqUser?.username || '',
-        staffEmail: userEmail || email,
-        applicantName: applicantName || reqUser?.name || 'Applicant',
-        phone: phone || reqUser?.phone || '',
-        role,
-        hostelId: targetHostel?.id || hostelId,
-        hostelName: finalHostelName,
-        managerId: targetHostel?.managerId || targetHostel?.assignedManagerId || '',
-        managerEmail: targetHostel?.managerEmail || '',
-        managerName: targetHostel?.managerName || '',
-        nationalId: nationalId || '',
-        idDocumentUrl: idDocumentUrl || '',
-        cvUrl: cvUrl || '',
-        cvData: cvData || '',
-        cvFileName: cvFileName || 'Curriculum_Vitae.pdf',
-        coverLetter: coverLetter || '',
-        status: 'pending',
-        appliedAt: new Date().toISOString()
-      };
-
-      staffApplications.unshift(newApp);
-
-      // Notify the manager
-      const managerNotif = {
-        id: `notif-staffapp-${Date.now()}`,
-        userId: targetHostel?.managerId || targetHostel?.assignedManagerId || 'manager_101',
-        recipientId: targetHostel?.managerId || targetHostel?.assignedManagerId || '',
-        recipientEmail: targetHostel?.managerEmail || '',
-        managerEmail: targetHostel?.managerEmail || '',
-        managerId: targetHostel?.managerId || targetHostel?.assignedManagerId || '',
-        hostelId: targetHostel?.id || hostelId || '',
-        targetRole: 'manager',
-        title: `New Staff Job Request: ${role}`,
-        message: `${newApp.applicantName} submitted a job request with CV & credentials for the position of "${role}" at ${finalHostelName}. Review applicant in Staff Management.`,
-        type: 'staff_application',
-        category: 'Staff Management',
-        date: new Date().toISOString().split('T')[0],
-        timestamp: new Date().toISOString(),
-        read: false,
-        link: '/manager/dashboard'
-      };
-      notifications.unshift(managerNotif);
-      await dbCreateNotification(managerNotif, notifications);
-
-      activities.unshift({
-        id: `act-${Date.now()}`,
-        text: `Staff application submitted by ${newApp.applicantName} for ${role} at ${finalHostelName}`,
-        time: 'Just now',
-        type: 'info'
-      });
-
-      syncStore();
-      return res.status(201).json(newApp);
-    } catch (err: any) {
-      console.error("Error creating staff application:", err);
-      res.status(500).json({ error: err.message || "Failed to submit staff application" });
-    }
-  });
-
-  app.put("/api/staff-applications/:id/decision", requireAuth(["manager", "admin"]), async (req: any, res) => {
-    try {
-      const { id } = req.params;
-      const decision = req.body.decision || req.body.status;
-      const { reviewNotes, shift, assignedBlock, startDate } = req.body;
-
-      if (!decision || (decision !== 'Approved' && decision !== 'Rejected')) {
-        return res.status(400).json({ error: "Decision must be 'Approved' or 'Rejected'" });
-      }
-
-      const appIndex = staffApplications.findIndex(a => a.id === id);
-      if (appIndex === -1) {
-        return res.status(404).json({ error: "Staff application not found" });
-      }
-
-      const application = staffApplications[appIndex];
-      application.status = decision;
-      application.reviewedAt = new Date().toISOString();
-      application.reviewNotes = reviewNotes || '';
-      application.startDate = startDate || 'Immediate';
-
-      if (decision === 'Approved') {
-        application.shift = shift || 'Day Shift';
-        application.assignedBlock = assignedBlock || 'All Blocks';
-
-        const staffId = `staff-${application.staffId || Date.now()}`;
-        const existingStaffIdx = staff.findIndex((s: any) => s.userId === application.staffId || s.id === staffId);
-        
-        const staffRecord = {
-          id: staffId,
-          userId: application.staffId,
-          name: application.applicantName,
-          role: application.role,
-          phone: application.phone,
-          email: application.staffEmail,
-          shift: shift || 'Day Shift',
-          assignedBlock: assignedBlock || 'All Wings',
-          status: 'Active',
-          startDate: startDate || 'Immediate',
-          hostelId: application.hostelId,
-          hostelName: application.hostelName,
-          nationalId: application.nationalId,
-          cvUrl: application.cvUrl,
-          cvData: application.cvData,
-          createdAt: new Date().toISOString()
-        };
-
-        if (existingStaffIdx !== -1) {
-          staff[existingStaffIdx] = staffRecord;
-        } else {
-          staff.unshift(staffRecord);
-        }
-
-        // Notify staff applicant
-        notifications.unshift({
-          id: `notif-${Date.now()}`,
-          studentId: application.staffId,
-          title: `Application Approved!`,
-          message: `Congratulations! Your staff application for "${application.role}" at ${application.hostelName} has been approved by the manager. Your starting work date is set to: ${startDate || 'Immediate'}. You are now officially appointed to the property staff roster.`,
-          type: 'success',
-          date: new Date().toISOString().split('T')[0],
-          read: false
-        });
-
-        // Auto-create chat room for this staff and manager
-        const targetHostel = hostels.find(h => h.id === application.hostelId);
-        const managerId = targetHostel?.managerId || req.user.id;
-        const roomId = `room-staff-mgr-${application.staffId}-${managerId}`;
-        const roomExists = staffChatRooms.some((r: any) => r.id === roomId);
-        if (!roomExists) {
-          staffChatRooms.push({
-            id: roomId,
-            staffId: application.staffId,
-            staffName: application.applicantName,
-            managerId: managerId,
-            managerName: req.user.name || 'Property Manager',
-            hostelId: application.hostelId,
-            hostelName: application.hostelName,
-            createdAt: new Date().toISOString()
-          });
-        }
-
-        activities.unshift({
-          id: `act-${Date.now()}`,
-          text: `Manager approved staff application of ${application.applicantName} as ${application.role} at ${application.hostelName} starting ${startDate || 'Immediate'}`,
-          time: 'Just now',
-          type: 'success'
-        });
-      } else {
-        // Rejected
-        notifications.unshift({
-          id: `notif-${Date.now()}`,
-          studentId: application.staffId,
-          title: `Staff Application Notice`,
-          message: `Your application for "${application.role}" at ${application.hostelName} was reviewed and not accepted at this time. Notes: ${reviewNotes || 'Criteria not met'}. You are now eligible to apply for other positions.`,
-          type: 'warning',
-          date: new Date().toISOString().split('T')[0],
-          read: false
-        });
-
-        activities.unshift({
-          id: `act-${Date.now()}`,
-          text: `Staff application for ${application.applicantName} at ${application.hostelName} was not accepted`,
-          time: 'Just now',
-          type: 'warning'
-        });
-      }
-
-      syncStore();
-      return res.json({ status: decision, application });
-    } catch (err: any) {
-      console.error("Error processing staff application decision:", err);
-      res.status(500).json({ error: "Failed to process decision" });
-    }
-  });
-
   // --- Dedicated Username Availability Check ---
   app.get("/api/auth/check-username", (req, res) => {
     const raw = (req.query.username as string || '').toLowerCase().trim();
@@ -14636,13 +11344,13 @@ ${400 + streamLength}
   });
 
   // --- Change Password Endpoint ---
-  app.post("/api/auth/change-password", requireAuth(), (req: any, res) => {
+  app.post("/api/auth/change-password", requireAuth(), async (req: any, res) => {
     if (typeof req.body.newPassword !== 'string' || req.body.newPassword.length < 6) return res.status(400).json({ error: 'A new password of at least 6 characters is required.' });
     const email = normalizeEmail(req.user.email), role = req.user.role;
     const records = passwordRecords(email, role).filter(record => role === 'merchant' || accountId(record) === req.user.id);
     if (!records.length) return res.status(404).json({ error: 'Account not found.' });
-    if (!records.some(record => credentialValues(record, false).some(hash => passwordsMatch(req.body.currentPassword, hash)))) return res.status(400).json({ error: 'Incorrect current password.' });
-    updateIdentityPassword(records, req.body.newPassword, email, role);
+    if (!await findAsync(records, async record => passwordsMatch(req.body.currentPassword, ...credentialValues(record, false)))) return res.status(400).json({ error: 'Incorrect current password.' });
+    await updateIdentityPassword(records, req.body.newPassword, email, role);
     return res.json({ success: true, message: 'Password updated. Sign in again using the new password.' });
   });
 
@@ -14888,6 +11596,12 @@ ${400 + streamLength}
   });
 
   // --- Notifications Endpoints ---
+  // Suppress historical notices for features that no longer exist; retain the stored records.
+  const isRetiredNotification = (notice: any) => !isMarketMessageNotification(notice) && (
+    /^(staff_application|staff_verification|staff_chat|general_chat|chat_message|dm_request|job_offer|housing_booking|booking_request|booking_application)$/.test(notice?.type || '') ||
+    /job offer|staff job request|welcome.*messenger/i.test(notice?.title || '') ||
+    /staff dashboard\?tab=(apply|chat)|staff\/dashboard\?tab=(apply|chat)/.test(notice?.link || '')
+  );
   app.get("/api/notifications", requireAuth(), async (req: any, res) => {
     const list = await dbGetNotifications(notifications);
     const user = req.user;
@@ -14904,6 +11618,8 @@ ${400 + streamLength}
 
     const filtered = (list || []).filter((n: any) => {
       if (!n) return false;
+      if (isRetiredNotification(n)) return false;
+      if (isMarketMessageNotification(n)) return marketNotificationVisible(user, n, getStoreInstance());
       if (user?.role === 'admin' && (n.targetRole === 'admin' || n.targetRole === 'all')) return true;
 
       if (n.studentId && (n.studentId === uId)) return true;
@@ -14921,7 +11637,7 @@ ${400 + streamLength}
       );
       if (mgrHostels.length > 0 && n.hostelId) {
         const mgrHostelIds = new Set(mgrHostels.map((h: any) => h.id));
-        if (mgrHostelIds.has(n.hostelId) && (n.targetRole === 'manager' || !n.targetRole || n.type === 'staff_application' || n.type === 'issue_report')) {
+        if (mgrHostelIds.has(n.hostelId) && (n.targetRole === 'manager' || !n.targetRole || n.type === 'issue_report')) {
           return true;
         }
       }
@@ -14969,6 +11685,7 @@ ${400 + streamLength}
     if (requestedScope === 'market' || requestedScope === 'seller' || requestedScope === 'merchant' || requestedScope === 'ecommerce') {
       const marketOnly = deduplicated.filter((n: any) => {
         if (!n) return false;
+        if (isMarketMessageNotification(n)) return true;
         if (n.scope === 'market' || n.category === 'market' || n.category === 'ecommerce' || n.module === 'digital_market' || n.targetRole === 'merchant') {
           return true;
         }
@@ -15047,7 +11764,7 @@ ${400 + streamLength}
     ].filter(Boolean)));
 
     for (const n of list) {
-      if (!n) continue;
+      if (!n || isRetiredNotification(n)) continue;
       const nEmails = [
         (n.studentId || '').toLowerCase().trim(),
         (n.userId || '').toLowerCase().trim(),
@@ -15065,7 +11782,7 @@ ${400 + streamLength}
                       (n.recipientId && n.recipientId === uId) ||
                       (userEmails.length > 0 && userEmails.some(ue => nEmails.includes(ue)));
 
-      if (matches) {
+      if (isMarketMessageNotification(n) ? marketNotificationVisible(user, n, getStoreInstance()) : matches) {
         n.read = true;
         await dbMarkNotificationRead(n.id, notifications);
       }
@@ -15076,6 +11793,9 @@ ${400 + streamLength}
 
   app.put("/api/notifications/:id/read", requireAuth(), async (req, res) => {
     const { id } = req.params;
+    const notification = notifications.find(n => n.id === id);
+    if (isRetiredNotification(notification)) return res.status(404).json({ error: "Notification no longer available." });
+    if (isMarketMessageNotification(notification) && !marketNotificationVisible((req as any).user, notification, getStoreInstance())) return res.status(403).json({ error: 'This message notification belongs to another account.' });
     await dbMarkNotificationRead(id, notifications);
     res.json({ success: true });
   });
@@ -15122,422 +11842,6 @@ ${400 + streamLength}
     res.json(list);
   });
 
-  // --- Chat App Endpoints ---
-
-  // 1. GET current user's profile
-  app.get("/api/chat/profile", requireAuth(), async (req: any, res) => {
-    const studentId = req.user.id;
-    let profile = await dbGetChatProfile(studentId, chatProfiles);
-    if (!profile) {
-      profile = await dbUpdateChatProfile(
-        studentId,
-        req.user.name,
-        'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
-        chatProfiles
-      );
-    }
-    res.json(profile);
-  });
-
-  // 2. POST update profile
-  app.post("/api/chat/profile", requireAuth(), async (req: any, res) => {
-    const studentId = req.user.id;
-    const { nickname, avatarUrl } = req.body;
-    let existingProfile = await dbGetChatProfile(studentId, chatProfiles);
-    const updatedNickname = nickname || (existingProfile ? existingProfile.nickname : req.user.name);
-    const updatedAvatar = avatarUrl || (existingProfile ? existingProfile.avatarUrl : 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80');
-    
-    let profile = await dbUpdateChatProfile(studentId, updatedNickname, updatedAvatar, chatProfiles);
-    res.json(profile);
-  });
-
-  // 3. GET messages for a channel
-  app.get("/api/chat/messages", requireAuth(), async (req: any, res) => {
-    const { channelType, channelId } = req.query;
-    if (!channelType || !channelId) {
-      return res.status(400).json({ error: "channelType and channelId queries are required" });
-    }
-    const messages = await dbGetChatMessages(channelType as string, channelId as string, chatMessages);
-    const seen = new Set<string>();
-    const uniqueMessages = (messages || []).filter((m: any) => {
-      if (!m || !m.id || seen.has(m.id)) return false;
-      seen.add(m.id);
-      return true;
-    });
-    res.json(uniqueMessages);
-  });
-
-  // 4. POST message
-  app.post("/api/chat/messages", requireAuth(), async (req: any, res) => {
-    const studentId = req.user.id;
-    const { channelType, channelId, messageType, content } = req.body;
-    if (!channelType || !channelId || !content) {
-      return res.status(400).json({ error: "Missing required message fields" });
-    }
-
-    let profile = await dbGetChatProfile(studentId, chatProfiles);
-    const senderName = profile ? profile.nickname : req.user.name;
-    const senderAvatar = profile ? profile.avatarUrl : 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80';
-
-    const newMsg = {
-      id: `msg-new-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-      channelType,
-      channelId,
-      senderId: studentId,
-      senderName,
-      senderAvatar,
-      messageType: messageType || 'text',
-      content,
-      reactions: {},
-      createdAt: new Date().toISOString()
-    };
-
-    const savedMsg = await dbCreateChatMessage(newMsg, chatMessages);
-
-    // Auto-create chat notifications for recipients
-    try {
-      const allUsers = await dbGetUsers(MOCK_USERS);
-      const students = allUsers.filter(u => {
-        const userObj = u.user || u;
-        return userObj && userObj.role === 'student' && userObj.id !== studentId;
-      });
-
-      if (channelType === 'global') {
-        for (const s of students) {
-          const userObj = s.user || s;
-          const newNotif = {
-            id: `notif-chat-${Date.now()}-${userObj.id}`,
-            studentId: userObj.id,
-            title: 'Global Chat Lounge',
-            message: `New message in Global Lounge from ${senderName}: "${content.substring(0, 30)}${content.length > 30 ? '...' : ''}"`,
-            type: 'info',
-            date: new Date().toISOString().split('T')[0],
-            read: false
-          };
-          await dbCreateNotification(newNotif, notifications);
-        }
-      } else if (channelType === 'hostel') {
-        for (const s of students) {
-          const userObj = s.user || s;
-          const newNotif = {
-            id: `notif-chat-${Date.now()}-${userObj.id}`,
-            studentId: userObj.id,
-            title: 'My Hostel Lounge',
-            message: `New message in Hostel Lounge from ${senderName}: "${content.substring(0, 30)}${content.length > 30 ? '...' : ''}"`,
-            type: 'info',
-            date: new Date().toISOString().split('T')[0],
-            read: false
-          };
-          await dbCreateNotification(newNotif, notifications);
-        }
-      } else if (channelType === 'dm') {
-        const rooms = await dbGetDMRooms(studentId, dmRooms);
-        const room = rooms.find(r => r.id === channelId);
-        if (room) {
-          const opponentId = room.user1Id === studentId ? room.user2Id : room.user1Id;
-          const newNotif = {
-            id: `notif-chat-${Date.now()}-${opponentId}`,
-            studentId: opponentId,
-            title: 'Direct Chat',
-            message: `New message from ${senderName}: "${content.substring(0, 30)}${content.length > 30 ? '...' : ''}"`,
-            type: 'info',
-            date: new Date().toISOString().split('T')[0],
-            read: false
-          };
-          await dbCreateNotification(newNotif, notifications);
-        }
-      }
-    } catch (err) {
-      console.error("Failed to auto-create chat notifications:", err);
-    }
-
-    res.status(201).json(savedMsg);
-  });
-
-  // 4b. React to message
-  app.post("/api/chat/messages/:id/react", requireAuth(), async (req: any, res) => {
-    const { id } = req.params;
-    const { emoji } = req.body;
-    const studentId = req.user.id;
-
-    let profile = await dbGetChatProfile(studentId, chatProfiles);
-    const reactorName = profile ? profile.nickname : req.user.name;
-
-    const updatedMsg = await dbReactToChatMessage(id, emoji, reactorName, chatMessages);
-    if (!updatedMsg) {
-      return res.status(404).json({ error: "Message not found" });
-    }
-
-    res.json(updatedMsg);
-  });
-
-  // 5. GET all DM rooms for current student
-  app.get("/api/chat/dms", requireAuth(), async (req: any, res) => {
-    const studentId = req.user.id;
-    const rooms = await dbGetDMRooms(studentId, dmRooms);
-    
-    // Enrich DM rooms with nickname and avatar info from mock users list
-    const allUsers = await dbGetUsers(MOCK_USERS);
-    
-    const enrichedRooms = [];
-    for (const room of rooms) {
-      const isInitiator = room.user1Id === studentId;
-      const opponentId = isInitiator ? room.user2Id : room.user1Id;
-      
-      const opponentUserRecord = allUsers.find(u => u.id === opponentId || (u.user && u.user.id === opponentId));
-      const opponentUser = opponentUserRecord ? (opponentUserRecord.user || opponentUserRecord) : null;
-      
-      const opponentProfile = await dbGetChatProfile(opponentId, chatProfiles);
-      
-      enrichedRooms.push({
-        ...room,
-        isInitiator,
-        opponent: {
-          id: opponentId,
-          name: opponentUser ? opponentUser.name : 'Unknown User',
-          nickname: opponentProfile ? opponentProfile.nickname : (opponentUser ? opponentUser.name : 'Unknown'),
-          avatarUrl: opponentProfile ? opponentProfile.avatarUrl : 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80'
-        }
-      });
-    }
-    
-    res.json(enrichedRooms);
-  });
-
-  // 6. POST request DM room
-  app.post("/api/chat/dms/request", requireAuth(), async (req: any, res) => {
-    const studentId = req.user.id;
-    const { recipientId } = req.body;
-    if (!recipientId) {
-      return res.status(400).json({ error: "recipientId is required" });
-    }
-
-    const rooms = await dbGetDMRooms(studentId, dmRooms);
-    let existingRoom = rooms.find(r => 
-      (r.user1Id === studentId && r.user2Id === recipientId) ||
-      (r.user1Id === recipientId && r.user2Id === studentId)
-    );
-
-    if (existingRoom) {
-      return res.json(existingRoom);
-    }
-
-    const newRoom = {
-      id: `room-${studentId.substring(0, 5)}-${recipientId.substring(0, 5)}-${Date.now()}`,
-      user1Id: studentId,
-      user2Id: recipientId,
-      status: 'pending',
-      createdAt: new Date().toISOString()
-    };
-
-    const savedRoom = await dbCreateDMRoom(newRoom, dmRooms);
-    res.status(201).json(savedRoom);
-  });
-
-  // 7. POST accept DM room request
-  app.post("/api/chat/dms/accept", requireAuth(), async (req: any, res) => {
-    const { roomId } = req.body;
-    if (!roomId) {
-      return res.status(400).json({ error: "roomId is required" });
-    }
-    const updatedRoom = await dbAcceptDMRoom(roomId, dmRooms);
-    if (!updatedRoom) {
-      return res.status(404).json({ error: "DM Room not found" });
-    }
-    res.json(updatedRoom);
-  });
-
-  // 8. GET other students list for DM start
-  app.get("/api/chat/students", requireAuth(), async (req: any, res) => {
-    const studentId = req.user.id;
-    const allUsers = await dbGetUsers(MOCK_USERS);
-    
-    const studentsFiltered = allUsers.filter(u => {
-      const uRecord = u.user || u;
-      return uRecord.role === 'student' && uRecord.id !== studentId;
-    });
-
-    const studentUsers = [];
-    for (const u of studentsFiltered) {
-      const uRecord = u.user || u;
-      const profile = await dbGetChatProfile(uRecord.id, chatProfiles);
-      studentUsers.push({
-        id: uRecord.id,
-        name: uRecord.name,
-        nickname: profile ? profile.nickname : uRecord.name,
-        avatarUrl: profile ? profile.avatarUrl : 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80'
-      });
-    }
-    
-    res.json(studentUsers);
-  });
-
-  // --- SECURED & ENCRYPTED STAFF-MANAGER CHAT SYSTEM ---
-  // Key derivation for secure encryption/decryption
-  const CHAT_ALGO = 'aes-256-cbc';
-  const CHAT_SECRET_KEY = crypto.scryptSync(process.env.CHAT_ENCRYPTION_SECRET || 'PineVelaSecureStaffChatSecret2026Key', 'salt', 32);
-  const CHAT_IV = crypto.scryptSync(process.env.CHAT_ENCRYPTION_IV || 'PineVelaIVSalt26', 'salt', 16);
-
-  function encryptMsg(text: string): string {
-    try {
-      const cipher = crypto.createCipheriv(CHAT_ALGO, CHAT_SECRET_KEY, CHAT_IV);
-      let encrypted = cipher.update(text, 'utf8', 'hex');
-      encrypted += cipher.final('hex');
-      return encrypted;
-    } catch (err) {
-      console.error("Staff chat encryption error:", err);
-      return text;
-    }
-  }
-
-  function decryptMsg(encryptedText: string): string {
-    try {
-      const decipher = crypto.createDecipheriv(CHAT_ALGO, CHAT_SECRET_KEY, CHAT_IV);
-      let decrypted = decipher.update(encryptedText, 'hex', 'utf8');
-      decrypted += decipher.final('utf8');
-      return decrypted;
-    } catch (err) {
-      console.error("Staff chat decryption error:", err);
-      return encryptedText;
-    }
-  }
-
-  // 1. GET staff chat rooms (only accessible to manager or the staff themselves, strictly forbidden to admin and anyone else)
-  app.get("/api/staff-chat/rooms", requireAuth(), async (req: any, res) => {
-    try {
-      const userId = (req.user.id || '').toString().trim();
-      const userEmail = (req.user.email || '').toLowerCase().trim();
-      const userRole = (req.user.role || '').toLowerCase();
-
-      // Strictly deny access to admins to fulfill "noone can see it beside the users not even the admins"
-      if (userRole === 'admin') {
-        return res.status(403).json({ error: "Access Denied: Chat logs are fully encrypted and only visible to the respective manager and staff member. Even Administrators are restricted from viewing." });
-      }
-
-      let rooms = [];
-      if (userRole === 'manager') {
-        rooms = (staffChatRooms || []).filter((r: any) => 
-          r.managerId === userId || 
-          (userEmail && r.managerEmail && r.managerEmail.toLowerCase().trim() === userEmail)
-        );
-      } else if (userRole === 'staff') {
-        rooms = (staffChatRooms || []).filter((r: any) => 
-          r.staffId === userId || 
-          r.staffUserId === userId || 
-          (userEmail && r.staffEmail && r.staffEmail.toLowerCase().trim() === userEmail)
-        );
-      }
-
-      res.json(rooms);
-    } catch (err) {
-      console.error("Error loading staff chat rooms:", err);
-      res.status(500).json({ error: "Failed to load chat rooms" });
-    }
-  });
-
-  // 2. GET messages for a specific staff-manager chat room
-  app.get("/api/staff-chat/rooms/:roomId/messages", requireAuth(), async (req: any, res) => {
-    try {
-      const { roomId } = req.params;
-      const userId = (req.user.id || '').toString().trim();
-      const userEmail = (req.user.email || '').toLowerCase().trim();
-      const userRole = (req.user.role || '').toLowerCase();
-
-      console.log(`[CHAT DEBUG] Loading messages for roomId="${roomId}" | Requester: userId="${userId}", role="${userRole}"`);
-
-      // Admin exclusion check
-      if (userRole === 'admin') {
-        console.log(`[CHAT DEBUG] 403 Forbidden! User is admin and excluded from staff chat.`);
-        return res.status(403).json({ error: "Access Denied: Even admins cannot view encrypted conversations." });
-      }
-
-      const room = (staffChatRooms || []).find((r: any) => r.id === roomId);
-      if (!room) {
-        console.log(`[CHAT DEBUG] 404 Room not found: "${roomId}"`);
-        return res.status(404).json({ error: "Chat room not found" });
-      }
-
-      console.log(`[CHAT DEBUG] Room details: staffId="${room.staffId}", managerId="${room.managerId}"`);
-
-      // Check if user is either the staff or the manager in this room
-      const isStaffInRoom = room.staffId === userId || room.staffUserId === userId || (userEmail && room.staffEmail && room.staffEmail.toLowerCase().trim() === userEmail);
-      const isManagerInRoom = room.managerId === userId || (userEmail && room.managerEmail && room.managerEmail.toLowerCase().trim() === userEmail);
-
-      if (!isStaffInRoom && !isManagerInRoom) {
-        console.log(`[CHAT DEBUG] 403 Forbidden! Requester userId="${userId}" is not authorized for this room`);
-        return res.status(403).json({ error: "Access Denied: You are not authorized to view this encrypted conversation." });
-      }
-
-      // Find messages and decrypt them on the fly
-      const filteredMsgs = staffChatMessages.filter((m: any) => m.roomId === roomId);
-      const decryptedMsgs = filteredMsgs.map((m: any) => {
-        return {
-          ...m,
-          content: decryptMsg(m.encryptedContent)
-        };
-      });
-
-      res.json(decryptedMsgs);
-    } catch (err) {
-      console.error("Error loading chat messages:", err);
-      res.status(500).json({ error: "Failed to load messages" });
-    }
-  });
-
-  // 3. POST message to a specific staff-manager chat room
-  app.post("/api/staff-chat/rooms/:roomId/messages", requireAuth(), async (req: any, res) => {
-    try {
-      const { roomId } = req.params;
-      const { content } = req.body;
-      const userId = req.user.id;
-      const userRole = req.user.role;
-
-      if (!content || !content.trim()) {
-        return res.status(400).json({ error: "Message content cannot be empty" });
-      }
-
-      // Admin exclusion check
-      if (userRole === 'admin') {
-        return res.status(403).json({ error: "Access Denied: Administrators cannot participate in staff chat conversations." });
-      }
-
-      const room = staffChatRooms.find((r: any) => r.id === roomId);
-      if (!room) {
-        return res.status(404).json({ error: "Chat room not found" });
-      }
-
-      // Validate participation
-      if (room.staffId !== userId && room.managerId !== userId) {
-        return res.status(403).json({ error: "Access Denied: You are not authorized to send messages to this room." });
-      }
-
-      // Encrypt the content before pushing to memory/store
-      const encrypted = encryptMsg(content.trim());
-
-      const newMsg = {
-        id: `staff-msg-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-        roomId,
-        senderId: userId,
-        senderName: req.user.name || 'Anonymous',
-        senderRole: userRole,
-        encryptedContent: encrypted,
-        createdAt: new Date().toISOString()
-      };
-
-      staffChatMessages.push(newMsg);
-      syncStore();
-
-      // Return the decrypted message to the client for immediate rendering
-      res.status(201).json({
-        ...newMsg,
-        content: content.trim()
-      });
-    } catch (err) {
-      console.error("Error saving secure chat message:", err);
-      res.status(500).json({ error: "Failed to send encrypted message" });
-    }
-  });
-
   // 404 handler for API routes to prevent falling through to SPA HTML
   app.all('/api/*', (req, res) => {
     console.warn(`[API 404] ${req.method} ${req.url}`);
@@ -15549,6 +11853,10 @@ ${400 + streamLength}
     const vite = await createViteServer({
       server: {
         middlewareMode: true,
+        fs: {
+          // Preserve Vite's default secret-file exclusions and deny raw upload access.
+          deny: ['.env', '.env.*', '*.{crt,pem}', '**/.git/**', '**/uploads/**', `${path.resolve(process.env.PINEVELA_UPLOADS_DIR || path.join(process.cwd(), 'uploads'))}/**`],
+        },
         watch: {
           ignored: ['**/data/**', '**/*.json', '**/*.log', '**/*.tmp*', '**/scratch/**'],
         },
@@ -15566,6 +11874,10 @@ ${400 + streamLength}
 
   // Global Error Handler
   app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+    if (err instanceof ResourceLimitError) return resourceFailure(res, err);
+    if (err?.type === 'entity.too.large') return res.status(413).set('Connection', 'close').json({ error: 'Request body exceeds the supported size.' });
+    if (err?.type === 'entity.parse.failed' || err?.type === 'request.size.invalid') return res.status(400).json({ error: 'Invalid request body.' });
+    if (err?.type === 'encoding.unsupported') return res.status(415).json({ error: 'Unsupported request body encoding.' });
     console.error("[SERVER ERROR]", err);
     if (res.headersSent) {
       return next(err);
@@ -15579,9 +11891,14 @@ ${400 + streamLength}
     next(err);
   });
 
-  app.listen(PORT, "0.0.0.0", () => {
+  const httpServer = app.listen(PORT, "0.0.0.0", () => {
     console.log(`[PineVela Backend] Server listening at http://0.0.0.0:${PORT}`);
   });
+  httpServer.maxConnections = 256;
+  httpServer.headersTimeout = 10000;
+  httpServer.requestTimeout = 30000;
+  httpServer.keepAliveTimeout = 5000;
+  httpServer.maxRequestsPerSocket = 100;
 }
 
 startServer().catch(err => {

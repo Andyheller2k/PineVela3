@@ -101,7 +101,6 @@
   padding: clamp(60px, 7vw, 100px) clamp(24px, 6vw, 100px);
   display: flex;
   align-items: center;
-  perspective: 1400px;
 }
 .company-chapter-transition { width: 100%; transform-origin: 50% min(40vh, 360px); }
 .company-chapter-grid {
@@ -180,7 +179,7 @@
   .company-story-actions { gap: 8px; }
   .company-menu-trigger { font-size: 11px; gap: 5px; padding: 10px 8px; }
   .company-close { width: 34px; height: 34px; }
-  .company-chapter { min-height: calc(100svh - 70px); padding: 32px 20px 56px; perspective: 1000px; }
+  .company-chapter { min-height: calc(100svh - 70px); padding: 32px 20px 56px; }
   .company-chapter-grid { grid-template-columns: minmax(0, 1fr); gap: 26px; }
   .company-image-card { position: relative; top: auto; max-width: 440px; margin: auto; border-radius: 20px; }
   .company-chapter-reversed .company-copy, .company-chapter-reversed .company-image-card { grid-column: auto; grid-row: auto; }

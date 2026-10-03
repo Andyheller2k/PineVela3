@@ -1,8 +1,10 @@
+import { sessionFetch as fetch } from '../lib/session';
 import React, { useState, useEffect, useRef, useCallback, memo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { queryClient, invalidateAllQueries } from '../lib/queryClient';
 import { useAuth } from '../context/AuthContext';
 import PineLogo from './PineLogo';
+import MarketplaceInbox from './MarketplaceInbox';
 import { compressImageFileToLowRes, optimizeImageDisplayUrl } from '../lib/imageOptimizer';
 import {
   Store,
@@ -45,7 +47,8 @@ import {
   Phone,
   Wrench,
   Scissors,
-  Briefcase
+  Briefcase,
+  MessageSquare
 } from 'lucide-react';
 import CampusMeetupMapPicker from './CampusMeetupMapPicker';
 import ItemImageCropModal from './ItemImageCropModal';
@@ -71,6 +74,8 @@ export const DIGITAL_MARKET_CATEGORIES = [
 ];
 
 interface MarketProduct {
+  rating?: number;
+  reviewCount?: number;
   id: string;
   storeId: string;
   storeName: string;
@@ -127,7 +132,6 @@ interface MarketOrder {
   sellerConfirmed?: boolean;
   sellerAgreedLocation?: boolean;
   sellerAgreedAt?: string;
-  otpPin: string;
   status: string;
   paymentMethod: string;
   createdAt: string;
@@ -287,7 +291,7 @@ export default function PageDigitalMarket() {
   }, [user, navigate]);
 
   // Navigation
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'inventory' | 'services' | 'sales' | 'notifications' | 'profile' | 'upgrade'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'inventory' | 'services' | 'sales' | 'notifications' | 'profile' | 'upgrade' | 'messages'>('dashboard');
   const [storeData, setStoreData] = useState<any>(null);
   const [applicationData, setApplicationData] = useState<any>(null);
   const [products, setProducts] = useState<MarketProduct[]>([]);
@@ -398,11 +402,8 @@ export default function PageDigitalMarket() {
   const [isMapLocationPickerOpen, setIsMapLocationPickerOpen] = useState(false);
   const [viewingServiceMap, setViewingServiceMap] = useState<any | null>(null);
   const [viewingServiceReviews, setViewingServiceReviews] = useState<any | null>(null);
-  const [newReviewRating, setNewReviewRating] = useState(5);
-  const [newReviewText, setNewReviewText] = useState('');
   const [serviceReviewsList, setServiceReviewsList] = useState<any[]>([]);
   const [loadingReviews, setLoadingReviews] = useState(false);
-  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
   const [isSubmittingService, setIsSubmittingService] = useState(false);
   const [servicesSearchQuery, setServicesSearchQuery] = useState('');
   const [servicesCategoryFilter, setServicesCategoryFilter] = useState('All');
@@ -546,6 +547,7 @@ export default function PageDigitalMarket() {
       
       const isSellerMarketNotification = (n: any) => {
         if (!n) return false;
+        if (n.marketChat || /^📩 New message from /.test(n.title || '')) return true;
         if (n.scope === 'market' || n.category === 'market' || n.category === 'ecommerce' || n.module === 'digital_market' || n.targetRole === 'merchant') {
           return true;
         }
@@ -844,7 +846,7 @@ export default function PageDigitalMarket() {
         setPinInput('');
         await loadData();
       } else {
-        triggerToast(res?.error || "Incorrect 4-Digit Pickup PIN.", "error");
+        triggerToast(res?.error || "Incorrect 6-Digit Pickup PIN.", "error");
       }
     } catch (err: any) {
       triggerToast(err?.message || "PIN verification handshake failed.", "error");
@@ -1028,8 +1030,6 @@ export default function PageDigitalMarket() {
   const handleOpenServiceReviews = async (service: MarketProduct) => {
     setViewingServiceReviews(service);
     setLoadingReviews(true);
-    setNewReviewRating(5);
-    setNewReviewText('');
     try {
       const res = await fetch(`/api/digital-market/ratings?serviceId=${encodeURIComponent(service.id)}`);
       if (res.ok) {
@@ -1040,51 +1040,6 @@ export default function PageDigitalMarket() {
       console.error("Error loading service reviews:", e);
     } finally {
       setLoadingReviews(false);
-    }
-  };
-
-  const handleSubmitServiceReview = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!viewingServiceReviews) return;
-    if (!newReviewText.trim()) {
-      triggerToast("Please write a brief feedback comment.", "error");
-      return;
-    }
-
-    setIsSubmittingReview(true);
-    try {
-      const email = user?.studentEmail || user?.email || '';
-      const name = user?.name || user?.username || 'Student Buyer';
-      const res = await apiFetch('/api/digital-market/ratings', {
-        method: 'POST',
-        body: JSON.stringify({
-          serviceId: viewingServiceReviews.id,
-          productId: viewingServiceReviews.id,
-          storeId: viewingServiceReviews.storeId,
-          sellerEmail: viewingServiceReviews.sellerEmail,
-          buyerEmail: email,
-          buyerName: name,
-          rating: newReviewRating,
-          review: newReviewText.trim()
-        })
-      });
-
-      if (res?.success) {
-        triggerToast("Thank you! Your feedback review has been published.", "success");
-        setNewReviewText('');
-        const updatedRes = await fetch(`/api/digital-market/ratings?serviceId=${encodeURIComponent(viewingServiceReviews.id)}`);
-        if (updatedRes.ok) {
-          const data = await updatedRes.json();
-          setServiceReviewsList(data.ratings || []);
-        }
-        await loadData();
-      } else {
-        triggerToast(res?.error || "Failed to submit review.", "error");
-      }
-    } catch (err: any) {
-      triggerToast(err?.message || "Failed to submit review.", "error");
-    } finally {
-      setIsSubmittingReview(false);
     }
   };
 
@@ -1245,7 +1200,7 @@ export default function PageDigitalMarket() {
     p.category?.toLowerCase().includes('service')
   ));
   const totalStockUnits = physicalProductsOnly.reduce((acc, p) => acc + (p.stockQuantity || 0), 0);
-  const pendingOrders = orders.filter(o => o.status !== 'Completed & Paid' && o.status !== 'Cancelled');
+  const pendingOrders = orders.filter(o => !['Completed & Paid', 'Cancelled', 'Location Rejected', 'Rejected by Seller'].includes(o.status));
   const completedOrders = orders.filter(o => o.status === 'Completed & Paid');
   const totalRevenue = completedOrders.reduce((acc, o) => acc + (o.totalAmount || (o.productPrice * o.quantity) || 0), 0);
 
@@ -1330,7 +1285,7 @@ export default function PageDigitalMarket() {
               <span className="text-sm font-black tracking-tight text-slate-900">PineVela Student Merchant Setup</span>
             </div>
             <button
-              onClick={() => { logout(); navigate('/login'); }}
+              onClick={async () => { if (!await logout()) return; navigate('/login'); }}
               className="px-3.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
             >
               <LogOut className="w-3.5 h-3.5" />
@@ -1816,6 +1771,7 @@ export default function PageDigitalMarket() {
                 )}
               </button>
 
+              <button type="button" onClick={() => setActiveTab('messages')} className={`px-4 py-2.5 rounded-xl text-xs font-black flex items-center gap-2 cursor-pointer ${activeTab === 'messages' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-600 hover:bg-blue-50'}`}><MessageSquare className="w-4 h-4" /><span>Messages</span></button>
               <button type="button" title="Upgrade your seller plan" aria-label="Upgrade your seller plan" onClick={() => setActiveTab("upgrade")} className={`px-3 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 cursor-pointer ${activeTab === "upgrade" ? "bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 shadow-md" : "text-amber-700 hover:bg-amber-50"}`}><CreditCard className="w-4 h-4" /><span className="sr-only">Upgrade</span></button>
               <button type="button" onClick={() => setActiveTab("profile")} className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 cursor-pointer ${activeTab === "profile" ? "bg-blue-600 text-white shadow-md" : "text-slate-600 hover:bg-slate-100/80 hover:text-slate-900"}`}><ShieldCheck className="w-4 h-4" /><span>Store Profile</span></button>
             </nav>
@@ -1914,7 +1870,7 @@ export default function PageDigitalMarket() {
                         <Clock className="w-4 h-4 text-blue-600" />
                         <span>Awaiting Campus Verification & PIN Handshake</span>
                       </h3>
-                      <p className="text-[11px] text-slate-400">When student buyers order, verify their transaction with their 4-digit pickup token.</p>
+                      <p className="text-[11px] text-slate-400">When student buyers order, verify their transaction with their six-digit pickup token.</p>
                     </div>
                     <span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-800 text-[10px] font-black">
                       {pendingOrders.length} Pending
@@ -2429,7 +2385,7 @@ export default function PageDigitalMarket() {
                             title="View student reviews and ratings"
                           >
                             <Star className="w-3 h-3 text-amber-500 fill-amber-400" />
-                            <span>{(service as any).rating ? Number((service as any).rating).toFixed(1) : '5.0'}</span>
+                            <span>{service.reviewCount ? Number(service.rating).toFixed(1) : 'Unrated'}</span>
                             <span className="text-slate-500 font-semibold text-[9px]">({(service as any).reviewCount || 0})</span>
                           </button>
                         </div>
@@ -2695,7 +2651,8 @@ export default function PageDigitalMarket() {
               {filteredNotifications.length > 0 ? (
                 <div className="space-y-3 pt-2">
                   {filteredNotifications.map((notif: any) => {
-                    const isBuyRequest = (notif.title || '').toLowerCase().includes('buy') || (notif.title || '').toLowerCase().includes('order') || (notif.message || '').toLowerCase().includes('purchase');
+                    const isMarketChat = notif.marketChat || /^📩 New message from /.test(notif.title || '');
+                    const isBuyRequest = !isMarketChat && ( (notif.title || '').toLowerCase().includes('buy') || (notif.title || '').toLowerCase().includes('order') || (notif.message || '').toLowerCase().includes('purchase'));
                     return (
                       <div
                         key={notif.id || `notif-${Math.random()}`}
@@ -2738,6 +2695,7 @@ export default function PageDigitalMarket() {
                         </div>
 
                         <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                          {isMarketChat && <button type="button" onClick={() => { if (!notif.read) handleMarkNotificationRead(notif.id); setActiveTab('messages'); }} className="px-3 py-1.5 rounded-xl bg-blue-600 text-white text-xs font-black flex items-center gap-1"><MessageSquare className="w-3.5 h-3.5" /><span>Open Messages</span></button>}
                           {isBuyRequest && (() => {
                             const notifTitle = (notif.title || '').toLowerCase();
                             const notifMsg = (notif.message || '').toLowerCase();
@@ -2841,6 +2799,8 @@ export default function PageDigitalMarket() {
           </div>
         )}
 
+        {activeTab === 'messages' && <MarketplaceInbox />}
+
         {activeTab === "upgrade" && (
           <section className="space-y-6 animate-fadeIn">
             <div className="relative overflow-hidden rounded-3xl border border-blue-300/40 bg-gradient-to-br from-slate-950 via-blue-950 to-indigo-900 p-6 sm:p-9 text-white shadow-[0_20px_60px_rgba(30,64,175,0.25)]">
@@ -2906,14 +2866,14 @@ export default function PageDigitalMarket() {
                     <span className="text-slate-400 font-bold">STORE RATING:</span>
                     <span className="font-black text-amber-600 flex items-center gap-1">
                       <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-500" />
-                      <span>{(storeData as any)?.storeRating !== undefined && (storeData as any)?.storeRating !== null ? Number((storeData as any).storeRating).toFixed(1) : '5.0'}</span>
+                      <span>{(storeData as any)?.ratingCount ? Number((storeData as any).storeRating).toFixed(1) : 'Unrated'}</span>
                       <span className="text-[9px] text-slate-400 font-normal">({(storeData as any)?.ratingCount || 0} reviews)</span>
                     </span>
                   </div>
                 </div>
 
                 <div className="p-3 rounded-xl bg-blue-50 text-[10px] text-blue-900 leading-relaxed text-left">
-                  <strong>P2P Commerce Code:</strong> All merchants must verify transactions physically inside KNUST/Accra college enclaves. Never handover goods without customer's 4-digit pickup PIN.
+                  <strong>P2P Commerce Code:</strong> All merchants must verify transactions physically inside KNUST/Accra college enclaves. Never handover goods without customer's six-digit pickup PIN.
                 </div>
               </div>
             </div>
@@ -3533,7 +3493,7 @@ export default function PageDigitalMarket() {
                   <div className="flex items-center gap-2">
                     <input
                       type="text"
-                      required={servLocationMode !== 'flexible'}
+                      required
                       placeholder="Search or pick on map e.g. Unity Hall Block B, Room 14"
                       value={servLocation}
                       onChange={(e) => setServLocation(e.target.value)}
@@ -3825,13 +3785,13 @@ export default function PageDigitalMarket() {
             <form onSubmit={handleVerifyPin} className="space-y-4">
               <div id="pin-group-input">
                 <label className="block text-xs font-black text-slate-800 mb-2 text-center">
-                  Enter buyer's 4-Digit Pickup PIN to finalize delivery:
+                  Enter buyer's 6-Digit Pickup PIN to finalize delivery:
                 </label>
                 <input
                   type="text"
-                  maxLength={4}
+                  maxLength={6}
                   required
-                  placeholder="• • • •"
+                  placeholder="• • • • • •"
                   value={pinInput}
                   onChange={(e) => setPinInput(e.target.value.replace(/\D/g, ''))}
                   className="w-full py-3 bg-blue-50 border-2 border-blue-400 rounded-2xl text-center text-3xl font-black font-mono tracking-widest text-blue-900 focus:outline-hidden focus:ring-2 focus:ring-blue-600 focus:bg-white"
@@ -3849,7 +3809,7 @@ export default function PageDigitalMarket() {
                 </button>
                 <button
                   type="submit"
-                  disabled={pinSubmitting || pinInput.length < 4}
+                  disabled={pinSubmitting || pinInput.length !== 6}
                   className="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-505 text-white text-xs font-black shadow-lg shadow-emerald-600/20 transition-all cursor-pointer disabled:opacity-50"
                 >
                   {pinSubmitting ? "Verifying..." : "Verify & Complete"}
@@ -3900,7 +3860,7 @@ export default function PageDigitalMarket() {
             setActiveTab('dashboard');
             window.scrollTo({ top: 0, behavior: 'smooth' });
           }}
-          className={`flex flex-col items-center gap-0.5 p-1 text-[9px] font-black tracking-tight transition-all rounded-xl min-w-[54px] ${
+          className={`flex flex-col items-center gap-0.5 p-1 text-[9px] font-black tracking-tight transition-all rounded-xl min-w-0 flex-1 ${
             activeTab === 'dashboard'
               ? 'text-blue-600 font-extrabold scale-105'
               : 'text-slate-600 hover:text-slate-900'
@@ -3916,14 +3876,14 @@ export default function PageDigitalMarket() {
             setActiveTab('inventory');
             window.scrollTo({ top: 0, behavior: 'smooth' });
           }}
-          className={`flex flex-col items-center gap-0.5 p-1 text-[9px] font-black tracking-tight transition-all rounded-xl min-w-[54px] ${
+          className={`flex flex-col items-center gap-0.5 p-1 text-[9px] font-black tracking-tight transition-all rounded-xl min-w-0 flex-1 ${
             activeTab === 'inventory'
               ? 'text-blue-600 font-extrabold scale-105'
               : 'text-slate-600 hover:text-slate-900'
           }`}
         >
           <Package className="w-4.5 h-4.5 shrink-0" />
-          <span>Stock ({physicalProductsList.length})</span>
+          <span>Stock</span>
         </button>
 
         <button
@@ -3932,7 +3892,7 @@ export default function PageDigitalMarket() {
             setActiveTab('services');
             window.scrollTo({ top: 0, behavior: 'smooth' });
           }}
-          className={`flex flex-col items-center gap-0.5 p-1 text-[9px] font-black tracking-tight transition-all rounded-xl min-w-[54px] ${
+          className={`flex flex-col items-center gap-0.5 p-1 text-[9px] font-black tracking-tight transition-all rounded-xl min-w-0 flex-1 ${
             activeTab === 'services'
               ? 'text-blue-600 font-extrabold scale-105'
               : 'text-slate-600 hover:text-slate-900'
@@ -3948,14 +3908,14 @@ export default function PageDigitalMarket() {
             setActiveTab('sales');
             window.scrollTo({ top: 0, behavior: 'smooth' });
           }}
-          className={`flex flex-col items-center gap-0.5 p-1 text-[9px] font-black tracking-tight transition-all rounded-xl relative min-w-[64px] ${
+          className={`flex flex-col items-center gap-0.5 p-1 text-[9px] font-black tracking-tight transition-all rounded-xl relative min-w-0 flex-1 ${
             activeTab === 'sales'
               ? 'text-blue-600 font-extrabold scale-105'
               : 'text-slate-600 hover:text-slate-900'
           }`}
         >
           <Clock className="w-4.5 h-4.5 shrink-0" />
-          <span>Sales ({completedOrders.length})</span>
+          <span>Sales</span>
         </button>
 
         <button
@@ -3964,7 +3924,7 @@ export default function PageDigitalMarket() {
             setActiveTab('notifications');
             window.scrollTo({ top: 0, behavior: 'smooth' });
           }}
-          className={`flex flex-col items-center gap-0.5 p-1 text-[9px] font-black tracking-tight transition-all rounded-xl relative min-w-[56px] ${
+          className={`flex flex-col items-center gap-0.5 p-1 text-[9px] font-black tracking-tight transition-all rounded-xl relative min-w-0 flex-1 ${
             activeTab === 'notifications'
               ? 'text-blue-600 font-extrabold scale-105'
               : 'text-slate-600 hover:text-slate-900'
@@ -3979,13 +3939,15 @@ export default function PageDigitalMarket() {
           )}
         </button>
 
+        <button type="button" onClick={() => setActiveTab('messages')} className={`flex flex-col items-center gap-0.5 p-1 text-[9px] font-black rounded-xl min-w-0 ${activeTab === 'messages' ? 'text-blue-600' : 'text-slate-600'}`}><MessageSquare className="w-4.5 h-4.5" /><span>Messages</span></button>
+
         <button
           type="button"
           onClick={() => {
             setActiveTab('upgrade');
             window.scrollTo({ top: 0, behavior: 'smooth' });
           }}
-          className={`flex flex-col items-center gap-0.5 p-1 text-[9px] font-black tracking-tight transition-all rounded-xl min-w-[64px] ${
+          className={`flex flex-col items-center gap-0.5 p-1 text-[9px] font-black tracking-tight transition-all rounded-xl min-w-0 flex-1 ${
             activeTab === 'upgrade'
               ? 'text-blue-600 font-extrabold scale-105'
               : 'text-slate-600 hover:text-slate-900'
@@ -4052,7 +4014,7 @@ export default function PageDigitalMarket() {
                   </h3>
                   <div className="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
                     <span className="font-extrabold text-amber-900">
-                      {viewingServiceReviews.rating ? Number(viewingServiceReviews.rating).toFixed(1) : '5.0'} ★
+                      {viewingServiceReviews.reviewCount ? `${Number(viewingServiceReviews.rating).toFixed(1)} ★` : 'Unrated'}
                     </span>
                     <span>·</span>
                     <span>{serviceReviewsList.length} verified student reviews</span>
@@ -4069,54 +4031,9 @@ export default function PageDigitalMarket() {
               </button>
             </div>
 
-            {/* Scrollable Reviews List & Feedback Form */}
+            {/* Scrollable Verified Reviews List */}
             <div className="flex-1 overflow-y-auto py-4 space-y-5 pr-1">
-              {/* Submit Review Form for Students */}
-              <form onSubmit={handleSubmitServiceReview} className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-black text-slate-900">Write Feedback & Rate Service</span>
-                  
-                  {/* Star Rating Picker */}
-                  <div className="flex items-center gap-1">
-                    {[1, 2, 3, 4, 5].map((star) => (
-                      <button
-                        key={star}
-                        type="button"
-                        onClick={() => setNewReviewRating(star)}
-                        className="p-1 cursor-pointer hover:scale-110 transition-transform"
-                      >
-                        <Star
-                          className={`w-4 h-4 ${
-                            star <= newReviewRating
-                              ? 'fill-amber-400 text-amber-500'
-                              : 'text-slate-300'
-                          }`}
-                        />
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <textarea
-                  rows={2}
-                  required
-                  placeholder="Share your experience (e.g. fast phone repair, great food portion, professional haircut, friendly service)..."
-                  value={newReviewText}
-                  onChange={(e) => setNewReviewText(e.target.value)}
-                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-600 resize-none"
-                />
-
-                <div className="flex justify-end">
-                  <button
-                    type="submit"
-                    disabled={isSubmittingReview || !newReviewText.trim()}
-                    className="px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white text-xs font-black rounded-xl shadow-md transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
-                  >
-                    {isSubmittingReview && <RefreshCw className="w-3 h-3 animate-spin" />}
-                    <span>Submit Student Review</span>
-                  </button>
-                </div>
-              </form>
+              <p className="text-xs text-slate-500">Reviews come from completed purchases. Buyers submit and edit reviews in Purchases &amp; Tracking.</p>
 
               {/* Reviews List */}
               <div className="space-y-3">
@@ -4131,7 +4048,7 @@ export default function PageDigitalMarket() {
                   </div>
                 ) : serviceReviewsList.length > 0 ? (
                   serviceReviewsList.map((rev) => (
-                    <div key={rev.id || Math.random()} className="bg-white border border-slate-150 rounded-2xl p-3.5 space-y-1.5 shadow-2xs">
+                    <div key={rev.id} className="bg-white border border-slate-150 rounded-2xl p-3.5 space-y-1.5 shadow-2xs">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <div className="w-7 h-7 rounded-full bg-blue-100 text-blue-900 text-xs font-black flex items-center justify-center">
@@ -4210,9 +4127,9 @@ export default function PageDigitalMarket() {
               </button>
               <button
                 type="button"
-                onClick={() => {
+                onClick={async () => {
                   setShowLogoutConfirm(false);
-                  logout();
+                  if (!await logout()) return;
                   navigate('/login');
                 }}
                 className="px-4 py-2.5 bg-rose-600 hover:bg-rose-500 text-white text-xs font-black rounded-xl shadow-md shadow-rose-600/20 transition-all cursor-pointer"

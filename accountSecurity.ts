@@ -1,4 +1,5 @@
 import crypto from 'node:crypto';
+import { credentialWork, WorkPool } from './resourceSecurity.js';
 
 const DIGEST = /^[a-f0-9]{64}$/i;
 const PASSWORD_FIELDS = ['password', 'plainPassword', 'localPassword', 'userPropPassword'];
@@ -21,7 +22,7 @@ function equal(a: string, b: string): boolean {
 
 function hashDigest(digest: string): string {
   const salt = crypto.randomBytes(16).toString('hex');
-  const derived = crypto.scryptSync(digest, salt, 32, SCRYPT_OPTIONS).toString('hex');
+  const derived = credentialWork(`hash:${digest}:${salt}`, () => crypto.scryptSync(digest, salt, 32, SCRYPT_OPTIONS).toString('hex'));
   return `scrypt-sha256$${salt}$${derived}`;
 }
 
@@ -35,9 +36,33 @@ export function verifyCredential(password: string, stored: unknown): boolean {
   if (stored.startsWith('scrypt-sha256$')) {
     const [, salt, expected] = stored.split('$');
     if (!/^[a-f0-9]{32}$/.test(salt || '') || !DIGEST.test(expected || '')) return false;
-    return equal(crypto.scryptSync(digestPassword(password), salt, 32, SCRYPT_OPTIONS).toString('hex'), expected);
+    const digest = digestPassword(password);
+    return equal(credentialWork(`verify:${digest}:${stored}`, () => crypto.scryptSync(digest, salt, 32, SCRYPT_OPTIONS).toString('hex')), expected);
   }
   return DIGEST.test(stored) ? equal(digestPassword(password), stored.toLowerCase()) : equal(password, stored);
+}
+
+const passwordWorkers = new WorkPool(2, 8);
+function deriveAsync(digest: string, salt: string): Promise<string> {
+  return passwordWorkers.run(() => new Promise((resolve, reject) => {
+    crypto.scrypt(digest, salt, 32, SCRYPT_OPTIONS, (error, derived) => error ? reject(error) : resolve(derived.toString('hex')));
+  }));
+}
+export async function hashCredentialAsync(password: string): Promise<string> {
+  const salt = crypto.randomBytes(16).toString('hex'), digest = digestPassword(password);
+  const derived = await credentialWork(`hash:${digest}:${salt}`, () => deriveAsync(digest, salt));
+  return `scrypt-sha256$${salt}$${derived}`;
+}
+export async function verifyCredentialAsync(password: string, stored: unknown): Promise<boolean> {
+  if (typeof password !== 'string' || !password || typeof stored !== 'string' || !stored || stored.startsWith('!LOCKED_')) return false;
+  if (!stored.startsWith('scrypt-sha256$')) return verifyCredential(password, stored);
+  const [, salt, expected] = stored.split('$');
+  if (!/^[a-f0-9]{32}$/.test(salt || '') || !DIGEST.test(expected || '')) return false;
+  const digest = digestPassword(password);
+  return equal(await credentialWork(`verify-async:${digest}:${stored}`, () => deriveAsync(digest, salt)), expected);
+}
+export async function findAsync<T>(values: T[], predicate: (value: T) => Promise<boolean>): Promise<T | undefined> {
+  for (const value of values) if (await predicate(value)) return value;
 }
 
 export function credentialValues(entry: any, includeHistory = true): string[] {
@@ -52,6 +77,12 @@ export function credentialValues(entry: any, includeHistory = true): string[] {
 
 /** Test a proposed password against the hashes of this person's existing identities. */
 export function passwordIsReused(password: string, records: any[], email: string, actor?: any): boolean {
+  return relatedCredentials(records, email, actor).some(value => verifyCredential(password, value));
+}
+export async function passwordIsReusedAsync(password: string, records: any[], email: string, actor?: any): Promise<boolean> {
+  return Boolean(await findAsync(relatedCredentials(records, email, actor), value => verifyCredentialAsync(password, value)));
+}
+function relatedCredentials(records: any[], email: string, actor?: any): string[] {
   const emails = new Set([normalizeEmail(email), normalizeEmail(actor?.email), normalizeEmail(actor?.parentUserEmail)].filter(Boolean));
   const ids = new Set([actor?.id, actor?.parentUserId].filter(Boolean).map(String));
   const related = new Set<any>();
@@ -75,10 +106,9 @@ export function passwordIsReused(password: string, records: any[], email: string
     for (const value of credentialValues(record)) {
       if (tested.has(value)) continue;
       tested.add(value);
-      if (verifyCredential(password, value)) return true;
     }
   }
-  return false;
+  return [...tested];
 }
 
 /** Scrub old plaintext aliases and upgrade legacy hashes before any database write. */
@@ -104,7 +134,7 @@ export function protectStoredCredentials(value: any, seen = new Set<any>()): voi
 export function publicAccountData(value: any, includeSession = false): any {
   if (!value || typeof value !== 'object') return value;
   if (Array.isArray(value)) return value.map(child => publicAccountData(child));
-  return Object.fromEntries(Object.entries(value).filter(([key]) => !PASSWORD_FIELDS.includes(key) && key !== 'passwordHistory' && (!['token', 'merchantToken', 'sessionToken'].includes(key) || (includeSession && key === 'token'))).map(([key, child]) => [key, publicAccountData(child, includeSession && key === 'user')]));
+  return Object.fromEntries(Object.entries(value).filter(([key]) => !PASSWORD_FIELDS.includes(key) && key !== 'passwordHistory' && key !== 'session' && (!['token', 'merchantToken', 'sessionToken'].includes(key) || (includeSession && key === 'token'))).map(([key, child]) => [key, publicAccountData(child, includeSession && key === 'user')]));
 }
 
 export function canManageHostel(actor: any, hostel: any): boolean {

@@ -5,6 +5,7 @@ import { queryClient, invalidateAllQueries } from '../lib/queryClient';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
 import { saveNavigationLayout, usesTopNavigation } from '../lib/navigationLayout';
+import TopNavBadge from './TopNavBadge';
 import PineLogo from './PineLogo';
 import HostelRegistration from './HostelRegistration';
 import ManagerProfileModal from './ManagerProfileModal';
@@ -12,14 +13,13 @@ import { ManagerMeetingsTab } from './ManagerMeetingsTab';
 import { ManagerAccountSettingsModal } from './ManagerAccountSettingsModal';
 import LogoutConfirmationModal from './LogoutConfirmationModal';
 import ManagerDigitalKeysView from './ManagerDigitalKeysView';
-import { getPdfBlobUrl, downloadPdfDocument } from '../utils/pdfHelper';
+import { } from '../utils/pdfHelper';
 import { 
-  Building2, Users, MapPin, DollarSign, CheckCircle2, XCircle, Clock, Plus, 
-  ShieldCheck, LogOut as LogOutIcon, Search, Home, Hotel, Coffee, UserPlus, 
-  AlertCircle, Check, Sparkles, ArrowRight, ArrowLeft, Layers, Wrench, Settings, Bell,
-  Send, MessageSquare, Phone, Mail, Shield, Trash2, Edit3, Eye, EyeOff, FileText, CheckCircle, Lock, Calendar, CalendarCheck,
-  Briefcase, Sliders, ExternalLink, Download, RefreshCw, Scale, Handshake, HelpCircle, ThumbsUp, ThumbsDown,
-  Key, Copy, Smartphone, Share2, ChevronRight, X, ShieldAlert, PanelLeftClose, PanelLeftOpen
+  Building2, Users, MapPin, CheckCircle2, XCircle, Clock, Plus,
+  ShieldCheck, LogOut as LogOutIcon, UserPlus,
+  AlertCircle, Check, ArrowRight, Layers, Wrench, Settings, Bell,
+  Send, MessageSquare, Phone, Mail, Trash2, Edit3, Eye, EyeOff, CheckCircle, Lock, CalendarCheck, RefreshCw, Scale, Handshake, ThumbsUp, ThumbsDown,
+  Key, Copy, X, ShieldAlert, PanelLeftClose, PanelLeftOpen
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
@@ -76,7 +76,7 @@ export default function PageManagerDashboard() {
   // Prioritize onboarding flow/tabs immediately if manager is pending approval
   const isPendingOnboarding = user && user.role === 'manager' && user.hasApprovedHostel === false;
 
-  const [activeTab, setActiveTab] = useState<'overview' | 'properties' | 'blocks' | 'staff' | 'maintenance' | 'meetings' | 'notifications' | 'chat'>(
+  const [activeTab, setActiveTab] = useState<'overview' | 'properties' | 'blocks' | 'staff' | 'maintenance' | 'meetings' | 'notifications'>(
     isPendingOnboarding ? 'notifications' : 'overview'
   );
   // Collapsible sidebar state (Disabled minimizing to prevent glitched overlapping)
@@ -87,7 +87,6 @@ export default function PageManagerDashboard() {
     saveNavigationLayout(isSidebarTopNav);
   }, [isSidebarTopNav]);
   const [loading, setLoading] = useState(true);
-  const isInitialLoadRef = React.useRef(true);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [selectedBlock, setSelectedBlock] = useState<any | null>(null);
   const [showRegistration, setShowRegistration] = useState(false);
@@ -98,17 +97,12 @@ export default function PageManagerDashboard() {
 
   // Manager specific states
   const [properties, setProperties] = useState<any[]>([]);
-  const [applications, setApplications] = useState<any[]>([]);
   const [maintenanceIssues, setMaintenanceIssues] = useState<MaintenanceTicket[]>([]);
   const [activities, setActivities] = useState<any[]>([]);
 
   // Staff state
   const [staffList, setStaffList] = useState<StaffMember[]>([]);
-  const [staffApplications, setStaffApplications] = useState<any[]>([]);
-  const [staffSubTab, setStaffSubTab] = useState<'roster' | 'applications' | 'bargains' | 'recruitment'>('roster');
-  const [selectedCvApp, setSelectedCvApp] = useState<any | null>(null);
-  const [docPreviewModal, setDocPreviewModal] = useState<{ title: string; type: 'cv' | 'id'; data: string; fileName?: string; name?: string; endpoint?: string } | null>(null);
-  const [previewBlobUrl, setPreviewBlobUrl] = useState<string | null>(null);
+  const [staffSubTab, setStaffSubTab] = useState<'roster' | 'bargains'>('roster');
 
   // Staff quit & bargain negotiation state
   const [staffBargains, setStaffBargains] = useState<any[]>([]);
@@ -118,33 +112,6 @@ export default function PageManagerDashboard() {
   const [managerUpdatedShift, setManagerUpdatedShift] = useState('');
   const [managerUpdatedBlock, setManagerUpdatedBlock] = useState('');
   const [submittingManagerResponse, setSubmittingManagerResponse] = useState(false);
-
-  useEffect(() => {
-    if (docPreviewModal && docPreviewModal.type === 'cv' && docPreviewModal.data) {
-      const url = getPdfBlobUrl(docPreviewModal.data, docPreviewModal.name || 'Applicant');
-      setPreviewBlobUrl(url);
-      return () => {
-        URL.revokeObjectURL(url);
-      };
-    } else {
-      setPreviewBlobUrl(null);
-    }
-  }, [docPreviewModal?.data, docPreviewModal?.type, docPreviewModal?.name]);
-  const [approveModalApp, setApproveModalApp] = useState<any | null>(null);
-  const [approveShift, setApproveShift] = useState('Day Shift (8 AM - 5 PM)');
-  const [approveBlock, setApproveBlock] = useState('All Blocks');
-  const [approveStartDate, setApproveStartDate] = useState(new Date(Date.now() + 86400000).toISOString().split('T')[0]);
-  const [hiringOpen, setHiringOpen] = useState(true);
-  const [recruitmentRoles, setRecruitmentRoles] = useState<any[]>([
-    { role: 'Facilities & Maintenance Technician', vacancies: 2, shift: 'Day Shift' },
-    { role: 'Security Officer (Night Shift)', vacancies: 1, shift: 'Night Shift' },
-    { role: 'Plumber & Water Systems Lead', vacancies: 1, shift: 'Day Shift' }
-  ]);
-  const [newRecruitRole, setNewRecruitRole] = useState('Facilities & Maintenance Technician');
-  const [newRecruitVacancies, setNewRecruitVacancies] = useState(1);
-  const [newRecruitShift, setNewRecruitShift] = useState('Day Shift (8 AM - 5 PM)');
-  const [newRecruitWage, setNewRecruitWage] = useState('GH₵ 2,500 / month');
-  const [savingRecruitment, setSavingRecruitment] = useState(false);
 
   const [showAddStaffModal, setShowAddStaffModal] = useState(false);
   const [newStaffName, setNewStaffName] = useState('');
@@ -156,17 +123,6 @@ export default function PageManagerDashboard() {
   const [isSubmittingStaff, setIsSubmittingStaff] = useState(false);
   const [newStaffShift, setNewStaffShift] = useState('Day Shift (8 AM - 5 PM)');
   const [newStaffBlock, setNewStaffBlock] = useState('All Blocks');
-
-  // Chat States
-  const [chatCategory, setChatCategory] = useState<'student' | 'staff'>('student');
-  const [chatRooms, setChatRooms] = useState<any[]>([]);
-  const [selectedRoomId, setSelectedRoomId] = useState<string>('');
-  const [chatMessagesList, setChatMessagesList] = useState<any[]>([]);
-  const [studentMessagesList, setStudentMessagesList] = useState<any[]>([]);
-  const [selectedStudentKey, setSelectedStudentKey] = useState<string>('');
-  const [newMessage, setNewMessage] = useState<string>('');
-  const [sendingMsg, setSendingMsg] = useState(false);
-  const [loadingChat, setLoadingChat] = useState(false);
 
   // Maintenance state
   const [showAddIssueModal, setShowAddIssueModal] = useState(false);
@@ -235,8 +191,6 @@ export default function PageManagerDashboard() {
     return `${year}/${year + 1}`;
   });
   const [loadingRoomKeys, setLoadingRoomKeys] = useState(false);
-  const [roomSearchQuery, setRoomSearchQuery] = useState('');
-  const [roomStatusFilter, setRoomStatusFilter] = useState<'all' | 'available' | 'occupied'>('all');
   const [copiedKeyId, setCopiedKeyId] = useState<string | null>(null);
 
   // Digital Dispatch Modal
@@ -331,12 +285,6 @@ export default function PageManagerDashboard() {
         );
       }
 
-      // 2. Fetch booking requests / applications
-      const resApps = await apiFetch('/api/booking-requests').catch(() => []);
-      const managerApps = Array.isArray(resApps)
-        ? resApps.filter((a: any) => managerProperties.some(p => p.name === a.hostelName))
-        : [];
-
       // 3. Fetch issue reports / maintenance
       const resIssues = await apiFetch('/api/issue-reports').catch(() => []);
       let mappedIssues: any[] = [];
@@ -363,7 +311,6 @@ export default function PageManagerDashboard() {
 
       // 4. Fetch staff members
       const resStaff = await apiFetch('/api/staff').catch(() => []);
-      const resStaffApps = await apiFetch('/api/staff-applications').catch(() => []);
       const resBargains = await apiFetch('/api/staff-bargains').catch(() => []);
       const resBoard = await apiFetch('/api/board-requests').catch(() => []);
       const resActivities = await apiFetch('/api/activities').catch(() => []);
@@ -371,11 +318,8 @@ export default function PageManagerDashboard() {
 
       return {
         managerProperties,
-        managerApps,
         mappedIssues,
-        staffList: Array.isArray(resStaff) ? resStaff : [],
-        staffApps: Array.isArray(resStaffApps) ? resStaffApps : [],
-        staffBargains: Array.isArray(resBargains) ? resBargains : [],
+        staffList: Array.isArray(resStaff) ? resStaff : [], staffBargains: Array.isArray(resBargains) ? resBargains : [],
         boardRequests: Array.isArray(resBoard) ? resBoard : [],
         activities: Array.isArray(resActivities) && resActivities.length > 0 ? resActivities.slice(0, 10) : [],
         roomKeys: Array.isArray(resRoomKeys) ? resRoomKeys : []
@@ -384,42 +328,6 @@ export default function PageManagerDashboard() {
     enabled: Boolean(user),
     refetchInterval: 8000,
   });
-
-  // Keep local state perfectly synchronized with TanStack Query cache
-  useEffect(() => {
-    if (!managerData) return;
-    setProperties(managerData.managerProperties);
-    setApplications(managerData.managerApps);
-    setMaintenanceIssues(managerData.mappedIssues);
-    setStaffList(managerData.staffList);
-    setStaffApplications(managerData.staffApps);
-    setStaffBargains(managerData.staffBargains);
-    setBoardRequests(managerData.boardRequests);
-    if (managerData.activities.length > 0) {
-      setActivities(managerData.activities);
-    }
-    setRoomKeysList(managerData.roomKeys);
-
-    if (managerData.managerProperties[0]) {
-      if (managerData.managerProperties[0].staffHiringOpen !== undefined) {
-        setHiringOpen(managerData.managerProperties[0].staffHiringOpen);
-      }
-      if (Array.isArray(managerData.managerProperties[0].openStaffRoles) && managerData.managerProperties[0].openStaffRoles.length > 0) {
-        setRecruitmentRoles(managerData.managerProperties[0].openStaffRoles);
-      }
-    }
-
-    if (isInitialLoadRef.current) {
-      if (managerData.managerProperties.some(isPropertyApproved)) {
-        setActiveTab('overview');
-      } else {
-        setActiveTab('notifications');
-      }
-      setShowWelcomePopup(managerData.managerProperties.length === 0);
-      isInitialLoadRef.current = false;
-    }
-    setLoading(false);
-  }, [managerData]);
 
   const fetchManagerData = async () => {
     await queryClient.invalidateQueries({ queryKey: ['managerData'] });
@@ -663,8 +571,8 @@ export default function PageManagerDashboard() {
   const handleAddStaff = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isSubmittingStaff) return;
-    if (!newStaffName.trim() || !newStaffPhone.trim()) {
-      triggerToast('Please enter both staff name and phone number.');
+    if (!newStaffName.trim() || !newStaffPhone.trim() || !newStaffEmail.trim()) {
+      triggerToast('Please enter the staff name, phone number and email.');
       return;
     }
     if (!newStaffPassword.trim()) {
@@ -679,7 +587,7 @@ export default function PageManagerDashboard() {
           name: newStaffName.trim(),
           role: newStaffRole,
           phone: newStaffPhone.trim(),
-          email: newStaffEmail.trim() || `${newStaffName.toLowerCase().replace(/\s+/g, '.')}@pinevela-team.com`,
+          email: newStaffEmail.trim(),
           password: newStaffPassword.trim(),
           shift: newStaffShift,
           assignedBlock: newStaffBlock,
@@ -722,31 +630,6 @@ export default function PageManagerDashboard() {
     }
   };
 
-  const handleStaffAppDecision = async (appId: string, status: 'Approved' | 'Rejected', shift?: string, block?: string, startDate?: string) => {
-    try {
-      await apiFetch(`/api/staff-applications/${appId}/decision`, {
-        method: 'PUT',
-        body: JSON.stringify({
-          status,
-          shift: shift || 'Day Shift (8 AM - 5 PM)',
-          assignedBlock: block || 'All Blocks',
-          startDate: startDate || 'Immediate',
-          reviewNotes: status === 'Approved' ? `Application reviewed and approved. Starting date: ${startDate || 'Immediate'}` : 'Application reviewed. Position filled or criteria not met.'
-        })
-      });
-      setStaffApplications(prev => prev.map(a => a.id === appId ? { ...a, status } : a));
-      setApproveModalApp(null);
-      // If approved, refresh the staff list
-      if (status === 'Approved') {
-        const resStaff = await apiFetch('/api/staff').catch(() => []);
-        if (Array.isArray(resStaff)) setStaffList(resStaff);
-      }
-      triggerToast(`Application ${status.toLowerCase()} successfully!`);
-    } catch (err: any) {
-      triggerToast(err.message || 'Failed to update application decision.');
-    }
-  };
-
   const handleManagerBargainResponse = async () => {
     if (!selectedBargainToReview) return;
     if (managerResponseAction === 'reject' && !managerResponseNote.trim()) {
@@ -785,40 +668,6 @@ export default function PageManagerDashboard() {
     } finally {
       setSubmittingManagerResponse(false);
     }
-  };
-
-  const handleSaveRecruitment = async () => {
-    if (!primaryProperty) {
-      triggerToast('Please ensure a hostel is registered to update recruitment settings.');
-      return;
-    }
-    setSavingRecruitment(true);
-    try {
-      await apiFetch(`/api/hostels/${primaryProperty.id}/recruitment`, {
-        method: 'PUT',
-        body: JSON.stringify({
-          staffHiringOpen: hiringOpen,
-          openStaffRoles: recruitmentRoles
-        })
-      });
-      triggerToast('Staff recruitment settings published to accredited hostel listings!');
-    } catch (err: any) {
-      triggerToast(err.message || 'Failed to save recruitment settings.');
-    } finally {
-      setSavingRecruitment(false);
-    }
-  };
-
-  const handleAddRecruitmentRole = () => {
-    if (!newRecruitRole) return;
-    setRecruitmentRoles(prev => [
-      ...prev,
-      { role: newRecruitRole, vacancies: Number(newRecruitVacancies) || 1, shift: newRecruitShift, wage: newRecruitWage }
-    ]);
-  };
-
-  const handleRemoveRecruitmentRole = (idx: number) => {
-    setRecruitmentRoles(prev => prev.filter((_, i) => i !== idx));
   };
 
   const handleAddMaintenance = async (e: React.FormEvent) => {
@@ -864,26 +713,6 @@ export default function PageManagerDashboard() {
     }
   };
 
-  const handleToggleIssueStatus = async (ticketId: string) => {
-    const targetTicket = maintenanceIssues.find(t => t.id === ticketId);
-    if (!targetTicket) return;
-
-    const nextStatus: MaintenanceTicket['status'] = 
-      targetTicket.status === 'Open' ? 'In Progress' :
-      targetTicket.status === 'In Progress' ? 'Resolved' : 'Open';
-
-    try {
-      await apiFetch(`/api/issue-reports/${ticketId}`, {
-        method: 'PUT',
-        body: JSON.stringify({ status: nextStatus })
-      });
-      setMaintenanceIssues(prev => prev.map(t => t.id === ticketId ? { ...t, status: nextStatus } : t));
-      triggerToast(`Ticket updated to ${nextStatus}.`);
-    } catch (err: any) {
-      triggerToast(err.message || 'Failed to update ticket status.');
-    }
-  };
-
   const handleAssignStaff = async (issueId: string) => {
     if (!selectedAssigneeId) {
       triggerToast("Please select a staff member to assign.");
@@ -920,26 +749,12 @@ export default function PageManagerDashboard() {
     if (closingIssueState) return;
     setClosingIssueState(true);
 
-    // Optimistically update ticket as marked as success, archived and closed immediately
-    const closedNow = {
-      ...selectedIssueDetail,
-      id: issueId,
-      status: 'Resolved',
-      closedByManager: true,
-      isClosed: true,
-      closedAt: new Date().toISOString(),
-      studentConfirmed: true,
-      studentAcceptedResolved: true
-    };
-    setSelectedIssueDetail(closedNow);
-    setMaintenanceIssues(prev => prev.map(issue => issue.id === issueId ? { ...issue, ...closedNow } : issue));
-
     try {
       const updated = await apiFetch(`/api/issue-reports/${issueId}/manager-close`, {
         method: 'POST',
         body: JSON.stringify({ managerNotes: notes })
       });
-      const finalRecord = { ...closedNow, ...(updated || {}) };
+      const finalRecord = updated;
       // Update states to keep updated ticket in history and display read-only success state
       setMaintenanceIssues(prev => prev.map(issue => issue.id === issueId ? finalRecord : issue));
       setSelectedIssueDetail(finalRecord);
@@ -947,7 +762,7 @@ export default function PageManagerDashboard() {
       invalidateAllQueries(['issueReports', 'managerData']);
     } catch (err: any) {
       console.error("Error closing issue:", err);
-      triggerToast("Work order marked as success & kept in history.");
+      triggerToast(err.message || "Unable to close this work order. Complete the required sign-off first.");
     } finally {
       setClosingIssueState(false);
     }
@@ -959,7 +774,7 @@ export default function PageManagerDashboard() {
       const updated = await apiFetch(`/api/issue-reports/${issueId}/approve-reschedule`, {
         method: 'POST',
         body: JSON.stringify({
-          timeframe: selectedIssueDetail.requestedTimeframe || '24h'
+          approvedTimeframe: selectedIssueDetail.requestedTimeframe || '24h'
         })
       });
       setMaintenanceIssues(prev => prev.map(issue => issue.id === issueId ? updated : issue));
@@ -994,160 +809,6 @@ export default function PageManagerDashboard() {
     }
   }, [user?.id, user?.email]);
 
-  const fetchChatRooms = async () => {
-    try {
-      const rooms = await apiFetch('/api/staff-chat/rooms').catch(() => []);
-      if (Array.isArray(rooms)) {
-        setChatRooms(rooms);
-        if (rooms.length > 0 && !selectedRoomId) {
-          setSelectedRoomId(rooms[0].id);
-        }
-      }
-    } catch (err) {
-      console.error("Error loading chat rooms:", err);
-    }
-  };
-
-  const fetchStudentMessages = async () => {
-    try {
-      const msgs = await apiFetch('/api/student-messages').catch(() => []);
-      if (Array.isArray(msgs)) {
-        setStudentMessagesList(msgs);
-      }
-    } catch (err) {
-      console.error("Error fetching student messages:", err);
-    }
-  };
-
-  const studentThreads = useMemo(() => {
-    const groups: { [key: string]: { threadKey: string; studentId: string; studentName: string; studentEmail: string; hostelId?: string; hostelName: string; roomNumber: string; messages: any[]; lastTimestamp: string } } = {};
-
-    studentMessagesList.forEach((m) => {
-      const sIdentifier = (m.studentId || m.studentEmail || m.studentName || 'unknown').trim();
-      const hIdentifier = (m.hostelId || m.hostelName || 'hostel').trim();
-      const key = `${sIdentifier}__${hIdentifier}`;
-
-      if (!groups[key]) {
-        groups[key] = {
-          threadKey: key,
-          studentId: sIdentifier,
-          studentName: m.studentName || 'Student Resident',
-          studentEmail: m.studentEmail || '',
-          hostelId: m.hostelId || '',
-          hostelName: m.hostelName || 'PineVela Hostel',
-          roomNumber: m.roomNumber || '',
-          messages: [],
-          lastTimestamp: m.timestamp || new Date().toISOString()
-        };
-      }
-      groups[key].messages.push(m);
-      if (new Date(m.timestamp) > new Date(groups[key].lastTimestamp)) {
-        groups[key].lastTimestamp = m.timestamp;
-      }
-    });
-
-    return Object.values(groups).sort((a, b) => new Date(b.lastTimestamp).getTime() - new Date(a.lastTimestamp).getTime());
-  }, [studentMessagesList]);
-
-  const handleSendStudentMessage = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    if (!selectedStudentKey || !newMessage.trim()) return;
-
-    const thread = studentThreads.find(t => t.threadKey === selectedStudentKey || t.studentId === selectedStudentKey);
-    if (!thread) return;
-
-    setSendingMsg(true);
-    try {
-      const res = await apiFetch('/api/student-messages', {
-        method: 'POST',
-        body: JSON.stringify({
-          studentId: thread.studentId,
-          studentName: thread.studentName,
-          studentEmail: thread.studentEmail,
-          hostelId: thread.hostelId,
-          hostelName: thread.hostelName,
-          managerId: user?.id,
-          managerName: user?.name,
-          message: newMessage.trim(),
-          senderRole: 'manager'
-        })
-      });
-      if (res && res.id) {
-        setNewMessage('');
-        fetchStudentMessages();
-      } else if (res && res.error) {
-        triggerToast(res.error);
-      }
-    } catch (err: any) {
-      triggerToast(err.message || 'Failed to send message.');
-    } finally {
-      setSendingMsg(false);
-    }
-  };
-
-  const fetchChatMessages = async (roomId: string) => {
-    if (!roomId) return;
-    try {
-      const msgs = await apiFetch(`/api/staff-chat/rooms/${roomId}/messages`).catch(() => []);
-      if (Array.isArray(msgs)) {
-        setChatMessagesList(msgs);
-      }
-    } catch (err) {
-      console.error("Error fetching chat messages:", err);
-    }
-  };
-
-  const handleSendChatMessage = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    if (!selectedRoomId || !newMessage.trim()) return;
-    setSendingMsg(true);
-    try {
-      const response = await apiFetch(`/api/staff-chat/rooms/${selectedRoomId}/messages`, {
-        method: 'POST',
-        body: JSON.stringify({ content: newMessage })
-      });
-      if (response && response.id) {
-        setNewMessage('');
-        fetchChatMessages(selectedRoomId);
-      } else if (response && response.error) {
-        triggerToast(response.error);
-      }
-    } catch (err: any) {
-      triggerToast(err.message || 'Failed to send message.');
-    } finally {
-      setSendingMsg(false);
-    }
-  };
-
-  // Poll for messages when chat active
-  useEffect(() => {
-    if (activeTab === 'chat') {
-      fetchChatRooms();
-      fetchStudentMessages();
-      const interval = setInterval(() => {
-        fetchChatRooms();
-        fetchStudentMessages();
-      }, 5000);
-      return () => clearInterval(interval);
-    }
-  }, [activeTab]);
-
-  useEffect(() => {
-    if (studentThreads.length > 0 && !selectedStudentKey) {
-      setSelectedStudentKey(studentThreads[0].studentId);
-    }
-  }, [studentThreads, selectedStudentKey]);
-
-  useEffect(() => {
-    if (activeTab === 'chat' && selectedRoomId) {
-      fetchChatMessages(selectedRoomId);
-      const interval = setInterval(() => {
-        fetchChatMessages(selectedRoomId);
-      }, 3500);
-      return () => clearInterval(interval);
-    }
-  }, [activeTab, selectedRoomId]);
-
   useEffect(() => {
     if (!loading && user) {
       const hasAnyHostel = properties.length > 0;
@@ -1159,18 +820,13 @@ export default function PageManagerDashboard() {
     setShowLogoutConfirm(true);
   };
 
-  const confirmLogout = () => {
-    logout();
+  const confirmLogout = async () => {
+    if (!await logout()) return;
     navigate('/login', { replace: true });
   };
-
-  // Derived stats
-  const totalProperties = properties.length;
   const totalCapacity = properties.reduce((acc, p) => acc + (p.totalCapacity || p.capacity || 0), 0);
   const totalOccupied = properties.reduce((acc, p) => acc + (p.occupied || 0), 0);
   const availableBeds = totalCapacity > 0 ? (totalCapacity - totalOccupied) : 0;
-  const occupancyRate = totalCapacity > 0 ? Math.round((totalOccupied / totalCapacity) * 100) : 0;
-  const pendingApps = applications.filter(a => a.status === 'pending').length;
   const activeIssues = maintenanceIssues.filter(i => i.status !== 'Resolved').length;
 
   const filteredIssues = maintenanceIssues.filter(i => {
@@ -1304,8 +960,8 @@ export default function PageManagerDashboard() {
               id: 'staff', 
               label: 'Staff', 
               icon: Users, 
-              badge: (staffApplications.filter(a => a.status === 'pending').length + staffBargains.filter(b => (b.status || '').toLowerCase() === 'pending').length) || null,
-              isRed: (staffApplications.filter(a => a.status === 'pending').length + staffBargains.filter(b => (b.status || '').toLowerCase() === 'pending').length) > 0,
+              badge: (staffBargains.filter(b => (b.status || '').toLowerCase() === 'pending').length) || null,
+              isRed: (staffBargains.filter(b => (b.status || '').toLowerCase() === 'pending').length) > 0,
               locked: !hasApprovedProperty 
             },
             { 
@@ -1318,7 +974,6 @@ export default function PageManagerDashboard() {
               locked: !hasApprovedProperty 
             },
             { id: 'meetings', label: 'Meetings', icon: CalendarCheck, locked: !hasApprovedProperty },
-            { id: 'chat', label: 'Chat', icon: MessageSquare, locked: !hasApprovedProperty },
             { 
               id: 'notifications', 
               label: 'Alerts', 
@@ -1362,9 +1017,16 @@ export default function PageManagerDashboard() {
 
       {/* SIDEBAR: PURELY STATIC / FIXED ICE-BLUE FROSTY BLUE WITH CURVED EDGES & BLUE GLOW */}
 
-      {isSidebarTopNav && <nav className="hidden lg:block fixed top-3 left-1/2 -translate-x-1/2 z-50 w-[min(760px,calc(100vw-3rem))] bg-white/72 backdrop-blur-xl border border-white/80 rounded-2xl shadow-lg"><div className="flex items-center gap-1 px-2 py-1.5">{[
-        { id: 'overview', label: 'Overview', icon: ShieldCheck }, { id: 'properties', label: 'Properties', icon: Building2 }, { id: 'blocks', label: 'Blocks', icon: Layers }, { id: 'staff', label: 'Staff', icon: Users }, { id: 'maintenance', label: 'Fixes', icon: Wrench }, { id: 'meetings', label: 'Meetings', icon: CalendarCheck }, { id: 'chat', label: 'Chat', icon: MessageSquare }, { id: 'notifications', label: 'Alerts', icon: Bell }
-      ].map(tab => <button key={tab.id} disabled={!hasApprovedProperty && tab.id !== 'notifications'} onClick={() => setActiveTab(tab.id as any)} className={`flex-1 min-w-0 flex flex-col items-center gap-0.5 py-1.5 rounded-xl text-[9px] font-bold ${activeTab === tab.id ? 'text-blue-700 bg-blue-100/65' : 'text-slate-500 hover:bg-white/70'} disabled:opacity-40 cursor-pointer`}><tab.icon className="w-4 h-4" /><span className="truncate max-w-full">{tab.label}</span></button>)}<button onClick={() => setShowLogoutConfirm(true)} title="Sign Out" className="shrink-0 flex flex-col items-center gap-0.5 px-2 py-1.5 text-[9px] font-bold text-rose-600 hover:bg-rose-50 rounded-xl cursor-pointer"><LogOutIcon className="w-4 h-4" /><span>Sign Out</span></button><button onClick={() => setIsSidebarTopNav(false)} title="Show sidebar" className="p-2 text-slate-500 hover:text-blue-700 cursor-pointer"><PanelLeftOpen className="w-4 h-4" /></button></div></nav>}
+      {isSidebarTopNav && <nav className="hidden lg:block fixed top-3 left-1/2 -translate-x-1/2 z-50 w-[min(760px,calc(100vw-3rem))] bg-white/72 backdrop-blur-xl border border-white/80 rounded-2xl shadow-lg"><div className="flex items-center gap-1 px-2 py-1.5">
+        {/* Profile avatar button — left end */}
+        <button onClick={() => setShowAccountSettingsModal(true)} title="Account Settings" className="shrink-0 flex flex-col items-center gap-0.5 py-1 px-1.5 rounded-xl hover:bg-white/70 cursor-pointer">
+          <img src={user?.photo || user?.avatar || (user as any)?.photoUrl || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80'} alt="Profile" className="w-6 h-6 rounded-full object-cover ring-2 ring-white shadow-sm" />
+          <span className="text-[9px] font-bold text-slate-500">Profile</span>
+        </button>
+        <div className="w-px h-6 bg-slate-200/70 shrink-0" />
+        {[
+        { id: 'overview', label: 'Overview', icon: ShieldCheck }, { id: 'properties', label: 'Properties', icon: Building2 }, { id: 'blocks', label: 'Blocks', icon: Layers }, { id: 'staff', label: 'Staff', icon: Users, badge: staffBargains.filter(b => (b.status || '').toLowerCase() === 'pending').length || staffList.length }, { id: 'maintenance', label: 'Fixes', icon: Wrench, badge: maintenanceIssues.filter(i => !i.closedByManager && (i.status === 'Pending' || i.status === 'Resolved' || i.rescheduleRequested || i.staffRescheduleRequested || i.staffDeclined)).length || activeIssues }, { id: 'meetings', label: 'Meetings', icon: CalendarCheck }, { id: 'notifications', label: 'Alerts', icon: Bell, badge: (systemNotifications || []).filter(n => !n.read).length + boardRequests.filter(r => r.status === 'Pending' || r.adminNotes).length }
+      ].map(tab => <button key={tab.id} disabled={!hasApprovedProperty && tab.id !== 'notifications'} onClick={() => setActiveTab(tab.id as any)} aria-label={`${tab.label}${tab.badge ? ` (${tab.badge})` : ''}`} className={`flex-1 min-w-0 flex flex-col items-center gap-0.5 py-1.5 rounded-xl text-[9px] font-bold ${activeTab === tab.id ? 'text-blue-700 bg-blue-100/65' : 'text-slate-500 hover:bg-white/70'} disabled:opacity-40 cursor-pointer`}><span className="relative inline-flex"><tab.icon className="w-4 h-4" /><TopNavBadge count={tab.badge} /></span><span className="truncate max-w-full">{tab.label}</span></button>)}<button onClick={() => setShowLogoutConfirm(true)} title="Sign Out" className="shrink-0 flex flex-col items-center gap-0.5 px-2 py-1.5 text-[9px] font-bold text-rose-600 hover:bg-rose-50 rounded-xl cursor-pointer"><LogOutIcon className="w-4 h-4" /><span>Sign Out</span></button><button onClick={() => setIsSidebarTopNav(false)} title="Show sidebar" className="p-2 text-slate-500 hover:text-blue-700 cursor-pointer"><PanelLeftOpen className="w-4 h-4" /></button></div></nav>}
       {!isSidebarTopNav && <aside className={`hidden lg:flex ${isSidebarCollapsed ? 'w-20 p-4' : 'w-72 p-6'} my-6 ml-6 h-[calc(100vh-3rem)] bg-gradient-to-br from-sky-100/90 via-blue-100/85 to-amber-50/40 backdrop-blur-3xl border border-sky-200/80 shadow-2xl rounded-3xl flex flex-col justify-between shrink-0 overflow-y-auto z-20 transition-all duration-300 relative`}>
         <button onClick={() => setIsSidebarTopNav(true)} title="Use top navigation" className="absolute top-3 right-3 p-2 rounded-xl text-slate-500 hover:text-blue-700 hover:bg-white/70 cursor-pointer"><PanelLeftClose className="w-4 h-4" /></button>
 
@@ -1433,10 +1095,10 @@ export default function PageManagerDashboard() {
                 id: 'staff', 
                 label: 'Staff Management', 
                 icon: Users, 
-                badge: (staffApplications.filter(a => a.status === 'pending').length + staffBargains.filter(b => (b.status || '').toLowerCase() === 'pending').length) > 0 
-                  ? (staffApplications.filter(a => a.status === 'pending').length + staffBargains.filter(b => (b.status || '').toLowerCase() === 'pending').length)
+                badge: (staffBargains.filter(b => (b.status || '').toLowerCase() === 'pending').length) > 0
+                  ? (staffBargains.filter(b => (b.status || '').toLowerCase() === 'pending').length)
                   : (staffList.length > 0 ? staffList.length : null),
-                isRed: (staffApplications.filter(a => a.status === 'pending').length + staffBargains.filter(b => (b.status || '').toLowerCase() === 'pending').length) > 0,
+                isRed: (staffBargains.filter(b => (b.status || '').toLowerCase() === 'pending').length) > 0,
                 sub: 'Security, desk & team', 
                 locked: !hasApprovedProperty 
               },
@@ -1453,7 +1115,6 @@ export default function PageManagerDashboard() {
                 locked: !hasApprovedProperty 
               },
               { id: 'meetings', label: 'Meeting Requests', icon: CalendarCheck, sub: 'Student & staff appointments', locked: !hasApprovedProperty },
-              { id: 'chat', label: 'Secure Staff Chat', icon: MessageSquare, sub: 'Encrypted communication', locked: !hasApprovedProperty },
               { 
                 id: 'notifications', 
                 label: 'Notifications & Board', 
@@ -1599,7 +1260,7 @@ export default function PageManagerDashboard() {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                   {[
                     { label: 'Total Capacity', value: `${(primaryProperty?.totalCapacity || 1200).toLocaleString()} Beds`, sub: `${propertyBlocks.length} Physical Blocks • Verified Wings`, icon: Building2, color: 'bg-blue-600 text-white' },
-                    { label: 'Available Beds', value: `${(availableBeds || primaryProperty?.totalCapacity || 1200).toLocaleString()} Available`, sub: 'Ready for student bookings', icon: Users, color: 'bg-emerald-600 text-white' },
+                    { label: 'Available Beds', value: `${(availableBeds || primaryProperty?.totalCapacity || 1200).toLocaleString()} Available`, sub: 'Ready for resident allocation', icon: Users, color: 'bg-emerald-600 text-white' },
                     { label: 'Staff On Duty', value: `${staffList.filter(s => s.status === 'Active').length} Personnel`, sub: `${staffList.length} Total Enrolled Staff`, icon: UserPlus, color: 'bg-indigo-600 text-white' },
                     { 
                       label: 'Active Tickets', 
@@ -1775,7 +1436,7 @@ export default function PageManagerDashboard() {
                       <div>
                         <p className="font-bold text-amber-950">Accredited Property Lock Active</p>
                         <p className="text-amber-800 mt-0.5">
-                          Direct editing of live residence specs (blocks, amenities, rules, fees) is restricted to maintain platform booking integrity. To request updates, submit a change request to the PineVela Admin Board.
+                          Direct editing of live residence specs (blocks, amenities, rules, fees) is restricted to maintain residence allocation integrity. To request updates, submit a change request to the PineVela Admin Board.
                         </p>
                       </div>
                     </div>
@@ -1995,10 +1656,10 @@ export default function PageManagerDashboard() {
                     <div>
                       <h3 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
                         <Users className="w-6 h-6 text-blue-600" />
-                        <span>Property Staff & Recruitment Operations</span>
+                        <span>Residence Staff</span>
                       </h3>
                       <p className="text-xs text-slate-500 mt-1">
-                        Manage active hostel employees, review candidate applications & CVs, and publish open positions to accredited hostel listings.
+                        Create and manage staff accounts for your residence.
                       </p>
                     </div>
 
@@ -2017,23 +1678,7 @@ export default function PageManagerDashboard() {
                         <span>Staff Roster ({staffList.length})</span>
                       </button>
 
-                      <button
-                        type="button"
-                        onClick={() => setStaffSubTab('applications')}
-                        className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 relative ${
-                          staffSubTab === 'applications'
-                            ? 'bg-white text-blue-900 shadow-sm'
-                            : 'text-slate-600 hover:text-slate-900'
-                        }`}
-                      >
-                        <Briefcase className="w-3.5 h-3.5" />
-                        <span>Applications & CVs</span>
-                        {staffApplications.filter(a => a.status === 'pending').length > 0 && (
-                          <span className="w-5 h-5 bg-red-600 text-white font-black text-[10px] rounded-full flex items-center justify-center animate-pulse ring-2 ring-red-300">
-                            {staffApplications.filter(a => a.status === 'pending').length}
-                          </span>
-                        )}
-                      </button>
+
 
                       <button
                         type="button"
@@ -2053,18 +1698,7 @@ export default function PageManagerDashboard() {
                         )}
                       </button>
 
-                      <button
-                        type="button"
-                        onClick={() => setStaffSubTab('recruitment')}
-                        className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                          staffSubTab === 'recruitment'
-                            ? 'bg-white text-blue-900 shadow-sm'
-                            : 'text-slate-600 hover:text-slate-900'
-                        }`}
-                      >
-                        <Sliders className="w-3.5 h-3.5" />
-                        <span>Recruitment Settings</span>
-                      </button>
+
                     </div>
                   </div>
 
@@ -2090,7 +1724,7 @@ export default function PageManagerDashboard() {
                         <div className="p-12 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-200">
                           <Users className="w-10 h-10 text-slate-300 mx-auto mb-2" />
                           <p className="text-xs font-bold text-slate-700">No staff members enrolled yet</p>
-                          <p className="text-[11px] text-slate-400 mt-1">Review applicant CVs or add staff manually using the button above.</p>
+                          <p className="text-[11px] text-slate-400 mt-1">Create the staff accounts your residence needs using the button above.</p>
                         </div>
                       ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
@@ -2193,154 +1827,7 @@ export default function PageManagerDashboard() {
                   {/* ======================================================== */}
                   {/* SUBTAB 2: APPLICATIONS & CV REVIEWS                      */}
                   {/* ======================================================== */}
-                  {staffSubTab === 'applications' && (
-                    <div className="space-y-6">
-                      <div className="p-4 bg-amber-50/70 border border-amber-200/80 rounded-2xl flex items-start gap-3">
-                        <Briefcase className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
-                        <div>
-                          <h4 className="text-xs font-black text-amber-950 uppercase tracking-wide">Candidate Application Portal</h4>
-                          <p className="text-xs text-amber-900 mt-0.5 font-medium">
-                            Candidates who apply via the accredited hostel page or staff portal appear here. You can read their full CV, review their ID, and choose to <strong>Approve & Enrol</strong> them directly into your staff roster or <strong>Reject</strong>.
-                          </p>
-                        </div>
-                      </div>
 
-                      {staffApplications.length === 0 ? (
-                        <div className="p-12 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-200">
-                          <FileText className="w-10 h-10 text-slate-300 mx-auto mb-2" />
-                          <p className="text-xs font-bold text-slate-700">No candidate applications received yet</p>
-                          <p className="text-[11px] text-slate-400 mt-1">Applications submitted by candidates on your hostel listing will appear here in real time.</p>
-                        </div>
-                      ) : (
-                        <div className="space-y-4">
-                          {staffApplications.map(app => (
-                            <div 
-                              key={app.id}
-                              className="p-5 bg-white border border-slate-200/80 rounded-2xl shadow-xs space-y-4 hover:border-blue-200 transition-all"
-                            >
-                              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
-                                <div className="flex items-center gap-3">
-                                  <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center font-black text-sm">
-                                    {app.applicantName?.slice(0, 2)?.toUpperCase() || 'ST'}
-                                  </div>
-                                  <div>
-                                    <div className="flex items-center gap-2">
-                                      <h4 className="text-sm font-black text-slate-900">{app.applicantName}</h4>
-                                      <span className="text-[10px] font-bold text-slate-400">({app.appliedAt || 'Recent'})</span>
-                                    </div>
-                                    <p className="text-xs font-bold text-blue-700">{app.role}</p>
-                                  </div>
-                                </div>
-
-                                <div className="flex items-center gap-2">
-                                  <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
-                                    app.status === 'Approved' ? 'bg-emerald-100 text-emerald-800' :
-                                    app.status === 'Rejected' ? 'bg-rose-100 text-rose-800' :
-                                    'bg-amber-100 text-amber-900'
-                                  }`}>
-                                    {app.status === 'pending' ? 'Pending Review' : app.status}
-                                  </span>
-                                </div>
-                              </div>
-
-                              {/* Candidate Contact & ID Details */}
-                              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs bg-slate-50 p-3 rounded-xl border border-slate-100">
-                                <div>
-                                  <span className="text-slate-400 font-bold block text-[10px] uppercase">Phone:</span>
-                                  <a href={`tel:${app.phone}`} className="font-semibold text-blue-700 hover:underline">{app.phone}</a>
-                                </div>
-                                <div>
-                                  <span className="text-slate-400 font-bold block text-[10px] uppercase">Email:</span>
-                                  <a href={`mailto:${app.email}`} className="font-semibold text-slate-800 hover:underline truncate block">{app.email}</a>
-                                </div>
-                                <div>
-                                  <span className="text-slate-400 font-bold block text-[10px] uppercase">Ghana Card / ID:</span>
-                                  <span className="font-semibold text-slate-800">{app.nationalId || 'Provided in Document'}</span>
-                                </div>
-                              </div>
-
-                              {/* Brief cover note / experience */}
-                              {app.coverLetter && (
-                                <div className="p-3 bg-blue-50/40 rounded-xl border border-blue-100 text-xs text-slate-700">
-                                  <span className="font-bold text-blue-900 block text-[10px] uppercase mb-0.5">Candidate Note:</span>
-                                  <p className="italic">"{app.coverLetter}"</p>
-                                </div>
-                              )}
-
-                              {/* Action Buttons: Read CV, View ID, Approve, Reject */}
-                              <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
-                                <div className="flex items-center gap-2">
-                                  {/* Read CV Button */}
-                                  <button
-                                    type="button"
-                                    onClick={() => setDocPreviewModal({
-                                      title: `Curriculum Vitae (CV) — ${app.applicantName}`,
-                                      type: 'cv',
-                                      data: app.cvData || '',
-                                      fileName: app.cvFileName || 'Curriculum_Vitae.pdf',
-                                      name: app.applicantName,
-                                      endpoint: `/api/staff-applications/${app.id}/cv`
-                                    })}
-                                    className="px-3.5 py-1.5 bg-blue-900 hover:bg-blue-800 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
-                                  >
-                                    <FileText className="w-3.5 h-3.5" />
-                                    <span>Read CV Document</span>
-                                  </button>
-
-                                  {/* ID Attachment preview if present */}
-                                  {app.idDocumentUrl && (
-                                    <button
-                                      type="button"
-                                      onClick={() => setDocPreviewModal({
-                                        title: `National ID / Ghana Card — ${app.applicantName}`,
-                                        type: 'id',
-                                        data: app.idDocumentUrl,
-                                        fileName: `Ghana_Card_${app.applicantName}.json`,
-                                        name: app.applicantName
-                                      })}
-                                      className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer border border-slate-200/50"
-                                    >
-                                      <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-                                      <span>Inspect National ID</span>
-                                    </button>
-                                  )}
-                                </div>
-
-                                {/* Decision Controls for Pending Applications */}
-                                {app.status === 'pending' ? (
-                                  <div className="flex items-center gap-2">
-                                    <button
-                                      type="button"
-                                      onClick={() => handleStaffAppDecision(app.id, 'Rejected')}
-                                      className="px-3.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-bold transition-colors cursor-pointer"
-                                    >
-                                      Reject
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        setApproveModalApp(app);
-                                        setApproveShift('Day Shift (8 AM - 5 PM)');
-                                        setApproveBlock('All Blocks');
-                                      }}
-                                      className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black transition-colors cursor-pointer flex items-center gap-1.5 shadow-sm"
-                                    >
-                                      <CheckCircle className="w-3.5 h-3.5" />
-                                      <span>Approve & Enrol</span>
-                                    </button>
-                                  </div>
-                                ) : (
-                                  <div className="text-xs font-bold text-slate-500">
-                                    Decision recorded: <span className="font-black text-slate-800">{app.status}</span>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
 
                   {/* ======================================================== */}
                   {/* SUBTAB 3: QUIT REASONS & BARGAIN NEGOTIATIONS             */}
@@ -2581,411 +2068,15 @@ export default function PageManagerDashboard() {
                   {/* ======================================================== */}
                   {/* SUBTAB 4: RECRUITMENT SETTINGS                            */}
                   {/* ======================================================== */}
-                  {staffSubTab === 'recruitment' && (
-                    <div className="space-y-6">
-                      <div className="p-5 bg-gradient-to-r from-blue-900 to-indigo-900 rounded-2xl text-white space-y-2">
-                        <div className="flex items-center justify-between">
-                          <h4 className="text-sm font-black flex items-center gap-2">
-                            <Sliders className="w-4 h-4 text-amber-400" />
-                            <span>Public Staff Recruitment & Vacancy Broadcaster</span>
-                          </h4>
-                          <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase ${
-                            hiringOpen ? 'bg-emerald-400 text-slate-950' : 'bg-slate-400 text-slate-900'
-                          }`}>
-                            {hiringOpen ? 'Hiring Open' : 'Hiring Paused'}
-                          </span>
-                        </div>
-                        <p className="text-xs text-blue-100">
-                          These roles are broadcast directly on your hostel's public page. Interested candidates can apply and attach their CVs for you to review.
-                        </p>
-                      </div>
 
-                      {/* Hiring Switch */}
-                      <div className="flex items-center justify-between p-4 bg-white border border-slate-200 rounded-2xl">
-                        <div>
-                          <span className="text-xs font-bold text-slate-900 block">Accept Staff Applications</span>
-                          <span className="text-[11px] text-slate-500">Allow job seekers to submit CVs and applications for this hostel</span>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={async () => {
-                            const newHiringState = !hiringOpen;
-                            setHiringOpen(newHiringState);
-                            if (primaryProperty?.id) {
-                              try {
-                                await apiFetch(`/api/hostels/${primaryProperty.id}/recruitment`, {
-                                  method: 'PUT',
-                                  body: JSON.stringify({
-                                    staffHiringOpen: newHiringState,
-                                    openStaffRoles: recruitmentRoles
-                                  })
-                                });
-                                triggerToast(`Recruitment ${newHiringState ? 'activated (Hiring Open)' : 'deactivated (Hiring Paused)'}`);
-                              } catch (err: any) {
-                                triggerToast(err.message || 'Failed to sync recruitment status');
-                              }
-                            }
-                          }}
-                          className={`w-14 h-7 flex items-center rounded-full p-1 transition-colors cursor-pointer ${
-                            hiringOpen ? 'bg-emerald-600 justify-end' : 'bg-slate-300 justify-start'
-                          }`}
-                        >
-                          <div className="bg-white w-5 h-5 rounded-full shadow-md transform" />
-                        </button>
-                      </div>
-
-                      {/* Open Roles List */}
-                      <div className="space-y-3">
-                        <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">Active Open Roles Broadcasted</h4>
-                        
-                        <div className="space-y-2">
-                          {recruitmentRoles.map((r, idx) => (
-                            <div key={idx} className="flex items-center justify-between p-3.5 bg-white border border-slate-200 rounded-xl text-xs">
-                              <div className="flex items-center gap-2">
-                                <Briefcase className="w-4 h-4 text-blue-600" />
-                                <div>
-                                  <div className="flex items-center gap-1.5 flex-wrap">
-                                    <span className="font-bold text-slate-900">{r.role}</span>
-                                    <span className="px-1.5 py-0.5 bg-emerald-50 text-emerald-700 text-[10px] font-black rounded-md">{r.wage || 'Negotiable'}</span>
-                                  </div>
-                                  <span className="text-[11px] text-slate-500 block">
-                                    Vacancies: {r.vacancies || 1} &bull; Shift: {r.shift || 'Day Shift'}
-                                  </span>
-                                </div>
-                              </div>
-                              <button
-                                type="button"
-                                onClick={() => handleRemoveRecruitmentRole(idx)}
-                                className="text-slate-400 hover:text-rose-600 p-1 cursor-pointer"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-
-                        {/* Add Role Form */}
-                        <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-3">
-                          <span className="text-xs font-bold text-slate-900 block">Add Needed Role</span>
-                          <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
-                            <div>
-                              <label className="text-[10px] font-bold text-slate-500 block mb-1">Role Title</label>
-                              <select
-                                value={newRecruitRole}
-                                onChange={(e) => setNewRecruitRole(e.target.value)}
-                                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-medium text-slate-800"
-                              >
-                                <option value="Facilities & Maintenance Technician">Facilities & Maintenance Technician</option>
-                                <option value="Plumber & Water Systems Lead">Plumber & Water Systems Lead</option>
-                                <option value="Electrician & Backup Power Specialist">Electrician & Backup Power Specialist</option>
-                                <option value="Head of Security & Gate Operations">Head of Security & Gate Operations</option>
-                                <option value="Security Officer (Night Shift)">Security Officer (Night Shift)</option>
-                                <option value="Housekeeping Supervisor">Housekeeping Supervisor</option>
-                                <option value="Front Desk Operations Lead">Front Desk Operations Lead</option>
-                                <option value="Hostel Warden / Residential Assistant">Hostel Warden / Residential Assistant</option>
-                              </select>
-                            </div>
-
-                            <div>
-                              <label className="text-[10px] font-bold text-slate-500 block mb-1">Number of Vacancies</label>
-                              <input
-                                type="number"
-                                min={1}
-                                max={20}
-                                value={newRecruitVacancies}
-                                onChange={(e) => setNewRecruitVacancies(Number(e.target.value))}
-                                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-medium text-slate-800"
-                              />
-                            </div>
-
-                            <div>
-                              <label className="text-[10px] font-bold text-slate-500 block mb-1">Preferred Shift</label>
-                              <select
-                                value={newRecruitShift}
-                                onChange={(e) => setNewRecruitShift(e.target.value)}
-                                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-medium text-slate-800"
-                              >
-                                <option value="Day Shift (8 AM - 5 PM)">Day Shift (8 AM - 5 PM)</option>
-                                <option value="Night Shift (6 PM - 6 AM)">Night Shift (6 PM - 6 AM)</option>
-                                <option value="Morning Shift (6 AM - 2 PM)">Morning Shift (6 AM - 2 PM)</option>
-                                <option value="Flexible / Rotating">Flexible / Rotating</option>
-                              </select>
-                            </div>
-
-                            <div>
-                              <label className="text-[10px] font-bold text-slate-500 block mb-1">Wage / Salary Offered</label>
-                              <input
-                                type="text"
-                                placeholder="e.g. GH₵ 2,500 / month"
-                                value={newRecruitWage}
-                                onChange={(e) => setNewRecruitWage(e.target.value)}
-                                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800"
-                              />
-                            </div>
-                          </div>
-
-                          <button
-                            type="button"
-                            onClick={handleAddRecruitmentRole}
-                            className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 rounded-xl text-xs font-bold cursor-pointer"
-                          >
-                            + Add Role to List
-                          </button>
-                        </div>
-
-                        {/* Save Button */}
-                        <div className="pt-2">
-                          <button
-                            type="button"
-                            onClick={handleSaveRecruitment}
-                            disabled={savingRecruitment}
-                            className="w-full sm:w-auto px-8 py-3 bg-blue-900 hover:bg-blue-800 text-white font-black text-xs rounded-xl shadow-md transition-all cursor-pointer flex items-center justify-center gap-2"
-                          >
-                            {savingRecruitment ? (
-                              <span>Saving Recruitment Settings...</span>
-                            ) : (
-                              <>
-                                <CheckCircle className="w-4 h-4" />
-                                <span>Save & Publish Open Roles to Hostel Info</span>
-                              </>
-                            )}
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  )}
 
                 </div>
 
                 {/* UNIFIED DOCUMENT PREVIEW MODAL */}
-                {docPreviewModal && (
-                  <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-60">
-                    <div className="bg-white rounded-3xl p-6 md:p-8 max-w-2xl w-full shadow-2xl border border-blue-200/80 space-y-4 max-h-[90vh] flex flex-col">
-                      <div className="flex justify-between items-center border-b border-slate-100 pb-3">
-                        <div className="flex items-center gap-3">
-                          <div className="p-2 bg-blue-50 rounded-xl">
-                            {docPreviewModal.type === 'cv' ? (
-                              <FileText className="w-5 h-5 text-blue-600" />
-                            ) : (
-                              <ShieldCheck className="w-5 h-5 text-emerald-600" />
-                            )}
-                          </div>
-                          <div>
-                            <h3 className="text-base font-black text-slate-900 leading-tight">
-                              {docPreviewModal.title}
-                            </h3>
-                            <p className="text-xs text-slate-500 mt-0.5">
-                              {docPreviewModal.fileName || 'Official Submitted Credential Document'}
-                            </p>
-                          </div>
-                        </div>
-                        <button 
-                          onClick={() => setDocPreviewModal(null)} 
-                          className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center cursor-pointer transition-colors"
-                        >
-                          <XCircle className="w-5 h-5 text-slate-500" />
-                        </button>
-                      </div>
 
-                      {/* Display Content */}
-                      <div className="flex-1 overflow-y-auto p-4 bg-slate-50 rounded-2xl border border-slate-200">
-                        {docPreviewModal.type === 'id' ? (
-                          <div>
-                            {(() => {
-                              let parsed: any = null;
-                              try {
-                                if (docPreviewModal.data.startsWith('{')) {
-                                  parsed = JSON.parse(docPreviewModal.data);
-                                }
-                              } catch (e) {}
-
-                              if (parsed && (parsed.front || parsed.back)) {
-                                return (
-                                  <div className="space-y-4">
-                                    <div className="text-xs font-extrabold text-slate-700 flex items-center gap-2">
-                                      <ShieldCheck className="w-4 h-4 text-blue-600" />
-                                      <span>Ghana National ID Card (Front & Back Sides Submitted)</span>
-                                    </div>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                      <div className="space-y-2 p-3 bg-white rounded-2xl border border-slate-200 shadow-xs">
-                                        <span className="text-[11px] font-black text-slate-700 block uppercase tracking-wider">1. Front Side (Ghana Card)</span>
-                                        {parsed.front && (parsed.front.startsWith('data:') || parsed.front.startsWith('http')) ? (
-                                          <img src={parsed.front} alt="ID Front" className="w-full h-48 object-contain rounded-xl border bg-slate-100" referrerPolicy="no-referrer" />
-                                        ) : (
-                                          <div className="p-6 text-center text-xs font-mono text-slate-600 bg-slate-100 rounded-xl">{parsed.front || 'Front Document Attached'}</div>
-                                        )}
-                                        <span className="text-[10px] text-slate-500 font-mono block text-center truncate">{parsed.frontName || 'Front Side Photo'}</span>
-                                      </div>
-
-                                      <div className="space-y-2 p-3 bg-white rounded-2xl border border-slate-200 shadow-xs">
-                                        <span className="text-[11px] font-black text-slate-700 block uppercase tracking-wider">2. Back Side (Ghana Card)</span>
-                                        {parsed.back && (parsed.back.startsWith('data:') || parsed.back.startsWith('http')) ? (
-                                          <img src={parsed.back} alt="ID Back" className="w-full h-48 object-contain rounded-xl border bg-slate-100" referrerPolicy="no-referrer" />
-                                        ) : (
-                                          <div className="p-6 text-center text-xs font-mono text-slate-600 bg-slate-100 rounded-xl">{parsed.back || 'Back Document Attached'}</div>
-                                        )}
-                                        <span className="text-[10px] text-slate-500 font-mono block text-center truncate">{parsed.backName || 'Back Side Photo'}</span>
-                                      </div>
-                                    </div>
-                                  </div>
-                                );
-                              } else if (docPreviewModal.data.startsWith('data:') || docPreviewModal.data.startsWith('http')) {
-                                return (
-                                  <div className="text-center space-y-3">
-                                    <img
-                                      src={docPreviewModal.data}
-                                      alt="National ID Document"
-                                      className="max-w-full h-auto mx-auto rounded-xl border border-slate-300 shadow-md max-h-[420px] object-contain bg-white"
-                                      referrerPolicy="no-referrer"
-                                    />
-                                  </div>
-                                );
-                              } else {
-                                return (
-                                  <div className="p-8 bg-white rounded-2xl border border-slate-200 text-center space-y-2">
-                                    <ShieldCheck className="w-12 h-12 text-blue-900 mx-auto" />
-                                    <p className="text-xs font-bold text-slate-800">Ghana National ID Document Reference</p>
-                                    <p className="font-mono text-sm text-blue-900 font-bold">{docPreviewModal.data}</p>
-                                  </div>
-                                );
-                              }
-                            })()}
-                          </div>
-                        ) : (
-                          <div className="space-y-3">
-                            <object
-                              data={docPreviewModal.endpoint || previewBlobUrl || undefined}
-                              type="application/pdf"
-                              className="w-full h-96 rounded-xl border border-slate-300 shadow-inner bg-white"
-                              title="CV PDF Viewer"
-                            >
-                              <div className="flex flex-col items-center justify-center h-full text-slate-500 bg-slate-50 space-y-3 p-6 text-center border border-slate-200 rounded-xl">
-                                <p className="text-sm font-medium">Unable to render PDF securely in this frame.</p>
-                                <a href={docPreviewModal.endpoint || previewBlobUrl || '#'} target="_blank" rel="noopener noreferrer" className="px-4 py-2 bg-blue-600 text-white rounded-lg text-xs font-bold hover:bg-blue-700">Open PDF in New Tab</a>
-                              </div>
-                            </object>
-                            <div className="flex items-center justify-between pt-1">
-                              <span className="text-xs text-slate-500 font-mono flex items-center gap-1">
-                                MIME: <strong className="text-blue-900">application/pdf</strong> {docPreviewModal.endpoint ? '(Backend Stream)' : '(Sanitized Blob)'}
-                              </span>
-                              <div className="flex items-center gap-2">
-                                {previewBlobUrl && (
-                                  <a
-                                    href={docPreviewModal.endpoint || previewBlobUrl || '#'}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold flex items-center gap-1 transition-colors cursor-pointer"
-                                  >
-                                    <ExternalLink className="w-3.5 h-3.5 text-slate-600" /> New Tab
-                                  </a>
-                                )}
-                                <button
-                                  type="button"
-                                  onClick={() => downloadPdfDocument(docPreviewModal.data, docPreviewModal.fileName, docPreviewModal.name || 'Applicant')}
-                                  className="px-3.5 py-1.5 bg-blue-900 hover:bg-blue-950 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-sm transition-all hover:scale-[1.02]"
-                                >
-                                  <Download className="w-3.5 h-3.5 text-emerald-400" /> Download PDF
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="flex items-center justify-end pt-3 border-t border-slate-100">
-                        <button
-                          type="button"
-                          onClick={() => setDocPreviewModal(null)}
-                          className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold cursor-pointer transition-colors"
-                        >
-                          Close
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
 
                 {/* APPROVE & ENROL MODAL */}
-                {approveModalApp && (
-                  <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 z-60">
-                    <div className="bg-white rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl border border-emerald-200 space-y-5">
-                      <div className="flex justify-between items-center border-b border-slate-100 pb-3">
-                        <div>
-                          <h3 className="text-base font-black text-slate-900 flex items-center gap-2">
-                            <CheckCircle className="w-5 h-5 text-emerald-600" />
-                            <span>Enrol Candidate into Staff Roster</span>
-                          </h3>
-                          <p className="text-xs text-slate-500 mt-0.5">{approveModalApp.applicantName} &bull; {approveModalApp.role}</p>
-                        </div>
-                        <button onClick={() => setApproveModalApp(null)} className="text-slate-400 hover:text-slate-600">
-                          <XCircle className="w-5 h-5" />
-                        </button>
-                      </div>
 
-                      <div className="space-y-3">
-                        <div>
-                          <label className="text-xs font-bold text-slate-700 block mb-1">Assign Shift</label>
-                          <select
-                            value={approveShift}
-                            onChange={(e) => setApproveShift(e.target.value)}
-                            className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800"
-                          >
-                            <option value="Day Shift (8 AM - 5 PM)">Day Shift (8 AM - 5 PM)</option>
-                            <option value="Night Shift (6 PM - 6 AM)">Night Shift (6 PM - 6 AM)</option>
-                            <option value="Morning Shift (6 AM - 2 PM)">Morning Shift (6 AM - 2 PM)</option>
-                            <option value="On-Call 24/7">On-Call 24/7</option>
-                          </select>
-                        </div>
-
-                        <div>
-                          <label className="text-xs font-bold text-slate-700 block mb-1">Assign Wing / Block</label>
-                          <select
-                            value={approveBlock}
-                            onChange={(e) => setApproveBlock(e.target.value)}
-                            className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800"
-                          >
-                            <option value="All Blocks">All Blocks</option>
-                            <option value="Block A (Alpha)">Block A (Alpha)</option>
-                            <option value="Block B (Beta)">Block B (Beta)</option>
-                          </select>
-                        </div>
-
-                        <div>
-                          <label className="text-xs font-bold text-slate-700 block mb-1">Starting Work Date *</label>
-                          <input
-                            type="date"
-                            required
-                            value={approveStartDate}
-                            onChange={(e) => setApproveStartDate(e.target.value)}
-                            className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                          />
-                        </div>
-                      </div>
-
-                      <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-[11px] text-emerald-950">
-                        Approving this candidate will automatically notify them of their starting date and enrol them into the roster.
-                      </div>
-
-                      <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
-                        <button
-                          type="button"
-                          onClick={() => setApproveModalApp(null)}
-                          className="px-4 py-2 text-xs font-bold text-slate-500 hover:text-slate-800"
-                        >
-                          Cancel
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleStaffAppDecision(approveModalApp.id, 'Approved', approveShift, approveBlock, approveStartDate)}
-                          className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black shadow-md cursor-pointer flex items-center gap-1.5"
-                        >
-                          <CheckCircle className="w-4 h-4" />
-                          <span>Confirm & Enrol Staff</span>
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
 
               </div>
             )}
@@ -3332,13 +2423,13 @@ export default function PageManagerDashboard() {
                                 </select>
                               </div>
                               <div>
-                                <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase tracking-wider">Select Registered Accredited Staff</label>
+                                <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase tracking-wider">Select Residence Staff</label>
                                 <select 
                                   value={selectedAssigneeId} 
                                   onChange={(e) => setSelectedAssigneeId(e.target.value)}
                                   className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-blue-600 focus:bg-white"
                                 >
-                                  <option value="">-- Choose Accredited Staff --</option>
+                                  <option value="">-- Choose Residence Staff --</option>
                                   {staffList.map(s => (
                                     <option key={s.id} value={s.id}>{s.name} ({s.role})</option>
                                   ))}
@@ -3386,7 +2477,7 @@ export default function PageManagerDashboard() {
                                   <strong>Reason Given:</strong> "{selectedIssueDetail.staffDeclineReason || "No details provided."}"
                                 </p>
                                 <div className="border-t border-rose-200/60 pt-3">
-                                  <label className="block text-[10px] font-bold text-slate-600 mb-1 uppercase">Re-assign to Another Accredited Staff Member:</label>
+                                  <label className="block text-[10px] font-bold text-slate-600 mb-1 uppercase">Re-assign to Another Residence Staff Member:</label>
                                   <div className="flex gap-2">
                                     <select 
                                       value={selectedAssigneeId} 
@@ -3682,7 +2773,7 @@ export default function PageManagerDashboard() {
                           </h2>
 
                           <p className="text-sm font-medium text-emerald-50 max-w-2xl leading-relaxed">
-                            Congratulations on successfully registering your residence with the PineVela community! Your property <strong>"{primaryProperty?.name || 'Your Residence'}"</strong> has been approved by the housing administration. All operational tabs are now fully unlocked — you can manage room capacity, view bookings, assign staff, and coordinate student services.
+                            Congratulations on successfully registering your residence with the PineVela community! Your property <strong>"{primaryProperty?.name || 'Your Residence'}"</strong> has been approved by the housing administration. All operational tabs are now fully unlocked — you can manage room capacity, activate resident access, assign staff, and coordinate student services.
                           </p>
 
                           <div className="pt-2 flex flex-wrap items-center gap-3">
@@ -3760,9 +2851,9 @@ export default function PageManagerDashboard() {
                               key={n.id}
                               onClick={() => {
                                 if (!n.read) markAsRead(n.id);
-                                if (n.link === '/manager-dashboard?tab=staff' || n.type === 'staff_application' || (n.title || '').toLowerCase().includes('staff') || (n.title || '').toLowerCase().includes('job')) {
+                                if (n.link === '/manager-dashboard?tab=staff' || (n.title || '').toLowerCase().includes('staff') || (n.title || '').toLowerCase().includes('job')) {
                                   setActiveTab('staff');
-                                  setStaffSubTab('applications');
+                                  setStaffSubTab('roster');
                                 } else if (n.type === 'issue_report' || (n.title || '').toLowerCase().includes('maintenance') || (n.title || '').toLowerCase().includes('repair')) {
                                   setActiveTab('maintenance');
                                 }
@@ -3779,11 +2870,11 @@ export default function PageManagerDashboard() {
                                   <div className="flex items-center gap-2 flex-wrap">
                                     <h4 className={`text-xs font-black ${!n.read ? 'text-blue-950' : 'text-slate-800'}`}>{n.title}</h4>
                                     <span className={`text-[9px] font-extrabold px-2 py-0.5 rounded-full ${
-                                      n.type === 'staff_application' ? 'bg-purple-100 text-purple-800 border border-purple-200' :
+
                                       n.type === 'issue_report' ? 'bg-amber-100 text-amber-800 border border-amber-200' :
                                       'bg-slate-200 text-slate-700'
                                     }`}>
-                                      {n.type === 'staff_application' ? 'Job Request' : n.type === 'issue_report' ? 'Maintenance' : (n.type || 'Notice')}
+                                      {n.type === 'issue_report' ? 'Maintenance' : (n.type || 'Notice')}
                                     </span>
                                   </div>
                                   <p className="text-xs text-slate-600 leading-snug">{n.message}</p>
@@ -3791,19 +2882,7 @@ export default function PageManagerDashboard() {
                                 </div>
                               </div>
                               <div className="shrink-0 flex items-center gap-1.5">
-                                {(n.type === 'staff_application' || (n.title || '').toLowerCase().includes('staff') || (n.title || '').toLowerCase().includes('job')) && (
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      if (!n.read) markAsRead(n.id);
-                                      setActiveTab('staff');
-                                      setStaffSubTab('applications');
-                                    }}
-                                    className="px-2.5 py-1 bg-blue-600 text-white font-bold text-[10px] rounded-lg hover:bg-blue-700 transition-all"
-                                  >
-                                    Review
-                                  </button>
-                                )}
+
                                 {(n.type === 'issue_report' || (n.title || '').toLowerCase().includes('maintenance')) && (
                                   <button
                                     onClick={(e) => {
@@ -3970,370 +3049,7 @@ export default function PageManagerDashboard() {
             {/* ========================================================================= */}
             {/* SECURE ENCRYPTED CHAT TAB VIEW                                            */}
             {/* ========================================================================= */}
-            {activeTab === 'chat' && (
-              <div className="flex flex-col h-[calc(100vh-14rem)] min-h-[480px] bg-white border border-emerald-200 rounded-3xl shadow-md overflow-hidden relative z-10" id="manager-secure-chat-container">
-                {/* Security Header Banner */}
-                <div className="bg-slate-900/90 backdrop-blur-md text-sky-100 px-6 py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/10" id="chat-security-banner">
-                  <div className="flex items-center gap-2.5">
-                    <div className="p-1.5 bg-blue-800/80 backdrop-blur-sm rounded-lg text-amber-300">
-                      <Lock className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <h3 className="text-xs font-black tracking-wide uppercase flex items-center gap-1.5">
-                        <span>Communication Center</span>
-                        <span className="px-1.5 py-0.5 bg-sky-500 text-slate-950 text-[8px] font-black rounded font-mono">LIVE SYNC</span>
-                      </h3>
-                      <p className="text-[10px] text-blue-300 font-medium">Direct manager inbox for resident inquiries & appointed staff channels.</p>
-                    </div>
-                  </div>
 
-                  {/* Sub-tab Category Switcher */}
-                  <div className="flex bg-slate-950/80 p-1 rounded-xl border border-white/15 gap-1">
-                    <button
-                      type="button"
-                      onClick={() => setChatCategory('student')}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
-                        chatCategory === 'student'
-                          ? 'bg-blue-600 text-white shadow-sm'
-                          : 'text-slate-400 hover:text-white'
-                      }`}
-                    >
-                      <MessageSquare className="w-3.5 h-3.5" />
-                      <span>Resident Inquiries</span>
-                      {studentThreads.length > 0 && (
-                        <span className="px-1.5 py-0.2 bg-emerald-400 text-slate-950 text-[9px] font-black rounded-full">
-                          {studentThreads.length}
-                        </span>
-                      )}
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setChatCategory('staff')}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
-                        chatCategory === 'staff'
-                          ? 'bg-blue-600 text-white shadow-sm'
-                          : 'text-slate-400 hover:text-white'
-                      }`}
-                    >
-                      <Users className="w-3.5 h-3.5" />
-                      <span>Staff Channels</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Main Content Split Area */}
-                <div className="flex-1 flex overflow-hidden bg-slate-50/50 relative" id="chat-split-view">
-                  {/* Left Sidebar: Contacts list based on category */}
-                  <div className={`w-full lg:w-80 border-r border-slate-200 bg-white flex flex-col overflow-y-auto p-4 space-y-2 shrink-0 ${
-                    ((chatCategory === 'student' && selectedStudentKey) || (chatCategory === 'staff' && selectedRoomId)) ? 'hidden lg:flex' : 'flex'
-                  }`} id="chat-rooms-contacts-list">
-                    {chatCategory === 'student' ? (
-                      <>
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2.5 py-1 mb-1">
-                          Resident Student Threads ({studentThreads.length})
-                        </p>
-                        {studentThreads.length === 0 ? (
-                          <div className="text-center py-10 px-4" id="chat-no-student-threads">
-                            <MessageSquare className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-                            <p className="text-xs font-bold text-slate-500">No Resident Messages Yet</p>
-                            <p className="text-[10px] text-slate-400 leading-relaxed mt-1">
-                              When student residents send messages via their dashboard, they will appear here instantly.
-                            </p>
-                          </div>
-                        ) : (
-                          studentThreads.map((thread) => {
-                            const isSelected = selectedStudentKey === thread.threadKey || selectedStudentKey === thread.studentId;
-                            const lastMsg = thread.messages[thread.messages.length - 1];
-                            return (
-                              <button
-                                key={thread.threadKey}
-                                onClick={() => setSelectedStudentKey(thread.threadKey)}
-                                className={`w-full text-left p-3.5 rounded-2xl transition-all flex items-center gap-3 border ${
-                                  isSelected
-                                    ? 'bg-blue-50/90 border-blue-200 text-blue-950 font-bold shadow-xs'
-                                    : 'bg-white border-slate-100 hover:bg-slate-50 text-slate-700'
-                                }`}
-                              >
-                                <div className="w-9 h-9 rounded-full bg-indigo-100 text-indigo-800 flex items-center justify-center font-black text-xs uppercase shrink-0 border border-indigo-200">
-                                  {(thread.studentName || 'ST').substring(0, 2)}
-                                </div>
-                                <div className="truncate flex-1">
-                                  <div className="text-xs font-bold truncate text-slate-900">{thread.studentName}</div>
-                                  <div className="text-[10px] text-slate-500 font-medium truncate flex items-center gap-1">
-                                    <span className="truncate text-blue-700 font-semibold">{thread.hostelName}</span>
-                                  </div>
-                                  {lastMsg && (
-                                    <div className="text-[10px] text-slate-400 truncate mt-0.5">
-                                      {lastMsg.senderRole === 'manager' ? 'You: ' : ''}{lastMsg.message}
-                                    </div>
-                                  )}
-                                </div>
-                              </button>
-                            );
-                          })
-                        )}
-                      </>
-                    ) : (
-                      <>
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2.5 py-1 mb-1">Appointed Team Chat</p>
-                        {chatRooms.length === 0 ? (
-                          <div className="text-center py-10 px-4" id="chat-no-staff-contacts">
-                            <Users className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-                            <p className="text-xs font-bold text-slate-500">No Appointed Staff Chats</p>
-                            <p className="text-[10px] text-slate-400 leading-relaxed mt-1">Approve a vocational staff application to auto-generate a private channel.</p>
-                          </div>
-                        ) : (
-                          chatRooms.map((r) => {
-                            const isSelected = selectedRoomId === r.id;
-                            return (
-                              <button
-                                key={r.id}
-                                onClick={() => setSelectedRoomId(r.id)}
-                                className={`w-full text-left p-3.5 rounded-2xl transition-all flex items-center gap-3 border ${
-                                  isSelected
-                                    ? 'bg-blue-50/80 border-blue-200 text-blue-950 font-bold shadow-xs'
-                                    : 'bg-white border-slate-100 hover:bg-slate-50 text-slate-700'
-                                }`}
-                              >
-                                <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-800 flex items-center justify-center font-black text-xs uppercase shrink-0">
-                                  {(r.staffName || 'ST').substring(0, 2)}
-                                </div>
-                                <div className="truncate flex-1">
-                                  <div className="text-xs font-bold truncate text-slate-900">{r.staffName || 'Staff Member'}</div>
-                                  <div className="text-[10px] text-slate-500 font-medium truncate flex items-center gap-1">
-                                    <span className="inline-block w-1.5 h-1.5 rounded-full bg-sky-500 animate-pulse" />
-                                    <span className="truncate">{r.staffRole || 'Vocational Specialist'}</span>
-                                  </div>
-                                </div>
-                              </button>
-                            );
-                          })
-                        )}
-                      </>
-                    )}
-                  </div>
-
-                  {/* Right Panel: Conversation Log */}
-                  <div className={`flex-1 flex flex-col h-full bg-white relative ${
-                    ((chatCategory === 'student' && selectedStudentKey) || (chatCategory === 'staff' && selectedRoomId)) ? 'flex' : 'hidden lg:flex'
-                  }`} id="chat-messages-container">
-                    {chatCategory === 'student' ? (
-                       selectedStudentKey && studentThreads.find(t => t.threadKey === selectedStudentKey || t.studentId === selectedStudentKey) ? (
-                        (() => {
-                          const activeThread = studentThreads.find(t => t.threadKey === selectedStudentKey || t.studentId === selectedStudentKey)!;
-                          return (
-                            <>
-                              {/* Conversation Info Header */}
-                              <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-white" id="active-student-channel-header">
-                                <div className="flex items-center gap-3">
-                                  <button
-                                    onClick={() => setSelectedStudentKey('')}
-                                    className="lg:hidden p-1.5 -ml-1 text-slate-500 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 rounded-lg transition-all flex items-center justify-center shrink-0"
-                                    type="button"
-                                    title="Back to list"
-                                  >
-                                    <ArrowLeft className="w-4 h-4" />
-                                  </button>
-                                  <div className="w-10 h-10 rounded-full bg-indigo-100 text-indigo-800 flex items-center justify-center font-black text-sm uppercase border border-indigo-200">
-                                    {(activeThread.studentName || 'S').substring(0, 2)}
-                                  </div>
-                                  <div>
-                                    <h4 className="text-sm font-black text-slate-900 flex items-center gap-2">
-                                      <span>{activeThread.studentName}</span>
-                                      {activeThread.studentEmail && (
-                                        <span className="text-[10px] font-normal text-slate-400">({activeThread.studentEmail})</span>
-                                      )}
-                                    </h4>
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-                                      <span>Resident Property:</span>
-                                      <span className="text-blue-700 font-black">{activeThread.hostelName}</span>
-                                    </p>
-                                  </div>
-                                </div>
-
-                                <div className="flex items-center gap-1.5 bg-emerald-50 border border-emerald-200/60 text-emerald-800 text-[10px] font-bold px-2.5 py-1 rounded-full">
-                                  <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
-                                  <span>Student Resident Active</span>
-                                </div>
-                              </div>
-
-                              {/* Conversational Scroll Log */}
-                              <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-slate-50/40" id="student-chat-feed">
-                                {activeThread.messages.length === 0 ? (
-                                  <div className="h-full flex flex-col items-center justify-center text-center p-8 space-y-3">
-                                    <MessageSquare className="w-8 h-8 text-slate-300 animate-pulse mx-auto" />
-                                    <p className="text-xs font-bold text-slate-600">No Messages Yet</p>
-                                  </div>
-                                ) : (
-                                  activeThread.messages.map((m) => {
-                                    const isManager = m.senderRole === 'manager';
-                                    return (
-                                      <div
-                                        key={m.id}
-                                        className={`flex flex-col ${isManager ? 'items-end' : 'items-start'} max-w-full`}
-                                      >
-                                        <span className="text-[9px] text-slate-400 font-bold mb-1 px-1">
-                                          {isManager ? 'You (Manager)' : `${m.studentName || 'Student'} (Resident)`} • {new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                        </span>
-                                        <div
-                                          className={`px-4 py-2.5 text-xs font-medium leading-relaxed shadow-xs max-w-md ${
-                                            isManager
-                                              ? 'bg-blue-600 text-white rounded-2xl rounded-tr-none'
-                                              : 'bg-white border border-slate-200 text-slate-800 rounded-2xl rounded-tl-none'
-                                          }`}
-                                        >
-                                          {m.message}
-                                        </div>
-                                      </div>
-                                    );
-                                  })
-                                )}
-                              </div>
-
-                              {/* Reply Form */}
-                              <form onSubmit={handleSendStudentMessage} className="p-4 border-t border-slate-100 bg-white flex gap-3 items-center">
-                                <input
-                                  type="text"
-                                  value={newMessage}
-                                  onChange={(e) => setNewMessage(e.target.value)}
-                                  placeholder={`Reply to ${activeThread.studentName}...`}
-                                  className="flex-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-medium text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-600 focus:bg-white transition-all"
-                                  disabled={sendingMsg}
-                                  required
-                                />
-                                <button
-                                  type="submit"
-                                  disabled={sendingMsg || !newMessage.trim()}
-                                  className="p-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-md transition-all cursor-pointer flex items-center justify-center disabled:opacity-50 shrink-0"
-                                >
-                                  {sendingMsg ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                                </button>
-                              </form>
-                            </>
-                          );
-                        })()
-                      ) : (
-                        <div className="h-full flex flex-col items-center justify-center text-center p-8 space-y-3">
-                          <MessageSquare className="w-10 h-10 text-slate-300" />
-                          <p className="text-xs font-bold text-slate-600">Select a Resident Thread</p>
-                          <p className="text-[10px] text-slate-400">Choose a resident student from the left panel to read and reply to their messages.</p>
-                        </div>
-                      )
-                    ) : (
-                      selectedRoomId ? (
-                        <>
-                          {/* Conversation Info Header */}
-                          <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-white" id="active-chat-channel-header">
-                            <div className="flex items-center gap-3">
-                              <button
-                                onClick={() => setSelectedRoomId('')}
-                                className="lg:hidden p-1.5 -ml-1 text-slate-500 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 rounded-lg transition-all flex items-center justify-center shrink-0"
-                                type="button"
-                                title="Back to list"
-                              >
-                                <ArrowLeft className="w-4 h-4" />
-                              </button>
-                              <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-800 flex items-center justify-center font-black text-sm uppercase">
-                                {(chatRooms.find(r => r.id === selectedRoomId)?.staffName || 'S').substring(0, 2)}
-                              </div>
-                              <div>
-                                <h4 className="text-sm font-black text-slate-900">
-                                  {chatRooms.find(r => r.id === selectedRoomId)?.staffName || 'Staff Member'}
-                                </h4>
-                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
-                                  <span>Designation:</span>
-                                  <span className="text-blue-700 font-black">{chatRooms.find(r => r.id === selectedRoomId)?.staffRole || 'Facilities Lead'}</span>
-                                </p>
-                              </div>
-                            </div>
-
-                            <div className="flex items-center gap-1.5 bg-blue-50 border border-blue-200/50 text-blue-800 text-[10px] font-bold px-2.5 py-1 rounded-full">
-                              <span className="w-1.5 h-1.5 bg-sky-500 rounded-full animate-pulse" />
-                              <span>Room Sync: On</span>
-                            </div>
-                          </div>
-
-                          {/* Conversational Scroll Log */}
-                          <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-slate-50/40" id="chat-messages-feed">
-                            {chatMessagesList.length === 0 ? (
-                              <div className="h-full flex flex-col items-center justify-center text-center p-8 space-y-3" id="chat-no-messages-state">
-                                <div className="w-12 h-12 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center">
-                                  <MessageSquare className="w-6 h-6 animate-pulse" />
-                                </div>
-                                <div>
-                                  <p className="text-xs font-bold text-slate-700">Encrypted Chat Room Ready</p>
-                                  <p className="text-[10px] text-slate-400 max-w-xs mx-auto mt-0.5">Send a message to sync with your staff member. Complete audit trails are strictly private.</p>
-                                </div>
-                              </div>
-                            ) : (
-                              chatMessagesList.map((m) => {
-                                const isMe = m.senderId === user?.id;
-                                return (
-                                  <div
-                                    key={m.id}
-                                    className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} max-w-full`}
-                                    id={`msg-${m.id}`}
-                                  >
-                                    <span className="text-[9px] text-slate-400 font-bold mb-1 px-1">
-                                      {isMe ? 'You (Manager)' : `${m.senderName} (Staff)`} • {new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                    </span>
-                                    <div
-                                      className={`px-4 py-2.5 text-xs font-medium leading-relaxed shadow-xs max-w-md ${
-                                        isMe
-                                          ? 'bg-blue-600 text-white rounded-2xl rounded-tr-none'
-                                          : 'bg-white border border-slate-200 text-slate-800 rounded-2xl rounded-tl-none'
-                                      }`}
-                                    >
-                                      {m.content}
-                                    </div>
-                                  </div>
-                                );
-                              })
-                            )}
-                          </div>
-
-                          {/* Text Message Submission Box */}
-                          <form onSubmit={handleSendChatMessage} className="p-4 border-t border-slate-100 bg-white flex gap-3 items-center" id="chat-submission-form">
-                            <input
-                              type="text"
-                              value={newMessage}
-                              onChange={(e) => setNewMessage(e.target.value)}
-                              placeholder="Type a secure message to this staff member..."
-                              className="flex-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-medium text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-600 focus:bg-white transition-all"
-                              disabled={sendingMsg}
-                              required
-                            />
-                            <button
-                              type="submit"
-                              disabled={sendingMsg || !newMessage.trim()}
-                              className="p-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-md transition-all cursor-pointer flex items-center justify-center disabled:opacity-50 shrink-0"
-                              title="Send secure message"
-                            >
-                              {sendingMsg ? (
-                                <RefreshCw className="w-4 h-4 animate-spin" />
-                              ) : (
-                                <Send className="w-4 h-4" />
-                              )}
-                            </button>
-                          </form>
-                        </>
-                      ) : (
-                        <div className="h-full flex flex-col items-center justify-center text-center p-8 space-y-3" id="chat-unselected-state">
-                          <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center">
-                            <Lock className="w-5 h-5" />
-                          </div>
-                          <div>
-                            <p className="text-xs font-bold text-slate-700">No Channel Selected</p>
-                            <p className="text-[10px] text-slate-400 max-w-xs mx-auto mt-0.5">Please select an active staff member from the left channel list to inspect message threads.</p>
-                          </div>
-                        </div>
-                      )
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
           </>
         )}
       </main>

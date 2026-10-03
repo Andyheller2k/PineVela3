@@ -1,3 +1,4 @@
+import { sessionFetch as fetch } from '../lib/session';
 import React, { createContext, useContext, useState, useEffect, useRef, useMemo, useCallback, ReactNode } from 'react';
 import { useAuth } from './AuthContext';
 import { safeJson } from '../lib/api';
@@ -27,7 +28,6 @@ export interface ToastItem {
 
 export interface RegisteredAccountsState {
   managerAccount: any | null;
-  staffAccount: any | null;
   residentAccount: any | null;
   merchantAccount?: any | null;
 }
@@ -136,24 +136,6 @@ class NotificationDeduplicatorService {
     return { changed, current };
   }
 
-  public checkStaffStatusTransition(uId: string, status: string | null | undefined, isPrimaryAccount: boolean): { changed: boolean; current: string | null } {
-    if (!isPrimaryAccount) return { changed: false, current: status || null };
-    const current = status ? String(status).toLowerCase().trim() : null;
-    const storageKey = `pinevela_last_stf_status_${uId || 'global'}`;
-    const storedLast = localStorage.getItem(storageKey);
-
-    if (storedLast === null) {
-      if (current) localStorage.setItem(storageKey, current);
-      return { changed: false, current };
-    }
-
-    const changed = Boolean(current && current !== storedLast);
-    if (changed && current) {
-      localStorage.setItem(storageKey, current);
-    }
-    return { changed, current };
-  }
-
   public checkMerchantStatusTransition(uId: string, status: string | null | undefined, isPrimaryAccount: boolean): { changed: boolean; current: string | null } {
     if (!isPrimaryAccount) return { changed: false, current: status || null };
     const current = status ? String(status).toLowerCase().trim() : null;
@@ -187,7 +169,6 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const [registeredAccounts, setRegisteredAccounts] = useState<RegisteredAccountsState>({
     managerAccount: null,
-    staffAccount: null,
     residentAccount: null,
   });
 
@@ -224,8 +205,8 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     if (!user) {
       setNotifications(prev => prev.length === 0 ? prev : []);
       setRegisteredAccounts(prev => {
-        if (!prev.managerAccount && !prev.staffAccount && !prev.residentAccount && !prev.merchantAccount) return prev;
-        return { managerAccount: null, staffAccount: null, residentAccount: null, merchantAccount: null };
+        if (!prev.managerAccount && !prev.residentAccount && !prev.merchantAccount) return prev;
+        return { managerAccount: null, residentAccount: null, merchantAccount: null };
       });
       return;
     }
@@ -233,16 +214,15 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     const uEmail = (user.email || '').toLowerCase().trim();
     const uId = user.id || '';
 
-    // 1. Fetch Registered Manager/Staff Accounts
+    // 1. Fetch Registered Manager, Resident and Seller Accounts
     try {
-      const token = user?.token || localStorage.getItem('pinevela_auth_token') || localStorage.getItem('pinevela_session_token') || localStorage.getItem('token');
+      const token = user?.token;
       const regRes = await fetch(`/api/users/my-registered-accounts?email=${encodeURIComponent(uEmail)}&userId=${encodeURIComponent(uId)}`, {
         headers: token ? { 'Authorization': `Bearer ${token}` } : {}
       });
       if (regRes.ok) {
         const regData = await safeJson(regRes);
         const mgrAccount = regData.managerAccount || null;
-        const stfAccount = regData.staffAccount || null;
         const mktAccount = regData.merchantAccount || null;
 
         // Check for Manager Status Transition - ONLY popup in Primary Account
@@ -254,19 +234,6 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
               pushToast(`🎉 Manager Account Approved!`, `Your manager registration for ${mgrAccount.name} was approved by Admin.`, 'success');
             } else if (String(mgrAccount.status).toLowerCase() === 'rejected') {
               pushToast(`⚠️ Manager Registration Update`, `Your manager registration status: ${displayStat}.`, 'warning');
-            }
-          }
-        }
-
-        // Check for Staff Status Transition - ONLY popup in Primary Account
-        if (stfAccount && isPrimaryAccount) {
-          const stfCheck = notificationServiceSingleton.checkStaffStatusTransition(uId, stfAccount.status, isPrimaryAccount);
-          if (stfCheck.changed && !isFirstLoadRef.current) {
-            const displayStat = stfAccount.displayStatus || stfAccount.status;
-            if (String(stfAccount.status).toLowerCase() === 'verified' || String(stfAccount.status).toLowerCase() === 'approved') {
-              pushToast(`🎉 Staff Verification Approved!`, `Your staff profile & credentials have been verified by Admin.`, 'success');
-            } else if (String(stfAccount.status).toLowerCase() === 'rejected') {
-              pushToast(`⚠️ Staff Verification Update`, `Your staff verification status: ${displayStat}.`, 'warning');
             }
           }
         }
@@ -287,7 +254,6 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         setRegisteredAccounts(prev => {
           if (
             JSON.stringify(prev.managerAccount) === JSON.stringify(mgrAccount) &&
-            JSON.stringify(prev.staffAccount) === JSON.stringify(stfAccount) &&
             JSON.stringify(prev.residentAccount) === JSON.stringify(regData.residentAccount || null) &&
             JSON.stringify(prev.merchantAccount) === JSON.stringify(mktAccount)
           ) {
@@ -295,7 +261,6 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
           }
           return {
             managerAccount: mgrAccount,
-            staffAccount: stfAccount,
             residentAccount: regData.residentAccount || null,
             merchantAccount: mktAccount,
           };

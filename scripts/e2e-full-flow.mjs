@@ -2,6 +2,10 @@
  * PineVela full logical E2E + against-tests (API-level).
  * Run: node scripts/e2e-full-flow.mjs
  */
+import { createInterface } from 'node:readline/promises';
+
+const signupInboxes = (process.env.PINEVELA_E2E_SIGNUP_EMAILS || '').split(',').map(value => value.trim()).filter(Boolean);
+
 const BASE = process.env.PINEVELA_BASE || 'http://127.0.0.1:3000';
 const TS = Date.now();
 
@@ -52,25 +56,20 @@ function expectStatus(name, res, codes, detailExtra = '') {
   return false;
 }
 
-async function registerUnified(name, email, password) {
-  const r1 = await req('POST', '/api/auth/register-unified', {
-    body: { name, email, password }
-  });
-  if (!r1.ok || !r1.data?.code) {
-    throw new Error(`register-unified failed for ${email}: ${JSON.stringify(r1.data)}`);
+async function registerUnified(name, _legacyGeneratedEmail, password) {
+  const email = signupInboxes.shift();
+  if (!email || !process.stdin.isTTY) {
+    throw new Error('Signup now requires real inbox verification. Run interactively with PINEVELA_E2E_SIGNUP_EMAILS containing owned, deliverable inboxes, or use scripts/verify-signup-live.ts for the focused signup check.');
   }
-  const r2 = await req('POST', '/api/auth/verify-unified', {
-    body: { email, code: r1.data.code }
-  });
-  if (!r2.ok || !r2.data?.token) {
-    throw new Error(`verify-unified failed for ${email}: ${JSON.stringify(r2.data)}`);
-  }
-  return {
-    ...r2.data.user,
-    token: r2.data.token,
-    password,
-    email
-  };
+  const r1 = await req('POST', '/api/auth/register-unified', { body: { name, email, password } });
+  if (!r1.ok || !r1.data?.signupId) throw new Error(`Email verification could not start: ${r1.data?.error || 'Unexpected response'}`);
+  const reader = createInterface({ input: process.stdin, output: process.stdout });
+  let code;
+  try { code = (await reader.question(`Enter the code or paste the confirmation link emailed to ${email}: `)).trim(); }
+  finally { reader.close(); }
+  const r2 = await req('POST', '/api/auth/verify-unified', { body: { email, password, signupId: r1.data.signupId, code } });
+  if (!r2.ok || !r2.data?.token) throw new Error(`Email verification failed: ${r2.data?.error || 'Unexpected response'}`);
+  return { ...r2.data.user, token: r2.data.token, password, email };
 }
 
 async function login(email, password) {
@@ -229,99 +228,18 @@ async function main() {
     fail('hostel id present', JSON.stringify(hostelReg.data)?.slice(0, 200));
   }
 
-  section('5. Create user B → register staff sub-account');
-  const userB = await registerUnified(
-    'E2E Staff Parent',
-    `e2e.staff.parent.${TS}@gmail.com`,
-    'StaffParent1!'
-  );
-  pass('user B created', userB.email);
-
+  section('5. Manager creates their residence staff account');
   const staffEmail = `staff.${TS}@technician.gh`;
-  const staffReg = await req('POST', '/api/auth/register-staff', {
-    token: userB.token,
-    body: {
-      name: 'E2E Electrician',
-      email: staffEmail,
-      password: 'StaffPass1!',
-      phone: '+233241111002',
-      role: 'Electrician',
-      specialization: 'Electrical / Backup Power',
-      yearsExperience: 4,
-      nationalId: 'GHA-712345679-2',
-      idType: 'Ghana Card',
-      cvFileName: 'cv.pdf',
-      cvData: 'Experienced electrician CV content for E2E',
-      declarationAccepted: true,
-      parentUserId: userB.id,
-      parentUserEmail: userB.email,
-      userId: userB.id,
-      userEmail: userB.email
-    }
+  const staffReg = await req('POST', '/api/staff', {
+    token: managerToken,
+    body: { name: 'E2E Electrician', email: staffEmail, password: 'StaffPass1!',
+      phone: '+233241111002', role: 'Electrician', hostelId, shift: 'Day' }
   });
-  expectStatus('staff registration', staffReg, [200, 201]);
-  const staffId = staffReg.data?.user?.id || staffReg.data?.id || staffReg.data?.staff?.id;
-
-  section('6. Against: staff cannot apply for hostel job before admin verifies');
-  const staffLoginPending = await login(staffEmail, 'StaffPass1!');
-  const staffPendingToken = staffLoginPending.data?.token;
-  if (staffLoginPending.ok && staffPendingToken) {
-    const earlyApply = await req('POST', '/api/staff-applications', {
-      token: staffPendingToken,
-      body: {
-        applicantName: 'E2E Electrician',
-        email: staffEmail,
-        phone: '+233241111002',
-        role: 'Electrician',
-        hostelId,
-        hostelName,
-        nationalId: 'GHA-712345679-2',
-        coverLetter: 'Please hire me early'
-      }
-    });
-    expectStatus('block unverified staff job application', earlyApply, [403, 400]);
-  } else {
-    fail('staff pending login for against-test', JSON.stringify(staffLoginPending.data)?.slice(0, 180));
-  }
-
-  section('7. Admin approves staff credentials');
-  const staffDecisionId = staffId || staffEmail;
-  const staffApprove = await req('PUT', `/api/admin/staff-verifications/${encodeURIComponent(staffDecisionId)}/decision`, {
-    token: adminToken,
-    body: { status: 'Verified', reviewNotes: 'E2E verified' }
-  });
-  expectStatus('admin verify staff', staffApprove, [200, 201]);
-
+  expectStatus('manager creates staff', staffReg, 201);
+  const staffId = staffReg.data?.id;
   const staffLogin = await login(staffEmail, 'StaffPass1!');
-  expectStatus('verified staff login', staffLogin, 200);
-  const staffToken = staffLogin.data?.token;
-
-  section('8. Staff applies to hostel → manager accepts');
-  const staffApply = await req('POST', '/api/staff-applications', {
-    token: staffToken,
-    body: {
-      applicantName: 'E2E Electrician',
-      email: staffEmail,
-      phone: '+233241111002',
-      role: 'Electrician',
-      hostelId,
-      hostelName,
-      nationalId: 'GHA-712345679-2',
-      coverLetter: 'Ready to maintain electrical systems'
-    }
-  });
-  expectStatus('staff job application', staffApply, [200, 201]);
-  const applicationId = staffApply.data?.application?.id || staffApply.data?.id;
-
-  if (applicationId) {
-    const acceptApp = await req('PUT', `/api/staff-applications/${applicationId}/decision`, {
-      token: managerToken,
-      body: { decision: 'Approved', status: 'Approved' }
-    });
-    expectStatus('manager accept staff application', acceptApp, [200, 201]);
-  } else {
-    fail('staff application id', JSON.stringify(staffApply.data)?.slice(0, 200));
-  }
+  expectStatus('manager-created staff login', staffLogin, 200);
+  const staffToken = (staffLogin.data?.user || staffLogin.data)?.token;
 
   section('9. Create user C → claim room key → file complaint');
   // Generate keys as manager
@@ -552,17 +470,15 @@ async function main() {
   section('12. Account harmony / registered accounts');
   // Re-login primaries: session tokens rotate on each login, so stale tokens from earlier steps are invalid
   const userAFresh = await login(userA.email, userA.password);
-  const userBFresh = await login(userB.email, userB.password);
   const userCFresh = await login(userC.email, userC.password);
-  if (!userAFresh.ok || !userBFresh.ok || !userCFresh.ok) {
+  if (!userAFresh.ok || !userCFresh.ok) {
     fail('re-login primary accounts for harmony check', JSON.stringify({
-      a: userAFresh.status, b: userBFresh.status, c: userCFresh.status
+      a: userAFresh.status, c: userCFresh.status
     }));
   } else {
     pass('re-login primary accounts for harmony check');
   }
   userA.token = userAFresh.data?.token || userA.token;
-  userB.token = userBFresh.data?.token || userB.token;
   userC.token = userCFresh.data?.token || userC.token;
 
   const accountsA = await req('GET', '/api/users/my-registered-accounts', {
@@ -571,13 +487,6 @@ async function main() {
   expectStatus('user A registered accounts', accountsA, 200);
   if (accountsA.data?.managerAccount) pass('user A has manager sub-account linked');
   else fail('user A manager sub-account linked', JSON.stringify(accountsA.data)?.slice(0, 200));
-
-  const accountsB = await req('GET', '/api/users/my-registered-accounts', {
-    token: userB.token
-  });
-  expectStatus('user B registered accounts', accountsB, 200);
-  if (accountsB.data?.staffAccount) pass('user B has staff sub-account linked');
-  else fail('user B staff sub-account linked', JSON.stringify(accountsB.data)?.slice(0, 200));
 
   const accountsC = await req('GET', '/api/users/my-registered-accounts', {
     token: userC.token
@@ -740,23 +649,16 @@ async function main() {
     fail('setup early market app', JSON.stringify(earlyDm.data)?.slice(0, 160));
   }
 
-  section('AGAINST 6. Banned staff account must not login / act');
-  if (staffDecisionId) {
-    const ban = await req('PUT', `/api/admin/staff-verifications/${encodeURIComponent(staffDecisionId)}/status`, {
-      token: adminToken,
-      body: { accountStatus: 'Banned', reason: 'E2E ban test' }
+  section('AGAINST 6. Manager-suspended staff cannot login or act');
+  if (staffId) {
+    const suspend = await req('PUT', `/api/staff/${encodeURIComponent(staffId)}`, {
+      token: managerToken, body: { status: 'Suspended' }
     });
-    expectStatus('admin ban staff', ban, 200);
-    const bannedLogin = await login(staffEmail, 'StaffPass1!');
-    if (!bannedLogin.ok) {
-      pass('banned staff cannot login', `HTTP ${bannedLogin.status}`);
-    } else {
-      fail('banned staff cannot login', 'login still succeeded — ban not enforced at login');
-    }
-    // restore for cleanliness
-    await req('PUT', `/api/admin/staff-verifications/${encodeURIComponent(staffDecisionId)}/status`, {
-      token: adminToken,
-      body: { accountStatus: 'Active', reason: 'E2E restore' }
+    expectStatus('manager suspends own staff', suspend, 200);
+    const suspendedLogin = await login(staffEmail, 'StaffPass1!');
+    expectStatus('suspended staff cannot login', suspendedLogin, 403);
+    await req('PUT', `/api/staff/${encodeURIComponent(staffId)}`, {
+      token: managerToken, body: { status: 'Active' }
     });
   }
 

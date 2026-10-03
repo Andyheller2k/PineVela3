@@ -1,3 +1,4 @@
+import { KNOWN_LEGACY_PASSWORDS } from '../legacyCredentialPolicy.js';
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
 import { test } from 'node:test';
@@ -41,4 +42,13 @@ test('offline recovery rejects compromised passwords, preserves role, and stays 
   assert.equal('token' in store.users[0], false);
   assert.equal(revokeExposedCredentials(store).changed, false);
   assert.equal(verifyCredential(replacement, store.users[0].password), true);
+});
+
+test('offline recovery rejects every disabled legacy password without changing the account', () => {
+  const store: any = { credentialExposureVersion: 1, users: [{ id: crypto.randomUUID(), role: 'admin', password: hashCredential(crypto.randomUUID()), token: crypto.randomUUID() }] };
+  const before = JSON.stringify(store);
+  for (const password of KNOWN_LEGACY_PASSWORDS) {
+    assert.throws(() => recoverAccountPassword(store, store.users[0].id, 'admin', password), /legacy password is disabled/);
+    assert.equal(JSON.stringify(store), before);
+  }
 });

@@ -1,10 +1,48 @@
 # PineVela Database Model
 
+## Marketplace Purchase Reviews During Migration
+
+`digitalMarketRatings` contains server-owned receipt, buyer, seller, store and item fields.
+Only records marked `purchaseVerifiedVersion: 1` that match their completed order contribute
+to public review lists and aggregates. There is one active verified review per order, updated
+only by its exact buyer. Historical unverified ratings and `digitalMarketServiceReviews`
+remain private and preserved across load/save; they are not automatically promoted.
+
+PostgreSQL migration must preserve completed-order eligibility and exact buyer ownership,
+use a unique `order_id` constraint with transactional review/aggregate updates, and enforce
+the same policy through server authorization and RLS. Keep private receipt/account fields
+out of the public review projection.
+
+## Marketplace Reservations During Migration
+
+The current JSON order record carries server-owned `stockReservationVersion` and
+`stockReservedUntil`; active Awaiting Seller Confirmation/Pending Meetup records reserve
+their positive integer quantity until that timestamp. Physical product stock is deducted
+only on completion. All checks account for other active reservations. Terminal or expired
+orders release reserved capacity without deleting historical records.
+
+PIN version, expiry, issuance time and attempts also persist on the server-private order.
+Only the exact authenticated buyer may retrieve an active PIN or issue a replacement.
+Unversioned historical PINs require buyer renewal; ownership is never inferred from a
+matching email when an exact buyer ID is absent or conflicts.
+
+PostgreSQL migration must serialize reservation creation/renewal and stock consumption
+in a transaction that locks the product and relevant orders (or uses an equivalent atomic
+inventory predicate). Expiry/release must preserve the same capacity rules. Keep actor
+authorization and RLS in the boundary; a JSON process lock cannot replace database locking.
+
 ## Database
 
 Target database:
 
 PostgreSQL through Supabase.
+
+During migration, JSON account records may contain a private `session` object with
+`tokenHash`, numeric `issuedAt` and `expiresAt`. Raw `token`, `merchantToken` and
+`sessionToken` fields are removed on load and before writes. One current session per
+account is retained; a fresh login replaces the previous hash. Logout/password recovery
+must remove every copy of that session. Target session handling must preserve those
+revocation/expiry invariants through Supabase Auth and server-side authorization/RLS.
 
 ---
 
@@ -166,3 +204,11 @@ Before changing schema:
 * identify business invariants
 * identify authorization boundaries
 * identify legacy fields that contain implicit relationships
+
+
+## Retired Feature Records During Migration
+
+The transitional JSON persistence model has no active housing booking application collection.
+Legacy housing applications are retained privately under `retiredFeatureRecords.housingApplications`
+when old stores load and save. This archive has no API or operational workflow and must not
+be exposed as a public directory or silently discarded during the Supabase migration.

@@ -1,3 +1,4 @@
+import { sessionFetch as fetch } from '../lib/session';
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
@@ -80,7 +81,7 @@ export default function PageManagerOnboarding() {
       setCheckingExisting(true);
       const uEmail = (user.email || '').toLowerCase().trim();
       const uId = user.id || '';
-      const token = user?.token || localStorage.getItem('pinevela_auth_token') || localStorage.getItem('pinevela_session_token') || localStorage.getItem('token');
+      const token = user?.token;
       const headers: any = {};
       if (token) headers['Authorization'] = `Bearer ${token}`;
       const res = await fetch(`/api/users/my-registered-accounts?email=${encodeURIComponent(uEmail)}&userId=${encodeURIComponent(uId)}`, { headers });
@@ -112,7 +113,7 @@ export default function PageManagerOnboarding() {
     try {
       setIsDeleting(true);
       setDelError(null);
-      const token = user?.token || localStorage.getItem('pinevela_auth_token') || localStorage.getItem('pinevela_session_token') || localStorage.getItem('token');
+      const token = user?.token;
       const res = await fetch('/api/users/delete-registered-account', {
         method: 'POST',
         headers: {
@@ -189,7 +190,7 @@ export default function PageManagerOnboarding() {
 
   const fetchRestrictionStatus = async () => {
     try {
-      const token = localStorage.getItem('pinevela_auth_token') || localStorage.getItem('pinevela_session_token') || localStorage.getItem('token') || (user as any)?.token;
+      const token = (user as any)?.token;
       const headers: any = {};
       if (token) headers['Authorization'] = `Bearer ${token}`;
       const res = await fetch('/api/users/manager-restriction', { headers });
@@ -538,7 +539,7 @@ export default function PageManagerOnboarding() {
                   <CheckCircle2 className="w-5 h-5 text-emerald-700 shrink-0 mt-0.5" />
                   <div className="text-xs text-emerald-950 leading-relaxed font-medium">
                     <strong className="block text-emerald-900 font-bold mb-0.5">Verified Manager Account:</strong>
-                    Your property and manager credentials have been verified by PineVela Administration. You can now log into your manager account to manage rooms, bookings, and resident communications.
+                    Your property and manager credentials have been verified by PineVela Administration. You can now log into your manager account to manage rooms, maintenance, and resident support.
                   </div>
                 </div>
               )}
@@ -632,7 +633,7 @@ export default function PageManagerOnboarding() {
                   </div>
                   <h4 className="text-xs font-black text-slate-900 uppercase tracking-wider">Account Activation</h4>
                   <p className="text-xs text-slate-500 leading-relaxed font-medium">
-                    Once the inspection report is reviewed and approved, your manager portal is unlocked to publish rooms and receive bookings.
+                    Once the inspection report is reviewed and approved, your manager portal is unlocked to manage rooms and activate resident access.
                   </p>
                 </div>
               </div>

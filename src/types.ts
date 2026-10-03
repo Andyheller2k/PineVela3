@@ -273,22 +273,6 @@ export interface ResidentOnboardingData {
   password?: string;
 }
 
-export interface StudentDirectMessage {
-  id: string;
-  studentId: string;
-  studentName: string;
-  studentEmail?: string;
-  hostelId: string;
-  hostelName: string;
-  managerId: string;
-  managerName?: string;
-  senderRole: 'student' | 'manager';
-  message: string;
-  attachmentUrl?: string;
-  timestamp: string;
-  read: boolean;
-}
-
 export interface IssueReport {
   id: string;
   title: string;
@@ -360,7 +344,7 @@ export interface MeetingRequest {
   studentId: string;
   studentName: string;
   hostelName: string;
-  type: 'Video Call' | 'Chat' | 'In-Person';
+  type: 'Video Call' | 'In-Person';
   date: string;
   time: string;
   reason: string;
@@ -387,16 +371,6 @@ export interface HostelRating {
   score: number; // 1-5
   review: string;
   date: string;
-}
-
-export interface BookingRequest {
-  id: string;
-  studentName: string;
-  studentId: string;
-  roomType: string;
-  hostelName: string;
-  avatar: string;
-  status: 'Pending' | 'Approved' | 'Ignored';
 }
 
 export interface MaintenanceStatus {
@@ -433,30 +407,6 @@ export interface Staff {
   cvUrl?: string;
   createdAt?: string;
   updatedAt?: string;
-}
-
-export interface StaffApplication {
-  id: string;
-  staffId: string;
-  staffUsername?: string;
-  staffEmail: string;
-  applicantName: string;
-  phone: string;
-  role: string;
-  hostelId: string;
-  hostelName: string;
-  nationalId?: string;
-  idDocumentUrl?: string;
-  cvUrl?: string;
-  cvData?: string;
-  cvFileName?: string;
-  coverLetter?: string;
-  status: 'pending' | 'Approved' | 'Rejected';
-  shift?: string;
-  assignedBlock?: string;
-  appliedAt: string;
-  reviewedAt?: string;
-  reviewNotes?: string;
 }
 
 export type ActiveScreen =
@@ -656,7 +606,6 @@ export interface ManagerAccountSettings {
     emailAlerts: boolean;
     smsAlerts: boolean;
     maintenanceTicketAlerts: boolean;
-    bookingApplicationAlerts: boolean;
     meetingRequestAlerts: boolean;
   };
   security: {
@@ -868,6 +817,7 @@ export interface DigitalMarketOrder {
   productTitle: string;
   productPrice: number;
   priceCategory?: string;
+  priceCategoryId?: string;
   productImage: string;
   quantity: number;
   totalAmount: number;
@@ -888,11 +838,12 @@ export interface DigitalMarketOrder {
   sellerConfirmed?: boolean;
   sellerAgreedLocation?: boolean;
   sellerAgreedAt?: string;
-  otpPin: string;
-  status: 'Awaiting Seller Confirmation' | 'Pending Meetup' | 'Inspected & Met' | 'Completed & Paid' | 'Cancelled' | 'Rejected by Seller' | string;
+  otpPin?: string; // Present only in the authenticated buyer's active challenge response.
+  deliveryPinState?: 'active' | 'expired' | 'locked' | 'unavailable';
+  deliveryPinExpiresAt?: string;
+  status: 'Awaiting Seller Confirmation' | 'Pending Meetup' | 'Completed & Paid' | 'Cancelled' | 'Location Rejected' | 'Rejected by Seller';
   paymentMethod: string;
   createdAt: string;
   updatedAt: string;
   timeline: DigitalMarketOrderTimeline[];
 }
-

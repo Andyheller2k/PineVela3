@@ -1,3 +1,4 @@
+import { sessionFetch as fetch } from '../lib/session';
 import React, { useState, useEffect } from 'react';
 import { 
   Settings, 
@@ -42,7 +43,6 @@ export const ManagerAccountSettingsModal: React.FC<ManagerAccountSettingsModalPr
       emailAlerts: true,
       smsAlerts: true,
       maintenanceTicketAlerts: true,
-      bookingApplicationAlerts: true,
       meetingRequestAlerts: true
     },
     security: {
@@ -81,7 +81,7 @@ export const ManagerAccountSettingsModal: React.FC<ManagerAccountSettingsModalPr
     setIsLoading(true);
     setError(null);
     try {
-      const token = currentUser?.token || localStorage.getItem('pinevela_session_token') || localStorage.getItem('token') || '';
+      const token = currentUser?.token || '';
       const res = await fetch('/api/manager/account-settings', {
         headers: {
           'Authorization': `Bearer ${token}`
@@ -119,7 +119,7 @@ export const ManagerAccountSettingsModal: React.FC<ManagerAccountSettingsModalPr
     setSuccessMessage(null);
 
     try {
-      const token = currentUser?.token || localStorage.getItem('pinevela_session_token') || localStorage.getItem('token') || '';
+      const token = currentUser?.token || '';
       const res = await fetch('/api/manager/account-settings', {
         method: 'PUT',
         headers: {
@@ -162,7 +162,7 @@ export const ManagerAccountSettingsModal: React.FC<ManagerAccountSettingsModalPr
 
     setIsChangingPassword(true);
     try {
-      const token = currentUser?.token || localStorage.getItem('pinevela_session_token') || localStorage.getItem('token') || '';
+      const token = currentUser?.token || '';
       const res = await fetch('/api/auth/change-password', {
         method: 'POST',
         headers: {
@@ -362,21 +362,7 @@ export const ManagerAccountSettingsModal: React.FC<ManagerAccountSettingsModalPr
                       />
                     </label>
 
-                    <label className="flex items-center justify-between p-2.5 bg-white rounded-xl border border-slate-200/60 cursor-pointer hover:border-blue-200 transition-all">
-                      <div>
-                        <div className="font-bold text-slate-800">Booking Applications</div>
-                        <div className="text-[11px] text-slate-500">Alerts for prospective resident bed reservations</div>
-                      </div>
-                      <input
-                        type="checkbox"
-                        checked={settings.notifications.bookingApplicationAlerts}
-                        onChange={(e) => setSettings({
-                          ...settings,
-                          notifications: { ...settings.notifications, bookingApplicationAlerts: e.target.checked }
-                        })}
-                        className="w-4 h-4 text-blue-600 rounded"
-                      />
-                    </label>
+
 
                     <label className="flex items-center justify-between p-2.5 bg-white rounded-xl border border-slate-200/60 cursor-pointer hover:border-blue-200 transition-all">
                       <div>

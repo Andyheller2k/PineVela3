@@ -35,8 +35,8 @@ function StorySection({ section, index, container, controls }: {
             <div className="company-paragraphs">
               {section.paragraphs.map((paragraph, paragraphIndex) => (
                 <motion.p key={paragraphIndex} className={paragraphIndex === 0 ? 'company-lead' : paragraph === 'So, who are we really?' ? 'company-subheading' : undefined}
-                  initial={reduced ? false : { opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ root: container, once: true, amount: 0.12 }} transition={{ duration: reduced ? 0 : 0.4, delay: reduced ? 0 : Math.min(paragraphIndex * 0.045, 0.18) }}>
+                  initial={reduced ? false : { opacity: 0, y: 18 }} whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ root: container, once: true, amount: 0.08 }} transition={{ duration: reduced ? 0 : 0.55, ease: [0.22, 1, 0.36, 1], delay: reduced ? 0 : Math.min(paragraphIndex * 0.07, 0.28) }}>
                   {paragraph}
                 </motion.p>
               ))}
@@ -120,7 +120,7 @@ export default function CompanyStory({ onClose, initialSection = 'about-us' }: {
         await photo.decode().catch(() => {});
       }
       if (!mounted.current || closing.current) return;
-      if (!reduced) await controls.start({ opacity: 0, scale: 0.86, z: -160, rotateX: 5, transition: { duration: 0.3, ease: [0.4, 0, 0.6, 1] } });
+      if (!reduced) await controls.start({ opacity: 0, y: -24, scale: 0.97, transition: { duration: 0.28, ease: [0.4, 0, 1, 1] } });
       if (!mounted.current || closing.current) return;
       if (root && chapter) {
         transitionScrollTop.current = chapter.offsetTop;
@@ -129,8 +129,8 @@ export default function CompanyStory({ onClose, initialSection = 'about-us' }: {
       activeSection.current = index;
       setActive(index);
       if (source === 'menu') chapter?.querySelector<HTMLElement>('h2')?.focus({ preventScroll: true });
-      if (!reduced) controls.set({ opacity: 0, scale: 0.9, z: -120, rotateX: -3 });
-      await controls.start({ opacity: 1, scale: 1, z: 0, rotateX: 0, transition: { duration: reduced ? 0 : 0.55, ease: [0.16, 1, 0.3, 1] } });
+      if (!reduced) controls.set({ opacity: 0, y: 32, scale: 0.97 });
+      await controls.start({ opacity: 1, y: 0, scale: 1, transition: { duration: reduced ? 0 : 0.62, ease: [0.22, 1, 0.36, 1] } });
     } finally {
       settledScrollTop.current = root?.scrollTop ?? 0;
       switching.current = false;
@@ -191,9 +191,7 @@ export default function CompanyStory({ onClose, initialSection = 'about-us' }: {
     if (!reduced) {
       await closeControls.start({
         opacity: 0,
-        scale: 0.97,
-        y: 8,
-        transition: { duration: 0.36, ease: [0.4, 0, 0.2, 1] },
+        transition: { duration: 0.28, ease: [0.4, 0, 0.2, 1] },
       });
     }
     if (mounted.current) onClose();

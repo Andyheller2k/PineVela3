@@ -1,3 +1,4 @@
+import { sessionFetch as fetch } from '../lib/session';
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
@@ -67,28 +68,13 @@ export default function PageVerificationTeamPortal() {
   const { user, login: authLogin, setSessionUser, logout: authLogout } = useAuth();
 
   // Authentication State
-  const [officerSession, setOfficerSession] = useState<any>(() => {
-    try {
-      const saved = localStorage.getItem('pinevela_officer_session');
-      if (saved) return JSON.parse(saved);
-      const userSaved = localStorage.getItem('pinevela_user');
-      if (userSaved) {
-        const parsed = JSON.parse(userSaved);
-        if (parsed.role === 'verification_team' || parsed.role === 'officer' || parsed.role === 'field_officer' || parsed.role === 'admin') {
-          return parsed;
-        }
-      }
-      return null;
-    } catch (e) {
-      return null;
-    }
-  });
+  const [officerSession, setOfficerSession] = useState<any>(null);
 
   // Automatically synchronize with AuthContext user if role is verification team or officer
   useEffect(() => {
     if (user && (user.role === 'verification_team' || user.role === 'officer' || user.role === 'field_officer' || user.role === 'admin')) {
       setOfficerSession(user);
-    }
+    } else { setOfficerSession(null); }
   }, [user]);
 
   const [loginEmail, setLoginEmail] = useState('');
@@ -105,9 +91,7 @@ export default function PageVerificationTeamPortal() {
     const updatedSession = { ...officerSession, avatar: newAvatarUrl, photoUrl: newAvatarUrl, photo: newAvatarUrl, profilePicture: newAvatarUrl };
     setOfficerSession(updatedSession);
     try {
-      localStorage.setItem('pinevela_officer_session', JSON.stringify(updatedSession));
       if (user) {
-        localStorage.setItem('pinevela_user', JSON.stringify({ ...user, avatar: newAvatarUrl, photoUrl: newAvatarUrl, photo: newAvatarUrl, profilePicture: newAvatarUrl }));
         setSessionUser({ ...user, avatar: newAvatarUrl, photoUrl: newAvatarUrl, photo: newAvatarUrl, profilePicture: newAvatarUrl });
       }
     } catch (e) {}
@@ -165,10 +149,8 @@ export default function PageVerificationTeamPortal() {
     if (!officerSession) return;
     try {
       setIsLoadingInspections(true);
-      const token = officerSession.token || localStorage.getItem('pinevela_session_token') || localStorage.getItem('token') || '';
-      const officerId = officerSession.id || officerSession.officerId || '';
-      const email = officerSession.email || '';
-      const res = await fetch(`/api/verification-team/my-inspections?officerId=${encodeURIComponent(officerId)}&email=${encodeURIComponent(email)}`, {
+      const token = officerSession.token || '';
+      const res = await fetch('/api/verification-team/my-inspections', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -202,7 +184,6 @@ export default function PageVerificationTeamPortal() {
       // First try specialized verification-teams login endpoint
       let loginSuccessful = false;
       let userData: any = null;
-      let userToken: string = '';
 
       const res = await fetch('/api/verification-teams/login', {
         method: 'POST',
@@ -220,7 +201,6 @@ export default function PageVerificationTeamPortal() {
       if (res.ok && data.success) {
         loginSuccessful = true;
         userData = data.user;
-        userToken = data.token;
       } else {
         // Fallback to standard auth login
         if (authLogin) {
@@ -228,7 +208,6 @@ export default function PageVerificationTeamPortal() {
           if (authRes) {
             loginSuccessful = true;
             userData = authRes;
-            userToken = authRes.token;
           }
         }
       }
@@ -238,14 +217,6 @@ export default function PageVerificationTeamPortal() {
       }
 
       setOfficerSession(userData);
-      localStorage.setItem('pinevela_officer_session', JSON.stringify(userData));
-      if (userToken) {
-        localStorage.setItem('pinevela_session_token', userToken);
-        localStorage.setItem('token', userToken);
-        localStorage.setItem('pinevela_auth_token', userToken);
-        localStorage.setItem('pinevela_token', userToken);
-        localStorage.setItem('pinevela_user', JSON.stringify(userData));
-      }
       if (setSessionUser) {
         setSessionUser(userData);
       }
@@ -256,7 +227,8 @@ export default function PageVerificationTeamPortal() {
     }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    if (authLogout && !await authLogout()) return;
     setOfficerSession(null);
     localStorage.removeItem('pinevela_officer_session');
     localStorage.removeItem('pinevela_session_token');
@@ -264,7 +236,6 @@ export default function PageVerificationTeamPortal() {
     localStorage.removeItem('pinevela_auth_token');
     localStorage.removeItem('pinevela_token');
     localStorage.removeItem('pinevela_user');
-    if (authLogout) authLogout();
     setActiveInspection(null);
     setViewingSubmittedReport(null);
   };
@@ -459,7 +430,7 @@ export default function PageVerificationTeamPortal() {
         inspectorSignature: inspectorSignature.trim() || `${officerSession?.name} (Field Inspector)`
       };
 
-      const token = officerSession?.token || localStorage.getItem('pinevela_session_token') || localStorage.getItem('token') || '';
+      const token = officerSession?.token || '';
       const res = await fetch(`/api/verification-team/inspections/${activeInspection.id}/submit-report`, {
         method: 'POST',
         headers: {
@@ -1158,9 +1129,10 @@ export default function PageVerificationTeamPortal() {
                           type="text"
                           required
                           value={inspectorSignature}
-                          onChange={(e) => setInspectorSignature(e.target.value)}
+                          readOnly
                           className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs text-slate-900 font-mono font-bold focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white"
                         />
+                        <p className="mt-1 text-[11px] text-slate-600">Signed with your registered officer identity.</p>
                       </div>
                     </div>
                   </div>

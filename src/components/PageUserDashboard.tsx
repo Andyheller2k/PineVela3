@@ -1,12 +1,15 @@
+import { sessionFetch as fetch } from '../lib/session';
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { queryClient, invalidateAllQueries } from '../lib/queryClient';
+import { } from '../lib/queryClient';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
 import { safeJson } from '../lib/api';
 import { optimizeImageDisplayUrl } from '../lib/imageOptimizer';
 import { saveNavigationLayout, usesTopNavigation } from '../lib/navigationLayout';
 import PineLogo from './PineLogo';
+import TopNavBadge from './TopNavBadge';
+import MarketplaceInbox from './MarketplaceInbox';
 import DashboardOverlay from './DashboardOverlay';
 import UserAvatarSelector, { renderAvatarGraphic } from './UserAvatarSelector';
 import MarketItemCard, { getServiceActionLabel } from './MarketItemCard';
@@ -35,45 +38,20 @@ import {
   X, 
   Plus, 
   RefreshCw, 
-  LogOut, 
-  FileText, 
-  ArrowRight, 
+  LogOut, ArrowRight,
   ArrowLeft, 
-  Search, 
-  Layers,
-  MapPin,
+  Search, MapPin,
   Calendar,
-  Settings,
-  HelpCircle,
-  AlertTriangle,
-  Landmark,
-  Users,
-  Star,
-  Briefcase,
-  Trash2,
+  Settings, AlertTriangle, Star, Trash2,
   KeyRound,
   Lock,
-  ShieldAlert,
-  GraduationCap,
-  School,
-  Building,
-  User,
-  BookOpen,
-  CheckCircle,
-  Zap,
-  Filter,
-  ShoppingBag,
+  ShieldAlert, School, User, CheckCircle, ShoppingBag,
   Store,
   Package,
   Tag,
   DollarSign,
-  BadgeCheck,
-  Edit,
-  LogIn,
-  Compass,
-  Navigation,
-  ExternalLink,
-  SlidersHorizontal,
+  BadgeCheck, LogIn,
+  Compass, SlidersHorizontal,
   ArrowUpDown,
   RotateCcw,
   Heart,
@@ -81,11 +59,11 @@ import {
   PanelLeftOpen
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { IssueReport, HostelRoomKey, StudentDirectMessage, DigitalMarketApplication, DigitalMarketStore, DigitalMarketProduct, DigitalMarketOrder } from '../types';
+import { IssueReport, HostelRoomKey, DigitalMarketApplication, DigitalMarketStore, DigitalMarketProduct, DigitalMarketOrder } from '../types';
 import CampusMeetupMapPicker from './CampusMeetupMapPicker';
 
 export interface PageUserDashboardProps {
-  initialTab?: 'home' | 'notifications' | 'options' | 'overview' | 'issues' | 'messages' | 'announcements' | 'settings' | 'register-resident' | 'become-staff' | 'login-room' | 'digital-market';
+  initialTab?: 'home' | 'notifications' | 'options' | 'overview' | 'issues' | 'announcements' | 'settings' | 'register-resident' | 'login-room' | 'digital-market';
   initialMarketMode?: 'catalog' | 'vendor' | 'orders';
 }
 
@@ -95,12 +73,14 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
-  const queryTab = searchParams.get('tab') as any;
-  const queryMode = searchParams.get('mode') as any;
+  const requestedTab = searchParams.get('tab');
+  const queryTab = ['home', 'notifications', 'options', 'overview', 'issues', 'announcements', 'settings', 'register-resident', 'login-room', 'digital-market'].includes(requestedTab || '') ? requestedTab as any : undefined;
+  const requestedMode = searchParams.get('mode');
+  const queryMode = ['catalog', 'vendor', 'orders', 'chats'].includes(requestedMode || '') ? requestedMode as any : undefined;
   const isMerchantUser = user?.role === 'merchant';
 
   // Navigation tabs
-  const [activeTab, setActiveTab] = useState<'home' | 'notifications' | 'options' | 'overview' | 'issues' | 'messages' | 'announcements' | 'settings' | 'register-resident' | 'become-staff' | 'login-room' | 'digital-market'>(
+  const [activeTab, setActiveTab] = useState<'home' | 'notifications' | 'options' | 'overview' | 'issues' | 'announcements' | 'settings' | 'register-resident' | 'login-room' | 'digital-market'>(
     initialTab || queryTab || (isMerchantUser ? 'digital-market' : 'home')
   );
 
@@ -174,23 +154,9 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
   const [submittingOrder, setSubmittingOrder] = useState<boolean>(false);
   const [verifyingOrderTarget, setVerifyingOrderTarget] = useState<DigitalMarketOrder | null>(null);
   const [inputPinValue, setInputPinValue] = useState<string>('');
+  const [renewingPinOrderId, setRenewingPinOrderId] = useState<string | null>(null);
   const [pinSubmitting, setPinSubmitting] = useState<boolean>(false);
-  
-  // Market private messages and direct campus chat states
-  const [chatMessages, setChatMessages] = useState<any[]>([]);
   const [activeChatEmail, setActiveChatEmail] = useState<string | null>(null);
-  const [chatInput, setChatInput] = useState<string>('');
-  const [sendingMarketMessage, setSendingMarketMessage] = useState<boolean>(false);
-  const chatMessagesEndRef = useRef<HTMLDivElement>(null);
-
-  // Auto-scroll chat to bottom when messages update or conversation changes
-  useEffect(() => {
-    if (activeChatEmail && marketTabMode === 'chats') {
-      setTimeout(() => {
-        chatMessagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-      }, 80);
-    }
-  }, [activeChatEmail, chatMessages, marketTabMode]);
   
   // Categories for Student Digital Market
   const DIGITAL_MARKET_CATEGORIES = [
@@ -226,24 +192,6 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
   const [dmCertifyAccepted, setDmCertifyAccepted] = useState<boolean>(false);
   const [submittingDMReg, setSubmittingDMReg] = useState<boolean>(false);
   const [dmRegError, setDmRegError] = useState<string | null>(null);
-
-  // Auto-format Ghana Card: GHA-XXXXXXXXX-X (max 15 chars)
-  const handleGhanaCardFormat = (input: string) => {
-    let raw = input.toUpperCase().replace(/[^A-Z0-9]/g, '');
-    if (raw.startsWith('GHA')) {
-      raw = raw.slice(3);
-    }
-    const digits = raw.replace(/\D/g, '').slice(0, 10);
-    if (digits.length === 0) {
-      setDmIdNumber(input.toUpperCase().startsWith('GHA') ? 'GHA-' : '');
-      return;
-    }
-    if (digits.length <= 9) {
-      setDmIdNumber(`GHA-${digits}`);
-    } else {
-      setDmIdNumber(`GHA-${digits.slice(0, 9)}-${digits.slice(9, 10)}`);
-    }
-  };
 
   // Helper to check if email domain is a commercial provider
   const isCommercialEmail = (email: string) => {
@@ -395,19 +343,10 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
 
   // Data states
   const [issueReports, setIssueReports] = useState<IssueReport[]>([]);
-  const [messages, setMessages] = useState<StudentDirectMessage[]>([]);
   const [roomKeyDetails, setRoomKeyDetails] = useState<HostelRoomKey | null>(null);
   const [userRooms, setUserRooms] = useState<any[]>([]);
   const [studentProfile, setStudentProfile] = useState<any>(null);
   const [loadingData, setLoadingData] = useState<boolean>(true);
-  const [accreditedStaff, setAccreditedStaff] = useState<any[]>([]);
-  const [staffReviews, setStaffReviews] = useState<any[]>([]);
-  const [selectedStaffForReviews, setSelectedStaffForReviews] = useState<any | null>(null);
-  const [reviewRating, setReviewRating] = useState<number>(5);
-  const [reviewComment, setReviewComment] = useState<string>('');
-  const [submittingReview, setSubmittingReview] = useState<boolean>(false);
-  const [reviewToast, setReviewToast] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
-  const [registeredResidents, setRegisteredResidents] = useState<any[]>([]);
   const [availableHostels, setAvailableHostels] = useState<any[]>([]);
   const [viewingHostelModal, setViewingHostelModal] = useState<any | null>(null);
   const [userActiveModalImage, setUserActiveModalImage] = useState<string>('');
@@ -439,95 +378,6 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
     id: user?.id || (studentProfile?.id)
   };
 
-  const fetchChatMessages = async () => {
-    if (!currentUser?.email) return;
-    try {
-      const res = await fetch(`/api/digital-market/messages?email=${encodeURIComponent(currentUser.email)}`, { headers: { Authorization: `Bearer ${user?.token || ''}` } });
-      if (res.ok) {
-        const data = await res.json();
-        setChatMessages(data);
-      }
-    } catch (err) {
-      console.error("Error loading chat messages:", err);
-    }
-  };
-
-  useEffect(() => {
-    if (currentUser?.email) {
-      fetchChatMessages();
-      const intv = setInterval(fetchChatMessages, 5000);
-      return () => clearInterval(intv);
-    }
-  }, [currentUser?.email]);
-
-  const getConversations = () => {
-    if (!currentUser?.email) return [];
-    const myEmail = currentUser.email.toLowerCase().trim();
-    const groups: { [key: string]: { otherEmail: string; otherName: string; messages: any[] } } = {};
-    
-    chatMessages.forEach(m => {
-      const isSender = m.senderEmail?.toLowerCase() === myEmail;
-      const otherEmail = isSender ? m.recipientEmail : m.senderEmail;
-      const otherName = isSender ? m.recipientName : m.senderName;
-      
-      if (!otherEmail) return;
-      const key = otherEmail.toLowerCase().trim();
-      
-      if (!groups[key]) {
-        groups[key] = {
-          otherEmail: otherEmail,
-          otherName: otherName || 'Student Resident',
-          messages: []
-        };
-      }
-      groups[key].messages.push(m);
-    });
-    
-    return Object.values(groups).sort((a, b) => {
-      const lastA = new Date(a.messages[a.messages.length - 1].createdAt).getTime();
-      const lastB = new Date(b.messages[b.messages.length - 1].createdAt).getTime();
-      return lastB - lastA;
-    });
-  };
-
-  const handleSendChatMessage = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    if (!currentUser?.email || !activeChatEmail || !chatInput.trim()) return;
-    
-    const textToSend = chatInput.trim();
-    setChatInput('');
-    setSendingMarketMessage(true);
-    
-    const conversations = getConversations();
-    const activeConv = conversations.find(c => c.otherEmail.toLowerCase() === activeChatEmail.toLowerCase());
-    const otherName = activeConv ? activeConv.otherName : 'Student Merchant';
-    
-    try {
-      const res = await fetch('/api/digital-market/messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${user?.token || ''}` },
-        body: JSON.stringify({
-          senderEmail: currentUser.email,
-          senderName: currentUser.name || 'Student Buyer',
-          recipientEmail: activeChatEmail,
-          recipientName: otherName,
-          content: textToSend,
-          productTitle: activeConv?.messages[0]?.productTitle || ''
-        })
-      });
-      if (res.ok) {
-        fetchChatMessages();
-      } else {
-        triggerToast("Failed to send message.");
-      }
-    } catch (err) {
-      console.error("Error sending chat message:", err);
-      triggerToast("Network error. Failed to send message.");
-    } finally {
-      setSendingMarketMessage(false);
-    }
-  };
-
   const handleStartChat = async (product: DigitalMarketProduct) => {
     if (!currentUser?.email) {
       triggerToast("Please log in first to message the merchant.");
@@ -538,10 +388,6 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
       return;
     }
     
-    setActiveTab('digital-market');
-    setMarketTabMode('chats');
-    setActiveChatEmail(product.sellerEmail);
-    setSelectedProductForBuy(null);
     
     const inquiryText = `Hi ${product.storeName}! I am interested in your item "${product.title}" (GHS ${product.price}). Is it still available for meetup?`;
     
@@ -560,18 +406,18 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
         })
       });
       const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Could not contact the seller.');
       if (data.success) {
+        setActiveTab('digital-market');
+        setMarketTabMode('chats');
+        setActiveChatEmail(product.sellerEmail);
+        setSelectedProductForBuy(null);
         triggerToast(`Inquiry sent to ${product.storeName}! Chat is open below.`);
-        fetchChatMessages();
       }
     } catch (err) {
-      console.error("Error sending instant inquiry:", err);
+      triggerToast(err instanceof Error ? err.message : "Could not contact the seller. Please try again.");
     }
   };
-
-  // Room key display states
-  const [showRoomKey, setShowRoomKey] = useState<boolean>(false);
-  const [copiedKey, setCopiedKey] = useState<boolean>(false);
   const [showSignoutConfirmModal, setShowSignoutConfirmModal] = useState<boolean>(false);
 
   // New Issue Modal states
@@ -586,17 +432,11 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
   const [issueContactPhone, setIssueContactPhone] = useState<string>('');
   const [issueContactMethod, setIssueContactMethod] = useState<'In-app Notification' | 'Phone Call' | 'Email'>('In-app Notification');
   const [submittingIssue, setSubmittingIssue] = useState<boolean>(false);
-  const [issueFilter, setIssueFilter] = useState<'all' | 'pending' | 'in-progress' | 'awaiting-confirmation' | 'resolved'>('all');
-  const [issueSearch, setIssueSearch] = useState<string>('');
 
   // Student Confirmation Modal for completed tasks
   const [selectedIssueForConfirm, setSelectedIssueForConfirm] = useState<IssueReport | null>(null);
   const [confirmFeedback, setConfirmFeedback] = useState<string>('');
   const [submittingConfirm, setSubmittingConfirm] = useState<boolean>(false);
-
-  // Direct Message states
-  const [newMessageText, setNewMessageText] = useState<string>('');
-  const [sendingMessage, setSendingMessage] = useState<boolean>(false);
 
   // Room Key Claim Modal & Resident Account Creation states
   const [showClaimModal, setShowClaimModal] = useState<boolean>(false);
@@ -606,9 +446,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
   const [verifiedKeyInfo, setVerifiedKeyInfo] = useState<any | null>(null);
   const [claimError, setClaimError] = useState<string | null>(null);
   const [submittingClaim, setSubmittingClaim] = useState<boolean>(false);
-  const [claimStep, setClaimStep] = useState<1 | 2 | 3 | 4>(1); // 1: Category & Digital Key, 2: Personal & Academic Info, 3: Password & Security, 4: Success Confirmed
-  const [claimCustomType, setClaimCustomType] = useState<string>('');
-  const [claimDepartment, setClaimDepartment] = useState<string>('');
+  const [claimStep, setClaimStep] = useState<1 | 2 | 3 | 4>(1);
   const [claimConfirmPassword, setClaimConfirmPassword] = useState<string>('');
   const [showClaimPassword, setShowClaimPassword] = useState<boolean>(false);
   const [showClaimConfirmPassword, setShowClaimConfirmPassword] = useState<boolean>(false);
@@ -616,18 +454,13 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
 
   // Resident Account Creation fields on key claim
   const [claimStudentName, setClaimStudentName] = useState<string>('');
-  const [claimStudentId, setClaimStudentId] = useState<string>('');
-  const [claimResidentType, setClaimResidentType] = useState<'student' | 'resident' | 'other'>('student');
-  const [claimInstitution, setClaimInstitution] = useState<string>('');
-  const [claimProgram, setClaimProgram] = useState<string>('');
   const [claimStudentPhone, setClaimStudentPhone] = useState<string>('');
   const [claimEmail, setClaimEmail] = useState<string>('');
-  const [claimEmailChoice, setClaimEmailChoice] = useState<'custom' | 'same'>('custom');
   const [claimPassword, setClaimPassword] = useState<string>('');
 
   // Reset Password Modal states
   const [showResetPasswordModal, setShowResetPasswordModal] = useState<boolean>(false);
-  const [resetTargetRole, setResetTargetRole] = useState<'manager' | 'staff' | 'resident'>('manager');
+  const [resetTargetRole, setResetTargetRole] = useState<'manager' | 'resident'>('manager');
   const [resetTargetEmail, setResetTargetEmail] = useState<string>('');
   const [newPasswordInput, setNewPasswordInput] = useState<string>('');
   const [confirmPasswordInput, setConfirmPasswordInput] = useState<string>('');
@@ -637,7 +470,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
 
   // Delete Account Modal states
   const [showDeleteAccountModal, setShowDeleteAccountModal] = useState<boolean>(false);
-  const [deleteTargetRole, setDeleteTargetRole] = useState<'manager' | 'staff' | 'resident'>('manager');
+  const [deleteTargetRole, setDeleteTargetRole] = useState<'manager' | 'resident'>('manager');
   const [deleteTargetEmail, setDeleteTargetEmail] = useState<string>('');
   const [deletePasswordInput, setDeletePasswordInput] = useState<string>('');
   const [deleteAccountError, setDeleteAccountError] = useState<string | null>(null);
@@ -665,232 +498,9 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
     saveNavigationLayout(isSidebarHidden);
   }, [isSidebarHidden]);
 
-  // Job Offer Form States & Client Identity Verification (same as Pinevela page)
-  const [selectedStaffForOffer, setSelectedStaffForOffer] = useState<any | null>(null);
-  const [jobRequesterName, setJobRequesterName] = useState(user?.name || '');
-  const [jobRequesterCategory, setJobRequesterCategory] = useState('Hostel Resident / Student');
-  const [jobRequesterNationalId, setJobRequesterNationalId] = useState('');
-  const [jobRequesterOrg, setJobRequesterOrg] = useState('');
-  const [jobRequesterPhone, setJobRequesterPhone] = useState(user?.phone || '');
-  const [jobRequesterAltPhone, setJobRequesterAltPhone] = useState('');
-  const [jobRequesterEmail, setJobRequesterEmail] = useState(user?.email || '');
-  const [jobWorkCategory, setJobWorkCategory] = useState('Plumbing & Pipe Fitting');
-  const [jobWorkOffered, setJobWorkOffered] = useState('');
-  const [jobSchedule, setJobSchedule] = useState('');
-  const [jobEstimatedDuration, setJobEstimatedDuration] = useState('2 - 3 Hours');
-  const [jobLocation, setJobLocation] = useState('');
-  const [jobDigitalAddress, setJobDigitalAddress] = useState('');
-  const [jobWage, setJobWage] = useState('');
-  const [jobPaymentMethod, setJobPaymentMethod] = useState('Mobile Money (MoMo) on Completion');
-  const [jobEquipment, setJobEquipment] = useState('Basic tools available on site');
-  const [jobSafetyTermsAccepted, setJobSafetyTermsAccepted] = useState(true);
-  const [jobContact, setJobContact] = useState(user?.phone || user?.email || '');
-  const [jobLat, setJobLat] = useState(5.6037);
-  const [jobLng, setJobLng] = useState(-0.1870);
-  const offerMapInstanceRef = React.useRef<any>(null);
-  const offerMarkerInstanceRef = React.useRef<any>(null);
-  
-  const [submittingOffer, setSubmittingOffer] = useState(false);
-  const [offerToast, setOfferToast] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
-
-  useEffect(() => {
-    if (user) {
-      if (!jobRequesterName) setJobRequesterName(user.name || '');
-      if (!jobRequesterEmail) setJobRequesterEmail(user.email || '');
-      if (!jobRequesterPhone && user.phone) setJobRequesterPhone(user.phone || '');
-    }
-  }, [user]);
-
-  useEffect(() => {
-    if (selectedStaffForOffer) {
-      const timer = setTimeout(() => {
-        const container = document.getElementById('job-offer-map-picker');
-        if (!container) return;
-        const L = (window as any).L;
-        if (!L) return;
-
-        if (!offerMapInstanceRef.current) {
-          const map = L.map(container).setView([5.6037, -0.1870], 15);
-          offerMapInstanceRef.current = map;
-          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; OpenStreetMap contributors'
-          }).addTo(map);
-
-          const marker = L.marker([5.6037, -0.1870], { draggable: true }).addTo(map);
-          offerMarkerInstanceRef.current = marker;
-
-          marker.on('dragend', () => {
-            const pos = marker.getLatLng();
-            setJobLat(pos.lat);
-            setJobLng(pos.lng);
-            fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${pos.lat}&lon=${pos.lng}&zoom=18&addressdetails=1`)
-              .then(safeJson)
-              .then(data => {
-                if (data && data.display_name) {
-                  setJobLocation(data.display_name);
-                }
-              }).catch(() => {});
-          });
-
-          map.on('click', (e: any) => {
-            const { lat, lng } = e.latlng;
-            marker.setLatLng([lat, lng]);
-            setJobLat(lat);
-            setJobLng(lng);
-            fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`)
-              .then(safeJson)
-              .then(data => {
-                if (data && data.display_name) {
-                  setJobLocation(data.display_name);
-                }
-              }).catch(() => {});
-          });
-        } else {
-          offerMapInstanceRef.current.invalidateSize();
-        }
-      }, 300);
-      return () => clearTimeout(timer);
-    } else {
-      if (offerMapInstanceRef.current) {
-        try {
-          offerMapInstanceRef.current.remove();
-        } catch (e) {}
-        offerMapInstanceRef.current = null;
-        offerMarkerInstanceRef.current = null;
-      }
-    }
-  }, [selectedStaffForOffer]);
-
-  const handleSendJobOffer = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedStaffForOffer) return;
-
-    if (!jobRequesterName.trim() || jobRequesterName.trim().length < 2) {
-      setOfferToast({ text: 'Please enter your full legal name.', type: 'error' });
-      return;
-    }
-    if (!jobRequesterPhone.trim()) {
-      setOfferToast({ text: 'Please enter your contact phone number.', type: 'error' });
-      return;
-    }
-    if (!jobWorkOffered.trim() || jobWorkOffered.trim().length < 5) {
-      setOfferToast({ text: 'Please provide a clear description of the work offered (min 5 chars).', type: 'error' });
-      return;
-    }
-    if (!jobSchedule.trim()) {
-      setOfferToast({ text: 'Please specify the proposed time and date schedule.', type: 'error' });
-      return;
-    }
-    if (!jobLocation.trim()) {
-      setOfferToast({ text: 'Please specify the physical location or tap on map.', type: 'error' });
-      return;
-    }
-    if (!jobWage.trim()) {
-      setOfferToast({ text: 'Please specify the proposed wage or compensation in GHS.', type: 'error' });
-      return;
-    }
-    if (!jobSafetyTermsAccepted) {
-      setOfferToast({ text: 'Please confirm the security & fair engagement declaration.', type: 'error' });
-      return;
-    }
-
-    setSubmittingOffer(true);
-    try {
-      await apiFetch('/api/job-offers', {
-        method: 'POST',
-        body: JSON.stringify({
-          staffId: selectedStaffForOffer.id,
-          staffEmail: selectedStaffForOffer.email,
-          staffName: selectedStaffForOffer.name,
-          workCategory: jobWorkCategory,
-          workOffered: jobWorkOffered.trim(),
-          timeAndSchedule: jobSchedule.trim(),
-          estimatedDuration: jobEstimatedDuration,
-          location: jobLocation.trim() || 'Accra, Ghana',
-          digitalAddress: jobDigitalAddress.trim(),
-          wageSalary: jobWage.trim(),
-          paymentMethod: jobPaymentMethod,
-          equipmentProvided: jobEquipment,
-          contact: jobRequesterPhone.trim() || jobRequesterEmail.trim(),
-          requesterName: jobRequesterName.trim(),
-          requesterCategory: jobRequesterCategory,
-          requesterNationalId: jobRequesterNationalId.trim(),
-          requesterOrganization: jobRequesterOrg.trim(),
-          requesterContact: jobRequesterPhone.trim(),
-          requesterAltPhone: jobRequesterAltPhone.trim(),
-          requesterEmail: jobRequesterEmail.trim(),
-          safetyDeclarationConfirmed: jobSafetyTermsAccepted,
-          lat: jobLat,
-          lng: jobLng
-        })
-      });
-
-      setOfferToast({ text: `Job offer sent to ${selectedStaffForOffer.name}! They will review and accept in their staff console.`, type: 'success' });
-      triggerToast(`Job offer successfully sent to ${selectedStaffForOffer.name}!`, 'success');
-      setTimeout(() => {
-        setOfferToast(null);
-        setSelectedStaffForOffer(null);
-        setJobWorkOffered('');
-        setJobSchedule('');
-        setJobLocation('');
-        setJobDigitalAddress('');
-        setJobWage('');
-      }, 2200);
-    } catch (err: any) {
-      setOfferToast({ text: err?.message || 'Failed to send job offer proposal', type: 'error' });
-    } finally {
-      setSubmittingOffer(false);
-    }
-  };
-
-  const handleSubmitReview = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedStaffForReviews) return;
-    setSubmittingReview(true);
-    try {
-      const res = await fetch('/api/staff-reviews', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${user?.token || localStorage.getItem('token') || localStorage.getItem('pinevela_auth_token') || ''}`
-        },
-        body: JSON.stringify({
-          staffId: selectedStaffForReviews.id,
-          rating: reviewRating,
-          comment: reviewComment
-        })
-      });
-      const data = await safeJson(res);
-      if (res.ok) {
-        setReviewToast({ text: 'Rating and review submitted successfully!', type: 'success' });
-        setReviewComment('');
-        const updatedStaff = await fetch('/api/accredited-staff').then(safeJson).catch(() => []);
-        const updatedReviews = await fetch('/api/staff-reviews').then(safeJson).catch(() => []);
-        if (Array.isArray(updatedStaff)) {
-          setAccreditedStaff(updatedStaff);
-        }
-        if (Array.isArray(updatedReviews)) {
-          setStaffReviews(updatedReviews);
-          const staffRevs = updatedReviews.filter((r: any) => r.staffId === selectedStaffForReviews.id || r.staffId === `staff-${selectedStaffForReviews.id}`);
-          const avg = staffRevs.length > 0 
-            ? (staffRevs.reduce((acc: number, curr: any) => acc + (Number(curr.rating) || 5), 0) / staffRevs.length).toFixed(1)
-            : '5.0';
-          setSelectedStaffForReviews((prev: any) => prev ? ({ ...prev, myReviews: staffRevs, avgRating: avg }) : null);
-        }
-        setTimeout(() => setReviewToast(null), 3000);
-      } else {
-        setReviewToast({ text: data.error || 'Failed to submit review', type: 'error' });
-      }
-    } catch (err: any) {
-      setReviewToast({ text: err.message || 'Failed to submit review', type: 'error' });
-    } finally {
-      setSubmittingReview(false);
-    }
-  };
-
   // Search & Filter state for the home tab
   const [homeSearchQuery, setHomeSearchQuery] = useState<string>('');
-  const [homeFilterType, setHomeFilterType] = useState<'hostels' | 'staff' | 'market'>('market');
+  const [homeFilterType, setHomeFilterType] = useState<'hostels' | 'market'>('market');
   const [marketVisibleCount, setMarketVisibleCount] = useState<number>(24);
 
   useEffect(() => {
@@ -980,26 +590,9 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
     });
   }, [availableHostels, homeSearchQuery]);
 
-  const filteredStaff = useMemo(() => {
-    const query = homeSearchQuery.toLowerCase().trim();
-    return accreditedStaff.filter((staff: any) => {
-      if (!staff) return false;
-      // Manager-created staff are tied to their property and do not appear on public user home feed
-      if (staff.managerCreated || staff.isInternalStaff) return false;
-      if (!query) return true;
-      return (
-        (staff.name && staff.name.toLowerCase().includes(query)) ||
-        (staff.role && staff.role.toLowerCase().includes(query)) ||
-        (staff.bio && staff.bio.toLowerCase().includes(query)) ||
-        (staff.email && staff.email.toLowerCase().includes(query))
-      );
-    });
-  }, [accreditedStaff, homeSearchQuery]);
-
   const scrollToSection = (id: string, sectionKey: string) => {
     if (sectionKey === 'market') setHomeFilterType('market');
     else if (sectionKey === 'hostels') setHomeFilterType('hostels');
-    else if (sectionKey === 'staff') setHomeFilterType('staff');
     // Timeout to allow filters to update and components to render
     setTimeout(() => {
       const container = mainScrollRef.current;
@@ -1023,13 +616,12 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
     setTimeout(() => setToastMessage(null), 2500);
   };
 
-  // Fetch student & users portal data on mount
   const loadStudentData = async (isSilent = false) => {
     if (!isSilent) setLoadingData(true);
     try {
       // Fetch user registered Manager/Staff/Resident accounts
       try {
-        const token = localStorage.getItem('pinevela_auth_token') || (user as any)?.token;
+        const token = (user as any)?.token;
         const headers: any = {};
         if (token) headers['Authorization'] = `Bearer ${token}`;
         const uEmail = (user?.email || '').toLowerCase().trim();
@@ -1064,32 +656,6 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
             }
           }
 
-          if (regData.staffAccount && uEmail) {
-            try {
-              const localStaff = JSON.parse(localStorage.getItem('pinevela_registered_staff') || '[]');
-              let updated = false;
-              const syncedStaff = localStaff.map((s: any) => {
-                const sEmail = (s.email || '').toLowerCase().trim();
-                const sParentEmail = (s.parentUserEmail || '').toLowerCase().trim();
-                if ((sEmail !== '' && sEmail === uEmail) || (sParentEmail !== '' && sParentEmail === uEmail)) {
-                  updated = true;
-                  return {
-                    ...s,
-                    status: regData.staffAccount.status,
-                    isApproved: regData.staffAccount.isApproved,
-                    isVerified: regData.staffAccount.isVerified
-                  };
-                }
-                return s;
-              });
-              if (updated) {
-                localStorage.setItem('pinevela_registered_staff', JSON.stringify(syncedStaff));
-              }
-            } catch (storageErr) {
-              console.warn("Staff storage sync error:", storageErr);
-            }
-          }
-
           // Check local fallbacks if server is still indexing
           if (!regData.managerAccount && uEmail) {
             try {
@@ -1117,35 +683,6 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
               }
             } catch (storageErr) {
               console.warn("Storage fallback error:", storageErr);
-            }
-          }
-
-          if (!regData.staffAccount && uEmail) {
-            try {
-              const localStaff = JSON.parse(localStorage.getItem('pinevela_registered_staff') || '[]');
-              const matchedLocalStaff = localStaff.find((s: any) => {
-                const sEmail = (s.email || '').toLowerCase().trim();
-                const sParentEmail = (s.parentUserEmail || '').toLowerCase().trim();
-                return Boolean(uEmail) && ((sEmail !== '' && sEmail === uEmail) || (sParentEmail !== '' && sParentEmail === uEmail));
-              });
-              if (matchedLocalStaff) {
-                const isVer = matchedLocalStaff.status === 'Verified' || matchedLocalStaff.status === 'approved' || matchedLocalStaff.isVerified === true;
-                const isRej = matchedLocalStaff.status === 'rejected' || matchedLocalStaff.isRejected === true;
-                regData.staffAccount = {
-                  id: `local-stf-${Date.now()}`,
-                  name: matchedLocalStaff.name || 'Accredited Staff Member',
-                  email: matchedLocalStaff.email || uEmail,
-                  specialization: matchedLocalStaff.specialization || 'Maintenance Specialist',
-                  status: isVer ? 'Verified' : (isRej ? 'Rejected' : 'Pending'),
-                  displayStatus: isVer ? 'Verified & Accredited Staff' : (isRej ? 'Rejected' : 'Pending Admin Verification'),
-                  isVerified: isVer,
-                  isApproved: isVer,
-                  isRejected: isRej,
-                  submittedAt: matchedLocalStaff.savedAt || new Date().toISOString()
-                };
-              }
-            } catch (storageErr) {
-              console.warn("Staff storage fallback error:", storageErr);
             }
           }
 
@@ -1214,14 +751,6 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
 
       // 1. Fetch accredited staff and their resident ratings
       try {
-        const staffRes = await apiFetch('/api/accredited-staff').catch(() => []);
-        if (Array.isArray(staffRes) && staffRes.length > 0) {
-          setAccreditedStaff(prev => JSON.stringify(prev) === JSON.stringify(staffRes) ? prev : staffRes);
-        }
-        const reviewsRes = await apiFetch('/api/staff-reviews').catch(() => []);
-        if (Array.isArray(reviewsRes)) {
-          setStaffReviews(prev => JSON.stringify(prev) === JSON.stringify(reviewsRes) ? prev : reviewsRes);
-        }
       } catch (e) {
         console.warn("Notice loading accredited staff & reviews:", e);
       }
@@ -1264,12 +793,6 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
       const issues = await apiFetch('/api/issue-reports').catch(() => []);
       if (Array.isArray(issues)) {
         setIssueReports(prev => JSON.stringify(prev) === JSON.stringify(issues) ? prev : issues);
-      }
-
-      // 6. Fetch direct messages with manager
-      const msgs = await apiFetch('/api/student-messages').catch(() => []);
-      if (Array.isArray(msgs)) {
-        setMessages(prev => JSON.stringify(prev) === JSON.stringify(msgs) ? prev : msgs);
       }
     } catch (err) {
       console.error("Error loading student dashboard data:", err);
@@ -1327,17 +850,6 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
     }, 8000);
     return () => clearInterval(interval);
   }, [user?.id, user?.email]);
-
-  // Copy room key helper
-  const handleCopyKey = () => {
-    const key = currentUser?.roomKey || roomKeyDetails?.roomKey || '';
-    if (key) {
-      navigator.clipboard.writeText(key);
-      setCopiedKey(true);
-      triggerToast(`Digital Room Key Copied (${key})`);
-      setTimeout(() => setCopiedKey(false), 2500);
-    }
-  };
 
   // Handle Photo Upload (Base64)
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1444,38 +956,6 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
     }
   };
 
-  // Send Direct Message
-  const handleSendMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newMessageText.trim()) return;
-
-    setSendingMessage(true);
-    try {
-      const payload = {
-        message: newMessageText.trim(),
-        studentId: currentUser?.studentId || currentUser?.id,
-        studentName: currentUser?.name || 'Student Resident',
-        hostelId: currentUser?.hostelId || roomKeyDetails?.hostelId || '',
-        hostelName: currentUser?.hostelName || roomKeyDetails?.hostelName || 'PineVela Residence',
-        managerId: roomKeyDetails?.managerId || '',
-        managerName: roomKeyDetails?.managerName || 'Hostel Operations Manager'
-      };
-
-      const sent = await apiFetch('/api/student-messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-
-      setMessages(prev => [...prev, sent]);
-      setNewMessageText('');
-    } catch (err: any) {
-      triggerToast(err.message || "Could not send message");
-    } finally {
-      setSendingMessage(false);
-    }
-  };
-
   // Verify room key during claim modal
   const handleVerifyClaimKey = async () => {
     if (!claimRoomKeyInput.trim()) {
@@ -1487,7 +967,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
     try {
       const res = await fetch('/api/room-keys/verify', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${user?.token || currentUser?.token || ''}` },
         body: JSON.stringify({ roomKey: claimRoomKeyInput.trim() })
       });
       const data = await safeJson(res);
@@ -1592,8 +1072,8 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
             blockName: verifiedKeyInfo.blockName,
             hostelName: verifiedKeyInfo.hostelName,
             hostelId: verifiedKeyInfo.hostelId,
-            managerName: verifiedKeyInfo.managerName || 'Hostel Operations Manager',
-            managerPhone: verifiedKeyInfo.managerPhone || '+233 24 000 0000',
+            managerName: data.user?.managerName,
+            managerPhone: data.user?.managerPhone,
             active: true
           };
 
@@ -1627,7 +1107,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
   };
 
   // Open reset password modal
-  const openResetPasswordModal = (role: 'manager' | 'staff' | 'resident', email: string) => {
+  const openResetPasswordModal = (role: 'manager' | 'resident', email: string) => {
     setResetTargetRole(role);
     setResetTargetEmail(email);
     setCurrentPasswordInput('');
@@ -1656,7 +1136,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
     setResettingPassword(true);
     setResetPasswordError(null);
     try {
-      const authToken = user?.token || localStorage.getItem('pinevela_session_token') || localStorage.getItem('token') || localStorage.getItem('pinevela_auth_token') || '';
+      const authToken = user?.token || '';
       const res = await fetch('/api/users/reset-registered-account-password', {
         method: 'POST',
         headers: { 
@@ -1688,7 +1168,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
   };
 
   // Open delete account modal
-  const openDeleteAccountModal = (role: 'manager' | 'staff' | 'resident', email: string) => {
+  const openDeleteAccountModal = (role: 'manager' | 'resident', email: string) => {
     setDeleteTargetRole(role);
     setDeleteTargetEmail(email);
     setDeletePasswordInput('');
@@ -1704,7 +1184,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
     setDeletingAccount(true);
     setDeleteAccountError(null);
     try {
-      const authToken = user?.token || localStorage.getItem('pinevela_session_token') || localStorage.getItem('token') || localStorage.getItem('pinevela_auth_token') || '';
+      const authToken = user?.token || '';
       const res = await fetch('/api/users/delete-registered-account', {
         method: 'POST',
         headers: { 
@@ -1730,24 +1210,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
         const activeUserEmail = (user?.email || currentUser?.email || '').toLowerCase().trim();
         const isTargetingActiveSession = 
           (activeUserEmail !== '' && activeUserEmail === tEmail) || 
-          (deleteTargetRole === 'manager' && user?.role === 'manager');
-
-        if (deleteTargetRole === 'staff') {
-          try {
-            const localStaff = JSON.parse(localStorage.getItem('pinevela_registered_staff') || '[]');
-            const filteredStaff = localStaff.filter((s: any) => {
-              const sEmail = (s.email || '').toLowerCase().trim();
-              const sParentEmail = (s.parentUserEmail || '').toLowerCase().trim();
-              const matchT = tEmail && (sEmail === tEmail || sParentEmail === tEmail);
-              const matchU = activeUserEmail && (sEmail === activeUserEmail || sParentEmail === activeUserEmail);
-              return !matchT && !matchU;
-            });
-            localStorage.setItem('pinevela_registered_staff', JSON.stringify(filteredStaff));
-            if (tEmail) localStorage.removeItem(`pinevela_avatar_${tEmail}`);
-          } catch (e) {
-            console.warn(e);
-          }
-        } else if (deleteTargetRole === 'manager') {
+          (deleteTargetRole === 'manager' && user?.role === 'manager'); if (deleteTargetRole === 'manager') {
           try {
             const localMgrs = JSON.parse(localStorage.getItem('pinevela_registered_managers') || '[]');
             const filteredMgrs = localMgrs.filter((m: any) => {
@@ -1767,7 +1230,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
         }
 
         if (isTargetingActiveSession) {
-          logout();
+          if (!await logout()) return;
           navigate('/login');
           return;
         }
@@ -1777,7 +1240,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
             role: 'user',
             registeredAccounts: {
               ...(currentUser?.registeredAccounts || user?.registeredAccounts || {}),
-              [deleteTargetRole === 'manager' ? 'managerAccount' : deleteTargetRole === 'staff' ? 'staffAccount' : 'residentAccount']: null
+              [deleteTargetRole === 'manager' ? 'managerAccount' : 'residentAccount']: null
             }
           });
         }
@@ -1792,34 +1255,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
     }
   };
 
-  // Compute issue statistics
-  const pendingCount = issueReports.filter(i => i.status === 'Pending').length;
-  const inProgressCount = issueReports.filter(i => i.status === 'In Progress' && !i.staffCompleted).length;
-  const awaitingConfirmCount = issueReports.filter(i => i.staffCompleted && !i.studentAcceptedResolved).length;
-  const resolvedCount = issueReports.filter(i => i.status === 'Resolved' || i.closedByManager || i.studentAcceptedResolved).length;
-
-  // Filter issues
-  const filteredIssues = issueReports.filter(issue => {
-    if (issueFilter === 'pending' && issue.status !== 'Pending') return false;
-    if (issueFilter === 'in-progress' && (issue.status !== 'In Progress' || issue.staffCompleted)) return false;
-    if (issueFilter === 'awaiting-confirmation' && (!issue.staffCompleted || issue.studentAcceptedResolved)) return false;
-    if (issueFilter === 'resolved' && !(issue.status === 'Resolved' || issue.closedByManager || issue.studentAcceptedResolved)) return false;
-    
-    if (issueSearch.trim()) {
-      const s = issueSearch.toLowerCase();
-      return (
-        issue.title.toLowerCase().includes(s) ||
-        issue.category.toLowerCase().includes(s) ||
-        issue.description.toLowerCase().includes(s) ||
-        (issue.assignedStaffName && issue.assignedStaffName.toLowerCase().includes(s))
-      );
-    }
-    return true;
-  });
-
   const unreadNotificationsCount = notifications.filter(n => !n.read).length;
-
-  const publicStaffFeaturesEnabled = false;
 
   const navItems = [
     { id: 'home', label: 'Home Tab', sub: 'Residents & Staff Hire', icon: Home },
@@ -1844,24 +1280,13 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
         ? ((registeredAccounts.managerAccount.status?.toLowerCase() === 'blocked' || registeredAccounts.managerAccount.isBlocked) ? 'Blocked / Restricted' : (registeredAccounts.managerAccount.status?.toLowerCase() === 'approved') ? 'Verified Account' : (registeredAccounts.managerAccount.status?.toLowerCase() === 'rejected') ? 'Rejected' : 'Pending Approval') 
         : 'Hostel Manager Gateway', 
       icon: Building2 
-    },
-    { 
-      id: 'become-staff', 
-      label: registeredAccounts.staffAccount ? 'Staff & Artisan' : 'Become a Staff', 
-      sub: registeredAccounts.staffAccount 
-        ? ((registeredAccounts.staffAccount.status?.toLowerCase() === 'verified' || registeredAccounts.staffAccount.status?.toLowerCase() === 'approved') ? 'Verified Account' : 'Pending Verification') 
-        : 'Staff & Artisan Gateway', 
-      icon: Wrench 
-    },
-    { id: 'notifications', label: 'Notifications Tab', sub: `${unreadNotificationsCount > 0 ? `${unreadNotificationsCount} New Alert${unreadNotificationsCount > 1 ? 's' : ''}` : 'Bulletins & Alerts'}`, icon: Bell },
+    }, { id: 'notifications', label: 'Notifications Tab', sub: `${unreadNotificationsCount > 0 ? `${unreadNotificationsCount} New Alert${unreadNotificationsCount > 1 ? 's' : ''}` : 'Bulletins & Alerts'}`, icon: Bell },
     { id: 'options', label: 'Options Tab', sub: 'Profile & Settings', icon: Settings },
   ];
 
   const handleNavClick = (tabId: string) => {
     if (tabId === 'register-resident') {
       setActiveTab('register-resident' as any);
-    } else if (tabId === 'become-staff') {
-      setActiveTab('become-staff' as any);
     } else if (tabId === 'login-room') {
       setActiveTab('login-room' as any);
     } else {
@@ -1902,11 +1327,6 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
         return;
       }
 
-      if (data.token) {
-        localStorage.setItem('pinevela_session_token', data.token);
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('pinevela_auth_token', data.token);
-      }
       if (setSessionUser && data.user) {
         setSessionUser(data.user);
       }
@@ -2183,38 +1603,6 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
     }
   };
 
-  // Update Stock Handler
-  const handleUpdateStock = async (productId: string, newStock: number) => {
-    try {
-      const res = await apiFetch(`/api/digital-market/products/${productId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ stockQuantity: newStock, isAvailable: newStock > 0 })
-      });
-      if (res && res.success) {
-        triggerToast("Stock updated in real-time!");
-        await loadDigitalMarketData();
-      }
-    } catch (e) {
-      triggerToast("Failed to update stock");
-    }
-  };
-
-  // Delete Product Handler
-  const handleDeleteProduct = async (productId: string) => {
-    try {
-      const res = await apiFetch(`/api/digital-market/products/${productId}`, {
-        method: 'DELETE'
-      });
-      if (res && res.success) {
-        triggerToast("Item removed from store.");
-        await loadDigitalMarketData();
-      }
-    } catch (e) {
-      triggerToast("Failed to delete product");
-    }
-  };
-
   // Place Order / Request Meetup Handler
   const handlePlaceOrder = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -2222,14 +1610,10 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
     setSubmittingOrder(true);
 
     try {
-      const activeUnitPrice = (selectedPriceCategory && selectedPriceCategory.price !== undefined)
-        ? Number(selectedPriceCategory.price)
-        : selectedProdForOrder.price;
-
       const payload = {
         productId: selectedProdForOrder.id,
         quantity: orderQtyInput,
-        price: activeUnitPrice,
+        priceCategoryId: selectedPriceCategory?.id || undefined,
         priceCategoryName: selectedPriceCategory?.name || undefined,
         buyerName: currentUser?.name || user?.name || 'Student Buyer',
         buyerEmail: currentUser?.email || user?.email || '',
@@ -2307,7 +1691,20 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
     }
   };
 
-  // Complete Order with 4-Digit Escrow PIN
+  const handleRenewDeliveryPin = async (orderId: string) => {
+    setRenewingPinOrderId(orderId);
+    try {
+      const result = await apiFetch(`/api/digital-market/orders/${orderId}/renew-pin`, { method: 'POST', body: JSON.stringify({}) });
+      setDigitalMarketOrders(prev => prev.map(order => order.id === orderId ? result.order : order));
+      triggerToast('New delivery PIN issued. Your previous PIN is no longer valid.');
+    } catch (error: any) {
+      triggerToast(error.message || 'Could not renew delivery PIN.');
+    } finally {
+      setRenewingPinOrderId(null);
+    }
+  };
+
+  // Complete Order with six-digit delivery PIN
   const handleVerifyPinOrder = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!verifyingOrderTarget || pinSubmitting) return;
@@ -2320,7 +1717,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
         body: JSON.stringify({
           newStatus: 'Completed & Paid',
           inputPin: inputPinValue,
-          notes: `Inspected on campus. PIN (${inputPinValue}) verified by merchant.`
+          notes: 'Inspected on campus. Delivery PIN verified by merchant.'
         })
       });
 
@@ -2356,9 +1753,6 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           orderId: ratingOrderTarget.id,
-          storeId: ratingOrderTarget.storeId,
-          sellerEmail: ratingOrderTarget.sellerEmail,
-          buyerEmail: currentUser?.email || user?.email,
           rating: ratingStars,
           review: ratingReview
         })
@@ -2372,7 +1766,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
         triggerToast(res?.error || 'Failed to submit rating.', 'error');
       }
     } catch (err: any) {
-      triggerToast('Error submitting store rating.', 'error');
+      triggerToast(err.message || 'Error submitting store rating.', 'error');
     } finally {
       setIsSubmittingRating(false);
     }
@@ -2549,7 +1943,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                      <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 text-[9px] font-black uppercase tracking-wider rounded-md">Manager Setup</span>
                    </div>
                    <p className="text-xs text-slate-500 leading-relaxed font-medium">
-                     Register KNUST-accredited hostel properties in Kumasi, manage active student room keys, track bookings, and respond to maintenance reports.
+                     Register KNUST-accredited hostel properties in Kumasi, manage active student room keys, track occupancy, and respond to maintenance reports.
                    </p>
                  </div>
                </div>
@@ -2686,9 +2080,9 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                  </button>
                  <button
                    type="button"
-                   onClick={() => {
+                   onClick={async () => {
                      setShowSignoutConfirmModal(false);
-                     logout();
+                     if (!await logout()) return;
                      navigate('/login');
                    }}
                    className="py-2.5 px-4 bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-xs rounded-xl shadow-md transition-all cursor-pointer"
@@ -2752,7 +2146,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
       {/* MOBILE BOTTOM NAV (lg:hidden) */}
       <nav className="mobile-bottom-nav lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/70 backdrop-blur-md border-t border-slate-200/60 shadow-[0_-10px_35px_rgba(0,0,0,0.06)]">
         <div className="flex items-center gap-1 overflow-x-auto px-2 py-2 pb-safe snap-x hide-scrollbar">
-          {navItems.filter(tab => tab.id !== 'become-staff').map(tab => (
+          {navItems.map(tab => (
             <button
               key={tab.id}
               onClick={() => handleNavClick(tab.id)}
@@ -2771,7 +2165,6 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                  tab.id === 'digital-market' ? 'Market' :
                  tab.id === 'login-room' ? 'Room' :
                  tab.id === 'register-resident' ? (registeredAccounts.managerAccount ? 'Manager' : 'Register') :
-                 tab.id === 'become-staff' ? 'Staff' :
                  tab.id === 'notifications' ? 'Alerts' :
                  tab.id === 'options' ? 'Options' :
                  tab.label.split(' ')[0]}
@@ -2784,8 +2177,18 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
       {/* Compact desktop equivalent of the mobile navigation. It stays above the scrolling content. */}
       {isSidebarHidden && (
         <nav className="hidden lg:block fixed top-3 left-1/2 -translate-x-1/2 z-50 w-[min(860px,calc(100vw-3rem))] bg-white/72 backdrop-blur-xl border border-white/80 rounded-2xl shadow-lg">
-          <div className="flex items-center justify-center gap-1 px-2 py-1.5">
-            {navItems.filter(tab => tab.id !== 'become-staff').map(tab => {
+          <div className="flex items-center gap-1 px-2 py-1.5">
+            {/* Profile avatar button — left end */}
+            <button
+              onClick={() => setActiveTab('options')}
+              title="Profile & Settings"
+              className="shrink-0 flex flex-col items-center gap-0.5 py-1 px-1.5 rounded-xl transition-all cursor-pointer hover:bg-white/70"
+            >
+              {renderAvatarGraphic(currentUser?.avatar, 'w-6 h-6 text-[9px] ring-2 ring-white shadow-sm')}
+              <span className="text-[9px] font-bold text-slate-500">Profile</span>
+            </button>
+            <div className="w-px h-6 bg-slate-200/70 shrink-0" />
+            {navItems.map(tab => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
               return (
@@ -2795,7 +2198,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                   title={tab.label}
                   className={`flex-1 min-w-0 flex flex-col items-center justify-center gap-0.5 py-1.5 rounded-xl transition-all cursor-pointer ${isActive ? 'text-blue-700 bg-blue-100/65' : 'text-slate-500 hover:text-slate-800 hover:bg-white/70'}`}
                 >
-                  <span className="relative"><Icon className="w-4 h-4" />{tab.id === 'notifications' && unreadNotificationsCount > 0 && <span className="absolute -top-1 -right-1 w-1.5 h-1.5 rounded-full bg-rose-500 ring-1 ring-white" />}</span>
+                  <span className="relative inline-flex"><Icon className="w-4 h-4" /><TopNavBadge count={tab.id === 'notifications' ? unreadNotificationsCount : null} /></span>
                   <span className="max-w-full truncate text-[9px] font-bold">{tab.id === 'digital-market' ? 'Market' : tab.id === 'notifications' ? 'Alerts' : tab.id === 'options' ? 'Options' : tab.label.split(' ')[0]}</span>
                 </button>
               );
@@ -2848,7 +2251,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
 
           {/* Navigation Links */}
           <nav className="space-y-1.5">
-            {navItems.filter(tab => tab.id !== 'become-staff').map(tab => {
+            {navItems.map(tab => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
 
@@ -3137,7 +2540,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
 
                   {/* Category Pills inside Marketplace */}
                   <div className="flex items-center gap-1.5 overflow-x-auto pb-2 -mx-1 px-1">
-                    {['All', 'Services','Electronics', 'Textbooks', 'Appliances', 'Fashion',, 'Furniture'].map(cat => (
+                    {['All', 'Services','Electronics', 'Textbooks', 'Appliances', 'Fashion', 'Furniture'].map(cat => (
                       <button
                         key={cat}
                         onClick={() => setCatalogCategory(cat)}
@@ -3304,554 +2707,13 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
             )}
 
             {/* Staff & Hire Staff Section (Staff View) */}
-            {publicStaffFeaturesEnabled && homeFilterType === 'staff' && (
-                <div id="home-staff-section" className="bg-transparent border-0 rounded-3xl p-0 shadow-none space-y-6 animate-fadeIn">
-                  <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-                    <div>
-                      <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
-                        <Wrench className="w-5 h-5 text-amber-700" />
-                        Staff View: Accredited Staff & Hire Directory
-                      </h3>
-                      <p className="text-xs text-slate-500 font-semibold mt-0.5">
-                        Verified accredited artisans and maintenance professionals available for job hire on PineVela.
-                      </p>
-                    </div>
-                    <span className="px-3 py-1 bg-amber-100 text-amber-900 font-black text-xs rounded-full">
-                      {filteredStaff.length} Accredited Staff
-                    </span>
-                  </div>
 
-                  {filteredStaff.length === 0 ? (
-                    <div className="p-8 text-center bg-slate-50/60 rounded-2xl border border-dashed border-slate-200 space-y-2">
-                      <Wrench className="w-8 h-8 text-slate-400 mx-auto" />
-                      <div className="text-sm font-bold text-slate-700">No matching staff found</div>
-                      <p className="text-xs text-slate-500 font-medium">Try refining your search text or clear the filter.</p>
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fadeIn">
-                      {filteredStaff.map((staff: any, idx: number) => {
-                        const myReviews = staffReviews.filter(r => 
-                          r.staffId === staff.id || 
-                          r.staffId === `staff-${staff.id}` || 
-                          (staff.email && r.staffEmail && r.staffEmail.toLowerCase() === staff.email.toLowerCase())
-                        );
-                        const avgRating = myReviews.length > 0
-                          ? (myReviews.reduce((sum: number, r: any) => sum + (Number(r.rating) || 5), 0) / myReviews.length).toFixed(1)
-                          : (staff.rating || '5.0');
-
-                        const avatarUrl = staff.avatar || staff.photo || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80';
-
-                        return (
-                          <div key={staff.id || idx} className="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-sm hover:shadow-md transition-all flex flex-col justify-between space-y-4">
-                            <div className="space-y-4">
-                              <div className="flex items-start gap-4">
-                                <img 
-                                  src={avatarUrl} 
-                                  alt={staff.name} 
-                                  className="w-14 h-14 rounded-2xl object-cover border-2 border-blue-900/10 shadow-sm" 
-                                  referrerPolicy="no-referrer"
-                                  onError={(e) => {
-                                    (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80';
-                                  }}
-                                />
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-1.5">
-                                    <h3 className="text-base font-extrabold text-slate-900 truncate">{staff.name || 'Verified Artisan'}</h3>
-                                    <ShieldCheck className="w-4 h-4 text-blue-600 shrink-0" />
-                                  </div>
-                                  <p className="text-xs font-bold text-blue-900 mt-0.5">{staff.specialization || staff.role || 'Facilities Technician'}</p>
-                                  <p className="text-[11px] text-slate-500 mt-0.5">{staff.yearsExperience || '3+ Years'} Experience</p>
-                                </div>
-                              </div>
-
-                              {/* Ratings & Reviews */}
-                              <div className="flex items-center justify-between bg-slate-50 p-3 rounded-xl border border-slate-200/60 text-xs">
-                                <div className="flex items-center gap-1 font-extrabold text-amber-600">
-                                  <span>★</span>
-                                  <span className="text-slate-900">{avgRating}</span>
-                                  <span className="text-slate-400 font-normal">({myReviews.length} reviews)</span>
-                                </div>
-                                <button
-                                  type="button"
-                                  onClick={() => setSelectedStaffForReviews({ ...staff, myReviews, avgRating })}
-                                  className="text-blue-700 font-bold hover:underline cursor-pointer"
-                                >
-                                  View Reviews
-                                </button>
-                              </div>
-
-                              {/* Contact Info */}
-                              <div className="space-y-1.5 text-xs text-slate-600 font-medium">
-                                <div className="flex items-center gap-2">
-                                  <Phone className="w-3.5 h-3.5 text-slate-400" />
-                                  <span>{staff.phone || 'No Phone Registered'}</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <Mail className="w-3.5 h-3.5 text-slate-400" />
-                                  <span className="truncate">{staff.email || 'No Email Registered'}</span>
-                                </div>
-                              </div>
-                            </div>
-
-                            <div className="pt-2 flex items-center gap-2">
-                              <button
-                                type="button"
-                                onClick={() => setSelectedStaffForReviews({ ...staff, myReviews, avgRating })}
-                                className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer"
-                              >
-                                <MessageSquare className="w-3.5 h-3.5" />
-                                <span>Rate & Review</span>
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setSelectedStaffForOffer(staff);
-                                  setJobContact(staff.whatsapp || staff.phone || '');
-                                }}
-                                className="flex-1 py-2.5 bg-blue-900 hover:bg-blue-950 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 transition-all shadow-md cursor-pointer"
-                              >
-                                <Briefcase className="w-3.5 h-3.5" />
-                                <span>Hire / Offer Job</span>
-                              </button>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-            )}
 
               {/* Staff Reviews Modal */}
-              {selectedStaffForReviews && (
-                <DashboardOverlay className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
-                  <div className="bg-white rounded-3xl p-6 max-w-lg w-full shadow-2xl border border-amber-200 space-y-4 max-h-[85vh] overflow-y-auto">
-                    <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-600 to-orange-600 text-white font-black text-sm flex items-center justify-center">
-                          {selectedStaffForReviews.name ? selectedStaffForReviews.name.slice(0, 2).toUpperCase() : 'ST'}
-                        </div>
-                        <div>
-                          <h4 className="text-sm font-black text-slate-900">{selectedStaffForReviews.name}</h4>
-                          <div className="text-xs text-amber-800 font-bold flex items-center gap-1">
-                            <span>{selectedStaffForReviews.role || 'Technician'}</span>
-                            <span>&bull;</span>
-                            <Star className="w-3.5 h-3.5 fill-amber-500 text-amber-500 inline" />
-                            <span>{selectedStaffForReviews.avgRating} ({selectedStaffForReviews.myReviews?.length || 0} reviews)</span>
-                          </div>
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => setSelectedStaffForReviews(null)}
-                        className="text-slate-400 hover:text-slate-600 p-1"
-                      >
-                        <X className="w-5 h-5" />
-                      </button>
-                    </div>
 
-                    <div className="space-y-3">
-                      <h5 className="text-xs font-black text-slate-800 uppercase tracking-wider">Verified Resident Reviews & Ratings</h5>
-                      {(!selectedStaffForReviews.myReviews || selectedStaffForReviews.myReviews.length === 0) ? (
-                        <div className="text-center py-8 bg-slate-50 rounded-2xl border border-dashed border-slate-200 text-xs text-slate-500">
-                          No reviews submitted yet for this staff member.
-                        </div>
-                      ) : (
-                        selectedStaffForReviews.myReviews.map((rev: any, rIdx: number) => (
-                          <div key={rev.id || rIdx} className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl space-y-2">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-1">
-                                {Array.from({ length: 5 }).map((_, i) => (
-                                  <Star
-                                    key={i}
-                                    className={`w-3.5 h-3.5 ${
-                                      i < (rev.rating || 5)
-                                        ? 'fill-amber-400 text-amber-400'
-                                        : 'text-slate-300'
-                                    }`}
-                                  />
-                                ))}
-                                <span className="text-xs font-bold text-slate-800 ml-1">{rev.rating || 5}.0</span>
-                              </div>
-                              <span className="text-[10px] text-slate-400 font-medium">
-                                {rev.createdAt ? new Date(rev.createdAt).toLocaleDateString() : 'Recent'}
-                              </span>
-                            </div>
-                            <p className="text-xs text-slate-700 font-medium leading-relaxed">
-                              "{rev.review}"
-                            </p>
-                            <div className="flex items-center justify-between text-[10px] text-slate-500 pt-1 border-t border-slate-200/60">
-                              <span>Resident: <strong>{rev.studentName || 'Verified Resident'}</strong></span>
-                              <span>Room: <strong>{rev.roomNumber || 'Room Key'}</strong></span>
-                            </div>
-                          </div>
-                        ))
-                      )}
-                    </div>
-
-                    {/* Submit Rating & Review Form */}
-                    <form onSubmit={handleSubmitReview} className="space-y-3 pt-3 border-t border-slate-200/80 text-xs">
-                      <h5 className="font-extrabold text-slate-900">Leave a Rating & Review</h5>
-                      
-                      <div className="flex items-center gap-3">
-                        <label className="font-bold text-slate-700">Rating:</label>
-                        <select 
-                          value={reviewRating}
-                          onChange={e => setReviewRating(Number(e.target.value))}
-                          className="px-3 py-1.5 rounded-xl border border-slate-300 font-bold text-slate-900 bg-white focus:outline-none"
-                        >
-                          <option value={5}>★★★★★ (5 Stars - Exceptional)</option>
-                          <option value={4}>★★★★☆ (4 Stars - Very Good)</option>
-                          <option value={3}>★★★☆☆ (3 Stars - Good)</option>
-                          <option value={2}>★★☆☆☆ (2 Stars - Fair)</option>
-                          <option value={1}>★☆☆☆☆ (1 Star - Poor)</option>
-                        </select>
-                      </div>
-
-                      <div>
-                        <label className="block font-bold text-slate-700 mb-1">Feedback / Comment</label>
-                        <textarea 
-                          rows={2}
-                          placeholder="Share your experience working with this staff member..."
-                          value={reviewComment}
-                          onChange={e => setReviewComment(e.target.value)}
-                          className="w-full px-3.5 py-2 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-blue-900 focus:outline-none"
-                        />
-                      </div>
-
-                      {reviewToast && (
-                        <div className={`p-2.5 rounded-xl font-bold flex items-center gap-2 ${reviewToast.type === 'success' ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-rose-50 text-rose-800 border border-rose-200'}`}>
-                          {reviewToast.type === 'success' ? <CheckCircle2 size={15} /> : <AlertCircle size={15} />}
-                          <span>{reviewToast.text}</span>
-                        </div>
-                      )}
-
-                      <div className="flex items-center justify-end gap-2 pt-1">
-                        <button
-                          type="button"
-                          onClick={() => setSelectedStaffForReviews(null)}
-                          className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl"
-                        >
-                          Cancel
-                        </button>
-                        <button
-                          type="submit"
-                          disabled={submittingReview}
-                          className="px-5 py-2 rounded-xl bg-blue-900 hover:bg-blue-950 text-white font-bold shadow-sm flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
-                        >
-                          {submittingReview ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />}
-                          <span>Submit Review</span>
-                        </button>
-                      </div>
-                    </form>
-                  </div>
-                </DashboardOverlay>
-              )}
 
               {/* Job Offer Proposal Modal */}
-              {selectedStaffForOffer && (
-                <DashboardOverlay className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4">
-                  <div className="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl border border-slate-200 space-y-6 max-h-[92vh] overflow-y-auto">
-                    <div className="flex items-center justify-between pb-4 border-b border-slate-100">
-                      <div className="flex items-center gap-3">
-                        <img 
-                          src={selectedStaffForOffer.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80'} 
-                          alt={selectedStaffForOffer.name} 
-                          className="w-12 h-12 rounded-xl object-cover ring-2 ring-blue-900/10" 
-                          referrerPolicy="no-referrer"
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80';
-                          }}
-                        />
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <h3 className="text-lg font-black text-slate-900">Propose One-Time Job Offer</h3>
-                            <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-blue-50 text-blue-900 border border-blue-200">
-                              Verified Staff
-                            </span>
-                          </div>
-                          <p className="text-xs text-slate-500 font-medium">To {selectedStaffForOffer.name} • {selectedStaffForOffer.specialization || selectedStaffForOffer.role} ({selectedStaffForOffer.rating || '5.0'} ★)</p>
-                        </div>
-                      </div>
-                      <button 
-                        onClick={() => setSelectedStaffForOffer(null)}
-                        className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600 cursor-pointer transition-colors"
-                      >
-                        <X size={18} />
-                      </button>
-                    </div>
 
-                    <form onSubmit={handleSendJobOffer} className="space-y-6 text-xs">
-                      {/* Section 1: Requester Verified Identity */}
-                      <div className="p-4 rounded-2xl bg-slate-50/80 border border-slate-200/80 space-y-4 text-left">
-                        <div className="flex items-center gap-2 pb-2 border-b border-slate-200">
-                          <ShieldCheck className="w-4 h-4 text-blue-900" />
-                          <h4 className="font-extrabold text-slate-900 uppercase tracking-wider text-[11px]">1. Client Identity & Verification</h4>
-                        </div>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                          <div>
-                            <label className="block font-bold text-slate-700 mb-1">Full Legal Name *</label>
-                            <input 
-                              type="text" 
-                              required
-                              placeholder="e.g. Kwame Mensah"
-                              value={jobRequesterName}
-                              onChange={e => setJobRequesterName(e.target.value)}
-                              className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-blue-900 focus:outline-none"
-                            />
-                          </div>
-
-                          <div>
-                            <label className="block font-bold text-slate-700 mb-1">Client Profile Category *</label>
-                            <select 
-                              value={jobRequesterCategory}
-                              onChange={e => setJobRequesterCategory(e.target.value)}
-                              className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-blue-900 focus:outline-none font-medium text-slate-800"
-                            >
-                              <option value="Hostel Resident / Student">Hostel Resident / Student</option>
-                              <option value="Hostel Property Manager">Hostel Property Manager</option>
-                              <option value="Private Homeowner / Landlord">Private Homeowner / Landlord</option>
-                              <option value="Commercial Business / Enterprise">Commercial Business / Enterprise</option>
-                              <option value="Verified Public Client">Verified Public Client</option>
-                            </select>
-                          </div>
-
-                          <div>
-                            <label className="block font-bold text-slate-700 mb-1">Ghana National ID / NIA Card (Optional)</label>
-                            <input 
-                              type="text" 
-                              placeholder="e.g. GHA-712891920-3"
-                              value={jobRequesterNationalId}
-                              onChange={e => setJobRequesterNationalId(e.target.value)}
-                              className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-blue-900 focus:outline-none uppercase"
-                            />
-                            <p className="text-[10px] text-slate-400 mt-1">Enhances staff trust & safe engagement verification</p>
-                          </div>
-
-                          <div>
-                            <label className="block font-bold text-slate-700 mb-1">Property / Organization Name</label>
-                            <input 
-                              type="text" 
-                              placeholder="e.g. PineVela Hall Rm 204 or Private Residence"
-                              value={jobRequesterOrg}
-                              onChange={e => setJobRequesterOrg(e.target.value)}
-                              className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-blue-900 focus:outline-none"
-                            />
-                          </div>
-
-                          <div>
-                            <label className="block font-bold text-slate-700 mb-1">Primary Phone / WhatsApp *</label>
-                            <input 
-                              type="tel" 
-                              required
-                              placeholder="e.g. 024 123 4567"
-                              value={jobRequesterPhone}
-                              onChange={e => setJobRequesterPhone(e.target.value)}
-                              className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-blue-900 focus:outline-none"
-                            />
-                          </div>
-
-                          <div>
-                            <label className="block font-bold text-slate-700 mb-1">Official Email Address *</label>
-                            <input 
-                              type="email" 
-                              required
-                              placeholder="e.g. client@gmail.com"
-                              value={jobRequesterEmail}
-                              onChange={e => setJobRequesterEmail(e.target.value)}
-                              className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-blue-900 focus:outline-none"
-                            />
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Section 2: Work Scope & Specifications */}
-                      <div className="p-4 rounded-2xl bg-slate-50/80 border border-slate-200/80 space-y-4 text-left">
-                        <div className="flex items-center gap-2 pb-2 border-b border-slate-200">
-                          <Briefcase className="w-4 h-4 text-blue-900" />
-                          <h4 className="font-extrabold text-slate-900 uppercase tracking-wider text-[11px]">2. Job Scope & Work Category</h4>
-                        </div>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                          <div>
-                            <label className="block font-bold text-slate-700 mb-1">Work Category *</label>
-                            <select 
-                              value={jobWorkCategory}
-                              onChange={e => setJobWorkCategory(e.target.value)}
-                              className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-blue-900 focus:outline-none font-medium text-slate-800"
-                            >
-                              <option value="Plumbing & Pipe Fitting">Plumbing & Pipe Fitting</option>
-                              <option value="Electrical & Wiring Fixes">Electrical & Wiring Fixes</option>
-                              <option value="Carpentry & Furniture Assembly">Carpentry & Furniture Assembly</option>
-                              <option value="Air Conditioning & Refrigeration">Air Conditioning & Refrigeration</option>
-                              <option value="Deep Cleaning & Sanitation">Deep Cleaning & Sanitation</option>
-                              <option value="Painting & Wall Treatment">Painting & Wall Treatment</option>
-                              <option value="Security & Access Control">Security & Access Control</option>
-                              <option value="General Maintenance & Handyman">General Maintenance & Handyman</option>
-                            </select>
-                          </div>
-
-                          <div>
-                            <label className="block font-bold text-slate-700 mb-1">Estimated Duration *</label>
-                            <select 
-                              value={jobEstimatedDuration}
-                              onChange={e => setJobEstimatedDuration(e.target.value)}
-                              className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-blue-900 focus:outline-none font-medium text-slate-800"
-                            >
-                              <option value="1 - 2 Hours">1 - 2 Hours (Quick fix)</option>
-                              <option value="2 - 3 Hours">2 - 3 Hours (Standard job)</option>
-                              <option value="Half Day (4 - 5 Hours)">Half Day (4 - 5 Hours)</option>
-                              <option value="Full Day (8 Hours)">Full Day (8 Hours)</option>
-                              <option value="Multi-day Contract">Multi-day Contract</option>
-                            </select>
-                          </div>
-                        </div>
-
-                        <div>
-                          <label className="block font-bold text-slate-700 mb-1">Specific Task Scope & Problem Description *</label>
-                          <textarea 
-                            required
-                            rows={3}
-                            placeholder="Describe exactly what needs fixing, tools required, and specific expectations..."
-                            value={jobWorkOffered}
-                            onChange={e => setJobWorkOffered(e.target.value)}
-                            className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-blue-900 focus:outline-none"
-                          />
-                        </div>
-                      </div>
-
-                      {/* Section 3: Location & Interactive Map Pin */}
-                      <div className="p-4 rounded-2xl bg-slate-50/80 border border-slate-200/80 space-y-4 text-left">
-                        <div className="flex items-center gap-2 pb-2 border-b border-slate-200">
-                          <MapPin className="w-4 h-4 text-blue-900" />
-                          <h4 className="font-extrabold text-slate-900 uppercase tracking-wider text-[11px]">3. Location & GPS Coordinate Pin</h4>
-                        </div>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                          <div className="sm:col-span-2">
-                            <label className="block font-bold text-slate-700 mb-1">Street Address / Landmark *</label>
-                            <input 
-                              type="text" 
-                              required
-                              placeholder="e.g. Atomic Junction, near Legon Campus, Accra"
-                              value={jobLocation}
-                              onChange={e => setJobLocation(e.target.value)}
-                              className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-blue-900 focus:outline-none"
-                            />
-                          </div>
-                        </div>
-
-                        <div>
-                          <p className="text-[11px] text-slate-600 mb-1.5 font-bold">Interactive Job Location Pin (Drag pin or click on map):</p>
-                          <div id="job-offer-map-picker" className="w-full h-44 rounded-xl border border-slate-300 shadow-inner z-0"></div>
-                          <div className="mt-1 flex items-center justify-between text-[10px] text-slate-500 font-mono">
-                            <span>Lat: {jobLat.toFixed(4)}</span>
-                            <span>Lng: {jobLng.toFixed(4)}</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Section 4: Schedule, Compensation & Payment */}
-                      <div className="p-4 rounded-2xl bg-slate-50/80 border border-slate-200/80 space-y-4 text-left">
-                        <div className="flex items-center gap-2 pb-2 border-b border-slate-200">
-                          <Clock className="w-4 h-4 text-blue-900" />
-                          <h4 className="font-extrabold text-slate-900 uppercase tracking-wider text-[11px]">4. Schedule & Compensation</h4>
-                        </div>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                          <div>
-                            <label className="block font-bold text-slate-700 mb-1">Date & Time Schedule *</label>
-                            <input 
-                              type="text" 
-                              required
-                              placeholder="e.g. Tomorrow at 2:00 PM"
-                              value={jobSchedule}
-                              onChange={e => setJobSchedule(e.target.value)}
-                              className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-blue-900 focus:outline-none"
-                            />
-                          </div>
-
-                          <div>
-                            <label className="block font-bold text-slate-700 mb-1">Offered Compensation / Wage *</label>
-                            <input 
-                              type="text" 
-                              required
-                              placeholder="e.g. GHS 300"
-                              value={jobWage}
-                              onChange={e => setJobWage(e.target.value)}
-                              className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-blue-900 focus:outline-none font-bold text-blue-900"
-                            />
-                          </div>
-
-                          <div>
-                            <label className="block font-bold text-slate-700 mb-1">Payment Method *</label>
-                            <select 
-                              value={jobPaymentMethod}
-                              onChange={e => setJobPaymentMethod(e.target.value)}
-                              className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-blue-900 focus:outline-none font-medium text-slate-800"
-                            >
-                              <option value="Mobile Money (MoMo) on Completion">Mobile Money (MoMo) on Completion</option>
-                              <option value="Cash on Satisfactory Finish">Cash on Satisfactory Finish</option>
-                              <option value="Direct Bank Instant Pay">Direct Bank Instant Pay</option>
-                              <option value="PineVela Escrow Deposit">PineVela Escrow Deposit</option>
-                            </select>
-                          </div>
-
-                          <div>
-                            <label className="block font-bold text-slate-700 mb-1">Equipment / Site Access Note</label>
-                            <input 
-                              type="text" 
-                              placeholder="e.g. Basic ladder on site; bring multimeter"
-                              value={jobEquipment}
-                              onChange={e => setJobEquipment(e.target.value)}
-                              className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-blue-900 focus:outline-none"
-                            />
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Section 5: Security Declaration */}
-                      <div className="p-3.5 rounded-xl bg-blue-50/70 border border-blue-200/80 flex items-start gap-3 text-left">
-                        <input 
-                          type="checkbox" 
-                          id="job-safety-check"
-                          checked={jobSafetyTermsAccepted}
-                          onChange={e => setJobSafetyTermsAccepted(e.target.checked)}
-                          className="mt-0.5 w-4 h-4 rounded text-blue-900 focus:ring-blue-900"
-                        />
-                        <label htmlFor="job-safety-check" className="text-[11px] text-slate-700 font-medium leading-relaxed cursor-pointer">
-                          I certify that the above identity and premise details are authentic, and I agree to treat PineVela accredited staff professionally and disburse the agreed compensation upon verified completion of the work.
-                        </label>
-                      </div>
-
-                      {offerToast && (
-                        <div className={`p-3.5 rounded-xl font-bold flex items-center gap-2 text-xs text-left ${offerToast.type === 'success' ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-rose-50 text-rose-800 border border-rose-200'}`}>
-                          {offerToast.type === 'success' ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
-                          <span>{offerToast.text}</span>
-                        </div>
-                      )}
-
-                      <div className="pt-2 flex items-center justify-end gap-3 border-t border-slate-100">
-                        <button
-                          type="button"
-                          onClick={() => setSelectedStaffForOffer(null)}
-                          className="px-5 py-3 rounded-xl bg-slate-100 hover:bg-slate-200 font-bold text-slate-700 cursor-pointer transition-colors"
-                        >
-                          Cancel
-                        </button>
-                        <button
-                          type="submit"
-                          disabled={submittingOffer}
-                          className="px-6 py-3 rounded-xl bg-blue-900 hover:bg-blue-950 text-white font-black shadow-md flex items-center gap-2 cursor-pointer disabled:opacity-50 transition-all hover:shadow-lg"
-                        >
-                          {submittingOffer ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Briefcase className="w-4 h-4" />}
-                          <span>Submit One-Time Job Offer Proposal</span>
-                        </button>
-                      </div>
-                    </form>
-                  </div>
-                </DashboardOverlay>
-              )}
           </div>
         )}
 
@@ -4026,7 +2888,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                     <CheckCircle2 className="w-5 h-5 text-emerald-700 shrink-0 mt-0.5" />
                     <div className="text-xs text-emerald-950 font-medium leading-relaxed">
                       <strong className="block text-emerald-900 font-bold mb-0.5">Approved & Verified Property:</strong>
-                      Your manager credentials and student residence are officially verified. You can now use the Manager Console to oversee bookings and operations.
+                      Your manager credentials and student residence are officially verified. You can now use the Manager Console to oversee room access and operations.
                     </div>
                   </div>
                 )}
@@ -4087,147 +2949,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
         )}
 
         {/* TAB 4: BECOME A STAFF TAB */}
-        {publicStaffFeaturesEnabled && activeTab === 'become-staff' && (
-          <div className="space-y-6 animate-fadeIn relative z-10 max-w-4xl">
-            {registeredAccounts.staffAccount ? (
-              <div className="bg-white/95 border border-amber-300 rounded-3xl p-6 sm:p-8 shadow-xl space-y-6 backdrop-blur-md">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-amber-100">
-                  <div className="flex items-center gap-4">
-                    <div className="w-14 h-14 rounded-2xl bg-amber-100 text-amber-900 flex items-center justify-center font-bold shadow-xs">
-                      <Wrench className="w-8 h-8" />
-                    </div>
-                    <div>
-                      <h3 className="text-xl font-black text-slate-900">
-                        {registeredAccounts.staffAccount.name}
-                      </h3>
-                      <p className="text-xs text-slate-500 font-semibold mt-0.5">
-                        {registeredAccounts.staffAccount.specialization || 'Accredited Maintenance Specialist'}
-                      </p>
-                    </div>
-                  </div>
-                  
-                  <div>
-                    {(registeredAccounts.staffAccount.status?.toLowerCase() === 'verified' || registeredAccounts.staffAccount.status?.toLowerCase() === 'approved' || registeredAccounts.staffAccount.isVerified) ? (
-                      <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-full text-xs font-black">
-                        <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                        <span>Verified & Accredited Staff</span>
-                      </span>
-                    ) : (registeredAccounts.staffAccount.status?.toLowerCase() === 'rejected' || registeredAccounts.staffAccount.isRejected) ? (
-                      <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-rose-100 text-rose-800 border border-rose-300 rounded-full text-xs font-black">
-                        <AlertTriangle className="w-4 h-4 text-rose-600" />
-                        <span>Verification Rejected</span>
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-amber-100 text-amber-900 border border-amber-300 rounded-full text-xs font-black">
-                        <Clock className="w-4 h-4 text-amber-600 animate-spin" />
-                        <span>Pending Admin Verification</span>
-                      </span>
-                    )}
-                  </div>
-                </div>
 
-                <div className="bg-slate-50/80 border border-slate-200/80 rounded-2xl p-5 space-y-3">
-                  <h4 className="text-xs font-black uppercase tracking-wider text-slate-500">Accredited Staff Profile & Credentials</h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 text-xs">
-                    <div>
-                      <span className="text-slate-400 block font-medium">Full Name</span>
-                      <span className="font-bold text-slate-800">{registeredAccounts.staffAccount.name}</span>
-                    </div>
-                    <div>
-                      <span className="text-slate-400 block font-medium">Specialization & Trade</span>
-                      <span className="font-bold text-slate-800">{registeredAccounts.staffAccount.specialization || 'General Maintenance'}</span>
-                    </div>
-                    <div>
-                      <span className="text-slate-400 block font-medium">Years of Experience</span>
-                      <span className="font-bold text-slate-800">{registeredAccounts.staffAccount.experienceYears || registeredAccounts.staffAccount.yearsExperience || '1'} Years</span>
-                    </div>
-                    <div>
-                      <span className="text-slate-400 block font-medium">Contact Email</span>
-                      <span className="font-bold text-slate-800 break-all">{registeredAccounts.staffAccount.email}</span>
-                    </div>
-                    <div>
-                      <span className="text-slate-400 block font-medium">Phone Number</span>
-                      <span className="font-bold text-slate-800">{registeredAccounts.staffAccount.phone || 'Provided'}</span>
-                    </div>
-                    <div>
-                      <span className="text-slate-400 block font-medium">Commute Availability</span>
-                      <span className="font-bold text-slate-800">{registeredAccounts.staffAccount.commutePreference || 'All Campuses'}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {!(registeredAccounts.staffAccount.status?.toLowerCase() === 'verified' || registeredAccounts.staffAccount.status?.toLowerCase() === 'approved' || registeredAccounts.staffAccount.isVerified) ? (
-                  <div className="p-4 bg-amber-50/90 border border-amber-300 rounded-2xl flex items-start gap-3">
-                    <Clock className="w-5 h-5 text-amber-700 shrink-0 mt-0.5 animate-pulse" />
-                    <div className="text-xs text-amber-950 font-medium leading-relaxed">
-                      <strong className="block text-amber-900 font-bold mb-0.5">Verification in Progress — Staff Operations Locked:</strong>
-                      Your vocational credentials and National ID have been submitted to PineVela Administration for verification review. You cannot log into the Staff Console until your account has been verified by the admin.
-                    </div>
-                  </div>
-                ) : (
-                  <div className="p-4 bg-emerald-50/90 border border-emerald-300 rounded-2xl flex items-start gap-3">
-                    <CheckCircle2 className="w-5 h-5 text-emerald-700 shrink-0 mt-0.5" />
-                    <div className="text-xs text-emerald-950 font-medium leading-relaxed">
-                      <strong className="block text-emerald-900 font-bold mb-0.5">Accredited & Verified Staff:</strong>
-                      Your trade credentials have been approved by administration. You can now access the Staff Operations console to take service requests.
-                    </div>
-                  </div>
-                )}
-
-                <div className="p-3 bg-blue-50/70 border border-blue-200/80 rounded-xl text-xs text-blue-900 flex items-center gap-2">
-                  <Bell className="w-4 h-4 text-blue-600 shrink-0" />
-                  <span>Real-time verification alerts will update your account. You cannot create a duplicate staff account while this registration is active.</span>
-                </div>
-
-                <div className="pt-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => openResetPasswordModal('staff', registeredAccounts.staffAccount.email)}
-                      className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs rounded-xl transition-all flex items-center gap-1.5 cursor-pointer"
-                    >
-                      <KeyRound className="w-3.5 h-3.5" />
-                      <span>Reset Password</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => openDeleteAccountModal('staff', registeredAccounts.staffAccount.email)}
-                      className="px-4 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-xs rounded-xl transition-all flex items-center gap-1.5 cursor-pointer"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                      <span>Delete Account & Restart Registration</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="bg-white/90 border border-amber-200/80 rounded-3xl p-6 sm:p-8 shadow-xl space-y-6 backdrop-blur-md">
-                <div className="flex items-center gap-4">
-                  <div className="w-14 h-14 rounded-2xl bg-amber-100 text-amber-900 flex items-center justify-center font-bold">
-                    <Wrench className="w-8 h-8" />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-black text-slate-900">
-                      Become a Staff
-                    </h3>
-                    <p className="text-sm text-slate-600 font-medium leading-relaxed mt-1">
-                      Initiate the staff creation account flow to offer accredited maintenance and artisan services across residences. Join our network of verified professionals.
-                    </p>
-                  </div>
-                </div>
-                <div className="pt-4 border-t border-slate-100 flex items-center justify-end">
-                  <button
-                    onClick={() => navigate('/staff/register')}
-                    className="px-8 py-3 bg-amber-600 hover:bg-amber-700 text-white font-black text-sm rounded-xl shadow-md transition-all flex items-center gap-2 cursor-pointer"
-                  >
-                    <span>Start Registration Process</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
 
                 {/* TAB 5: RESIDENT ROOM TAB (SUPPORTS UP TO 5 REGISTERED ROOMS & DELETION) */}
         {activeTab === 'login-room' && (
@@ -4490,11 +3212,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                 >
                   <MessageSquare className="w-4 h-4" />
                   <span>Chat & Logistics</span>
-                  {chatMessages.length > 0 && (
-                    <span className="px-1.5 py-0.5 bg-indigo-600 text-white text-[10px] font-black rounded-full">
-                      {getConversations().length}
-                    </span>
-                  )}
+
                 </button>
               </div>
             </div>
@@ -4887,7 +3605,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                   {digitalMarketOrders.length > 0 ? (
                     <div className="space-y-6">
                       {digitalMarketOrders.map(order => {
-                        const isBuyer = (currentUser?.email || user?.email || '').toLowerCase() === order.buyerEmail.toLowerCase();
+                        const isBuyer = user?.role === 'user' && (currentUser?.id || user?.id) === order.buyerId;
                         return (
                           <div key={order.id} className="bg-slate-50/80 border border-slate-200/90 rounded-2xl p-5 shadow-sm space-y-4">
                             {/* Order Header */}
@@ -4946,13 +3664,21 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                               </div>
 
                               {/* PIN Box / Rate Store Box */}
-                              {order.status !== 'Completed & Paid' ? (
+                              {!['Completed & Paid', 'Cancelled', 'Location Rejected', 'Rejected by Seller'].includes(order.status) ? (
                                 <div className="w-full sm:w-auto bg-white border border-slate-200 rounded-2xl p-3.5 text-center shadow-xs">
                                   {isBuyer ? (
                                     <div>
                                       <div className="text-[10px] font-extrabold uppercase text-slate-400">Escrow Handshake PIN</div>
-                                      <div className="text-2xl font-black text-blue-700 tracking-widest my-0.5">{order.otpPin}</div>
-                                      <div className="text-[10px] text-slate-500 font-medium">Provide to merchant upon physical inspection</div>
+                                      {order.otpPin && order.deliveryPinExpiresAt && Date.parse(order.deliveryPinExpiresAt) > Date.now() ? (
+                                        <>
+                                          <div className="text-2xl font-black text-blue-700 tracking-widest my-0.5">{order.otpPin}</div>
+                                          <div className="text-[10px] text-slate-500">Expires {new Date(order.deliveryPinExpiresAt).toLocaleString()}</div>
+                                        </>
+                                      ) : <div className="text-xs text-slate-600 my-1">{order.deliveryPinState === 'locked' ? 'PIN locked after failed attempts.' : 'Request a new delivery PIN.'}</div>}
+                                      <div className="text-[10px] text-slate-500 font-medium">Share only after inspecting the delivery.</div>
+                                      <button type="button" disabled={renewingPinOrderId === order.id} onClick={() => handleRenewDeliveryPin(order.id)} className="mt-2 text-xs font-bold text-blue-700 underline disabled:opacity-50">
+                                        {renewingPinOrderId === order.id ? 'Renewing…' : 'Get a new PIN'}
+                                      </button>
                                     </div>
                                   ) : (
                                     <div className="space-y-2">
@@ -4971,7 +3697,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                                     </div>
                                   )}
                                 </div>
-                              ) : isBuyer ? (
+                              ) : isBuyer && order.status === 'Completed & Paid' ? (
                                 <div className="w-full sm:w-auto bg-amber-50/80 border border-amber-200 rounded-2xl p-3 text-center shadow-xs shrink-0 min-w-[150px]">
                                   {(order as any).userRating ? (
                                     <div className="space-y-1">
@@ -5121,169 +3847,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
             )}
 
             {/* MODE 4: PRIVATE MEETUP LOGISTICS & CHAT */}
-            {marketTabMode === 'chats' && (
-              <div className="bg-white/90 border border-slate-200/80 rounded-3xl overflow-hidden shadow-xl h-[calc(100dvh-200px)] sm:h-[620px] max-h-[750px] min-h-[420px] flex flex-col md:flex-row backdrop-blur-md mb-24 md:mb-6 relative">
-                {/* Conversations Sidebar */}
-                <div className={`w-full md:w-80 border-r border-slate-200 flex flex-col min-h-0 ${activeChatEmail ? 'hidden md:flex' : 'flex-1 flex'}`}>
-                  <div className="p-3.5 sm:p-4 border-b border-slate-150 bg-slate-50/50 shrink-0">
-                    <h3 className="font-black text-slate-900 text-xs sm:text-sm flex items-center gap-2">
-                      <MessageSquare className="w-4 h-4 text-blue-600" />
-                      Active Conversations
-                    </h3>
-                    <p className="text-[10px] text-slate-500 font-semibold mt-0.5">Direct campus buyer & merchant chat</p>
-                  </div>
-
-                  <div className="flex-1 min-h-0 overflow-y-auto divide-y divide-slate-100 overscroll-contain">
-                    {getConversations().map(conv => {
-                      const isActive = activeChatEmail?.toLowerCase() === conv.otherEmail.toLowerCase();
-                      const lastMsg = conv.messages[conv.messages.length - 1];
-                      return (
-                        <button
-                          key={conv.otherEmail}
-                          type="button"
-                          onClick={() => setActiveChatEmail(conv.otherEmail)}
-                          className={`w-full text-left p-3.5 sm:p-4 flex items-start gap-3 transition-all cursor-pointer ${
-                            isActive ? 'bg-blue-50/80' : 'hover:bg-slate-50'
-                          }`}
-                        >
-                          <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-blue-100 flex items-center justify-center font-black text-blue-700 text-xs shrink-0 border border-blue-200">
-                            {conv.otherName.charAt(0).toUpperCase()}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center justify-between">
-                              <span className="font-extrabold text-slate-900 text-xs truncate">{conv.otherName}</span>
-                              <span className="text-[9px] text-slate-400 font-bold">
-                                {new Date(lastMsg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                              </span>
-                            </div>
-                            <p className="text-[11px] text-slate-550 truncate mt-0.5 font-medium">{lastMsg.content}</p>
-                            {lastMsg.productTitle && (
-                              <span className="inline-block mt-1 px-1.5 py-0.5 bg-blue-50 text-blue-800 text-[8px] font-bold rounded-md truncate max-w-full">
-                                Context: {lastMsg.productTitle}
-                              </span>
-                            )}
-                          </div>
-                        </button>
-                      );
-                    })}
-
-                    {getConversations().length === 0 && (
-                      <div className="p-8 text-center text-slate-400 space-y-2 mt-8">
-                        <MessageSquare className="w-10 h-10 mx-auto text-slate-300" />
-                        <div>
-                          <h4 className="text-xs font-bold text-slate-700">No Chat Logs Yet</h4>
-                          <p className="text-[10px] text-slate-500 mt-0.5 max-w-[200px] mx-auto">
-                            Direct messages will appear here when you inquire about standard listings in the Student Market.
-                          </p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Chat Area */}
-                <div className={`flex-1 min-h-0 flex flex-col bg-slate-50/50 ${!activeChatEmail ? 'hidden md:flex' : 'flex h-full'}`}>
-                  {activeChatEmail ? (() => {
-                    const conversations = getConversations();
-                    const activeConv = conversations.find(c => c.otherEmail.toLowerCase() === activeChatEmail.toLowerCase());
-                    const otherName = activeConv ? activeConv.otherName : activeChatEmail;
-                    const messages = activeConv ? activeConv.messages : [];
-                    const contextProduct = messages.find(m => m.productTitle)?.productTitle;
-
-                    return (
-                      <>
-                        {/* Header */}
-                        <div className="p-3 sm:p-4 border-b border-slate-200 bg-white flex items-center justify-between shrink-0 shadow-xs">
-                          <div className="flex items-center gap-2.5 sm:gap-3">
-                            <button
-                              type="button"
-                              onClick={() => setActiveChatEmail(null)}
-                              className="md:hidden p-1.5 hover:bg-slate-100 rounded-xl text-slate-600 border border-slate-200 cursor-pointer"
-                              title="Back to conversations"
-                            >
-                              <ArrowLeft className="w-4 h-4" />
-                            </button>
-                            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-blue-100 flex items-center justify-center font-black text-blue-700 border border-blue-200 shrink-0 text-xs sm:text-sm">
-                              {otherName.charAt(0).toUpperCase()}
-                            </div>
-                            <div className="min-w-0">
-                              <h4 className="font-black text-slate-900 text-xs truncate max-w-[140px] sm:max-w-none">{otherName}</h4>
-                              <p className="text-[9px] sm:text-[10px] text-slate-500 font-semibold truncate max-w-[140px] sm:max-w-none">{activeChatEmail}</p>
-                            </div>
-                          </div>
-
-                          {contextProduct && (
-                            <span className="hidden sm:inline-block px-2.5 py-1 bg-amber-50 border border-amber-200 text-amber-900 font-bold text-[9px] rounded-lg truncate max-w-[180px]">
-                              Listing: {contextProduct}
-                            </span>
-                          )}
-                        </div>
-
-                        {/* Message History */}
-                        <div className="flex-1 min-h-0 overflow-y-auto p-3 sm:p-4 space-y-3 flex flex-col overscroll-contain">
-                          {messages.map((msg, index) => {
-                            const isMe = msg.senderEmail?.toLowerCase() === currentUser?.email?.toLowerCase();
-                            return (
-                              <div
-                                key={msg.id || index}
-                                className={`flex flex-col max-w-[85%] sm:max-w-[75%] ${isMe ? 'self-end items-end' : 'self-start items-start'}`}
-                              >
-                                <div
-                                  className={`px-3 py-2 sm:px-3.5 sm:py-2.5 rounded-2xl text-xs font-semibold shadow-xs leading-relaxed ${
-                                    isMe
-                                      ? 'bg-blue-600 text-white rounded-tr-none'
-                                      : 'bg-white border border-slate-200 text-slate-800 rounded-tl-none'
-                                  }`}
-                                >
-                                  {msg.content}
-                                </div>
-                                <span className="text-[8px] text-slate-400 font-bold mt-1 px-1">
-                                  {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                </span>
-                              </div>
-                            );
-                          })}
-                          <div ref={chatMessagesEndRef} />
-                        </div>
-
-                        {/* Input Footer - Always pinned at bottom */}
-                        <form 
-                          onSubmit={(e) => {
-                            e.preventDefault();
-                            handleSendChatMessage();
-                          }} 
-                          className="p-2.5 sm:p-3.5 border-t border-slate-200 bg-white flex items-center gap-2 shrink-0 sticky bottom-0 z-20"
-                        >
-                          <input
-                            type="text"
-                            required
-                            placeholder="Type a secure message..."
-                            value={chatInput}
-                            onChange={e => setChatInput(e.target.value)}
-                            className="flex-1 px-3.5 py-2 sm:py-2.5 bg-slate-50 hover:bg-slate-100 focus:bg-white border border-slate-200 focus:border-blue-500 rounded-xl font-medium text-xs sm:text-sm text-slate-900 focus:outline-none transition-colors"
-                          />
-                          <button
-                            type="submit"
-                            disabled={sendingMarketMessage || !chatInput.trim()}
-                            className="p-2 sm:p-2.5 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white rounded-xl transition-all shadow-md shadow-blue-600/10 cursor-pointer disabled:opacity-40 shrink-0"
-                          >
-                            <Send className="w-4 h-4" />
-                          </button>
-                        </form>
-                      </>
-                    );
-                  })() : (
-                    <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-slate-400 space-y-3">
-                      <MessageSquare className="w-12 h-12 text-slate-200" />
-                      <div>
-                        <h4 className="text-sm font-bold text-slate-700">No Chat Selected</h4>
-                        <p className="text-xs text-slate-500 mt-0.5">Select a conversation from the list to start campus meetup negotiations.</p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
+            {marketTabMode === 'chats' && <MarketplaceInbox initialPeerEmail={activeChatEmail} />}
           </div>
         )}
 
@@ -6116,9 +4680,9 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                         <Star className="w-4 h-4 fill-amber-400 text-amber-500 shrink-0" />
                         <div className="flex flex-col items-start leading-none">
                           <span className="text-xs font-black">
-                            {(selectedProductForBuy as any).storeRating !== undefined && (selectedProductForBuy as any).storeRating !== null
+                            {(selectedProductForBuy as any).ratingCount
                               ? Number((selectedProductForBuy as any).storeRating).toFixed(1)
-                              : '5.0'}
+                              : 'Unrated'}
                           </span>
                           <span className="text-[8.5px] text-amber-700/80 font-extrabold">
                             {(selectedProductForBuy as any).ratingCount ? `${(selectedProductForBuy as any).ratingCount} ratings` : 'New Store'}
@@ -6481,14 +5045,14 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
               <form onSubmit={handleVerifyPinOrder} className="space-y-4">
                 <div className="space-y-2">
                   <label className="block text-xs font-black text-slate-800">
-                    Ask Buyer for 4-Digit Escrow PIN:
+                    Ask Buyer for 6-Digit Delivery PIN:
                   </label>
                   <p className="text-[11px] text-slate-500">
-                    The student buyer sees this 4-digit code in their order history. Enter it to confirm physical handover and release payment.
+                    The student buyer sees this six-digit code in their order history. Enter it to confirm physical handover and release payment.
                   </p>
                   <input
                     type="text"
-                    maxLength={4}
+                    maxLength={6}
                     required
                     placeholder="• • • •"
                     value={inputPinValue}
@@ -6508,7 +5072,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                   </button>
                   <button
                     type="submit"
-                    disabled={pinSubmitting || inputPinValue.length < 4}
+                    disabled={pinSubmitting || inputPinValue.length !== 6}
                     className="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black shadow-lg shadow-emerald-600/20 transition-all cursor-pointer disabled:opacity-50"
                   >
                     {pinSubmitting ? "Verifying..." : "Verify & Complete"}
@@ -7529,7 +6093,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                 </div>
                 <div>
                   <h3 className="text-base font-black text-slate-900">
-                    Reset {resetTargetRole === 'manager' ? 'Manager' : resetTargetRole === 'staff' ? 'Staff' : 'Resident'} Password
+                    Reset {resetTargetRole === 'manager' ? 'Manager' : 'Resident'} Password
                   </h3>
                   <p className="text-xs text-slate-500 font-medium truncate max-w-xs">{resetTargetEmail}</p>
                 </div>
@@ -7624,7 +6188,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                 </div>
                 <div>
                   <h3 className="text-base font-black text-slate-900">
-                    Delete {deleteTargetRole === 'manager' ? 'Hostel Manager' : deleteTargetRole === 'staff' ? 'Staff Specialist' : 'Resident'} Account
+                    Delete {deleteTargetRole === 'manager' ? 'Hostel Manager' : 'Resident'} Account
                   </h3>
                   <p className="text-xs text-slate-500 font-medium truncate max-w-xs">{deleteTargetEmail}</p>
                 </div>
@@ -7784,9 +6348,9 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
               </button>
               <button
                 type="button"
-                onClick={() => {
+                onClick={async () => {
                   setShowSignoutConfirmModal(false);
-                  logout();
+                  if (!await logout()) return;
                   navigate('/login');
                 }}
                 className="py-2.5 px-4 bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-xs rounded-xl shadow-md shadow-rose-600/20 transition-all cursor-pointer"
@@ -8745,6 +7309,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-slate-700">Optional Written Feedback</label>
               <textarea
+                maxLength={4000}
                 rows={3}
                 placeholder="Describe your experience with this seller (e.g. quick delivery, good item condition, polite)..."
                 value={ratingReview}

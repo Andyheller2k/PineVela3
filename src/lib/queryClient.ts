@@ -78,17 +78,13 @@ export function setupRealtimeQuerySync() {
               queryClient.invalidateQueries({ queryKey: ['managerData'] });
               queryClient.invalidateQueries({ queryKey: ['adminData'] });
               queryClient.invalidateQueries({ queryKey: ['userData'] });
-            } else if (['booking-requests'].includes(entity)) {
-              queryClient.invalidateQueries({ queryKey: ['bookingRequests'] });
-              queryClient.invalidateQueries({ queryKey: ['managerData'] });
-              queryClient.invalidateQueries({ queryKey: ['adminData'] });
             } else if (['issue-reports'].includes(entity)) {
               queryClient.invalidateQueries({ queryKey: ['issueReports'] });
               queryClient.invalidateQueries({ queryKey: ['residentData'] });
               queryClient.invalidateQueries({ queryKey: ['managerData'] });
               queryClient.invalidateQueries({ queryKey: ['staffData'] });
               queryClient.invalidateQueries({ queryKey: ['userData'] });
-            } else if (['staff', 'staff-applications', 'staff-bargains', 'staff-reviews', 'accredited-staff'].includes(entity)) {
+            } else if (['staff', 'staff-bargains', 'staff-reviews'].includes(entity)) {
               queryClient.invalidateQueries({ queryKey: ['staffData'] });
               queryClient.invalidateQueries({ queryKey: ['managerData'] });
               queryClient.invalidateQueries({ queryKey: ['adminData'] });

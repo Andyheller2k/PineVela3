@@ -1,3 +1,4 @@
+import { sessionFetch as fetch } from './lib/session';
 import React, { useState, useEffect } from 'react';
 import { HashRouter, Routes, Route, Navigate, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { QueryClientProvider, useQuery } from '@tanstack/react-query';
@@ -5,7 +6,7 @@ import { queryClient, invalidateAllQueries, setupRealtimeQuerySync } from './lib
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { NotificationProvider, useNotifications } from './context/NotificationContext';
 import ProtectedRoute from './components/ProtectedRoute';
-import { Hostel, BookingRequest, IssueReport } from './types';
+import { Hostel, IssueReport } from './types';
 import { safeJson } from './lib/api';
 import { motion, AnimatePresence } from 'motion/react';
 

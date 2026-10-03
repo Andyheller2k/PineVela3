@@ -1,4 +1,5 @@
 import crypto from "crypto";
+import { ResourceLimitError } from './resourceSecurity.js';
 import { loadPersistentStore, savePersistentStore, PersistentStore } from "./persistentDb.js";
 
 // Helper to generate UUIDs
@@ -17,20 +18,14 @@ export function getStore(defaults?: Partial<PersistentStore> | any): PersistentS
   if (!memoryStore) {
     const emptyDefault: PersistentStore = {
       hostels: defaults?.hostels || [],
-      bookingRequests: [],
       issueReports: [],
       activities: [],
       hostelVerifications: [],
       managerRegistrationRequests: [],
       verificationAuditLogs: [],
       users: defaults?.users || [],
-      notifications: [],
-      chatMessages: [],
-      dmRooms: [],
-      chatProfiles: [],
-      boardRequests: [],
+      notifications: [], boardRequests: [],
       staff: [],
-      staffApplications: [],
       staffAuditLogs: [],
       platformSettings: {
         registrationFee: 3500,
@@ -203,48 +198,11 @@ export async function dbUpdateHostel(id: string, updates: any, fallbackHostels?:
   const store = getStore({ hostels: fallbackHostels || [], users: [] });
   const idx = store.hostels.findIndex((h: any) => h.id === id);
   if (idx >= 0) {
-    store.hostels[idx] = { ...store.hostels[idx], ...updates };
+    store.hostels[idx] = { ...store.hostels[idx], ...updates, id };
     persistStore();
     return store.hostels[idx];
   }
-  const updated = { id, ...updates };
-  store.hostels.push(updated);
-  persistStore();
-  return updated;
-}
-
-// 3. Booking Requests
-export async function dbGetBookingRequests(fallbackRequests?: any[], ..._args: any[]): Promise<any[]> {
-  const store = getStore();
-  if (!store.bookingRequests || store.bookingRequests.length === 0) {
-    if (fallbackRequests && fallbackRequests.length > 0) {
-      store.bookingRequests = fallbackRequests;
-      persistStore();
-    }
-  }
-  return store.bookingRequests || [];
-}
-
-export async function dbCreateBookingRequest(reqData: any, ..._args: any[]): Promise<any> {
-  const store = getStore();
-  const id = reqData.id || `book-${Date.now()}`;
-  const newReq = { ...reqData, id, createdAt: new Date().toISOString() };
-  if (!store.bookingRequests) store.bookingRequests = [];
-  store.bookingRequests.unshift(newReq);
-  persistStore();
-  return newReq;
-}
-
-export async function dbUpdateBookingRequest(id: string, status: string, ..._args: any[]): Promise<any> {
-  const store = getStore();
-  if (!store.bookingRequests) store.bookingRequests = [];
-  const req = store.bookingRequests.find((b: any) => b.id === id);
-  if (req) {
-    req.status = status;
-    persistStore();
-    return req;
-  }
-  return { id, status };
+  return null;
 }
 
 // 4. Issue Reports
@@ -329,49 +287,6 @@ export async function dbDeleteStaff(id: string, ..._args: any[]): Promise<boolea
   return true;
 }
 
-// 5B. Staff Applications & Recruitment
-export async function dbGetStaffApplications(filter?: { hostelId?: string; staffId?: string }): Promise<any[]> {
-  const store = getStore();
-  let list = (store as any).staffApplications || [];
-  if (filter?.hostelId) {
-    list = list.filter((a: any) => a.hostelId === filter.hostelId);
-  }
-  if (filter?.staffId) {
-    list = list.filter((a: any) => a.staffId === filter.staffId || a.staffEmail === filter.staffId || a.email === filter.staffId);
-  }
-  return list;
-}
-
-export async function dbCreateStaffApplication(appData: any): Promise<any> {
-  const store = getStore();
-  if (!(store as any).staffApplications) (store as any).staffApplications = [];
-  const newApp = {
-    ...appData,
-    id: appData.id || `stf-app-${Date.now()}`,
-    status: appData.status || 'pending',
-    appliedAt: appData.appliedAt || new Date().toISOString()
-  };
-  (store as any).staffApplications.unshift(newApp);
-  persistStore();
-  return newApp;
-}
-
-export async function dbUpdateStaffApplication(id: string, updates: any): Promise<any> {
-  const store = getStore();
-  if (!(store as any).staffApplications) (store as any).staffApplications = [];
-  const idx = (store as any).staffApplications.findIndex((a: any) => a.id === id);
-  if (idx !== -1) {
-    (store as any).staffApplications[idx] = {
-      ...(store as any).staffApplications[idx],
-      ...updates,
-      updatedAt: new Date().toISOString()
-    };
-    persistStore();
-    return (store as any).staffApplications[idx];
-  }
-  return null;
-}
-
 export async function dbGetStaffAuditLogs(): Promise<any[]> {
   const store = getStore();
   return (store as any).staffAuditLogs || [];
@@ -429,11 +344,15 @@ export async function dbDeleteMeeting(id: string, ..._args: any[]): Promise<bool
   return false;
 }
 
+const currentManagerNotifications = (settings: any) => Object.fromEntries(
+  ['emailAlerts', 'smsAlerts', 'maintenanceTicketAlerts', 'meetingRequestAlerts'].filter(key => key in (settings || {})).map(key => [key, settings[key]])
+);
+
 export async function dbGetManagerAccountSettings(managerId: string): Promise<any> {
   const store = getStore();
   if (!store.managerAccountSettings) store.managerAccountSettings = {};
   const existing = store.managerAccountSettings[managerId];
-  if (existing) return existing;
+  if (existing) return { ...existing, notifications: currentManagerNotifications(existing.notifications) };
 
   const defaults = {
     managerId,
@@ -441,7 +360,6 @@ export async function dbGetManagerAccountSettings(managerId: string): Promise<an
       emailAlerts: true,
       smsAlerts: true,
       maintenanceTicketAlerts: true,
-      bookingApplicationAlerts: true,
       meetingRequestAlerts: true
     },
     security: {
@@ -496,6 +414,7 @@ export async function dbUpdateManagerAccountSettings(managerId: string, updates:
       ...(updates.emergencyContact || {})
     }
   };
+  updated.notifications = currentManagerNotifications(updated.notifications);
   store.managerAccountSettings[managerId] = updated;
   persistStore();
   return updated;
@@ -580,92 +499,6 @@ export async function dbCreateActivity(activityData: any, ..._args: any[]): Prom
   return newAct;
 }
 
-// 10. Chat Profiles
-export async function dbGetChatProfile(userId: string, ..._args: any[]): Promise<any | null> {
-  const store = getStore();
-  if (!store.chatProfiles) store.chatProfiles = [];
-  return store.chatProfiles.find((p: any) => p.userId === userId) || null;
-}
-
-export async function dbUpdateChatProfile(userId: string, profileData: any, ..._args: any[]): Promise<any> {
-  const store = getStore();
-  if (!store.chatProfiles) store.chatProfiles = [];
-  const idx = store.chatProfiles.findIndex((p: any) => p.userId === userId);
-  const updated = { userId, ...profileData, updatedAt: new Date().toISOString() };
-  if (idx >= 0) {
-    store.chatProfiles[idx] = { ...store.chatProfiles[idx], ...updated };
-  } else {
-    store.chatProfiles.push(updated);
-  }
-  persistStore();
-  return updated;
-}
-
-// 11. Chat Messages
-export async function dbGetChatMessages(roomId?: string, ..._args: any[]): Promise<any[]> {
-  const store = getStore();
-  if (!store.chatMessages) store.chatMessages = [];
-  if (roomId) {
-    return store.chatMessages.filter((m: any) => m.roomId === roomId);
-  }
-  return store.chatMessages;
-}
-
-export async function dbCreateChatMessage(msgData: any, ..._args: any[]): Promise<any> {
-  const store = getStore();
-  if (!store.chatMessages) store.chatMessages = [];
-  const newMsg = { ...msgData, id: msgData.id || `msg-${Date.now()}`, createdAt: new Date().toISOString() };
-  store.chatMessages.push(newMsg);
-  persistStore();
-  return newMsg;
-}
-
-export async function dbReactToChatMessage(msgId: string, emoji: string, userId?: string, ..._args: any[]): Promise<any> {
-  const store = getStore();
-  if (store.chatMessages) {
-    const msg = store.chatMessages.find((m: any) => m.id === msgId);
-    if (msg) {
-      if (!msg.reactions) msg.reactions = [];
-      msg.reactions.push({ emoji, userId, timestamp: new Date().toISOString() });
-      persistStore();
-      return msg;
-    }
-  }
-  return { id: msgId, emoji, userId };
-}
-
-// 12. DM Rooms
-export async function dbGetDMRooms(userId?: string, ..._args: any[]): Promise<any[]> {
-  const store = getStore();
-  if (!store.dmRooms) store.dmRooms = [];
-  if (userId) {
-    return store.dmRooms.filter((r: any) => r.senderId === userId || r.receiverId === userId);
-  }
-  return store.dmRooms;
-}
-
-export async function dbCreateDMRoom(roomData: any, ..._args: any[]): Promise<any> {
-  const store = getStore();
-  if (!store.dmRooms) store.dmRooms = [];
-  const newRoom = { ...roomData, id: roomData.id || `dm-${Date.now()}`, status: roomData.status || 'pending', createdAt: new Date().toISOString() };
-  store.dmRooms.push(newRoom);
-  persistStore();
-  return newRoom;
-}
-
-export async function dbAcceptDMRoom(roomId: string, ..._args: any[]): Promise<any> {
-  const store = getStore();
-  if (store.dmRooms) {
-    const room = store.dmRooms.find((r: any) => r.id === roomId);
-    if (room) {
-      room.status = 'accepted';
-      persistStore();
-      return room;
-    }
-  }
-  return { id: roomId, status: 'accepted' };
-}
-
 // 13. Atomic Hostel Registration
 export async function dbRegisterHostelAtomic(registrationPayload: any, fallbackHostels?: any[], ..._args: any[]): Promise<any> {
   const store = getStore({ hostels: fallbackHostels || [], users: [] });
@@ -698,7 +531,7 @@ export async function dbRegisterHostelAtomic(registrationPayload: any, fallbackH
     description: registrationPayload.description || 'Hostel property profile and configurations.',
     rating: 5.0,
     registrationDate: new Date().toISOString().split('T')[0],
-    subscriptionPaid: true,
+    subscriptionPaid: registrationPayload.subscriptionPaid === true,
     isApproved: Boolean(registrationPayload.isApproved),
     approvalStatus: registrationPayload.approvalStatus || (registrationPayload.isApproved ? 'Approved' : 'Pending Approval'),
     blocksList: registrationPayload.blocksList || [],
@@ -712,11 +545,8 @@ export async function dbRegisterHostelAtomic(registrationPayload: any, fallbackH
   };
 
   const existingIdx = store.hostels.findIndex((h: any) => h.id === hostelId || (h.managerEmail && registrationPayload.managerEmail && h.managerEmail.toLowerCase() === registrationPayload.managerEmail.toLowerCase()));
-  if (existingIdx >= 0) {
-    store.hostels[existingIdx] = hostelRecord;
-  } else {
-    store.hostels.unshift(hostelRecord);
-  }
+  if (existingIdx >= 0) throw Object.assign(new Error('This hostel already exists. Use its authorized edit route.'), { status: 409 });
+  store.hostels.unshift(hostelRecord);
 
   // Create verification entry
   const verifRecord = {
@@ -1030,26 +860,37 @@ export async function dbGenerateHostelRoomKeys(hostel: any): Promise<any[]> {
 
   const generatedKeys: any[] = [];
 
+  // Bound client-controlled generation before mutating keys or entering nested loops.
+  const counts = blocks.map((block: any) => Number(block.totalRooms || block.rooms || 20));
+  if (hostelName.length > 200 || blocks.length > 100 || counts.some((count: number) => !Number.isSafeInteger(count) || count < 1) || counts.reduce((sum: number, count: number) => sum + count, 0) > 2000 || blocks.some((block: any, idx: number) => {
+    const name = block.name || block.blockName || '', prefix = block.roomPrefix || '';
+    const start = Number(block.startNum || (idx + 1) * 100 + 1);
+    return typeof name !== 'string' || name.length > 120 || typeof prefix !== 'string' || prefix.length > 16 || !Number.isSafeInteger(start) || start < 1 || start > 1000000;
+  })) {
+    throw new ResourceLimitError(413, 60, 'A residence may generate at most 2,000 rooms across 100 blocks per operation.');
+  }
+  const existingRooms = new Set(store.roomKeys.filter((r: any) => r.hostelId === hostelId).map((r: any) => `${String(r.blockName || '').toLowerCase()}\0${r.roomNumber}`));
+  const reservedCodes = new Set([...(store.roomKeys || []).map((r: any) => r.roomKey), ...(store.retiredRoomKeys || [])]);
+
   for (let idx = 0; idx < blocks.length; idx++) {
     const block = blocks[idx];
     const blockName = block.name || block.blockName || `Block ${String.fromCharCode(65 + idx)}`;
-    const roomCount = block.totalRooms || block.rooms || 20;
-    const startNum = block.startNum || (idx + 1) * 100 + 1;
+    const roomCount = counts[idx];
+    const startNum = Number(block.startNum || (idx + 1) * 100 + 1);
     const defaultPrefix = String.fromCharCode(65 + idx);
     const roomPrefix = block.roomPrefix || defaultPrefix;
 
     for (let i = 0; i < roomCount; i++) {
       const roomNum = `${roomPrefix}-${startNum + i}`;
-      const existing = store.roomKeys.find((rk: any) => 
-        rk.hostelId === hostelId && 
-        (rk.blockName === blockName || rk.blockName?.toLowerCase() === blockName.toLowerCase()) && 
-        rk.roomNumber === roomNum
-      );
-      if (!existing) {
-        let keyVal: string;
-        do {
-          keyVal = generateHostelRoomKeyCode(hostelName, blockName);
-        } while (store.roomKeys.some((room: any) => room.roomKey === keyVal) || store.retiredRoomKeys?.includes(keyVal));
+      const roomIdentity = `${blockName.toLowerCase()}\0${roomNum}`;
+      if (!existingRooms.has(roomIdentity)) {
+        let keyVal: string | undefined;
+        for (let attempt = 0; attempt < 32; attempt++) {
+          const candidate = generateHostelRoomKeyCode(hostelName, blockName);
+          if (!reservedCodes.has(candidate)) { keyVal = candidate; break; }
+        }
+        if (!keyVal) throw new ResourceLimitError(503, 60, 'Room-key capacity is busy. Contact an administrator.');
+        reservedCodes.add(keyVal); existingRooms.add(roomIdentity);
         const newKey = {
           id: `rk-${hostelId}-${blockName.replace(/[^a-zA-Z0-9]/g, '_')}-${roomNum}`,
           hostelId,
@@ -1063,13 +904,12 @@ export async function dbGenerateHostelRoomKeys(hostel: any): Promise<any[]> {
           status: 'Available',
           createdAt: new Date().toISOString()
         };
-        store.roomKeys.push(newKey);
         generatedKeys.push(newKey);
       }
     }
   }
 
-  persistStore();
+  if (generatedKeys.length) { store.roomKeys.push(...generatedKeys); persistStore(); }
   return generatedKeys;
 }
 
@@ -1106,40 +946,15 @@ export async function dbRecordRoomKeyDispatch(roomKey: string, dispatchInfo: {
   return dispatchRecord;
 }
 
+// Reads never generate keys. Generation requires an authorized management operation.
 export async function dbGetRoomKeys(hostelId?: string): Promise<any[]> {
-  const store = getStore();
-  if (!store.roomKeys) store.roomKeys = [];
-
-  // Ensure initial room keys exist for all hostels
-  if (store.hostels && store.hostels.length > 0) {
-    let hadMissing = false;
-    for (const h of store.hostels) {
-      const hasKeys = store.roomKeys.some((rk: any) => rk.hostelId === h.id);
-      if (!hasKeys) {
-        hadMissing = true;
-        await dbGenerateHostelRoomKeys(h);
-      }
-    }
-    if (hadMissing) {
-      persistStore();
-    }
-  }
-
-  if (hostelId) {
-    return store.roomKeys.filter((rk: any) => rk.hostelId === hostelId);
-  }
-  return store.roomKeys;
+  const keys = getStore().roomKeys || [];
+  return hostelId === undefined ? keys : keys.filter((room: any) => room.hostelId === hostelId);
 }
 
 export async function dbGetRoomKeyByCode(code: string): Promise<any | null> {
-  const store = getStore();
-  if (!store.roomKeys) store.roomKeys = [];
   const normalized = (code || '').trim().toUpperCase();
-  
-  // Also check if keys need generation
-  await dbGetRoomKeys();
-
-  return store.roomKeys.find((rk: any) => rk.roomKey?.trim().toUpperCase() === normalized) || null;
+  return (getStore().roomKeys || []).find((room: any) => room.roomKey?.trim().toUpperCase() === normalized) || null;
 }
 
 export async function dbAssignRoomKey(roomKey: string, studentData: {
@@ -1189,101 +1004,3 @@ export async function dbAssignRoomKey(roomKey: string, studentData: {
   }
   return null;
 }
-
-// ==========================================
-// 13. STUDENT DIRECT MESSAGES
-// ==========================================
-
-export async function dbGetStudentMessages(filter?: {
-  studentId?: string;
-  studentEmail?: string;
-  roomKey?: string;
-  userId?: string;
-  managerId?: string;
-  managerEmail?: string;
-  hostelId?: string;
-  hostelIds?: string[];
-  hostelNames?: string[];
-  exactStudentMatchOnly?: boolean;
-}): Promise<any[]> {
-  const store = getStore();
-  if (!store.studentMessages) store.studentMessages = [];
-
-  let results = [...store.studentMessages];
-
-  if (filter?.exactStudentMatchOnly || filter?.studentId || filter?.studentEmail || filter?.roomKey || filter?.userId) {
-    const sId = (filter.studentId || '').toLowerCase().trim();
-    const sEmail = (filter.studentEmail || '').toLowerCase().trim();
-    const rKey = (filter.roomKey || '').toUpperCase().trim();
-    const uId = (filter.userId || '').toLowerCase().trim();
-
-    results = results.filter((m: any) => {
-      const mStudentId = (m.studentId || '').toLowerCase().trim();
-      const mStudentEmail = (m.studentEmail || '').toLowerCase().trim();
-      const mRoomKey = (m.roomKey || '').toUpperCase().trim();
-      const mUserId = (m.userId || '').toLowerCase().trim();
-
-      const matchesStudentId = Boolean(sId && mStudentId && mStudentId === sId);
-      const matchesStudentEmail = Boolean(sEmail && mStudentEmail && mStudentEmail === sEmail);
-      const matchesRoomKey = Boolean(rKey && mRoomKey && mRoomKey === rKey);
-      const matchesUserId = Boolean(uId && mUserId && mUserId === uId);
-
-      return matchesStudentId || matchesStudentEmail || matchesRoomKey || matchesUserId;
-    });
-  }
-
-  if (filter?.managerId || filter?.managerEmail) {
-    const mId = (filter.managerId || '').toLowerCase().trim();
-    const mEmail = (filter.managerEmail || '').toLowerCase().trim();
-    results = results.filter((m: any) => {
-      const msgManagerId = (m.managerId || '').toLowerCase().trim();
-      const msgManagerEmail = (m.managerEmail || '').toLowerCase().trim();
-      return (mId && msgManagerId === mId) || (mEmail && msgManagerEmail === mEmail);
-    });
-  }
-
-  if (filter?.hostelId) {
-    const hId = filter.hostelId.toLowerCase().trim();
-    results = results.filter((m: any) => (m.hostelId || '').toLowerCase().trim() === hId || (m.hostelName || '').toLowerCase().trim() === hId);
-  }
-
-  if (filter?.hostelIds && filter.hostelIds.length > 0) {
-    const idSet = new Set(filter.hostelIds.map(h => (h || '').toLowerCase().trim()));
-    results = results.filter((m: any) => idSet.has((m.hostelId || '').toLowerCase().trim()));
-  }
-
-  if (filter?.hostelNames && filter.hostelNames.length > 0) {
-    const nameSet = new Set(filter.hostelNames.map(h => (h || '').toLowerCase().trim()));
-    results = results.filter((m: any) => nameSet.has((m.hostelName || '').toLowerCase().trim()));
-  }
-
-  // Sort chronologically
-  return results.sort((a: any, b: any) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-}
-
-export async function dbCreateStudentMessage(msgData: any): Promise<any> {
-  const store = getStore();
-  if (!store.studentMessages) store.studentMessages = [];
-
-  const newMsg = {
-    id: msgData.id || `smsg-${generateUUID()}`,
-    studentId: msgData.studentId || '',
-    studentName: msgData.studentName || 'Student Resident',
-    studentEmail: msgData.studentEmail || '',
-    hostelId: msgData.hostelId || '',
-    hostelName: msgData.hostelName || 'Hostel',
-    managerId: msgData.managerId || '',
-    managerName: msgData.managerName || 'Hostel Manager',
-    managerEmail: msgData.managerEmail || '',
-    senderRole: msgData.senderRole || 'student', // 'student' | 'manager'
-    message: msgData.message || '',
-    attachmentUrl: msgData.attachmentUrl || '',
-    timestamp: msgData.timestamp || new Date().toISOString(),
-    read: false
-  };
-
-  store.studentMessages.push(newMsg);
-  persistStore();
-  return newMsg;
-}
-

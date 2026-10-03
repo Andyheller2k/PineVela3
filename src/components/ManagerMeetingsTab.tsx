@@ -1,3 +1,4 @@
+import { sessionFetch as fetch } from '../lib/session';
 import React, { useState, useEffect } from 'react';
 import { safeJson } from '../lib/api';
 import { 
@@ -75,7 +76,7 @@ export const ManagerMeetingsTab: React.FC<ManagerMeetingsTabProps> = ({
     setIsLoading(true);
     setError(null);
     try {
-      const token = currentUser?.token || localStorage.getItem('pinevela_session_token') || localStorage.getItem('token') || '';
+      const token = currentUser?.token || '';
       const res = await fetch('/api/meetings', {
         headers: {
           'Authorization': `Bearer ${token}`
@@ -109,7 +110,7 @@ export const ManagerMeetingsTab: React.FC<ManagerMeetingsTabProps> = ({
     setError(null);
 
     try {
-      const token = currentUser?.token || localStorage.getItem('pinevela_session_token') || localStorage.getItem('token') || '';
+      const token = currentUser?.token || '';
       const payload = {
         requesterName: bookRequesterName.trim(),
         requesterType: bookRequesterType,
@@ -162,7 +163,7 @@ export const ManagerMeetingsTab: React.FC<ManagerMeetingsTabProps> = ({
 
   const handleUpdateStatus = async (meetingId: string, newStatus: MeetingLog['status']) => {
     try {
-      const token = currentUser?.token || localStorage.getItem('pinevela_session_token') || localStorage.getItem('token') || '';
+      const token = currentUser?.token || '';
       const res = await fetch(`/api/meetings/${meetingId}`, {
         method: 'PUT',
         headers: {
@@ -196,7 +197,7 @@ export const ManagerMeetingsTab: React.FC<ManagerMeetingsTabProps> = ({
   const handleDeleteMeeting = async (meetingId: string) => {
     if (!confirm('Are you sure you want to remove this meeting log?')) return;
     try {
-      const token = currentUser?.token || localStorage.getItem('pinevela_session_token') || localStorage.getItem('token') || '';
+      const token = currentUser?.token || '';
       const res = await fetch(`/api/meetings/${meetingId}`, {
         method: 'DELETE',
         headers: {

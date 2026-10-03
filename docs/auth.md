@@ -84,6 +84,32 @@ Sensitive operations must require a valid authenticated session.
 
 Session revocation, expiration, and invalid sessions must be rejected.
 
+### Current session bridge during migration
+
+The existing JSON login paths now share expiring server sessions while full Supabase
+Auth/database migration remains pending. A record stores only a SHA-256 token hash,
+issuance time and absolute expiry. The default lifetime is one day; configure
+`PINEVELA_SESSION_TTL_SECONDS` from 60 to 604800 seconds. Reads do not extend it.
+Historical raw sessions without expiry require a fresh login. Account data and passwords
+are preserved; password changes/recovery, room release and logout revoke sessions.
+
+The browser uses `pv_auth_token`, an HttpOnly, SameSite=Strict cookie with Secure enabled
+in production. Same-origin API requests use cookies and do not retain session tokens in
+localStorage, sessionStorage or cached officer/user profiles. Reload resolves identity
+through `/api/auth/me`, which never returns token material. Non-browser API clients may
+still receive a raw token once at successful login; bearer and cookie authentication use
+the same hash/expiry checks. Invalid explicit bearer credentials never fall back to cookies.
+
+`POST /api/auth/logout` persists revocation of the presented session across all account
+copies before clearing the cookie. It is idempotent and accepts no body-supplied identity
+or token as authority. UI sign-out awaits confirmation and preserves the session screen
+when the request fails. Cookie-authenticated writes require a same-origin browser signal;
+set `PINEVELA_PUBLIC_ORIGIN` to the public HTTPS origin behind a production proxy.
+
+Supabase migration must preserve expiry, explicit session revocation and profile/account
+isolation, including immediate denial after logout. This local bridge does not replace
+Supabase Auth or RLS in the target architecture.
+
 ---
 
 ## Security Principle

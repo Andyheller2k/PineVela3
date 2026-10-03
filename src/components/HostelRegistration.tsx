@@ -1,3 +1,4 @@
+import { sessionFetch as fetch } from '../lib/session';
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import confetti from 'canvas-confetti';
@@ -538,7 +539,7 @@ export default function HostelRegistration({
     setSubmissionProgress('Initiating atomic hostel registration...');
 
     try {
-      const token = localStorage.getItem('token') || localStorage.getItem('pinevela_auth_token') || '';
+      const token = '';
 
       // 1. Upload Image to Storage (Local storage)
       let finalImageUrl = formData.imageUrl;
@@ -546,30 +547,25 @@ export default function HostelRegistration({
 
       if (formData.imagePreviewUrl && formData.imagePreviewUrl.startsWith('data:')) {
         setSubmissionProgress('Uploading high-resolution hostel exterior photograph...');
-        try {
-          const uploadResp = await fetch('/api/storage/upload-hostel-image', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${token}`
-            },
-            body: JSON.stringify({
-              fileName: `${(formData.name || 'hostel').toLowerCase().replace(/[^a-z0-9]/g, '-')}-facade.jpg`,
-              fileType: 'image/jpeg',
-              fileData: formData.imagePreviewUrl
-            })
-          });
+        const uploadResp = await fetch('/api/storage/upload-hostel-image', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            fileName: `${(formData.name || 'hostel').toLowerCase().replace(/[^a-z0-9]/g, '-')}-facade.jpg`,
+            fileType: 'image/jpeg',
+            fileData: formData.imagePreviewUrl
+          })
+        });
 
-          if (uploadResp.ok) {
-            const uploadResult = await safeJson(uploadResp);
-            if (uploadResult.imageUrl) {
-              finalImageUrl = uploadResult.imageUrl;
-              finalImagePath = uploadResult.imagePath;
-            }
-          }
-        } catch (uploadErr) {
-          console.warn('Image upload error:', uploadErr);
+        const uploadResult = await safeJson(uploadResp);
+        if (!uploadResp.ok || !uploadResult.success || !uploadResult.imageUrl) {
+          throw new Error(uploadResult.error || 'The photograph could not be uploaded. Please select a valid image and try again.');
         }
+        finalImageUrl = uploadResult.imageUrl;
+        finalImagePath = uploadResult.imagePath;
       }
 
       // 2. Atomic Database Insertion into persistent store

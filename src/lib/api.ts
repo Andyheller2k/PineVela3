@@ -1,3 +1,4 @@
+import { sessionFetch as fetch } from './session';
 import { invalidateAllQueries } from './queryClient';
 
 export async function hashPassword(password: string): Promise<string> {
@@ -24,15 +25,10 @@ export async function safeJson(res: Response): Promise<any> {
 }
 
 export async function apiFetch(url: string, options: RequestInit = {}): Promise<any> {
-  const currentToken =
-    localStorage.getItem('pinevela_session_token') ||
-    localStorage.getItem('token') ||
-    localStorage.getItem('pinevela_auth_token') ||
-    '';
+
 
   const headers = {
     'Content-Type': 'application/json',
-    ...(currentToken ? { 'Authorization': `Bearer ${currentToken}` } : {}),
     ...(options.headers || {})
   };
 

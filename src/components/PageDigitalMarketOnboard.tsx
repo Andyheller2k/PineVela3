@@ -1,3 +1,4 @@
+import { sessionFetch as fetch } from '../lib/session';
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -181,8 +182,8 @@ export default function PageDigitalMarketOnboard() {
         </div>
 
         <button
-          onClick={() => {
-            logout();
+          onClick={async () => {
+            if (!await logout()) return;
             navigate('/login');
           }}
           className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-full cursor-pointer transition-colors"

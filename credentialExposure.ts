@@ -1,8 +1,9 @@
+import { isDisabledLegacyCredential } from './legacyCredentialPolicy.js';
 import { credentialValues, hashCredential, normalizeEmail, protectStoredCredentials, verifyCredential } from './accountSecurity.js';
 
 export const CREDENTIAL_EXPOSURE_VERSION = 1;
 const PASSWORD_FIELDS = ['password', 'plainPassword', 'localPassword', 'userPropPassword'];
-const SESSION_FIELDS = ['token', 'merchantToken', 'sessionToken'];
+const SESSION_FIELDS = ['token', 'merchantToken', 'sessionToken', 'session'];
 const LOCKED_PASSWORD = '!LOCKED_GIT_EXPOSURE_RESET_REQUIRED';
 
 /** One-time containment for databases previously distributed in source control. */
@@ -41,6 +42,7 @@ export function revokeExposedCredentials(store: any) {
 /** Offline recovery requires filesystem access; it never creates or elevates an account. */
 export function recoverAccountPassword(store: any, identifier: string, role: string, password: string): number {
   if (store.credentialExposureVersion !== CREDENTIAL_EXPOSURE_VERSION) throw new Error('Run credential containment before recovering an account.');
+  if (isDisabledLegacyCredential(password)) throw new Error('This legacy password is disabled. Choose a fresh, unique password.');
   if (password.length < 12 || password.length > 1024 || /^[a-f0-9]{64}$/i.test(password) || password.startsWith('scrypt-sha256$') || password.startsWith('!LOCKED_')) {
     throw new Error('Choose a fresh password of 12–1024 characters, not a stored hash.');
   }

@@ -1,59 +1,36 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { queryClient, invalidateAllQueries } from '../lib/queryClient';
+import { } from '@tanstack/react-query';
+import { } from '../lib/queryClient';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
 import { saveNavigationLayout, usesTopNavigation } from '../lib/navigationLayout';
 import PineLogo from './PineLogo';
+import TopNavBadge from './TopNavBadge';
 import UserAvatarSelector, { renderAvatarGraphic } from './UserAvatarSelector';
 import { 
   Home, 
-  Wrench, 
-  MessageSquare, 
-  Bell, 
+  Wrench, Bell,
   Key, 
   ShieldCheck, 
   AlertCircle, 
   CheckCircle2, 
   Clock, 
   Camera, 
-  Upload, 
-  Send, 
-  Phone, 
-  Mail, 
-  Building2, 
-  ChevronRight, 
-  X, 
+  Upload, Phone,
+  Mail, X,
   Plus, 
   RefreshCw, 
-  LogOut, 
-  Sparkles, 
-  FileText, 
-  Search, 
+  LogOut, Search,
   MapPin, 
   Calendar, 
-  Settings, 
-  HelpCircle, 
-  AlertTriangle, 
-  Landmark, 
-  Users, 
-  Lock, 
-  ShieldAlert, 
-  BookOpen, 
-  User,
+  Settings, Lock, User,
   Copy,
   Bed,
-  Layers,
-  GraduationCap,
-  Eye,
-  ImageIcon,
-  Star,
-  ShoppingBag,
-  ArrowRight, PanelLeftClose, PanelLeftOpen
+  Layers, Eye, Star, ArrowRight, PanelLeftClose, PanelLeftOpen
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { IssueReport, HostelRoomKey, StudentDirectMessage } from '../types';
+import { IssueReport, HostelRoomKey } from '../types';
 
 export default function PageResidentDashboard() {
   const { user, logout, apiFetch, updateUser } = useAuth();
@@ -72,15 +49,10 @@ export default function PageResidentDashboard() {
 
   // Data states
   const [issueReports, setIssueReports] = useState<IssueReport[]>([]);
-  const [messages, setMessages] = useState<StudentDirectMessage[]>([]);
   const [roomKeyDetails, setRoomKeyDetails] = useState<HostelRoomKey | null>(null);
   const [userRooms, setUserRooms] = useState<any[]>([]);
   const [studentProfile, setStudentProfile] = useState<any>(null);
   const [loadingData, setLoadingData] = useState<boolean>(true);
-  const [accreditedStaff, setAccreditedStaff] = useState<any[]>([]);
-
-  // Selected chat or issue
-  const [activeChatIssueId, setActiveChatIssueId] = useState<string | null>(null);
 
   // New Issue Modal states
   const [showNewIssueModal, setShowNewIssueModal] = useState<boolean>(false);
@@ -97,14 +69,6 @@ export default function PageResidentDashboard() {
   const [issueFilter, setIssueFilter] = useState<'all' | 'pending' | 'in-progress' | 'awaiting-confirmation' | 'resolved'>('all');
   const [issueSearch, setIssueSearch] = useState<string>('');
   const [lightboxPhoto, setLightboxPhoto] = useState<string | null>(null);
-
-  // Sample evidence photos for quick selection
-  const SAMPLE_EVIDENCE_PHOTOS = [
-    { label: '💧 Leaking Tap / Pipe', url: 'https://images.unsplash.com/photo-1585704032915-c3400ca199e7?auto=format&fit=crop&w=600&q=80' },
-    { label: '⚡ Power Socket / Wiring', url: 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&w=600&q=80' },
-    { label: '🔒 Door Handle / Lock', url: 'https://images.unsplash.com/photo-1558002038-1055907df827?auto=format&fit=crop&w=600&q=80' },
-    { label: '❄️ AC / Cooling Unit', url: 'https://images.unsplash.com/photo-1615873968403-89e068629265?auto=format&fit=crop&w=600&q=80' }
-  ];
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -136,10 +100,6 @@ export default function PageResidentDashboard() {
   const [hoverRating, setHoverRating] = useState<number>(0);
   const [submittingConfirm, setSubmittingConfirm] = useState<boolean>(false);
 
-  // Direct Message states
-  const [newMessageText, setNewMessageText] = useState<string>('');
-  const [sendingMessage, setSendingMessage] = useState<boolean>(false);
-
   // Toast alert
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [showSignoutConfirmModal, setShowSignoutConfirmModal] = useState<boolean>(false);
@@ -150,26 +110,6 @@ export default function PageResidentDashboard() {
   const [editEmail, setEditEmail] = useState<string>('');
   const [editPhone, setEditPhone] = useState<string>('');
   const [savingProfile, setSavingProfile] = useState<boolean>(false);
-
-  // TanStack Query for resident server-state caching and automatic refetching
-  const { data: residentData } = useQuery({
-    queryKey: ['residentData', user?.id, user?.email],
-    queryFn: async () => {
-      const profile = await apiFetch('/api/student/my-profile').catch(() => null);
-      const issues = await apiFetch('/api/issue-reports').catch(() => []);
-      const msgs = await apiFetch('/api/student-messages').catch(() => []);
-      const staff = await apiFetch('/api/accredited-staff').catch(() => []);
-
-      return {
-        profile,
-        issues: Array.isArray(issues) ? issues : [],
-        msgs: Array.isArray(msgs) ? msgs : [],
-        staff: Array.isArray(staff) ? staff : [],
-      };
-    },
-    enabled: Boolean(user),
-    refetchInterval: 8000,
-  });
 
   // Track active maintenance updates requiring attention or recently modified
   const unconfirmedIssues = useMemo(() => {
@@ -187,24 +127,6 @@ export default function PageResidentDashboard() {
   }, [issueReports]);
 
   const hasMaintenanceUpdates = activeUpdatedIssues.length > 0;
-
-  // Sync state with TanStack Query cache
-  useEffect(() => {
-    if (!residentData) return;
-    if (residentData.profile) {
-      if (residentData.profile.user) {
-        setStudentProfile(residentData.profile.user);
-      } else {
-        setStudentProfile(residentData.profile);
-      }
-      if (residentData.profile.roomKeyDetails) setRoomKeyDetails(residentData.profile.roomKeyDetails);
-      if (residentData.profile.rooms) setUserRooms(residentData.profile.rooms);
-    }
-    setIssueReports(residentData.issues);
-    setMessages(residentData.msgs);
-    setAccreditedStaff(residentData.staff);
-    setLoadingData(false);
-  }, [residentData]);
 
   const triggerToast = (msg: string) => {
     setToastMessage(msg);
@@ -344,42 +266,6 @@ export default function PageResidentDashboard() {
     }
   };
 
-  // Submit Direct Message to Staff
-  const handleSendMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newMessageText.trim() || !activeChatIssueId) return;
-
-    // Find the staff assigned to this issue
-    const issue = issueReports.find(i => i.id === activeChatIssueId);
-    if (!issue || !issue.assignedStaffId) {
-      triggerToast('No active technician assigned to this complaint yet.');
-      return;
-    }
-
-    setSendingMessage(true);
-    try {
-      const sent = await apiFetch('/api/student-messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          recipientId: issue.assignedStaffId,
-          messageText: newMessageText.trim(),
-          issueId: activeChatIssueId
-        })
-      });
-
-      setMessages(prev => [...prev, sent]);
-      setNewMessageText('');
-    } catch (err: any) {
-      triggerToast(err.message || 'Failed to send message.');
-    } finally {
-      setSendingMessage(false);
-    }
-  };
-
-  // Helper function to extract chat messages for the selected issue
-  const activeChatMessages = messages.filter(m => (m as any).issueId === activeChatIssueId);
-
   // Check if resident currently has an active unclosed complaint
   const activeComplaint = issueReports.find(i => 
     !i.closedByManager && 
@@ -465,7 +351,14 @@ export default function PageResidentDashboard() {
       </header>
 
       {/* SIDEBAR: PURELY STATIC / FIXED ICE-BLUE FROSTY GLASS LOOK WITH CURVED EDGES & BLUE GLOW */}
-      {isSidebarTopNav && <nav className="hidden lg:block fixed top-3 left-1/2 -translate-x-1/2 z-50 w-[min(620px,calc(100vw-3rem))] bg-white/72 backdrop-blur-xl border border-white/80 rounded-2xl shadow-lg"><div className="flex items-center gap-1 px-2 py-1.5">{[{ id: 'room', label: 'Room', icon: Home }, { id: 'complaints', label: 'Issues', icon: Wrench }, { id: 'alerts', label: 'Alerts', icon: Bell }, { id: 'settings', label: 'Settings', icon: Settings }].map(tab => <button key={tab.id} onClick={() => setActiveTab(tab.id as any)} className={`flex-1 min-w-0 flex flex-col items-center gap-0.5 py-1.5 rounded-xl text-[9px] font-bold cursor-pointer ${activeTab === tab.id ? 'text-blue-700 bg-blue-100/65' : 'text-slate-500 hover:bg-white/70'}`}><tab.icon className="w-4 h-4" /><span className="truncate max-w-full">{tab.label}</span></button>)}<button onClick={() => setShowSignoutConfirmModal(true)} className="shrink-0 flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-xl text-[9px] font-bold text-rose-600 hover:bg-rose-50 cursor-pointer" title="Sign Out"><LogOut className="w-4 h-4" /><span>Sign Out</span></button><button onClick={() => setIsSidebarTopNav(false)} title="Show sidebar" className="p-2 text-slate-500 hover:text-blue-700 cursor-pointer"><PanelLeftOpen className="w-4 h-4" /></button></div></nav>}
+      {isSidebarTopNav && <nav className="hidden lg:block fixed top-3 left-1/2 -translate-x-1/2 z-50 w-[min(620px,calc(100vw-3rem))] bg-white/72 backdrop-blur-xl border border-white/80 rounded-2xl shadow-lg"><div className="flex items-center gap-1 px-2 py-1.5">
+        {/* Profile avatar button — left end */}
+        <button onClick={() => setActiveTab('settings')} title="Profile & Settings" className="shrink-0 flex flex-col items-center gap-0.5 py-1 px-1.5 rounded-xl hover:bg-white/70 cursor-pointer">
+          {renderAvatarGraphic(activeAvatar, 'w-6 h-6 text-[9px] ring-2 ring-white shadow-sm')}
+          <span className="text-[9px] font-bold text-slate-500">Profile</span>
+        </button>
+        <div className="w-px h-6 bg-slate-200/70 shrink-0" />
+        {[{ id: 'room', label: 'Room', icon: Home }, { id: 'complaints', label: 'Issues', icon: Wrench, badge: unconfirmedIssues.length || activeUpdatedIssues.length }, { id: 'alerts', label: 'Alerts', icon: Bell, badge: unreadCount }, { id: 'settings', label: 'Settings', icon: Settings }].map(tab => <button key={tab.id} onClick={() => setActiveTab(tab.id as any)} aria-label={`${tab.label}${tab.badge ? ` (${tab.badge})` : ''}`} className={`flex-1 min-w-0 flex flex-col items-center gap-0.5 py-1.5 rounded-xl text-[9px] font-bold cursor-pointer ${activeTab === tab.id ? 'text-blue-700 bg-blue-100/65' : 'text-slate-500 hover:bg-white/70'}`}><span className="relative inline-flex"><tab.icon className="w-4 h-4" /><TopNavBadge count={tab.badge} /></span><span className="truncate max-w-full">{tab.label}</span></button>)}<button onClick={() => setShowSignoutConfirmModal(true)} className="shrink-0 flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-xl text-[9px] font-bold text-rose-600 hover:bg-rose-50 cursor-pointer" title="Sign Out"><LogOut className="w-4 h-4" /><span>Sign Out</span></button><button onClick={() => setIsSidebarTopNav(false)} title="Show sidebar" className="p-2 text-slate-500 hover:text-blue-700 cursor-pointer"><PanelLeftOpen className="w-4 h-4" /></button></div></nav>}
       {!isSidebarTopNav && <aside className={`hidden lg:flex ${isSidebarCollapsed ? 'w-20 p-4' : 'w-72 p-6'} my-6 ml-6 h-[calc(100vh-3rem)] bg-gradient-to-br from-sky-100/90 via-blue-100/85 to-amber-50/40 backdrop-blur-3xl border border-sky-200/80 shadow-2xl rounded-3xl flex flex-col justify-between shrink-0 overflow-y-auto z-20 transition-all duration-300 relative`}>
         <button onClick={() => setIsSidebarTopNav(true)} title="Use top navigation" className="absolute top-3 right-3 p-2 rounded-xl text-slate-500 hover:text-blue-700 hover:bg-white/70 cursor-pointer"><PanelLeftClose className="w-4 h-4" /></button>
 
@@ -908,7 +801,6 @@ export default function PageResidentDashboard() {
                         onClick={() => {
                           setActiveTab('complaints');
                           if (issue.assignedStaffId) {
-                            setActiveChatIssueId(issue.id);
                           }
                         }}
                         className={`p-3.5 rounded-2xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 cursor-pointer transition-all hover:scale-[1.005] ${
@@ -985,10 +877,10 @@ export default function PageResidentDashboard() {
 
         {/* COMPLAINTS TAB */}
         {activeTab === 'complaints' && (
-          <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start animate-fade-in max-w-7xl">
+          <div className="grid grid-cols-1 gap-6 items-start animate-fade-in max-w-7xl">
             
             {/* List & Controls Panel */}
-            <div className="space-y-4 xl:col-span-7">
+            <div className="space-y-4 w-full">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                 <div>
                   <h2 className="text-xl font-black text-slate-900 tracking-tight">Maintenance Desk</h2>
@@ -1067,18 +959,9 @@ export default function PageResidentDashboard() {
 
                     return (
                     <div 
-                      key={issue.id} 
-                      onClick={() => {
-                        if (issue.assignedStaffId) {
-                          setActiveChatIssueId(issue.id);
-                        } else {
-                          triggerToast("Chat with technician is only available once staff has been assigned.");
-                        }
-                      }}
+                      key={issue.id}
                       className={`p-4 bg-white border rounded-2xl cursor-pointer transition-all hover:border-slate-300 space-y-3 relative ${
-                        activeChatIssueId === issue.id 
-                          ? 'ring-2 ring-blue-600 border-blue-600 shadow-md' 
-                          : hasAction 
+                        hasAction
                             ? 'border-amber-300 ring-2 ring-amber-400/20 shadow-xs' 
                             : 'border-slate-200'
                       }`}
@@ -1294,19 +1177,7 @@ export default function PageResidentDashboard() {
                         </div>
 
                         <div className="flex items-center gap-1.5">
-                          {issue.assignedStaffId && (
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setActiveChatIssueId(issue.id);
-                              }}
-                              className="text-blue-700 hover:text-blue-900 font-extrabold flex items-center gap-1 bg-blue-50 hover:bg-blue-100 px-2.5 py-1 rounded-lg border border-blue-200 transition-colors"
-                            >
-                              <MessageSquare size={12} />
-                              <span>Chat with {issue.assignedStaffName || 'Tech'}</span>
-                            </button>
-                          )}
+
                         </div>
                       </div>
                     </div>
@@ -1316,96 +1187,8 @@ export default function PageResidentDashboard() {
               </div>
             </div>
 
-            {/* Live Chat & Tech Bargain Panel */}
-            <div className="xl:col-span-5 h-[600px] xl:h-[70vh] bg-white border border-slate-200 rounded-3xl flex flex-col justify-between overflow-hidden shadow-xs">
-              {activeChatIssueId ? (
-                (() => {
-                  const currentIssue = issueReports.find(i => i.id === activeChatIssueId);
-                  if (!currentIssue) return <div className="p-6 text-center text-slate-400">Loading chat...</div>;
+            {/*  */}
 
-                  return (
-                    <>
-                      {/* Chat Header */}
-                      <div className="p-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 bg-blue-100 rounded-xl text-blue-800 flex items-center justify-center shrink-0">
-                            <MessageSquare className="w-4 h-4" />
-                          </div>
-                          <div>
-                            <h3 className="text-xs font-black text-slate-900 leading-tight">Chat with Technician</h3>
-                            <p className="text-[10px] text-slate-500 font-bold truncate max-w-[180px]">
-                              Issue: {currentIssue.title}
-                            </p>
-                          </div>
-                        </div>
-                        <button 
-                          onClick={() => setActiveChatIssueId(null)}
-                          className="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-slate-200"
-                        >
-                          <X size={16} />
-                        </button>
-                      </div>
-
-                      {/* Message Log */}
-                      <div className="flex-1 p-4 overflow-y-auto space-y-3 bg-slate-50/50">
-                        <div className="text-[10px] text-slate-400 font-extrabold text-center uppercase tracking-wider py-1 bg-white border border-slate-100 rounded-full max-w-xs mx-auto">
-                          Dispatched: {currentIssue.assignedStaffName || 'Accredited Specialist'}
-                        </div>
-
-                        {activeChatMessages.length === 0 ? (
-                          <div className="p-6 text-center text-xs text-slate-400 font-semibold space-y-2">
-                            <MessageSquare className="w-8 h-8 text-slate-200 mx-auto" />
-                            <p>No messages yet. Send a message to coordinate access or bargain repair rates.</p>
-                          </div>
-                        ) : (
-                          activeChatMessages.map(m => {
-                            const isMe = m.senderRole === 'student';
-                            return (
-                              <div key={m.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
-                                <div className={`max-w-xs p-3 rounded-2xl text-xs font-semibold ${
-                                  isMe ? 'bg-blue-900 text-white rounded-tr-none' : 'bg-white border border-slate-200 text-slate-800 rounded-tl-none'
-                                }`}>
-                                  <div>{m.message}</div>
-                                  <span className={`block text-[9px] text-right mt-1 ${isMe ? 'text-blue-200' : 'text-slate-400'}`}>
-                                    {new Date(m.timestamp || '').toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                  </span>
-                                </div>
-                              </div>
-                            );
-                          })
-                        )}
-                      </div>
-
-                      {/* Chat Input */}
-                      <form onSubmit={handleSendMessage} className="p-3 bg-white border-t border-slate-200 flex gap-2">
-                        <input
-                          type="text"
-                          value={newMessageText}
-                          onChange={(e) => setNewMessageText(e.target.value)}
-                          placeholder="Type message to technician..."
-                          className="flex-1 px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-blue-600 focus:bg-white"
-                        />
-                        <button
-                          type="submit"
-                          disabled={sendingMessage || !newMessageText.trim()}
-                          className="p-2.5 bg-blue-900 hover:bg-blue-800 text-white rounded-xl disabled:opacity-40 cursor-pointer"
-                        >
-                          <Send size={15} />
-                        </button>
-                      </form>
-                    </>
-                  );
-                })()
-              ) : (
-                <div className="flex-1 flex flex-col items-center justify-center p-6 text-center space-y-2.5 text-slate-400 bg-slate-50/20">
-                  <MessageSquare className="w-12 h-12 text-slate-200" />
-                  <h4 className="text-xs font-black text-slate-900">Coordinate and Chat with assigned Technicians</h4>
-                  <p className="text-[11px] max-w-xs mx-auto">
-                    Select any of your submitted maintenance issues from the left panel that has an assigned technician to open a real-time coordination chat workspace.
-                  </p>
-                </div>
-              )}
-            </div>
 
           </div>
         )}
@@ -1956,7 +1739,7 @@ export default function PageResidentDashboard() {
                 Keep Session
               </button>
               <button
-                onClick={() => { setShowSignoutConfirmModal(false); logout(); navigate('/', { replace: true }); }}
+                onClick={async () => { setShowSignoutConfirmModal(false); if (!await logout()) return; navigate('/', { replace: true }); }}
                 className="px-5 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-black rounded-xl cursor-pointer"
               >
                 Sign Out
