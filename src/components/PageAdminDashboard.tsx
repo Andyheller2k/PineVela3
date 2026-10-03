@@ -3270,7 +3270,6 @@ export default function PageAdminDashboard() {
                           {block.roomTypes.map((rt: any, rtIdx: number) => (
                             <div key={rt.id || rtIdx} className="p-2.5 bg-white border border-slate-200 rounded-xl flex items-center justify-between">
                               <span className="font-bold text-slate-800">{rt.typeName}</span>
-                              <span className="font-black text-emerald-700">GHS {rt.pricePerBed || block.pricePerBlock || inspectingResidenceModal.price || 0}/bed</span>
                             </div>
                           ))}
                         </div>

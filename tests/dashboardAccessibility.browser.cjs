@@ -23,6 +23,9 @@ async function main() {
   const owner = actor('user', `${crypto.randomUUID()}@example.test`);
   const seller = actor('merchant', `${crypto.randomUUID()}@example.test`);
   const manager = { ...actor('manager', `${crypto.randomUUID()}@example.test`), isVerified: true, verificationStatus: 'approved' };
+  const housingCheck = process.argv.includes('--housing');
+  const admin = actor('admin', `${crypto.randomUUID()}@example.test`);
+  const newManager = { ...actor('manager', `${crypto.randomUUID()}@example.test`), isVerified: true, verificationStatus: 'approved' };
   const store = { id: crypto.randomUUID(), userId: owner.id, studentEmail: seller.email, storeName: 'Isolated seller', status: 'active', setupCompleted: true, registrationFeePaid: true, subscriptionPlan: 'pro' };
   Object.assign(seller, { merchantStoreId: store.id, parentUserId: owner.id, merchantSetupCompleted: true, merchantRegistrationFeePaid: true });
   const application = { id: crypto.randomUUID(), userId: owner.id, studentEmail: seller.email, status: 'approved' };
@@ -39,7 +42,8 @@ async function main() {
     { id: crypto.randomUUID(), userId: buyer.id, orderId: order.id, scope: 'market', title: 'Order tracking changed', message: 'Your order status changed', read: false },
     { id: crypto.randomUUID(), userId: buyer.id, scope: 'market', title: 'Merchant application update', message: 'Your merchant platform status changed', read: false }];
   const hostel = { id: crypto.randomUUID(), managerId: manager.id, managerEmail: manager.email, name: 'Isolated approved residence', isApproved: true, approvalStatus: 'Approved', totalCapacity: 10, price: 3000, subscriptionPaid: true, amenities: [], facilities: [], blocks: [], imageUrl: photos[0] };
-  await fs.writeFile(path.join(dataDir, 'pinevela_store.json'), sessionFixtureJson({ credentialExposureVersion: 1, accountSecurityVersion: 1, users: [buyer, owner, seller, manager], digitalMarketApplications: [application], digitalMarketStores: [store], digitalMarketProducts: [product, service], digitalMarketOrders: [order, receipt], digitalMarketMessages: [inquiry, reply], notifications: notices, hostels: [hostel], managerVerifications: [{ id: crypto.randomUUID(), managerId: manager.id, managerEmail: manager.email, status: 'approved' }] }));
+  if (housingCheck) Object.assign(hostel, { location: 'Kumasi KNUST Ayeduase', blocksList: [{ id: 'housing-block', name: 'Female Block', gender: 'Female', totalRooms: 3, bedsPerRoom: 2, roomTypes: [{ id: 'housing-room', typeName: '2 in 1 Room', bedsPerRoom: 2, totalRooms: 3, pricePerBed: 7777 }] }] });
+  await fs.writeFile(path.join(dataDir, 'pinevela_store.json'), sessionFixtureJson({ credentialExposureVersion: 1, accountSecurityVersion: 1, users: [buyer, owner, seller, manager, ...(housingCheck ? [admin, newManager] : [])], digitalMarketApplications: [application], digitalMarketStores: [store], digitalMarketProducts: [product, service], digitalMarketOrders: [order, receipt], digitalMarketMessages: [inquiry, reply], notifications: notices, hostels: [hostel, ...(housingCheck ? [{ ...hostel, id: crypto.randomUUID(), name: 'Isolated pending residence', isApproved: false, approvalStatus: 'Pending Approval' }] : [])], managerVerifications: [{ id: crypto.randomUUID(), managerId: manager.id, managerEmail: manager.email, status: 'approved' }, ...(housingCheck ? [{ id: crypto.randomUUID(), managerId: newManager.id, managerEmail: newManager.email, status: 'approved' }] : [])] }));
   const port = await freePort(), debugPort = await freePort(), base = `http://127.0.0.1:${port}`;
   let server, chrome, socket, command; let serverLogs = '', chromeLogs = '';
   try {
@@ -104,6 +108,60 @@ async function main() {
       const found = await command('DOM.querySelector', { nodeId: doc.root.nodeId, selector });
       await command('DOM.setFileInputFiles', { nodeId: found.nodeId, files: [file] });
     };
+    if (housingCheck) {
+      for (const [width, layout] of [[375, 'top'], [768, 'top'], [1440, 'top'], [1440, 'sidebar']]) {
+        await viewport(width); await switchAccount(manager.token, '/#/manager/dashboard');
+        await until("document.body.innerText.includes('Live Operations Audit')", 'Manager loaded');
+        await evaluate(`localStorage.setItem('pinevela_navigation_layout', ${JSON.stringify(layout)})`);
+        await command('Page.reload');
+        const profile = "[...document.querySelectorAll('button[title=\"Manager Profile Settings\"]')].find(b=>b.getClientRects().length)";
+        await click(profile);
+        await until("document.body.innerText.includes('Manager Profile Settings')", 'Real profile editor');
+        assert(await evaluate("document.querySelector('input[placeholder=\"e.g. Samuel Appiah\"]') !== null && !document.body.innerText.includes('Alert Preferences')"), 'Profile editor replaces preferences');
+        await click("document.querySelector('button[aria-label=\"Close profile settings\"]')");
+        await click(profile);
+        await until("document.querySelector('button[aria-label=\"Close profile settings\"]') !== null", 'Profile reopens without hook errors');
+        if (width === 375) {
+          await input('input[placeholder="e.g. Samuel Appiah"]', 'Updated isolated manager');
+          await input('input[placeholder="+233 24 123 4567"]', '0241234567');
+          await click(button('Save Profile Changes'));
+          await until("document.querySelector('button[aria-label=\"Close profile settings\"]') === null", 'Profile save completed');
+          const saved = await api('/api/auth/me', manager.token);
+          assert.equal((saved.user || saved).name, 'Updated isolated manager');
+        } else await click("document.querySelector('button[aria-label=\"Close profile settings\"]')");
+        await click(matchingButton(width < 1024 || layout === 'top' ? 'Properties' : 'My Properties'));
+        await until("document.body.innerText.includes('Registered Property Dossier')", 'Property details');
+        assert(await evaluate("!document.body.innerText.includes('Annual Fee') && !document.body.innerText.includes('GHS')"), 'Manager property has no room price');
+        await noOverflow(`${width}px manager ${layout}`);
+        console.log(`${width}px manager ${layout}: profile opens/reopens and property prices absent.`);
+      }
+      await viewport(1440); await switchAccount(admin.token, '/#/admin/dashboard');
+      await click(matchingButton('Residences'));
+      await click(button('Details'));
+      await until("document.body.innerText.includes('2 in 1 Room')", 'Admin sees actual room types');
+      assert(await evaluate("!document.body.innerText.includes('/bed') && !document.body.innerText.includes('7777')"), 'Admin inspection hides legacy prices');
+      await switchAccount(admin.token, '/#/admin/dashboard');
+      await click(matchingButton('Residences')); await click(button('Edit')); await click(button('Stay Cycle'));
+      assert(await evaluate("!document.body.innerText.includes('Standard Room Fee') && !document.body.innerText.includes('Refundable Security Deposit') && !document.body.innerText.includes('Pricing & Deposit')"), 'Residence editor has no room pricing inputs');
+      await switchAccount(buyer.token, '/#/'); await click(button('View Details'));
+      await until("document.body.innerText.includes('Room Configuration Options')", 'Public residence details');
+      assert(await evaluate("document.body.innerText.includes('2 in 1 Room') && !document.body.innerText.includes('GHS') && !document.body.innerText.includes('7777')"), 'Public details use actual unpriced configuration');
+      await switchAccount(newManager.token, '/#/manager/dashboard');
+      await until("document.body.innerText.includes('Register a Hostel to Start Onboarding')", 'New manager registration action');
+      const draft = { name: 'Isolated registration', contactEmail: newManager.email, contactPhone: '0241234567', imageUrl: photos[0], gallery: [photos[1]], blocksList: [{ id: 'capacity-block', name: 'Capacity block', gender: 'Female', floors: 1, totalRooms: 3, roomPrefix: 'C', startNum: 1, bedsPerRoom: 1, roomTypes: [{ id: 'capacity-room', typeName: '1 in 1 Room', bedsPerRoom: 1, totalRooms: 3 }] }] };
+      await evaluate(`localStorage.setItem('pinevela_hostel_registration_draft_v1', ${JSON.stringify(JSON.stringify(draft))})`);
+      await click(button('Register a Hostel to Start Onboarding'));
+      await click(button('Continue to Map Pin')); await click(button('Continue to Image Upload')); await click(button('Continue to Capacity'));
+      await until("document.body.textContent.includes('Room Type / Bedspace #1')", 'Capacity form');
+      assert(await evaluate("!document.body.innerText.includes('Beds / Room') && document.querySelector('input[placeholder=\"Beds/Rm\"]') === null"), 'Redundant bed input removed');
+      await evaluate("(()=>{const select=[...document.querySelectorAll('select')].find(s=>[...s.options].some(o=>o.value==='4 in 1 Room'));select.value='4 in 1 Room';select.dispatchEvent(new Event('change',{bubbles:true}));})()");
+      await until("JSON.parse(localStorage.getItem('pinevela_hostel_registration_draft_v1')).maximumCapacity === 12", 'Selector recalculates capacity');
+      assert(await evaluate("JSON.parse(localStorage.getItem('pinevela_hostel_registration_draft_v1')).blocksList[0].roomTypes[0].bedsPerRoom === 4"), 'Bed count follows room type');
+      for (const width of [375, 768, 1440]) { await viewport(width); await noOverflow(`${width}px registration`); }
+      assert.deepEqual(exceptions, [], 'No browser errors'); assert.deepEqual(apiErrors, [], 'No API errors');
+      console.log('Admin inspection/editor and public details hide prices; registration selector calculates 4 beds x 3 rooms = 12.');
+      return;
+    }
     if (process.argv.includes('--skeleton')) {
       await command('Network.setCacheDisabled', { cacheDisabled: true });
       await command('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'reduce' }] });

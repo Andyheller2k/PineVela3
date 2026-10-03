@@ -10,7 +10,6 @@ import PineLogo from './PineLogo';
 import HostelRegistration from './HostelRegistration';
 import ManagerProfileModal from './ManagerProfileModal';
 import { ManagerMeetingsTab } from './ManagerMeetingsTab';
-import { ManagerAccountSettingsModal } from './ManagerAccountSettingsModal';
 import LogoutConfirmationModal from './LogoutConfirmationModal';
 import ManagerDigitalKeysView from './ManagerDigitalKeysView';
 import { } from '../utils/pdfHelper';
@@ -91,7 +90,6 @@ export default function PageManagerDashboard() {
   const [selectedBlock, setSelectedBlock] = useState<any | null>(null);
   const [showRegistration, setShowRegistration] = useState(false);
   const [showEditProfileModal, setShowEditProfileModal] = useState(false);
-  const [showAccountSettingsModal, setShowAccountSettingsModal] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [showWelcomePopup, setShowWelcomePopup] = useState(false);
 
@@ -438,7 +436,6 @@ export default function PageManagerDashboard() {
         const floors = b.floors || 4;
         const bedsPerRoom = b.bedsPerRoom || 3;
         const roomsPerFloor = Math.ceil(totalRooms / floors);
-        const blockPrice = b.pricePerBlock !== undefined && b.pricePerBlock !== null ? b.pricePerBlock : (b.price || property.price || 3500);
         return {
           id: b.id || `block-${idx + 1}`,
           blockName: b.name || `Block ${String.fromCharCode(65 + idx)} (${idx === 0 ? 'Alpha' : 'Beta'})`,
@@ -446,15 +443,14 @@ export default function PageManagerDashboard() {
           totalRooms,
           roomsPerFloor,
           bedsPerRoom,
-          pricePerBlock: blockPrice,
           totalBeds: totalRooms * bedsPerRoom,
           roomPrefix: b.roomPrefix || String.fromCharCode(65 + idx),
           startNum: b.startNum || (idx + 1) * 100 + 1,
           genderCategory: idx === 0 ? 'Male & Female (Co-Ed Wing)' : 'Female Wing & Executive',
           roomTypes: [
-            { type: `${bedsPerRoom} in a Room (Standard)`, priceGHS: blockPrice, spaces: Math.round(totalRooms * bedsPerRoom * 0.7) },
-            { type: '2 in a Room (Deluxe Ensuite)', priceGHS: Math.round(blockPrice * 1.2), spaces: Math.round(totalRooms * bedsPerRoom * 0.2) },
-            { type: '1 in a Room (Executive Private)', priceGHS: Math.round(blockPrice * 1.5), spaces: Math.round(totalRooms * bedsPerRoom * 0.1) }
+            { type: `${bedsPerRoom} in a Room (Standard)`, spaces: Math.round(totalRooms * bedsPerRoom * 0.7) },
+            { type: '2 in a Room (Deluxe Ensuite)', spaces: Math.round(totalRooms * bedsPerRoom * 0.2) },
+            { type: '1 in a Room (Executive Private)', spaces: Math.round(totalRooms * bedsPerRoom * 0.1) }
           ],
           amenities: property.facilities || property.amenities || [
             'Fiber-Optic Wi-Fi', 'Standby Generator', '24/7 Uniformed Security', 'Borehole Water', 'Study Hall'
@@ -465,7 +461,6 @@ export default function PageManagerDashboard() {
     
     if (Array.isArray(property.blocks) && property.blocks.length > 0) {
       return property.blocks.map((b: any, idx: number) => {
-        const blockPrice = b.pricePerBlock !== undefined && b.pricePerBlock !== null ? b.pricePerBlock : (b.price || property.price || 3500);
         const bedsPerRoom = b.bedsPerRoom || 3;
         const totalRooms = b.totalRooms || 20;
         return {
@@ -475,13 +470,12 @@ export default function PageManagerDashboard() {
           totalRooms,
           roomsPerFloor: b.roomsPerFloor || Math.ceil(totalRooms / (b.floors || 4)),
           bedsPerRoom,
-          pricePerBlock: blockPrice,
           totalBeds: b.totalBeds || (totalRooms * bedsPerRoom),
           roomPrefix: b.roomPrefix || String.fromCharCode(65 + idx),
           startNum: b.startNum || (idx + 1) * 100 + 1,
           genderCategory: b.genderCategory || 'Mixed Community',
           roomTypes: b.roomTypes || [
-            { type: `${bedsPerRoom} in a Room (Standard)`, priceGHS: blockPrice, spaces: totalRooms * bedsPerRoom }
+            { type: `${bedsPerRoom} in a Room (Standard)`, spaces: totalRooms * bedsPerRoom }
           ],
           amenities: b.amenities || property.facilities || []
         };
@@ -489,7 +483,6 @@ export default function PageManagerDashboard() {
     }
 
     const cap = property.totalCapacity || property.capacity || 1200;
-    const defaultPrice = property.price || 3500;
     return [
       {
         id: 'block-1',
@@ -498,13 +491,12 @@ export default function PageManagerDashboard() {
         totalRooms: Math.ceil(cap / 6),
         roomsPerFloor: Math.ceil(cap / 24),
         bedsPerRoom: 3,
-        pricePerBlock: defaultPrice,
         totalBeds: Math.ceil(cap / 2),
         roomPrefix: 'A',
         startNum: 101,
         genderCategory: 'Male & Female (Co-Ed)',
         roomTypes: [
-          { type: '3 in a Room (Standard)', priceGHS: defaultPrice, spaces: Math.ceil(cap / 2) }
+          { type: '3 in a Room (Standard)', spaces: Math.ceil(cap / 2) }
         ],
         amenities: property.facilities || property.amenities || ['Fiber-Optic Wi-Fi', 'Standby Generator', 'Security']
       },
@@ -515,13 +507,12 @@ export default function PageManagerDashboard() {
         totalRooms: Math.ceil(cap / 6),
         roomsPerFloor: Math.ceil(cap / 24),
         bedsPerRoom: 3,
-        pricePerBlock: defaultPrice,
         totalBeds: Math.ceil(cap / 2),
         roomPrefix: 'B',
         startNum: 201,
         genderCategory: 'Executive & Quiet Wing',
         roomTypes: [
-          { type: '3 in a Room (Standard)', priceGHS: defaultPrice, spaces: Math.ceil(cap / 2) }
+          { type: '3 in a Room (Standard)', spaces: Math.ceil(cap / 2) }
         ],
         amenities: property.facilities || property.amenities || ['Fiber-Optic Wi-Fi', 'Standby Generator', 'Security']
       }
@@ -957,7 +948,7 @@ export default function PageManagerDashboard() {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <button onClick={() => setShowAccountSettingsModal(true)} className="p-1.5 text-slate-400 hover:text-blue-600 rounded-lg">
+          <button onClick={() => setShowEditProfileModal(true)} title="Manager Profile Settings" className="p-1.5 text-slate-400 hover:text-blue-600 rounded-lg">
             <Settings className="w-4 h-4" />
           </button>
           <button onClick={() => setShowLogoutConfirm(true)} className="flex items-center gap-1.5 px-2 py-1.5 text-[10px] font-bold text-rose-600 hover:bg-rose-50 rounded-lg" title="Sign Out">
@@ -1037,7 +1028,7 @@ export default function PageManagerDashboard() {
 
       {isSidebarTopNav && <nav className="hidden lg:block fixed top-3 left-1/2 -translate-x-1/2 z-50 w-[min(760px,calc(100vw-3rem))] bg-white/72 backdrop-blur-xl border border-white/80 rounded-2xl shadow-lg"><div className="flex items-center gap-1 px-2 py-1.5">
         {/* Profile avatar button — left end */}
-        <button onClick={() => setShowAccountSettingsModal(true)} title="Account Settings" className="shrink-0 flex flex-col items-center gap-0.5 py-1 px-1.5 rounded-xl hover:bg-white/70 cursor-pointer">
+        <button onClick={() => setShowEditProfileModal(true)} title="Manager Profile Settings" className="shrink-0 flex flex-col items-center gap-0.5 py-1 px-1.5 rounded-xl hover:bg-white/70 cursor-pointer">
           <img src={user?.photo || user?.avatar || (user as any)?.photoUrl || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80'} alt="Profile" className="w-6 h-6 rounded-full object-cover ring-2 ring-white shadow-sm" />
           <span className="text-[9px] font-bold text-slate-500">Profile</span>
         </button>
@@ -1083,8 +1074,8 @@ export default function PageManagerDashboard() {
             {!isSidebarCollapsed && (
               <div className="flex items-center gap-1 shrink-0">
                 <button
-                  onClick={() => setShowAccountSettingsModal(true)}
-                  title="Manager Account Settings"
+                  onClick={() => setShowEditProfileModal(true)}
+                  title="Manager Profile Settings"
                   className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-100/50 rounded-lg transition-colors cursor-pointer"
                 >
                   <Settings className="w-3.5 h-3.5" />
@@ -1515,14 +1506,10 @@ export default function PageManagerDashboard() {
                           </p>
                         </div>
 
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                           <div className="p-4 bg-white border border-slate-100 rounded-2xl shadow-sm text-center">
                             <span className="text-[10px] font-bold uppercase text-slate-400">Total Beds</span>
                             <span className="block text-xl font-black text-slate-900 mt-0.5">{(p.totalCapacity || 1200).toLocaleString()}</span>
-                          </div>
-                          <div className="p-4 bg-white border border-slate-100 rounded-2xl shadow-sm text-center">
-                            <span className="text-[10px] font-bold uppercase text-slate-400">Annual Fee</span>
-                            <span className="block text-xl font-black text-blue-600 mt-0.5">GHS {(p.price || 35000).toLocaleString()}</span>
                           </div>
                           <div className="p-4 bg-white border border-slate-100 rounded-2xl shadow-sm text-center">
                             <span className="text-[10px] font-bold uppercase text-slate-400">Total Blocks</span>
@@ -2947,7 +2934,6 @@ export default function PageManagerDashboard() {
                           className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:border-blue-600 focus:bg-white transition-all"
                         >
                           <option value="Room Capacity Adjustment">Room Capacity Adjustment</option>
-                          <option value="Fee Rate & Pricing Update">Fee Rate & Pricing Update</option>
                           <option value="Property Details Revision">Property Details Revision</option>
                           <option value="Verification & Compliance">Verification & Compliance</option>
                           <option value="Urgent Maintenance / Inspection">Urgent Maintenance / Inspection</option>
@@ -3269,19 +3255,12 @@ export default function PageManagerDashboard() {
       )}
 
       {/* MANAGER PROFILE EDIT MODAL */}
-      <ManagerProfileModal
+      {showEditProfileModal && <ManagerProfileModal
         isOpen={showEditProfileModal}
         onClose={() => setShowEditProfileModal(false)}
         currentUser={user}
         onSave={handleSaveProfile}
-      />
-
-      {/* MANAGER ACCOUNT SETTINGS MODAL */}
-      <ManagerAccountSettingsModal
-        isOpen={showAccountSettingsModal}
-        onClose={() => setShowAccountSettingsModal(false)}
-        currentUser={user}
-      />
+      />}
 
       {/* ======================================================== */}
       {/* MODAL: DIGITAL ROOM KEY DISPATCH MODAL                    */}

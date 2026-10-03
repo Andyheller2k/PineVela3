@@ -878,68 +878,32 @@ export default function Page1Public({
                     </h2>
 
                     {(() => {
-                      const customBlocks = Array.isArray((selectedHostel as any).blocksList) && (selectedHostel as any).blocksList.length > 0
+                      const registeredBlocks = Array.isArray((selectedHostel as any).blocksList) && (selectedHostel as any).blocksList.length > 0
                         ? (selectedHostel as any).blocksList
-                        : Array.isArray(selectedHostel.blocks) && selectedHostel.blocks.length > 0
-                        ? selectedHostel.blocks
-                        : Array.isArray((selectedHostel as any).roomTypes) && (selectedHostel as any).roomTypes.length > 0
-                        ? (selectedHostel as any).roomTypes
-                        : null;
-
-                      if (customBlocks && customBlocks.length > 0) {
-                        return (
-                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pt-2">
-                            {customBlocks.map((blk: any, bIdx: number) => {
-                              const blockName = blk.name || blk.title || `Block ${bIdx + 1}`;
-                              const blockPrice = Number(blk.pricePerBlock || blk.price || selectedHostel.price || 3500);
-                              const bedsCount = blk.bedsPerRoom || blk.capacity || 2;
-                              return (
-                                <div key={bIdx} className="p-4 bg-white/80 backdrop-blur-md border border-slate-200/80 rounded-2xl text-center space-y-2 shadow-xs relative overflow-hidden">
-                                  {bIdx === 0 && (
-                                    <span className="absolute top-0 right-0 bg-blue-900 text-white text-[9px] font-black px-2 py-0.5 rounded-bl-lg">POPULAR</span>
-                                  )}
-                                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">
-                                    {blk.roomPrefix ? `Prefix ${blk.roomPrefix}` : `Option ${String.fromCharCode(65 + bIdx)}`}
-                                  </span>
-                                  <h4 className="text-sm font-black text-slate-950">{blockName}</h4>
-                                  <p className="text-xs text-blue-900 font-black">
-                                    GHS {blockPrice.toLocaleString()} <span className="text-[10px] text-slate-500 font-normal">/ session</span>
-                                  </p>
-                                  <p className="text-[10px] text-slate-700 font-bold">
-                                    {bedsCount === 1 ? '1 Bed / Private Room' : `${bedsCount} Beds per Room`} ({blk.totalRooms || 20} rooms)
-                                  </p>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        );
-                      }
-
-                      // Fallback: derive options dynamically from registered base hostel price
-                      const basePrice = Number(selectedHostel.price || (selectedHostel as any).defaultFee || 3500);
+                        : Array.isArray(selectedHostel.blocks) ? selectedHostel.blocks : [];
+                      const roomOptions = registeredBlocks.length > 0 ? registeredBlocks :
+                        Array.isArray((selectedHostel as any).roomTypes) ? (selectedHostel as any).roomTypes : [];
+                      if (roomOptions.length === 0) return <p className="text-sm text-slate-600">Room configuration has not been provided.</p>;
                       return (
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
-                          <div className="p-4 bg-white/80 backdrop-blur-md border border-slate-200/80 rounded-2xl text-center space-y-2 shadow-xs">
-                            <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">Option A</span>
-                            <h4 className="text-sm font-black text-slate-950">1-in-a-Room Private</h4>
-                            <p className="text-xs text-blue-900 font-black">GHS {Math.round(basePrice * 1.4).toLocaleString()}</p>
-                            <p className="text-[10px] text-slate-700 font-bold">Private washroom & study desk</p>
-                          </div>
-
-                          <div className="p-4 bg-blue-50/80 backdrop-blur-md border border-blue-200 rounded-2xl text-center space-y-2 relative overflow-hidden shadow-xs">
-                            <span className="absolute top-0 right-0 bg-blue-900 text-white text-[9px] font-black px-2 py-0.5 rounded-bl-lg">POPULAR</span>
-                            <span className="text-[10px] font-black uppercase tracking-wider text-blue-800">Option B</span>
-                            <h4 className="text-sm font-black text-slate-950">2-in-a-Room Shared</h4>
-                            <p className="text-xs text-blue-900 font-black">GHS {basePrice.toLocaleString()}</p>
-                            <p className="text-[10px] text-slate-700 font-bold">En-suite washroom & dual wardrobes</p>
-                          </div>
-
-                          <div className="p-4 bg-white/80 backdrop-blur-md border border-slate-200/80 rounded-2xl text-center space-y-2 shadow-xs">
-                            <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">Option C</span>
-                            <h4 className="text-sm font-black text-slate-950">4-in-a-Room Economy</h4>
-                            <p className="text-xs text-blue-900 font-black">GHS {Math.round(basePrice * 0.75).toLocaleString()}</p>
-                            <p className="text-[10px] text-slate-700 font-bold">Spacious layout & shared facilities</p>
-                          </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pt-2">
+                          {roomOptions.map((block: any, index: number) => (
+                            <div key={block.id || index} className="p-4 bg-white/80 backdrop-blur-md border border-slate-200/80 rounded-2xl space-y-3 shadow-xs">
+                              <h4 className="text-sm font-black text-slate-950">{block.name || block.blockName || block.typeName || block.type || `Block ${index + 1}`}</h4>
+                              {block.gender && <p className="text-xs font-bold text-blue-900">{block.gender} Block</p>}
+                              {Array.isArray(block.roomTypes) && block.roomTypes.length > 0 ? block.roomTypes.map((room: any, roomIndex: number) => (
+                                <div key={room.id || roomIndex} className="text-xs text-slate-700">
+                                  <span className="font-bold">{room.typeName || room.type}</span>
+                                  {room.totalRooms != null && <span> · {room.totalRooms} rooms</span>}
+                                  {room.bedsPerRoom != null && <span> · {room.bedsPerRoom} beds per room</span>}
+                                </div>
+                              )) : (
+                                <p className="text-xs text-slate-700">
+                                  {block.totalRooms != null && <span>{block.totalRooms} rooms</span>}
+                                  {block.bedsPerRoom != null && <span> · {block.bedsPerRoom} beds per room</span>}
+                                </p>
+                              )}
+                            </div>
+                          ))}
                         </div>
                       );
                     })()}

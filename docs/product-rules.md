@@ -171,6 +171,14 @@ workflow. Resident access uses the supported room-key activation flow. Marketpla
 bookings and meeting appointments are separate supported features. Historical housing
 applications are retained only in a private inactive archive during migration.
 
+## Residence Configuration and Profile Controls
+
+Room-type selection determines beds per room; registration does not expose a separate
+bed-count input. Residence registration, editing, public details and admin inspection
+do not set or display room prices. Legacy database monetary fields remain untouched.
+Manager navigation profile controls open the existing profile editor; the placeholder
+account-preferences panel is removed.
+
 ## Maintenance Workflow
 
 Only the active staff member assigned to a maintenance issue may accept, decline, request

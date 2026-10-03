@@ -88,12 +88,12 @@ export interface HostelRegistrationDraft {
   cancellationPolicy: string;
   customRules: string[];
 
-  // Step 8: Pricing & Payment
-  defaultFee: number;
+  // Stay cycle; optional monetary fields retained for legacy stored drafts only.
+  defaultFee?: number;
   paymentFrequency: 'Per Academic Year' | 'Per Semester' | 'Monthly' | 'Quarterly' | 'Per Night' | 'Per Day' | 'Per Week' | 'Per Year' | 'Bi-Annually' | 'Weekend Package' | string;
-  securityDeposit: number;
-  applicationFee: number;
-  currency: 'GHS' | 'USD' | 'EUR' | 'GBP';
+  securityDeposit?: number;
+  applicationFee?: number;
+  currency?: 'GHS' | 'USD' | 'EUR' | 'GBP';
 
   // Step 9: Manager Assignment
   assignedManagerId?: string;

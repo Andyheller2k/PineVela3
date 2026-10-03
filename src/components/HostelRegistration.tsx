@@ -198,12 +198,8 @@ export default function HostelRegistration({
     cancellationPolicy: 'Full refund 14 days before semester commencement, 50% thereafter',
     customRules: [],
 
-    // Step 7: Pricing
-    defaultFee: 3500,
+    // Stay cycle
     paymentFrequency: 'Per Academic Year',
-    securityDeposit: 300,
-    applicationFee: 50,
-    currency: 'GHS',
 
     // Step 8: Manager
     assignedManagerId: '',
@@ -250,9 +246,10 @@ export default function HostelRegistration({
       if (saved) {
         const parsed = JSON.parse(saved);
         if (parsed && typeof parsed === 'object') {
+          const { defaultFee, securityDeposit, applicationFee, currency, ...currentDraft } = parsed;
           setFormData((prev) => ({
             ...initialDraftState,
-            ...parsed,
+            ...currentDraft,
             blocksList: Array.isArray(parsed.blocksList) && parsed.blocksList.length > 0 ? parsed.blocksList : initialDraftState.blocksList,
             facilities: Array.isArray(parsed.facilities) ? parsed.facilities : initialDraftState.facilities,
             customRules: Array.isArray(parsed.customRules) ? parsed.customRules : initialDraftState.customRules
@@ -910,7 +907,6 @@ export default function HostelRegistration({
                         let defaultMaxStay = '1 Academic Year';
                         let defaultCancellation = 'Full refund 14 days before semester commencement, 50% thereafter';
                         let defaultCurfew = '10:00 PM (Hostel main gate lock)';
-                        let defaultPrice = 3500;
 
                         if (val === 'Inn') {
                           defaultHType = 'Guesthouse / Inn';
@@ -919,7 +915,6 @@ export default function HostelRegistration({
                           defaultMaxStay = '14 Nights';
                           defaultCancellation = 'Free cancellation up to 48 hours prior to check-in date.';
                           defaultCurfew = '11:00 PM (Host / Manager on duty)';
-                          defaultPrice = 180;
                         } else if (val === 'Hotel') {
                           defaultHType = 'Hotel / Commercial';
                           defaultFreq = 'Per Night';
@@ -927,7 +922,6 @@ export default function HostelRegistration({
                           defaultMaxStay = '30 Nights';
                           defaultCancellation = 'Free cancellation up to 24 hours prior to check-in date.';
                           defaultCurfew = '24/7 Front Desk & Electronic Keycard Access';
-                          defaultPrice = 250;
                         } else if (val === 'Estate') {
                           defaultHType = 'Residential Estate / Apartment';
                           defaultFreq = 'Monthly';
@@ -935,7 +929,6 @@ export default function HostelRegistration({
                           defaultMaxStay = '1 Year';
                           defaultCancellation = '1-month advance written notice required prior to lease termination.';
                           defaultCurfew = '24/7 Gated Security & Perimeter Patrol';
-                          defaultPrice = 1500;
                         }
 
                         updateFormData({ 
@@ -945,8 +938,7 @@ export default function HostelRegistration({
                           minStay: defaultMinStay,
                           maxStay: defaultMaxStay,
                           cancellationPolicy: defaultCancellation,
-                          curfew: defaultCurfew,
-                          defaultFee: defaultPrice
+                          curfew: defaultCurfew
                         });
                       }}
                       className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-900 text-slate-800"
@@ -1282,7 +1274,7 @@ export default function HostelRegistration({
                               {(block.roomTypes || []).map((rt, rtIdx) => (
                                 <div key={rt.id} className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs grid grid-cols-1 sm:grid-cols-12 gap-3 items-center">
                                   {/* Room Type Selector / Name */}
-                                  <div className="sm:col-span-4 space-y-1">
+                                  <div className="sm:col-span-7 space-y-1">
                                     <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">
                                       Room Type / Bedspace #{rtIdx + 1}
                                     </label>
@@ -1303,23 +1295,8 @@ export default function HostelRegistration({
                                     </select>
                                   </div>
 
-                                  {/* Bedspaces per room */}
-                                  <div className="sm:col-span-2 space-y-1">
-                                    <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">
-                                      Beds / Room
-                                    </label>
-                                    <input
-                                      type="text"
-                                      inputMode="numeric"
-                                      value={renderNumberInputValue(rt.bedsPerRoom)}
-                                      onChange={(e) => handleRoomTypeChange(block.id, rt.id, 'bedsPerRoom', parseCleanNumberInput(e.target.value))}
-                                      placeholder="Beds/Rm"
-                                      className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-800"
-                                    />
-                                  </div>
-
                                   {/* Total Rooms of this type */}
-                                  <div className="sm:col-span-2 space-y-1">
+                                  <div className="sm:col-span-4 space-y-1">
                                     <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">
                                       No. of Rooms
                                     </label>
@@ -1357,7 +1334,7 @@ export default function HostelRegistration({
                   </div>
                 </div>
 
-                {/* Capacity & Price Breakdown Card */}
+                {/* Capacity Breakdown Card */}
                 <div className="p-4 bg-blue-50/70 rounded-2xl border border-blue-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-blue-950">
                   <div className="space-y-0.5">
                     <span className="font-extrabold text-sm block">

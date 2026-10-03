@@ -36,7 +36,7 @@ export default function EditResidenceModal({
 }: EditResidenceModalProps) {
   if (!isOpen || !residence) return null;
 
-  const [activeSection, setActiveSection] = useState<'basics' | 'pricing' | 'blocks' | 'amenities' | 'rules' | 'manager'>('basics');
+  const [activeSection, setActiveSection] = useState<'basics' | 'stay' | 'blocks' | 'amenities' | 'rules' | 'manager'>('basics');
   const [isSaving, setIsSaving] = useState(false);
 
   // Form State
@@ -48,8 +48,6 @@ export default function EditResidenceModal({
   const [location, setLocation] = useState(residence.location || '');
   const [digitalAddress, setDigitalAddress] = useState(residence.digitalAddress || residence.digital_address || 'GA-183-9022');
   const [imageUrl, setImageUrl] = useState(residence.image || residence.imageUrl || '');
-  const [price, setPrice] = useState(residence.price || 35000);
-  const [securityDeposit, setSecurityDeposit] = useState(residence.securityDeposit || 2000);
   const [totalCapacity, setTotalCapacity] = useState(residence.totalCapacity || residence.capacity || 1200);
   const [totalBlocks, setTotalBlocks] = useState(residence.totalBlocks || 2);
   
@@ -139,8 +137,6 @@ export default function EditResidenceModal({
         digital_address: digitalAddress.trim(),
         image: imageUrl.trim() || residence.image,
         imageUrl: imageUrl.trim() || residence.imageUrl,
-        price: Number(price),
-        securityDeposit: Number(securityDeposit),
         totalCapacity: Number(totalCapacity),
         totalBlocks: Number(totalBlocks),
         facilities: amenities,
@@ -191,7 +187,7 @@ export default function EditResidenceModal({
         <div className="flex border-b border-slate-200 bg-slate-50 px-6 overflow-x-auto shrink-0 gap-2 py-2">
           {[
             { id: 'basics', label: 'Basic Info' },
-            { id: 'pricing', label: 'Pricing & Deposit' },
+            { id: 'stay', label: 'Stay Cycle' },
             { id: 'blocks', label: 'Blocks & Capacity' },
             { id: 'amenities', label: 'Amenities & Facilities' },
             { id: 'rules', label: 'Rules & Policies' },
@@ -277,13 +273,13 @@ export default function EditResidenceModal({
             </div>
           )}
 
-          {/* SECTION 2: PRICING */}
-          {activeSection === 'pricing' && (
+          {/* SECTION 2: STAY CYCLE */}
+          {activeSection === 'stay' && (
             <div className="space-y-4 animate-fadeIn">
-              <h4 className="text-sm font-bold text-slate-900 border-b pb-2">Pricing Structure & Payment Terms</h4>
+              <h4 className="text-sm font-bold text-slate-900 border-b pb-2">Stay Cycle</h4>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="md:col-span-2">
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Billing Frequency</label>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Stay Cycle</label>
                   <select
                     value={paymentFrequency}
                     onChange={(e) => setPaymentFrequency(e.target.value)}
@@ -301,30 +297,6 @@ export default function EditResidenceModal({
                      hostelType === 'Estate' ? 'Residential lease cycle (Monthly, quarterly, or annual rent)' :
                      'Academic residence cycle (Per academic year, per semester, or monthly)'}
                   </p>
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
-                    {hostelType === 'Hotel' ? `Standard Room Rate (GHS / ${paymentFrequency})` :
-                     hostelType === 'Inn' ? `Standard Room Rate (GHS / ${paymentFrequency})` :
-                     hostelType === 'Estate' ? `Standard Unit Rent (GHS / ${paymentFrequency})` :
-                     `Standard Room Fee (GHS / ${paymentFrequency})`}
-                  </label>
-                  <input
-                    type="number"
-                    required
-                    value={price}
-                    onChange={(e) => setPrice(Number(e.target.value))}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:border-blue-600 focus:bg-white"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Refundable Security Deposit (GHS)</label>
-                  <input
-                    type="number"
-                    value={securityDeposit}
-                    onChange={(e) => setSecurityDeposit(Number(e.target.value))}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:border-blue-600 focus:bg-white"
-                  />
                 </div>
               </div>
             </div>

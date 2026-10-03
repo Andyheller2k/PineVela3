@@ -36,8 +36,8 @@ export default function ManagerProfileModal({
 
   const [name, setName] = useState(currentUser?.name || '');
   const [phone, setPhone] = useState(currentUser?.phone || '');
-  const [organization, setOrganization] = useState(currentUser?.organization || 'PineVela Property Holdings');
-  const [roleTitle, setRoleTitle] = useState(currentUser?.roleTitle || 'Residence Operations Manager');
+  const [organization, setOrganization] = useState(currentUser?.organization || '');
+  const [roleTitle, setRoleTitle] = useState(currentUser?.roleTitle || '');
   const [photo, setPhoto] = useState(currentUser?.photo || currentUser?.avatar || currentUser?.photoUrl || PRESET_AVATARS[0]);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -96,6 +96,7 @@ export default function ManagerProfileModal({
           </div>
           <button 
             onClick={onClose}
+            aria-label="Close profile settings"
             className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center transition-colors cursor-pointer"
           >
             <X className="w-4 h-4" />
