@@ -48,7 +48,7 @@ export function checkDeliveryPin(order: any, submitted: unknown): MarketOrderErr
 }
 
 const PUBLIC_ORDER_FIELDS = ['id', 'productId', 'productTitle', 'productPrice', 'priceCategory', 'priceCategoryId', 'productImage',
-  'quantity', 'totalAmount', 'buyerId', 'buyerEmail', 'buyerName', 'buyerPhone', 'sellerId', 'sellerEmail', 'storeId', 'storeName',
+  'quantity', 'totalAmount', 'platformCommissionRate', 'platformCommissionAmount', 'buyerId', 'buyerEmail', 'buyerName', 'buyerPhone', 'sellerId', 'sellerEmail', 'storeId', 'storeName',
   'university', 'meetingLocation', 'meetingLatitude', 'meetingLongitude', 'serviceLocationOption', 'sellerConfirmed',
   'sellerAgreedLocation', 'sellerAgreedAt', 'status', 'paymentMethod', 'createdAt', 'updatedAt'];
 function redactPinText(value: unknown, pin: unknown) {

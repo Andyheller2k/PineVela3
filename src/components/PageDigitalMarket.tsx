@@ -1,3 +1,4 @@
+import OnboardingProgress, { STORE_SETUP_STEPS } from './OnboardingProgress';
 import TopNavBadge from './TopNavBadge';
 import MarketPhotoUpload from './MarketPhotoUpload';
 import { useNotifications } from '../context/NotificationContext';
@@ -1238,23 +1239,10 @@ export default function PageDigitalMarket() {
         </header>
 
         <main className="max-w-2xl mx-auto px-4 pt-10">
-          <div className="bg-white rounded-3xl border border-blue-100 shadow-xl p-8 space-y-8 backdrop-blur-md relative overflow-hidden">
+          <div className="onboarding-fields bg-white rounded-3xl border border-blue-100 shadow-xl p-8 space-y-8 backdrop-blur-md relative overflow-hidden">
             <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-2xl pointer-events-none" />
 
-            {/* Steps Eyebrow */}
-            <div className="flex items-center justify-between border-b border-slate-100 pb-6">
-              <div>
-                <span className="text-[10px] font-extrabold uppercase text-blue-600 tracking-widest">Store Onboarding</span>
-                <h1 className="text-xl font-black text-slate-900 mt-1">Activate Your Campus Storefront</h1>
-              </div>
-              <div className="flex items-center gap-1.5 text-xs font-black">
-                <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] ${onboardingStep >= 1 ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-400'}`}>1</span>
-                <ChevronRight className="w-3.5 h-3.5 text-slate-300" />
-                <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] ${onboardingStep >= 2 ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-400'}`}>2</span>
-                <ChevronRight className="w-3.5 h-3.5 text-slate-300" />
-                <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] ${onboardingStep >= 3 ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-400'}`}>3</span>
-              </div>
-            </div>
+            <OnboardingProgress steps={STORE_SETUP_STEPS} step={onboardingStep} label="Store activation" />
 
             {/* STEP 1: MARKET DETAILS */}
             {onboardingStep === 1 && (

@@ -354,3 +354,20 @@ the real data directory, including configured custom directories and recovery ar
 Backup restoration is offline, preserves the original, and revokes restored sessions and
 pending challenges rather than silently reviving old credentials. PostgreSQL transactions
 and recipient/ownership RLS remain required for future multi-worker deployments.
+
+## Administrator destructive operations
+
+System wipes require exactly five active, independently enrolled administrator approvals
+bound to an immutable, expiring proposal and server-derived deletion preview. Administrator
+#1 explicitly executes after quorum; single-password wipe routes are retired. Membership
+changes invalidate proposals. Removal/key recovery need independent approval, active admin
+status is checked on every request, and generic resets cannot take over another admin.
+Encrypted verified recovery and an external audit precede deletion; partial execution fails
+closed across restart. See [setup, boundaries and recovery](admin-governance.md).
+
+
+Administrator platform settings and profile changes additionally require a separate,
+owner-bound settings key; wipe keys cannot authorize them. Key/password attempts are
+limited and lost-key resets require two other administrators. Maintenance authorization
+is server-enforced for all non-admin roles and existing sessions, with administrators
+retaining access to restore service. See [administrator setup](admin-governance.md).

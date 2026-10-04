@@ -1,0 +1,153 @@
+# Administrator approvals and wipe recovery
+
+This flow currently uses the existing single-writer JSON backend. No real accounts,
+approval keys, or wipe proposals are seeded. Administrators enroll from their own accounts.
+
+## Setup
+
+1. Sign in as Andyheller2k and open **Shared approvals / Admin Approvals**.
+2. Verify administrator #1 and enroll your private approval key using your current login
+   password. Save the generated key securely; it is shown once and stored only as a hash.
+3. Invite the other founders into available slots, using distinct administrator email
+   addresses. Share each private invitation with its intended recipient through a trusted
+   channel. After creating an invitation, its private URL appears directly below the form
+   with a **Copy invitation link** button and is scrolled into view. Invitations expire in
+   24 hours, reserve a slot, and are redeemed once. The URL is shown only in the creating
+   browser session; if lost, cancel the reserved invitation and create a new one.
+4. Each recipient chooses their own login password and receives their own private key.
+   Existing administrators enroll their key while signed in. The application does not send
+   invitation emails or create placeholder founder accounts.
+5. Exactly five active administrators with enrolled keys are required to submit or execute
+   a wipe. Suspended, vacant or unenrolled slots do not reduce this threshold.
+
+On first initialization, Andyheller2k's existing administrator account receives slot #1.
+`PINEVELA_MAIN_ADMIN_ID` may instead identify an existing administrator at initialization.
+The persisted ID governs subsequent authorization; changing a profile email or environment
+value does not transfer authority. A sole bootstrap administrator becomes #1 when Andy's
+account does not exist. Multiple existing administrators without either selection require
+offline reconciliation. More than five existing admins cause startup to fail safely.
+
+Administrator #1 may suspend/reactivate another admin immediately; suspension revokes its
+sessions. Permanent account removal requires #1's key plus a different existing admin's
+key approval. A key reset requires two active admins other than the key owner, so other
+founders can recover a lost #1 key without knowing it. The owner then enrolls a new key
+with their login password. #1 cannot be suspended/deleted. Generic account/password APIs
+cannot delete an administrator or reset another admin's login password.
+
+## Wipes
+
+- Checkbox scopes: hostels, markets, managers (including staff), resident accounts, primary
+  user accounts; **total** is exclusive and preserves administrators and governance records.
+- A server-derived preview lists affected collections, dependent records, uploaded files,
+  and cascade rules. Manager deletion removes owned hostels to avoid orphaned ownership.
+  Hostel deletion removes its activated room accounts and staff, preserving unrelated
+  primary users. Primary account deletion cascades to its linked accounts and properties.
+- A reason and private key submit an immutable proposal and count the proposer as 1/5.
+  Every dashboard sees the proposer, account ID, numbered voter roster, decisions and times.
+- Each other administrator independently approves with their own key. Any rejection
+  cancels. Proposals expire after 24 hours. Duplicate votes and replay are rejected.
+- Admin membership/key changes invalidate live proposals. Changes to selected records or
+  media invalidate the deletion preview; a fresh proposal and five approvals are required.
+- After 5/5, #1 must enter their key and **WIPE APPROVED DATA** to execute explicitly.
+  Approving the fifth vote never automatically deletes data.
+- Execution drains active requests/async handlers (including handlers whose clients have
+  disconnected), rechecks authorization/quorum/preview, verifies an encrypted database/media
+  backup, stages media outside public uploads, commits once, and removes staged files.
+  Concurrent requests cannot execute the same proposal twice. Shared retained images remain.
+- The old `/api/admin/clear-all-registered-accounts` endpoint returns 410. Old
+  `ADMIN_DESTRUCTIVE_*` variables have no authorization effect.
+
+Approval-key failures are limited to five per account per 15 minutes, persisted across
+restarts. Existing IP/request/body/credential limits also apply. Approval hashes and
+invitation hashes never appear in API responses. Keys are never put in browser storage.
+
+## Backup and offline recovery
+
+`PINEVELA_WIPE_RECOVERY_DIR` defaults to `.security/wipe-recovery`, outside public uploads.
+The directory requires mode 700; its generated `backup.key`, authenticated AES-256-GCM
+archives and minimal `audit.jsonl` require mode 600. Development static serving denies these
+paths. Keep a separate secure copy of **both the key and archives outside this host**;
+encryption does not protect them from an attacker who controls the same host and key.
+Never commit the recovery directory. Custom recovery directories must also remain untracked.
+
+Online recovery is bounded: 64 MiB selected media, 32 MiB individual files, 128 MiB archive.
+Larger operations require an offline archival/migration plan. Symlinks and unsafe paths are
+rejected. Partial/crashed execution leaves a durable `execution-blocked` marker, which
+blocks writes even after restart; inspect it offline rather than deleting it blindly.
+
+Stop the application, retain recovery files, and restore a verified archive with:
+
+```sh
+npm run admin:restore-wipe -- <proposal-id> --confirm-restore
+```
+
+The tool takes the same kernel writer lease, verifies/decrypts the archive, restores media,
+quarantines the current database, and atomically restores the snapshot. It refuses to
+overwrite changed media or an existing quarantine. It revokes all restored sessions,
+invalidates pending approvals, drops invitations, and appends a recovery audit. Login
+passwords/private approval keys remain valid, but everyone must sign in again.
+After an interrupted recovery, inspect the archive, staging directory, database and
+quarantine before retrying. Do not serve the staging directory or recovery directory.
+
+Governance records and private recovery artifacts intentionally survive total wipes.
+The JSON writer also retains its protected local `.bak`; recovery copies are not active
+operational collections. No Supabase database is wiped by this implementation. Port these
+invariants to PostgreSQL transactions, server-side Auth identities and private RLS policies
+before migrating this flow or enabling multiple workers.
+
+## Verification
+
+- `tests/adminGovernance.test.ts`: keys, quorum, state transitions, cascades, encrypted media
+  backup, expiry, invalidation, rate limits, independent replacement/reset, failure markers.
+- `tests/adminGovernance.integration.test.ts`: direct Express role/session checks, retired
+  bypass, suspension/login, five votes, concurrent execution, real persistence/restarts,
+  encrypted offline restore, revoked old sessions and successful fresh admin login.
+- `node tests/adminGovernance.browser.cjs`: production browser at 375/768/1440px, sidebar/top
+  navigation, number tags, shared proposals, checkboxes, preview, private-key clearing and
+  independent mobile approval; checks console/API errors and horizontal overflow.
+
+All tests use disposable databases. Never run a real wipe as a verification shortcut.
+
+
+## Platform settings and administrator photographs
+
+Open **Admin Settings** and enroll your own settings key with your current login password.
+The cryptographic settings key is displayed once and stored only as a purpose-bound hash.
+It is independent of the wipe approval key. Every settings update, administrator password change and
+profile change requires the authenticated owner's settings key. Five incorrect attempts
+lock the key for 15 minutes; password enrollment is also limited. A lost settings key
+requires two other administrators to approve its reset under **Admin Approvals**. The
+owner then signs in and enrolls again; resetting this key preserves the wipe key.
+
+- Settings are server-validated, persisted and synchronized to open portals. Announcements
+  render as plain text across non-admin portals; clear the text to remove them.
+- Maintenance blocks existing non-admin sessions, non-admin logins, signup and other
+  account operations before body parsing. Administrators remain able to log in and disable
+  it with their own settings keys. Public settings, health, invalidation streams, logout
+  and secret administrator-invitation acceptance remain available. These public streams
+  contain no account records and retain their connection/resource limits.
+- New marketplace applications snapshot the configured registration fee. Existing quoted
+  fees remain unchanged. Onboarding displays that stored amount. New orders snapshot the
+  configured commission for accounting without changing trusted product prices. These
+  settings do not implement payment collection or transfer; existing payment verification
+  limitations remain separate. Housing room prices are not reintroduced.
+- Choose a real JPEG, PNG or WebP profile photograph up to 5 MB and enter your settings
+  key. Existing secure upload machinery decodes/re-encodes it to PNG (800 pixel maximum),
+  validates content, applies quotas and uses generated filenames. Each administrator may
+  attach only their own uploaded image. Profile photographs persist across logout/restart.
+
+
+Settings verification commands:
+
+```sh
+node --import tsx tests/adminSettings.test.ts
+node --import tsx tests/adminSettings.integration.test.ts
+npm run build
+node --import tsx tests/adminSettings.browser.cjs
+```
+
+These checks use disposable databases and photographs. They verify settings-key
+separation/ownership/attempt limits/recovery, strict input validation, every non-admin
+role during maintenance, continued admin access, restart persistence, real image content
+checks, responsive forms and live announcement/maintenance updates. No operational
+maintenance setting or administrator credentials are changed by the tests.

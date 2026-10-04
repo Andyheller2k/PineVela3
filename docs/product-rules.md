@@ -188,3 +188,21 @@ resident must retain active room access to confirm a completed repair or request
 Resident reports require resident sign-off before management closure; managers cannot
 manufacture that confirmation. Closed issues reject further workflow changes, and resident
 sign-off may create only one repair review per completion.
+
+## Founder administration
+
+At most five administrators hold stable numbered slots. Andyheller2k is administrator #1.
+Each has a separate private approval key. Destructive proposals use checkbox scopes, show
+all dependent deletions, and require all five independent approvals. Any rejection cancels;
+membership/data changes invalidate approval. Administrator #1 explicitly confirms execution.
+Total wipe preserves administrators, governance and protected recovery/audit artifacts.
+See [administrator governance](admin-governance.md) for onboarding and recovery.
+
+
+Onboarding uses a shared icon stepper and blue filling progress bar across account,
+room, manager, residence, staff, officer, marketplace and administrator flows. Progress
+reflects the active phase and does not bypass existing validation or approval rules.
+Administrator manual resident enrollment is retired; resident accounts activate through
+the authenticated room-key flow. The removed wizard only wrote browser-local records and
+used the shared activity endpoint; it had no dedicated backend creation endpoint. Actual
+resident directories and room activation APIs remain supported.

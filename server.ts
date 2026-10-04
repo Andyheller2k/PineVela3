@@ -1,3 +1,6 @@
+import { AdminGovernance, GovernanceError, initializeAdminGovernance, activeAdministrator } from './adminGovernance.js';
+import { publicPlatformSettings, MAINTENANCE_MESSAGE } from './platformSettings.js';
+import { installAdminGovernance } from './adminGovernanceRoutes.js';
 import { DatabasePersistenceError } from './jsonStoreSafety.js';
 import { realpathSync } from 'node:fs';
 import { meetingVisible, notificationVisible, notificationReaderKey, notificationForActor } from './recordAccessSecurity.js';
@@ -5,7 +8,7 @@ import { ownsMarketStore } from './marketOwnership.js';
 import { marketMediaFields, MarketMediaError } from './marketMediaSecurity.js';
 import { createSessionToken, setRecordSession, clearRecordSession, sessionMatches, requestSessionToken, revokeMatchingSessions, cookieSessionRequest, setSessionCookie, clearSessionCookie, sessionOriginGuard, sessionLifetimeMs } from './sessionSecurity.js';
 import { createImageStorage, ImageUploadError } from './imageUploadSecurity.js';
-import { createResourceProtection, EventConnections, guardAsyncRoutes, ResourceLimitError, resourceFailure, trustedProxyAddresses, UPLOAD_ROUTE, MARKET_UPLOAD_ROUTE, isImageUploadRoute } from './resourceSecurity.js';
+import { createResourceProtection, EventConnections, guardAsyncRoutes, ResourceLimitError, resourceFailure, trustedProxyAddresses, UPLOAD_ROUTE, MARKET_UPLOAD_ROUTE, ADMIN_PROFILE_UPLOAD_ROUTE, isImageUploadRoute } from './resourceSecurity.js';
 import { installMarketRatings, verifiedMarketRatings, publicMarketRating, ratingSummary } from './marketRatingSecurity.js';
 import { issueDeliveryPin, checkDeliveryPin, publicMarketOrder, orderAction, authorizeOrderAction, isOrderBuyer, isOrderSeller } from './marketOrderWorkflow.js';
 import { catalogOrderTerms, checkOrderStock, consumeOrderStock, activeOrderReservation, terminalMarketOrder, MarketOrderError } from './marketOrderSecurity.js';
@@ -73,8 +76,6 @@ import {
   dbGetVerificationAuditLogs,
   dbCreateOnboardingPayment,
   dbAssignHostelManager,
-  dbGetSettings,
-  dbUpdateSettings,
   getStoreInstance,
   dbDeleteHostel,
   dbGetBoardRequests,
@@ -185,7 +186,6 @@ const initialActivities: any[] = [];
 let hostels = [...initialHostels];
 let issueReports = [...initialIssueReports];
 let activities = [...initialActivities];
-let platformSettings: any;
 
 const initialStaff: any[] = [];
 let staff: any[] = [...initialStaff];
@@ -720,7 +720,8 @@ if (initStore) {
   unescapeObj(initStore.digitalMarketApplications);
   unescapeObj(initStore.digitalMarketProducts);
 
-  initStore.users = [...MOCK_USERS];
+  initStore.users = MOCK_USERS;
+  initializeAdminGovernance(initStore);
   if (!initStore.managerRegistrationRequests) {
     initStore.managerRegistrationRequests = [];
   }
@@ -750,7 +751,7 @@ export function syncStore(): void {
   (persistentData as any).verificationInspections = verificationInspections;
   persistentData.users = MOCK_USERS;
   persistentData.notifications = notifications;
-  persistentData.platformSettings = platformSettings;
+  persistentData.platformSettings = getStoreInstance().platformSettings;
   persistentData.staff = staff;
   persistentData.staffAuditLogs = staffAuditLogs;
   persistentData.staffReviews = staffReviews;
@@ -808,6 +809,17 @@ async function startServer() {
     const entry = [...MOCK_USERS, ...(store.users || []), ...(store.digitalMarketApplications || []), ...(store.digitalMarketStores || []), ...(store.verificationTeams || [])].find(record => sessionMatches(record, token));
     return entry ? `${accountRole(entry) || 'merchant'}:${accountId(entry)}` : '';
   };
+  let activeWrites = 0;
+  const governance = new AdminGovernance(getStoreInstance, syncManagedStore, undefined, () => Math.max(0, activeWrites - 1) + Math.max(0, app.locals.activeAsyncHandlers - 1));
+  app.use((req, res, next) => {
+    if (!req.path.startsWith('/api/') || ['HEAD', 'OPTIONS'].includes(req.method) || ['/api/health', '/api/sync/events', '/api/admin/governance'].includes(req.path)) return next();
+    if (governance.blocked && req.method !== 'GET') return res.status(503).json({ error: 'Writes are blocked pending offline wipe recovery inspection.' });
+    activeWrites++;
+    let finished = false;
+    const release = () => { if (!finished) { activeWrites--; finished = true; } };
+    res.once('finish', release); res.once('close', release);
+    next();
+  });
   const resources = await createResourceProtection({ actor: resourceActor, loginIdentity: req => {
     const store = getStoreInstance();
     const records = [...MOCK_USERS, ...(store.users || []), ...(store.digitalMarketApplications || []), ...(store.verificationTeams || [])];
@@ -835,10 +847,22 @@ async function startServer() {
   app.use((req, res, next) => req.path.toLowerCase().startsWith('/api/') || req.path.toLowerCase().startsWith('/uploads/') ? resources.beforeBody(req, res, next) : next());
   app.use('/api', sessionOriginGuard);
   app.use((req, res, next) => {
+    const route = req.path.toLowerCase().replace(/\/+$/, '');
+    if (!route.startsWith('/api/') || !publicPlatformSettings(getStoreInstance()).maintenanceMode) return next();
+    const publicRead = req.method === 'GET' && ['/api/settings', '/api/health', '/api/sync/events'].includes(route);
+    const authEntry = req.method === 'POST' && ['/api/auth/login', '/api/auth/logout', '/api/auth/admin-invitation/accept'].includes(route);
+    if (publicRead || authEntry) return next();
+    const token = requestSessionToken(req), store = getStoreInstance();
+    const admin = token && (store.users || []).find((entry: any) => accountRole(entry) === 'admin' && sessionMatches(entry, token) && activeAdministrator(store, accountId(entry)));
+    if (admin) return next();
+    return res.status(503).set({ 'Cache-Control': 'no-store', 'Retry-After': '30' }).json({ error: MAINTENANCE_MESSAGE, maintenanceMode: true });
+  });
+  app.use((req, res, next) => {
     if (req.method !== 'POST' || !isImageUploadRoute(req.path.toLowerCase().replace(/\/+$/, ''))) return next();
     res.set('Connection', 'close');
     const marketUpload = req.path.toLowerCase().replace(/\/+$/, '') === MARKET_UPLOAD_ROUTE;
-    return requireAuth(marketUpload ? ['merchant', 'admin'] : ['admin', 'manager'])(req, res, () => {
+    const adminProfileUpload = req.path.toLowerCase().replace(/\/+$/, '') === ADMIN_PROFILE_UPLOAD_ROUTE;
+    return requireAuth(adminProfileUpload ? ['admin'] : marketUpload ? ['merchant', 'admin'] : ['admin', 'manager'])(req, res, () => {
       const actor = (req as any).user;
       if (marketUpload && actor.role !== 'admin') {
         const seller = sellerStore(actor, getStoreInstance());
@@ -1105,13 +1129,7 @@ async function startServer() {
 
 
   app.get("/api/settings", async (req, res) => {
-    const settings = await dbGetSettings();
-    res.json(settings);
-  });
-
-  app.post("/api/settings", requireAuth(["admin"]), async (req: any, res) => {
-    await dbUpdateSettings(req.body);
-    res.json({ success: true });
+    res.set('Cache-Control', 'no-store').json(publicPlatformSettings(getStoreInstance()));
   });
 
   // Authentication endpoint
@@ -1132,6 +1150,7 @@ async function startServer() {
     }
 
     const allCandidates = await dbGetAllUsersByEmailOrUsername(usernameOrEmail, MOCK_USERS);
+    if (publicPlatformSettings(getStoreInstance()).maintenanceMode && !allCandidates.some(candidate => accountRole(candidate) === 'admin' && activeAdministrator(getStoreInstance(), accountId(candidate)))) return res.status(503).json({ error: MAINTENANCE_MESSAGE, maintenanceMode: true });
 
     const checkCandidateValid = async (cand: any) => {
       if (!cand) return false;
@@ -1297,6 +1316,9 @@ async function startServer() {
     if (!matched) {
       return res.status(401).json({ error: "Invalid username/email or password" });
     }
+    if (publicPlatformSettings(getStoreInstance()).maintenanceMode && accountRole(matched) !== 'admin') return res.status(503).json({ error: MAINTENANCE_MESSAGE, maintenanceMode: true });
+
+    if (accountRole(matched) === 'admin' && !activeAdministrator(getStoreInstance(), accountId(matched))) return res.status(403).json({ error: 'This administrator account is suspended or is no longer in the administrator roster.' });
 
     const banStatus = String(
       matched.user?.accountStatus ||
@@ -2065,6 +2087,8 @@ async function startServer() {
     syncStore();
   }
 
+  syncManagedStore(); // Align legacy array aliases before scoped governance mutations.
+
   // Authentication validation middleware
   function requireAuth(allowedRoles?: ("student" | "manager" | "admin" | "staff" | "user" | "resident" | string)[]) {
     return async (req: any, res: any, next: any) => {
@@ -2130,6 +2154,8 @@ async function startServer() {
 
       const rawUser = foundEntry.user ? { ...foundEntry.user } : { ...foundEntry };
       const resolvedRole = rawUser.role || foundEntry.role || 'user';
+      if (publicPlatformSettings(store).maintenanceMode && resolvedRole !== 'admin') return res.status(503).json({ error: MAINTENANCE_MESSAGE, maintenanceMode: true });
+      if (resolvedRole === 'admin' && !activeAdministrator(store, accountId(foundEntry))) return res.status(403).json({ error: 'This administrator account is suspended or is no longer in the administrator roster.' });
       if (resolvedRole === 'verification_team' && !currentReportOfficer({ ...rawUser, id: rawUser.id || foundEntry.id, role: resolvedRole, token }, store.verificationTeams || [])) {
         return res.status(403).json({ error: 'Your officer account is no longer active or its session has ended.' });
       }
@@ -2257,6 +2283,11 @@ async function startServer() {
   // Update profile details (e.g. photo, name, phone, etc.) and sync everywhere
   const handleProfileUpdate = async (req: any, res: any) => {
     try {
+      if (req.user.role === 'admin') {
+        governance.verifySettingsKey(req.user.id, req.body.settingsKey);
+        const photo = req.body.photo || req.body.avatar || req.body.photoUrl || req.body.avatarUrl || req.body.profilePicture;
+        if (photo !== undefined && !getStoreInstance().marketMedia?.some(media => media.accountId === req.user.id && media.imageUrl === photo)) return res.status(400).json({ error: 'Upload your own verified profile photograph before saving it.' });
+      }
       const { name, email, phone, photo, avatar, photoUrl, avatarUrl, profilePicture, organization, roleTitle, address, studentId, residentType, programOfStudy, department, institution } = req.body;
       const userId = req.user.id;
       const cleanEmail = (req.user.email || '').toLowerCase().trim();
@@ -2473,6 +2504,7 @@ async function startServer() {
         message: "Profile updated successfully across all records."
       });
     } catch (err: any) {
+      if (err instanceof GovernanceError) return res.status(err.status).json({ error: err.message });
       console.error("Profile update error:", err);
       return res.status(500).json({ error: err.message || "Failed to update profile" });
     }
@@ -2481,112 +2513,7 @@ async function startServer() {
   app.put("/api/auth/profile", requireAuth(), handleProfileUpdate);
   app.post("/api/auth/profile", requireAuth(), handleProfileUpdate);
 
-  // Admin endpoint to clear all registered non-admin accounts
-  app.post("/api/admin/clear-all-registered-accounts", requireAuth(["admin"]), async (req: any, res) => {
-    try {
-      const { password } = req.body || {};
-      if (!password) {
-        return res.status(400).json({ error: "Administrator authorization password is required." });
-      }
-
-      // Validate destructive action authorization without static hard-coded passwords
-      const destructiveSecret = process.env.ADMIN_DESTRUCTIVE_SECRET;
-      const destructiveHash = process.env.ADMIN_DESTRUCTIVE_PASSWORD_HASH;
-      const callerUser = MOCK_USERS.find(u =>
-        (u.id && u.id === req.user?.id) ||
-        (u.user?.id && u.user.id === req.user?.id) ||
-        (u.email && u.email.toLowerCase() === (req.user?.email || '').toLowerCase())
-      );
-
-      let isAuthorized = false;
-      if (destructiveHash && crypto.createHash('sha256').update(password).digest('hex') === destructiveHash) {
-        isAuthorized = true;
-      } else if (destructiveSecret && password === destructiveSecret) {
-        isAuthorized = true;
-      } else if (callerUser && await passwordsMatch(password, callerUser.password, callerUser.user?.password)) {
-        isAuthorized = true;
-      }
-
-      if (!isAuthorized) {
-        return res.status(403).json({ error: "Invalid clear security confirmation. Access Denied." });
-      }
-
-      // Retain existing admin accounts strictly by role
-      const adminUsers = MOCK_USERS.filter(u => {
-        if (!u) return false;
-        const role = (u.role || u.user?.role || '').toLowerCase();
-        return role === 'admin';
-      });
-
-      MOCK_USERS.length = 0;
-      MOCK_USERS.push(...adminUsers);
-
-      hostels.length = 0;
-      issueReports.length = 0;
-      activities.length = 0;
-      hostelVerifications.length = 0;
-      managerRequests.length = 0;
-      managerVerifications.length = 0;
-      verificationAuditLogs.length = 0;
-      onboardingPayments.length = 0;
-      verificationInspections.length = 0;
-      verificationTeams.length = 0;
-      notifications.length = 0;
-
-
-
-      staff.length = 0;
-
-      if (typeof staffAuditLogs !== 'undefined' && staffAuditLogs) staffAuditLogs.length = 0;
-      if (typeof staffReviews !== 'undefined' && staffReviews) staffReviews.length = 0;
-      if (typeof staffBargains !== 'undefined' && staffBargains) staffBargains.length = 0;
-      meetings.length = 0;
-
-      const store = getStoreInstance();
-      store.users = [...adminUsers];
-      store.hostels = [];
-      store.issueReports = [];
-      store.activities = [];
-      store.hostelVerifications = [];
-      store.managerRegistrationRequests = [];
-      store.managerVerifications = [];
-      (store as any).managerRequests = [];
-      (store as any).managerVerifications = [];
-      store.verificationAuditLogs = [];
-      store.verificationTeams = [];
-      store.verificationInspections = [];
-      store.notifications = [];
-      store.boardRequests = [];
-      (store as any).boardRequests = [];
-      store.meetings = [];
-      (store as any).meetings = [];
-      store.managerAccountSettings = {};
-      store.staff = [];
-      store.staffAuditLogs = [];
-      store.staffReviews = [];
-      store.staffBargains = [];
-      store.roomKeys = [];
-      store.keyDispatches = [];
-      store.managerRestrictions = [];
-      store.digitalMarketApplications = [];
-      store.digitalMarketStores = [];
-      store.digitalMarketProducts = [];
-      store.digitalMarketOrders = [];
-      store.digitalMarketMessages = [];
-
-      savePersistentStore(store);
-      syncStore();
-
-      return res.json({
-        success: true,
-        message: "The entire database (all registered users, residences, student markets, products, orders, chat messages, issue reports, key dispatches, etc.) has been cleared successfully. Admin accounts are preserved.",
-        remainingAdmins: adminUsers.map(u => u.email || u.user?.email)
-      });
-    } catch (err: any) {
-      console.error("Clear registered accounts error:", err);
-      return res.status(500).json({ error: "Failed to clear registered accounts." });
-    }
-  });
+  installAdminGovernance(app, requireAuth, governance);
 
   // Secure administrator password reset endpoint for existing accounts
   app.post("/api/admin/reset-user-password", requireAuth(["admin"]), async (req: any, res) => {
@@ -2595,6 +2522,7 @@ async function startServer() {
     if (!email || typeof password !== 'string' || password.length < 8) return res.status(400).json({ error: 'Target email and a new password of at least 8 characters are required.' });
     const roles = ['user', 'manager', 'staff', 'student', 'merchant'].filter(role => passwordRecords(email, role).length);
     const role = String(req.body.role || (roles.length === 1 ? roles[0] : '')).toLowerCase();
+    if (role === 'admin') return res.status(403).json({ error: 'Another administrator’s login password cannot be reset through this endpoint.' });
     if (!role) return res.status(400).json({ error: 'This email has multiple accounts. Specify the account role to reset.' });
     const records = passwordRecords(email, role);
     if (!records.length) return res.status(404).json({ error: 'Account not found.' });
@@ -4924,7 +4852,7 @@ async function startServer() {
         idNumber: resolvedIdNumber,
         status: 'pending',
         registrationFeePaid: false,
-        registrationFeeAmount: 50,
+        registrationFeeAmount: publicPlatformSettings(store).registrationFee,
         semesterFeeAmount: 300,
         submittedAt: new Date().toISOString()
       };
@@ -5012,6 +4940,7 @@ async function startServer() {
         status: 'active',
         isBanned: false,
         registrationFeePaid: true,
+        registrationFeeAmount: application.registrationFeeAmount ?? 50,
         setupCompleted: true,
         paymentTransactionRef: `PINE-MM-PAY-${Math.random().toString(36).substring(2, 10).toUpperCase()}`,
         createdAt: new Date().toISOString(),
@@ -5279,6 +5208,7 @@ async function startServer() {
         existingStore.isVerified = true;
         existingStore.isBanned = false;
         existingStore.registrationFeePaid = true;
+        existingStore.registrationFeeAmount = application.registrationFeeAmount ?? 50;
         existingStore.setupCompleted = true;
         existingStore.paymentMethod = paymentMethod || paymentNetwork || 'Mobile Money';
         existingStore.paymentTransactionRef = txRef;
@@ -5305,6 +5235,7 @@ async function startServer() {
           isBanned: false,
           isVerified: true,
           registrationFeePaid: true,
+          registrationFeeAmount: application.registrationFeeAmount ?? 50,
           setupCompleted: true,
           paymentMethod: paymentMethod || paymentNetwork || 'Mobile Money',
           paymentTransactionRef: txRef,
@@ -6107,6 +6038,8 @@ async function startServer() {
         productImage: (terms.priceCategory ? product.priceCategories?.find((c: any) => terms.priceCategoryId ? c.id === terms.priceCategoryId : c.name === terms.priceCategory)?.imageUrl : undefined) || product.imageUrl,
         quantity: orderQty,
         totalAmount: totalAmount,
+        platformCommissionRate: publicPlatformSettings(store).commission,
+        platformCommissionAmount: Math.round(totalAmount * publicPlatformSettings(store).commission) / 100,
         buyerId,
         buyerEmail: (buyerEmail || '').toLowerCase().trim(),
         buyerName,
@@ -8681,6 +8614,24 @@ async function startServer() {
       if (err instanceof ResourceLimitError) return resourceFailure(res, err);
       if (err instanceof ImageUploadError) return res.status(err.status).json({ error: err.message });
       return res.status(500).json({ error: 'Could not save marketplace photograph.' });
+    }
+  });
+
+  app.post(ADMIN_PROFILE_UPLOAD_ROUTE, requireAuth(['admin']), async (req: any, res) => {
+    try {
+      governance.verifySettingsKey(req.user.id, req.body.settingsKey);
+      const encoded = typeof req.body.fileData === 'string' ? req.body.fileData.replace(/^data:[^,]*,/, '') : '';
+      const encodedBytes = encoded.length * 3 / 4 - (encoded.endsWith('==') ? 2 : encoded.endsWith('=') ? 1 : 0);
+      if (encodedBytes > 5 * 1024 * 1024) return res.status(413).json({ error: 'Profile photographs must be at most 5 MB.' });
+      const result = await imageStorage.save(req.body, bytes => resources.reserveUpload(`admin:${req.user.id}`, req.ip || req.socket.remoteAddress || 'unknown', bytes), 800);
+      if (!activeAdministrator(getStoreInstance(), req.user.id)) return res.status(403).json({ error: 'This administrator account is no longer active.' });
+      const store = getStoreInstance(); store.marketMedia ||= [];
+      store.marketMedia.push({ imageUrl: result.imageUrl, accountId: req.user.id, createdAt: new Date().toISOString() });
+      syncManagedStore(); return res.json(result);
+    } catch (error: any) {
+      if (error instanceof GovernanceError || error instanceof ImageUploadError) return res.status(error.status).json({ error: error.message });
+      if (error instanceof ResourceLimitError) return resourceFailure(res, error);
+      return res.status(503).json({ error: 'Your profile photograph could not be saved.' });
     }
   });
 
@@ -11410,6 +11361,10 @@ async function startServer() {
 
   // --- Change Password Endpoint ---
   app.post("/api/auth/change-password", requireAuth(), async (req: any, res) => {
+    if (req.user.role === 'admin') {
+      try { governance.verifySettingsKey(req.user.id, req.body.settingsKey); }
+      catch (error) { if (error instanceof GovernanceError) return res.status(error.status).json({ error: error.message }); throw error; }
+    }
     if (typeof req.body.newPassword !== 'string' || req.body.newPassword.length < 6) return res.status(400).json({ error: 'A new password of at least 6 characters is required.' });
     const email = normalizeEmail(req.user.email), role = req.user.role;
     const records = passwordRecords(email, role).filter(record => role === 'merchant' || accountId(record) === req.user.id);
@@ -11771,7 +11726,7 @@ async function startServer() {
         middlewareMode: true,
         fs: {
           // Preserve Vite's default secret-file exclusions and deny raw upload access.
-          deny: ['.env', '.env.*', '*.{crt,pem}', '**/.git/**', '**/uploads/**', '**/data/**', '**/.security/**',
+          deny: ['.env', '.env.*', '*.{crt,pem}', '**/.git/**', '**/uploads/**', '**/data/**', '**/.security/**', '**/.pinevela-wipe-*/**', `${path.resolve(process.env.PINEVELA_WIPE_RECOVERY_DIR || '.security/wipe-recovery')}/**`,
             `${realpathSync(path.resolve(process.env.PINEVELA_DATA_DIR || path.join(process.cwd(), 'data')))}/**`,
             `${path.resolve(process.env.PINEVELA_UPLOADS_DIR || path.join(process.cwd(), 'uploads'))}/**`],
         },

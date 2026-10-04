@@ -1,3 +1,4 @@
+import OnboardingProgress from './OnboardingProgress';
 import { sessionFetch as fetch } from '../lib/session';
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -800,7 +801,7 @@ export default function HostelRegistration({
               Admin Workflow
             </span>
             <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight mt-1.5">
-              Multi-Step Resident Onboarding
+              Residence Registration
             </h2>
             <p className="text-xs text-slate-500 mt-0.5">
               Complete all 6 registration steps. Submission commits atomically to the persistent database on the final step.
@@ -828,55 +829,11 @@ export default function HostelRegistration({
           </div>
         </div>
 
-        {/* 6 Step Progress Nav */}
-        <div className="overflow-x-auto pb-2 -mx-2 px-2 no-scrollbar">
-          <div className="flex items-center gap-2 min-w-max">
-            {STEPS.map((s) => {
-              const Icon = s.icon;
-              const isActive = currentStep === s.num;
-              const isPassed = currentStep > s.num;
-
-              return (
-                <button
-                  key={s.num}
-                  type="button"
-                  onClick={() => {
-                    // Allow jumping back to earlier steps or current step
-                    if (s.num <= currentStep) {
-                      setCurrentStep(s.num);
-                    }
-                  }}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold transition-all ${
-                    isActive
-                      ? 'bg-blue-900 text-white shadow-sm ring-2 ring-blue-900/20'
-                      : isPassed
-                      ? 'bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100'
-                      : 'bg-slate-50 text-slate-400 border border-slate-200/60 cursor-not-allowed'
-                  }`}
-                >
-                  <span
-                    className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black shrink-0 ${
-                      isActive
-                        ? 'bg-white text-blue-900'
-                        : isPassed
-                        ? 'bg-emerald-500 text-white'
-                        : 'bg-slate-200 text-slate-500'
-                    }`}
-                  >
-                    {isPassed ? <Check size={11} strokeWidth={3} /> : s.num}
-                  </span>
-                  <div className="text-left">
-                    <p className="leading-tight text-[11px] whitespace-nowrap">{s.title}</p>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </div>
+        <OnboardingProgress steps={STEPS} step={currentStep} label="Residence registration" onStepChange={setCurrentStep} />
       </div>
 
       {/* Main Step Form Body */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 shadow-sm text-left">
+      <div className="onboarding-fields bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 shadow-sm text-left">
         <AnimatePresence mode="wait">
           <motion.div
             key={currentStep}

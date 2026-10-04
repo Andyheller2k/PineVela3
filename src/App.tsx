@@ -1,3 +1,4 @@
+import { PlatformSettingsProvider, PlatformAccessBoundary } from './context/PlatformSettingsContext';
 import { sessionFetch as fetch } from './lib/session';
 import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { HashRouter, Routes, Route, Navigate, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
@@ -13,6 +14,7 @@ import { motion, AnimatePresence } from 'motion/react';
 
 // Component imports
 import Page1Public from './components/Page1Public';
+const PageAdminInvitation = lazy(() => import('./components/PageAdminInvitation'));
 const PageUnifiedLogin = lazy(() => import('./components/PageUnifiedLogin'));
 const PageManagerOnboarding = lazy(() => import('./components/PageManagerOnboarding'));
 const PageAdminDashboard = lazy(() => import('./components/PageAdminDashboard'));
@@ -342,6 +344,7 @@ function AppContent() {
         />
 
         {/* FALLBACK REDIRECT */}
+        <Route path="/admin-invitation" element={<PageWrapper><PageAdminInvitation /></PageWrapper>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </AnimatePresence>
@@ -417,16 +420,20 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <NotificationProvider>
+        <PlatformSettingsProvider>
           <HashRouter>
-            <div className="min-h-screen flex flex-col relative overflow-hidden bg-slate-50">
-              <BubbleBackground />
-              <div className="flex-1 z-10 flex flex-col">
-                <AppContent />
-              </div>
-            </div>
+            <PlatformAccessBoundary>
+              <NotificationProvider>
+                <div className="min-h-screen flex flex-col relative overflow-hidden bg-slate-50">
+                  <BubbleBackground />
+                  <div className="flex-1 z-10 flex flex-col">
+                    <AppContent />
+                  </div>
+                </div>
+              </NotificationProvider>
+            </PlatformAccessBoundary>
           </HashRouter>
-        </NotificationProvider>
+        </PlatformSettingsProvider>
       </AuthProvider>
     </QueryClientProvider>
   );

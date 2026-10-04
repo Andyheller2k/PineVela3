@@ -75,7 +75,6 @@ const cacheAvatar = (email: string | undefined, avatar?: string) => {
   try {
     const cleanEmail = (email || "").toLowerCase().trim();
     if (cleanEmail) localStorage.setItem("pinevela_avatar_" + cleanEmail, avatar);
-    localStorage.setItem("pinevela_user_avatar", avatar);
   } catch (error) {
     console.warn("[Auth] Avatar could not be cached locally:", error);
   }
@@ -139,7 +138,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             // Restore avatar from localStorage if the server didn't return one
             const cleanEmail = (userData.email || '').toLowerCase().trim();
             const avatarKey = cleanEmail ? `pinevela_avatar_${cleanEmail}` : null;
-            const storedAvatar = (avatarKey ? localStorage.getItem(avatarKey) : null) || localStorage.getItem('pinevela_user_avatar');
+            const storedAvatar = avatarKey ? localStorage.getItem(avatarKey) : null;
             const resolvedAvatar = userData.avatar || userData.photo || userData.photoUrl || userData.avatarUrl || userData.profilePicture || storedAvatar || undefined;
             setUser({
               ...userData,
@@ -222,7 +221,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Restore avatar from localStorage if the server didn't return one
     const cleanEmail = (userData.email || '').toLowerCase().trim();
     const avatarKey = cleanEmail ? `pinevela_avatar_${cleanEmail}` : null;
-    const storedAvatar = (avatarKey ? localStorage.getItem(avatarKey) : null) || localStorage.getItem('pinevela_user_avatar');
+    const storedAvatar = avatarKey ? localStorage.getItem(avatarKey) : null;
     const resolvedAvatar = userData.avatar || userData.photo || userData.photoUrl || userData.avatarUrl || userData.profilePicture || storedAvatar || undefined;
 
     const finalUser = {

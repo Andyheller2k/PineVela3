@@ -13,3 +13,6 @@ coverage/
 /.security/
 **/pinevela_store.json*
 **/request-limits.json*
+
+# Private same-filesystem staging for approved wipes.
+**/.pinevela-wipe-*/

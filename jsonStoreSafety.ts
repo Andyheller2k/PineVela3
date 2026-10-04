@@ -32,7 +32,7 @@ export function validateDatabase(bytes: Buffer): any {
   for (const key of JSON_COLLECTIONS) if (key in value && !Array.isArray(value[key])) {
     return failure('INVALID_DATABASE', `Database collection ${key} must be an array. Existing data is preserved.`);
   }
-  for (const key of ['platformSettings', 'managerAccountSettings', 'retiredFeatureRecords', 'signupVerification', 'roomKeyAttempts']) {
+  for (const key of ['platformSettings', 'managerAccountSettings', 'retiredFeatureRecords', 'signupVerification', 'roomKeyAttempts', 'adminGovernance']) {
     if (key in value && !object(value[key])) return failure('INVALID_DATABASE', `Database field ${key} must be an object. Existing data is preserved.`);
   }
   for (const [key, fields] of [['signupVerification', ['pending', 'limits']], ['roomKeyAttempts', ['limits']]] as const) {
@@ -42,6 +42,18 @@ export function validateDatabase(bytes: Buffer): any {
   }
   if (value.retiredFeatureRecords && Object.values(value.retiredFeatureRecords).some(records => !Array.isArray(records))) {
     return failure('INVALID_DATABASE', 'Archived database collections must be arrays. Existing data is preserved.');
+  }
+  if (value.adminGovernance) {
+    const g = value.adminGovernance;
+    const validMembers = Array.isArray(g.members) && g.members.length <= 5 && g.members.every((m: any) => object(m) && typeof m.id === 'string' && m.id && Number.isInteger(m.slot) && m.slot >= 1 && m.slot <= 5 && typeof m.active === 'boolean' && (m.keyHash === undefined || /^[a-f0-9]{64}$/.test(m.keyHash)) && (m.settingsKeyHash === undefined || /^[a-f0-9]{64}$/.test(m.settingsKeyHash))) &&
+      new Set(g.members.map((m: any) => m.id)).size === g.members.length && new Set(g.members.map((m: any) => m.slot)).size === g.members.length;
+    const validArrays = ['proposals', 'invitations', 'changes'].every(key => Array.isArray(g[key]) && g[key].length <= 100 && g[key].every((r: any) => object(r) && /^[a-f0-9-]{36}$/.test(r.id) && Number.isFinite(Date.parse(r.expiresAt))));
+    if (g.version !== 1 || typeof g.mainId !== 'string' || !Number.isSafeInteger(g.revision) || g.revision < 1 || !validMembers || !validArrays || !object(g.attempts) || (g.mainId && !g.members.some((m: any) => m.id === g.mainId && m.slot === 1))) {
+      return failure('INVALID_DATABASE', 'Administrator governance metadata is invalid. Preserve the database and inspect it offline.');
+    }
+    if (g.invitations.length + g.members.length > 5 || g.proposals.some((p: any) => !Array.isArray(p.scopes) || !p.scopes.length || p.scopes.some((s: string) => !['hostels', 'markets', 'managers', 'residents', 'users', 'total'].includes(s)) || !Array.isArray(p.votes) || !Array.isArray(p.roster) || !object(p.preview) || !/^[a-f0-9]{64}$/.test(p.fingerprint)) || g.changes.some((c: any) => !['remove', 'reset-key', 'reset-settings-key'].includes(c.action) || !Array.isArray(c.votes))) {
+      return failure('INVALID_DATABASE', 'Administrator proposal metadata is invalid. Existing data is preserved.');
+    }
   }
   return value;
 }
@@ -187,6 +199,21 @@ export class JsonStoreWriter {
       this.atomicWrite(this.storePath, bytes);
       this.expected = digest(bytes); this.loaded = true;
     } catch { failure('RESTORE_FAILED', 'Recovery write failed. Database, backup and quarantine must be inspected offline.'); }
+  }
+
+  /** Offline disaster recovery from a separately authenticated encrypted wipe archive. */
+  restoreValidatedSnapshot(value: any): void {
+    this.acquire();
+    const bytes = Buffer.from(JSON.stringify(value, null, 2));
+    if (bytes.length > this.maximumBytes) failure('DATABASE_SIZE_LIMIT', 'Recovery snapshot exceeds the configured JSON size limit.');
+    validateDatabase(bytes);
+    if (fs.existsSync(this.quarantinePath)) failure('QUARANTINE_EXISTS', 'Archive the existing quarantine securely before restoring another snapshot.');
+    const current = this.readBytes(this.storePath, true);
+    try {
+      if (current) this.atomicWrite(this.quarantinePath, current);
+      this.atomicWrite(this.storePath, bytes);
+      this.expected = digest(bytes); this.loaded = true;
+    } catch { failure('RESTORE_FAILED', 'Recovery could not finish. Inspect the database, encrypted archive and quarantine offline.'); }
   }
 
   close(): void {

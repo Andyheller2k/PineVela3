@@ -134,7 +134,7 @@ export function protectStoredCredentials(value: any, seen = new Set<any>()): voi
 export function publicAccountData(value: any, includeSession = false): any {
   if (!value || typeof value !== 'object') return value;
   if (Array.isArray(value)) return value.map(child => publicAccountData(child));
-  return Object.fromEntries(Object.entries(value).filter(([key]) => !PASSWORD_FIELDS.includes(key) && key !== 'passwordHistory' && key !== 'session' && (!['token', 'merchantToken', 'sessionToken'].includes(key) || (includeSession && key === 'token'))).map(([key, child]) => [key, publicAccountData(child, includeSession && key === 'user')]));
+  return Object.fromEntries(Object.entries(value).filter(([key]) => !PASSWORD_FIELDS.includes(key) && !['passwordHistory', 'session', 'keyHash', 'settingsKeyHash', 'tokenHash', 'adminGovernance'].includes(key) && (!['token', 'merchantToken', 'sessionToken'].includes(key) || (includeSession && key === 'token'))).map(([key, child]) => [key, publicAccountData(child, includeSession && key === 'user')]));
 }
 
 export function canManageHostel(actor: any, hostel: any): boolean {

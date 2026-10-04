@@ -1,3 +1,6 @@
+import OnboardingProgress, { OFFICER_ACCOUNT_STEPS } from './OnboardingProgress';
+import AdminSettingsPanel from './AdminSettingsPanel';
+import AdminGovernancePanel, { useAdminGovernance } from './AdminGovernancePanel';
 import { sessionFetch as fetch } from '../lib/session';
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -9,7 +12,6 @@ import { saveNavigationLayout, usesTopNavigation } from '../lib/navigationLayout
 import { useNotifications } from '../context/NotificationContext';
 import PineLogo from './PineLogo';
 import TopNavBadge from './TopNavBadge';
-import ResidentOnboardingWizard from './ResidentOnboardingWizard';
 import HostelRegistration from './HostelRegistration';
 import EditResidenceModal from './EditResidenceModal';
 import LogoutConfirmationModal from './LogoutConfirmationModal';
@@ -29,7 +31,7 @@ export default function PageAdminDashboard() {
   const { notifications, unreadCount, markAsRead, refreshNotifications } = useNotifications();
   const navigate = useNavigate();
 
-  const [activeTab, setActiveTab] = useState<'overview' | 'residences' | 'managers' | 'digital_market' | 'notifications' | 'settings' | 'user_accounts'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'residences' | 'managers' | 'digital_market' | 'notifications' | 'settings' | 'user_accounts' | 'governance'>('overview');
   
   // All Registered User Accounts State
   const [allUsersData, setAllUsersData] = useState<{
@@ -79,22 +81,17 @@ export default function PageAdminDashboard() {
   const [residentSearchQuery, setResidentSearchQuery] = useState('');
 
   // Settings State
-  const [registrationFeeGHS, setRegistrationFeeGHS] = useState('3500');
-  const [platformCommission, setPlatformCommission] = useState('5');
-  const [systemAnnouncement, setSystemAnnouncement] = useState('');
-  const [maintenanceMode, setMaintenanceMode] = useState(false);
 
-  // Database Wipe State
-  const [wipePassword, setWipePassword] = useState('');
-  const [wipeLoading, setWipeLoading] = useState(false);
-  const [showWipeSuccessModal, setShowWipeSuccessModal] = useState(false);
+  const { data: governanceData } = useAdminGovernance();
+  const adminSlot = governanceData?.members.find((m: any) => m.id === user?.id)?.slot;
+  const pendingGovernance = (governanceData?.proposals.filter((p: any) => ['pending', 'approved'].includes(p.status)).length || 0) + (governanceData?.changes.filter((c: any) => c.status === 'pending').length || 0);
 
   // Datasets
   const [residences, setResidences] = useState<any[]>([]);
   const [managerRequests, setManagerRequests] = useState<any[]>([]);
   const [managerRestrictions, setManagerRestrictions] = useState<any[]>([]);
   const [rejectionNotes, setRejectionNotes] = useState<{[key: string]: string}>({});
-  const [residents, setResidents] = useState<any[]>([]);
+  const residents = allUsersData.users.filter((account: any) => ['student', 'resident'].includes(account.role)).map((account: any) => ({ ...account, residenceName: account.hostelName || account.residenceName || '', roomNumber: account.roomNumber || '' }));
   const [feesPaid, setFeesPaid] = useState<any[]>([]);
   const [activities, setActivities] = useState<any[]>([]);
 
@@ -176,9 +173,6 @@ export default function PageAdminDashboard() {
   const [approvalTabFilter, setApprovalTabFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Manual Resident Registration Modal / Form State
-  const [showAddResidentModal, setShowAddResidentModal] = useState(false);
-
   // Manual Residence Registration Modal / Form State
   const [showAddResidenceModal, setShowAddResidenceModal] = useState(false);
 
@@ -214,7 +208,8 @@ export default function PageAdminDashboard() {
 
   // TanStack Query for server-state caching and automatic refetching
   const { data: adminData } = useQuery({
-    queryKey: ['adminData'],
+    queryKey: ['adminData', user?.id],
+    enabled: user?.role === 'admin',
     queryFn: async () => {
       const resHostels = await fetch('/api/hostels');
       let residencesData: any[] = [];
@@ -256,7 +251,7 @@ export default function PageAdminDashboard() {
         digitalMarketStores: Array.isArray(marketStoresRes) ? marketStoresRes : [],
         verificationTeams: Array.isArray(vtRes) ? vtRes : (vtRes?.verificationTeams || []),
         verificationInspections: Array.isArray(inspectionsRes) ? inspectionsRes : [],
-        allUsersData: allUsersRes
+        allUsersData: Array.isArray(allUsersRes?.users) ? allUsersRes : null
       };
     },
     refetchInterval: 8000,
@@ -273,7 +268,7 @@ export default function PageAdminDashboard() {
     setDigitalMarketStores(adminData.digitalMarketStores);
     setVerificationTeams(adminData.verificationTeams);
     setVerificationInspections(adminData.verificationInspections);
-    if (adminData.allUsersData) setAllUsersData(adminData.allUsersData);
+    if (Array.isArray(adminData.allUsersData?.users)) setAllUsersData(adminData.allUsersData);
   }, [adminData]);
 
   const fetchAdminData = async () => {
@@ -472,11 +467,6 @@ export default function PageAdminDashboard() {
   useEffect(() => {
     fetchAdminData();
   }, []);
-
-  const saveResidentsToStorage = (updated: any[]) => {
-    setResidents(updated);
-    localStorage.setItem('pinevela_admin_residents', JSON.stringify(updated));
-  };
 
   const handleApproveManager = async (reqId: string, managerEmail: string) => {
     try {
@@ -692,86 +682,6 @@ export default function PageAdminDashboard() {
     }
   };
 
-  const handleSaveSettings = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      await apiFetch('/api/settings', {
-        method: 'POST',
-        body: JSON.stringify({
-          registrationFee: parseFloat(registrationFeeGHS),
-          commission: parseFloat(platformCommission),
-          announcement: systemAnnouncement,
-          maintenanceMode: maintenanceMode
-        })
-      });
-      triggerToast('Admin settings updated successfully across PineVela!');
-    } catch (err) {
-      console.error(err);
-      triggerToast('Failed to update settings.');
-    }
-  };
-
-  const handleDatabaseWipe = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!wipePassword.trim()) {
-      triggerToast('Please enter your administrator authorization password to confirm reset.');
-      return;
-    }
-
-    if (!window.confirm('CRITICAL WARNING: This will permanently delete all registered users, residences, student markets, products, orders, marketplace messages, and everything else in PineVela. Are you absolutely sure you want to proceed?')) {
-      return;
-    }
-
-    setWipeLoading(true);
-    try {
-      const response = await apiFetch('/api/admin/clear-all-registered-accounts', {
-        method: 'POST',
-        body: JSON.stringify({ password: wipePassword.trim() })
-      });
-
-      if (response && response.success) {
-        setWipePassword('');
-        setShowWipeSuccessModal(true);
-        triggerToast('System successfully cleared of all data! Admin accounts preserved.');
-        
-        // Remove locally cached lists from localStorage
-        localStorage.removeItem('pinevela_admin_residents');
-        localStorage.removeItem('pinevela_admin_fees');
-        localStorage.removeItem('pinevela_registered_managers');
-
-        // Refresh local dashboard states to match the clean database
-        setResidences([]);
-        setResidents([]);
-        setManagerRequests([]);
-        setVerificationInspections([]);
-        setDigitalMarketApps([]);
-        setDigitalMarketStores([]);
-        setActivities([]);
-        setBoardRequests([]);
-        setFeesPaid([]);
-        setManagerRestrictions([]);
-      } else {
-        triggerToast(response?.error || 'Failed to clean database.');
-      }
-    } catch (err: any) {
-      console.error(err);
-      triggerToast(err.message || 'Failed to wipe system data.');
-    } finally {
-      setWipeLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    apiFetch('/api/settings').then(data => {
-      if (data) {
-        setRegistrationFeeGHS(data.registrationFee?.toString() || '3500');
-        setPlatformCommission(data.commission?.toString() || '5');
-        setSystemAnnouncement(data.announcement || '');
-        setMaintenanceMode(data.maintenanceMode || false);
-      }
-    });
-  }, []);
-
   const handleLogout = () => {
     setShowLogoutConfirm(true);
   };
@@ -829,24 +739,7 @@ export default function PageAdminDashboard() {
   const pendingBoardRequestsCount = boardRequests.filter(r => r.status === 'Pending').length;
   const adminAlertCount = pendingBoardRequestsCount + pendingHostelsCount + unreadCount;
 
-  const availableManagersList = [
-    {
-      id: 'manager_101',
-      name: 'Anthony Davis',
-      email: 'manager@pinevela.com',
-      phone: '+233 24 123 4567',
-      photo: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80',
-      hostelName: 'Emerald Heights Block A'
-    },
-    ...managerRequests.filter(m => m.status === 'approved' || m.status === 'Approved').map(m => ({
-      id: m.id || m._id || `mgr-${Date.now()}`,
-      name: m.managerName || m.name || 'Property Manager',
-      email: m.managerEmail || m.email || '',
-      phone: m.managerPhone || m.phone || '+233 24 000 0000',
-      photo: m.managerPhoto || m.photo || m.avatar || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80',
-      hostelName: m.hostelName || 'Assigned Property'
-    }))
-  ];
+
 
   return (
     <div className="min-h-screen h-screen flex flex-col lg:flex-row bg-gradient-to-br from-slate-50 via-blue-50/70 to-indigo-50/50 text-slate-800 overflow-hidden font-sans">
@@ -870,7 +763,7 @@ export default function PageAdminDashboard() {
         <div className="flex items-center gap-2">
           <PineLogo size={24} />
           <div>
-            <h1 className="text-xs font-black tracking-tight text-blue-950 leading-tight">PineVela Admin</h1>
+            <h1 className="text-xs font-black tracking-tight text-blue-950 leading-tight">PineVela Admin {adminSlot ? `#${adminSlot}` : ''}</h1>
           </div>
         </div>
         <div className="flex items-center gap-3">
@@ -890,7 +783,7 @@ export default function PageAdminDashboard() {
             { id: 'managers', label: 'Managers', icon: Users, badge: pendingManagersCount },
             { id: 'digital_market', label: 'Market', icon: ShoppingBag, badge: digitalMarketApps.filter(a => a.status === 'pending').length || null },
             { id: 'notifications', label: 'Alerts', icon: Bell, badge: adminAlertCount },
-            { id: 'settings', label: 'Settings', icon: Edit3 }
+            { id: 'governance', label: 'Approvals', icon: ShieldCheck, badge: pendingGovernance }, { id: 'settings', label: 'Settings', icon: Edit3 }
           ].map(tab => (
             <button
               key={tab.id}
@@ -920,12 +813,12 @@ export default function PageAdminDashboard() {
       {isSidebarTopNav && <nav className="hidden lg:block fixed top-3 left-1/2 -translate-x-1/2 z-50 w-[min(760px,calc(100vw-3rem))] bg-white/72 backdrop-blur-xl border border-white/80 rounded-2xl shadow-lg"><div className="flex items-center gap-1 px-2 py-1.5">
         {/* Profile avatar button — left end */}
         <button onClick={() => setActiveTab('settings')} title="Profile & Settings" className="shrink-0 flex flex-col items-center gap-0.5 py-1 px-1.5 rounded-xl hover:bg-white/70 cursor-pointer">
-          <img src={user?.photo || user?.avatar || (user as any)?.photoUrl || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80'} alt="Profile" className="w-6 h-6 rounded-full object-cover ring-2 ring-white shadow-sm" />
+          {user?.photo || user?.avatar ? <img src={user.photo || user.avatar} alt="Profile" className="w-6 h-6 rounded-full object-cover ring-2 ring-white shadow-sm" /> : <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-blue-900">{user?.name?.slice(0, 1)}</span>}
           <span className="text-[9px] font-bold text-slate-500">Profile</span>
         </button>
         <div className="w-px h-6 bg-slate-200/70 shrink-0" />
         {[
-        { id: 'overview', label: 'Overview', icon: ShieldCheck }, { id: 'user_accounts', label: 'Accounts', icon: Users, badge: allUsersData.totalUsers }, { id: 'residences', label: 'Residences', icon: Building2, badge: pendingHostelsCount }, { id: 'managers', label: 'Managers', icon: Users, badge: pendingManagersCount }, { id: 'digital_market', label: 'Market', icon: ShoppingBag, badge: digitalMarketApps.filter(a => a.status === 'pending').length }, { id: 'notifications', label: 'Alerts', icon: Bell, badge: adminAlertCount }, { id: 'settings', label: 'Settings', icon: Edit3 }
+        { id: 'overview', label: 'Overview', icon: ShieldCheck }, { id: 'user_accounts', label: 'Accounts', icon: Users, badge: allUsersData.totalUsers }, { id: 'residences', label: 'Residences', icon: Building2, badge: pendingHostelsCount }, { id: 'managers', label: 'Managers', icon: Users, badge: pendingManagersCount }, { id: 'digital_market', label: 'Market', icon: ShoppingBag, badge: digitalMarketApps.filter(a => a.status === 'pending').length }, { id: 'notifications', label: 'Alerts', icon: Bell, badge: adminAlertCount }, { id: 'governance', label: 'Approvals', icon: ShieldCheck, badge: pendingGovernance }, { id: 'settings', label: 'Settings', icon: Edit3 }
       ].map(tab => <button key={tab.id} onClick={() => setActiveTab(tab.id as any)} aria-label={`${tab.label}${tab.badge ? ` (${tab.badge})` : ''}`} className={`flex-1 min-w-0 flex flex-col items-center gap-0.5 py-1.5 rounded-xl text-[9px] font-bold cursor-pointer ${activeTab === tab.id ? 'text-blue-700 bg-blue-100/65' : 'text-slate-500 hover:bg-white/70'}`}><span className="relative inline-flex"><tab.icon className="w-4 h-4" /><TopNavBadge count={tab.badge} /></span><span className="truncate max-w-full">{tab.label}</span></button>)}<button onClick={() => setShowLogoutConfirm(true)} title="Sign Out" className="shrink-0 flex flex-col items-center gap-0.5 px-2 py-1.5 text-[9px] font-bold text-rose-600 hover:bg-rose-50 rounded-xl cursor-pointer"><LogOutIcon className="w-4 h-4" /><span>Sign Out</span></button><button onClick={() => setIsSidebarTopNav(false)} title="Show sidebar" className="p-2 text-slate-500 hover:text-blue-700 cursor-pointer"><PanelLeftOpen className="w-4 h-4" /></button></div></nav>}
       {!isSidebarTopNav && <aside className={`hidden lg:flex ${isSidebarCollapsed ? 'w-20 p-4' : 'w-72 p-6'} my-6 ml-6 h-[calc(100vh-3rem)] bg-gradient-to-br from-sky-100/90 via-blue-100/85 to-amber-50/40 backdrop-blur-3xl border border-sky-200/80 shadow-2xl rounded-3xl flex flex-col justify-between shrink-0 overflow-y-auto transition-all duration-300 relative`}>
         <button onClick={() => setIsSidebarTopNav(true)} title="Use top navigation" className="absolute top-3 right-3 p-2 rounded-xl text-slate-500 hover:text-blue-700 hover:bg-white/70 cursor-pointer"><PanelLeftClose className="w-4 h-4" /></button>
@@ -937,7 +830,7 @@ export default function PageAdminDashboard() {
             {!isSidebarCollapsed && (
               <div>
                 <h1 className="text-sm font-extrabold tracking-tight bg-gradient-to-r from-blue-900 to-cyan-800 bg-clip-text text-transparent">
-                  PineVela Admin
+                  PineVela Admin {adminSlot ? `#${adminSlot}` : ''}
                 </h1>
                 <p className="text-[10px] font-medium text-blue-600/70 uppercase tracking-widest">Master Control</p>
               </div>
@@ -956,7 +849,7 @@ export default function PageAdminDashboard() {
               { id: 'managers', label: 'Managers & Staffs', icon: Users, badge: pendingManagersCount || null, sub: 'Approvals, contact & history' },
               { id: 'digital_market', label: 'Student Digital Market', icon: ShoppingBag, badge: digitalMarketApps.filter(a => a.status === 'pending').length || null, sub: 'Stores, products & applications' },
               { id: 'notifications', label: 'Notifications', icon: Bell, badge: adminAlertCount || null, sub: 'Manager requests & alerts' },
-              { id: 'settings', label: 'Admin Settings', icon: Edit3, sub: 'Fees, commission & controls' }
+              { id: 'governance', label: 'Admin Approvals', icon: ShieldCheck, sub: 'Founder roster & wipe proposals', badge: pendingGovernance }, { id: 'settings', label: 'Admin Settings', icon: Edit3, sub: 'Fees, commission & controls' }
             ].map(tab => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
@@ -1019,6 +912,8 @@ export default function PageAdminDashboard() {
 
       {/* MAIN CONTENT AREA */}
       <main className={`dashboard-centered-content flex-1 p-6 lg:p-10 space-y-8 overflow-y-auto h-full relative ${isSidebarTopNav ? 'lg:pt-24 lg:w-[calc(100vw-22rem)] lg:max-w-[calc(100vw-22rem)] lg:mx-auto' : ''}`}>
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-blue-200 bg-white/65 p-4 text-sm backdrop-blur-xl"><span className="flex items-center gap-3 font-semibold text-blue-950">{(user?.photo || user?.avatar) && <img src={user.photo || user.avatar} alt="Administrator profile" className="h-9 w-9 rounded-full object-cover" />}Administrator {adminSlot ? `#${adminSlot}` : ''} · {user?.name}</span><button onClick={() => setActiveTab('governance')} className="rounded-xl bg-blue-600 px-4 py-2 font-semibold text-white">Shared approvals{pendingGovernance ? ` (${pendingGovernance})` : ''}</button></div>
+        {activeTab === 'governance' && <AdminGovernancePanel />}
 
         {/* TAB 1: OVERVIEW */}
         {activeTab === 'overview' && (
@@ -1027,7 +922,7 @@ export default function PageAdminDashboard() {
             <div className="bg-sky-50/20 border border-sky-200/50 p-8 rounded-3xl backdrop-blur-2xl shadow-xl relative overflow-hidden">
               <div className="absolute right-0 top-0 w-96 h-96 bg-blue-400/10 rounded-full blur-3xl pointer-events-none" />
               <div className="relative z-10 max-w-2xl">
-                <h2 className="text-2xl lg:text-3xl font-bold text-3d tracking-tight">Welcome back, Andy Heller</h2>
+                <h2 className="text-2xl lg:text-3xl font-bold text-3d tracking-tight">Welcome back, {user?.name}</h2>
               </div>
             </div>
 
@@ -1117,16 +1012,7 @@ export default function PageAdminDashboard() {
                       <Plus className="w-4 h-4" />
                     </button>
 
-                    <button
-                      onClick={() => setShowAddResidentModal(true)}
-                      className="w-full flex items-center justify-between px-5 py-3.5 rounded-2xl bg-sky-100/40 hover:bg-sky-100/70 border border-sky-200/60 text-blue-900 font-semibold text-xs transition-all cursor-pointer backdrop-blur-md"
-                    >
-                      <span className="flex items-center space-x-2">
-                        <UserPlus className="w-4 h-4 text-blue-600" />
-                        <span>Manually Register Resident</span>
-                      </span>
-                      <Plus className="w-4 h-4" />
-                    </button>
+
 
                     <button
                       onClick={() => setActiveTab('managers')}
@@ -2207,120 +2093,9 @@ export default function PageAdminDashboard() {
         {/* TAB 5: ADMIN SETTINGS */}
         {activeTab === 'settings' && (
           <div className="space-y-6 animate-fadeIn relative z-10 max-w-4xl">
-            <div className="bg-sky-50/20 border border-sky-200/50 p-6 rounded-3xl backdrop-blur-2xl shadow-xl">
-              <h3 className="text-xl font-bold text-3d">PineVela Admin Settings</h3>
-              <p className="text-xs text-slate-600 font-medium text-outline-sm">Configure global platform parameters, registration fees in GHS, commission rates, and system announcements.</p>
-            </div>
+            <AdminSettingsPanel />
 
-            <form onSubmit={handleSaveSettings} className="bg-sky-50/20 border border-sky-200/50 p-8 rounded-3xl backdrop-blur-2xl shadow-xl space-y-6">
-
-
-              <div>
-                <label className="block text-xs font-bold text-slate-800 mb-2 text-outline-sm">Global System Announcement Banner</label>
-                <textarea
-                  rows={3}
-                  value={systemAnnouncement}
-                  onChange={(e) => setSystemAnnouncement(e.target.value)}
-                  className="w-full px-4 py-3 bg-sky-100/40 border border-sky-200/60 rounded-2xl text-xs text-slate-900 font-medium focus:outline-none focus:border-blue-600 backdrop-blur-md"
-                  placeholder="Enter important announcement for students and managers..."
-                />
-                <p className="text-[10px] text-slate-500 mt-1">Displayed on student and manager portals instantly.</p>
-              </div>
-
-              <div className="flex items-center justify-between p-4 bg-sky-100/30 border border-sky-200/50 rounded-2xl backdrop-blur-md">
-                <div>
-                  <h4 className="text-xs font-bold text-slate-900">Platform Maintenance Mode</h4>
-                  <p className="text-[11px] text-slate-600">Temporarily restrict non-admin student logins during database updates.</p>
-                </div>
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={maintenanceMode}
-                    onChange={(e) => setMaintenanceMode(e.target.checked)}
-                    className="sr-only peer"
-                  />
-                  <div className="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                </label>
-              </div>
-
-              <div className="flex justify-end pt-4 border-t border-sky-200/40">
-                <button
-                  type="submit"
-                  className="px-8 py-3.5 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-xl cursor-pointer transition-all"
-                >
-                  Save Admin Settings
-                </button>
-              </div>
-            </form>
-
-            {/* DANGER ZONE: SYSTEM WIPE / CLEAR DATABASE */}
-            <div className="bg-red-50/70 border border-red-200 p-8 rounded-3xl shadow-xl space-y-6">
-              <div className="flex items-center gap-3 border-b border-red-100 pb-4">
-                <div className="p-2.5 rounded-2xl bg-red-600 text-white shadow-lg shadow-red-600/20 animate-pulse">
-                  <ShieldAlert className="w-5 h-5" />
-                </div>
-                <div>
-                  <h4 className="text-sm font-black text-red-950 uppercase tracking-wide">⚠️ Critical Danger Zone: Complete System Reset</h4>
-                  <p className="text-xs text-red-700 font-medium mt-0.5">Wipe all registered residents, markets, hostels, and operational records.</p>
-                </div>
-              </div>
-
-              <div className="p-4 bg-white/80 rounded-2xl border border-red-100 space-y-2 text-xs text-slate-700 leading-relaxed font-medium">
-                <p>
-                  <strong className="text-red-950">Wipe Execution Policies:</strong>
-                </p>
-                <ul className="list-disc pl-4 space-y-1 text-[11px] text-slate-600">
-                  <li>Purges all registered student, manager, staff, and officer accounts completely.</li>
-                  <li>Wipes all hostel property listings, student digital store fronts, products, and active orders.</li>
-                  <li>Deletes all student service logs, key dispatches, issue reports, marketplace message history, and audit records.</li>
-                  <li><strong className="text-red-900">Protected Profile Exemption:</strong> Verified system administrator accounts are locked and will NOT be deleted.</li>
-                </ul>
-              </div>
-
-              <form onSubmit={handleDatabaseWipe} className="space-y-4">
-                <div>
-                  <label className="block text-xs font-black text-slate-800 mb-1.5 uppercase tracking-wider">
-                    Authorize Security Wipe Password
-                  </label>
-                  <div className="relative">
-                    <span className="absolute left-4 top-3.5 text-xs font-semibold text-slate-400">🔑</span>
-                    <input
-                      type="password"
-                      value={wipePassword}
-                      onChange={(e) => setWipePassword(e.target.value)}
-                      placeholder="Enter administrator authorization password..."
-                      required
-                      className="w-full pl-10 pr-4 py-3 bg-white border border-slate-300 rounded-2xl text-xs text-slate-900 font-bold focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600"
-                    />
-                  </div>
-                  <p className="text-[10px] text-slate-500 mt-1">Please enter your administrator authorization password to unlock the complete wipe button.</p>
-                </div>
-
-                <div className="flex justify-end">
-                  <button
-                    type="submit"
-                    disabled={!wipePassword.trim() || wipeLoading}
-                    className={`px-8 py-3.5 rounded-2xl font-black text-xs shadow-md transition-all flex items-center gap-2 cursor-pointer ${
-                      wipePassword.trim() && !wipeLoading
-                        ? 'bg-red-600 hover:bg-red-700 text-white shadow-red-600/15 hover:scale-[1.01]'
-                        : 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'
-                    }`}
-                  >
-                    {wipeLoading ? (
-                      <>
-                        <span className="w-3.5 h-3.5 border-2 border-slate-400 border-t-transparent rounded-full animate-spin" />
-                        <span>Resetting System Database...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Trash2 className="w-4 h-4" />
-                        <span>Perform Complete System Wipe</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-              </form>
-            </div>
+            <button onClick={() => setActiveTab('governance')} className="w-full rounded-2xl border border-blue-200 bg-blue-50/60 p-5 text-left text-sm font-semibold text-blue-800">Open administrator roster and five-key wipe proposals</button>
           </div>
         )}
 
@@ -2339,15 +2114,6 @@ export default function PageAdminDashboard() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setShowAddResidentModal(true)}
-                  className="flex items-center space-x-2 px-4 py-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs transition-colors cursor-pointer whitespace-nowrap"
-                >
-                  <UserPlus className="w-4 h-4 text-slate-600" />
-                  <span>Register Resident</span>
-                </button>
-              </div>
             </div>
 
             {notifications.length > 0 && <section className="rounded-3xl border border-blue-100 bg-white/75 p-5 shadow-sm backdrop-blur-xl"><div className="mb-3 flex items-center justify-between"><p className="flex items-center gap-2 text-sm font-extrabold text-slate-900"><Bell className="h-4 w-4 text-blue-600" />Live operational alerts {unreadCount > 0 && <span className="rounded-full bg-blue-600 px-2 py-0.5 text-[10px] text-white">{unreadCount} new</span>}</p><button onClick={() => refreshNotifications()} className="text-xs font-bold text-blue-700">Refresh</button></div><div className="space-y-2">{notifications.slice(0, 6).map((notification: any) => <button key={notification.id} onClick={() => markAsRead(notification.id)} className="block w-full rounded-2xl border border-blue-100 bg-blue-50/60 p-3 text-left"><p className="text-xs font-bold text-slate-900">{notification.title}</p><p className="mt-1 text-xs text-slate-600">{notification.message}</p></button>)}</div></section>}
@@ -2732,7 +2498,7 @@ export default function PageAdminDashboard() {
 
               {residents.length === 0 ? (
                 <div className="text-center py-6 text-slate-400 text-xs italic">
-                  No residents registered yet. Use "Register Resident" above to enroll verified residents.
+                  Residents appear here after activating their assigned room with a room key.
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -2750,31 +2516,13 @@ export default function PageAdminDashboard() {
                     .map((res) => (
                     <div key={res.id} className="flex flex-col md:flex-row items-start md:items-center justify-between bg-blue-50/60 border border-blue-100 p-4 rounded-2xl gap-4">
                       <div className="space-y-1">
-                        <div className="flex items-center space-x-3">
-                          <span className="font-bold text-slate-900 text-sm">{res.name}</span>
-                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
-                            {res.status || 'Live & Approved'}
-                          </span>
-                        </div>
+                        <p className="text-sm font-bold text-slate-900">{res.name}</p>
                         <p className="text-xs text-slate-600">
                           Email: <span className="text-slate-900 font-semibold">{res.email}</span> | Residence: <span className="text-blue-600 font-semibold">{res.residenceName}</span> ({res.roomNumber})
                         </p>
                       </div>
 
-                      <div className="flex items-center space-x-3">
-                        <span className="text-xs text-emerald-700 font-semibold bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-200">
-                          Fee Paid: GHS {res.feeAmount || '3,500'}
-                        </span>
-                        <button
-                          onClick={() => {
-                            saveResidentsToStorage(residents.filter(r => r.id !== res.id));
-                            triggerToast('Resident removed.');
-                          }}
-                          className="text-rose-600 hover:text-rose-700 p-2 rounded-xl bg-rose-50 hover:bg-rose-100 transition-all cursor-pointer"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
+
                     </div>
                   ))}
                 </div>
@@ -3062,19 +2810,6 @@ export default function PageAdminDashboard() {
         )}
 
       </main>
-
-      {/* FULL 5-PHASE ONBOARDING WIZARD WITH MANAGER INFO: MANUALLY REGISTER RESIDENT */}
-      <ResidentOnboardingWizard
-        isOpen={showAddResidentModal}
-        onClose={() => setShowAddResidentModal(false)}
-        onResidentRegistered={(newResident) => {
-          const updated = [newResident, ...residents.filter(r => r.id !== newResident.id)];
-          saveResidentsToStorage(updated);
-          triggerToast(`Resident ${newResident.name} onboarded successfully and linked to Manager ${newResident.managerName || 'Assigned Manager'}!`);
-        }}
-        availableHostels={residences}
-        availableManagers={availableManagersList}
-      />
 
       {/* FULL 10-STEP HOSTEL REGISTRATION WIZARD: MANUALLY REGISTER RESIDENCE */}
       {showAddResidenceModal && (
@@ -4136,7 +3871,8 @@ export default function PageAdminDashboard() {
               </button>
             </div>
 
-            <form onSubmit={handleRegisterOfficer} className="space-y-4 text-xs">
+            <OnboardingProgress steps={OFFICER_ACCOUNT_STEPS} step={newOfficerData.fullName.trim() && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newOfficerData.email) ? (newOfficerData.password ? 3 : 2) : 1} label="Officer registration" />
+            <form onSubmit={handleRegisterOfficer} className="onboarding-fields space-y-4 text-xs">
               <div className="space-y-1.5">
                 <label className="font-bold text-slate-700 block">Officer Full Name *</label>
                 <input
@@ -4451,47 +4187,11 @@ export default function PageAdminDashboard() {
         isOpen={showLogoutConfirm}
         onClose={() => setShowLogoutConfirm(false)}
         onConfirm={confirmLogout}
-        userRole="Super Administrator"
+        userRole={adminSlot ? `Administrator #${adminSlot}` : 'Administrator'}
         userName={user?.name || 'Administrator'}
       />
 
-      {/* SYSTEM WIPE SUCCESS MODAL */}
-      <AnimatePresence>
-        {showWipeSuccessModal && (
-          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
-            <motion.div 
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl border border-red-100 text-center space-y-5"
-            >
-              <div className="w-16 h-16 rounded-full bg-red-100 text-red-600 flex items-center justify-center mx-auto shadow-inner shadow-red-200">
-                <CheckCircle2 className="w-9 h-9" />
-              </div>
               
-              <div className="space-y-2">
-                <h3 className="text-lg font-black text-slate-900">System Reset Successful! 🎉</h3>
-                <p className="text-xs text-slate-600 font-semibold leading-relaxed">
-                  All hostels, resident accounts, student digital marketplace products, orders, and marketplace messages have been purged.
-                </p>
-                <div className="p-3 bg-red-50 text-red-950 rounded-xl text-[11px] font-bold mt-2">
-                  🛡️ Protected Administrator profiles were preserved and remain active in the system.
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setShowWipeSuccessModal(false);
-                }}
-                className="w-full py-3 bg-red-600 hover:bg-red-700 text-white font-black text-xs rounded-xl shadow-md cursor-pointer transition-all uppercase tracking-wider"
-              >
-                Acknowledge & Close
-              </button>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
     </div>
   );
 }

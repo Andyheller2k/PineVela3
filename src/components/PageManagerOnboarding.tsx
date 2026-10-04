@@ -1,3 +1,4 @@
+import OnboardingProgress from './OnboardingProgress';
 import { sessionFetch as fetch } from '../lib/session';
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -668,68 +669,7 @@ export default function PageManagerOnboarding() {
             {/* Top Accent Gradient Line */}
             <div className="h-1.5 bg-gradient-to-r from-blue-900 via-indigo-800 to-blue-700 w-full" />
 
-            {/* Stepper Header */}
-            <div className="p-6 sm:p-8 bg-slate-50/70 border-b border-slate-100">
-              
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-black uppercase text-blue-900 tracking-wider">Phase {phase} of 3</span>
-                    <span className="text-[10px] bg-blue-100 text-blue-900 font-bold px-2 py-0.5 rounded-full">
-                      Step {phase}
-                    </span>
-                  </div>
-                  <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight mt-0.5">
-                    {phaseTitles[phase - 1].title}
-                  </h1>
-                  <p className="text-xs font-semibold text-slate-500 mt-0.5">
-                    {phaseTitles[phase - 1].sub}
-                  </p>
-                </div>
-
-                {/* Progress Bar Circle / Pill */}
-                <div className="hidden sm:flex items-center gap-1.5 bg-white px-3 py-1.5 rounded-full border border-slate-200 shadow-xs">
-                  <span className="text-xs font-extrabold text-slate-700">{Math.round(10 + ((phase - 1) / 2) * 90)}%</span>
-                  <span className="text-[10px] font-bold text-slate-400">Completed</span>
-                </div>
-              </div>
-
-              {/* Step Navigation Pills */}
-              <div className="grid grid-cols-3 gap-2 pt-2">
-                {phaseTitles.map((p) => {
-                  const Icon = p.icon;
-                  const isActive = phase === p.num;
-                  const isDone = phase > p.num;
-                  return (
-                    <div 
-                      key={p.num}
-                      className={`p-2.5 sm:p-3 rounded-2xl border transition-all flex items-center gap-2.5 ${
-                        isActive 
-                          ? 'bg-blue-900 text-white border-blue-900 shadow-md' 
-                          : isDone 
-                            ? 'bg-blue-50 text-blue-900 border-blue-200' 
-                            : 'bg-white text-slate-400 border-slate-200/80'
-                      }`}
-                    >
-                      <div className={`w-7 h-7 rounded-xl flex items-center justify-center font-black text-xs shrink-0 ${
-                        isActive 
-                          ? 'bg-white text-blue-900' 
-                          : isDone 
-                            ? 'bg-blue-200 text-blue-950' 
-                            : 'bg-slate-100 text-slate-500'
-                      }`}>
-                        {isDone ? <Check className="w-4 h-4" /> : p.num}
-                      </div>
-                      <div className="hidden md:block truncate">
-                        <div className={`text-[10px] font-extrabold uppercase tracking-wider truncate ${isActive ? 'text-white' : isDone ? 'text-blue-950' : 'text-slate-500'}`}>
-                          {p.title}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+            <div className="p-6 sm:p-8"><OnboardingProgress steps={phaseTitles} step={phase} label="Manager registration" /></div>
 
             {/* Error Message Alert */}
             {errorMessage && (
@@ -740,7 +680,7 @@ export default function PageManagerOnboarding() {
             )}
 
             {/* Form Form Content */}
-            <form onSubmit={handleSubmit} className="p-6 sm:p-8 space-y-6">
+            <form onSubmit={handleSubmit} className="onboarding-fields p-6 sm:p-8 space-y-6">
               
               {/* PHASE 1: RESIDENCE & MANAGER LEGAL PROFILE */}
               {phase === 1 && (

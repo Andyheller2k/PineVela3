@@ -1,3 +1,4 @@
+import OnboardingProgress, { STORE_SETUP_STEPS, ROOM_ACTIVATION_STEPS, MARKET_APPLICATION_STEPS } from './OnboardingProgress';
 import MarketImageGallery from './MarketImageGallery';
 import { marketNoticeKind } from '../lib/marketNotifications';
 import { sessionFetch as fetch } from '../lib/session';
@@ -1993,7 +1994,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
          {/* MODALS */}
          {showClaimModal && (
            <DashboardOverlay aria-label="Activate Digital Room Key" onClose={() => setShowClaimModal(false)} className="fixed inset-0 bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-4">
-             <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-2xl border border-blue-200 space-y-5">
+             <div className="onboarding-fields bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-2xl border border-blue-200 space-y-5">
                <div className="flex items-start justify-between gap-3 pb-3 border-b border-blue-100">
                  <div className="flex items-start gap-3">
                    <div className="w-11 h-11 rounded-2xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-blue-600/30">
@@ -2012,6 +2013,8 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                    <X className="w-5 h-5" />
                  </button>
                </div>
+
+               <OnboardingProgress steps={ROOM_ACTIVATION_STEPS} step={claimStep} label="Room key activation" />
 
                <div className="space-y-3">
                  <div className="space-y-1">
@@ -3914,7 +3917,8 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                 </button>
               </div>
 
-              <form onSubmit={handleStoreSetup} className="space-y-4 text-xs">
+              <OnboardingProgress steps={STORE_SETUP_STEPS} step={paymentStep === 'success' ? 3 : setupStoreName.trim() ? 2 : 1} label="Store setup" />
+              <form onSubmit={handleStoreSetup} className="onboarding-fields space-y-4 text-xs">
                 {/* Store Profile Section */}
                 <div className="space-y-3 p-4 bg-slate-50 rounded-2xl border border-slate-200/80">
                   <div className="text-[11px] font-black uppercase text-slate-600 tracking-wider flex items-center gap-1.5">
@@ -4200,25 +4204,10 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                   </div>
                 </div>
 
-                <div className="flex items-center gap-1.5">
-                  {[1, 2, 3].map(step => (
-                    <div
-                      key={step}
-                      className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-black transition-all ${
-                        onboardStep === step
-                          ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30 ring-4 ring-blue-100'
-                          : onboardStep > step
-                          ? 'bg-emerald-600 text-white'
-                          : 'bg-slate-100 text-slate-400'
-                      }`}
-                    >
-                      {onboardStep > step ? '✓' : step}
-                    </div>
-                  ))}
-                </div>
               </div>
+              <OnboardingProgress steps={STORE_SETUP_STEPS} step={onboardStep} label="Store activation" />
 
-              <form onSubmit={handleMandatoryStoreSetup} className="space-y-6">
+              <form onSubmit={handleMandatoryStoreSetup} className="onboarding-fields space-y-6">
                 {onboardStep === 1 && (
                   <div className="space-y-4 animate-fadeIn">
                     <div className="p-4 bg-blue-50/80 rounded-2xl border border-blue-200 text-xs text-blue-950">
@@ -5682,7 +5671,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
       {/* ========================================================================= */}
       {showClaimModal && (
         <DashboardOverlay aria-label="Resident Room Registration" onClose={() => setShowClaimModal(false)} className="fixed inset-0 bg-slate-950/70 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-          <div className="bg-white/95 backdrop-blur-2xl rounded-3xl max-w-lg w-full p-5 sm:p-7 shadow-2xl border border-blue-200 space-y-5 animate-in fade-in zoom-in-95 duration-150">
+          <div className="onboarding-fields bg-white/95 backdrop-blur-2xl rounded-3xl max-w-lg w-full p-5 sm:p-7 shadow-2xl border border-blue-200 space-y-5 animate-in fade-in zoom-in-95 duration-150">
             
             {/* Modal Header */}
             <div className="flex items-start justify-between gap-3 pb-3 border-b border-slate-100">
@@ -5713,29 +5702,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
               )}
             </div>
 
-            {/* Step indicator bar */}
-            <div className="grid grid-cols-3 gap-1.5 pt-1">
-              {[
-                { num: 1, label: '1. Verify Key' },
-                { num: 2, label: '2. Account Details' },
-                { num: 3, label: '3. Activated' }
-              ].map((s) => (
-                <div key={s.num} className="flex flex-col gap-1">
-                  <div 
-                    className={`h-1 rounded-full transition-all ${
-                      claimStep >= s.num 
-                        ? 'bg-gradient-to-r from-blue-600 to-indigo-600' 
-                        : 'bg-slate-200'
-                    }`} 
-                  />
-                  <span className={`text-[10px] font-bold text-center ${
-                    claimStep === s.num ? 'text-blue-900' : 'text-slate-400'
-                  }`}>
-                    {s.label}
-                  </span>
-                </div>
-              ))}
-            </div>
+            <OnboardingProgress steps={ROOM_ACTIVATION_STEPS} step={claimStep} label="Room activation" />
 
             {/* STEP 1: Simple Digital Room Key Verification */}
             {claimStep === 1 && (
@@ -6503,7 +6470,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
       {/* ADD ADDITIONAL ROOM MODAL */}
       {showAddRoomModal && (
         <DashboardOverlay aria-label="Register Additional Room" onClose={() => setShowAddRoomModal(false)} className="fixed inset-0 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-lg w-full shadow-2xl border border-slate-200 space-y-5 animate-scaleUp">
+          <div className="onboarding-fields bg-white rounded-3xl p-6 sm:p-8 max-w-lg w-full shadow-2xl border border-slate-200 space-y-5 animate-scaleUp">
             <div className="flex items-center justify-between border-b border-slate-100 pb-4">
               <div className="flex items-center gap-3">
                 <div className="p-2.5 rounded-2xl bg-blue-100 text-blue-900 font-bold">
@@ -6522,6 +6489,8 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                 <X className="w-5 h-5" />
               </button>
             </div>
+
+            <OnboardingProgress steps={ROOM_ACTIVATION_STEPS} step={verifiedAddKeyInfo ? 2 : 1} label="Room registration" />
 
             <form
               onSubmit={async (e) => {
@@ -6833,72 +6802,10 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
               {/* Accent Top Bar */}
               <div className="h-1.5 bg-gradient-to-r from-blue-900 via-indigo-800 to-blue-700 w-full" />
 
-            {/* Stepper Header */}
-            <div className="p-6 sm:p-8 bg-slate-50/70 border-b border-slate-100">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-black uppercase text-blue-900 tracking-wider">Phase {dmWizardPhase} of 3</span>
-                    <span className="text-[10px] bg-blue-100 text-blue-900 font-bold px-2 py-0.5 rounded-full">
-                      Step {dmWizardPhase}
-                    </span>
-                  </div>
-                  <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight mt-0.5">
-                    {dmWizardPhase === 1 ? "Student Identity & Accreditation" : dmWizardPhase === 2 ? "Merchant Security & Credentials" : "Store Category & Verification Review"}
-                  </h1>
-                  <p className="text-xs font-semibold text-slate-500 mt-0.5">
-                    {dmWizardPhase === 1 ? "Provide your legal student identity and accredited Ghanaian university" : dmWizardPhase === 2 ? "Set up your student merchant portal authentication credentials" : "Choose primary product line and review activation terms"}
-                  </p>
-                </div>
-
-                <div className="hidden sm:flex items-center gap-1.5 bg-white px-3 py-1.5 rounded-full border border-slate-200 shadow-xs">
-                  <span className="text-xs font-extrabold text-slate-700">{Math.round((dmWizardPhase / 3) * 100)}%</span>
-                  <span className="text-[10px] font-bold text-slate-400">Completed</span>
-                </div>
-              </div>
-
-              {/* Step Navigation Pills */}
-              <div className="grid grid-cols-3 gap-2 pt-2">
-                {[
-                  { num: 1, title: 'Student Identity', sub: 'Identity & University' },
-                  { num: 2, title: 'Security', sub: 'Credentials & Password' },
-                  { num: 3, title: 'Store & Review', sub: 'Category & Terms' }
-                ].map((p) => {
-                  const isActive = dmWizardPhase === p.num;
-                  const isDone = dmWizardPhase > p.num;
-                  return (
-                    <div 
-                      key={p.num}
-                      className={`p-2.5 sm:p-3 rounded-2xl border transition-all flex items-center gap-2.5 ${
-                        isActive 
-                          ? 'bg-blue-900 text-white border-blue-900 shadow-md' 
-                          : isDone 
-                            ? 'bg-blue-50 text-blue-900 border-blue-200' 
-                            : 'bg-white text-slate-400 border-slate-200/80'
-                      }`}
-                    >
-                      <div className={`w-7 h-7 rounded-xl flex items-center justify-center font-black text-xs shrink-0 ${
-                        isActive 
-                          ? 'bg-white text-blue-900' 
-                          : isDone 
-                            ? 'bg-blue-200 text-blue-950' 
-                            : 'bg-slate-100 text-slate-500'
-                      }`}>
-                        {isDone ? <Check className="w-4 h-4" /> : p.num}
-                      </div>
-                      <div className="hidden md:block truncate">
-                        <div className={`text-[10px] font-extrabold uppercase tracking-wider truncate ${isActive ? 'text-white' : isDone ? 'text-blue-950' : 'text-slate-500'}`}>
-                          {p.title}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+            <div className="p-6 sm:p-8"><OnboardingProgress steps={MARKET_APPLICATION_STEPS} step={dmWizardPhase} label="Marketplace application" /></div>
 
             {/* Form Body Container */}
-            <div className="p-6 sm:p-10 space-y-6 text-slate-800">
+            <div className="onboarding-fields p-6 sm:p-10 space-y-6 text-slate-800">
               
               {dmRegError && (
                 <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold flex items-center gap-3">

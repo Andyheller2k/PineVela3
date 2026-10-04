@@ -1,3 +1,4 @@
+import OnboardingProgress, { STORE_SETUP_STEPS } from './OnboardingProgress';
 import { sessionFetch as fetch } from '../lib/session';
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -73,6 +74,7 @@ export default function PageDigitalMarketOnboard() {
   const [deliveryMode, setDeliveryMode] = useState<string>('Campus Meetup & Secure Escrow');
   const [profilePicture, setProfilePicture] = useState<string>('');
   const [coverPicture, setCoverPicture] = useState<string>('');
+  const registrationFee = appData?.registrationFeeAmount ?? storeData?.registrationFeeAmount ?? 50;
   const [momoNetwork, setMomoNetwork] = useState<string>('MTN Mobile Money');
   const [momoPhone, setMomoPhone] = useState<string>('0244123456');
 
@@ -193,31 +195,8 @@ export default function PageDigitalMarketOnboard() {
       </div>
 
       {/* Main Container */}
-      <div className="max-w-3xl mx-auto w-full my-0 bg-white/95 border border-blue-200/90 rounded-3xl p-6 sm:p-10 shadow-2xl backdrop-blur-md space-y-8 animate-fadeIn">
-        {/* Wizard Header & Progress */}
-        <div className="space-y-4 pb-6 border-b border-blue-100">
-          <div className="flex items-center justify-between">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-100 text-blue-900 text-xs font-black rounded-full">
-              <span>Phase {phase} of 3 • Store Activation Wizard</span>
-            </div>
-            <div className="text-xs font-bold text-slate-400">
-              {phase === 1 && "Store Identity & Handle"}
-              {phase === 2 && "Campus Location & Delivery"}
-              {phase === 3 && "50 GHS Activation & Launch"}
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            {[1, 2, 3].map((step) => (
-              <div
-                key={step}
-                className={`h-2 flex-1 rounded-full transition-all ${
-                  phase >= step ? 'bg-blue-600 shadow-sm' : 'bg-slate-200'
-                }`}
-              />
-            ))}
-          </div>
-        </div>
+      <div className="onboarding-fields max-w-3xl mx-auto w-full my-0 bg-white/95 border border-blue-200/90 rounded-3xl p-6 sm:p-10 shadow-2xl backdrop-blur-md space-y-8 animate-fadeIn">
+        <OnboardingProgress steps={STORE_SETUP_STEPS} step={phase} label="Store activation" />
 
         {errorMessage && (
           <div className="p-4 bg-rose-50 border border-rose-200 rounded-2xl text-xs font-semibold text-rose-800">
@@ -358,7 +337,7 @@ export default function PageDigitalMarketOnboard() {
                   }}
                   className="px-8 py-3.5 bg-blue-600 hover:bg-blue-500 text-white font-black text-xs rounded-xl shadow-lg shadow-blue-600/30 flex items-center gap-2 cursor-pointer transition-all"
                 >
-                  <span>Continue to 50 GHS Payment</span>
+                  <span>Continue to {registrationFee} GHS Payment</span>
                   <ArrowRight className="w-4 h-4" />
                 </button>
               </div>
@@ -368,7 +347,7 @@ export default function PageDigitalMarketOnboard() {
           {phase === 3 && (
             <div className="space-y-6 animate-fadeIn">
               <div>
-                <h2 className="text-xl font-black text-slate-900">Step 3: Finalize 50 GHS Registration Fee</h2>
+                <h2 className="text-xl font-black text-slate-900">Step 3: Finalize {registrationFee} GHS Registration Fee</h2>
                 <p className="text-xs text-slate-500 font-medium mt-0.5">
                   Secure settlement via PineVela Mobile Money Gateway to activate your campus merchant store.
                 </p>
@@ -383,7 +362,7 @@ export default function PageDigitalMarketOnboard() {
                     </p>
                   </div>
                   <div className="px-5 py-2.5 bg-blue-600 text-white font-black text-base rounded-xl shadow-md text-center shrink-0">
-                    50 GHS
+                    {registrationFee} GHS
                   </div>
                 </div>
 
@@ -430,7 +409,7 @@ export default function PageDigitalMarketOnboard() {
                   {submitting ? (
                     <>
                       <Clock className="w-4 h-4 animate-spin" />
-                      <span>Processing 50 GHS Payment & Launching Store...</span>
+                      <span>Processing {registrationFee} GHS Payment & Launching Store...</span>
                     </>
                   ) : (
                     <>

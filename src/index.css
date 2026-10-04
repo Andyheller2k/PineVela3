@@ -244,3 +244,14 @@ html.marketplace-scrollbar-hidden::-webkit-scrollbar {
   dialog[data-dashboard-overlay] { padding: 0; color: inherit; }
 }
 dialog[data-dashboard-overlay]::backdrop { background: transparent; }
+/* Shared resident-wizard field treatment, scoped to onboarding forms. */
+.onboarding-fields :is(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"]), select, textarea) {
+  border-radius: 1rem;
+  border-color: #cbd5e1;
+  background-color: #f8fafc;
+  color: #1e293b;
+}
+.onboarding-fields :is(input, select, textarea):focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}

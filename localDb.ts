@@ -35,7 +35,7 @@ export function getStore(defaults?: Partial<PersistentStore> | any): PersistentS
       platformSettings: {
         registrationFee: 3500,
         commission: 5,
-        announcement: 'Welcome to PineVela Academic Year 2026/2027.',
+        announcement: '',
         maintenanceMode: false
       },
       managerRestrictions: [],

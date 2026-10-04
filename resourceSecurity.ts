@@ -17,7 +17,14 @@ export const asyncHandler = (handler: (req: any, res: any, next: NextFunction) =
 
 /** Express 4 does not forward async rejections. Keep overloads and nested middleware arrays. */
 export function guardAsyncRoutes(app: any) {
-  const wrap = (value: any): any => Array.isArray(value) ? value.map(wrap) : typeof value === 'function' && value.constructor.name === 'AsyncFunction' ? asyncHandler(value) : value;
+  app.locals.activeAsyncHandlers = 0;
+  // A closed/timed-out response does not mean its async handler has stopped. Wipe
+  // execution checks this counter as well as live requests before committing.
+  const wrap = (value: any): any => Array.isArray(value) ? value.map(wrap) : typeof value === 'function' && value.constructor.name === 'AsyncFunction' ? asyncHandler(async (req, res, next) => {
+    app.locals.activeAsyncHandlers++;
+    try { return await value(req, res, next); }
+    finally { app.locals.activeAsyncHandlers--; }
+  }) : value;
   for (const method of ['use', 'get', 'post', 'put', 'patch', 'delete', 'all']) {
     const register = app[method].bind(app);
     app[method] = (...args: any[]) => register(...args.map(wrap));
@@ -112,11 +119,12 @@ export class AttemptBudgets {
 const ipOf = (req: Request) => req.ip || req.socket.remoteAddress || 'unknown';
 const routeOf = (req: Request) => req.path.toLowerCase().replace(/\/+$/, '');
 const loginPaths = new Set(['/api/auth/login', '/api/digital-market/login', '/api/verification-teams/login', '/api/auth/verification-team-login']);
-const credentialPaths = /(?:login|register|verify-unified|password|residents\/onboard|room-keys\/claim|manager-verifications\/submit|\/staff$|delete-registered-account|delete-room|clear-registered-accounts|\/verification-teams$)/;
-const smallBody = (route: string) => loginPaths.has(route) || /(?:password|verify-unified|register-unified)$/.test(route);
+const credentialPaths = /(?:admin-invitation\/accept|admin\/governance\/keys|login|register|verify-unified|password|residents\/onboard|room-keys\/claim|manager-verifications\/submit|\/staff$|delete-registered-account|delete-room|clear-registered-accounts|\/verification-teams$)/;
+const smallBody = (route: string) => route === '/api/settings' || route.startsWith('/api/admin/governance') || route === '/api/auth/admin-invitation/accept' || loginPaths.has(route) || /(?:password|verify-unified|register-unified)$/.test(route);
 export const UPLOAD_ROUTE = '/api/storage/upload-hostel-image';
 export const MARKET_UPLOAD_ROUTE = '/api/storage/upload-market-image';
-export const isImageUploadRoute = (route: string) => route === UPLOAD_ROUTE || route === MARKET_UPLOAD_ROUTE;
+export const ADMIN_PROFILE_UPLOAD_ROUTE = '/api/storage/upload-admin-profile';
+export const isImageUploadRoute = (route: string) => route === UPLOAD_ROUTE || route === MARKET_UPLOAD_ROUTE || route === ADMIN_PROFILE_UPLOAD_ROUTE;
 
 export async function createResourceProtection(options: { actor: (req: Request) => string; loginIdentity: (req: Request) => string | string[]; dataDir?: string }) {
   const memory = new AttemptBudgets();

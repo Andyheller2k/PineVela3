@@ -1,3 +1,4 @@
+import OnboardingProgress, { STAFF_ACCOUNT_STEPS } from './OnboardingProgress';
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -1079,13 +1080,6 @@ export default function PageManagerDashboard() {
                   className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-100/50 rounded-lg transition-colors cursor-pointer"
                 >
                   <Settings className="w-3.5 h-3.5" />
-                </button>
-                <button
-                  onClick={() => setShowEditProfileModal(true)}
-                  title="Edit Manager Profile"
-                  className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-100/50 rounded-lg transition-colors cursor-pointer"
-                >
-                  <Edit3 className="w-3.5 h-3.5" />
                 </button>
               </div>
             )}
@@ -3421,7 +3415,7 @@ export default function PageManagerDashboard() {
       {/* ADD STAFF MODAL */}
       {showAddStaffModal && (
         <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-md flex items-center justify-center p-4 z-[999] overflow-y-auto">
-          <div className="bg-white rounded-3xl p-6 md:p-8 max-w-lg w-full shadow-2xl border border-slate-200 space-y-6 relative z-[1000] text-slate-900">
+          <div className="onboarding-fields my-auto max-h-[calc(100dvh-2rem)] overflow-y-auto bg-white rounded-3xl p-6 md:p-8 max-w-lg w-full shadow-2xl border border-slate-200 space-y-6 relative z-[1000] text-slate-900">
             <div className="flex justify-between items-center border-b border-slate-100 pb-4">
               <div>
                 <h3 className="text-lg font-bold text-slate-900">Add Staff Member</h3>
@@ -3431,6 +3425,8 @@ export default function PageManagerDashboard() {
                 <XCircle className="w-5 h-5" />
               </button>
             </div>
+
+            <OnboardingProgress steps={STAFF_ACCOUNT_STEPS} step={newStaffName.trim() && newStaffPhone.trim() && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newStaffEmail) ? (newStaffPassword.trim() ? 3 : 2) : 1} label="Staff creation" />
 
             <div className="p-3 bg-emerald-50/80 border border-emerald-200/90 rounded-2xl text-xs text-emerald-900 flex items-start gap-2.5">
               <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />

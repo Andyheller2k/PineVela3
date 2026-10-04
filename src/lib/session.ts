@@ -14,6 +14,10 @@ export async function sessionFetch(input: RequestInfo | URL, options: RequestIni
   headers.delete('Authorization');
   headers.set('X-PineVela-Session', 'cookie');
   const response = await globalThis.fetch(input, { ...options, headers, credentials: 'same-origin' });
+  if (response.status === 503) {
+    const body = await response.clone().json().catch(() => null);
+    if (body?.maintenanceMode === true) window.dispatchEvent(new Event('pinevela-maintenance'));
+  }
   if (response.status === 401 && !/\/(?:login|verification-team-login)$/.test(url.pathname)) window.dispatchEvent(new Event('pinevela-session-expired'));
   return response;
 }

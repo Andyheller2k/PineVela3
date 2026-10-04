@@ -1,3 +1,4 @@
+import OnboardingProgress, { SIGNUP_STEPS, MANAGER_ACCOUNT_STEPS, ROOM_ACTIVATION_STEPS } from './OnboardingProgress';
 import { sessionFetch as fetch } from '../lib/session';
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -1065,9 +1066,11 @@ export default function PageUnifiedLogin() {
               </div>
             )}
 
+            {(activeTab === 'register' || verificationPending) && <OnboardingProgress steps={SIGNUP_STEPS} step={verificationPending ? 2 : 1} label="Account signup" />}
+
             {verificationPending ? (
               /* Email Verification Screen */
-              <form onSubmit={handleUnifiedVerifySubmit} className="space-y-4 text-left py-1">
+              <form onSubmit={handleUnifiedVerifySubmit} className="onboarding-fields space-y-4 text-left py-1">
                 <div className="text-center space-y-1">
                   <div className="mx-auto w-12 h-12 bg-blue-100 text-blue-900 rounded-full flex items-center justify-center font-bold shadow-inner">
                     <ShieldCheck className="w-6 h-6" />
@@ -1227,7 +1230,7 @@ export default function PageUnifiedLogin() {
               </form>
             ) : (
               /* Unified Registration Form */
-              <form onSubmit={handleUnifiedRegisterSubmit} className="space-y-3.5 text-left py-1">
+              <form onSubmit={handleUnifiedRegisterSubmit} className="onboarding-fields space-y-3.5 text-left py-1">
                 
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-slate-700 block">Your Full Name</label>
@@ -1380,6 +1383,8 @@ export default function PageUnifiedLogin() {
               ×
             </button>
 
+            <OnboardingProgress steps={MANAGER_ACCOUNT_STEPS} step={regStep} label="Manager account" />
+
             {/* Step Wizard Header */}
             {regStep === 1 && (
               <div className="mb-5 space-y-2">
@@ -1405,7 +1410,7 @@ export default function PageUnifiedLogin() {
 
             {/* STEP 1: ACCOUNT & KEEN MANAGER DETAILS WITH PHASE 1 VERIFICATION */}
             {regStep === 1 && (
-              <form onSubmit={handleManagerRegisterSubmit} className="space-y-4 text-xs font-semibold text-left max-h-[75vh] overflow-y-auto pr-1">
+              <form onSubmit={handleManagerRegisterSubmit} className="onboarding-fields space-y-4 text-xs font-semibold text-left max-h-[75vh] overflow-y-auto pr-1">
                 
                 {/* Synthetic Test Card Quick-Select Banner (Dev/Test Tooling) */}
                 <div className="bg-amber-50/80 border border-amber-200 rounded-2xl p-3 space-y-1.5 shadow-xs">
@@ -2179,29 +2184,7 @@ export default function PageUnifiedLogin() {
                 </div>
               </div>
 
-              {/* Step indicator bar */}
-              <div className="grid grid-cols-3 gap-1.5 pt-1">
-                {[
-                  { num: 1, label: '1. Verify Key' },
-                  { num: 2, label: '2. Account Info' },
-                  { num: 3, label: '3. Activated' }
-                ].map((s) => (
-                  <div key={s.num} className="flex flex-col gap-1">
-                    <div 
-                      className={`h-1.5 rounded-full transition-all ${
-                        studentKeyStep >= s.num 
-                          ? 'bg-gradient-to-r from-blue-600 to-indigo-600' 
-                          : 'bg-slate-200'
-                      }`} 
-                    />
-                    <span className={`text-[10px] font-bold text-center ${
-                      studentKeyStep === s.num ? 'text-blue-900' : 'text-slate-400'
-                    }`}>
-                      {s.label}
-                    </span>
-                  </div>
-                ))}
-              </div>
+              <OnboardingProgress steps={ROOM_ACTIVATION_STEPS} step={studentKeyStep} label="Room activation" />
             </div>
 
             {/* STEP 1: Digital Room Key Verification */}

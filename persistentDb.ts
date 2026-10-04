@@ -1,3 +1,4 @@
+import type { AdminGovernanceState } from './adminGovernance.js';
 import type { RoomKeyLimitState } from './roomKeySecurity.js';
 import 'dotenv/config';
 import type { SignupState } from './signupSecurity.js';
@@ -8,6 +9,7 @@ import { accountKey, protectStoredCredentials } from './accountSecurity.js';
 import { CREDENTIAL_EXPOSURE_VERSION, revokeExposedCredentials } from './credentialExposure.js';
 
 export interface PersistentStore {
+  adminGovernance?: AdminGovernanceState;
   signupVerification?: SignupState;
   roomKeyAttempts?: RoomKeyLimitState;
   hostels: any[];
@@ -121,6 +123,7 @@ export function loadPersistentStore(defaultStore: PersistentStore): PersistentSt
       );
     }
     const result: PersistentStore = {
+      adminGovernance: parsed.adminGovernance,
       roomKeyAttempts: { limits: Array.isArray(parsed.roomKeyAttempts?.limits) ? parsed.roomKeyAttempts.limits : [] },
       signupVerification: { pending: Array.isArray(parsed.signupVerification?.pending) ? parsed.signupVerification.pending : [], limits: Array.isArray(parsed.signupVerification?.limits) ? parsed.signupVerification.limits : [] },
       hostels: deduplicateById(Array.isArray(parsed.hostels) ? parsed.hostels : defaultStore.hostels),
