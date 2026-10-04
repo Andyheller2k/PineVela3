@@ -111,7 +111,19 @@ export class AdminGovernance {
     this.verifySettingsKey(id, body?.settingsKey);
     let settings;
     try { settings = validatePlatformSettings(body); } catch (error: any) { fail(400, error.message); }
-    Object.assign(this.getStore().platformSettings, settings);
+    const store = this.getStore(), previousAnnouncement = store.platformSettings.announcement;
+    Object.assign(store.platformSettings, settings);
+    if (settings.announcement && (settings.announcement !== previousAnnouncement || !(store.notifications || []).some((n: any) => n.category === 'system_announcement' && n.message === settings.announcement))) {
+      const date = new Date(this.now()).toISOString();
+      const recipients = new Set<string>();
+      const messages = store.users.flatMap((entry: any) => {
+        const userId = accountId(entry);
+        if (!userId || accountRole(entry) === 'admin' || recipients.has(userId)) return [];
+        recipients.add(userId);
+        return [{ id: crypto.randomUUID(), userId, title: 'PineVela announcement', message: settings.announcement, category: 'system_announcement', type: 'info', read: false, isRead: false, createdAt: date, date }];
+      });
+      store.notifications = [...messages, ...(store.notifications || [])];
+    }
     this.commit(); return { success: true, settings };
   }
   private fullRoster() {

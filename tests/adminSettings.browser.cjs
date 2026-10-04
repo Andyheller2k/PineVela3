@@ -110,8 +110,9 @@ async function main() {
     await command('Page.reload'); await until("document.body.innerText.includes('Shared approvals')", 'Admin reload'); await click(matchingButton('Admin Settings'));
     await until("document.querySelector('img[alt=\"Your administrator profile\"]')?.getAttribute('src') === " + JSON.stringify(avatar), 'Photograph survives reload');
     await viewport(375); await switchAccount(primary.token, '/#/student/dashboard');
-    await until("document.querySelector('[aria-label=\"PineVela system announcement\"]') !== null", 'Buyer announcement banner');
-    assert.equal(await evaluate('window.__announcementXss'), undefined, 'Announcement is plain text'); await noOverflow('Buyer banner on mobile');
+    await until("fetch('/api/notifications').then(r=>r.json()).then(list=>list.some(n=>n.category==='system_announcement'))", 'Buyer announcement notification');
+    assert(!(await evaluate("Boolean(document.querySelector('[aria-label=\"PineVela system announcement\"]'))")), 'No floating announcement banner');
+    assert.equal(await evaluate('window.__announcementXss'), undefined, 'Announcement is plain text'); await noOverflow('Buyer notification inbox on mobile');
     await api('/api/settings', admins[1].token, { registrationFee: 62.5, commission: 7.5, announcement: '', maintenanceMode: true, settingsKey: settingsKeys[1] });
     await until("document.body.innerText.includes('PineVela is undergoing maintenance')", 'Live maintenance boundary');
     // Any in-flight non-admin polling is intentionally denied with a 503. No successful
@@ -120,7 +121,7 @@ async function main() {
     await until("!document.body.innerText.includes('PineVela is undergoing maintenance') && !document.querySelector('[aria-label=\"PineVela system announcement\"]')", 'Service automatically resumes and cleared banner disappears');
     assert.deepEqual(exceptions, [], 'Browser console and runtime errors');
     assert(apiErrors.every(error => error.status === 503), 'Only deliberate maintenance denials are allowed');
-    console.log('Settings key enrollment, responsive settings, real photograph upload/reload, escaped live banner, and all-account maintenance/resumption passed. No console/runtime errors; no operational data touched.');
+    console.log('Settings key enrollment, responsive settings, real photograph upload/reload, announcement inbox delivery without floating banners, and all-account maintenance/resumption passed. No console/runtime errors; no operational data touched.');
   } finally {
     if (command && socket?.readyState === WebSocket.OPEN) { try { await command('Browser.close'); } catch {} } socket?.close();
     if (server && server.exitCode === null) { const stopped = once(server, 'exit').catch(() => {}); try { process.kill(-server.pid, 'SIGTERM'); } catch {} await Promise.race([stopped, pause(3000)]); }

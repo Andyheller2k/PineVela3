@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { } from '@tanstack/react-query';
-import { } from '../lib/queryClient';
+import { useQuery } from '@tanstack/react-query';
+import { sessionFetch } from '../lib/session';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
 import { saveNavigationLayout, usesTopNavigation } from '../lib/navigationLayout';
@@ -52,7 +52,28 @@ export default function PageResidentDashboard() {
   const [roomKeyDetails, setRoomKeyDetails] = useState<HostelRoomKey | null>(null);
   const [userRooms, setUserRooms] = useState<any[]>([]);
   const [studentProfile, setStudentProfile] = useState<any>(null);
-  const [loadingData, setLoadingData] = useState<boolean>(true);
+  const { data: residentData, isPending: loadingData, error: residentError, refetch: retryResidentData } = useQuery({
+    queryKey: ['residentData', user?.id, user?.roomKey],
+    enabled: Boolean(user),
+    refetchInterval: 8000,
+    queryFn: async ({ signal }) => {
+      const request = async (path: string) => {
+        const response = await sessionFetch(path, { signal: AbortSignal.any([signal, AbortSignal.timeout(15000)]) });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Your resident portal could not load.');
+        return data;
+      };
+      const [issues, rooms] = await Promise.all([request('/api/issue-reports'), request('/api/student/my-rooms')]);
+      if (!Array.isArray(issues) || !Array.isArray(rooms.rooms)) throw new Error('Your resident portal received an invalid response. Please try again.');
+      return { issues: issues as IssueReport[], rooms: rooms.rooms as HostelRoomKey[] };
+    }
+  });
+  useEffect(() => {
+    if (!residentData) return;
+    setIssueReports(residentData.issues);
+    setUserRooms(residentData.rooms);
+    setRoomKeyDetails(residentData.rooms.find(room => room.roomKey === user?.roomKey) || residentData.rooms[0] || null);
+  }, [residentData, user?.roomKey]);
 
   // New Issue Modal states
   const [showNewIssueModal, setShowNewIssueModal] = useState<boolean>(false);
@@ -290,6 +311,12 @@ export default function PageResidentDashboard() {
 
     return matchesFilter && matchesSearch;
   });
+
+  if (residentError && !residentData) return <main role="alert" className="flex min-h-screen flex-col items-center justify-center gap-4 bg-blue-50 p-6 text-center text-blue-950">
+    <PineLogo size={60} />
+    <p>Your resident portal could not load. Please try again.</p>
+    <button type="button" onClick={() => void retryResidentData()} className="rounded-xl bg-blue-900 px-5 py-3 font-semibold text-white">Retry resident portal</button>
+  </main>;
 
   if (loadingData) {
     return (

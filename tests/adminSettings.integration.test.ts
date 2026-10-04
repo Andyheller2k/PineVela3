@@ -48,6 +48,17 @@ test('Admin settings, all-role maintenance restrictions, verified profile photog
   await request('POST', '/api/settings', admins[0], { ...body, maintenanceMode: 'false' }, 400);
   await request('POST', '/api/settings', admins[0], { ...body, ownerId: others[0].id }, 400);
   await request('POST', '/api/settings', admins[0], body);
+  const announcements = (await request('GET', '/api/notifications', others[0], undefined)).filter((n: any) => n.category === 'system_announcement');
+  assert.equal(announcements.length, 1); assert.equal(announcements[0].message, 'Configured notice &lt;script&gt;not executable&lt;/script&gt;'); assert.equal(announcements[0].userId, others[0].id);
+  await request('POST', '/api/settings', admins[0], body);
+  assert.equal((await request('GET', '/api/notifications', others[0], undefined)).filter((n: any) => n.category === 'system_announcement').length, 1, 'Unchanged announcement is not duplicated');
+  const otherAnnouncements = (await request('GET', '/api/notifications', others[5], undefined)).filter((n: any) => n.category === 'system_announcement');
+  assert.equal(otherAnnouncements.length, 1); assert.notEqual(otherAnnouncements[0].id, announcements[0].id);
+  assert.equal((await request('GET', '/api/notifications', admins[0], undefined)).filter((n: any) => n.category === 'system_announcement').length, 0);
+  await request('PUT', `/api/notifications/${announcements[0].id}/read`, others[5], undefined, 403);
+  await request('PUT', `/api/notifications/${announcements[0].id}/read`, others[0], undefined);
+  assert.equal((await request('GET', '/api/notifications', others[5], undefined)).find((n: any) => n.id === otherAnnouncements[0].id).read, false, 'Recipient read states are independent');
+
   await request('POST', '/api/auth/change-password', admins[0], { currentPassword: 'Isolated-settings-login-0!', newPassword: 'Different-settings-login!456', settingsKey: wipeKey }, 403);
   assert.equal((await request('GET', '/api/settings', null, undefined)).commission, 7.5);
   const jpeg = await sharp({ create: { width: 1200, height: 900, channels: 3, background: '#1685cc' } }).jpeg().toBuffer();

@@ -151,3 +151,5 @@ separation/ownership/attempt limits/recovery, strict input validation, every non
 role during maintenance, continued admin access, restart persistence, real image content
 checks, responsive forms and live announcement/maintenance updates. No operational
 maintenance setting or administrator credentials are changed by the tests.
+
+System announcements are delivered as private, unread notifications to existing non-admin accounts when an administrator publishes new text. They do not create floating banners or toasts. Unchanged saves do not duplicate announcements; clearing the setting preserves notification history.

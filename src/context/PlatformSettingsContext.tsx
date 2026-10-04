@@ -30,6 +30,6 @@ export function PlatformAccessBoundary({ children }: { children: React.ReactNode
     <p>Non-admin accounts are temporarily restricted during database updates. Access will return automatically when maintenance ends.</p>
     <Link to="/login" className="rounded-xl bg-blue-600 px-5 py-3 font-semibold text-white">Administrator sign in</Link>
   </main>;
-  return <>{settings?.announcement && user && user.role !== 'admin' && !settings.maintenanceMode && <aside role="status" aria-label="PineVela system announcement" className="fixed bottom-20 left-1/2 z-[60] w-[min(42rem,calc(100%_-_2rem))] -translate-x-1/2 rounded-2xl border border-blue-200 bg-blue-50/95 px-5 py-3 text-sm text-blue-950 shadow-xl backdrop-blur-xl"><p className="whitespace-pre-wrap break-words">{settings.announcement}</p></aside>}
+  return <>
     {settings?.maintenanceMode && location.pathname === '/' && <aside role="status" className="fixed bottom-5 left-1/2 z-[60] w-[min(42rem,calc(100%_-_2rem))] -translate-x-1/2 rounded-2xl bg-blue-950 px-5 py-3 text-sm text-white">Temporary maintenance: non-admin accounts are restricted during database updates.</aside>}{children}</>;
 }

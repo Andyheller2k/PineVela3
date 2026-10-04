@@ -303,7 +303,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
             uniqueNotifs.push(notif);
 
             // Popups strictly ONLY fire in the primary user account for brand new unread notifications
-            if (isPrimaryAccount && !isFirstLoadRef.current && !notif.read && notificationServiceSingleton.shouldFireNotification(notif, isPrimaryAccount, notificationAccountKey)) {
+            if (notif.category !== 'system_announcement' && isPrimaryAccount && !isFirstLoadRef.current && !notif.read && notificationServiceSingleton.shouldFireNotification(notif, isPrimaryAccount, notificationAccountKey)) {
               pushToast(notif.title, notif.message, notif.type === 'success' ? 'success' : notif.type === 'warning' ? 'warning' : 'info');
             }
           }
