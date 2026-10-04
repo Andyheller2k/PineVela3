@@ -21,13 +21,15 @@ async function main() {
   const admins = Array.from({ length: 5 }, (_, i) => ({ id: crypto.randomUUID(), role: 'admin', name: `Browser founder ${i + 1}`, email: `founder${i + 1}@example.test`, token: crypto.randomUUID(), isVerified: true, verificationStatus: 'approved', password: crypto.createHash('sha256').update(`Browser-settings-login-${i}!`).digest('hex') }));
   const settingsKeys = admins.map(() => crypto.randomBytes(32).toString('base64url'));
   const primary = { id: crypto.randomUUID(), role: 'user', name: 'Browser primary user', email: 'browser-primary@example.test', token: crypto.randomUUID(), isVerified: true };
+  const merchant = { id: crypto.randomUUID(), role: 'merchant', name: 'Browser seller', email: 'browser-seller@example.test', token: crypto.randomUUID(), isDigitalMarketOnly: true, isVerified: true, merchantStoreId: 'browser-paid-store', merchantSetupCompleted: true, merchantRegistrationFeePaid: true };
+  const paidStore = { id: merchant.merchantStoreId, studentEmail: merchant.email, userId: merchant.id, storeName: 'Browser seller store', status: 'active', setupCompleted: true, registrationFeePaid: true, subscriptionPlan: 'default', subscriptionStatus: 'free', subscriptionExpiresAt: '2099-01-01T00:00:00.000Z', semesterExpiresAt: '2099-01-01T00:00:00.000Z', paymentMode: 'free' };
   const keys = admins.map(() => crypto.randomBytes(32).toString('base64url'));
   const governance = { version: 1, mainId: admins[0].id, revision: 1, members: admins.map((a, i) => ({ id: a.id, slot: i + 1, active: true, keyHash: crypto.createHash('sha256').update(`${a.id}:${keys[i]}`).digest('hex'), ...(i ? { settingsKeyHash: crypto.createHash('sha256').update(`settings:${a.id}:${settingsKeys[i]}`).digest('hex') } : {}) })), proposals: [], invitations: [], changes: [], attempts: {} };
-  await fs.writeFile(path.join(dataDir, 'pinevela_store.json'), sessionFixtureJson({ credentialExposureVersion: 1, accountSecurityVersion: 1, users: [...admins, primary], hostels: [], adminGovernance: governance, platformSettings: { registrationFee: 50, commission: 5, announcement: '', maintenanceMode: false } }));
+  await fs.writeFile(path.join(dataDir, 'pinevela_store.json'), sessionFixtureJson({ credentialExposureVersion: 1, accountSecurityVersion: 1, users: [...admins, primary, merchant], digitalMarketStores: [paidStore], digitalMarketApplications: [{ id: 'browser-paid-app', studentEmail: merchant.email, userId: merchant.id, status: 'approved' }], paymentTransactions: [{ id: 'browser-paid-transaction', storeId: paidStore.id, purpose: 'activation', status: 'fulfilled', mode: 'free' }], hostels: [], adminGovernance: governance, platformSettings: { registrationFee: 50, commission: 5, announcement: '', maintenanceMode: false } }));
   const port = await freePort(), debugPort = await freePort(), base = `http://127.0.0.1:${port}`;
   let server, chrome, socket, command; let serverLogs = '', chromeLogs = '';
   try {
-    server = spawn(process.execPath, [path.join(project, 'dist/server.cjs')], { cwd: project, detached: true, env: { ...process.env, NODE_ENV: 'production', PORT: String(port), PINEVELA_DATA_DIR: dataDir, PINEVELA_UPLOADS_DIR: path.join(temp, 'uploads'), PINEVELA_WIPE_RECOVERY_DIR: path.join(temp, 'recovery'), PINEVELA_MAIN_ADMIN_ID: admins[0].id, PINEVELA_TRUST_PROXY: '' }, stdio: ['ignore', 'pipe', 'pipe'] });
+    server = spawn(process.execPath, [path.join(project, 'dist/server.cjs')], { cwd: project, detached: true, env: { ...process.env, NODE_ENV: 'production', PORT: String(port), PINEVELA_PUBLIC_ORIGIN: base, PAYSTACK_SECRET_KEY: '', PINEVELA_DATA_DIR: dataDir, PINEVELA_UPLOADS_DIR: path.join(temp, 'uploads'), PINEVELA_WIPE_RECOVERY_DIR: path.join(temp, 'recovery'), PINEVELA_MAIN_ADMIN_ID: admins[0].id, PINEVELA_TRUST_PROXY: '' }, stdio: ['ignore', 'pipe', 'pipe'] });
     server.stdout.on('data', data => serverLogs += data); server.stderr.on('data', data => serverLogs += data);
     for (let i = 0; i < 200; i++) { try { if ((await fetch(base + '/api/health')).ok) break; } catch {} if (server.exitCode !== null) throw new Error(serverLogs); await pause(100); }
     chrome = spawn(process.env.CHROMIUM_PATH || '/snap/bin/chromium', ['--headless', '--no-sandbox', '--disable-gpu', '--disable-dev-shm-usage', '--disable-features=BackForwardCache', '--no-first-run', `--remote-debugging-port=${debugPort}`, `--user-data-dir=${path.join(temp, 'chrome')}`, 'about:blank'], { stdio: ['ignore', 'pipe', 'pipe'] });
@@ -78,7 +80,7 @@ async function main() {
     const noOverflow = async label => assert(await evaluate('document.documentElement.scrollWidth <= innerWidth + 1'), `${label}: page overflow`);
     await viewport(1440); await switchAccount(admins[0].token, '/#/admin/dashboard');
     await until("document.body.innerText.includes('Shared approvals')", 'Admin dashboard');
-    await click(matchingButton('Admin Settings'));
+    await click(matchingButton('Settings'));
     await until("document.body.innerText.includes('Enroll your separate settings key')", 'Settings key enrollment');
     await input('input[autocomplete="current-password"]', 'Browser-settings-login-0!');
     await click(button('Generate my settings key'));
@@ -90,14 +92,43 @@ async function main() {
       await viewport(width); await noOverflow(`Admin settings at ${width}`);
       assert(await evaluate("document.body.innerText.includes('Temporary restrict non admin accounts during database updates')"));
       assert(await evaluate("document.querySelector('[aria-label=\"Administrator settings\"] input[type=file]') !== null"));
+      assert(await evaluate("document.querySelector('[aria-label=\"Payment receiving account\"]') !== null"));
+      assert(await evaluate("document.querySelector('[aria-label=\"Payment receiving account\"] a').href === 'https://dashboard.paystack.com/'"));
     }
     await input('input[type=number][max="1000000"]', '62.50'); await input('input[type=number][max="100"]', '7.5');
+    for (const [label, amount] of [['Semester fee', '210.25'], ['Pine Default', '0'], ['Pine Star', '45.5'], ['Pine Pro', '99.75']]) {
+      const selector = await evaluate(`(()=>{const labels=[...document.querySelectorAll('[aria-label="Administrator settings"] label')]; const found=labels.find(l=>l.textContent.startsWith(${JSON.stringify(label)})); const field=found?.querySelector('input'); if(!field)throw new Error('Price field missing');field.id='price-field';return '#price-field';})()`); await input(selector, amount); await evaluate("document.querySelector('#price-field').removeAttribute('id')");
+    }
+    await input('[aria-label="Propose marketplace pricing"] input[type=text]', 'Reviewed registration and subscription pricing');
+    await input('[aria-label="Administrator settings"] input[autocomplete="off"]', settingsKeys[0]);
+    await click(button('Submit pricing proposal'));
+    await until("document.body.innerText.includes('1 approvals')", 'Initial proposal approval');
+    assert.equal((await api('/api/settings', admins[0].token)).registrationFee, 50, 'Proposal alone does not change prices');
+    assert(await evaluate(`${button('Final push — apply approved pricing')}.disabled`), 'Final push disabled without quorum');
+    for (const [index, width] of [[1, 375], [2, 768]]) {
+      await viewport(width); await switchAccount(admins[index].token, '/#/admin/dashboard');
+      await until("document.body.innerText.includes('Shared approvals')", 'Reviewer dashboard'); await click(matchingButton('Settings'));
+      await until("document.querySelector('[data-pricing-proposal]') !== null", 'Shared proposal visible');
+      assert(!(await evaluate(`Boolean(${button('Final push — apply approved pricing')})`)), 'Non-main cannot see final push');
+      await input('[aria-label="Administrator settings"] input[autocomplete="off"]', settingsKeys[index]); await click(button('Approve pricing'));
+      await until(`document.body.innerText.includes('${index + 1} approvals')`, 'Independent reviewer approval');
+      assert.equal(await evaluate("document.querySelector('[aria-label=\"Administrator settings\"] input[autocomplete=off]').value"), '', 'Reviewer key cleared');
+      await noOverflow('Pricing proposal reviewer ' + width);
+    }
+    assert.equal((await api('/api/settings', admins[0].token)).registrationFee, 50, 'Three approvals still require main final push');
+    await viewport(1440); await switchAccount(admins[0].token, '/#/admin/dashboard');
+    await until("document.body.innerText.includes('Shared approvals')", 'Main dashboard'); await click(matchingButton('Settings'));
+    await until("document.body.innerText.toLowerCase().includes('ready for main admin’s final push')", 'Main sees approved proposal');
+    for (const width of [375, 768, 1440]) { await viewport(width); await noOverflow('Approved pricing at ' + width); }
+    await input('[aria-label="Administrator settings"] input[autocomplete="off"]', settingsKeys[0]); await click(button('Final push — apply approved pricing'));
+    await until("document.body.innerText.includes('Approved pricing applied by administrator #1')", 'Main final push saved');
+    await until("document.body.innerText.includes('Applied by administrator #1')", 'Applied audit visible');
     await input('textarea', 'Browser configured announcement <script>window.__announcementXss = true</script>');
     await input('[aria-label="Administrator settings"] input[autocomplete="off"]', settingsKeys[0]);
     await click(button('Save Admin Settings'));
     await until("document.body.innerText.includes('Platform settings saved.')", 'Settings saved');
     assert.equal(await evaluate("document.querySelector('[aria-label=\"Administrator settings\"] input[autocomplete=off]').value"), '', 'Settings key cleared');
-    assert.equal((await api('/api/settings', admins[0].token)).registrationFee, 62.5);
+    assert.equal((await api('/api/settings', admins[0].token)).registrationFee, 62.5); const livePrices = await api('/api/settings', admins[0].token); assert.equal(livePrices.semesterFee, 210.25); assert.deepEqual(livePrices.subscriptionPrices, { default: 0, star: 45.5, pro: 99.75 });
     const sharp = require('sharp');
     const photo = await sharp({ create: { width: 1000, height: 900, channels: 3, background: '#1677cf' } }).png().toBuffer();
     // Snap Chromium has a separate /tmp. Put the same real raster bytes into a File
@@ -107,8 +138,20 @@ async function main() {
     await click(button('Save profile photograph'));
     await until("document.body.innerText.includes('Your profile photograph has been saved.')", 'Profile saved');
     const avatar = await evaluate("document.querySelector('img[alt=\"Your administrator profile\"]').getAttribute('src')"); assert.match(avatar, /\/uploads\/hostels\/.*\.png$/);
-    await command('Page.reload'); await until("document.body.innerText.includes('Shared approvals')", 'Admin reload'); await click(matchingButton('Admin Settings'));
+    await command('Page.reload'); await until("document.body.innerText.includes('Shared approvals')", 'Admin reload'); await click(matchingButton('Settings'));
     await until("document.querySelector('img[alt=\"Your administrator profile\"]')?.getAttribute('src') === " + JSON.stringify(avatar), 'Photograph survives reload');
+    await viewport(1440); await switchAccount(merchant.token, '/#/digital-market');
+    await until("document.querySelector('[aria-label=\"Upgrade your seller plan\"]') !== null", 'Seller dashboard');
+    await click("document.querySelector('[aria-label=\"Upgrade your seller plan\"]')");
+    await until("document.body.innerText.includes('GH₵45.50 / month') && document.body.innerText.includes('GH₵99.75 / month')", 'Desktop seller uses configured prices');
+    assert(await evaluate("document.body.innerText.includes('Semester fee: GHS 210.25')"));
+    for (const plan of ['Default', 'Star', 'Pro']) assert(await evaluate(`document.body.innerText.includes(${JSON.stringify('Pine ' + plan)})`));
+    await noOverflow('Desktop seller subscriptions');
+    await viewport(375);
+    for (const [plan, price] of [['Default', '0.00'], ['Star', '45.50'], ['Pro', '99.75']]) {
+      await click(button('Pine ' + plan)); await until(`document.body.innerText.includes(${JSON.stringify('GH₵' + price + ' / month')})`, 'Mobile selected plan price');
+      await noOverflow('Mobile seller ' + plan);
+    }
     await viewport(375); await switchAccount(primary.token, '/#/student/dashboard');
     await until("fetch('/api/notifications').then(r=>r.json()).then(list=>list.some(n=>n.category==='system_announcement'))", 'Buyer announcement notification');
     assert(!(await evaluate("Boolean(document.querySelector('[aria-label=\"PineVela system announcement\"]'))")), 'No floating announcement banner');
@@ -121,7 +164,7 @@ async function main() {
     await until("!document.body.innerText.includes('PineVela is undergoing maintenance') && !document.querySelector('[aria-label=\"PineVela system announcement\"]')", 'Service automatically resumes and cleared banner disappears');
     assert.deepEqual(exceptions, [], 'Browser console and runtime errors');
     assert(apiErrors.every(error => error.status === 503), 'Only deliberate maintenance denials are allowed');
-    console.log('Settings key enrollment, responsive settings, real photograph upload/reload, announcement inbox delivery without floating banners, and all-account maintenance/resumption passed. No console/runtime errors; no operational data touched.');
+    console.log('Shared pricing proposal, three separate keyed approvals, main-only final push and applied audit passed at desktop/tablet/mobile widths. Applied registration/three-plan/two-month prices reflected on seller plans; photograph upload/reload, announcement inbox delivery and maintenance/resumption passed. No console/runtime errors; no operational data touched.');
   } finally {
     if (command && socket?.readyState === WebSocket.OPEN) { try { await command('Browser.close'); } catch {} } socket?.close();
     if (server && server.exitCode === null) { const stopped = once(server, 'exit').catch(() => {}); try { process.kill(-server.pid, 'SIGTERM'); } catch {} await Promise.race([stopped, pause(3000)]); }

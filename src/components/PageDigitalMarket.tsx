@@ -1,4 +1,7 @@
-import OnboardingProgress, { STORE_SETUP_STEPS } from './OnboardingProgress';
+import { usePlatformSettings } from '../context/PlatformSettingsContext';
+import { openPaymentCheckout } from '../lib/payments';
+import { effectiveMarketPlan, PLAN_LIMITS } from '../../marketPlans';
+import RouteSkeleton from './RouteSkeleton';
 import TopNavBadge from './TopNavBadge';
 import MarketPhotoUpload from './MarketPhotoUpload';
 import { useNotifications } from '../context/NotificationContext';
@@ -436,21 +439,6 @@ export default function PageDigitalMarket() {
   const [viewingOrderMap, setViewingOrderMap] = useState<MarketOrder | null>(null);
   const [confirmingOrderId, setConfirmingOrderId] = useState<string | null>(null);
 
-  // Onboarding Wizard States
-  const [onboardingStep, setOnboardingStep] = useState<1 | 2 | 3>(1);
-  const [obStoreName, setObStoreName] = useState('');
-  const [obLocation, setObLocation] = useState('KNUST Campus (On-Campus)');
-  const [obDeliveryForm, setObDeliveryForm] = useState('Physical Meetup & PIN Handshake');
-  const [obCategory, setObCategory] = useState('Electronics');
-  const [obCoverPicture, setObCoverPicture] = useState('https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=1200&auto=format&fit=crop&q=80');
-  const [obProfilePicture, setObProfilePicture] = useState('https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80');
-  const [obUsername, setObUsername] = useState('');
-  const [obMomoNetwork, setObMomoNetwork] = useState('MTN Mobile Money');
-  const [obMomoNumber, setObMomoNumber] = useState('');
-  const [isPaying, setIsPaying] = useState(false);
-  const [payProgress, setPayProgress] = useState(0);
-  const [paymentStatusMessage, setPaymentStatusMessage] = useState('');
-
   // Profile Edit States
   const [editStoreName, setEditStoreName] = useState('');
   const [editLocation, setEditLocation] = useState('');
@@ -470,30 +458,27 @@ export default function PageDigitalMarket() {
     setTimeout(() => setToastMessage(null), 4000);
   };
 
-  // Preset resources for onboarding
-  const presetCovers = [
-    { name: 'Modern Tech Store', url: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=1200&auto=format&fit=crop&q=80' },
-    { name: 'Aesthetic Products', url: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=1200&auto=format&fit=crop&q=80' },
-    { name: 'Campus Study Center', url: 'https://images.unsplash.com/photo-1507842217343-583bb7270b66?w=1200&auto=format&fit=crop&q=80' },
-    { name: 'Apparel Boutique', url: 'https://images.unsplash.com/photo-1511556532299-8f662fc26c06?w=1200&auto=format&fit=crop&q=80' }
-  ];
-
-  const presetAvatars = [
-    { name: 'Academic Female', url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80' },
-    { name: 'Aesthetic Male', url: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=400&auto=format&fit=crop&q=80' },
-    { name: 'Vibrant Female', url: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&auto=format&fit=crop&q=80' },
-    { name: 'Professional Male', url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&auto=format&fit=crop&q=80' }
-  ];
-
   const studentEmail = user?.studentEmail || user?.email || '';
   const storeName = storeData?.storeName || applicationData?.storeName || `${user?.fullName || 'Student'}'s Store`;
   const university = storeData?.university || applicationData?.university || 'Accredited Ghanaian University';
-  const subscriptionPlan = storeData?.subscriptionPlan || "default";
+  const { settings: paymentSettings } = usePlatformSettings();
+  const subscriptionPlan = effectiveMarketPlan(storeData);
+  const planPrice = (plan: 'default' | 'star' | 'pro') => paymentSettings ? `GH₵${paymentSettings.subscriptionPrices[plan].toFixed(2)} / month` : 'Loading price…';
+  const [paymentError, setPaymentError] = useState('');
   const [selectedMobilePlan, setSelectedMobilePlan] = useState<"default" | "star" | "pro" | null>(null);
   const [isPlanActivationLoading, setIsPlanActivationLoading] = useState(false);
   const displayedMobilePlan = selectedMobilePlan || subscriptionPlan;
-  const subscriptionLimits = subscriptionPlan === "pro" ? { items: 200, services: 10, inventory: 900 } : subscriptionPlan === "star" ? { items: 100, services: 5, inventory: 600 } : { items: 20, services: 1, inventory: 200 };
-  const selectSubscription = async (plan: "default" | "star" | "pro") => { try { const result = await apiFetch("/api/digital-market/subscription", { method: "POST", body: JSON.stringify({ studentEmail, plan }) }); if (result?.store) { setStoreData(result.store); triggerToast(plan === "default" ? "Pine Default selected." : `Pine ${plan === "star" ? "Star" : "Pro"} selected for testing.`, "success"); } } catch (err: any) { triggerToast(err?.message || "Unable to update subscription.", "error"); } };
+  const subscriptionLimits = PLAN_LIMITS[subscriptionPlan];
+  const checkoutPayment = async (purpose: 'activation' | 'subscription' | 'semester', plan: 'default' | 'star' | 'pro' = subscriptionPlan) => {
+    setPaymentError(''); setIsPlanActivationLoading(true);
+    try { const result = await apiFetch('/api/payments/paystack/initialize', { method: 'POST', body: JSON.stringify({ purpose, plan }) });
+      if (openPaymentCheckout(result)) return;
+      if (!result?.paid) throw new Error('Verified payment is required.');
+      if (result.store) setStoreData(result.store); triggerToast('Subscription updated.', 'success');
+    } catch (err: any) { setPaymentError(err.message || 'Unable to open checkout.'); }
+    finally { setIsPlanActivationLoading(false); }
+  };
+  const selectSubscription = (plan: 'default' | 'star' | 'pro') => checkoutPayment('subscription', plan);
   const activateMobilePlan = async () => { setIsPlanActivationLoading(true); try { await selectSubscription(displayedMobilePlan); } finally { setIsPlanActivationLoading(false); } };
 
   const loadData = async (isBackground = false) => {
@@ -512,10 +497,7 @@ export default function PageDigitalMarket() {
       
       if (statusRes?.application) {
         setApplicationData((prev: any) => JSON.stringify(prev) === JSON.stringify(statusRes.application) ? prev : statusRes.application);
-        // Pre-fill some onboarding defaults from application only if empty
-        if (!obStoreName) setObStoreName(statusRes.application.storeName || `${statusRes.application.fullName}'s Store`);
-        if (!obCategory) setObCategory(statusRes.application.categoryToSell || 'Electronics');
-        if (!obUsername) setObUsername(statusRes.application.fullName?.split(' ')[0]?.toLowerCase() || 'student_merchant');
+
       }
 
       if (!statusRes?.store || !statusRes.store.setupCompleted) {
@@ -578,89 +560,6 @@ export default function PageDigitalMarket() {
     }, 10000);
     return () => clearInterval(interval);
   }, [user?.email, user?.studentEmail]);
-
-  // Handle Onboarding Next Step
-  const handleOnboardingNext = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (onboardingStep === 1) {
-      if (!obStoreName.trim()) {
-        triggerToast("Please provide your store name.", "error");
-        return;
-      }
-      setOnboardingStep(2);
-    } else if (onboardingStep === 2) {
-      if (!obUsername.trim()) {
-        triggerToast("Please choose a unique merchant username.", "error");
-        return;
-      }
-      setOnboardingStep(3);
-    }
-  };
-
-  // Process Simulated Payment of 50 GHS & Create Store
-  const handleProcessPayment = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!obMomoNumber.trim()) {
-      triggerToast("Please enter your Mobile Money Phone Number.", "error");
-      return;
-    }
-    if (obMomoNumber.trim().length < 9) {
-      triggerToast("Please enter a valid Ghanaian Mobile Money Phone Number.", "error");
-      return;
-    }
-
-    setIsPaying(true);
-    setPayProgress(15);
-    setPaymentStatusMessage("Contacting network provider...");
-
-    const steps = [
-      { progress: 30, text: "Sending GH₵ 50.00 authorization request to PineVela Secure Gateway..." },
-      { progress: 55, text: "Awaiting approval prompt on your mobile device..." },
-      { progress: 80, text: "MoMo Pin validated! Confirming transaction settlement..." },
-      { progress: 100, text: "Payment Approved! Provisioning your digital storefront..." }
-    ];
-
-    for (const step of steps) {
-      await new Promise(resolve => setTimeout(resolve, 800));
-      setPayProgress(step.progress);
-      setPaymentStatusMessage(step.text);
-    }
-
-    try {
-      const email = user?.studentEmail || user?.email || '';
-      const res = await apiFetch('/api/digital-market/create-store', {
-        method: 'POST',
-        body: JSON.stringify({
-          studentEmail: email,
-          storeName: obStoreName.trim(),
-          location: obLocation,
-          deliveryForm: obDeliveryForm,
-          category: obCategory,
-          coverPicture: obCoverPicture,
-          profilePicture: obProfilePicture,
-          username: obUsername.trim()
-        })
-      });
-
-      if (res?.success && res?.store) {
-        triggerToast(`Congratulations! "${obStoreName}" has been successfully created.`, "success");
-        setStoreData(res.store);
-        setOnboardingStep(1);
-        await loadData();
-        setActiveTab('dashboard');
-      } else {
-        triggerToast(res?.error || "Store creation failed. Please try again.", "error");
-        setOnboardingStep(1);
-      }
-    } catch (err: any) {
-      triggerToast(err?.message || "Failed to finalize store setup.", "error");
-      setOnboardingStep(1);
-    } finally {
-      setIsPaying(false);
-      setPayProgress(0);
-      setPaymentStatusMessage('');
-    }
-  };
 
   // Handle Add Product (MANDATORY Description and Image)
   const handleCreateProduct = async (e: React.FormEvent) => {
@@ -1183,347 +1082,9 @@ export default function PageDigitalMarket() {
   });
 
   // Loading Screen
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-tr from-sky-100 via-blue-50 to-indigo-100 flex flex-col items-center justify-center p-6 text-slate-800 relative overflow-hidden">
+  if (loading) return <RouteSkeleton />;
 
-        <div className="relative z-10 flex flex-col items-center space-y-4 text-center">
-          <div className="w-20 h-20 rounded-3xl bg-white/75 backdrop-blur-md border border-blue-200/60 shadow-xl flex items-center justify-center animate-pulse">
-            <PineLogo size={48} hideText={true} />
-          </div>
-          
-          <div className="space-y-1">
-            <h1 className="text-xl font-black text-slate-900 tracking-tight">PineVela</h1>
-            <p className="text-sm font-bold text-blue-700 flex items-center gap-2 justify-center">
-              <RefreshCw className="w-4 h-4 animate-spin text-blue-600" />
-              <span>Syncing Market Portal...</span>
-            </p>
-          </div>
-          
-          <p className="text-xs text-slate-500 font-medium">Connecting to peer-to-peer secure commerce channels...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // ONBOARDING WIZARD SCREEN
-  if (!storeData && applicationData?.status === 'approved') {
-    return (
-      <div className="min-h-screen bg-slate-50 text-slate-800 pb-20">
-        {/* Toast */}
-        {toastMessage && (
-          <div className={`fixed bottom-6 right-6 z-50 px-5 py-3 rounded-2xl shadow-2xl text-xs font-bold flex items-center gap-2.5 transition-all animate-bounce ${
-            toastMessage.type === 'success' ? 'bg-emerald-600 text-white' : 'bg-rose-600 text-white'
-          }`}>
-            {toastMessage.type === 'success' ? <CheckCircle2 className="w-4 h-4" /> : <X className="w-4 h-4" />}
-            <span>{toastMessage.text}</span>
-          </div>
-        )}
-
-        <header className="bg-white border-b border-blue-100/50 py-4 px-6 sticky top-0 z-40 backdrop-blur-md shadow-xs">
-          <div className="max-w-4xl mx-auto flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-blue-600 flex items-center justify-center font-bold">
-                <Store className="w-4.5 h-4.5 text-white" />
-              </div>
-              <span className="text-sm font-black tracking-tight text-slate-900">PineVela Student Merchant Setup</span>
-            </div>
-            <button
-              onClick={async () => { if (!await logout()) return; navigate('/login'); }}
-              className="px-3.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
-            >
-              <LogOut className="w-3.5 h-3.5" />
-              <span>Cancel & Sign Out</span>
-            </button>
-          </div>
-        </header>
-
-        <main className="max-w-2xl mx-auto px-4 pt-10">
-          <div className="onboarding-fields bg-white rounded-3xl border border-blue-100 shadow-xl p-8 space-y-8 backdrop-blur-md relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-2xl pointer-events-none" />
-
-            <OnboardingProgress steps={STORE_SETUP_STEPS} step={onboardingStep} label="Store activation" />
-
-            {/* STEP 1: MARKET DETAILS */}
-            {onboardingStep === 1 && (
-              <form onSubmit={handleOnboardingNext} className="space-y-5">
-                <div className="p-4 bg-blue-50/70 border border-blue-100 rounded-2xl text-xs text-blue-950 space-y-1">
-                  <span className="font-extrabold text-blue-900 block">Verified Status Approved!</span>
-                  <p className="text-slate-600 leading-relaxed">
-                    Your institutional student merchant registration is approved by PineVela Admins. Let's customize your store details to list items on your campus.
-                  </p>
-                </div>
-
-                <div id="ob-group-store-name">
-                  <label className="block text-xs font-black text-slate-800 mb-1">Store / Market Name *</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Kwame's Hub KNUST, Elite Textbooks, etc."
-                    value={obStoreName}
-                    onChange={(e) => setObStoreName(e.target.value)}
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-hidden focus:ring-2 focus:ring-blue-600 focus:bg-white"
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div id="ob-group-location">
-                    <label className="block text-xs font-black text-slate-800 mb-1">Campus Location *</label>
-                    <select
-                      value={obLocation}
-                      onChange={(e) => setObLocation(e.target.value)}
-                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-hidden focus:ring-2 focus:ring-blue-600 focus:bg-white cursor-pointer"
-                    >
-                      <option value="KNUST Campus (On-Campus)">KNUST Campus (On-Campus)</option>
-                      <option value="University of Ghana (Legon On-Campus)">University of Ghana (Legon On-Campus)</option>
-                      <option value="UCC Campus (Cape Coast On-Campus)">UCC Campus (Cape Coast On-Campus)</option>
-                      <option value="Kumasi Metropolis (Anywhere in Kumasi)">Kumasi Metropolis (Anywhere in Kumasi)</option>
-                      <option value="Ayeduase & Kotei (KNUST Enclave)">Ayeduase & Kotei (KNUST Enclave)</option>
-                      <option value="Bomso / Kentinkrono (Kumasi)">Bomso / Kentinkrono (Kumasi)</option>
-                    </select>
-                  </div>
-
-                  <div id="ob-group-category">
-                    <label className="block text-xs font-black text-slate-800 mb-1">Primary Type of Items *</label>
-                    <select
-                      value={obCategory}
-                      onChange={(e) => setObCategory(e.target.value)}
-                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-hidden focus:ring-2 focus:ring-blue-600 focus:bg-white cursor-pointer"
-                    >
-                      {DIGITAL_MARKET_CATEGORIES.map(cat => (
-                        <option key={cat} value={cat}>{cat}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                <div id="ob-group-delivery">
-                  <label className="block text-xs font-black text-slate-800 mb-1">Form of Delivery *</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Physical Handover at Hostel Porter Lodge, Campus delivery couriers"
-                    value={obDeliveryForm}
-                    onChange={(e) => setObDeliveryForm(e.target.value)}
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-hidden focus:ring-2 focus:ring-blue-600 focus:bg-white"
-                  />
-                </div>
-
-                <div className="pt-4 border-t border-slate-100 flex justify-end">
-                  <button
-                    type="submit"
-                    className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-black shadow-lg shadow-blue-600/20 transition-all flex items-center gap-1.5 cursor-pointer"
-                  >
-                    <span>Branding & Cover</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </form>
-            )}
-
-            {/* STEP 2: BRANDING & IDENTITY */}
-            {onboardingStep === 2 && (
-              <form onSubmit={handleOnboardingNext} className="space-y-6">
-                <div id="ob-group-username">
-                  <label className="block text-xs font-black text-slate-800 mb-1">Merchant Display Username *</label>
-                  <div className="relative">
-                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">@</span>
-                    <input
-                      type="text"
-                      required
-                      pattern="^[a-zA-Z0-9_]{3,20}$"
-                      placeholder="kwame_store"
-                      value={obUsername}
-                      onChange={(e) => setObUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
-                      className="w-full pl-8 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-hidden focus:ring-2 focus:ring-blue-600 focus:bg-white"
-                    />
-                  </div>
-                  <span className="text-[10px] text-slate-400 block mt-1">Alphanumeric, underscores, 3-20 chars. Visible to buyers on student portal.</span>
-                </div>
-
-                {/* Profile Picture presets */}
-                <div id="ob-group-avatar">
-                  <label className="block text-xs font-black text-slate-800 mb-2">Select Profile Avatar</label>
-                  <div className="grid grid-cols-4 gap-3">
-                    {presetAvatars.map((preset, index) => (
-                      <button
-                        key={index}
-                        type="button"
-                        onClick={() => setObProfilePicture(preset.url)}
-                        className={`relative rounded-2xl overflow-hidden aspect-square border-2 transition-all cursor-pointer ${
-                          obProfilePicture === preset.url ? 'border-blue-600 ring-2 ring-blue-500/20' : 'border-transparent opacity-75 hover:opacity-100'
-                        }`}
-                      >
-                        <img src={preset.url} alt={preset.name} className="w-full h-full object-cover" />
-                        {obProfilePicture === preset.url && (
-                          <div className="absolute inset-0 bg-blue-600/20 flex items-center justify-center">
-                            <CheckCircle2 className="w-5 h-5 text-white fill-blue-600" />
-                          </div>
-                        )}
-                      </button>
-                    ))}
-                  </div>
-                  <div className="mt-3">
-                    <input
-                      type="url"
-                      placeholder="Or enter custom profile picture URL..."
-                      value={obProfilePicture}
-                      onChange={(e) => setObProfilePicture(e.target.value)}
-                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-hidden"
-                    />
-                  </div>
-                </div>
-
-                {/* Cover presets */}
-                <div id="ob-group-cover">
-                  <label className="block text-xs font-black text-slate-800 mb-2">Select Store Cover Banner</label>
-                  <div className="grid grid-cols-2 gap-3">
-                    {presetCovers.map((preset, index) => (
-                      <button
-                        key={index}
-                        type="button"
-                        onClick={() => setObCoverPicture(preset.url)}
-                        className={`relative rounded-2xl overflow-hidden h-18 border-2 transition-all cursor-pointer ${
-                          obCoverPicture === preset.url ? 'border-blue-600 ring-2 ring-blue-500/20' : 'border-transparent opacity-75 hover:opacity-100'
-                        }`}
-                      >
-                        <img src={preset.url} alt={preset.name} className="w-full h-full object-cover" />
-                        <div className="absolute bottom-1 left-2 bg-slate-900/80 text-[8px] font-bold text-white px-1.5 py-0.5 rounded-sm">
-                          {preset.name}
-                        </div>
-                        {obCoverPicture === preset.url && (
-                          <div className="absolute inset-0 bg-blue-600/20 flex items-center justify-center">
-                            <CheckCircle2 className="w-5 h-5 text-white fill-blue-600" />
-                          </div>
-                        )}
-                      </button>
-                    ))}
-                  </div>
-                  <div className="mt-3">
-                    <input
-                      type="url"
-                      placeholder="Or enter custom banner picture URL..."
-                      value={obCoverPicture}
-                      onChange={(e) => setObCoverPicture(e.target.value)}
-                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-hidden"
-                    />
-                  </div>
-                </div>
-
-                <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
-                  <button
-                    type="button"
-                    onClick={() => setOnboardingStep(1)}
-                    className="px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50"
-                  >
-                    Back
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-black shadow-lg shadow-blue-600/20 transition-all flex items-center gap-1.5 cursor-pointer"
-                  >
-                    <span>Verify & Pay Activation</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </form>
-            )}
-
-            {/* STEP 3: PAYMENT ACTIVATION (50 CEDIS) */}
-            {onboardingStep === 3 && (
-              <form onSubmit={handleProcessPayment} className="space-y-6">
-                <div className="p-5 bg-emerald-50 border border-emerald-200 rounded-3xl space-y-3">
-                  <div className="flex items-center gap-2">
-                    <CreditCard className="w-5 h-5 text-emerald-600" />
-                    <span className="text-sm font-black text-emerald-950">One-Time Platform Verification Fee</span>
-                  </div>
-                  <p className="text-xs text-slate-600 leading-relaxed">
-                    Accredited student merchants pay a non-refundable security integration fee of <strong>GH₵ 50.00</strong> to the PineVela Merchant Account. This supports hosting, verification, fraud prevention, and real-time pickup security services.
-                  </p>
-                  <div className="flex items-center justify-between pt-2 border-t border-emerald-200 text-xs">
-                    <span className="text-slate-500">Amount Due:</span>
-                    <span className="text-base font-black text-emerald-800">GH₵ 50.00</span>
-                  </div>
-                </div>
-
-                {!isPaying ? (
-                  <div className="space-y-4">
-                    <div id="pay-group-network">
-                      <label className="block text-xs font-black text-slate-800 mb-1">Select Mobile Money Network</label>
-                      <div className="grid grid-cols-3 gap-2.5">
-                        {['MTN Mobile Money', 'Telecel Cash', 'AT Money'].map((net) => (
-                          <button
-                            key={net}
-                            type="button"
-                            onClick={() => setObMomoNetwork(net)}
-                            className={`py-2 px-3 rounded-xl border text-[11px] font-black transition-all cursor-pointer ${
-                              obMomoNetwork === net
-                                ? 'bg-yellow-500/10 border-yellow-500 text-yellow-900 shadow-xs'
-                                : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
-                            }`}
-                          >
-                            {net}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div id="pay-group-phone">
-                      <label className="block text-xs font-black text-slate-800 mb-1">Mobile Money Number *</label>
-                      <div className="relative">
-                        <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">+233</span>
-                        <input
-                          type="text"
-                          required
-                          pattern="^[0-9]{9,10}$"
-                          placeholder="244123456"
-                          value={obMomoNumber}
-                          onChange={(e) => setObMomoNumber(e.target.value.replace(/\D/g, ''))}
-                          className="w-full pl-14 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-hidden focus:ring-2 focus:ring-blue-600 focus:bg-white"
-                        />
-                      </div>
-                      <span className="text-[10px] text-slate-400 block mt-1">Provide your local active MoMo billing phone number to authorize pull.</span>
-                    </div>
-
-                    <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
-                      <button
-                        type="button"
-                        onClick={() => setOnboardingStep(2)}
-                        className="px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50"
-                      >
-                        Back
-                      </button>
-                      <button
-                        type="submit"
-                        className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black shadow-lg shadow-emerald-600/20 transition-all flex items-center gap-1.5 cursor-pointer"
-                      >
-                        <CheckCircle2 className="w-4 h-4" />
-                        <span>Pay GH₵ 50.00 & Activate Store</span>
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="space-y-4 py-6 text-center">
-                    <div className="relative w-full h-2 bg-slate-100 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-emerald-500 rounded-full transition-all duration-300"
-                        style={{ width: `${payProgress}%` }}
-                      />
-                    </div>
-                    <div className="flex items-center justify-center gap-2">
-                      <div className="w-4 h-4 rounded-full border-2 border-emerald-200 border-t-emerald-600 animate-spin" />
-                      <span className="text-xs font-bold text-emerald-800">{paymentStatusMessage}</span>
-                    </div>
-                    <p className="text-[10px] text-slate-400 font-medium">Please do not refresh this page. Authorizing via secure campus merchant token...</p>
-                  </div>
-                )}
-              </form>
-            )}
-          </div>
-        </main>
-      </div>
-    );
-  }
+  if (!storeData && applicationData?.status === 'approved') return <div className="p-8 text-center"><button onClick={() => navigate('/digital-market/onboard')} className="rounded-xl bg-blue-600 p-4 text-white">Complete store details and secure checkout</button></div>;
 
   // REDESIGNED MERCHANT MANAGEMENT WORKBENCH (GLOSSY LIGHT-BLUE VIBE)
   return (
@@ -2746,14 +2307,22 @@ export default function PageDigitalMarket() {
               </div>
               <div key={displayedMobilePlan} className={`relative min-h-[365px] overflow-hidden rounded-3xl border p-6 shadow-xl animate-fadeIn ${displayedMobilePlan === "pro" ? "border-cyan-300/70 bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-900 text-white" : displayedMobilePlan === "star" ? "border-amber-300 bg-gradient-to-br from-amber-50 via-white to-orange-50 text-slate-900" : "border-blue-200 bg-gradient-to-br from-white via-blue-50 to-slate-50 text-slate-900"}`}>
                 <div className={`absolute inset-x-0 top-0 h-1 ${displayedMobilePlan === "pro" ? "bg-gradient-to-r from-indigo-500 via-cyan-300 to-indigo-500 animate-pulse" : displayedMobilePlan === "star" ? "bg-gradient-to-r from-amber-300 via-yellow-500 to-orange-400 animate-pulse" : "bg-gradient-to-r from-blue-300 via-blue-600 to-indigo-400"}`} />
-                <div className="relative flex h-full flex-col"><div className="flex items-start justify-between"><div className={`rounded-2xl p-3 ${displayedMobilePlan === "pro" ? "bg-cyan-300/15 text-cyan-200" : displayedMobilePlan === "star" ? "bg-gradient-to-br from-amber-400 to-orange-500 text-white" : "bg-blue-100 text-blue-700"}`}>{displayedMobilePlan === "pro" ? <TrendingUp className="h-7 w-7" /> : displayedMobilePlan === "star" ? <Star className="h-7 w-7 fill-current" /> : <Store className="h-7 w-7" />}</div><BadgeCheck className={`h-6 w-6 ${displayedMobilePlan === "pro" ? "text-cyan-300" : displayedMobilePlan === "star" ? "text-amber-600" : "text-blue-600"}`} /></div><div className="mt-6"><div className={`text-[10px] font-black uppercase tracking-[0.16em] ${displayedMobilePlan === "pro" ? "text-cyan-200" : displayedMobilePlan === "star" ? "text-amber-700" : "text-blue-700"}`}>Selected seller subscription</div><h3 className="mt-1 text-3xl font-black">Pine {displayedMobilePlan === "star" ? "Star" : displayedMobilePlan === "pro" ? "Pro" : "Default"}</h3><p className={`mt-2 text-sm font-medium ${displayedMobilePlan === "pro" ? "text-indigo-100" : "text-slate-600"}`}>{displayedMobilePlan === "pro" ? "The full visual storefront toolkit." : displayedMobilePlan === "star" ? "A brighter presence for growing stores." : "Everything needed to begin selling."}</p></div><div className={`my-6 h-px ${displayedMobilePlan === "pro" ? "bg-white/15" : "bg-slate-200"}`} /><div className="grid grid-cols-3 gap-2 text-center"><div className={`rounded-2xl p-3 ${displayedMobilePlan === "pro" ? "bg-white/10" : "bg-white/70"}`}><div className="text-lg font-black">{displayedMobilePlan === "pro" ? "200" : displayedMobilePlan === "star" ? "100" : "20"}</div><div className="text-[9px] font-bold opacity-70">items</div></div><div className={`rounded-2xl p-3 ${displayedMobilePlan === "pro" ? "bg-white/10" : "bg-white/70"}`}><div className="text-lg font-black">{displayedMobilePlan === "pro" ? "10" : displayedMobilePlan === "star" ? "5" : "1"}</div><div className="text-[9px] font-bold opacity-70">services</div></div><div className={`rounded-2xl p-3 ${displayedMobilePlan === "pro" ? "bg-white/10" : "bg-white/70"}`}><div className="text-lg font-black">{displayedMobilePlan === "pro" ? "900" : displayedMobilePlan === "star" ? "600" : "200"}</div><div className="text-[9px] font-bold opacity-70">inventory</div></div></div><div className={`mt-6 rounded-2xl p-3 text-xs font-semibold leading-relaxed ${displayedMobilePlan === "pro" ? "bg-cyan-300/10 text-cyan-100" : displayedMobilePlan === "star" ? "bg-amber-100 text-amber-950" : "bg-blue-100 text-blue-950"}`}>{displayedMobilePlan === "pro" ? "Includes every Pine Star benefit, plus custom animated item-card designs and highlights." : displayedMobilePlan === "star" ? "Includes a Pine Star badge, search priority, a store link, HD images, and AI image tools." : "Publish up to 20 items and one service at a time, with 200 total inventory units."}</div><div className={`mt-auto pt-5 text-lg font-black ${displayedMobilePlan === "pro" ? "text-cyan-200" : displayedMobilePlan === "star" ? "text-amber-700" : "text-blue-700"}`}>{displayedMobilePlan === "default" ? "Free forever" : displayedMobilePlan === "star" ? "GH₵90 / month" : "GH₵150 / month"}</div></div>
-                <button type="button" onClick={activateMobilePlan} disabled={isPlanActivationLoading || displayedMobilePlan === subscriptionPlan} className={`mt-6 flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-3 text-xs font-black transition-all disabled:cursor-default ${displayedMobilePlan === subscriptionPlan ? "bg-emerald-500 text-white" : displayedMobilePlan === "pro" ? "bg-cyan-300 text-slate-950" : displayedMobilePlan === "star" ? "bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950" : "bg-blue-600 text-white"}`}>{isPlanActivationLoading ? <><RefreshCw className="h-4 w-4 animate-spin" />Activating...</> : displayedMobilePlan === subscriptionPlan ? <><CheckCircle2 className="h-4 w-4" />Activated</> : <>Upgrade to Pine {displayedMobilePlan === "star" ? "Star" : displayedMobilePlan === "pro" ? "Pro" : "Default"}<ArrowRight className="h-4 w-4" /></>}</button>
+                <div className="relative flex h-full flex-col"><div className="flex items-start justify-between"><div className={`rounded-2xl p-3 ${displayedMobilePlan === "pro" ? "bg-cyan-300/15 text-cyan-200" : displayedMobilePlan === "star" ? "bg-gradient-to-br from-amber-400 to-orange-500 text-white" : "bg-blue-100 text-blue-700"}`}>{displayedMobilePlan === "pro" ? <TrendingUp className="h-7 w-7" /> : displayedMobilePlan === "star" ? <Star className="h-7 w-7 fill-current" /> : <Store className="h-7 w-7" />}</div><BadgeCheck className={`h-6 w-6 ${displayedMobilePlan === "pro" ? "text-cyan-300" : displayedMobilePlan === "star" ? "text-amber-600" : "text-blue-600"}`} /></div><div className="mt-6"><div className={`text-[10px] font-black uppercase tracking-[0.16em] ${displayedMobilePlan === "pro" ? "text-cyan-200" : displayedMobilePlan === "star" ? "text-amber-700" : "text-blue-700"}`}>Selected seller subscription</div><h3 className="mt-1 text-3xl font-black">Pine {displayedMobilePlan === "star" ? "Star" : displayedMobilePlan === "pro" ? "Pro" : "Default"}</h3><p className={`mt-2 text-sm font-medium ${displayedMobilePlan === "pro" ? "text-indigo-100" : "text-slate-600"}`}>{displayedMobilePlan === "pro" ? "More publishing capacity for established stores." : displayedMobilePlan === "star" ? "A brighter presence for growing stores." : "Everything needed to begin selling."}</p></div><div className={`my-6 h-px ${displayedMobilePlan === "pro" ? "bg-white/15" : "bg-slate-200"}`} /><div className="grid grid-cols-3 gap-2 text-center"><div className={`rounded-2xl p-3 ${displayedMobilePlan === "pro" ? "bg-white/10" : "bg-white/70"}`}><div className="text-lg font-black">{displayedMobilePlan === "pro" ? "200" : displayedMobilePlan === "star" ? "100" : "20"}</div><div className="text-[9px] font-bold opacity-70">items</div></div><div className={`rounded-2xl p-3 ${displayedMobilePlan === "pro" ? "bg-white/10" : "bg-white/70"}`}><div className="text-lg font-black">{displayedMobilePlan === "pro" ? "10" : displayedMobilePlan === "star" ? "5" : "1"}</div><div className="text-[9px] font-bold opacity-70">services</div></div><div className={`rounded-2xl p-3 ${displayedMobilePlan === "pro" ? "bg-white/10" : "bg-white/70"}`}><div className="text-lg font-black">{displayedMobilePlan === "pro" ? "900" : displayedMobilePlan === "star" ? "600" : "200"}</div><div className="text-[9px] font-bold opacity-70">inventory</div></div></div><div className={`mt-6 rounded-2xl p-3 text-xs font-semibold leading-relaxed ${displayedMobilePlan === "pro" ? "bg-cyan-300/10 text-cyan-100" : displayedMobilePlan === "star" ? "bg-amber-100 text-amber-950" : "bg-blue-100 text-blue-950"}`}>{displayedMobilePlan === "pro" ? "Publish up to 200 items and 10 services, with 900 total inventory units." : displayedMobilePlan === "star" ? "Publish up to 100 items and five services, with 600 total inventory units." : "Publish up to 20 items and one service at a time, with 200 total inventory units."}</div><div className={`mt-auto pt-5 text-lg font-black ${displayedMobilePlan === "pro" ? "text-cyan-200" : displayedMobilePlan === "star" ? "text-amber-700" : "text-blue-700"}`}>{planPrice(displayedMobilePlan)}</div></div>
+                <button type="button" onClick={activateMobilePlan} disabled={isPlanActivationLoading || !paymentSettings} className={`mt-6 flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-3 text-xs font-black transition-all disabled:cursor-default ${displayedMobilePlan === subscriptionPlan ? "bg-emerald-500 text-white" : displayedMobilePlan === "pro" ? "bg-cyan-300 text-slate-950" : displayedMobilePlan === "star" ? "bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950" : "bg-blue-600 text-white"}`}>{isPlanActivationLoading ? <><RefreshCw className="h-4 w-4 animate-spin" />Activating...</> : displayedMobilePlan === subscriptionPlan ? <><CheckCircle2 className="h-4 w-4" />Renew plan</> : <>Upgrade to Pine {displayedMobilePlan === "star" ? "Star" : displayedMobilePlan === "pro" ? "Pro" : "Default"}<ArrowRight className="h-4 w-4" /></>}</button>
               </div>
             </div>
+            <div className="space-y-3 rounded-2xl border border-blue-200 bg-white/80 p-5 text-sm text-slate-900">
+              {paymentError && <p role="alert" className="text-red-700">{paymentError}</p>}
+              <p>Registration: GHS {paymentSettings?.registrationFee ?? '…'} once. Semester fee: GHS {paymentSettings?.semesterFee ?? '…'} every two months. Plans renew monthly through checkout; no automatic debit.</p>
+              <p>Plan paid until: {storeData?.subscriptionExpiresAt ? new Date(storeData.subscriptionExpiresAt).toLocaleDateString() : 'No verified paid period'}. Two-month fee paid until: {storeData?.semesterExpiresAt ? new Date(storeData.semesterExpiresAt).toLocaleDateString() : 'Payment required'}.</p>
+              {storeData?.paymentMode === 'test' && <p className="font-semibold text-amber-700">Paystack test payment — development access only.</p>}
+              <button disabled={isPlanActivationLoading || !paymentSettings} onClick={() => checkoutPayment(storeData?.registrationFeePaid ? 'semester' : 'activation')} className="rounded-xl bg-blue-600 px-4 py-3 text-white disabled:opacity-50">{storeData?.registrationFeePaid ? 'Renew two-month fee' : 'Complete verified registration'}</button>
+              {sessionStorage.getItem('pinevela.pendingPayment') && <button onClick={() => navigate('/payments/return')} className="ml-3 text-blue-700">Verify unfinished payment</button>}
+            </div>
             <div className="hidden grid-cols-1 gap-5 sm:grid lg:grid-cols-3">
-              <button type="button" onClick={() => selectSubscription("default")} className={`group relative overflow-hidden rounded-3xl border bg-white/70 p-6 text-left shadow-sm transition-all hover:-translate-y-1 hover:shadow-xl ${subscriptionPlan === "default" ? "border-blue-500 ring-2 ring-blue-200" : "border-slate-200"}`}><div className="flex items-start justify-between"><div className="rounded-2xl bg-blue-100 p-3 text-blue-700"><Store className="h-6 w-6" /></div>{subscriptionPlan === "default" && <BadgeCheck className="h-6 w-6 text-blue-600" />}</div><h3 className="mt-5 text-xl font-black text-slate-900">Pine Default</h3><p className="mt-1 text-sm text-slate-500">Everything needed to begin selling.</p><div className="my-5 h-px bg-slate-200" /><div className="space-y-3 text-sm font-semibold text-slate-700"><div className="flex gap-2"><CheckCircle2 className="h-4 w-4 text-blue-600" />Publish 20 items at a time</div><div className="flex gap-2"><CheckCircle2 className="h-4 w-4 text-blue-600" />1 active service</div><div className="flex gap-2"><CheckCircle2 className="h-4 w-4 text-blue-600" />200 total inventory units</div></div><div className="mt-6 text-sm font-black text-blue-700">Free forever <ArrowRight className="ml-1 inline h-4 w-4" /></div></button>
-              <button type="button" onClick={() => selectSubscription("star")} className={`group relative overflow-hidden rounded-3xl border bg-gradient-to-b from-amber-50 via-white to-orange-50 p-6 text-left shadow-md transition-all hover:-translate-y-1 hover:shadow-2xl ${subscriptionPlan === "star" ? "border-amber-400 ring-2 ring-amber-200" : "border-amber-200"}`}><div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-amber-300 via-yellow-500 to-orange-400 animate-pulse" /><div className="flex items-start justify-between"><div className="rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 p-3 text-white shadow-lg"><Star className="h-6 w-6 fill-current" /></div>{subscriptionPlan === "star" && <BadgeCheck className="h-6 w-6 text-amber-600" />}</div><h3 className="mt-5 text-xl font-black text-slate-900">Pine Star</h3><p className="mt-1 text-sm text-slate-600">A brighter presence for growing stores.</p><div className="mt-4 text-2xl font-black text-slate-900">GH₵90 <span className="text-xs font-bold text-slate-500">/ month</span></div><div className="my-5 h-px bg-amber-200" /><div className="space-y-3 text-sm font-semibold text-slate-700"><div className="flex gap-2"><BadgeCheck className="h-4 w-4 text-amber-600" />100 items, 5 services, 600 inventory</div><div className="flex gap-2"><TrendingUp className="h-4 w-4 text-amber-600" />Star badge and search priority</div><div className="flex gap-2"><ImageIcon className="h-4 w-4 text-amber-600" />Store link, HD images and AI tools</div></div><div className="mt-6 text-sm font-black text-amber-700">Choose Pine Star <ArrowRight className="ml-1 inline h-4 w-4" /></div></button>
-              <button type="button" onClick={() => selectSubscription("pro")} className={`group relative overflow-hidden rounded-3xl border bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-900 p-6 text-left text-white shadow-lg transition-all hover:-translate-y-1 hover:shadow-2xl ${subscriptionPlan === "pro" ? "border-cyan-300 ring-2 ring-cyan-300/70" : "border-indigo-500/60"}`}><div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-cyan-300/20 blur-2xl animate-pulse" /><div className="relative flex items-start justify-between"><div className="rounded-2xl border border-cyan-200/40 bg-cyan-300/15 p-3 text-cyan-200"><TrendingUp className="h-6 w-6" /></div>{subscriptionPlan === "pro" && <BadgeCheck className="h-6 w-6 text-cyan-300" />}</div><div className="relative"><h3 className="mt-5 text-xl font-black">Pine Pro</h3><p className="mt-1 text-sm text-indigo-200">The full visual storefront toolkit.</p><div className="mt-4 text-2xl font-black">GH₵150 <span className="text-xs font-bold text-indigo-200">/ month</span></div><div className="my-5 h-px bg-white/15" /><div className="space-y-3 text-sm font-semibold text-indigo-50"><div className="flex gap-2"><CheckCircle2 className="h-4 w-4 text-cyan-300" />200 items, 10 services, 900 inventory</div><div className="flex gap-2"><Star className="h-4 w-4 text-cyan-300" />Every Pine Star advantage</div><div className="flex gap-2"><ImageIcon className="h-4 w-4 text-cyan-300" />Animated, custom item cards</div></div><div className="mt-6 text-sm font-black text-cyan-200">Choose Pine Pro <ArrowRight className="ml-1 inline h-4 w-4" /></div></div></button>
+              <button type="button" disabled={isPlanActivationLoading || !paymentSettings} onClick={() => selectSubscription("default")} className={`group relative overflow-hidden rounded-3xl border bg-white/70 p-6 text-left shadow-sm transition-all hover:-translate-y-1 hover:shadow-xl ${subscriptionPlan === "default" ? "border-blue-500 ring-2 ring-blue-200" : "border-slate-200"}`}><div className="flex items-start justify-between"><div className="rounded-2xl bg-blue-100 p-3 text-blue-700"><Store className="h-6 w-6" /></div>{subscriptionPlan === "default" && <BadgeCheck className="h-6 w-6 text-blue-600" />}</div><h3 className="mt-5 text-xl font-black text-slate-900">Pine Default</h3><p className="mt-1 text-sm text-slate-500">Everything needed to begin selling.</p><div className="my-5 h-px bg-slate-200" /><div className="space-y-3 text-sm font-semibold text-slate-700"><div className="flex gap-2"><CheckCircle2 className="h-4 w-4 text-blue-600" />Publish 20 items at a time</div><div className="flex gap-2"><CheckCircle2 className="h-4 w-4 text-blue-600" />1 active service</div><div className="flex gap-2"><CheckCircle2 className="h-4 w-4 text-blue-600" />200 total inventory units</div></div><div className="mt-6 text-sm font-black text-blue-700">{planPrice("default")} <ArrowRight className="ml-1 inline h-4 w-4" /></div></button>
+              <button type="button" disabled={isPlanActivationLoading || !paymentSettings} onClick={() => selectSubscription("star")} className={`group relative overflow-hidden rounded-3xl border bg-gradient-to-b from-amber-50 via-white to-orange-50 p-6 text-left shadow-md transition-all hover:-translate-y-1 hover:shadow-2xl ${subscriptionPlan === "star" ? "border-amber-400 ring-2 ring-amber-200" : "border-amber-200"}`}><div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-amber-300 via-yellow-500 to-orange-400 animate-pulse" /><div className="flex items-start justify-between"><div className="rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 p-3 text-white shadow-lg"><Star className="h-6 w-6 fill-current" /></div>{subscriptionPlan === "star" && <BadgeCheck className="h-6 w-6 text-amber-600" />}</div><h3 className="mt-5 text-xl font-black text-slate-900">Pine Star</h3><p className="mt-1 text-sm text-slate-600">A brighter presence for growing stores.</p><div className="mt-4 text-2xl font-black text-slate-900">{planPrice("star")}</div><div className="my-5 h-px bg-amber-200" /><div className="space-y-3 text-sm font-semibold text-slate-700"><div className="flex gap-2"><BadgeCheck className="h-4 w-4 text-amber-600" />100 items, 5 services, 600 inventory</div><div className="flex gap-2"><TrendingUp className="h-4 w-4 text-amber-600" />Monthly plan with higher publishing limits</div><div className="flex gap-2"><ImageIcon className="h-4 w-4 text-amber-600" />100 items and 5 active services</div></div><div className="mt-6 text-sm font-black text-amber-700">Choose Pine Star <ArrowRight className="ml-1 inline h-4 w-4" /></div></button>
+              <button type="button" disabled={isPlanActivationLoading || !paymentSettings} onClick={() => selectSubscription("pro")} className={`group relative overflow-hidden rounded-3xl border bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-900 p-6 text-left text-white shadow-lg transition-all hover:-translate-y-1 hover:shadow-2xl ${subscriptionPlan === "pro" ? "border-cyan-300 ring-2 ring-cyan-300/70" : "border-indigo-500/60"}`}><div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-cyan-300/20 blur-2xl animate-pulse" /><div className="relative flex items-start justify-between"><div className="rounded-2xl border border-cyan-200/40 bg-cyan-300/15 p-3 text-cyan-200"><TrendingUp className="h-6 w-6" /></div>{subscriptionPlan === "pro" && <BadgeCheck className="h-6 w-6 text-cyan-300" />}</div><div className="relative"><h3 className="mt-5 text-xl font-black">Pine Pro</h3><p className="mt-1 text-sm text-indigo-200">More publishing capacity for established stores.</p><div className="mt-4 text-2xl font-black">{planPrice("pro")}</div><div className="my-5 h-px bg-white/15" /><div className="space-y-3 text-sm font-semibold text-indigo-50"><div className="flex gap-2"><CheckCircle2 className="h-4 w-4 text-cyan-300" />200 items, 10 services, 900 inventory</div><div className="flex gap-2"><Star className="h-4 w-4 text-cyan-300" />Higher capacity than Pine Star</div><div className="flex gap-2"><ImageIcon className="h-4 w-4 text-cyan-300" />900 total inventory units</div></div><div className="mt-6 text-sm font-black text-cyan-200">Choose Pine Pro <ArrowRight className="ml-1 inline h-4 w-4" /></div></div></button>
             </div>
           </section>
         )}

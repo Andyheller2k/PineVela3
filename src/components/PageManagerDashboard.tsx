@@ -1,3 +1,6 @@
+import RouteSkeleton from './RouteSkeleton';
+import DashboardOverlay from './DashboardOverlay';
+import PasswordStrengthGauge from './PasswordStrengthGauge';
 import OnboardingProgress, { STAFF_ACCOUNT_STEPS } from './OnboardingProgress';
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -521,6 +524,21 @@ export default function PageManagerDashboard() {
   };
 
   const propertyBlocks = getNormalizedBlocks(primaryProperty);
+  // Staff assignments use saved names only; display fallback blocks are not assignments.
+  const staffWingNames = useMemo(() => {
+    const blocks = primaryProperty?.blocksList?.length ? primaryProperty.blocksList : primaryProperty?.blocks;
+    if (!Array.isArray(blocks)) return [];
+    return [...new Set<string>(blocks.map((block: any) => {
+      const name = typeof block?.name === 'string' && block.name.trim() ? block.name : block?.blockName;
+      return typeof name === 'string' ? name.trim() : '';
+    }).filter((name: string) => name && name !== 'All Blocks'))];
+  }, [primaryProperty]);
+  useEffect(() => {
+    if (newStaffBlock !== 'All Blocks' && !staffWingNames.includes(newStaffBlock)) setNewStaffBlock('All Blocks');
+  }, [staffWingNames, newStaffBlock]);
+  useEffect(() => {
+    if (managerUpdatedBlock && managerUpdatedBlock !== 'All Blocks' && !staffWingNames.includes(managerUpdatedBlock)) setManagerUpdatedBlock('');
+  }, [staffWingNames, managerUpdatedBlock]);
 
   const handleSendBoardRequest = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -578,6 +596,10 @@ export default function PageManagerDashboard() {
     }
     if (!newStaffPassword.trim()) {
       triggerToast('Please specify an initial account password for this staff member.');
+      return;
+    }
+    if (newStaffBlock !== 'All Blocks' && !staffWingNames.includes(newStaffBlock)) {
+      triggerToast('Choose a wing from this residence’s configured blocks.');
       return;
     }
     try {
@@ -900,25 +922,7 @@ export default function PageManagerDashboard() {
     </div>;
   }
 
-  if (loading && properties.length === 0) {
-    return (
-      <div className="min-h-screen h-screen flex flex-col items-center justify-center bg-transparent">
-        <div className="flex flex-col items-center space-y-5 animate-fadeIn">
-          <div className="relative">
-            <div className="absolute inset-0 rounded-full bg-blue-500/20 blur-xl animate-pulse" />
-            <PineLogo size={72} />
-          </div>
-          <div className="flex items-center space-x-3 text-blue-950 font-sans">
-            <svg className="animate-spin h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-            <span className="text-sm font-black tracking-tight">Syncing Operational State...</span>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  if (loading && properties.length === 0) return <RouteSkeleton />;
 
   return (
     <div className="min-h-screen h-screen flex flex-col lg:flex-row bg-transparent text-slate-800 overflow-hidden font-sans">
@@ -1731,9 +1735,9 @@ export default function PageManagerDashboard() {
                             <div key={staff.id} className="p-6 bg-white border border-slate-200/80 rounded-2xl shadow-sm space-y-4 hover:shadow-md transition-all">
                               <div className="flex justify-between items-start">
                                 <div className="flex items-center gap-3">
-                                  {(staff as any).avatarUrl ? (
+                                  {((staff as any).avatarUrl || (staff as any).profilePicture || (staff as any).photo || (staff as any).avatar) ? (
                                     <img 
-                                      src={(staff as any).avatarUrl} 
+                                      src={(staff as any).avatarUrl || (staff as any).profilePicture || (staff as any).photo || (staff as any).avatar}
                                       alt={staff.name} 
                                       className="w-12 h-12 rounded-2xl object-cover border border-slate-200 shadow-sm"
                                     />
@@ -2263,8 +2267,8 @@ export default function PageManagerDashboard() {
 
                 {/* DETAILED MAINTENANCE TICKET ENLARGED VIEW */}
                 {selectedIssueDetail && (
-                  <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
-                    <div className="bg-white rounded-3xl p-6 md:p-8 max-w-2xl w-full shadow-2xl border border-blue-200/80 space-y-6 max-h-[90vh] overflow-y-auto relative text-slate-850">
+                  <DashboardOverlay onClose={() => setSelectedIssueDetail(null)} aria-label="Maintenance ticket details" className="flex items-center justify-center overflow-y-auto bg-slate-950/45 p-4 backdrop-blur-sm">
+                    <div className="my-auto w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-3xl border border-blue-200/80 bg-white p-6 text-slate-850 shadow-2xl md:p-8 space-y-6 animate-fadeIn">
                       
                       {/* HEADER */}
                       <div className="flex justify-between items-start gap-4 border-b border-slate-100 pb-4">
@@ -2595,7 +2599,7 @@ export default function PageManagerDashboard() {
                         )}
                       </div>
                     </div>
-                  </div>
+                  </DashboardOverlay>
                 )}
 
                 {/* LOG MAINTENANCE MODAL */}
@@ -3173,9 +3177,7 @@ export default function PageManagerDashboard() {
                     >
                       <option value="">(Keep current block)</option>
                       <option value="All Blocks">All Blocks</option>
-                      <option value="Block A (East Wing)">Block A (East Wing)</option>
-                      <option value="Block B (West Wing)">Block B (West Wing)</option>
-                      <option value="Executive Suites & Annex">Executive Suites & Annex</option>
+                      {staffWingNames.map(name => <option key={name} value={name}>{name}</option>)}
                     </select>
                   </div>
                 </div>
@@ -3526,6 +3528,7 @@ export default function PageManagerDashboard() {
                       {showStaffPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
+                  <PasswordStrengthGauge password={newStaffPassword} />
                 </div>
               </div>
               <p className="text-[10px] text-slate-400">
@@ -3548,15 +3551,15 @@ export default function PageManagerDashboard() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Assigned Wing</label>
+                  <label htmlFor="staff-assigned-wing" className="block text-xs font-bold text-slate-700 mb-1">Assigned Wing</label>
                   <select 
+                    id="staff-assigned-wing"
                     value={newStaffBlock} 
                     onChange={(e) => setNewStaffBlock(e.target.value)}
                     className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:border-blue-600"
                   >
                     <option value="All Blocks">All Blocks</option>
-                    <option value="Block A (Alpha)">Block A (Alpha)</option>
-                    <option value="Block B (Beta)">Block B (Beta)</option>
+                    {staffWingNames.map(name => <option key={name} value={name}>{name}</option>)}
                   </select>
                 </div>
               </div>

@@ -1,4 +1,7 @@
-import OnboardingProgress, { STORE_SETUP_STEPS, ROOM_ACTIVATION_STEPS, MARKET_APPLICATION_STEPS } from './OnboardingProgress';
+import { usePlatformSettings } from '../context/PlatformSettingsContext';
+import RouteSkeleton from './RouteSkeleton';
+import PasswordStrengthGauge from './PasswordStrengthGauge';
+import OnboardingProgress, { ROOM_ACTIVATION_STEPS, MARKET_APPLICATION_STEPS } from './OnboardingProgress';
 import MarketImageGallery from './MarketImageGallery';
 import { marketNoticeKind } from '../lib/marketNotifications';
 import { sessionFetch as fetch } from '../lib/session';
@@ -256,7 +259,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
     setDmWizardPhase(3);
   };
 
-  // Store setup & dummy 50 GHS payment state
+  // Legacy store setup navigation state
   const [showStoreSetupModal, setShowStoreSetupModal] = useState<boolean>(false);
   const [setupStoreName, setSetupStoreName] = useState<string>('');
   const [setupUsername, setSetupUsername] = useState<string>('');
@@ -340,6 +343,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
   const [maxPriceFilter, setMaxPriceFilter] = useState<number>(5000);
   const [priceSortOption, setPriceSortOption] = useState<'featured' | 'price-asc' | 'price-desc' | 'newest'>('featured');
   const [showPriceFilterPanel, setShowPriceFilterPanel] = useState<boolean>(false);
+  const [marketActionError, setMarketActionError] = useState('');
   const [selectedProductForBuy, setSelectedProductForBuy] = useState<DigitalMarketProduct | null>(null);
   const [selectedPriceCategory, setSelectedPriceCategory] = useState<{ id?: string; name: string; price: number; imageUrl?: string } | null>(null);
   const [showPendingModal, setShowPendingModal] = useState<boolean>(false);
@@ -387,7 +391,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
       return;
     }
     if (currentUser.email.toLowerCase() === product.sellerEmail.toLowerCase()) {
-      triggerToast("This is your own product listed by your merchant account!");
+      setMarketActionError("This is your own product listed by your merchant account!");
       return;
     }
     
@@ -1465,110 +1469,10 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
     }
   };
 
-  // Store Setup Handler with 50 GHS Dummy Payment to PineVela Admin
-  const handleStoreSetup = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!setupStoreName.trim()) {
-      triggerToast("Please enter your Store Name");
-      return;
-    }
+  const { settings: marketPrices } = usePlatformSettings();
+  const handleStoreSetup = async (e: React.FormEvent) => { e.preventDefault(); setShowStoreSetupModal(false); navigate('/login'); triggerToast('Sign in with your seller account to complete secure market checkout.'); };
+  const handleMandatoryStoreSetup = async (e: React.FormEvent) => { e.preventDefault(); setStoreOnboardingModalOpen(false); navigate('/login'); };
 
-    setSubmittingSetup(true);
-    setPaymentStep('processing');
-
-    try {
-      // Simulate real-time Ghana Telecom Momo USSD prompt push & PineVela admin settlement
-      await new Promise(r => setTimeout(r, 1500));
-
-      const payload = {
-        storeName: setupStoreName,
-        category: setupCategory,
-        description: setupDescription,
-        phone: setupPhone || paymentMomoPhone,
-        paymentMethod: paymentMomoNetwork,
-        momoNumber: paymentMomoPhone,
-        userEmail: currentUser?.email || user?.email || '',
-        userId: currentUser?.id || user?.id || ''
-      };
-
-      const res = await apiFetch('/api/digital-market/store-setup', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-
-      if (res && res.success) {
-        setPaymentStep('success');
-        await new Promise(r => setTimeout(r, 1000));
-        setShowStoreSetupModal(false);
-        setPaymentStep('form');
-        triggerToast("50 GHS Payment Approved & Merchant Platform Activated! 🎉");
-        await loadDigitalMarketData();
-      } else {
-        setPaymentStep('form');
-        triggerToast(res?.error || "Failed to complete store setup.");
-      }
-    } catch (err: any) {
-      setPaymentStep('form');
-      triggerToast(err.message || "Failed to complete store setup.");
-    } finally {
-      setSubmittingSetup(false);
-    }
-  };
-
-  // Mandatory Store Setup Onboarding Handler with 50 GHS Fee Payment
-  const handleMandatoryStoreSetup = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!setupStoreName.trim() || !setupUsername.trim() || !setupLocation.trim() || !setupDeliveryMode.trim()) {
-      triggerToast("Please fill in all mandatory store onboarding details.");
-      return;
-    }
-
-    setSubmittingSetup(true);
-    setPaymentStep('processing');
-
-    try {
-      await new Promise(r => setTimeout(r, 1500));
-
-      const payload = {
-        studentEmail: digitalMarketApp?.studentEmail || currentUser?.email || user?.email || '',
-        storeName: setupStoreName,
-        username: setupUsername,
-        location: setupLocation,
-        deliveryForm: setupDeliveryMode,
-        category: setupCategory,
-        description: setupDescription,
-        profilePicture: setupProfilePicture,
-        coverPicture: setupCoverPicture
-      };
-
-      const res = await apiFetch('/api/digital-market/create-store', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-
-      if (res && res.success) {
-        setPaymentStep('success');
-        await new Promise(r => setTimeout(r, 1000));
-        setPaymentStep('form');
-        triggerToast("Store Successfully Created & 50 GHS Fee Finalized! 🎉");
-        setStoreOnboardingModalOpen(false);
-        await loadDigitalMarketData();
-        navigate('/digital-market');
-      } else {
-        setPaymentStep('form');
-        triggerToast(res?.error || "Failed to create store.");
-      }
-    } catch (err: any) {
-      setPaymentStep('form');
-      triggerToast(err.message || "Failed to create store.");
-    } finally {
-      setSubmittingSetup(false);
-    }
-  };
-
-  // Add Product Handler
   const handleAddProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmittingProd(true);
@@ -1618,10 +1522,16 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
     }
   };
 
+  useEffect(() => { setMarketActionError(''); }, [selectedProductForBuy?.id, selectedProdForOrder?.id]);
+  useEffect(() => {
+    if (marketActionError) document.querySelector('[data-market-action-error]')?.scrollIntoView({ block: 'nearest', behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' });
+  }, [marketActionError]);
+
   // Place Order / Request Meetup Handler
   const handlePlaceOrder = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedProdForOrder) return;
+    setMarketActionError('');
     setSubmittingOrder(true);
 
     try {
@@ -1652,10 +1562,10 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
         triggerToast("Campus Meetup Coordinates Transmitted to Seller! 📍🛍️");
         await loadDigitalMarketData();
       } else {
-        triggerToast(res?.error || "Failed to place order.");
+        setMarketActionError(res?.error || "Failed to place order.");
       }
     } catch (err: any) {
-      triggerToast(err.message || "Failed to place order.");
+      setMarketActionError(err.message || "Failed to place order.");
     } finally {
       setSubmittingOrder(false);
     }
@@ -1787,25 +1697,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
     }
   };
 
-  if (loadingData && issueReports.length === 0) {
-    return (
-      <div className="min-h-screen h-screen flex flex-col items-center justify-center bg-transparent">
-        <div className="flex flex-col items-center space-y-5 animate-fadeIn">
-          <div className="relative">
-            <div className="absolute inset-0 rounded-full bg-blue-500/20 blur-xl animate-pulse" />
-            <PineLogo size={72} />
-          </div>
-          <div className="flex items-center space-x-3 text-blue-950 font-sans">
-            <svg className="animate-spin h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-            <span className="text-sm font-black tracking-tight">Syncing Resident Portal...</span>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  if (loadingData && issueReports.length === 0) return <RouteSkeleton />;
 
   if (false && currentUser?.role === 'user') {
     return (
@@ -3250,7 +3142,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
 
               return (
               <div className="space-y-6">
-                {/* 1. APPROVED MERCHANT MANDATORY STORE CREATION & 50 GHS FEE ONBOARDING SCREEN */}
+                {/* 1. APPROVED MERCHANT MANDATORY STORE CREATION & PAYSTACK ONBOARDING SCREEN */}
                 {digitalMarketApp && digitalMarketApp.status === 'approved' && !effectiveMarketStore && (
                   <div className="bg-white/95 border-2 border-blue-300/90 rounded-3xl p-6 sm:p-10 shadow-2xl space-y-6 backdrop-blur-md">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-blue-100">
@@ -3265,7 +3157,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                           </div>
                           <h2 className="text-xl sm:text-2xl font-black text-slate-900">Your Student Merchant Store is Approved! 🎉</h2>
                           <p className="text-xs text-slate-600 font-medium mt-0.5">
-                            Log into your digital market account to complete your mandatory multi-phase store onboarding and 50 GHS activation.
+                            Log into your digital market account to complete your mandatory multi-phase store onboarding and secure Paystack activation.
                           </p>
                         </div>
                       </div>
@@ -3284,7 +3176,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                     <div className="p-4 bg-blue-50/80 rounded-2xl border border-blue-200/90 text-xs text-blue-950 flex items-center gap-3">
                       <ShieldCheck className="w-5 h-5 text-blue-700 shrink-0" />
                       <div>
-                        <span className="font-bold">Mandatory First-Time Onboarding:</span> As per PineVela security policies, logging into your digital market account for the first time will guide you through our clean multi-phase store creation wizard (Store Details, Campus Location, and 50 GHS Fee Activation).
+                        <span className="font-bold">Mandatory First-Time Onboarding:</span> As per PineVela security policies, logging into your digital market account for the first time will guide you through our clean multi-phase store creation wizard (Store Details, Campus Location, and Paystack Checkout).
                       </div>
                     </div>
                   </div>
@@ -3306,8 +3198,8 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
 
                       <div className="bg-gradient-to-br from-blue-50 via-indigo-50/50 to-blue-100/50 border border-blue-200/80 rounded-2xl p-4 text-center shrink-0 w-full md:w-auto">
                         <div className="text-xs font-extrabold text-blue-950 uppercase">Registration Fee</div>
-                        <div className="text-2xl font-black text-blue-900 mt-0.5">50 GHS <span className="text-xs font-medium text-slate-500">one-time</span></div>
-                        <div className="text-[10px] text-slate-500 mt-0.5">+ 300 GHS per semester maintenance</div>
+                        <div className="text-2xl font-black text-blue-900 mt-0.5">{marketPrices?.registrationFee ?? "…"} GHS <span className="text-xs font-medium text-slate-500">one-time</span></div>
+                        <div className="text-[10px] text-slate-500 mt-0.5">+ {marketPrices?.semesterFee ?? "…"} GHS every two months, plus selected monthly plan</div>
                       </div>
                     </div>
 
@@ -3895,201 +3787,8 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
           </DashboardOverlay>
         )}
 
-        {/* STORE SETUP & 50 GHS DUMMY PAYMENT MODAL */}
-        {showStoreSetupModal && (
-          <DashboardOverlay aria-label="Student Store Setup & Activation" onClose={() => setShowStoreSetupModal(false)} className="fixed inset-0 bg-slate-950/75 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
-            <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-7 shadow-2xl border border-slate-200 space-y-5 animate-scaleIn my-8">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-3.5">
-                <div className="flex items-center gap-2.5">
-                  <div className="p-2 rounded-xl bg-emerald-100 text-emerald-700">
-                  </div>
-                  <div>
-                    <h3 className="text-base font-black text-slate-900">Student Store Setup & Activation</h3>
-                    <p className="text-[11px] text-slate-500 font-medium">Final step to activate your verified digital merchant card</p>
-                  </div>
-                </div>
-                <button aria-label="Close dialog"
-                  type="button" 
-                  onClick={() => setShowStoreSetupModal(false)} 
-                  className="text-slate-400 hover:text-slate-600 cursor-pointer p-1 rounded-lg"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              <OnboardingProgress steps={STORE_SETUP_STEPS} step={paymentStep === 'success' ? 3 : setupStoreName.trim() ? 2 : 1} label="Store setup" />
-              <form onSubmit={handleStoreSetup} className="onboarding-fields space-y-4 text-xs">
-                {/* Store Profile Section */}
-                <div className="space-y-3 p-4 bg-slate-50 rounded-2xl border border-slate-200/80">
-                  <div className="text-[11px] font-black uppercase text-slate-600 tracking-wider flex items-center gap-1.5">
-                    <Store className="w-3.5 h-3.5 text-blue-600" />
-                    <span>Store Profile Details</span>
-                  </div>
-
-                  <div>
-                    <label className="block font-bold text-slate-700 mb-1">Store / Business Name *</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. Kwame's Tech & Textbook Hub"
-                      value={setupStoreName}
-                      onChange={e => setSetupStoreName(e.target.value)}
-                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-semibold text-slate-900"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="block font-bold text-slate-700 mb-1">Selling Category</label>
-                      <select
-                        value={setupCategory}
-                        onChange={e => setSetupCategory(e.target.value)}
-                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-semibold text-slate-900"
-                      >
-                        {DIGITAL_MARKET_CATEGORIES.map(cat => (
-                          <option key={cat} value={cat}>{cat}</option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block font-bold text-slate-700 mb-1">WhatsApp / Contact Phone</label>
-                      <input
-                        type="text"
-                        placeholder="0244-123-456"
-                        value={setupPhone}
-                        onChange={e => setSetupPhone(e.target.value)}
-                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-semibold text-slate-900"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block font-bold text-slate-700 mb-1">Store Tagline / Bio</label>
-                    <textarea
-                      rows={2}
-                      placeholder="Affordable campus essentials with direct hostel delivery..."
-                      value={setupDescription}
-                      onChange={e => setSetupDescription(e.target.value)}
-                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-semibold text-slate-900"
-                    />
-                  </div>
-                </div>
-
-                {/* Dummy Payment Checkout to PineVela Admin */}
-                <div className="p-4 bg-gradient-to-br from-emerald-50 via-teal-50 to-emerald-100/50 rounded-2xl border-2 border-emerald-300 space-y-3.5">
-                  <div className="flex items-center justify-between">
-                    <div className="text-[11px] font-black uppercase text-emerald-950 tracking-wider flex items-center gap-1.5">
-                      <DollarSign className="w-4 h-4 text-emerald-700" />
-                      <span>50 GHS Platform Activation Checkout</span>
-                    </div>
-                    <span className="px-2 py-0.5 bg-emerald-200 text-emerald-900 font-extrabold text-[10px] rounded-md">
-                      PineVela Official
-                    </span>
-                  </div>
-
-                  {/* Payment Summary Box */}
-                  <div className="bg-white/90 p-3 rounded-xl border border-emerald-200 space-y-1.5 text-[11px]">
-                    <div className="flex justify-between text-slate-600">
-                      <span>Payee:</span>
-                      <strong className="text-slate-900">PineVela Admin Account (0244-000-000)</strong>
-                    </div>
-                    <div className="flex justify-between text-slate-600">
-                      <span>Purpose:</span>
-                      <span className="font-semibold text-slate-800">Student Merchant Card Activation</span>
-                    </div>
-                    <div className="flex justify-between text-slate-900 pt-1 border-t border-slate-100 font-bold">
-                      <span>Total Due:</span>
-                      <span className="text-emerald-700 text-sm font-black">50.00 GHS</span>
-                    </div>
-                  </div>
-
-                  {/* Mobile Money Selection */}
-                  <div className="space-y-2">
-                    <label className="block font-bold text-slate-700 text-[11px]">Select Mobile Money Network</label>
-                    <div className="grid grid-cols-2 gap-2">
-                      {['MTN Mobile Money', 'Telecel Cash', 'AT Money', 'GhanaPay'].map(net => (
-                        <button
-                          key={net}
-                          type="button"
-                          onClick={() => setPaymentMomoNetwork(net)}
-                          className={`p-2 rounded-xl text-left font-bold text-[11px] transition-all cursor-pointer border ${
-                            paymentMomoNetwork === net 
-                              ? 'bg-emerald-600 text-white border-emerald-700 shadow-xs' 
-                              : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
-                          }`}
-                        >
-                          {net}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <label className="block font-bold text-slate-700 text-[10px] mb-1">MoMo Wallet Number</label>
-                      <input
-                        type="text"
-                        value={paymentMomoPhone}
-                        onChange={e => setPaymentMomoPhone(e.target.value)}
-                        className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg font-mono font-bold text-slate-900"
-                        placeholder="0244123456"
-                      />
-                    </div>
-                    <div>
-                      <label className="block font-bold text-slate-700 text-[10px] mb-1">Simulated 4-Digit PIN</label>
-                      <input
-                        type="password"
-                        maxLength={4}
-                        value={paymentPinSim}
-                        onChange={e => setPaymentPinSim(e.target.value)}
-                        className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg font-mono font-bold text-slate-900 tracking-widest text-center"
-                        placeholder="••••"
-                      />
-                    </div>
-                  </div>
-
-                  <p className="text-[10px] text-slate-500 font-medium">
-                    ⚡ <em>Direct simulated transaction to PineVela Admin Account. Instantly validates and activates your digital merchant store.</em>
-                  </p>
-                </div>
-
-                {/* Submit Action */}
-                <div className="pt-2 flex justify-end gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setShowStoreSetupModal(false)}
-                    className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl cursor-pointer"
-                  >
-                    Cancel
-                  </button>
-
-                  <button
-                    type="submit"
-                    disabled={submittingSetup}
-                    className="px-6 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-black rounded-xl shadow-lg shadow-emerald-600/25 transition-all flex items-center gap-2 cursor-pointer"
-                  >
-                    {paymentStep === 'processing' ? (
-                      <>
-                        <RefreshCw className="w-4 h-4 animate-spin" />
-                        <span>Authorizing 50 GHS to Admin...</span>
-                      </>
-                    ) : paymentStep === 'success' ? (
-                      <>
-                        <Check className="w-4 h-4" />
-                        <span>Activated Successfully!</span>
-                      </>
-                    ) : (
-                      <>
-                        <span>Authorize 50 GHS & Activate Platform</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </DashboardOverlay>
-        )}
+        {/* SELLER CHECKOUT ENTRY */}
+        {showStoreSetupModal && <DashboardOverlay onClose={() => setShowStoreSetupModal(false)} aria-label="Seller checkout" className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4"><section className="w-full max-w-md space-y-4 rounded-3xl bg-white p-6"><h2 className="text-xl font-bold">Activate your seller account</h2><p>Sign in with your seller password to save store details and pay the current registration, monthly plan and two-month fees through Paystack.</p><button onClick={() => navigate('/login')} className="rounded-xl bg-blue-600 px-5 py-3 text-white">Sign in as seller</button><button onClick={() => setShowStoreSetupModal(false)} className="ml-3 text-slate-600">Close</button></section></DashboardOverlay>}
 
         {/* DIGITAL STORE LOGIN MODAL */}
         {showMerchantStoreLoginModal && (
@@ -4184,225 +3883,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
         )}
 
         {/* MULTI-PHASE DIGITAL MARKET STORE ONBOARDING WIZARD MODAL */}
-        {storeOnboardingModalOpen && (
-          <DashboardOverlay aria-label="Digital Market Store Onboarding" onClose={null} className="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
-            <div className="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-10 shadow-2xl border border-blue-200 space-y-8 my-8 animate-scaleIn">
-              <div className="flex items-center justify-between pb-6 border-b border-blue-100">
-                <div className="flex items-center gap-3.5">
-                  <div className="w-12 h-12 rounded-2xl bg-blue-100 border border-blue-300 text-blue-900 flex items-center justify-center shadow-md">
-                    <PineLogo className="w-7 h-7" />
-                  </div>
-                  <div>
-                    <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-blue-100 text-blue-900 text-[10px] font-black uppercase tracking-wider mb-1">
-                      <span>PineVela Digital Market Onboarding • Phase {onboardStep} of 3</span>
-                    </div>
-                    <h3 className="text-lg sm:text-xl font-black text-slate-900">
-                      {onboardStep === 1 && "Phase 1: Store Identity & Handle"}
-                      {onboardStep === 2 && "Phase 2: Campus Location & Delivery"}
-                      {onboardStep === 3 && "Phase 3: 50 GHS Activation & Launch"}
-                    </h3>
-                  </div>
-                </div>
-
-              </div>
-              <OnboardingProgress steps={STORE_SETUP_STEPS} step={onboardStep} label="Store activation" />
-
-              <form onSubmit={handleMandatoryStoreSetup} className="onboarding-fields space-y-6">
-                {onboardStep === 1 && (
-                  <div className="space-y-4 animate-fadeIn">
-                    <div className="p-4 bg-blue-50/80 rounded-2xl border border-blue-200 text-xs text-blue-950">
-                      <strong>Welcome to your first login!</strong> Please configure your official student store identity. You can update these details later in your store profile.
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-black text-slate-800 uppercase tracking-wider mb-1.5">Store / Market Name *</label>
-                      <input
-                        type="text"
-                        required
-                        value={setupStoreName}
-                        onChange={e => setSetupStoreName(e.target.value)}
-                        placeholder="e.g. Ellie Gody's Campus Store"
-                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-600"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-black text-slate-800 uppercase tracking-wider mb-1.5">Merchant Username / Handle *</label>
-                      <input
-                        type="text"
-                        required
-                        value={setupUsername}
-                        onChange={e => setSetupUsername(e.target.value)}
-                        placeholder="e.g. elliegodystore"
-                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-600"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-black text-slate-800 uppercase tracking-wider mb-1.5">Store Description / About *</label>
-                      <textarea
-                        rows={3}
-                        required
-                        value={setupDescription}
-                        onChange={e => setSetupDescription(e.target.value)}
-                        placeholder="Official student digital market store..."
-                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-600"
-                      />
-                    </div>
-
-                    <div className="pt-4 flex justify-end">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (!setupStoreName.trim() || !setupUsername.trim()) {
-                            triggerToast("Please fill in store name and username.", "error");
-                            return;
-                          }
-                          setOnboardStep(2);
-                        }}
-                        className="px-8 py-3.5 bg-blue-600 hover:bg-blue-500 text-white font-black text-xs rounded-xl shadow-lg shadow-blue-600/30 flex items-center gap-2 cursor-pointer"
-                      >
-                        <span>Continue to Campus Location</span>
-                        <ArrowRight className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {onboardStep === 2 && (
-                  <div className="space-y-4 animate-fadeIn">
-                    <div>
-                      <label className="block text-xs font-black text-slate-800 uppercase tracking-wider mb-1.5">Campus Location / Residence *</label>
-                      <input
-                        type="text"
-                        required
-                        value={setupLocation}
-                        onChange={e => setSetupLocation(e.target.value)}
-                        placeholder="e.g. KNUST Campus, Hall 6"
-                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-600"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-black text-slate-800 uppercase tracking-wider mb-1.5">Primary Category *</label>
-                      <select
-                        value={setupCategory}
-                        onChange={e => setSetupCategory(e.target.value)}
-                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-600"
-                      >
-                        {DIGITAL_MARKET_CATEGORIES.map(cat => (
-                          <option key={cat} value={cat}>{cat}</option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-black text-slate-800 uppercase tracking-wider mb-1.5">Delivery / Handover Mode *</label>
-                      <input
-                        type="text"
-                        required
-                        value={setupDeliveryMode}
-                        onChange={e => setSetupDeliveryMode(e.target.value)}
-                        placeholder="e.g. Campus Meetup & Secure Escrow"
-                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-600"
-                      />
-                    </div>
-
-                    <div className="pt-4 flex items-center justify-between">
-                      <button
-                        type="button"
-                        onClick={() => setOnboardStep(1)}
-                        className="px-6 py-3 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 cursor-pointer flex items-center gap-1.5"
-                      >
-                        <ChevronLeft className="w-4 h-4" />
-                        <span>Back</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setOnboardStep(3)}
-                        className="px-8 py-3.5 bg-blue-600 hover:bg-blue-500 text-white font-black text-xs rounded-xl shadow-lg shadow-blue-600/30 flex items-center gap-2 cursor-pointer"
-                      >
-                        <span>Continue to 50 GHS Payment</span>
-                        <ArrowRight className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {onboardStep === 3 && (
-                  <div className="space-y-6 animate-fadeIn">
-                    <div className="bg-gradient-to-br from-blue-50 via-indigo-50/50 to-blue-100/50 border border-blue-200 rounded-2xl p-6 space-y-4">
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                        <div>
-                          <h4 className="text-sm font-black text-blue-950">Finalize 50 GHS Registration Fee</h4>
-                          <p className="text-xs text-blue-900 font-medium mt-0.5">
-                            Secure settlement via PineVela Mobile Money Gateway to activate your campus merchant store.
-                          </p>
-                        </div>
-                        <div className="px-4 py-2 bg-blue-600 text-white font-black text-base rounded-xl shadow-md text-center shrink-0">
-                          50 GHS
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-                        <div>
-                          <label className="block text-xs font-bold text-slate-700 mb-1">Momo Network</label>
-                          <select
-                            value={paymentMomoNetwork}
-                            onChange={e => setPaymentMomoNetwork(e.target.value)}
-                            className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-900"
-                          >
-                            <option value="MTN Mobile Money">MTN Mobile Money</option>
-                            <option value="Telecel Cash">Telecel Cash</option>
-                            <option value="AT Cash">AT Cash</option>
-                          </select>
-                        </div>
-                        <div>
-                          <label className="block text-xs font-bold text-slate-700 mb-1">Mobile Money Phone</label>
-                          <input
-                            type="text"
-                            value={paymentMomoPhone}
-                            onChange={e => setPaymentMomoPhone(e.target.value)}
-                            placeholder="0244123456"
-                            className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-900"
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="pt-4 flex items-center justify-between border-t border-slate-100">
-                      <button
-                        type="button"
-                        onClick={() => setOnboardStep(2)}
-                        className="px-6 py-3 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 cursor-pointer flex items-center gap-1.5"
-                      >
-                        <ChevronLeft className="w-4 h-4" />
-                        <span>Back</span>
-                      </button>
-                      <button
-                        type="submit"
-                        disabled={submittingSetup}
-                        className="px-8 py-4 bg-gradient-to-r from-blue-900 via-indigo-900 to-blue-800 hover:from-blue-800 hover:to-indigo-800 text-white font-black text-xs rounded-xl shadow-lg shadow-blue-900/20 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
-                      >
-                        {submittingSetup ? (
-                          <>
-                            <Clock className="w-4 h-4 animate-spin" />
-                            <span>Processing Payment & Launching Store...</span>
-                          </>
-                        ) : (
-                          <>
-                            <span>Complete Store Setup & Launch Store 🎉</span>
-                            <ArrowRight className="w-4 h-4" />
-                          </>
-                        )}
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </form>
-            </div>
-          </DashboardOverlay>
-        )}
+        {storeOnboardingModalOpen && <DashboardOverlay onClose={() => setStoreOnboardingModalOpen(false)} aria-label="Seller onboarding checkout" className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4"><section className="w-full max-w-md space-y-4 rounded-3xl bg-white p-6"><h2 className="text-xl font-bold">Activate your seller account</h2><p>Sign in with your seller password to save store details and pay the current registration, monthly plan and two-month fees through Paystack.</p><button onClick={() => navigate('/login')} className="rounded-xl bg-blue-600 px-5 py-3 text-white">Sign in as seller</button><button onClick={() => setStoreOnboardingModalOpen(false)} className="ml-3 text-slate-600">Close</button></section></DashboardOverlay>}
 
         {/* ADD PRODUCT MODAL */}
         {showAddProductModal && (
@@ -4522,6 +4003,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
           return (
             <DashboardOverlay aria-label={`Inspect ${selectedProductForBuy.title}`} onClose={() => setSelectedProductForBuy(null)} className="fixed inset-0 bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-2 sm:p-4">
               <div className="bg-white rounded-3xl max-w-[calc(100vw-1rem)] sm:max-w-lg w-full max-h-[88dvh] sm:max-h-[92vh] overflow-y-auto p-3 sm:p-6 shadow-2xl border border-slate-200 space-y-3 sm:space-y-4 animate-scaleIn">
+                {marketActionError && <p data-market-action-error role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs font-semibold text-rose-800">{marketActionError}</p>}
                 <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                   <div className="flex items-center gap-2 min-w-0 pr-2">
                     <h3 className="text-base font-black text-slate-900 break-words">{selectedProductForBuy.title}</h3>
@@ -4775,6 +4257,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                 </div>
 
                 <form onSubmit={handlePlaceOrder} className={isOrderService ? 'grid gap-4 lg:grid-cols-2 lg:gap-x-6 lg:gap-y-4' : 'space-y-4'}>
+                {marketActionError && <p data-market-action-error role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs font-semibold text-rose-800">{marketActionError}</p>}
                   {/* Price Categories Choice in Order Modal */}
                   {Array.isArray((selectedProdForOrder as any).priceCategories) && (selectedProdForOrder as any).priceCategories.length > 0 && (
                     <div className={`p-3 bg-blue-50/80 border border-blue-200/90 rounded-2xl space-y-2 ${isOrderService ? 'lg:col-span-2' : ''}`}>
@@ -5905,6 +5388,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                           {showClaimPassword ? <EyeOff size={14} /> : <Eye size={14} />}
                         </button>
                       </div>
+                      <PasswordStrengthGauge password={claimPassword} />
                     </div>
 
                     <div className="space-y-1">
@@ -5929,6 +5413,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                           {showClaimConfirmPassword ? <EyeOff size={14} /> : <Eye size={14} />}
                         </button>
                       </div>
+                      <PasswordStrengthGauge password={claimConfirmPassword} />
                     </div>
                   </div>
 
@@ -6098,6 +5583,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                   className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-blue-600"
                   required
                 />
+                <PasswordStrengthGauge password={newPasswordInput} />
               </div>
 
               <div className="space-y-1">
@@ -6110,6 +5596,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                   className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-blue-600"
                   required
                 />
+                <PasswordStrengthGauge password={confirmPasswordInput} />
               </div>
 
               {resetPasswordError && (
@@ -6965,6 +6452,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                       onChange={e => setDmPassword(e.target.value)}
                       className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-xs sm:text-sm text-slate-800 font-semibold focus:outline-none focus:ring-2 focus:ring-blue-800 focus:border-blue-800 transition-all"
                     />
+                    <PasswordStrengthGauge password={dmPassword} />
                     <p className="text-[11px] text-slate-500 font-medium">Used to access your student seller store and inventory dashboard.</p>
                   </div>
 
@@ -6995,6 +6483,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                         dmConfirmPassword && dmPassword !== dmConfirmPassword ? 'border-rose-400 focus:ring-2 focus:ring-rose-500' : 'border-slate-200 focus:ring-2 focus:ring-blue-800'
                       }`}
                     />
+                    <PasswordStrengthGauge password={dmConfirmPassword} />
                   </div>
                 </div>
               )}
@@ -7041,13 +6530,13 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                   {/* Fee & Verified P2P Schedule Card */}
                   <div className="p-4 rounded-2xl bg-slate-50 border border-blue-200 space-y-2.5">
                     <div className="flex justify-between items-center text-xs font-black text-blue-900">
-                      <span>Registration Fee: <strong>50 GHS</strong> + <strong>300 GHS</strong>/sem</span>
+                      <span>Registration Fee: <strong>{marketPrices?.registrationFee ?? "…"} GHS</strong> + <strong>{marketPrices?.semesterFee ?? "…"} GHS</strong> every two months + selected monthly plan</span>
                       <span className="px-2.5 py-0.5 bg-blue-100 text-blue-900 border border-blue-300 rounded-full font-black text-[10px]">
                         Verified P2P
                       </span>
                     </div>
                     <p className="text-xs text-slate-600 leading-relaxed font-medium">
-                      🛡️ <strong>Verified P2P Activation:</strong> Verified P2P merchant access is only accepted and unlocked after you have completed setting up your digital market following approval by the manager/admin. You pay the 50 GHS activation fee upon completing the store setup wizard.
+                      🛡️ <strong>Verified P2P Activation:</strong> Verified P2P merchant access is only accepted and unlocked after you have completed setting up your digital market following approval by the manager/admin. Payment is verified by the server after Paystack checkout.
                     </p>
                   </div>
 

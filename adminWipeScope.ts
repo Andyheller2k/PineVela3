@@ -11,7 +11,7 @@ export function parseWipeScopes(input: unknown): WipeScope[] {
   return WIPE_SCOPES.filter(s => input.includes(s));
 }
 const linkedAccountFields = ['parentUserId', 'userId', 'claimedByUserId', 'ownerId'];
-const personFields = ['managerId', 'assignedManagerId', 'staffId', 'assignedStaffId', 'studentId', 'residentId', 'assignedStudentId', 'buyerId', 'sellerId', 'reviewerId', 'requesterId', 'recipientId', 'targetAccountId', 'accountId', ...linkedAccountFields];
+const personFields = ['managerId', 'assignedManagerId', 'staffId', 'assignedStaffId', 'studentId', 'residentId', 'assignedStudentId', 'buyerId', 'sellerId', 'reviewerId', 'requesterId', 'recipientId', 'targetAccountId', 'accountId', 'actorId', ...linkedAccountFields];
 const homeFields = ['hostelId', 'residenceId', 'propertyId'];
 const marketFields = ['storeId', 'sellerStoreId', 'merchantStoreId', 'marketId'];
 const walk = (v: any, fn: (key: string, value: any) => boolean): boolean => !!v && typeof v === 'object' && Object.entries(v).some(([k, x]) => fn(k, x) || (x && typeof x === 'object' && walk(x, fn)));
@@ -86,7 +86,7 @@ export function buildWipePlan(store: any, scopes: WipeScope[]): WipePlan {
       key === 'digitalMarketProducts' && products.has(String(v?.id)) ||
       key === 'digitalMarketOrders' && orders.has(String(v?.id)) ||
       key === 'staff' && staff.has(String(v?.id)) ||
-      (key.startsWith('digitalMarket') || key === 'marketMedia') && scopes.includes('markets') ||
+      (key.startsWith('digitalMarket') || key === 'marketMedia' || key === 'paymentTransactions' && v?.purpose !== 'housing') && scopes.includes('markets') ||
       key === 'retiredRoomKeys' && scopes.includes('hostels') || related(v);
     removed[key] = list.filter(shouldRemove); kept[key] = list.filter((v: any) => !shouldRemove(v));
     if (removed[key].length) counts[key] = removed[key].length;

@@ -14,8 +14,9 @@ import { motion, AnimatePresence } from 'motion/react';
 
 // Component imports
 import Page1Public from './components/Page1Public';
+const PagePaymentReturn = lazy(() => import('./components/PagePaymentReturn'));
 const PageAdminInvitation = lazy(() => import('./components/PageAdminInvitation'));
-const PageUnifiedLogin = lazy(() => import('./components/PageUnifiedLogin'));
+import PageUnifiedLogin from './components/PageUnifiedLogin';
 const PageManagerOnboarding = lazy(() => import('./components/PageManagerOnboarding'));
 const PageAdminDashboard = lazy(() => import('./components/PageAdminDashboard'));
 const PageManagerDashboard = lazy(() => import('./components/PageManagerDashboard'));
@@ -344,6 +345,7 @@ function AppContent() {
         />
 
         {/* FALLBACK REDIRECT */}
+        <Route path="/payments/return" element={<PageWrapper><PagePaymentReturn /></PageWrapper>} />
         <Route path="/admin-invitation" element={<PageWrapper><PageAdminInvitation /></PageWrapper>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

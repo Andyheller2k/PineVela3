@@ -41,6 +41,7 @@ async function main() {
     await new Promise((resolve, reject) => { socket.onopen = resolve; socket.onerror = reject; });
     let sequence = 0; const pending = new Map(), exceptions = [], apiErrors = [];
     const heldChunks = new Set();
+    let holdResidentRequest = true;
     command = (method, params = {}) => new Promise((resolve, reject) => {
       const id = ++sequence, timer = setTimeout(() => { pending.delete(id); reject(new Error(`Browser command timed out: ${method}`)); }, 20000);
       pending.set(id, { resolve, reject, timer }); socket.send(JSON.stringify({ id, method, params }));
@@ -49,7 +50,7 @@ async function main() {
     socket.onmessage = event => {
       const message = JSON.parse(event.data);
       if (message.method === 'Fetch.requestPaused') {
-        if (process.argv.includes('--skeleton')) { heldChunks.add(message.params.requestId); return; }
+        if (holdResidentRequest) { heldChunks.add(message.params.requestId); return; }
         void command('Fetch.fulfillRequest', { requestId: message.params.requestId, responseCode: 503, responseHeaders: [{ name: 'Content-Type', value: 'application/json' }], body: Buffer.from(JSON.stringify({ error: 'Isolated dashboard retry check' })).toString('base64') }); return;
       }
       if (message.id) { const request = pending.get(message.id); if (!request) return; pending.delete(message.id); clearTimeout(request.timer); message.error ? request.reject(new Error(message.error.message)) : request.resolve(message.result); }
@@ -77,6 +78,17 @@ async function main() {
     const matchingButton = text => `[...document.querySelectorAll('button')].find(b => b.getClientRects().length && b.textContent.includes(${JSON.stringify(text)}))`;
     const noOverflow = async label => assert(await evaluate('document.documentElement.scrollWidth <= innerWidth + 1'), `${label}: page overflow`);
 
+    await viewport(375);
+    await command('Fetch.enable',{patterns:[{urlPattern:'*/api/issue-reports',requestStage:'Request'}]});
+    await switchAccount(resident.token, '/#/resident/dashboard');
+    for (let attempt=0;attempt<100 && !heldChunks.size;attempt++) await pause(100);
+    assert(heldChunks.size, 'Resident data fetch held');
+    await until("document.querySelector('[data-route-skeleton]')", 'Skeleton while data loads');
+    assert(!(await evaluate("document.body.innerText.includes('Syncing Resident Portal')")), 'No second logo loader');
+    holdResidentRequest = false;
+    await command('Fetch.disable');
+    await until("document.body.innerText.includes('Resident browser room') && !document.querySelector('[data-route-skeleton]')", 'Skeleton disappears after real data loads');
+    console.log('Resident data loading uses only the shared skeleton and removes it when loading completes.');
     for (const width of [375, 1440]) {
       await viewport(width); await switchAccount(resident.token, '/#/resident/dashboard');
       await until("document.body.innerText.includes('Resident browser room') && !document.body.innerText.includes('Syncing Resident Portal')", 'Resident room loads');

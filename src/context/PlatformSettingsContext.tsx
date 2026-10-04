@@ -4,7 +4,8 @@ import { useLocation, Link } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 import { sessionFetch } from '../lib/session';
 
-interface Settings { registrationFee: number; commission: number; announcement: string; maintenanceMode: boolean }
+import type { PlatformSettings as Settings } from '../../platformSettings';
+import { DEFAULT_SUBSCRIPTION_PRICES } from '../../marketPlans';
 const PlatformSettingsContext = createContext<{ settings?: Settings }>({});
 export const usePlatformSettings = () => useContext(PlatformSettingsContext);
 export function PlatformSettingsProvider({ children }: { children: React.ReactNode }) {
@@ -20,7 +21,7 @@ export function PlatformSettingsProvider({ children }: { children: React.ReactNo
     window.addEventListener('pinevela-maintenance', onMaintenance);
     return () => window.removeEventListener('pinevela-maintenance', onMaintenance);
   }, [refetch]);
-  return <PlatformSettingsContext.Provider value={{ settings: data ? { ...data, maintenanceMode: blocked || data.maintenanceMode } : blocked ? { registrationFee: 0, commission: 0, announcement: '', maintenanceMode: true } : undefined }}>{children}</PlatformSettingsContext.Provider>;
+  return <PlatformSettingsContext.Provider value={{ settings: data ? { ...data, maintenanceMode: blocked || data.maintenanceMode } : blocked ? { registrationFee: 0, semesterFee: 0, subscriptionPrices: DEFAULT_SUBSCRIPTION_PRICES, commission: 0, announcement: '', maintenanceMode: true } : undefined }}>{children}</PlatformSettingsContext.Provider>;
 }
 export function PlatformAccessBoundary({ children }: { children: React.ReactNode }) {
   const { user } = useAuth(), { settings } = usePlatformSettings(), location = useLocation();

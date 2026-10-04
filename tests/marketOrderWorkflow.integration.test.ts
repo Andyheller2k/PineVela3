@@ -1,3 +1,4 @@
+import { paidMarketFixture } from './paidMarketFixture.cjs';
 import { sessionFixtureJson } from './sessionFixtures.cjs';
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
@@ -29,7 +30,7 @@ test('S16/S17: private PINs, expiry, persistent lockouts, closed transitions and
   const service = { ...product, id: crypto.randomUUID(), isService: true, serviceLocationMode: 'fixed', location: 'Stored service location', stockQuantity: 99 };
   const race = { ...product, id: crypto.randomUUID(), stockQuantity: 2 };
   const corrupt = { id: crypto.randomUUID(), productId: product.id, sellerEmail: seller.studentEmail, storeId: seller.id, quantity: -2, productPrice: 100, totalAmount: -200, status: 'Pending Meetup', otpPin: '1234' };
-  await fs.mkdir(dataDir); await fs.writeFile(db, sessionFixtureJson({ credentialExposureVersion: 1, accountSecurityVersion: 1, users: [buyer, otherBuyer, admin, parent], digitalMarketApplications: [app, otherApp], digitalMarketStores: [seller, otherSeller], digitalMarketProducts: [product, service, race], digitalMarketOrders: [corrupt] }));
+  await fs.mkdir(dataDir); await fs.writeFile(db, sessionFixtureJson({ credentialExposureVersion: 1, accountSecurityVersion: 1, users: [buyer, otherBuyer, admin, parent], digitalMarketApplications: [app, otherApp], ...paidMarketFixture([seller, otherSeller]), digitalMarketProducts: [product, service, race], digitalMarketOrders: [corrupt] }));
   const socket = net.createServer(); socket.listen(0, '127.0.0.1'); await once(socket, 'listening');
   const port = (socket.address() as net.AddressInfo).port; await new Promise<void>(r => socket.close(() => r()));
   const base = `http://127.0.0.1:${port}`; let child: ChildProcess | undefined; let serverErrors = '';

@@ -367,7 +367,14 @@ closed across restart. See [setup, boundaries and recovery](admin-governance.md)
 
 
 Administrator platform settings and profile changes additionally require a separate,
-owner-bound settings key; wipe keys cannot authorize them. Key/password attempts are
+owner-bound settings key. Pricing changes require three to five distinct administrator
+approvals and a final application by administrator #1; direct settings writes cannot bypass
+this, and no vote alone changes prices. Immutable pricing proposals expire after 24 hours
+and invalidate on roster/key or live-price changes. Announcement and maintenance changes
+retain their single-actor settings-key policy. Every pricing vote/final push uses the
+settings key rather than the wipe approval key.
+
+Wipe keys cannot authorize settings/profile changes. Key/password attempts are
 limited and lost-key resets require two other administrators. Maintenance authorization
 is server-enforced for all non-admin roles and existing sessions, with administrators
 retaining access to restore service. See [administrator setup](admin-governance.md).

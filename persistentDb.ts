@@ -28,6 +28,7 @@ export interface PersistentStore {
   meetings?: any[];
   ratings?: any[];
   onboardingPayments?: any[];
+  paymentTransactions?: any[];
   managerAccountSettings?: Record<string, any>;
   staff?: any[];
   staffAuditLogs?: any[];
@@ -40,6 +41,9 @@ export interface PersistentStore {
   credentialsRevokedAt?: string;
   keyDispatches?: any[];
   platformSettings: {
+    paystackSettlement?: { code: string; mode: string; updatedBy: string; updatedAt: string };
+    semesterFee?: number;
+    subscriptionPrices?: Record<string, number>;
     registrationFee: number;
     commission: number;
     announcement: string;
@@ -144,6 +148,7 @@ export function loadPersistentStore(defaultStore: PersistentStore): PersistentSt
       notifications: deduplicateById(Array.isArray(parsed.notifications) ? parsed.notifications : defaultStore.notifications), boardRequests: deduplicateById(Array.isArray(parsed.boardRequests) ? parsed.boardRequests : (defaultStore.boardRequests || [])),
       meetings: deduplicateById(Array.isArray(parsed.meetings) ? parsed.meetings : (defaultStore.meetings || [])),
       ratings: Array.isArray(parsed.ratings) ? parsed.ratings : (defaultStore.ratings || []),
+      paymentTransactions: Array.isArray(parsed.paymentTransactions) ? parsed.paymentTransactions : (defaultStore.paymentTransactions || []),
       onboardingPayments: Array.isArray(parsed.onboardingPayments) ? parsed.onboardingPayments : (defaultStore.onboardingPayments || []),
       managerAccountSettings: managerSettings,
       staff: deduplicateById(Array.isArray(parsed.staff) ? parsed.staff : (defaultStore.staff || [])),

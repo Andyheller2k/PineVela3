@@ -1,3 +1,4 @@
+import { paidMarketFixture } from './paidMarketFixture.cjs';
 import { sessionFixtureJson } from './sessionFixtures.cjs';
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
@@ -28,7 +29,7 @@ test('Live marketplace media, ownership, purchase images and scoped notification
   const completed = { id: crypto.randomUUID(), buyerId: buyer.id, buyerEmail: buyer.email, buyerName: buyer.name, productId: product.id, productTitle: product.title, storeId: sellerStore.id, sellerEmail: seller.email, status: 'Completed & Paid' };
   const ownCompleted = { ...completed, id: crypto.randomUUID(), buyerId: owner.id, buyerEmail: owner.email };
   await fs.writeFile(database, sessionFixtureJson({ accountSecurityVersion: 1, credentialExposureVersion: 1,
-    users: [owner, buyer, seller, foreign, admin], digitalMarketStores: [sellerStore, foreignStore],
+    users: [owner, buyer, seller, foreign, admin], ...paidMarketFixture([sellerStore, foreignStore]),
     digitalMarketApplications: [seller, foreign].map(u => ({ id: crypto.randomUUID(), studentEmail: u.email, status: 'approved' })),
     digitalMarketProducts: [product], digitalMarketOrders: [completed, ownCompleted] }));
   const socket = net.createServer(); socket.listen(0, '127.0.0.1'); await once(socket, 'listening');

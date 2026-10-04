@@ -1,3 +1,5 @@
+import { usePlatformSettings } from '../context/PlatformSettingsContext';
+import { openPaymentCheckout } from '../lib/payments';
 import OnboardingProgress, { STORE_SETUP_STEPS } from './OnboardingProgress';
 import { sessionFetch as fetch } from '../lib/session';
 import React, { useState, useEffect } from 'react';
@@ -43,6 +45,8 @@ export default function PageDigitalMarketOnboard() {
   const navigate = useNavigate();
   const { user, apiFetch, logout, setSessionUser } = useAuth();
 
+  const { settings } = usePlatformSettings();
+  const [selectedPlan, setSelectedPlan] = useState<'default' | 'star' | 'pro'>('default');
   // Role Protection Guard: Only merchant and student roles can access store onboarding
   useEffect(() => {
     if (user) {
@@ -69,14 +73,13 @@ export default function PageDigitalMarketOnboard() {
   const [storeName, setStoreName] = useState<string>('');
   const [username, setUsername] = useState<string>('');
   const [description, setDescription] = useState<string>('');
-  const [location, setLocation] = useState<string>('KNUST Campus, Hall 6');
+  const [location, setLocation] = useState<string>('');
   const [category, setCategory] = useState<string>(DIGITAL_MARKET_CATEGORIES[0]);
-  const [deliveryMode, setDeliveryMode] = useState<string>('Campus Meetup & Secure Escrow');
+  const [deliveryMode, setDeliveryMode] = useState<string>('Campus Meetup');
   const [profilePicture, setProfilePicture] = useState<string>('');
   const [coverPicture, setCoverPicture] = useState<string>('');
-  const registrationFee = appData?.registrationFeeAmount ?? storeData?.registrationFeeAmount ?? 50;
-  const [momoNetwork, setMomoNetwork] = useState<string>('MTN Mobile Money');
-  const [momoPhone, setMomoPhone] = useState<string>('0244123456');
+  const registrationFee = settings?.registrationFee;
+  const checkoutTotal = settings ? settings.registrationFee + settings.semesterFee + settings.subscriptionPrices[selectedPlan] : undefined;
 
   useEffect(() => {
     const fetchStatus = async () => {
@@ -133,26 +136,15 @@ export default function PageDigitalMarketOnboard() {
           profilePicture: profilePicture.trim(),
           coverPicture: coverPicture.trim(),
           description: description.trim(),
-          paymentMethod: momoNetwork,
-          momoPhone: momoPhone.trim(),
-          registrationFeePaid: true
+
         })
       });
 
       if (res && res.success) {
-        if (setSessionUser && user) {
-          setSessionUser({
-            ...user,
-            role: 'merchant',
-            isApprovedMerchant: true,
-            hasApprovedMerchantStore: true,
-            merchantStoreId: res.store?.id || user.merchantStoreId,
-            merchantStoreName: res.store?.storeName || storeName,
-            merchantSetupCompleted: true,
-            merchantRegistrationFeePaid: true,
-            targetRedirect: '/digital-market'
-          });
-        }
+        const payment = await apiFetch('/api/payments/paystack/initialize', { method: 'POST', body: JSON.stringify({ purpose: 'activation', plan: selectedPlan }) });
+        if (openPaymentCheckout(payment)) return;
+        if (!payment?.paid) throw new Error('Store activation requires verified payment.');
+        setSessionUser?.({ ...user, merchantSetupCompleted: true, merchantRegistrationFeePaid: true });
         navigate('/digital-market', { replace: true });
       } else {
         setErrorMessage(res?.error || "Failed to complete store onboarding.");
@@ -337,7 +329,7 @@ export default function PageDigitalMarketOnboard() {
                   }}
                   className="px-8 py-3.5 bg-blue-600 hover:bg-blue-500 text-white font-black text-xs rounded-xl shadow-lg shadow-blue-600/30 flex items-center gap-2 cursor-pointer transition-all"
                 >
-                  <span>Continue to {registrationFee} GHS Payment</span>
+                  <span>Continue to Secure Checkout</span>
                   <ArrowRight className="w-4 h-4" />
                 </button>
               </div>
@@ -347,9 +339,9 @@ export default function PageDigitalMarketOnboard() {
           {phase === 3 && (
             <div className="space-y-6 animate-fadeIn">
               <div>
-                <h2 className="text-xl font-black text-slate-900">Step 3: Finalize {registrationFee} GHS Registration Fee</h2>
+                <h2 className="text-xl font-black text-slate-900">Step 3: Review your market fees</h2>
                 <p className="text-xs text-slate-500 font-medium mt-0.5">
-                  Secure settlement via PineVela Mobile Money Gateway to activate your campus merchant store.
+                  Pay securely through Paystack. Registration is one-time, the selected plan renews monthly, and the semester fee renews every two months.
                 </p>
               </div>
 
@@ -362,34 +354,13 @@ export default function PageDigitalMarketOnboard() {
                     </p>
                   </div>
                   <div className="px-5 py-2.5 bg-blue-600 text-white font-black text-base rounded-xl shadow-md text-center shrink-0">
-                    {registrationFee} GHS
+                    {checkoutTotal ?? "…"} GHS total
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1">Momo Network</label>
-                    <select
-                      value={momoNetwork}
-                      onChange={(e) => setMomoNetwork(e.target.value)}
-                      className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-900"
-                    >
-                      <option value="MTN Mobile Money">MTN Mobile Money</option>
-                      <option value="Telecel Cash">Telecel Cash</option>
-                      <option value="AT Cash">AT Cash</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1">Mobile Money Phone</label>
-                    <input
-                      type="text"
-                      value={momoPhone}
-                      onChange={(e) => setMomoPhone(e.target.value)}
-                      placeholder="0244123456"
-                      className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-900"
-                    />
-                  </div>
-                </div>
+                <label className="block text-sm font-semibold">Monthly plan<select value={selectedPlan} onChange={event => setSelectedPlan(event.target.value as typeof selectedPlan)} className="mt-2 w-full rounded-xl border border-blue-200 p-3">{(['default', 'star', 'pro'] as const).map(plan => <option key={plan} value={plan}>Pine {plan} — GHS {settings?.subscriptionPrices[plan] ?? '…'} / month</option>)}</select></label>
+                <dl className="space-y-2 text-sm"><div className="flex justify-between"><dt>Registration (one-time)</dt><dd>GHS {registrationFee ?? '…'}</dd></div><div className="flex justify-between"><dt>Semester fee (every two months)</dt><dd>GHS {settings?.semesterFee ?? '…'}</dd></div><div className="flex justify-between"><dt>Selected plan (monthly)</dt><dd>GHS {settings?.subscriptionPrices[selectedPlan] ?? '…'}</dd></div></dl>
+                <p className="text-xs text-slate-600">Paystack collects your payment details on its secure checkout. Closing checkout does not activate your store.</p>
               </div>
 
               <div className="pt-4 flex items-center justify-between border-t border-slate-100">
@@ -403,17 +374,17 @@ export default function PageDigitalMarketOnboard() {
                 </button>
                 <button
                   type="submit"
-                  disabled={submitting}
+                  disabled={submitting || !settings}
                   className="px-8 py-4 bg-gradient-to-r from-blue-900 via-indigo-900 to-blue-800 hover:from-blue-800 hover:to-indigo-800 text-white font-black text-xs rounded-xl shadow-lg shadow-blue-900/20 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
                 >
                   {submitting ? (
                     <>
                       <Clock className="w-4 h-4 animate-spin" />
-                      <span>Processing {registrationFee} GHS Payment & Launching Store...</span>
+                      <span>Opening secure checkout…</span>
                     </>
                   ) : (
                     <>
-                      <span>Complete Store Setup & Launch Store 🎉</span>
+                      <span>Continue to Paystack</span>
                       <ArrowRight className="w-4 h-4" />
                     </>
                   )}

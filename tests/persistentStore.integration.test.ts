@@ -11,7 +11,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { sessionFixtureJson } from './sessionFixtures.cjs';
 
 const project = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-test('B01: real startup and repeated restarts preserve historical collections and new onboarding writes', { timeout: 90000 }, async t => {
+test('B01: real startup and repeated restarts preserve historical collections and rejects self-attested onboarding writes', { timeout: 90000 }, async t => {
   const temp = await fs.mkdtemp(path.join(os.tmpdir(), 'pinevela-b01-startup-'));
   const dataDir = path.join(temp, 'data'); await fs.mkdir(dataDir);
   const db = path.join(dataDir, 'pinevela_store.json');
@@ -19,7 +19,7 @@ test('B01: real startup and repeated restarts preserve historical collections an
   const records = (key: string) => [1, 2].map(i => ({ id: `${key}-${i}`, email: 'shared-history@example.test',
     hostelId: 'isolated-residence', serviceId: 'isolated-service', rating: i + 2,
     details: { note: `Retained ${key} ${i}`, nested: [i, { preserved: true }] } }));
-  const expected: any = Object.fromEntries(['ratings', 'staffBargains', 'digitalMarketServiceReviews', 'onboardingPayments', 'managerProfiles'].map(key => [key, records(key)]));
+  const expected: any = Object.fromEntries(['ratings', 'staffBargains', 'digitalMarketServiceReviews', 'onboardingPayments', 'managerProfiles', 'paymentTransactions'].map(key => [key, records(key)]));
   await fs.writeFile(db, sessionFixtureJson({ credentialExposureVersion: 1, accountSecurityVersion: 1,
     users: [admin], ...expected }));
   const listener = net.createServer(); listener.listen(0, '127.0.0.1'); await once(listener, 'listening');
@@ -47,15 +47,8 @@ test('B01: real startup and repeated restarts preserve historical collections an
   };
   await start(); await verify();
   const payments = '/api/hostel-verifications/pay-onboarding-fee';
-  await request('POST', payments, admin.token, { agreedToPay: false }, 400);
-  await verify();
-  await request('POST', payments, admin.token, { agreedToPay: true, hostelId: 'isolated-residence', hostelName: 'Isolated residence', managerId: 'isolated-manager', managerName: 'Isolated manager' }, 201);
-  const afterPayment = (await read()).onboardingPayments;
-  assert.equal(afterPayment.length, expected.onboardingPayments.length + 1, 'A payment is inserted exactly once');
-  const added = afterPayment.find((payment: any) => !expected.onboardingPayments.some((original: any) => original.id === payment.id));
-  assert(added?.timestamp && added?.paidAt && added?.reference);
-  assert.equal(added.amount, 50);
-  expected.onboardingPayments = afterPayment;
+  await request('POST', payments, undefined, { agreedToPay: true }, 401);
+  await request('POST', payments, admin.token, { agreedToPay: true, hostelId: 'isolated-residence' }, 403);
   await verify();
   for (let restart = 0; restart < 2; restart++) { await stop(); await start(); await verify(); }
 });

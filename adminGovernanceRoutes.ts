@@ -19,6 +19,9 @@ export function installAdminGovernance(app: Express, requireAuth: any, governanc
   app.post(`${root}/keys/enroll`, auth, route(req => governance.enroll(req.user.id, req.body.password)));
   app.post(`${root}/keys/settings/enroll`, auth, route(req => governance.enrollSettingsKey(req.user.id, req.body.password)));
   app.post('/api/settings', auth, route(req => governance.updateSettings(req.user.id, req.body)));
+  app.post(`${root}/pricing`, auth, route(req => governance.proposePricing(req.user.id, req.body)));
+  app.post(`${root}/pricing/:id/vote`, auth, route(req => governance.decidePricing(req.user.id, req.params.id, req.body)));
+  app.post(`${root}/pricing/:id/apply`, auth, route(req => governance.applyPricing(req.user.id, req.params.id, req.body)));
   app.post(`${root}/invitations`, auth, route(req => governance.invite(req.user.id, req.body)));
   app.post(`${root}/invitations/:id/cancel`, auth, route(req => governance.cancelInvitation(req.user.id, req.params.id, req.body.privateKey)));
   app.post('/api/auth/admin-invitation/accept', route(req => governance.acceptInvitation(req.body)));

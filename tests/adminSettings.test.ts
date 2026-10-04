@@ -47,7 +47,7 @@ test('Settings keys are independent, private, actor-bound, limited and recoverab
 
 test('Platform settings reject malformed amounts, coerced flags and arbitrary fields, and preserve zero values', () => {
   const settings = { registrationFee: 0, commission: 0, announcement: '', maintenanceMode: false };
-  assert.deepEqual(publicPlatformSettings({ platformSettings: settings }), settings);
+  assert.deepEqual(publicPlatformSettings({ platformSettings: settings }), { ...settings, semesterFee: 300, subscriptionPrices: { default: 0, star: 90, pro: 150 } });
   for (const registrationFee of [-1, Infinity, NaN, '50', null, 0.001, 1000001]) assert.throws(() => validatePlatformSettings({ ...settings, registrationFee }));
   for (const commission of [-1, 101, '5', null, Infinity]) assert.throws(() => validatePlatformSettings({ ...settings, commission }));
   for (const maintenanceMode of ['false', 0, null]) assert.throws(() => validatePlatformSettings({ ...settings, maintenanceMode }));

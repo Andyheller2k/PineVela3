@@ -1,5 +1,7 @@
+import PasswordStrengthGauge from './PasswordStrengthGauge';
 import OnboardingProgress, { OFFICER_ACCOUNT_STEPS } from './OnboardingProgress';
 import AdminSettingsPanel from './AdminSettingsPanel';
+import AdministratorLabel from './AdministratorLabel';
 import AdminGovernancePanel, { useAdminGovernance } from './AdminGovernancePanel';
 import { sessionFetch as fetch } from '../lib/session';
 import React, { useState, useEffect } from 'react';
@@ -240,9 +242,11 @@ export default function PageAdminDashboard() {
       const marketStoresRes = await apiFetch('/api/admin/digital-market/stores').catch(() => []);
       const vtRes = await apiFetch('/api/verification-teams').catch(() => []);
       const inspectionsRes = await apiFetch('/api/admin/verification-inspections').catch(() => []);
+      const paymentRecords = await apiFetch('/api/admin/payments').catch(() => []);
       const allUsersRes = await apiFetch('/api/admin/all-users').catch(() => null);
 
       return {
+        paymentRecords: Array.isArray(paymentRecords) ? paymentRecords : [],
         residences: residencesData,
         managerRequests: mergedMgrs,
         managerRestrictions: Array.isArray(resRestrictions) ? resRestrictions : [],
@@ -700,35 +704,9 @@ export default function PageAdminDashboard() {
   const totalResidences = residences.length;
   const totalFeesCollected = feesPaid.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
 
-  // Calculate Platform Revenue strictly from verified paid merchant plans (50 GHS activation + 300 GHS/semester fees)
-  // Only counts AFTER the student merchant has completed payment (registrationFeePaid === true && setupCompleted === true)
-  const paidMerchantEmails = new Set<string>();
-  let totalMerchantFeesCollected = 0;
-  let activeMerchantCount = 0;
-
-  digitalMarketApps.forEach((app: any) => {
-    const emailKey = (app.studentEmail || app.parentUserEmail || app.userId || '').toLowerCase().trim();
-    // Must be explicitly paid and completed - do not count uncompleted/unpaid approved applications
-    if (emailKey && app.registrationFeePaid === true && app.setupCompleted === true) {
-      if (!paidMerchantEmails.has(emailKey)) {
-        paidMerchantEmails.add(emailKey);
-        const regFee = typeof app.registrationFeeAmount === 'number' ? app.registrationFeeAmount : 50;
-        const semFee = typeof app.semesterFeeAmount === 'number' ? app.semesterFeeAmount : 300;
-        totalMerchantFeesCollected += (regFee + semFee);
-        activeMerchantCount++;
-      }
-    }
-  });
-
-  digitalMarketStores.forEach((st: any) => {
-    const emailKey = (st.studentEmail || st.parentUserEmail || st.userId || '').toLowerCase().trim();
-    // Must have completed setup and paid registration fee
-    if (emailKey && !paidMerchantEmails.has(emailKey) && st.registrationFeePaid === true && st.setupCompleted === true) {
-      paidMerchantEmails.add(emailKey);
-      totalMerchantFeesCollected += 350; // default for store setup (50 activation + 300 semester plan)
-      activeMerchantCount++;
-    }
-  });
+  // Revenue is counted once from server-verified live transactions. Test/free payments are excluded.
+  const totalMerchantFeesCollected = (adminData?.paymentRecords || []).filter((p: any) => p.mode === 'live' && p.purpose !== 'housing').reduce((sum: number, p: any) => sum + p.amount, 0);
+  const activeMerchantCount = digitalMarketStores.filter((s: any) => s.registrationFeePaid && Date.parse(s.semesterExpiresAt) > Date.now()).length;
 
   const pendingHostelsCount = residences.filter(r => (
     r.status === 'Pending Approval' || 
@@ -912,7 +890,7 @@ export default function PageAdminDashboard() {
 
       {/* MAIN CONTENT AREA */}
       <main className={`dashboard-centered-content flex-1 p-6 lg:p-10 space-y-8 overflow-y-auto h-full relative ${isSidebarTopNav ? 'lg:pt-24 lg:w-[calc(100vw-22rem)] lg:max-w-[calc(100vw-22rem)] lg:mx-auto' : ''}`}>
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-blue-200 bg-white/65 p-4 text-sm backdrop-blur-xl"><span className="flex items-center gap-3 font-semibold text-blue-950">{(user?.photo || user?.avatar) && <img src={user.photo || user.avatar} alt="Administrator profile" className="h-9 w-9 rounded-full object-cover" />}Administrator {adminSlot ? `#${adminSlot}` : ''} · {user?.name}</span><button onClick={() => setActiveTab('governance')} className="rounded-xl bg-blue-600 px-4 py-2 font-semibold text-white">Shared approvals{pendingGovernance ? ` (${pendingGovernance})` : ''}</button></div>
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-blue-200 bg-white/65 p-4 text-sm backdrop-blur-xl"><span className="flex min-w-0 items-center gap-3 font-semibold text-blue-950">{(user?.photo || user?.avatar) && <img src={user.photo || user.avatar} alt="Administrator profile" className="h-9 w-9 shrink-0 rounded-full object-cover" />}<AdministratorLabel slot={adminSlot} name={user?.name} /></span><button onClick={() => setActiveTab('governance')} className="rounded-xl bg-blue-600 px-4 py-2 font-semibold text-white">Shared approvals{pendingGovernance ? ` (${pendingGovernance})` : ''}</button></div>
         {activeTab === 'governance' && <AdminGovernancePanel />}
 
         {/* TAB 1: OVERVIEW */}
@@ -3935,6 +3913,7 @@ export default function PageAdminDashboard() {
                   onChange={(e) => setNewOfficerData(prev => ({ ...prev, password: e.target.value }))}
                   className="w-full p-3 bg-slate-50 border border-slate-300 rounded-2xl font-mono text-xs font-bold text-slate-900 focus:ring-2 focus:ring-blue-500 focus:outline-none"
                 />
+                <PasswordStrengthGauge password={newOfficerData.password} />
               </div>
 
               <div className="flex items-center justify-end gap-3 pt-3 border-t">

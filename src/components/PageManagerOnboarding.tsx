@@ -1,3 +1,5 @@
+import RouteSkeleton from './RouteSkeleton';
+import PasswordStrengthGauge from './PasswordStrengthGauge';
 import OnboardingProgress from './OnboardingProgress';
 import { sessionFetch as fetch } from '../lib/session';
 import React, { useState, useEffect } from 'react';
@@ -431,10 +433,7 @@ export default function PageManagerOnboarding() {
       <main className="flex-1 max-w-4xl w-full mx-auto px-4 sm:px-6 py-8 flex flex-col justify-center">
         
         {checkingExisting ? (
-          <div className="bg-white rounded-3xl border border-slate-100 shadow-xl p-12 text-center flex flex-col items-center justify-center space-y-4">
-            <div className="w-10 h-10 border-4 border-blue-900 border-t-transparent rounded-full animate-spin" />
-            <p className="text-sm font-bold text-slate-600">Verifying Manager Registration Records...</p>
-          </div>
+          <RouteSkeleton />
         ) : activeRestriction ? (
           <div className="bg-white rounded-3xl border border-slate-100 shadow-2xl p-10 text-center space-y-6">
             <div className="w-16 h-16 rounded-2xl bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center mx-auto">
@@ -905,6 +904,7 @@ export default function PageManagerOnboarding() {
                           {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                         </button>
                       </div>
+                      <PasswordStrengthGauge password={password} />
                     </div>
 
                     <div>
@@ -922,6 +922,7 @@ export default function PageManagerOnboarding() {
                           className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 focus:bg-white focus:border-blue-800 focus:ring-1 focus:ring-blue-800 focus:outline-none transition-colors"
                         />
                       </div>
+                      <PasswordStrengthGauge password={confirmPassword} />
                     </div>
                   </div>
 

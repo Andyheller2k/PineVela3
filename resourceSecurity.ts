@@ -120,7 +120,7 @@ const ipOf = (req: Request) => req.ip || req.socket.remoteAddress || 'unknown';
 const routeOf = (req: Request) => req.path.toLowerCase().replace(/\/+$/, '');
 const loginPaths = new Set(['/api/auth/login', '/api/digital-market/login', '/api/verification-teams/login', '/api/auth/verification-team-login']);
 const credentialPaths = /(?:admin-invitation\/accept|admin\/governance\/keys|login|register|verify-unified|password|residents\/onboard|room-keys\/claim|manager-verifications\/submit|\/staff$|delete-registered-account|delete-room|clear-registered-accounts|\/verification-teams$)/;
-const smallBody = (route: string) => route === '/api/settings' || route.startsWith('/api/admin/governance') || route === '/api/auth/admin-invitation/accept' || loginPaths.has(route) || /(?:password|verify-unified|register-unified)$/.test(route);
+const smallBody = (route: string) => route.startsWith('/api/payments/paystack') || route.startsWith('/api/admin/payments') || route === '/api/settings' || route.startsWith('/api/admin/governance') || route === '/api/auth/admin-invitation/accept' || loginPaths.has(route) || /(?:password|verify-unified|register-unified)$/.test(route);
 export const UPLOAD_ROUTE = '/api/storage/upload-hostel-image';
 export const MARKET_UPLOAD_ROUTE = '/api/storage/upload-market-image';
 export const ADMIN_PROFILE_UPLOAD_ROUTE = '/api/storage/upload-admin-profile';
@@ -132,7 +132,7 @@ export async function createResourceProtection(options: { actor: (req: Request) 
   await durable.load();
   let inFlight = 0, credentialRequests = 0, uploadRequests = 0;
   const ipRequests = new Map<string, number>(), ipCredentials = new Map<string, number>(), actorRequests = new Map<string, number>();
-  const small = express.json({ limit: '256kb', inflate: false });
+  const small = express.json({ limit: '256kb', inflate: false, verify(req, _res, buffer) { if (req.url?.split('?')[0].toLowerCase().replace(/\/+$/, '') === '/api/payments/paystack/webhook') (req as any).paystackRawBody = Buffer.from(buffer); } });
   // Bounded media-bearing JSON is still used by existing avatar/catalog/document forms.
   const medium = express.json({ limit: '4mb', inflate: false });
   const photo = express.json({ limit: '28mb', inflate: false });

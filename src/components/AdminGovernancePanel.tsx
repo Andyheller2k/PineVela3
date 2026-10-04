@@ -1,7 +1,8 @@
 import OnboardingProgress, { ADMIN_INVITATION_STEPS } from './OnboardingProgress';
+import AdministratorLabel from './AdministratorLabel';
 import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { ShieldCheck, KeyRound, Users, Trash2, AlertTriangle, Copy } from 'lucide-react';
+import { KeyRound, Users, Trash2, AlertTriangle, Copy } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { queryClient } from '../lib/queryClient';
 
@@ -59,7 +60,7 @@ export default function AdminGovernancePanel() {
     </div>) : null;
   return <section className="space-y-6 text-slate-900" aria-label="Administrator governance">
     <header className="rounded-3xl border border-blue-200 bg-white/65 p-6 backdrop-blur-xl">
-      <h2 className="flex items-center gap-2 text-xl font-bold"><ShieldCheck className="text-blue-600" /> Administrator #{self?.slot} · {self?.name}</h2>
+      <h2 className="text-xl font-bold"><AdministratorLabel slot={self?.slot} name={self?.name} /></h2>
       <p className="mt-1 break-all text-xs text-slate-600">Account ID: {data.currentId}</p>
       <p className="mt-3 text-sm text-slate-600">Wipes need five independent approvals. Keys belong to each administrator and are separate from login passwords. A rejected, expired or changed proposal cannot execute.</p>
     </header>

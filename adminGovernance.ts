@@ -3,7 +3,7 @@ import { accountData, accountId, accountRole, normalizeEmail, credentialValues, 
 import { clearRecordSession } from './sessionSecurity.js';
 import { buildWipePlan, applyWipePlan, parseWipeScopes, type WipeScope } from './adminWipeScope.js';
 import { WipeRecovery } from './adminWipeRecovery.js';
-import { validatePlatformSettings } from './platformSettings.js';
+import { validatePlatformSettings, publicPlatformSettings, pricingSettings, validatePricingSettings, type PricingSettings } from './platformSettings.js';
 
 export class GovernanceError extends Error { constructor(public status: number, message: string) { super(message); } }
 const fail = (status: number, message: string): never => { throw new GovernanceError(status, message); };
@@ -19,7 +19,8 @@ type Proposal = { id: string; scopes: WipeScope[]; reason: string; createdBy: st
   status: 'pending' | 'approved' | 'rejected' | 'expired' | 'invalidated' | 'executed'; preview: any; fingerprint: string; votes: Vote[]; roster: { id: string; slot: number; name: string }[]; executedAt?: string; backup?: string };
 type Invitation = { id: string; email: string; name: string; slot: number; tokenHash: string; expiresAt: string };
 type Change = { id: string; targetId: string; action: 'remove' | 'reset-key' | 'reset-settings-key'; reason: string; requestedBy: string; revision: number; expiresAt: string; status: 'pending' | 'approved' | 'rejected' | 'invalidated'; votes: Vote[] };
-export interface AdminGovernanceState { version: 1; mainId: string; revision: number; members: Member[]; proposals: Proposal[]; invitations: Invitation[]; changes: Change[]; attempts: Record<string, { count: number; until: number }> }
+type PricingProposal = { id: string; before: PricingSettings; prices: PricingSettings; reason: string; createdBy: string; createdAt: string; expiresAt: string; revision: number; status: 'pending' | 'approved' | 'rejected' | 'invalidated' | 'expired' | 'applied'; votes: Vote[]; roster: { id: string; slot: number; name: string }[]; appliedBy?: string; appliedAt?: string };
+export interface AdminGovernanceState { version: 1; mainId: string; revision: number; members: Member[]; proposals: Proposal[]; invitations: Invitation[]; changes: Change[]; attempts: Record<string, { count: number; until: number }>; pricingProposals?: PricingProposal[] }
 
 export function initializeAdminGovernance(store: any, configuredMain = process.env.PINEVELA_MAIN_ADMIN_ID): boolean {
   if (store.adminGovernance) return false;
@@ -79,6 +80,7 @@ export class AdminGovernance {
     this.state.revision++;
     for (const p of this.state.proposals) if (['pending', 'approved'].includes(p.status)) p.status = 'invalidated';
     for (const c of this.state.changes) if (c.status === 'pending') c.status = 'invalidated';
+    for (const p of this.state.pricingProposals || []) if (['pending', 'approved'].includes(p.status)) p.status = 'invalidated';
   }
   verifySettingsKey(id: string, key: unknown) {
     if (this.blocked) fail(503, 'Settings writes are blocked pending offline recovery.');
@@ -110,7 +112,9 @@ export class AdminGovernance {
   updateSettings(id: string, body: any) {
     this.verifySettingsKey(id, body?.settingsKey);
     let settings;
-    try { settings = validatePlatformSettings(body); } catch (error: any) { fail(400, error.message); }
+    const current = publicPlatformSettings(this.getStore());
+    try { settings = validatePlatformSettings({ ...current, ...body }, current); } catch (error: any) { fail(400, error.message); }
+    if (JSON.stringify(pricingSettings(settings)) !== JSON.stringify(pricingSettings(current))) fail(409, 'Pricing changes require at least three administrator approvals and a final push by administrator #1. Submit a pricing proposal.');
     const store = this.getStore(), previousAnnouncement = store.platformSettings.announcement;
     Object.assign(store.platformSettings, settings);
     if (settings.announcement && (settings.announcement !== previousAnnouncement || !(store.notifications || []).some((n: any) => n.category === 'system_announcement' && n.message === settings.announcement))) {
@@ -126,6 +130,58 @@ export class AdminGovernance {
     }
     this.commit(); return { success: true, settings };
   }
+  private pricingRoster() {
+    const members = this.state.members.filter(m => m.active && this.account(m.id));
+    if (members.length < 3 || members.length > 5 || members.filter(m => m.settingsKeyHash).length < 3 || !members.some(m => m.id === this.state.mainId && m.settingsKeyHash)) fail(409, 'At least three active administrators with enrolled settings keys, including administrator #1, are required for pricing governance.');
+    return members;
+  }
+  proposePricing(id: string, body: any) {
+    this.verifySettingsKey(id, body?.settingsKey); const roster = this.pricingRoster();
+    if (!body || Object.keys(body).some(key => !['prices', 'reason', 'settingsKey'].includes(key))) fail(400, 'Only prices, a reason and your settings key may be submitted.');
+    let prices: PricingSettings;
+    try { prices = validatePricingSettings(body.prices); } catch (error: any) { return fail(400, error.message); }
+    const before = pricingSettings(publicPlatformSettings(this.getStore()));
+    if (JSON.stringify(before) === JSON.stringify(prices)) fail(400, 'Change at least one price or the commission rate before proposing.');
+    const proposals = this.state.pricingProposals || [];
+    if (proposals.filter(p => ['pending', 'approved'].includes(p.status) && Date.parse(p.expiresAt) > this.now()).length >= 10) fail(429, 'At most ten live pricing proposals are allowed.');
+    const proposal: PricingProposal = { id: crypto.randomUUID(), before, prices: structuredClone(prices), reason: cleanText(body.reason, 'Reason'), createdBy: id, createdAt: new Date(this.now()).toISOString(), expiresAt: new Date(this.now() + 24 * 3600_000).toISOString(), revision: this.state.revision, status: 'pending', votes: [this.vote(id, 'approved')], roster: roster.map(m => ({ id: m.id, slot: m.slot, name: accountData(this.account(m.id)).name || accountData(this.account(m.id)).email })) };
+    this.state.pricingProposals = [...proposals.slice(-99), proposal]; this.commit();
+    return { success: true, id: proposal.id, message: 'Pricing proposal submitted. Your approval counts as one; live prices have not changed.' };
+  }
+  private pendingPricing(proposalId: string) {
+    const p = this.state.pricingProposals?.find(p => p.id === proposalId);
+    if (!p) return fail(404, 'Pricing proposal not found.');
+    if (['pending', 'approved'].includes(p.status) && Date.parse(p.expiresAt) <= this.now()) { p.status = 'expired'; this.commit(); }
+    if (!['pending', 'approved'].includes(p.status)) fail(409, 'This pricing proposal is no longer eligible.');
+    const roster = this.pricingRoster();
+    if (p.revision !== this.state.revision || roster.length !== p.roster.length || roster.some(m => !p.roster.some(r => r.id === m.id)) || JSON.stringify(p.before) !== JSON.stringify(pricingSettings(publicPlatformSettings(this.getStore())))) { p.status = 'invalidated'; this.commit(); fail(409, 'The administrator roster or live prices changed. Submit a fresh pricing proposal.'); }
+    return p;
+  }
+  decidePricing(id: string, proposalId: string, body: any) {
+    this.verifySettingsKey(id, body?.settingsKey);
+    if (!body || Object.keys(body).some(key => !['decision', 'settingsKey'].includes(key)) || !['approved', 'rejected'].includes(body.decision)) fail(400, 'Select approve or reject and supply only your settings key.');
+    const p = this.pendingPricing(proposalId);
+    if (!p.roster.some(m => m.id === id)) fail(403, 'You are not on this proposal’s administrator roster.');
+    if (p.votes.some(v => v.id === id)) fail(409, 'You have already voted on this pricing proposal.');
+    p.votes.push(this.vote(id, body.decision));
+    const approvals = p.votes.filter(v => v.decision === 'approved').length, rejections = p.votes.length - approvals;
+    p.status = approvals >= 3 ? 'approved' : p.roster.length - rejections < 3 ? 'rejected' : 'pending';
+    this.commit(); return { success: true, status: p.status, approvals, message: approvals >= 3 ? 'At least three approvals received. Administrator #1 must make the final push.' : 'Vote saved. Live prices have not changed.' };
+  }
+  applyPricing(id: string, proposalId: string, body: any) {
+    this.member(id); if (id !== this.state.mainId) fail(403, 'Only administrator #1 may make the final pricing push.');
+    this.verifySettingsKey(id, body?.settingsKey);
+    if (!body || Object.keys(body).some(key => !['settingsKey'].includes(key))) fail(400, 'The final push accepts only your settings key; approved prices cannot be edited.');
+    const p = this.pendingPricing(proposalId), approvals = p.votes.filter(v => v.decision === 'approved');
+    if (p.status !== 'approved' || approvals.length < 3 || approvals.length > 5 || new Set(p.votes.map(v => v.id)).size !== p.votes.length || p.votes.length > 5 || approvals.some(v => !p.roster.some(m => m.id === v.id) || !this.state.members.some(m => m.id === v.id && m.active && m.settingsKeyHash) || !this.account(v.id))) fail(409, 'Three to five distinct active administrator approvals are required before the final push.');
+    const store = this.getStore(), previousPrices = pricingSettings(publicPlatformSettings(store)), previousProposals = structuredClone(this.state.pricingProposals);
+    // One synchronous commit applies the reviewed prices and records who performed the final push.
+    Object.assign(store.platformSettings, validatePricingSettings(p.prices));
+    p.status = 'applied'; p.appliedBy = id; p.appliedAt = new Date(this.now()).toISOString();
+    for (const other of this.state.pricingProposals || []) if (other.id !== p.id && ['pending', 'approved'].includes(other.status)) other.status = 'invalidated';
+    try { this.commit(); } catch (error) { Object.assign(store.platformSettings, previousPrices); this.state.pricingProposals = previousProposals; throw error; }
+    return { success: true, status: 'applied', settings: publicPlatformSettings(store), message: 'Approved pricing applied by administrator #1. New checkouts use these prices.' };
+  }
   private fullRoster() {
     if (this.state.members.length !== 5 || this.state.members.some(m => !m.active || !m.keyHash || !this.account(m.id))) fail(409, 'Five active administrators, each with an enrolled private approval key, are required.');
   }
@@ -136,6 +192,7 @@ export class AdminGovernance {
       proposals: this.state.proposals.map(p => ({ id: p.id, scopes: p.scopes, reason: p.reason, createdBy: p.createdBy, createdAt: p.createdAt, expiresAt: p.expiresAt,
         status: ['pending', 'approved'].includes(p.status) && Date.parse(p.expiresAt) <= this.now() ? 'expired' : p.status, preview: p.preview, votes: p.votes, roster: p.roster, executedAt: p.executedAt })),
       invitations: id === this.state.mainId ? this.state.invitations.filter(i => Date.parse(i.expiresAt) > this.now()).map(({ tokenHash, ...i }) => i) : [],
+      pricingProposals: (this.state.pricingProposals || []).map(({ revision, ...p }) => ({ ...p, status: ['pending', 'approved'].includes(p.status) && Date.parse(p.expiresAt) <= this.now() ? 'expired' : p.status })),
       changes: this.state.changes.map(({ revision, ...c }) => c), blocked: this.blocked };
   }
   async enroll(id: string, password: unknown) {

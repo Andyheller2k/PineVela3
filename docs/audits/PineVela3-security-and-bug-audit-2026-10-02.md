@@ -326,6 +326,8 @@ defaultVerificationProvider is always MockNiaVerificationProvider. Arbitrary non
 
 ### S25 — High: Payment and subscription flags are self-attested development features
 
+**Remediation update (2026-10-04):** Server-verified Paystack checkout, actor-bound quotes, signed webhooks, idempotent fulfillment, protected configurable pricing and paid-period enforcement are implemented and verified in isolated API/browser tests. **Real Paystack checkout verification remains pending local key/public-origin configuration.** Historical self-attested records cannot grant paid access or count as live revenue. See [S25 implementation and verification](S25-remediation-2026-10-04.md). The evidence below records the original audit state.
+
 **Evidence:** Confirmed in isolated probe: anonymous agreedToPay request returned paid=true. Other paths confirmed in source.
 
 pay-onboarding-fee records paid solely from agreedToPay. Hostel submissions accept paymentStatus/paymentReference from the client. store-setup marks registrationFeePaid and setupCompleted without provider validation. subscription activates any plan as test_active without payment; there is no production-mode guard. The code explicitly identifies some of these as intentional temporary features. They are release blockers for real payment/accounting, not evidence that an implemented payment gateway was compromised.

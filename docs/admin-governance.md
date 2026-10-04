@@ -111,6 +111,30 @@ All tests use disposable databases. Never run a real wipe as a verification shor
 
 ## Platform settings and administrator photographs
 
+Marketplace registration, commission, the two-month semester fee and all three monthly
+subscription prices use shared pricing proposals in **Admin Settings**. Any active admin
+may propose an immutable set of prices with a reason and their own settings key. Submission
+counts as one approval. At least three distinct administrators must approve; fourth and
+fifth votes remain possible before application. There is no automatic application at quorum.
+Only administrator #1 may make the **Final push**, using their settings key, after quorum.
+That final action cannot change the reviewed prices or replay an applied proposal.
+
+At least three active admins must have settings keys enrolled, including #1. Fewer founders
+do not reduce the approval threshold. Each admin gets one approve/reject vote; a rejection
+closes the proposal only when three approvals become impossible. Cards show before/after
+values, proposer, numbered roster, named votes, expiry and final applier/time. Proposals
+expire after 24 hours. Membership/key changes or stale live prices invalidate proposals;
+applying one invalidates competing live proposals. All votes and application survive restart.
+The legacy direct settings endpoint rejects pricing changes even from #1. Announcements,
+maintenance and personal profile controls retain their own settings-key authorization.
+Receiving-account controls retain the separately documented Paystack behavior.
+
+New checkouts/orders use the applied prices and commission; existing immutable payment
+quotes, paid periods and stored order accounting retain their original values. Private
+receiving configuration remains unchanged. An application-save failure rolls back in-memory
+prices and blocks further governance writes for recovery. Offline wipe recovery invalidates
+restored live pricing proposals as well as wipe approvals.
+
 Open **Admin Settings** and enroll your own settings key with your current login password.
 The cryptographic settings key is displayed once and stored only as a purpose-bound hash.
 It is independent of the wipe approval key. Every settings update, administrator password change and
@@ -140,6 +164,7 @@ owner then signs in and enrolls again; resetting this key preserves the wipe key
 Settings verification commands:
 
 ```sh
+node --import tsx tests/adminPricing.test.ts
 node --import tsx tests/adminSettings.test.ts
 node --import tsx tests/adminSettings.integration.test.ts
 npm run build
@@ -149,7 +174,10 @@ node --import tsx tests/adminSettings.browser.cjs
 These checks use disposable databases and photographs. They verify settings-key
 separation/ownership/attempt limits/recovery, strict input validation, every non-admin
 role during maintenance, continued admin access, restart persistence, real image content
-checks, responsive forms and live announcement/maintenance updates. No operational
+checks, responsive forms and live announcement/maintenance updates. Pricing checks cover
+three through five distinct approvals, unchanged live prices before the main final push,
+direct-update denial, replay protection, expiry, roster changes and persistence failure.
+No operational
 maintenance setting or administrator credentials are changed by the tests.
 
 System announcements are delivered as private, unread notifications to existing non-admin accounts when an administrator publishes new text. They do not create floating banners or toasts. Unchanged saves do not duplicate announcements; clearing the setting preserves notification history.

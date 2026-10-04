@@ -30,6 +30,7 @@ export function hostelVerificationSubmission(actor: any, body: any, store: any) 
   const identityVerified = dossiers.some(v => v.status === 'approved' && v.documentsVerified?.idFront === 'verified' && v.documentsVerified?.idBack === 'verified');
   const capacityValid = [hostel.totalCapacity, hostel.totalRooms, hostel.totalBlocks].every(value => value === undefined || typeof value === 'number' && Number.isSafeInteger(value) && value > 0);
   const pricingValid = hostel.pricePerYear === undefined || typeof hostel.pricePerYear === 'number' && Number.isFinite(hostel.pricePerYear) && hostel.pricePerYear >= 0;
+  const paidTransaction = (store.paymentTransactions || []).find((t: any) => t.hostelId === hostel.id && t.purpose === 'housing' && t.status === 'fulfilled' && (process.env.NODE_ENV !== 'production' || t.mode !== 'test'));
   const now = new Date().toISOString();
   const systemValidation = {
     missingInfo: !hostel.name || !hostel.location, digitalAddressFormatValid: true,
@@ -46,7 +47,7 @@ export function hostelVerificationSubmission(actor: any, body: any, store: any) 
     managerApproved: true, systemValidation,
     validationPassed: !systemValidation.missingInfo && !systemValidation.conflictingInfo && systemValidation.capacityPricingValid && identityVerified && systemValidation.ownershipEvidencePresent,
     // A submitted receipt reference is evidence for review, never proof of payment.
-    paymentStatus: 'unpaid', paymentAmount: 50, paymentDate: null,
+    paymentStatus: paidTransaction ? 'paid' : 'unpaid', paymentAmount: 50, paymentDate: paidTransaction?.fulfilledAt || null, paymentReference: paidTransaction?.reference || evidence.paymentReference,
     status: 'under_admin_review', adminNotes: '', submittedAt: now, createdAt: now, updatedAt: now
   };
 }

@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import { validatePricingSettings } from './platformSettings.js';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { spawnSync } from 'node:child_process';
@@ -6,7 +7,7 @@ import { spawnSync } from 'node:child_process';
 export const JSON_COLLECTIONS = [
   'hostels', 'issueReports', 'activities', 'hostelVerifications', 'managerRegistrationRequests',
   'managerVerifications', 'managerRequests', 'managerProfiles', 'verificationAuditLogs', 'users',
-  'notifications', 'boardRequests', 'meetings', 'ratings', 'onboardingPayments', 'staff',
+  'notifications', 'boardRequests', 'meetings', 'ratings', 'onboardingPayments', 'paymentTransactions', 'staff',
   'staffAuditLogs', 'staffReviews', 'staffBargains', 'roomKeys', 'retiredRoomKeys', 'keyDispatches',
   'managerRestrictions', 'digitalMarketApplications', 'digitalMarketStores', 'digitalMarketProducts',
   'marketMedia', 'digitalMarketOrders', 'digitalMarketMessages', 'digitalMarketRatings',
@@ -48,7 +49,15 @@ export function validateDatabase(bytes: Buffer): any {
     const validMembers = Array.isArray(g.members) && g.members.length <= 5 && g.members.every((m: any) => object(m) && typeof m.id === 'string' && m.id && Number.isInteger(m.slot) && m.slot >= 1 && m.slot <= 5 && typeof m.active === 'boolean' && (m.keyHash === undefined || /^[a-f0-9]{64}$/.test(m.keyHash)) && (m.settingsKeyHash === undefined || /^[a-f0-9]{64}$/.test(m.settingsKeyHash))) &&
       new Set(g.members.map((m: any) => m.id)).size === g.members.length && new Set(g.members.map((m: any) => m.slot)).size === g.members.length;
     const validArrays = ['proposals', 'invitations', 'changes'].every(key => Array.isArray(g[key]) && g[key].length <= 100 && g[key].every((r: any) => object(r) && /^[a-f0-9-]{36}$/.test(r.id) && Number.isFinite(Date.parse(r.expiresAt))));
-    if (g.version !== 1 || typeof g.mainId !== 'string' || !Number.isSafeInteger(g.revision) || g.revision < 1 || !validMembers || !validArrays || !object(g.attempts) || (g.mainId && !g.members.some((m: any) => m.id === g.mainId && m.slot === 1))) {
+    const validPricing = g.pricingProposals === undefined || Array.isArray(g.pricingProposals) && g.pricingProposals.length <= 100 && g.pricingProposals.every((p: any) => {
+      if (!object(p)) return false;
+      try { validatePricingSettings(p.before); validatePricingSettings(p.prices); } catch { return false; }
+      if (!Array.isArray(p.roster) || p.roster.length < 3 || p.roster.length > 5 || !p.roster.every((r: any) => object(r) && typeof r.id === 'string' && r.id && Number.isInteger(r.slot) && r.slot >= 1 && r.slot <= 5 && typeof r.name === 'string')) return false;
+      if (new Set(p.roster.map((r: any) => r.id)).size !== p.roster.length || new Set(p.roster.map((r: any) => r.slot)).size !== p.roster.length || !p.roster.some((r: any) => r.id === p.createdBy)) return false;
+      if (!Array.isArray(p.votes) || p.votes.length < 1 || p.votes.length > 5 || !p.votes.every((v: any) => object(v) && p.roster.some((r: any) => r.id === v.id && r.slot === v.slot) && typeof v.name === 'string' && ['approved', 'rejected'].includes(v.decision) && Number.isFinite(Date.parse(v.at))) || new Set(p.votes.map((v: any) => v.id)).size !== p.votes.length) return false;
+      return /^[a-f0-9-]{36}$/.test(p.id) && typeof p.reason === 'string' && p.reason.length >= 3 && p.reason.length <= 500 && Number.isFinite(Date.parse(p.createdAt)) && Number.isFinite(Date.parse(p.expiresAt)) && Number.isSafeInteger(p.revision) && p.revision >= 1 && ['pending', 'approved', 'rejected', 'invalidated', 'expired', 'applied'].includes(p.status) && (p.status !== 'applied' || p.appliedBy === g.mainId && Number.isFinite(Date.parse(p.appliedAt)) && p.votes.filter((v: any) => v.decision === 'approved').length >= 3);
+    });
+    if (g.version !== 1 || typeof g.mainId !== 'string' || !Number.isSafeInteger(g.revision) || g.revision < 1 || !validMembers || !validArrays || !validPricing || !object(g.attempts) || (g.mainId && !g.members.some((m: any) => m.id === g.mainId && m.slot === 1))) {
       return failure('INVALID_DATABASE', 'Administrator governance metadata is invalid. Preserve the database and inspect it offline.');
     }
     if (g.invitations.length + g.members.length > 5 || g.proposals.some((p: any) => !Array.isArray(p.scopes) || !p.scopes.length || p.scopes.some((s: string) => !['hostels', 'markets', 'managers', 'residents', 'users', 'total'].includes(s)) || !Array.isArray(p.votes) || !Array.isArray(p.roster) || !object(p.preview) || !/^[a-f0-9]{64}$/.test(p.fingerprint)) || g.changes.some((c: any) => !['remove', 'reset-key', 'reset-settings-key'].includes(c.action) || !Array.isArray(c.votes))) {

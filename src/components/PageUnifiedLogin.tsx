@@ -1,3 +1,4 @@
+import PasswordStrengthGauge from './PasswordStrengthGauge';
 import OnboardingProgress, { SIGNUP_STEPS, MANAGER_ACCOUNT_STEPS, ROOM_ACTIVATION_STEPS } from './OnboardingProgress';
 import { sessionFetch as fetch } from '../lib/session';
 import React, { useState, useEffect } from 'react';
@@ -378,26 +379,6 @@ export default function PageUnifiedLogin() {
   }, [showRegModal, regStep]);
 
   // Password strength helper
-  const getPasswordStrength = (pass: string): { score: number; label: string; color: string; textClass: string } => {
-    if (!pass) return { score: 0, label: 'Not Entered', color: 'bg-slate-200 w-0', textClass: 'text-slate-450' };
-    
-    let score = 0;
-    if (pass.length >= 6) score += 1;
-    if (pass.length >= 8) score += 1;
-    if (/[A-Z]/.test(pass)) score += 1;
-    if (/[0-9]/.test(pass)) score += 1;
-    if (/[^A-Za-z0-9]/.test(pass)) score += 1; // Special character
-
-    if (score <= 2) {
-      return { score: 1, label: 'Weak', color: 'bg-rose-500 w-1/3', textClass: 'text-rose-500' };
-    } else if (score <= 4) {
-      return { score: 2, label: 'Good', color: 'bg-amber-500 w-2/3', textClass: 'text-amber-600' };
-    } else {
-      return { score: 3, label: 'Strong', color: 'bg-emerald-500 w-full', textClass: 'text-emerald-650' };
-    }
-  };
-
-
   // Toast notification
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [toastType, setToastType] = useState<'success' | 'error' | 'info'>('info');
@@ -935,12 +916,14 @@ export default function PageUnifiedLogin() {
                     }
                   }}
                 >
-                  <AnimatePresence mode="wait">
+                  <AnimatePresence initial={false} mode="sync">
                     <motion.img
                       key={currentSlide}
                       src={activeSlide.image || manager2Img}
                       alt={activeSlide.title || 'PineVela'}
-                      initial={{ opacity: 0, x: 20 }}
+                      loading="eager"
+                      fetchPriority="high"
+                      initial={false}
                       animate={{ opacity: 1, x: 0 }}
                       exit={{ opacity: 0, x: -20 }}
                       transition={{ duration: 0.5, ease: "easeInOut" }}
@@ -1288,33 +1271,8 @@ export default function PageUnifiedLogin() {
                       {showRegPass ? <EyeOff size={16} /> : <Eye size={16} />}
                     </button>
                   </div>
-                  {regPass && (
-                    <div className="space-y-1 pt-1.5">
-                      <div className="flex items-center justify-between text-[11px] font-bold">
-                        <span className="text-slate-500">Password Strength:</span>
-                        <span className={getPasswordStrength(regPass).textClass}>
-                          {getPasswordStrength(regPass).label}
-                        </span>
-                      </div>
-                      <div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden">
-                        <div className={`h-full transition-all duration-300 ${getPasswordStrength(regPass).color}`} />
-                      </div>
-                      <div className="grid grid-cols-2 gap-1 pt-1 text-[10px] text-slate-500 font-semibold">
-                        <div className={`flex items-center gap-1 ${regPass.length >= 6 ? 'text-emerald-600 font-bold' : ''}`}>
-                          <span>{regPass.length >= 6 ? '✓' : '•'}</span> Min 6 characters
-                        </div>
-                        <div className={`flex items-center gap-1 ${/[A-Z]/.test(regPass) ? 'text-emerald-600 font-bold' : ''}`}>
-                          <span>{/[A-Z]/.test(regPass) ? '✓' : '•'}</span> Uppercase letter
-                        </div>
-                        <div className={`flex items-center gap-1 ${/[0-9]/.test(regPass) ? 'text-emerald-600 font-bold' : ''}`}>
-                          <span>{/[0-9]/.test(regPass) ? '✓' : '•'}</span> Number (0-9)
-                        </div>
-                        <div className={`flex items-center gap-1 ${/[^A-Za-z0-9]/.test(regPass) ? 'text-emerald-600 font-bold' : ''}`}>
-                          <span>{/[^A-Za-z0-9]/.test(regPass) ? '✓' : '•'}</span> Special symbol
-                        </div>
-                      </div>
-                    </div>
-                  )}
+                  <PasswordStrengthGauge password={regPass} />
+
                 </div>
 
                 <div className="space-y-1">
@@ -1339,6 +1297,7 @@ export default function PageUnifiedLogin() {
                       {showRegConfirmPass ? <EyeOff size={16} /> : <Eye size={16} />}
                     </button>
                   </div>
+                  <PasswordStrengthGauge password={regConfirmPass} />
                 </div>
 
                 <button
@@ -1868,21 +1827,9 @@ export default function PageUnifiedLogin() {
                         {showRegPassword ? <EyeOff size={15} /> : <Eye size={15} />}
                       </button>
                     </div>
+                    <PasswordStrengthGauge password={regPassword} />
 
-                    {/* Password Strength Indicator */}
-                    {regPassword && (
-                      <div className="mt-1.5 space-y-1">
-                        <div className="flex justify-between items-center text-[10px]">
-                          <span className="text-slate-400">Password Strength:</span>
-                          <span className={`font-bold ${getPasswordStrength(regPassword).textClass}`}>
-                            {getPasswordStrength(regPassword).label}
-                          </span>
-                        </div>
-                        <div className="w-full h-1 bg-slate-100 rounded-full overflow-hidden">
-                          <div className={`h-full transition-all duration-300 ${getPasswordStrength(regPassword).color}`} />
-                        </div>
-                      </div>
-                    )}
+
                   </div>
 
                   <div className="space-y-1">
@@ -1908,6 +1855,7 @@ export default function PageUnifiedLogin() {
                         {showRegConfirmPassword ? <EyeOff size={15} /> : <Eye size={15} />}
                       </button>
                     </div>
+                    <PasswordStrengthGauge password={regConfirmPassword} />
                   </div>
                 </div>
 
@@ -2375,6 +2323,7 @@ export default function PageUnifiedLogin() {
                           {showStuPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                         </button>
                       </div>
+                      <PasswordStrengthGauge password={stuPassword} />
                     </div>
 
                     <div className="space-y-1">
@@ -2399,6 +2348,7 @@ export default function PageUnifiedLogin() {
                           {showStuConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                         </button>
                       </div>
+                      <PasswordStrengthGauge password={stuConfirmPassword} />
                     </div>
                   </div>
                 </div>

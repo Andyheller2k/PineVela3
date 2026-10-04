@@ -49,7 +49,7 @@ interface NotificationItem {
 }
 
 export default function PageStaffDashboard() {
-  const { user, logout, updateUser, setSessionUser } = useAuth();
+  const { user, logout, updateUser } = useAuth();
   const navigate = useNavigate();
   const [isSidebarTopNav, setIsSidebarTopNav] = useState(usesTopNavigation);
 
@@ -83,12 +83,21 @@ export default function PageStaffDashboard() {
   const [zoomedImage, setZoomedImage] = useState<string | null>(null);
 
   // Settings / Profile Form States
-  const [settingsName, setSettingsName] = useState<string>('');
-  const [settingsUsername, setSettingsUsername] = useState<string>('');
-  const [settingsEmail, setSettingsEmail] = useState<string>('');
-  const [settingsPhone, setSettingsPhone] = useState<string>('');
-  const [settingsPhoto, setSettingsPhoto] = useState<string>('');
+  const [settingsName, setSettingsName] = useState<string>(user?.name || '');
+  const [settingsUsername, setSettingsUsername] = useState<string>(user?.username || user?.email || '');
+  const [settingsEmail, setSettingsEmail] = useState<string>(user?.email || '');
+  const [settingsPhone, setSettingsPhone] = useState<string>(user?.phone || '');
+  const [settingsPhoto, setSettingsPhoto] = useState<string>(user?.profilePicture || user?.photo || user?.avatar || '');
+  const [profileDirty, setProfileDirty] = useState(false);
   const [savingSettings, setSavingSettings] = useState(false);
+  useEffect(() => {
+    if (profileDirty) return;
+    setSettingsName(staffRecord?.name ?? user?.name ?? '');
+    setSettingsUsername(staffRecord?.username ?? user?.username ?? staffRecord?.email ?? user?.email ?? '');
+    setSettingsEmail(staffRecord?.email ?? user?.email ?? '');
+    setSettingsPhone(staffRecord?.phone ?? user?.phone ?? '');
+    setSettingsPhoto(staffRecord?.profilePicture ?? staffRecord?.photo ?? staffRecord?.avatar ?? user?.profilePicture ?? user?.photo ?? user?.avatar ?? '');
+  }, [staffRecord, user, profileDirty]);
 
   const triggerToast = (text: string, type: 'success' | 'error' | 'info' = 'info') => {
     setToastMessage({ text, type });
@@ -325,6 +334,7 @@ export default function PageStaffDashboard() {
     const reader = new FileReader();
     reader.onload = () => {
       const result = reader.result as string;
+      setProfileDirty(true);
       setSettingsPhoto(result);
       triggerToast("New profile picture preview loaded. Tap Save to apply.", 'info');
     };
@@ -353,12 +363,15 @@ export default function PageStaffDashboard() {
         })
       });
 
-      if (res.user && updateUser) {
+      if (!res.success || !res.user) throw new Error('Your profile could not be saved. Please sign in again.');
+      setStaffRecord(res.staffRecord || null);
+      setProfileDirty(false);
+      if (updateUser) {
         updateUser(res.user);
       }
 
       triggerToast("Profile updated successfully! All contact details are directly synchronized with your manager's staff directory.", 'success');
-      loadData();
+      await loadData();
     } catch (err: any) {
       triggerToast(err?.message || "Failed to update profile settings.", 'error');
     } finally {
@@ -367,7 +380,7 @@ export default function PageStaffDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 flex flex-col lg:flex-row relative text-slate-900">
+    <div className="min-h-screen bg-transparent flex flex-col lg:flex-row relative text-slate-900" data-staff-dashboard>
       {/* Toast Notification */}
       {toastMessage && (
         <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50">
@@ -398,7 +411,7 @@ export default function PageStaffDashboard() {
 
       
       {/* MOBILE HEADER (lg:hidden) */}
-      <header className="lg:hidden flex items-center justify-between px-5 py-3 bg-white/90 backdrop-blur-xl border-b border-sky-200/50 sticky top-0 z-40 shadow-sm">
+      <header className="lg:hidden flex items-center justify-between px-5 py-3 bg-sky-100/60 backdrop-blur-xl border-b border-white/70 sticky top-0 z-40 shadow-sm">
         <div className="flex items-center gap-2">
           <PineLogo size={24} />
           <div>
@@ -414,7 +427,7 @@ export default function PageStaffDashboard() {
       </header>
 
       {/* MOBILE BOTTOM NAV (lg:hidden) */}
-      <nav className="mobile-bottom-nav lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-xl border-t border-slate-200 shadow-[0_-10px_40px_rgba(0,0,0,0.08)]">
+      <nav className="mobile-bottom-nav lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-sky-100/70 backdrop-blur-xl border-t border-white/70 shadow-[0_-10px_40px_rgba(0,0,0,0.08)]">
         <div className="flex items-center justify-around px-2 py-2 pb-safe">
           {[
             { id: 'notifications', icon: Bell, label: 'Alerts', badge: notifications.length },
@@ -451,7 +464,7 @@ export default function PageStaffDashboard() {
 
       {/* LEFT SIDEBAR NAVIGATION */}
 
-      {isSidebarTopNav && <nav className="hidden lg:block fixed top-3 left-1/2 -translate-x-1/2 z-50 w-[min(780px,calc(100vw-3rem))] bg-white/72 backdrop-blur-xl border border-white/80 rounded-2xl shadow-lg"><div className="flex items-center gap-1 px-2 py-1.5">
+      {isSidebarTopNav && <nav className="hidden lg:block fixed top-3 left-1/2 -translate-x-1/2 z-50 w-[min(780px,calc(100vw-3rem))] bg-sky-100/70 backdrop-blur-xl border border-white/80 rounded-2xl shadow-lg"><div className="flex items-center gap-1 px-2 py-1.5">
         {/* Profile avatar button — left end */}
         <button onClick={() => setActiveTab('settings')} title="Profile & Settings" className="shrink-0 flex flex-col items-center gap-0.5 py-1 px-1.5 rounded-xl hover:bg-white/70 cursor-pointer">
           {settingsPhoto || user?.photo || user?.avatar ? (
@@ -481,7 +494,7 @@ export default function PageStaffDashboard() {
           </div>
 
           {/* Staff Member Profile Card */}
-          <div className={`p-3.5 bg-white/80 border border-blue-200/60 rounded-2xl flex items-center ${isSidebarCollapsed ? 'justify-center' : 'justify-between'} shadow-sm overflow-hidden`}>
+          <div className={`p-3.5 bg-sky-50/60 border border-white/80 rounded-2xl flex items-center ${isSidebarCollapsed ? 'justify-center' : 'justify-between'} shadow-sm overflow-hidden`}>
             <div className="flex items-center gap-3 overflow-hidden">
               {settingsPhoto || user?.photo || user?.avatar ? (
                 <img 
@@ -655,27 +668,20 @@ export default function PageStaffDashboard() {
 
 
       {/* MAIN WORKSPACE CONTENT */}
-      <main className={`dashboard-centered-content flex-1 m-4 mb-24 lg:mb-6 lg:my-6 lg:mr-6 h-auto lg:h-[calc(100vh-3rem)] overflow-y-auto pb-24 lg:pb-8 bg-gradient-to-br from-white/95 via-sky-50/50 to-blue-50/30 backdrop-blur-2xl border border-sky-200/70 shadow-2xl rounded-3xl p-6 md:p-8 space-y-8 relative z-10 ${isSidebarTopNav ? 'lg:pt-24 lg:w-[calc(100vw-22rem)] lg:max-w-[calc(100vw-22rem)] lg:mx-auto' : ''}`}>
+      <main className={`dashboard-centered-content min-w-0 flex-1 m-4 mb-24 lg:mb-6 lg:my-6 lg:mr-6 h-auto lg:h-[calc(100vh-3rem)] overflow-y-auto pb-24 lg:pb-8 bg-gradient-to-br from-sky-100/65 via-blue-100/45 to-indigo-100/35 backdrop-blur-2xl border border-white/70 shadow-2xl shadow-blue-950/10 rounded-3xl p-6 md:p-8 space-y-8 relative z-10 ${isSidebarTopNav ? 'lg:pt-24 lg:w-[calc(100vw-22rem)] lg:max-w-[calc(100vw-22rem)] lg:mx-auto' : ''}`}>
         {/* TOP STATUS BAR */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-200/60">
           <div>
             <div className="flex items-center gap-2">
               <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 bg-emerald-100 text-emerald-900 rounded-md border border-emerald-200">
-                {employment ? 'Active Duty Dispatch' : 'Staff Console'}
+                Staff Console
               </span>
-              <span className="text-xs text-slate-500 font-semibold">{employment ? `• Hostel: ${employment.hostelName}` : 'Academic Year 2026/2027'}</span>
+              {employment && <span className="text-xs text-blue-900 font-semibold">Hostel: {employment.hostelName}</span>}
             </div>
             <h2 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight mt-1">
-              {employment && activeTab === 'maintenance' ? 'Vocational Repair Desk' : (
-                <>
-
-                  {activeTab === 'notifications' && 'Operational Notifications'}
-
-                  {activeTab === 'settings' && 'Staff Account & Profile Settings'}
-
-                  {activeTab === 'maintenance' && 'Vocational Work Orders & Repairs'}
-                </>
-              )}
+              {activeTab === 'notifications' && 'Operational Notifications'}
+              {activeTab === 'settings' && 'Staff Account & Profile Settings'}
+              {activeTab === 'maintenance' && 'Maintenance Work Orders'}
             </h2>
           </div>
 
@@ -695,9 +701,7 @@ export default function PageStaffDashboard() {
           </div>
         </div>
 
-        {/* ========================================================================= */}
-        {/* TAB 1: APPLY (JOB BOARD, ACTIVE APPLICATION & APPLICATION SUBMISSION) */}
-        {/* ========================================================================= */}
+
 
 
         {/* ========================================================================= */}
@@ -708,7 +712,7 @@ export default function PageStaffDashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-lg font-black text-slate-900">Notifications & Decisions</h3>
-                <p className="text-xs text-slate-500 font-medium">Official updates from property managers regarding your applications and duty assignments.</p>
+                <p className="text-xs text-slate-500 font-medium">Updates from your residence manager about maintenance assignments and employment requests.</p>
               </div>
               <span className="text-xs font-bold text-slate-600 bg-slate-100 px-3 py-1 rounded-full">
                 {notifications.length} Total Notices
@@ -716,7 +720,7 @@ export default function PageStaffDashboard() {
             </div>
 
             {notifications.length === 0 ? (
-              <div className="p-12 text-center bg-white border border-slate-200 rounded-3xl space-y-3">
+              <div className="p-12 text-center bg-sky-50/55 backdrop-blur-xl border border-white/80 rounded-3xl space-y-3">
                 <Bell className="w-10 h-10 text-slate-300 mx-auto" />
                 <h4 className="text-base font-bold text-slate-800">No New Notifications</h4>
                 <p className="text-xs text-slate-500 max-w-sm mx-auto">
@@ -732,7 +736,7 @@ export default function PageStaffDashboard() {
                   return (
                     <div
                       key={n.id}
-                      className={`p-5 bg-white border rounded-2xl shadow-xs transition-all space-y-2 ${
+                      className={`p-5 bg-sky-50/55 backdrop-blur-xl border rounded-2xl shadow-xs transition-all space-y-2 ${
                         isSuccess ? 'border-emerald-200 bg-emerald-50/30' : isWarning ? 'border-rose-200 bg-rose-50/20' : 'border-slate-200'
                       }`}
                     >
@@ -760,16 +764,14 @@ export default function PageStaffDashboard() {
           </div>
         )}
 
-        {/* ========================================================================= */}
-        {/* TAB: JOB OFFERS & PROPOSALS */}
-        {/* ========================================================================= */}
+
 
 
         {/* ========================================================================= */}
         {/* TAB 3: SETTINGS (PROFILE, USERNAME, EMAIL, PHONE, PICTURE -> MANAGER SYNC) */}
         {/* ========================================================================= */}
         {activeTab === 'settings' && (
-          <div className="max-w-2xl bg-white border border-slate-200/90 rounded-3xl p-6 md:p-8 shadow-sm space-y-6">
+          <div className="max-w-2xl bg-sky-50/55 backdrop-blur-xl border border-white/80 rounded-3xl p-6 md:p-8 shadow-sm shadow-blue-950/5 space-y-6">
             <div className="border-b pb-4">
               <h3 className="text-lg font-black text-slate-900">Staff Account Settings</h3>
               <p className="text-xs text-slate-500 font-medium">
@@ -777,9 +779,9 @@ export default function PageStaffDashboard() {
               </p>
             </div>
 
-            <form onSubmit={handleSaveSettings} className="space-y-6">
+            <form aria-label="Staff profile" onSubmit={handleSaveSettings} className="space-y-6">
               {/* Profile Picture Upload & Preview */}
-              <div className="flex items-center gap-5 p-4 bg-slate-50 rounded-2xl border border-slate-200">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-5 p-4 bg-blue-100/45 rounded-2xl border border-white/80">
                 <div className="relative">
                   {settingsPhoto ? (
                     <img 
@@ -808,7 +810,7 @@ export default function PageStaffDashboard() {
                   <input
                     type="text"
                     value={settingsPhoto}
-                    onChange={(e) => setSettingsPhoto(e.target.value)}
+                    onChange={(e) => { setProfileDirty(true); setSettingsPhoto(e.target.value); }}
                     placeholder="Or enter image URL"
                     className="w-full px-2.5 py-1 text-[11px] bg-white border border-slate-200 rounded-lg text-slate-800"
                   />
@@ -818,51 +820,55 @@ export default function PageStaffDashboard() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Full Name */}
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Full Name</label>
+                  <label htmlFor="staff-profile-name" className="block text-xs font-bold text-slate-700 mb-1">Full Name</label>
                   <input
+                    id="staff-profile-name"
                     type="text"
                     value={settingsName}
-                    onChange={(e) => setSettingsName(e.target.value)}
+                    onChange={(e) => { setProfileDirty(true); setSettingsName(e.target.value); }}
                     placeholder="e.g. Kwame Mensah"
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:outline-none focus:border-blue-600 focus:bg-white"
+                    className="w-full px-3.5 py-2.5 bg-white/65 border border-blue-200/70 rounded-xl text-xs font-medium text-slate-900 focus:outline-none focus:border-blue-600 focus:bg-white"
                     required
                   />
                 </div>
 
                 {/* Username */}
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Username (Login ID)</label>
+                  <label htmlFor="staff-profile-username" className="block text-xs font-bold text-slate-700 mb-1">Username (Login ID)</label>
                   <input
+                    id="staff-profile-username"
                     type="text"
                     value={settingsUsername}
-                    onChange={(e) => setSettingsUsername(e.target.value)}
+                    onChange={(e) => { setProfileDirty(true); setSettingsUsername(e.target.value); }}
                     placeholder="e.g. kwame_staff"
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:outline-none focus:border-blue-600 focus:bg-white"
+                    className="w-full px-3.5 py-2.5 bg-white/65 border border-blue-200/70 rounded-xl text-xs font-medium text-slate-900 focus:outline-none focus:border-blue-600 focus:bg-white"
                     required
                   />
                 </div>
 
                 {/* Contact Phone */}
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Phone Number (Direct Line)</label>
+                  <label htmlFor="staff-profile-phone" className="block text-xs font-bold text-slate-700 mb-1">Phone Number (Direct Line)</label>
                   <input
+                    id="staff-profile-phone"
                     type="text"
                     value={settingsPhone}
-                    onChange={(e) => setSettingsPhone(e.target.value)}
+                    onChange={(e) => { setProfileDirty(true); setSettingsPhone(e.target.value); }}
                     placeholder="+233 24 123 4567"
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:outline-none focus:border-blue-600 focus:bg-white"
+                    className="w-full px-3.5 py-2.5 bg-white/65 border border-blue-200/70 rounded-xl text-xs font-medium text-slate-900 focus:outline-none focus:border-blue-600 focus:bg-white"
                   />
                 </div>
 
                 {/* Email Address */}
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Email Address</label>
+                  <label htmlFor="staff-profile-email" className="block text-xs font-bold text-slate-700 mb-1">Email Address</label>
                   <input
+                    id="staff-profile-email"
                     type="email"
                     value={settingsEmail}
-                    onChange={(e) => setSettingsEmail(e.target.value)}
+                    onChange={(e) => { setProfileDirty(true); setSettingsEmail(e.target.value); }}
                     placeholder="kwame@example.com"
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:outline-none focus:border-blue-600 focus:bg-white"
+                    className="w-full px-3.5 py-2.5 bg-white/65 border border-blue-200/70 rounded-xl text-xs font-medium text-slate-900 focus:outline-none focus:border-blue-600 focus:bg-white"
                     required
                   />
                 </div>
@@ -896,35 +902,14 @@ export default function PageStaffDashboard() {
         {/* TAB 4: SECURE ENCRYPTED CHAT SYSTEM                                       */}
         {/* ========================================================================= */}
 
-      </main>
-
-      {/* View Offer Precise Location Modal */}
-
-
       {/* ========================================================================= */}
       {/* TAB 6: ASSIGNED MAINTENANCE WORK ORDERS (VOCATIONAL STAFF WORKFLOW) */}
       {/* ========================================================================= */}
       {activeTab === 'maintenance' && employment && (
         <div className="space-y-6 pt-3">
-          <div className="p-6 bg-gradient-to-r from-sky-400/20 via-blue-500/15 to-indigo-400/20 backdrop-blur-xl border border-sky-300/50 text-slate-900 rounded-3xl shadow-xl relative overflow-hidden mt-2">
-            <div className="absolute -right-10 -bottom-10 w-48 h-48 bg-sky-200/20 rounded-full blur-2xl pointer-events-none" />
-            <div className="relative z-10 space-y-2">
-              <div className="flex items-center gap-2">
-                <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-900 text-[10px] font-black uppercase tracking-wider border border-emerald-300">
-                  Active Duty Dispatch
-                </span>
-                <span className="text-xs text-blue-900 font-semibold">• Hostel: {employment.hostelName}</span>
-              </div>
-              <h3 className="text-xl font-black text-slate-900 tracking-tight">Vocational Repair Desk</h3>
-              <p className="text-xs text-slate-600 max-w-2xl leading-relaxed font-medium">
-                Manage, diagnose, and resolve repair requests assigned to you by the hostel manager. Maintain strict SLA timeframes to avoid delay penalties.
-              </p>
-            </div>
-          </div>
-
           <div className="space-y-4">
             {assignedIssues.length === 0 ? (
-              <div className="text-center py-16 bg-white border border-dashed border-slate-200 rounded-3xl p-8 space-y-3">
+              <div className="text-center py-16 bg-sky-50/50 backdrop-blur-xl border border-dashed border-blue-200 rounded-3xl p-8 space-y-3">
                 <div className="w-12 h-12 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-400 mx-auto border border-slate-200 shadow-sm">
                   <Wrench className="w-6 h-6" />
                 </div>
@@ -957,7 +942,7 @@ export default function PageStaffDashboard() {
                 }
 
                 return (
-                  <div key={issue.id} className="p-5 sm:p-6 bg-white border border-slate-200 rounded-3xl shadow-xs hover:shadow-md transition-all space-y-4">
+                  <div key={issue.id} className="p-5 sm:p-6 bg-sky-50/55 backdrop-blur-xl border border-white/80 rounded-3xl shadow-xs hover:shadow-md transition-all space-y-4">
                     
                     {/* Urgencies, High-Contrast Status Badge & Deadline Countdown */}
                     <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3">
@@ -1146,10 +1131,12 @@ export default function PageStaffDashboard() {
         </div>
       )}
 
+      </main>
+
       {/* Decline Dialog Modal */}
       {showDeclineModal && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-55 animate-fadeIn">
-          <div className="bg-white rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl border border-slate-200/80 space-y-5">
+          <div className="bg-blue-50/90 backdrop-blur-xl rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl border border-slate-200/80 space-y-5">
             <div className="flex justify-between items-center border-b pb-3 border-slate-100">
               <h3 className="text-sm font-black text-slate-900">Decline Work Order Assignment</h3>
               <button onClick={() => setShowDeclineModal(null)} className="text-slate-400 hover:text-slate-600">
@@ -1187,7 +1174,7 @@ export default function PageStaffDashboard() {
       {/* Reschedule/SLA Extension Modal */}
       {showRescheduleModal && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-55 animate-fadeIn">
-          <div className="bg-white rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl border border-slate-200/80 space-y-5">
+          <div className="bg-blue-50/90 backdrop-blur-xl rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl border border-slate-200/80 space-y-5">
             <div className="flex justify-between items-center border-b pb-3 border-slate-100">
               <h3 className="text-sm font-black text-slate-900">Request SLA Timeframe Extension</h3>
               <button onClick={() => setShowRescheduleModal(null)} className="text-slate-400 hover:text-slate-600">
@@ -1242,7 +1229,7 @@ export default function PageStaffDashboard() {
       {/* Completion Signoff Modal with Image attachment upload */}
       {showCompleteModal && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-55 animate-fadeIn">
-          <div className="bg-white rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl border border-slate-200/80 space-y-5">
+          <div className="bg-blue-50/90 backdrop-blur-xl rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl border border-slate-200/80 space-y-5">
             <div className="flex justify-between items-center border-b pb-3 border-slate-100">
               <h3 className="text-sm font-black text-slate-900">Submit Repair Resolution Details</h3>
               <button onClick={() => setShowCompleteModal(null)} className="text-slate-400 hover:text-slate-600">

@@ -1,3 +1,5 @@
+import { installPaystackPayments, PaystackPayments, marketAccessPaid, publicPaidStore, hasVerifiedRegistration } from './paystackPayments.js';
+import { effectiveMarketPlan, PLAN_LIMITS, planCapacityError } from './marketPlans.js';
 import { AdminGovernance, GovernanceError, initializeAdminGovernance, activeAdministrator } from './adminGovernance.js';
 import { publicPlatformSettings, MAINTENANCE_MESSAGE } from './platformSettings.js';
 import { installAdminGovernance } from './adminGovernanceRoutes.js';
@@ -850,7 +852,7 @@ async function startServer() {
     const route = req.path.toLowerCase().replace(/\/+$/, '');
     if (!route.startsWith('/api/') || !publicPlatformSettings(getStoreInstance()).maintenanceMode) return next();
     const publicRead = req.method === 'GET' && ['/api/settings', '/api/health', '/api/sync/events'].includes(route);
-    const authEntry = req.method === 'POST' && ['/api/auth/login', '/api/auth/logout', '/api/auth/admin-invitation/accept'].includes(route);
+    const authEntry = req.method === 'POST' && ['/api/auth/login', '/api/auth/logout', '/api/auth/admin-invitation/accept', '/api/payments/paystack/webhook'].includes(route);
     if (publicRead || authEntry) return next();
     const token = requestSessionToken(req), store = getStoreInstance();
     const admin = token && (store.users || []).find((entry: any) => accountRole(entry) === 'admin' && sessionMatches(entry, token) && activeAdministrator(store, accountId(entry)));
@@ -991,6 +993,7 @@ async function startServer() {
       if (req.user.role !== 'admin' && ((requestedEmail && requestedEmail !== email) || (requestedId && !target) || (target && normalizeEmail(target.studentEmail) !== email))) {
         return res.status(403).json({ error: 'You cannot manage another merchant’s store.' });
       }
+      if (target && req.path.startsWith('/products') && req.method !== 'DELETE' && !marketAccessPaid(store, target)) return res.status(402).json({ error: 'Complete verified registration and renew your two-month market fee before publishing or editing listings.' });
       req.body.studentEmail = email;
       req.body.userEmail = email;
       next();
@@ -1221,8 +1224,8 @@ async function startServer() {
         }
 
         const isSetupCompleted = Boolean(
-          (approvedMerchantStore && approvedMerchantStore.setupCompleted === true && approvedMerchantStore.registrationFeePaid === true) ||
-          (marketApp && marketApp.setupCompleted === true && marketApp.registrationFeePaid === true)
+          (approvedMerchantStore && approvedMerchantStore.setupCompleted === true && hasVerifiedRegistration(getStoreInstance(), approvedMerchantStore)) ||
+          (marketApp && marketApp.setupCompleted === true && (getStoreInstance().paymentTransactions || []).some(t => t.applicationId === marketApp.id && t.purpose === "activation" && t.status === "fulfilled" && (process.env.NODE_ENV !== "production" || t.mode !== "test")))
         );
 
         matched = {
@@ -2125,8 +2128,8 @@ async function startServer() {
             hasApprovedMerchantStore: true,
             merchantStoreId: mStore?.id || (() => { const matches = (store.digitalMarketStores || []).filter(s => normalizeEmail(s.studentEmail) === mEmail && (!matchedItem.userId || s.userId === matchedItem.userId)); return matches.length === 1 ? matches[0].id : undefined; })(),
             isDigitalMarketOnly: true,
-            merchantSetupCompleted: Boolean(mStore?.setupCompleted && mStore?.registrationFeePaid),
-            merchantRegistrationFeePaid: Boolean(mStore?.setupCompleted && mStore?.registrationFeePaid)
+            merchantSetupCompleted: Boolean(mStore?.setupCompleted && hasVerifiedRegistration(store, mStore)),
+            merchantRegistrationFeePaid: Boolean(mStore?.setupCompleted && hasVerifiedRegistration(store, mStore))
           };
         }
       }
@@ -4853,7 +4856,7 @@ async function startServer() {
         status: 'pending',
         registrationFeePaid: false,
         registrationFeeAmount: publicPlatformSettings(store).registrationFee,
-        semesterFeeAmount: 300,
+        semesterFeeAmount: publicPlatformSettings(store).semesterFee,
         submittedAt: new Date().toISOString()
       };
 
@@ -4882,127 +4885,14 @@ async function startServer() {
     }
   });
 
-  // Complete Digital Market Store Onboarding & Creation
-  app.post("/api/digital-market/create-store", async (req: any, res) => {
-    try {
-      const {
-        studentEmail, storeName, location, deliveryForm,
-        category, coverPicture, profilePicture, username
-      } = req.body;
-
-      if (!studentEmail) {
-        return res.status(400).json({ error: "Student email is required for store creation." });
-      }
-
-      if (!storeName || !location || !deliveryForm || !category || !username) {
-        return res.status(400).json({ error: "All onboarding details (Store Name, Location, Delivery Form, Category, and Username) are mandatory." });
-      }
-
-      const cleanEmail = studentEmail.toLowerCase().trim();
-      const store = getStoreInstance();
-
-      if (!store.digitalMarketApplications) store.digitalMarketApplications = [];
-      if (!store.digitalMarketStores) store.digitalMarketStores = [];
-
-      const application = store.digitalMarketApplications.find((a: any) =>
-        a.studentEmail?.toLowerCase() === cleanEmail
-      );
-
-      if (!application) {
-        return res.status(404).json({ error: "No verified digital market application found for this email." });
-      }
-
-      // Check if store already exists
-      let existingStore = store.digitalMarketStores.find((s: any) =>
-        s.studentEmail?.toLowerCase() === cleanEmail
-      );
-
-      if (existingStore && existingStore.status === 'active') {
-        return res.status(400).json({ error: "A Digital Market store is already active for this email.", store: existingStore });
-      }
-
-      const storeId = `store-${application.id || Date.now()}`;
-      const newStore = {
-        id: storeId,
-        userId: application.userId,
-        storeName: storeName.trim(),
-        location: location.trim(),
-        deliveryForm: deliveryForm.trim(),
-        category: category.trim(),
-        coverPicture: coverPicture || 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=1200&auto=format&fit=crop&q=80',
-        profilePicture: profilePicture || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80',
-        logoUrl: profilePicture || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80',
-        bannerUrl: coverPicture || 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=1200&auto=format&fit=crop&q=80',
-        username: username.trim(),
-        studentEmail: cleanEmail,
-        parentUserEmail: application.parentUserEmail || cleanEmail,
-        university: application.university || 'Accredited University',
-        status: 'active',
-        isBanned: false,
-        registrationFeePaid: true,
-        registrationFeeAmount: application.registrationFeeAmount ?? 50,
-        setupCompleted: true,
-        paymentTransactionRef: `PINE-MM-PAY-${Math.random().toString(36).substring(2, 10).toUpperCase()}`,
-        createdAt: new Date().toISOString(),
-        approvedAt: new Date().toISOString(),
-        phone: application.phone || '0244-123-456',
-        description: `Official student digital market store by ${application.fullName} at ${application.university || 'Accredited University'}.`
-      };
-
-      if (existingStore) {
-        Object.assign(existingStore, newStore);
-      } else {
-        store.digitalMarketStores.unshift(newStore);
-      }
-
-      application.registrationFeePaid = true;
-      application.setupCompleted = true;
-      application.paidAt = new Date().toISOString();
-
-      const markMerchantActive = (u: any) => {
-        const target = u.user || u;
-        if (target.roomKey || target.role === 'user' || !target.isDigitalMarketOnly) return;
-        target.role = 'merchant';
-        target.isApprovedMerchant = true;
-        target.hasApprovedMerchantStore = true;
-        target.merchantStoreId = newStore.id;
-        target.merchantStoreName = newStore.storeName;
-        target.merchantSetupCompleted = true;
-        target.merchantRegistrationFeePaid = true;
-        target.targetRedirect = '/digital-market';
-      };
-
-      const studentEmailClean = (cleanEmail || application.studentEmail || '').toLowerCase().trim();
-      const inStoreUsers = (store.users || []).filter((u: any) =>
-        (u.email || '').toLowerCase().trim() === studentEmailClean
-      );
-      inStoreUsers.forEach(markMerchantActive);
-
-      const inMockUsers = MOCK_USERS.filter((u: any) =>
-        (u.email || u.user?.email || '').toLowerCase().trim() === studentEmailClean
-      );
-      inMockUsers.forEach(markMerchantActive);
-
-      savePersistentStore(store);
-      syncStore();
-
-      return res.json({
-        success: true,
-        store: newStore,
-        message: "Digital Market Store created & activated successfully!"
-      });
-    } catch (err: any) {
-      console.error("Error creating digital market store:", err);
-      return res.status(500).json({ error: "Failed to create Digital Market Store." });
-    }
-  });
+  installPaystackPayments(app, requireAuth, new PaystackPayments(getStoreInstance, syncManagedStore), getStoreInstance, (id, key) => governance.verifySettingsKey(id, key));
 
   // Get Digital Market status for current user
   app.get("/api/digital-market/status", requireAuth(), async (req: any, res) => {
     try {
       if (!['user', 'merchant', 'admin'].includes(req.user.role)) return res.status(403).json({ error: 'Open market registration from your primary account, or sign in with your market password.' });
-      const userEmail = (req.query.email || '').toString().toLowerCase().trim();
-      const userId = (req.query.userId || '').toString().trim();
+      const userEmail = (req.query.email || req.user.email || '').toString().toLowerCase().trim();
+      const userId = (req.query.userId || req.user.parentUserId || req.user.id || '').toString().trim();
       if (req.user.role !== 'admin' && ((userEmail && userEmail !== normalizeEmail(req.user.email)) || (userId && userId !== req.user.id && userId !== req.user.parentUserId))) return res.status(403).json({ error: 'You cannot view another account’s market registration.' });
 
       const store = getStoreInstance();
@@ -5107,7 +4997,7 @@ async function startServer() {
         setupCompleted: Boolean(marketApp.setupCompleted)
       };
 
-      const isSetupCompleted = Boolean(targetStore.setupCompleted && targetStore.registrationFeePaid);
+      const isSetupCompleted = Boolean(targetStore.setupCompleted && hasVerifiedRegistration(store, targetStore));
       const parentEmail = marketApp?.parentUserEmail || targetStore?.parentUserEmail || cleanEmail;
       const merchantUser = {
         id: `merchant:${marketApp?.id || targetStore.id}`,
@@ -5141,153 +5031,13 @@ async function startServer() {
         needsSetup,
         application: marketApp,
         user: merchantUser,
-        store: targetStore,
+        store: publicPaidStore(targetStore, store),
         token: merchantUser.token,
         message: needsSetup ? "Application approved! Please complete your digital market store setup." : "Successfully logged into Digital Market Platform!"
       });
     } catch (err: any) {
       console.error("Error in digital market login endpoint:", err);
       return res.status(500).json({ error: "Failed to authenticate into digital market store." });
-    }
-  });
-
-  // Complete Store Setup & 50 GHS Platform Activation Payment
-  app.post("/api/digital-market/store-setup", async (req: any, res) => {
-    try {
-      const {
-        storeName, category, description, phone, logoUrl, bannerUrl,
-        userEmail, studentEmail, userId, paymentMethod, paymentPhone, paymentNetwork, transactionRef,
-        location, deliveryMode, username, profilePicture, coverPicture, momoPhone
-      } = req.body;
-      const store = getStoreInstance();
-      if (!store.digitalMarketStores) store.digitalMarketStores = [];
-      if (!store.digitalMarketApplications) store.digitalMarketApplications = [];
-
-      const cleanEmail = (userEmail || studentEmail || '').toLowerCase().trim();
-      const application = store.digitalMarketApplications.find((a: any) =>
-        (cleanEmail && (a.studentEmail?.toLowerCase() === cleanEmail || a.parentUserEmail?.toLowerCase() === cleanEmail)) ||
-        (userId && a.userId === userId)
-      );
-
-      if (!application || application.status !== 'approved') {
-        return res.status(403).json({ error: "Your application must be approved by a PineVela Admin before setting up and activating your store." });
-      }
-
-      const txRef = transactionRef || `PINE-MM-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
-      const nowIso = new Date().toISOString();
-
-      // Mark application as paid and setup completed
-      application.registrationFeePaid = true;
-      application.setupCompleted = true;
-      application.paymentMethod = paymentMethod || paymentNetwork || 'Mobile Money (MTN/Telecel/AT)';
-      application.paymentTransactionRef = txRef;
-      application.paidAt = nowIso;
-
-      let existingStore = store.digitalMarketStores.find((s: any) =>
-        (cleanEmail && (s.studentEmail?.toLowerCase() === cleanEmail || s.parentUserEmail?.toLowerCase() === cleanEmail)) ||
-        (userId && s.userId === userId)
-      );
-
-      const resolvedLogo = profilePicture || logoUrl || existingStore?.logoUrl || '';
-      const resolvedBanner = coverPicture || bannerUrl || existingStore?.bannerUrl || '';
-      const resolvedPhone = phone || momoPhone || paymentPhone || existingStore?.phone || application.phone || '';
-
-      if (existingStore) {
-        existingStore.storeName = storeName || existingStore.storeName;
-        existingStore.category = category || existingStore.category;
-        existingStore.description = description || existingStore.description;
-        existingStore.phone = resolvedPhone;
-        existingStore.logoUrl = resolvedLogo;
-        existingStore.bannerUrl = resolvedBanner;
-        existingStore.profilePicture = resolvedLogo;
-        existingStore.coverPicture = resolvedBanner;
-        if (location) existingStore.location = location;
-        if (deliveryMode) existingStore.deliveryMode = deliveryMode;
-        if (username) existingStore.username = username;
-        existingStore.status = 'active';
-        existingStore.isVerified = true;
-        existingStore.isBanned = false;
-        existingStore.registrationFeePaid = true;
-        existingStore.registrationFeeAmount = application.registrationFeeAmount ?? 50;
-        existingStore.setupCompleted = true;
-        existingStore.paymentMethod = paymentMethod || paymentNetwork || 'Mobile Money';
-        existingStore.paymentTransactionRef = txRef;
-        existingStore.activatedAt = nowIso;
-      } else {
-        existingStore = {
-          id: `dmstore-${Date.now()}`,
-          userId: userId || application.userId,
-          parentUserEmail: application.parentUserEmail || cleanEmail,
-          storeName: storeName || `${application.fullName}'s Market`,
-          university: application.university || 'Accredited Ghanaian University',
-          ownerName: application.fullName,
-          studentEmail: application.studentEmail,
-          category: category || application.categoryToSell,
-          description: description || `Verified Student Digital Store at ${application.university}`,
-          phone: resolvedPhone,
-          logoUrl: resolvedLogo,
-          bannerUrl: resolvedBanner,
-          profilePicture: resolvedLogo,
-          coverPicture: resolvedBanner,
-          location: location || `${application.university || 'Campus'}`,
-          deliveryMode: deliveryMode || 'Campus Meetup / In-Person Delivery',
-          username: username || application.fullName?.toLowerCase().replace(/[^a-z0-9]/g, '') || 'studentmerchant',
-          isBanned: false,
-          isVerified: true,
-          registrationFeePaid: true,
-          registrationFeeAmount: application.registrationFeeAmount ?? 50,
-          setupCompleted: true,
-          paymentMethod: paymentMethod || paymentNetwork || 'Mobile Money',
-          paymentTransactionRef: txRef,
-          status: 'active',
-          createdAt: nowIso,
-          activatedAt: nowIso
-        };
-        store.digitalMarketStores.unshift(existingStore);
-      }
-
-      // Update student user to merchant role
-      const markActivated = (u: any) => {
-        const target = u.user || u;
-        if (target.roomKey || target.role === 'user' || !target.isDigitalMarketOnly) return;
-        target.role = 'merchant';
-        target.isApprovedMerchant = true;
-        target.hasApprovedMerchantStore = true;
-        target.merchantStoreId = existingStore.id;
-        target.merchantStoreName = existingStore.storeName;
-        target.merchantSetupCompleted = true;
-        target.merchantRegistrationFeePaid = true;
-        target.targetRedirect = '/digital-market';
-      };
-
-      const studentEmailClean = (cleanEmail || application.studentEmail || '').toLowerCase().trim();
-      const inStoreUsers = (store.users || []).filter((u: any) =>
-        (u.email || '').toLowerCase().trim() === studentEmailClean
-      );
-      inStoreUsers.forEach(markActivated);
-
-      const inMockUsers = MOCK_USERS.filter((u: any) =>
-        (u.email || u.user?.email || '').toLowerCase().trim() === studentEmailClean
-      );
-      inMockUsers.forEach(markActivated);
-
-      savePersistentStore(store);
-      syncStore();
-
-      await dbCreateActivity({
-        id: `act-dm-setup-${Date.now()}`,
-        text: `Student merchant ${application.fullName} completed 50 GHS platform activation for "${existingStore.storeName}" (${application.university}) via ${paymentMethod || 'Mobile Money'} [Ref: ${txRef}].`,
-        type: 'success'
-      }, activities);
-
-      return res.json({ 
-        success: true, 
-        store: existingStore, 
-        message: "Digital Market Store setup & 50 GHS platform activation completed successfully! 🎉" 
-      });
-    } catch (err: any) {
-      console.error("Error setting up digital store:", err);
-      return res.status(500).json({ error: "Failed to setup Digital Store." });
     }
   });
 
@@ -5375,10 +5125,12 @@ async function startServer() {
             storeObj.id === p.storeId || 
             (p.sellerEmail && storeObj.studentEmail?.toLowerCase() === p.sellerEmail.toLowerCase())
           );
+          const currentPlan = effectiveMarketPlan(s, Date.now(), process.env.NODE_ENV === 'production');
           const storeSummary = getStoreRatingSummary(p.storeId || s?.id);
           const itemRating = ratingSummary(verifiedRatings.filter((r: any) => r.productId === p.id));
           return {
             ...p,
+            subscriptionPlan: currentPlan, isPineStar: currentPlan !== "default", hasPriorityPlacement: currentPlan !== "default", allowsAiImageTools: currentPlan !== "default", allowsCustomAnimatedCard: currentPlan === "pro",
             rating: itemRating.averageRating,
             reviewCount: itemRating.ratingCount,
             storeName: s?.storeName || p.storeName,
@@ -5418,12 +5170,12 @@ async function startServer() {
 
       const nonBannedStoreIds = new Set(
         store.digitalMarketStores
-          .filter((s: any) => !s.isBanned)
+          .filter((s: any) => !s.isBanned && marketAccessPaid(store, s))
           .map((s: any) => s.id)
       );
 
       const availableProducts = store.digitalMarketProducts.filter((p: any) => {
-        const isNotBanned = p.storeId ? (nonBannedStoreIds.has(p.storeId) || nonBannedStoreIds.size === 0) : true;
+        const isNotBanned = p.storeId ? (nonBannedStoreIds.has(p.storeId)) : true;
         return isNotBanned && p.isAvailable !== false && Number(p.stockQuantity) > 0;
       });
 
@@ -5432,19 +5184,6 @@ async function startServer() {
       console.error("Error fetching market products:", err);
       return res.status(500).json({ error: "Failed to fetch products." });
     }
-  });
-
-  // Subscription selection: temporary test activation. Replace the assignment below with a verified Paystack webhook/transaction check when payments launch.
-  app.post("/api/digital-market/subscription", requireAuth(["merchant", "student", "user", "admin"]), async (req: any, res) => {
-    const plan = String(req.body?.plan || "default").toLowerCase();
-    if (!["default", "star", "pro"].includes(plan)) return res.status(400).json({ error: "Invalid subscription plan." });
-    const email = String(req.body?.studentEmail || req.user?.email || "").toLowerCase().trim();
-    const store = getStoreInstance();
-    const target = (store.digitalMarketStores || []).find((s: any) => s.studentEmail?.toLowerCase() === email || s.parentUserEmail?.toLowerCase() === email || s.userId === req.user?.id);
-    if (!target) return res.status(404).json({ error: "Active seller store not found." });
-    target.subscriptionPlan = plan; target.subscriptionStatus = "test_active"; target.subscriptionUpdatedAt = new Date().toISOString();
-    savePersistentStore(store); syncStore();
-    return res.json({ success: true, store: target, paymentRequired: false, paymentProvider: "paystack" });
   });
 
   // Add Product to Store
@@ -5461,54 +5200,8 @@ async function startServer() {
         s.id === storeId || (cleanEmail && (s.studentEmail?.toLowerCase() === cleanEmail || s.parentUserEmail?.toLowerCase() === cleanEmail))
       );
 
-      // Auto-fallback: if targetStore not in digitalMarketStores yet, check digitalMarketApplications
-      if (!targetStore && cleanEmail) {
-        const application = (store.digitalMarketApplications || []).find((a: any) =>
-          (a.studentEmail?.toLowerCase() === cleanEmail || a.parentUserEmail?.toLowerCase() === cleanEmail)
-        );
-        if (application) {
-          targetStore = {
-            id: `dmstore-${Date.now()}`,
-            userId: application.userId || `user-${Date.now()}`,
-            studentEmail: application.studentEmail || cleanEmail,
-            parentUserEmail: application.parentUserEmail || cleanEmail,
-            storeName: application.storeName || `${application.fullName}'s Campus Store`,
-            category: application.categoryToSell || category || 'General Items',
-            status: 'active',
-            isBanned: false,
-            setupCompleted: true,
-            registrationFeePaid: true,
-            createdAt: new Date().toISOString()
-          };
-          store.digitalMarketStores.unshift(targetStore);
-        }
-      }
-
-      if (!targetStore) {
-        targetStore = {
-          id: storeId || `dmstore-${Date.now()}`,
-          userId: `user-${Date.now()}`,
-          studentEmail: cleanEmail,
-          parentUserEmail: cleanEmail,
-          storeName: cleanEmail ? `${cleanEmail.split('@')[0]}'s Campus Store` : 'Campus Merchant Store',
-          category: category || 'General Items',
-          status: 'active',
-          isBanned: false,
-          setupCompleted: true,
-          registrationFeePaid: true,
-          createdAt: new Date().toISOString()
-        };
-        store.digitalMarketStores.unshift(targetStore);
-      }
-
-      if (targetStore.isBanned) {
-        return res.status(403).json({ error: "This store has been disabled or banned by Admin." });
-      }
-
-      // Ensure store is active
-      targetStore.status = 'active';
-      targetStore.setupCompleted = true;
-      targetStore.isBanned = false;
+      if (!targetStore || !marketAccessPaid(store, targetStore)) return res.status(402).json({ error: 'Complete verified registration and renew your two-month market fee before publishing.' });
+      if (targetStore.isBanned) return res.status(403).json({ error: 'This store has been disabled by Admin.' });
 
       const isServiceItem = Boolean(req.body.isService || category === 'Services' || String(category || '').toLowerCase().includes('service'));
       const serviceLocationMode = String(req.body.serviceLocationMode || '').toLowerCase();
@@ -5519,25 +5212,31 @@ async function startServer() {
         return res.status(400).json({ error: 'Fixed and Hybrid services require the seller to pin a service location.' });
       }
 
-      const plan = String(targetStore.subscriptionPlan || "default").toLowerCase();
-      const limits = plan === "pro" ? { items: 200, services: 10, inventory: 900 } : plan === "star" ? { items: 100, services: 5, inventory: 600 } : { items: 20, services: 1, inventory: 200 };
+      const plan = effectiveMarketPlan(targetStore, Date.now(), process.env.NODE_ENV === "production");
+      const limits = PLAN_LIMITS[plan];
       const storeProducts = store.digitalMarketProducts.filter((p: any) => p.storeId === targetStore.id);
       const existingItems = storeProducts.filter((p: any) => !Boolean(p.isService || String(p.category || "").toLowerCase().includes("service")));
       const existingServices = storeProducts.filter((p: any) => Boolean(p.isService || String(p.category || "").toLowerCase().includes("service")));
-      const requestedStock = isServiceItem ? 0 : Math.max(1, Number(stockQuantity) || 1);
+      const requestedStock = isServiceItem ? 0 : stockQuantity;
+      if (!isServiceItem && (!Number.isSafeInteger(requestedStock) || requestedStock < 1)) return res.status(400).json({ error: 'Inventory quantity must be a finite positive whole number.' });
       const inventoryUnits = existingItems.reduce((sum: number, p: any) => sum + Math.max(0, Number(p.stockQuantity) || 0), 0);
       if ((!isServiceItem && existingItems.length >= limits.items) || (isServiceItem && existingServices.length >= limits.services)) return res.status(403).json({ error: `Your Pine ${plan === "star" ? "Star" : plan === "pro" ? "Pro" : "Default"} plan publishing limit has been reached.` });
       if (!isServiceItem && inventoryUnits + requestedStock > limits.inventory) return res.status(403).json({ error: `Your plan allows up to ${limits.inventory} total inventory units.` });
 
       const safeImageUrl = await saveMarketCover(imageUrl, req);
+      // Upload decoding can yield; recheck paid access and limits immediately before the insertion.
+      if (!marketAccessPaid(store, targetStore)) return res.status(402).json({ error: 'Renew your market payment before publishing.' });
+      const currentPlan = effectiveMarketPlan(targetStore, Date.now(), process.env.NODE_ENV === 'production');
+      const capacityError = planCapacityError(store.digitalMarketProducts, targetStore.id, currentPlan, { isService: isServiceItem, category, stockQuantity: requestedStock });
+      if (capacityError) return res.status(403).json({ error: capacityError });
       const newProduct = {
         id: `dmprod-${Date.now()}`,
         storeId: targetStore.id,
-        subscriptionPlan: plan,
-        isPineStar: plan === "star" || plan === "pro",
-        hasPriorityPlacement: plan === "star" || plan === "pro",
-        allowsAiImageTools: plan === "star" || plan === "pro",
-        allowsCustomAnimatedCard: plan === "pro",
+        subscriptionPlan: currentPlan,
+        isPineStar: currentPlan === "star" || currentPlan === "pro",
+        hasPriorityPlacement: currentPlan === "star" || currentPlan === "pro",
+        allowsAiImageTools: currentPlan === "star" || currentPlan === "pro",
+        allowsCustomAnimatedCard: currentPlan === "pro",
         storeName: targetStore.storeName,
         sellerId: targetStore.userId,
         sellerEmail: targetStore.studentEmail || targetStore.parentUserEmail || cleanEmail,
@@ -5600,6 +5299,11 @@ async function startServer() {
 
       const mediaFields = marketMediaFields(req.body, req.user, store);
       const safeImageUrl = imageUrl === undefined ? undefined : imageUrl === product.imageUrl ? imageUrl : await saveMarketCover(imageUrl, req);
+      const listingStore = store.digitalMarketStores?.find(s => s.id === product.storeId);
+      if (!listingStore || !marketAccessPaid(store, listingStore)) return res.status(402).json({ error: 'Renew your market payment before editing listings.' });
+      const plan = effectiveMarketPlan(listingStore, Date.now(), process.env.NODE_ENV === 'production');
+      const capacityError = planCapacityError(store.digitalMarketProducts, product.storeId, plan, { ...product, ...req.body, stockQuantity: req.body.stockQuantity ?? product.stockQuantity }, product.id);
+      if (capacityError) return res.status(400).json({ error: capacityError });
       if (title !== undefined) product.title = title;
       if (description !== undefined) product.description = description;
       if (price !== undefined) product.price = Number(price);
@@ -6003,6 +5707,7 @@ async function startServer() {
       checkOrderStock(product, terms.quantity, store.digitalMarketOrders);
 
       const targetStore = store.digitalMarketStores.find((s: any) => s.id === product.storeId);
+      if (!targetStore || !marketAccessPaid(store, targetStore)) return res.status(402).json({ error: 'This store must complete verified payment or renew its two-month market fee before accepting new orders.' });
       if (targetStore?.isBanned) {
         return res.status(403).json({ error: "Cannot order from a disabled/banned store." });
       }
@@ -7669,62 +7374,6 @@ async function startServer() {
     }
   });
 
-  // 10. GHS 50 Onboarding Payment Endpoint (Direct agreement / placeholder payment)
-  // Requirement: "the 50 cedis fee should be charged when they aggree to pay for now , later on we will implement paystack not now make no mistakes"
-  app.post("/api/hostel-verifications/pay-onboarding-fee", async (req: any, res) => {
-    try {
-      const { hostelId, hostelName, managerId, managerName, agreedToPay } = req.body;
-
-      if (!agreedToPay) {
-        return res.status(400).json({ error: "Manager agreement to pay the GHS 50.00 onboarding fee is required." });
-      }
-
-      const now = new Date().toISOString();
-      const paymentRef = `PAY-PV50-${Date.now().toString().slice(-6)}-${Math.floor(Math.random() * 900 + 100)}`;
-
-      const paymentRecord = {
-        id: `pay-${Date.now()}`,
-        hostelId: hostelId || `hostel-${Date.now()}`,
-        hostelName: hostelName || 'Hostel Accommodation',
-        managerId: managerId || req.user?.id || 'mgr-unassigned',
-        managerName: managerName || req.user?.name || 'Property Manager',
-        amount: 50.00,
-        currency: 'GHS',
-        status: 'paid',
-        reference: paymentRef,
-        agreementAcknowledged: true,
-        paymentMethod: 'Manual Confirmation (Direct Agreement)',
-        paidAt: now
-      };
-
-      await dbCreateOnboardingPayment(paymentRecord);
-
-      // Audit log
-      const auditLog = {
-        id: `val-${Date.now()}`,
-        action: 'ONBOARDING_FEE_PAID',
-        targetType: 'payment',
-        targetId: paymentRef,
-        targetName: hostelName,
-        performedBy: managerName || 'Manager',
-        role: 'manager',
-        details: { amount: 50.00, currency: 'GHS', reference: paymentRef },
-        timestamp: now
-      };
-      verificationAuditLogs.unshift(auditLog);
-      await dbCreateVerificationAuditLog(auditLog);
-
-      return res.status(201).json({
-        success: true,
-        message: "GHS 50.00 Onboarding fee successfully recorded via agreement confirmation.",
-        payment: paymentRecord
-      });
-    } catch (err: any) {
-      console.error("Payment error:", err);
-      return res.status(500).json({ error: err.message || "Failed to record onboarding payment." });
-    }
-  });
-
   // 11. Hostel Verification: Submit Hostel for Admin Review (Phase 2)
   app.post("/api/hostel-verifications/submit", requireAuth(["manager"]), async (req: any, res) => {
     try {
@@ -8153,7 +7802,7 @@ async function startServer() {
           description: 'Hostel property registration submitted and saved in database. Pending final administrator verification.',
           rating: 5.0,
           registrationDate: new Date().toISOString().split('T')[0],
-          subscriptionPaid: true,
+          subscriptionPaid: false,
           isApproved: false,
           approvalStatus: 'Pending Approval'
         };
@@ -8694,7 +8343,7 @@ async function startServer() {
       totalCapacity: Number(req.body.totalCapacity || 100),
       availableSpaces: Number(req.body.availableSpaces ?? req.body.bedsLeft ?? req.body.totalCapacity ?? 100),
       price: defaultPrice,
-      subscriptionPaid: true,
+      subscriptionPaid: false,
       registrationDate: new Date().toISOString().split('T')[0],
       managerName: req.body.managerName || 'Resident Manager',
       managerPhone: req.body.managerPhone || '+233201234567',

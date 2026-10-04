@@ -1,3 +1,4 @@
+import RouteSkeleton from './RouteSkeleton';
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -154,7 +155,7 @@ export default function PageResidentDashboard() {
     setTimeout(() => setToastMessage(null), 3000);
   };
 
-  const currentUser = studentProfile || user;
+  const currentUser = useMemo(() => ({ ...user, ...studentProfile }), [user, studentProfile]);
   const activeAvatar = user?.avatar || user?.photo || user?.photoUrl || studentProfile?.avatar || studentProfile?.photo || studentProfile?.photoUrl || studentProfile?.avatarUrl || (user?.email ? localStorage.getItem(`pinevela_avatar_${user.email.toLowerCase().trim()}`) : null) || localStorage.getItem('pinevela_user_avatar') || currentUser?.avatar || 'preset:pine-classic';
 
   // Keep edit fields updated when currentUser loads
@@ -164,7 +165,7 @@ export default function PageResidentDashboard() {
       setEditEmail(currentUser.email || '');
       setEditPhone(currentUser.phone || '');
     }
-  }, [currentUser?.id, currentUser?.email, currentUser?.name, currentUser?.roomKey]);
+  }, [currentUser?.id, currentUser?.email, currentUser?.name, currentUser?.phone, currentUser?.roomKey]);
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -318,19 +319,7 @@ export default function PageResidentDashboard() {
     <button type="button" onClick={() => void retryResidentData()} className="rounded-xl bg-blue-900 px-5 py-3 font-semibold text-white">Retry resident portal</button>
   </main>;
 
-  if (loadingData) {
-    return (
-      <div className="min-h-screen h-screen flex flex-col items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50/70 to-indigo-50/50">
-        <div className="flex flex-col items-center space-y-4 animate-pulse">
-          <PineLogo size={60} />
-          <div className="flex items-center space-x-2 text-blue-950">
-            <RefreshCw className="animate-spin h-5 w-5 text-blue-600" />
-            <span className="text-sm font-black">Syncing Resident Portal...</span>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  if (loadingData) return <RouteSkeleton />;
 
   return (
     <div className="min-h-screen h-screen flex flex-col lg:flex-row bg-gradient-to-br from-slate-50 via-blue-50/70 to-indigo-50/50 text-slate-800 overflow-hidden font-sans relative">
@@ -1269,36 +1258,13 @@ export default function PageResidentDashboard() {
 
         {/* SETTINGS TAB */}
         {activeTab === 'settings' && (
-          <div className="space-y-6 max-w-xl animate-fade-in">
+          <div className="space-y-6 max-w-6xl w-full animate-fade-in">
             <div>
               <h2 className="text-xl font-black text-slate-900 tracking-tight">Profile & Security Settings</h2>
               <p className="text-xs text-slate-500 font-medium">Manage your personal information, room credentials, avatar, and settings</p>
             </div>
 
-            {/* Profile Avatar Update Component */}
-            <UserAvatarSelector 
-              onAvatarSave={(avatarUrl) => {
-                setStudentProfile((prev: any) => ({
-                  ...(prev || {}),
-                  avatar: avatarUrl,
-                  photo: avatarUrl,
-                  photoUrl: avatarUrl,
-                  avatarUrl: avatarUrl,
-                  profilePicture: avatarUrl
-                }));
-                if (updateUser) {
-                  updateUser({
-                    avatar: avatarUrl,
-                    photo: avatarUrl,
-                    photoUrl: avatarUrl,
-                    avatarUrl: avatarUrl,
-                    profilePicture: avatarUrl
-                  });
-                }
-                triggerToast('Profile picture updated successfully!');
-              }} 
-            />
-
+            <div className="grid grid-cols-1 xl:grid-cols-2 items-start gap-6">
             {/* Settings Forms */}
             <form onSubmit={handleSaveProfile} className="bg-white border border-slate-200 rounded-3xl p-6 space-y-5 shadow-sm">
               <div className="flex items-center gap-4 pb-4 border-b border-slate-100">
@@ -1381,6 +1347,32 @@ export default function PageResidentDashboard() {
                 </div>
               </div>
             </form>
+            {/* Profile Avatar Update Component */}
+            <UserAvatarSelector
+              onAvatarSave={(avatarUrl) => {
+                setStudentProfile((prev: any) => ({
+                  ...user,
+                  ...(prev || {}),
+                  avatar: avatarUrl,
+                  photo: avatarUrl,
+                  photoUrl: avatarUrl,
+                  avatarUrl: avatarUrl,
+                  profilePicture: avatarUrl
+                }));
+                if (updateUser) {
+                  updateUser({
+                    avatar: avatarUrl,
+                    photo: avatarUrl,
+                    photoUrl: avatarUrl,
+                    avatarUrl: avatarUrl,
+                    profilePicture: avatarUrl
+                  });
+                }
+                triggerToast('Profile picture updated successfully!');
+              }}
+            />
+
+            </div>
 
           </div>
         )}

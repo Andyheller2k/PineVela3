@@ -1,3 +1,4 @@
+import { paidMarketFixture } from './paidMarketFixture.cjs';
 import { sessionFixtureJson } from './sessionFixtures.cjs';
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
@@ -36,7 +37,7 @@ test('S18: live purchase-bound ratings, alias protection, reputation isolation a
   const legacy = { id: crypto.randomUUID(), orderId: completed.id, buyerEmail: buyer.email, buyerName: 'Legacy impersonation', sellerEmail: seller.email, storeId: merchantStore.id, productId: product.id, rating: 5, review: 'Unverified legacy review' };
   const oldServiceReview = { ...legacy, id: crypto.randomUUID(), serviceId: product.id };
   await fs.mkdir(dataDir);
-  await fs.writeFile(db, sessionFixtureJson({ credentialExposureVersion: 1, accountSecurityVersion: 1, users: [buyer, otherBuyer, admin, resident, seller], digitalMarketApplications: [application], digitalMarketStores: [merchantStore, secondStore], digitalMarketProducts: [product, secondProduct, separateProduct], digitalMarketOrders: [completed, another, otherItem, separateStoreOrder, foreign, pending, cancelled], digitalMarketRatings: [legacy], digitalMarketServiceReviews: [oldServiceReview] }));
+  await fs.writeFile(db, sessionFixtureJson({ credentialExposureVersion: 1, accountSecurityVersion: 1, users: [buyer, otherBuyer, admin, resident, seller], digitalMarketApplications: [application], ...paidMarketFixture([merchantStore, secondStore]), digitalMarketProducts: [product, secondProduct, separateProduct], digitalMarketOrders: [completed, another, otherItem, separateStoreOrder, foreign, pending, cancelled], digitalMarketRatings: [legacy], digitalMarketServiceReviews: [oldServiceReview] }));
   const socket = net.createServer(); socket.listen(0, '127.0.0.1'); await once(socket, 'listening');
   const port = (socket.address() as net.AddressInfo).port; await new Promise<void>(r => socket.close(() => r()));
   const base = `http://127.0.0.1:${port}`; let child: ChildProcess | undefined;
