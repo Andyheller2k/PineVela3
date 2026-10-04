@@ -11,7 +11,7 @@ export default function PineLogo({ className = '', size = 32, hideText = false, 
   const isDark = variant === 'dark';
 
   return (
-    <div className={`flex items-center gap-2.5 font-sans ${className}`}>
+    <div className={`pinevela-brand flex items-center gap-2.5 font-sans ${className}`}>
       {/* Pineapple Building Icon */}
       <svg
         width={size}
@@ -19,7 +19,7 @@ export default function PineLogo({ className = '', size = 32, hideText = false, 
         viewBox="0 0 64 64"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
-        className="shrink-0 drop-shadow-sm"
+        className="pinevela-brand-mark shrink-0 drop-shadow-sm"
       >
         {/* Crown/Spikes (Red & Teal/Blue accents as seen in top) */}
         <path

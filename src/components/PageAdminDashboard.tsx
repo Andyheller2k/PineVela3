@@ -3,6 +3,7 @@ import OnboardingProgress, { OFFICER_ACCOUNT_STEPS } from './OnboardingProgress'
 import AdminSettingsPanel from './AdminSettingsPanel';
 import AdministratorLabel from './AdministratorLabel';
 import AdminGovernancePanel, { useAdminGovernance } from './AdminGovernancePanel';
+import AccountModerationPanel from './AccountModerationPanel';
 import { sessionFetch as fetch } from '../lib/session';
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -29,6 +30,7 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 
 export default function PageAdminDashboard() {
+  const [moderationTarget, setModerationTarget] = useState<any>(null);
   const { user, logout, apiFetch } = useAuth();
   const { notifications, unreadCount, markAsRead, refreshNotifications } = useNotifications();
   const navigate = useNavigate();
@@ -86,7 +88,7 @@ export default function PageAdminDashboard() {
 
   const { data: governanceData } = useAdminGovernance();
   const adminSlot = governanceData?.members.find((m: any) => m.id === user?.id)?.slot;
-  const pendingGovernance = (governanceData?.proposals.filter((p: any) => ['pending', 'approved'].includes(p.status)).length || 0) + (governanceData?.changes.filter((c: any) => c.status === 'pending').length || 0);
+  const pendingGovernance = (governanceData?.proposals.filter((p: any) => ['pending', 'approved'].includes(p.status)).length || 0) + (governanceData?.changes.filter((c: any) => c.status === 'pending').length || 0) + (governanceData?.accountProposals?.filter((p: any) => ['pending', 'approved'].includes(p.status)).length || 0);
 
   // Datasets
   const [residences, setResidences] = useState<any[]>([]);
@@ -311,22 +313,10 @@ export default function PageAdminDashboard() {
     }
   };
 
-  const handleToggleBanStore = async (storeId: string) => {
-    try {
-      const res = await apiFetch('/api/admin/digital-market/toggle-ban-store', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ storeId, banReason: banReasonInput })
-      });
-      if (res && res.success) {
-        triggerToast(res.message);
-        setBanningStoreTarget(null);
-        setBanReasonInput('');
-        fetchAdminData();
-      }
-    } catch (e: any) {
-      triggerToast(e.message || "Failed to toggle store ban state");
-    }
+  const handleToggleBanStore = async (_storeId: string) => {
+    setBanningStoreTarget(null);
+    setActiveTab('user_accounts');
+    triggerToast('Select the seller account and submit a proposal for five-administrator approval.');
   };
 
   const handleRegisterOfficer = async (e: React.FormEvent) => {
@@ -548,89 +538,14 @@ export default function PageAdminDashboard() {
   };
 
   const handleConfirmBlockManager = async () => {
-    if (!blockManagerModal) return;
-    if (!blockManagerReason.trim() || blockManagerReason.trim().length < 5) {
-      triggerToast('Please provide a detailed explanation (minimum 5 characters) for why manager access is restricted.');
-      return;
-    }
-
-    setBlockingManagerLoading(true);
-    try {
-      const payload = {
-        reason: blockManagerReason.trim(),
-        blockReason: blockManagerReason.trim(),
-        adminNotes: blockManagerReason.trim()
-      };
-
-      await apiFetch(`/api/manager-verifications/${blockManagerModal.id}/block`, {
-        method: 'PUT',
-        body: JSON.stringify(payload)
-      }).catch(async () => {
-        return await apiFetch(`/api/manager-requests/${blockManagerModal.id}/block`, {
-          method: 'PUT',
-          body: JSON.stringify(payload)
-        });
-      });
-
-      setManagerRequests(prev => prev.map(r => (r.id === blockManagerModal.id || r.managerId === blockManagerModal.id) ? {
-        ...r,
-        status: 'blocked',
-        isBlocked: true,
-        isApproved: false,
-        blockReason: blockManagerReason.trim(),
-        adminNotes: blockManagerReason.trim()
-      } : r));
-
-      // Update local residences list to remove blocked hostel from active live view
-      setResidences(prev => prev.map(h => {
-        const match = (h.managerEmail && blockManagerModal.email && h.managerEmail.toLowerCase() === blockManagerModal.email.toLowerCase()) ||
-                      (h.managerId && (h.managerId === blockManagerModal.id || h.managerId === blockManagerModal.name));
-        return match ? { ...h, status: 'Blocked', approvalStatus: 'Blocked', isApproved: false, isLive: false, isBlocked: true } : h;
-      }));
-
-      triggerToast(`Manager access blocked for ${blockManagerModal.email}. Detailed restriction message delivered to manager.`);
-      setBlockManagerModal(null);
-      setBlockManagerReason('');
-      refreshNotifications();
-    } catch (err: any) {
-      console.error(err);
-      triggerToast(err.message || 'Failed to block manager.');
-    } finally {
-      setBlockingManagerLoading(false);
-    }
+    setBlockManagerModal(null);
+    setActiveTab('user_accounts');
+    triggerToast('Select the manager account and submit a timed-ban proposal for five-administrator approval.');
   };
 
-  const handleUnblockManager = async (reqId: string, managerEmail: string) => {
-    try {
-      await apiFetch(`/api/manager-verifications/${reqId}/unblock`, {
-        method: 'PUT'
-      }).catch(async () => {
-        return await apiFetch(`/api/manager-requests/${reqId}/unblock`, {
-          method: 'PUT'
-        });
-      });
-
-      setManagerRequests(prev => prev.map(r => (r.id === reqId || r.managerId === reqId) ? {
-        ...r,
-        status: 'approved',
-        isBlocked: false,
-        isApproved: true,
-        blockReason: null
-      } : r));
-
-      // Restore residences list
-      setResidences(prev => prev.map(h => {
-        const match = (h.managerEmail && managerEmail && h.managerEmail.toLowerCase() === managerEmail.toLowerCase()) ||
-                      (h.managerId && h.managerId === reqId);
-        return match ? { ...h, status: 'Open', approvalStatus: 'Approved', isApproved: true, isLive: true, isBlocked: false } : h;
-      }));
-
-      triggerToast(`Manager ${managerEmail} unblocked successfully! Access and live listings restored.`);
-      refreshNotifications();
-    } catch (err: any) {
-      console.error(err);
-      triggerToast(err.message || 'Failed to unblock manager.');
-    }
+  const handleUnblockManager = async (_reqId: string, _managerEmail: string) => {
+    setActiveTab('user_accounts');
+    triggerToast('Select the manager account and submit a restore-access proposal for five-administrator approval.');
   };
 
   const handleRejectManager = (reqId: string, managerName?: string, managerEmail?: string) => {
@@ -891,7 +806,7 @@ export default function PageAdminDashboard() {
       {/* MAIN CONTENT AREA */}
       <main className={`dashboard-centered-content flex-1 p-6 lg:p-10 space-y-8 overflow-y-auto h-full relative ${isSidebarTopNav ? 'lg:pt-24 lg:w-[calc(100vw-22rem)] lg:max-w-[calc(100vw-22rem)] lg:mx-auto' : ''}`}>
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-blue-200 bg-white/65 p-4 text-sm backdrop-blur-xl"><span className="flex min-w-0 items-center gap-3 font-semibold text-blue-950">{(user?.photo || user?.avatar) && <img src={user.photo || user.avatar} alt="Administrator profile" className="h-9 w-9 shrink-0 rounded-full object-cover" />}<AdministratorLabel slot={adminSlot} name={user?.name} /></span><button onClick={() => setActiveTab('governance')} className="rounded-xl bg-blue-600 px-4 py-2 font-semibold text-white">Shared approvals{pendingGovernance ? ` (${pendingGovernance})` : ''}</button></div>
-        {activeTab === 'governance' && <AdminGovernancePanel />}
+        {activeTab === 'governance' && <><AdminGovernancePanel /><AccountModerationPanel target={null} onClose={() => {}} onApplied={fetchAdminData} /></>}
 
         {/* TAB 1: OVERVIEW */}
         {activeTab === 'overview' && (
@@ -1017,6 +932,7 @@ export default function PageAdminDashboard() {
         {/* TAB: ALL REGISTERED ACCOUNTS */}
         {activeTab === 'user_accounts' && (
           <div className="space-y-6 animate-fadeIn relative z-10">
+            <AccountModerationPanel target={moderationTarget} onClose={() => setModerationTarget(null)} onApplied={fetchAdminData} />
             <div className="flex flex-col md:flex-row items-center justify-between gap-4 bg-white/80 border border-blue-200/80 p-6 rounded-3xl backdrop-blur-xl shadow-xl">
               <div>
                 <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2">
@@ -1090,6 +1006,7 @@ export default function PageAdminDashboard() {
                       <th className="p-4">Property / Detail</th>
                       <th className="p-4">Status</th>
                       <th className="p-4 pr-6">Registered On</th>
+                      <th className="p-4">Account Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 text-xs">
@@ -1100,7 +1017,7 @@ export default function PageAdminDashboard() {
                           if (userRoleFilter === 'student' && !['student', 'user', 'resident'].includes(r)) return false;
                           if (userRoleFilter === 'manager' && r !== 'manager') return false;
                           if (userRoleFilter === 'staff' && r !== 'staff') return false;
-                          if (userRoleFilter === 'verification_officer' && !['verification_officer', 'officer'].includes(r)) return false;
+                          if (userRoleFilter === 'verification_officer' && !['verification_officer', 'officer', 'verification_team'].includes(r)) return false;
                           if (userRoleFilter === 'student_merchant' && !['student_merchant', 'seller', 'merchant'].includes(r)) return false;
                           if (userRoleFilter === 'admin' && r !== 'admin') return false;
                         }
@@ -1128,7 +1045,7 @@ export default function PageAdminDashboard() {
                         } else if (role === 'staff') {
                           roleBadgeClass = 'bg-cyan-50 text-cyan-700 border-cyan-200';
                           roleLabel = 'Staff Member';
-                        } else if (['verification_officer', 'officer'].includes(role)) {
+                        } else if (['verification_officer', 'officer', 'verification_team'].includes(role)) {
                           roleBadgeClass = 'bg-emerald-50 text-emerald-700 border-emerald-200';
                           roleLabel = 'Field Officer';
                         } else if (['student_merchant', 'seller', 'merchant'].includes(role)) {
@@ -1140,7 +1057,7 @@ export default function PageAdminDashboard() {
                         }
 
                         return (
-                          <tr key={account.id || index} className="hover:bg-blue-50/40 transition-colors">
+                          <tr key={`${account.role}:${account.id}`} className="hover:bg-blue-50/40 transition-colors">
                             <td className="p-4 pl-6 font-bold text-slate-900">
                               <div className="flex items-center gap-3">
                                 <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-800 font-black flex items-center justify-center text-xs shrink-0">
@@ -1172,6 +1089,7 @@ export default function PageAdminDashboard() {
                             <td className="p-4 pr-6 text-slate-500 text-[11px]">
                               {account.registeredAt ? new Date(account.registeredAt).toLocaleDateString() : 'Active'}
                             </td>
+                            <td className="p-4">{account.role === 'admin' ? <span className="text-xs text-slate-500">Protected founder account</span> : <button className="whitespace-nowrap rounded-xl bg-blue-600 px-3 py-2 font-bold text-white" onClick={() => setModerationTarget(account)}>Manage account</button>}</td>
                           </tr>
                         );
                       })}

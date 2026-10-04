@@ -11,7 +11,9 @@ import CompanyStory from './CompanyStory';
 import type { CompanySection } from './companyStoryContent';
 import { } from '../utils/formValidation';
 
-import welcomeBg from '../../assets/welcome_bg.jpg';
+import dayImage from '../../assets/pinevela-day.webp';
+import nightImage from '../../assets/pinevela-night.webp';
+import ThemeToggle from './ThemeToggle';
 
 interface Page1PublicProps {
   hostels: Hostel[];
@@ -157,6 +159,7 @@ export default function Page1Public({
           </form>
 
           <div className="flex items-center gap-3 text-sm font-medium shrink-0">
+            <ThemeToggle />
             {user ? (
               <div className="flex items-center gap-2 sm:gap-3">
                 <span className="text-xs font-bold text-slate-800 hidden sm:inline">
@@ -202,13 +205,9 @@ export default function Page1Public({
       <div className="relative overflow-hidden rounded-b-[4.5rem] w-full border-none shadow-none pt-24 sm:pt-28 md:pt-32">
         {/* Background Image covering entire top section */}
         <div className="absolute inset-0 z-0 w-full h-full">
-          <img 
-            src={welcomeBg} 
-            alt="" 
-            className="w-full h-full object-cover opacity-90 saturate-[110%]"
-            referrerPolicy="no-referrer"
-          />
-          <div className="absolute inset-0 bg-gradient-to-tr from-blue-100/40 via-white/50 to-transparent" />
+          <img src={dayImage} alt="" fetchPriority="high" className="landing-theme-image landing-day" />
+          <img src={nightImage} alt="" className="landing-theme-image landing-night" />
+          <div className="landing-theme-shade absolute inset-0" />
         </div>
 
         {/* Welcome Section */}
@@ -295,8 +294,8 @@ export default function Page1Public({
               transition={{ type: "spring", stiffness: 300, damping: 20 }}
             >
               {/* Abstract decorative circles behind logo */}
-              <div className="absolute -bottom-4 -right-4 w-48 h-48 bg-blue-100/50 rounded-full -z-10" />
-              <div className="absolute -top-4 -left-4 w-24 h-24 bg-amber-100/50 rounded-full -z-10" />
+              <div className="landing-decoration-blue absolute -bottom-4 -right-4 w-48 h-48 bg-blue-100/50 rounded-full -z-10" />
+              <div className="landing-decoration-amber absolute -top-4 -left-4 w-24 h-24 bg-amber-100/50 rounded-full -z-10" />
               <div className="text-center space-y-4">
                 <PineLogo size={140} hideText={true} />
                 <div className="font-extrabold text-2xl tracking-tight text-slate-900">

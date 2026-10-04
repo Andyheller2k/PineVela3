@@ -3,6 +3,8 @@ import { createPortal } from 'react-dom';
 import { ArrowUpRight, ChevronDown, X } from 'lucide-react';
 import { motion, useAnimationControls, useReducedMotion } from 'motion/react';
 import PineLogo from './PineLogo';
+import ThemeToggle from './ThemeToggle';
+import ThemeEnvironment from './ThemeEnvironment';
 import { companyContacts, companySections, CompanySection } from './companyStoryContent';
 import './CompanyStory.css';
 
@@ -199,10 +201,11 @@ export default function CompanyStory({ onClose, initialSection = 'about-us' }: {
 
   return createPortal(
     <motion.dialog ref={dialog} animate={closeControls} initial={false} className={`company-story${isClosing ? ' company-story-closing' : ''}`} aria-label="About PineVela" onCancel={event => { event.preventDefault(); void requestClose(); }}>
-      <div className="company-background" aria-hidden="true"><div className="company-background-logo"><PineLogo size={480} hideText /></div></div>
+      <div className="company-background" aria-hidden="true"><ThemeEnvironment showBrand={false} /><div className="company-background-logo"><PineLogo size={480} hideText /></div></div>
       <header className="company-story-header">
         <div className="company-wordmark"><PineLogo size={34} /><span> / Our story</span></div>
         <div className="company-story-actions">
+          <ThemeToggle className="company-theme-toggle" />
           <div ref={menu} className="company-menu">
             <button className="company-menu-trigger" aria-expanded={menuOpen} aria-controls="company-section-menu" onClick={() => setMenuOpen(open => !open)}>{companySections[active].title} <ChevronDown size={16} aria-hidden="true" /></button>
             {menuOpen && <nav id="company-section-menu" className="company-menu-dropdown" aria-label="Company sections">

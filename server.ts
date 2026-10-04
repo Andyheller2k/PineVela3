@@ -3,12 +3,14 @@ import { effectiveMarketPlan, PLAN_LIMITS, planCapacityError } from './marketPla
 import { AdminGovernance, GovernanceError, initializeAdminGovernance, activeAdministrator } from './adminGovernance.js';
 import { publicPlatformSettings, MAINTENANCE_MESSAGE } from './platformSettings.js';
 import { installAdminGovernance } from './adminGovernanceRoutes.js';
+import { installThemePreferences } from './themePreferences.js';
 import { DatabasePersistenceError } from './jsonStoreSafety.js';
 import { realpathSync } from 'node:fs';
 import { meetingVisible, notificationVisible, notificationReaderKey, notificationForActor } from './recordAccessSecurity.js';
 import { ownsMarketStore } from './marketOwnership.js';
 import { marketMediaFields, MarketMediaError } from './marketMediaSecurity.js';
 import { createSessionToken, setRecordSession, clearRecordSession, sessionMatches, requestSessionToken, revokeMatchingSessions, cookieSessionRequest, setSessionCookie, clearSessionCookie, sessionOriginGuard, sessionLifetimeMs } from './sessionSecurity.js';
+import { moderationAccounts, accountAccess, banResponse, accountRestriction, tokenAccount, revokedBanNotice, governedMarketBanned } from './accountModeration.js';
 import { createImageStorage, ImageUploadError } from './imageUploadSecurity.js';
 import { createResourceProtection, EventConnections, guardAsyncRoutes, ResourceLimitError, resourceFailure, trustedProxyAddresses, UPLOAD_ROUTE, MARKET_UPLOAD_ROUTE, ADMIN_PROFILE_UPLOAD_ROUTE, isImageUploadRoute } from './resourceSecurity.js';
 import { installMarketRatings, verifiedMarketRatings, publicMarketRating, ratingSummary } from './marketRatingSecurity.js';
@@ -882,8 +884,43 @@ async function startServer() {
   app.use('/api', (req, res, next) => {
     const sendJson = res.json.bind(res);
     const sessionResponse = ['/auth/login', '/auth/verify-unified', '/digital-market/login', '/room-keys/claim', '/residents/onboard', '/verification-teams/login', '/auth/verification-team-login', '/auth/register-unified', '/users/register', '/auth/register-manager'].includes(req.path);
-    res.json = (value: any) => sendJson(publicAccountData(value, sessionResponse && !cookieSessionRequest(req)));
+    res.json = (value: any) => {
+      const profile = value?.user || value;
+      if (sessionResponse && res.statusCode < 400 && profile?.id && profile?.role) {
+        const access = accountAccess(getStoreInstance(), profile.id, profile.role);
+        if (access.banned) {
+          if (profile.token) revokeMatchingSessions([getStoreInstance(), MOCK_USERS, verificationTeams], profile.token);
+          syncManagedStore(); clearSessionCookie(res); res.status(403);
+          return sendJson(banResponse(access));
+        }
+      }
+      return sendJson(publicAccountData(value, sessionResponse && !cookieSessionRequest(req)));
+    };
     next();
+  });
+
+  // Enforce governed bans/restrictions before any route, including legacy aliases.
+  app.use((req, res, next) => {
+    if (!req.path.toLowerCase().startsWith('/api/') || ['/api/auth/logout', '/api/auth/login', '/api/digital-market/login', '/api/verification-teams/login', '/api/auth/verification-team-login', '/api/payments/paystack/webhook'].includes(req.path.toLowerCase())) return next();
+    const store = getStoreInstance(), token = requestSessionToken(req);
+    if (!Object.keys(store.adminGovernance?.accountPolicies || {}).length) return next();
+    const denied = revokedBanNotice(store, token);
+    if (denied) return res.status(403).set('Cache-Control', 'no-store').json(denied);
+    const actor = tokenAccount(store, token);
+    if (actor && actor.role !== 'admin') {
+      const access = accountAccess(store, actor.id, actor.role);
+      if (access.banned) return res.status(403).set('Cache-Control', 'no-store').json(banResponse(access));
+      const restriction = accountRestriction(store, actor.id, actor.role, req.method, req.path);
+      if (restriction) return res.status(403).set('Cache-Control', 'no-store').json(restriction);
+    }
+    next();
+  });
+  app.use((req, res, next) => {
+    const path = req.path.toLowerCase().replace(/\/+$/, '');
+    const legacyBan = req.method === 'POST' && path === '/api/admin/digital-market/toggle-ban-store' ||
+      req.method === 'PUT' && /^\/api\/(?:manager-requests|manager-verifications|admin\/managers)\/[^/]+\/(?:block|unblock|suspend)$/.test(path);
+    if (!legacyBan) return next();
+    return requireAuth(['admin'])(req, res, () => res.status(410).json({ error: 'Single-administrator account bans are retired. Use Accounts to submit a five-administrator proposal.' }));
   });
 
   function requirePrimaryAccount(req: any, res: any, next: any) {
@@ -1291,6 +1328,8 @@ async function startServer() {
         return Boolean(emailMatch || idMatch || usernameMatch) && await passwordsMatch(password, t.password, t.plainPassword);
       });
       if (matchedOfficer) {
+        const officerAccess = accountAccess(store, matchedOfficer.id, 'verification_team');
+        if (officerAccess.banned) return res.status(403).json(banResponse(officerAccess));
         if (matchedOfficer.status !== 'active') {
           return res.status(403).json({ error: `Officer account is currently ${matchedOfficer.status}. Please contact PineVela Administration.` });
         }
@@ -1319,6 +1358,8 @@ async function startServer() {
     if (!matched) {
       return res.status(401).json({ error: "Invalid username/email or password" });
     }
+    const loginAccess = accountAccess(getStoreInstance(), accountId(matched), accountRole(matched));
+    if (loginAccess.banned) return res.status(403).json(banResponse(loginAccess));
     if (publicPlatformSettings(getStoreInstance()).maintenanceMode && accountRole(matched) !== 'admin') return res.status(503).json({ error: MAINTENANCE_MESSAGE, maintenanceMode: true });
 
     if (accountRole(matched) === 'admin' && !activeAdministrator(getStoreInstance(), accountId(matched))) return res.status(403).json({ error: 'This administrator account is suspended or is no longer in the administrator roster.' });
@@ -2157,6 +2198,10 @@ async function startServer() {
 
       const rawUser = foundEntry.user ? { ...foundEntry.user } : { ...foundEntry };
       const resolvedRole = rawUser.role || foundEntry.role || 'user';
+      const governedAccess = accountAccess(store, rawUser.id || foundEntry.id, resolvedRole);
+      if (governedAccess.banned) return res.status(403).json(banResponse(governedAccess));
+      const governedRestriction = accountRestriction(store, rawUser.id || foundEntry.id, resolvedRole, req.method, req.originalUrl.split('?')[0]);
+      if (governedRestriction) return res.status(403).json(governedRestriction);
       if (publicPlatformSettings(store).maintenanceMode && resolvedRole !== 'admin') return res.status(503).json({ error: MAINTENANCE_MESSAGE, maintenanceMode: true });
       if (resolvedRole === 'admin' && !activeAdministrator(store, accountId(foundEntry))) return res.status(403).json({ error: 'This administrator account is suspended or is no longer in the administrator roster.' });
       if (resolvedRole === 'verification_team' && !currentReportOfficer({ ...rawUser, id: rawUser.id || foundEntry.id, role: resolvedRole, token }, store.verificationTeams || [])) {
@@ -2282,6 +2327,7 @@ async function startServer() {
     }
     res.json(sanitizedUser);
   });
+  app.get('/api/auth/account-access', requireAuth(), (req: any, res) => res.json(accountAccess(getStoreInstance(), req.user.id, req.user.role)));
 
   // Update profile details (e.g. photo, name, phone, etc.) and sync everywhere
   const handleProfileUpdate = async (req: any, res: any) => {
@@ -2515,6 +2561,8 @@ async function startServer() {
 
   app.put("/api/auth/profile", requireAuth(), handleProfileUpdate);
   app.post("/api/auth/profile", requireAuth(), handleProfileUpdate);
+
+  installThemePreferences(app, requireAuth, getStoreInstance, syncManagedStore);
 
   installAdminGovernance(app, requireAuth, governance);
 
@@ -3095,438 +3143,10 @@ async function startServer() {
   });
 
   // Block manager access with required detailed explanation message and unlist their hostel
-  app.put(["/api/manager-requests/:id/block", "/api/manager-verifications/:id/block", "/api/admin/managers/:id/block", "/api/manager-verifications/:id/suspend"], requireAuth(["admin"]), async (req: any, res) => {
-    try {
-      const { id } = req.params;
-      const rawNotes = (req.body?.reason || req.body?.adminNotes || req.body?.blockReason || req.body?.rejectionReason || req.body?.message || '').trim();
-      if (!rawNotes || rawNotes.length < 5) {
-        return res.status(400).json({ error: "A valid, detailed message explaining why manager access is restricted must be provided (minimum 5 characters)." });
-      }
-      const blockReason = rawNotes;
-      const store = getStoreInstance();
-
-      // Check if ID belongs to an inspection first
-      const matchedInsp = verificationInspections.find(i => i.id === id || i.managerVerificationId === id);
-      const effectiveId = matchedInsp?.managerVerificationId || id;
-
-      const target = managerRequests.find(r => r.id === effectiveId || r.managerId === effectiveId || r.id === id || r.managerId === id || (r.managerEmail && r.managerEmail.toLowerCase() === id.toLowerCase())) ||
-                     managerVerifications.find(v => v.id === effectiveId || v.managerId === effectiveId || v.id === id || v.managerId === id || (v.managerEmail && v.managerEmail.toLowerCase() === id.toLowerCase())) ||
-                     (store.managerRegistrationRequests || []).find((r: any) => r.id === effectiveId || r.managerId === effectiveId || r.id === id) ||
-                     ((store as any).managerVerifications || []).find((v: any) => v.id === effectiveId || v.managerId === effectiveId || v.id === id) ||
-                     MOCK_USERS.find(u => (u.user && (u.user.id === id || u.user.email?.toLowerCase() === id.toLowerCase())) || u.id === id || u.email?.toLowerCase() === id.toLowerCase());
-
-      if (!target) {
-        return res.status(404).json({ error: "Manager record not found." });
-      }
-
-      const now = new Date().toISOString();
-      const cleanEmail = (target.managerEmail || target.email || target.user?.email || '').toLowerCase().trim();
-      const cleanParentEmail = ((target as any).parentUserEmail || target.user?.parentUserEmail || '').toLowerCase().trim();
-      const targetMgrId = target.managerId || (target as any).userId || target.user?.id || target.id;
-
-      const matchesTarget = (obj: any) => {
-        if (!obj) return false;
-        const e1 = (obj.managerEmail || obj.email || obj.user?.email || '').toLowerCase().trim();
-        const e2 = (obj.parentUserEmail || obj.user?.parentUserEmail || '').toLowerCase().trim();
-        const id1 = obj.managerId || obj.userId || obj.user?.id || obj.id;
-        const id2 = obj.parentUserId || obj.user?.parentUserId;
-
-        const emailMatch = Boolean(cleanEmail) && (e1 === cleanEmail || e2 === cleanEmail);
-        const parentEmailMatch = Boolean(cleanParentEmail) && (e1 === cleanParentEmail || e2 === cleanParentEmail);
-        const idMatch = Boolean(targetMgrId) && (id1 === targetMgrId || id2 === targetMgrId);
-        return emailMatch || parentEmailMatch || idMatch || obj.id === id || obj.id === effectiveId;
-      };
-
-      // 1. Update in-memory managerRequests
-      managerRequests.forEach(r => {
-        if (r.id === id || r.id === effectiveId || matchesTarget(r)) {
-          r.status = 'blocked';
-          (r as any).isApproved = false;
-          (r as any).isBlocked = true;
-          r.blockReason = blockReason;
-          r.adminNotes = blockReason;
-          r.blockedAt = now;
-          r.updatedAt = now;
-        }
-      });
-
-      // 2. Update in-memory managerVerifications
-      managerVerifications.forEach(v => {
-        if (v.id === id || v.id === effectiveId || matchesTarget(v)) {
-          v.status = 'blocked';
-          v.authorityStatus = 'blocked';
-          v.isBlocked = true;
-          (v as any).isApproved = false;
-          v.blockReason = blockReason;
-          v.adminNotes = blockReason;
-          v.blockedAt = now;
-          v.reviewedAt = now;
-          v.reviewedBy = req.user?.name || 'Admin';
-          v.updatedAt = now;
-        }
-      });
-
-      // 3. Update store
-      if (store.managerRegistrationRequests) {
-        store.managerRegistrationRequests.forEach((r: any) => {
-          if (r.id === id || matchesTarget(r)) {
-            r.status = 'blocked';
-            r.isApproved = false;
-            r.isBlocked = true;
-            r.blockReason = blockReason;
-            r.adminNotes = blockReason;
-            r.blockedAt = now;
-            r.updatedAt = now;
-          }
-        });
-      }
-      if ((store as any).managerVerifications) {
-        (store as any).managerVerifications.forEach((v: any) => {
-          if (v.id === id || matchesTarget(v)) {
-            v.status = 'blocked';
-            v.authorityStatus = 'blocked';
-            v.isApproved = false;
-            v.isBlocked = true;
-            v.blockReason = blockReason;
-            v.adminNotes = blockReason;
-            v.blockedAt = now;
-            v.reviewedAt = now;
-            v.reviewedBy = req.user?.name || 'Admin';
-            v.updatedAt = now;
-          }
-        });
-      }
-
-      // 4. Update MOCK_USERS and store.users
-      const updateUserObj = (u: any) => {
-        if (!u) return;
-        const uEmail = (u.email || u.user?.email || '').toLowerCase().trim();
-        const uId = u.id || u.user?.id;
-        const uRole = (u.role || u.user?.role || '').toLowerCase();
-
-        const isActualMgr = (uRole === 'manager' || (cleanEmail && uEmail === cleanEmail)) && 
-                            (!cleanParentEmail || uEmail !== cleanParentEmail) && 
-                            ((cleanEmail && uEmail === cleanEmail) || (targetMgrId && uId === targetMgrId));
-        if (isActualMgr) {
-          if (u.user) {
-            u.user.isVerified = false;
-            u.user.isBlocked = true;
-            u.user.verificationStatus = 'blocked';
-            u.user.status = 'blocked';
-            u.user.blockReason = blockReason;
-            u.user.adminNotes = blockReason;
-          }
-          u.isVerified = false;
-          u.isBlocked = true;
-          u.verificationStatus = 'blocked';
-          u.status = 'blocked';
-          u.blockReason = blockReason;
-          u.adminNotes = blockReason;
-        }
-
-        const isParentUser = (cleanParentEmail && uEmail === cleanParentEmail) || (target.parentUserId && uId === target.parentUserId);
-        if (isParentUser || u.registeredAccounts?.managerAccount || u.user?.registeredAccounts?.managerAccount) {
-          const targetAcc = u.registeredAccounts?.managerAccount || u.user?.registeredAccounts?.managerAccount;
-          if (targetAcc && (isParentUser || (cleanEmail && targetAcc.email?.toLowerCase().trim() === cleanEmail))) {
-            targetAcc.status = 'blocked';
-            targetAcc.isApproved = false;
-            targetAcc.isBlocked = true;
-            targetAcc.blockReason = blockReason;
-            targetAcc.adminNotes = blockReason;
-          }
-        }
-      };
-      MOCK_USERS.forEach(updateUserObj);
-      if (store.users) {
-        store.users.forEach(updateUserObj);
-      }
-
-      // 5. Unlist/hide all hostels registered or managed by this manager from live public search
-      const currentHostels = await dbGetHostels(hostels);
-      for (const h of currentHostels) {
-        const isMgr = (h.managerId && targetMgrId && h.managerId === targetMgrId) ||
-                      (h.assignedManagerId && targetMgrId && h.assignedManagerId === targetMgrId) ||
-                      (h.managerEmail && cleanEmail && h.managerEmail.toLowerCase().trim() === cleanEmail) ||
-                      (target.propertyName && h.name && h.name.toLowerCase().trim() === target.propertyName.toLowerCase().trim()) ||
-                      (target.proposedHostelName && h.name && h.name.toLowerCase().trim() === target.proposedHostelName.toLowerCase().trim()) ||
-                      (target.hostelName && h.name && h.name.toLowerCase().trim() === target.hostelName.toLowerCase().trim());
-        if (isMgr) {
-          h.isApproved = false;
-          h.approvalStatus = 'Blocked';
-          h.status = 'Blocked';
-          h.isLive = false;
-          h.isBlocked = true;
-          h.blockReason = blockReason;
-          await dbUpdateHostel(h.id, {
-            isApproved: false,
-            approvalStatus: 'Blocked',
-            status: 'Blocked',
-            isLive: false,
-            isBlocked: true,
-            blockReason: blockReason
-          }, hostels);
-        }
-      }
-
-      // 6. Send detailed restriction notification to primary user account and manager
-      const parentUserId = (target as any).parentUserId || targetMgrId;
-      const notifyEmails = Array.from(new Set([cleanEmail, cleanParentEmail].filter(Boolean)));
-      for (const emailToNotify of notifyEmails) {
-        const blkNotif = {
-          id: `notif-mgr-blk-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
-          studentId: targetMgrId,
-          userId: parentUserId || targetMgrId,
-          parentUserId: parentUserId,
-          userEmail: emailToNotify,
-          recipientEmail: emailToNotify,
-          targetEmail: emailToNotify,
-          parentUserEmail: cleanParentEmail,
-          managerEmail: cleanEmail,
-          title: 'Manager Account Restricted / Blocked',
-          message: `Your Manager Account for "${target.propertyName || target.proposedHostelName || target.managerName || 'Hostel'}" has been restricted by PineVela Administration. Reason: ${blockReason}. Manager Console login and live property listings are suspended until further notice.`,
-          type: 'danger',
-          isBlocked: true,
-          date: new Date().toISOString().split('T')[0],
-          read: false
-        };
-        notifications.unshift(blkNotif);
-        await dbCreateNotification(blkNotif, notifications);
-      }
-
-      syncStore();
-
-      await dbUpdateManagerRequestStatus(id, 'blocked', blockReason);
-      await dbUpdateManagerVerificationStatus(id, 'blocked', blockReason, req.user?.name || 'Admin', cleanEmail, targetMgrId);
-
-      await dbCreateActivity({
-        id: `act-new-${Date.now()}`,
-        text: `Admin RESTRICTED/BLOCKED manager access for "${target.managerName || cleanEmail}". Reason: ${blockReason}`,
-        time: 'Just now',
-        type: 'danger'
-      }, activities);
-
-      return res.json({
-        success: true,
-        message: `Manager access for ${cleanEmail || target.managerName} has been restricted and property unlisted.`,
-        status: 'blocked',
-        isBlocked: true,
-        blockReason: blockReason
-      });
-    } catch (err: any) {
-      console.error("Error blocking manager:", err);
-      return res.status(500).json({ error: err.message || "Failed to block manager." });
-    }
-  });
+  app.put(["/api/manager-requests/:id/block", "/api/manager-verifications/:id/block", "/api/admin/managers/:id/block", "/api/manager-verifications/:id/suspend"], requireAuth(["admin"]), (_req, res) => res.status(410).json({ error: 'Single-administrator account bans are retired. Use Accounts to submit a five-administrator proposal.' }));
 
   // Unblock manager access and restore property to live
-  app.put(["/api/manager-requests/:id/unblock", "/api/manager-verifications/:id/unblock", "/api/admin/managers/:id/unblock"], requireAuth(["admin"]), async (req: any, res) => {
-    try {
-      const { id } = req.params;
-      const store = getStoreInstance();
-
-      const matchedInsp = verificationInspections.find(i => i.id === id || i.managerVerificationId === id);
-      const effectiveId = matchedInsp?.managerVerificationId || id;
-
-      const target = managerRequests.find(r => r.id === effectiveId || r.managerId === effectiveId || r.id === id || r.managerId === id || (r.managerEmail && r.managerEmail.toLowerCase() === id.toLowerCase())) ||
-                     managerVerifications.find(v => v.id === effectiveId || v.managerId === effectiveId || v.id === id || v.managerId === id || (v.managerEmail && v.managerEmail.toLowerCase() === id.toLowerCase())) ||
-                     (store.managerRegistrationRequests || []).find((r: any) => r.id === effectiveId || r.managerId === effectiveId || r.id === id) ||
-                     ((store as any).managerVerifications || []).find((v: any) => v.id === effectiveId || v.managerId === effectiveId || v.id === id) ||
-                     MOCK_USERS.find(u => (u.user && (u.user.id === id || u.user.email?.toLowerCase() === id.toLowerCase())) || u.id === id || u.email?.toLowerCase() === id.toLowerCase());
-
-      if (!target) {
-        return res.status(404).json({ error: "Manager record not found." });
-      }
-
-      const now = new Date().toISOString();
-      const cleanEmail = (target.managerEmail || target.email || target.user?.email || '').toLowerCase().trim();
-      const cleanParentEmail = ((target as any).parentUserEmail || target.user?.parentUserEmail || '').toLowerCase().trim();
-      const targetMgrId = target.managerId || (target as any).userId || target.user?.id || target.id;
-
-      const matchesTarget = (obj: any) => {
-        if (!obj) return false;
-        const e1 = (obj.managerEmail || obj.email || obj.user?.email || '').toLowerCase().trim();
-        const e2 = (obj.parentUserEmail || obj.user?.parentUserEmail || '').toLowerCase().trim();
-        const id1 = obj.managerId || obj.userId || obj.user?.id || obj.id;
-        const id2 = obj.parentUserId || obj.user?.parentUserId;
-
-        const emailMatch = Boolean(cleanEmail) && (e1 === cleanEmail || e2 === cleanEmail);
-        const parentEmailMatch = Boolean(cleanParentEmail) && (e1 === cleanParentEmail || e2 === cleanParentEmail);
-        const idMatch = Boolean(targetMgrId) && (id1 === targetMgrId || id2 === targetMgrId);
-        return emailMatch || parentEmailMatch || idMatch || obj.id === id || obj.id === effectiveId;
-      };
-
-      // 1. Update in-memory managerRequests
-      managerRequests.forEach(r => {
-        if (r.id === id || r.id === effectiveId || matchesTarget(r)) {
-          r.status = 'approved';
-          (r as any).isApproved = true;
-          (r as any).isBlocked = false;
-          r.blockReason = null;
-          r.unblockedAt = now;
-          r.updatedAt = now;
-        }
-      });
-
-      // 2. Update in-memory managerVerifications
-      managerVerifications.forEach(v => {
-        if (v.id === id || v.id === effectiveId || matchesTarget(v)) {
-          v.status = 'approved';
-          v.authorityStatus = 'verified';
-          v.isBlocked = false;
-          (v as any).isApproved = true;
-          v.blockReason = null;
-          v.unblockedAt = now;
-          v.reviewedAt = now;
-          v.reviewedBy = req.user?.name || 'Admin';
-          v.updatedAt = now;
-        }
-      });
-
-      // 3. Update store
-      if (store.managerRegistrationRequests) {
-        store.managerRegistrationRequests.forEach((r: any) => {
-          if (r.id === id || matchesTarget(r)) {
-            r.status = 'approved';
-            r.isApproved = true;
-            r.isBlocked = false;
-            r.blockReason = null;
-            r.unblockedAt = now;
-            r.updatedAt = now;
-          }
-        });
-      }
-      if ((store as any).managerVerifications) {
-        (store as any).managerVerifications.forEach((v: any) => {
-          if (v.id === id || matchesTarget(v)) {
-            v.status = 'approved';
-            v.authorityStatus = 'verified';
-            v.isApproved = true;
-            v.isBlocked = false;
-            v.blockReason = null;
-            v.unblockedAt = now;
-            v.reviewedAt = now;
-            v.reviewedBy = req.user?.name || 'Admin';
-            v.updatedAt = now;
-          }
-        });
-      }
-
-      // 4. Update MOCK_USERS and store.users
-      const updateUserObj = (u: any) => {
-        if (!u) return;
-        const uEmail = (u.email || u.user?.email || '').toLowerCase().trim();
-        const uId = u.id || u.user?.id;
-        const uRole = (u.role || u.user?.role || '').toLowerCase();
-
-        const isActualMgr = (uRole === 'manager' || (cleanEmail && uEmail === cleanEmail)) && 
-                            (!cleanParentEmail || uEmail !== cleanParentEmail) && 
-                            ((cleanEmail && uEmail === cleanEmail) || (targetMgrId && uId === targetMgrId));
-        if (isActualMgr) {
-          if (u.user) {
-            u.user.isVerified = true;
-            u.user.isBlocked = false;
-            u.user.verificationStatus = 'approved';
-            u.user.status = 'approved';
-            u.user.blockReason = null;
-          }
-          u.isVerified = true;
-          u.isBlocked = false;
-          u.verificationStatus = 'approved';
-          u.status = 'approved';
-          u.blockReason = null;
-        }
-
-        const isParentUser = (cleanParentEmail && uEmail === cleanParentEmail) || (target.parentUserId && uId === target.parentUserId);
-        if (isParentUser || u.registeredAccounts?.managerAccount || u.user?.registeredAccounts?.managerAccount) {
-          const targetAcc = u.registeredAccounts?.managerAccount || u.user?.registeredAccounts?.managerAccount;
-          if (targetAcc && (isParentUser || (cleanEmail && targetAcc.email?.toLowerCase().trim() === cleanEmail))) {
-            targetAcc.status = 'approved';
-            targetAcc.isApproved = true;
-            targetAcc.isVerified = true;
-            targetAcc.isBlocked = false;
-            targetAcc.blockReason = null;
-          }
-        }
-      };
-      MOCK_USERS.forEach(updateUserObj);
-      if (store.users) {
-        store.users.forEach(updateUserObj);
-      }
-
-      // 5. Restore hostel(s) back to live public search
-      const currentHostels = await dbGetHostels(hostels);
-      for (const h of currentHostels) {
-        const isMgr = (h.managerId && targetMgrId && h.managerId === targetMgrId) ||
-                      (h.assignedManagerId && targetMgrId && h.assignedManagerId === targetMgrId) ||
-                      (h.managerEmail && cleanEmail && h.managerEmail.toLowerCase().trim() === cleanEmail) ||
-                      (target.propertyName && h.name && h.name.toLowerCase().trim() === target.propertyName.toLowerCase().trim()) ||
-                      (target.proposedHostelName && h.name && h.name.toLowerCase().trim() === target.proposedHostelName.toLowerCase().trim()) ||
-                      (target.hostelName && h.name && h.name.toLowerCase().trim() === target.hostelName.toLowerCase().trim());
-        if (isMgr) {
-          h.isApproved = true;
-          h.approvalStatus = 'Approved';
-          h.status = 'Open';
-          h.isLive = true;
-          h.isBlocked = false;
-          delete h.blockReason;
-          await dbUpdateHostel(h.id, {
-            isApproved: true,
-            approvalStatus: 'Approved',
-            status: 'Open',
-            isLive: true,
-            isBlocked: false,
-            blockReason: null
-          }, hostels);
-        }
-      }
-
-      // 6. Send unblock notification to primary user account and manager
-      const parentUserId = (target as any).parentUserId || targetMgrId;
-      const notifyEmails = Array.from(new Set([cleanEmail, cleanParentEmail].filter(Boolean)));
-      for (const emailToNotify of notifyEmails) {
-        const unblkNotif = {
-          id: `notif-mgr-unblk-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
-          studentId: targetMgrId,
-          userId: parentUserId || targetMgrId,
-          parentUserId: parentUserId,
-          userEmail: emailToNotify,
-          recipientEmail: emailToNotify,
-          targetEmail: emailToNotify,
-          parentUserEmail: cleanParentEmail,
-          managerEmail: cleanEmail,
-          title: 'Manager Account Access Restored / Unblocked',
-          message: `Your Manager Account for "${target.propertyName || target.proposedHostelName || target.managerName || 'Hostel'}" has been unblocked by PineVela Administration. Full manager dashboard access and live property listings are now active.`,
-          type: 'success',
-          date: new Date().toISOString().split('T')[0],
-          read: false
-        };
-        notifications.unshift(unblkNotif);
-        await dbCreateNotification(unblkNotif, notifications);
-      }
-
-      syncStore();
-
-      await dbUpdateManagerRequestStatus(id, 'approved');
-      await dbUpdateManagerVerificationStatus(id, 'approved', 'Unblocked by Administrator', req.user?.name || 'Admin', cleanEmail, targetMgrId);
-
-      await dbCreateActivity({
-        id: `act-new-${Date.now()}`,
-        text: `Admin UNBLOCKED manager access for "${target.managerName || cleanEmail}". Full access and live property listings restored.`,
-        time: 'Just now',
-        type: 'success'
-      }, activities);
-
-      return res.json({
-        success: true,
-        message: `Manager access for ${cleanEmail || target.managerName} has been restored and property returned to live listings.`,
-        status: 'approved',
-        isBlocked: false
-      });
-    } catch (err: any) {
-      console.error("Error unblocking manager:", err);
-      return res.status(500).json({ error: err.message || "Failed to unblock manager." });
-    }
-  });
+  app.put(["/api/manager-requests/:id/unblock", "/api/manager-verifications/:id/unblock", "/api/admin/managers/:id/unblock"], requireAuth(["admin"]), (_req, res) => res.status(410).json({ error: 'Single-administrator account bans are retired. Use Accounts to submit a five-administrator proposal.' }));
 
   // Verify manager document individually
   app.put(["/api/manager-verifications/:id/verify-doc", "/api/manager-requests/:id/verify-doc"], requireAuth(["admin"]), async (req: any, res) => {
@@ -4968,6 +4588,8 @@ async function startServer() {
       if (!passMatch) {
         return res.status(401).json({ error: "Incorrect Digital Market Store password." });
       }
+      const loginAccess = accountAccess(store, `merchant:${marketApp?.id || approvedStore?.id}`, 'merchant');
+      if (loginAccess.banned) return res.status(403).json(banResponse(loginAccess));
 
       if (store.digitalMarketStores?.some(s => normalizeEmail(s.studentEmail) === cleanEmail && s.isBanned) || ['rejected', 'banned', 'disabled'].includes(String(marketApp?.status))) return res.status(403).json({ error: 'This market account is not permitted to sign in.' });
       if (await findAsync([...MOCK_USERS, ...(store.users || [])], async u => normalizeEmail(accountData(u)?.email || u.email) === cleanEmail && Boolean(accountData(u)?.roomKey || accountRole(u) === 'user') && await passwordsMatch(password, ...credentialValues(u)))) {
@@ -5165,12 +4787,13 @@ async function startServer() {
             return false;
           });
         }
-        return res.json(enrichProducts(products));
+        const administrator = tokenAccount(store, requestSessionToken(req))?.role === 'admin';
+        return res.json(enrichProducts(products.filter((p: any) => administrator || !governedMarketBanned(store, p.storeId))));
       }
 
       const nonBannedStoreIds = new Set(
         store.digitalMarketStores
-          .filter((s: any) => !s.isBanned && marketAccessPaid(store, s))
+          .filter((s: any) => !s.isBanned && !governedMarketBanned(store, s.id) && marketAccessPaid(store, s))
           .map((s: any) => s.id)
       );
 
@@ -5641,48 +5264,7 @@ async function startServer() {
   });
 
   // Admin: Toggle Ban/Disable Store
-  app.post("/api/admin/digital-market/toggle-ban-store", requireAuth(["admin"]), async (req: any, res) => {
-    try {
-      const { storeId, banReason } = req.body;
-      const store = getStoreInstance();
-      if (!store.digitalMarketStores) store.digitalMarketStores = [];
-
-      const targetStore = store.digitalMarketStores.find((s: any) => s.id === storeId);
-      if (!targetStore) {
-        return res.status(404).json({ error: "Digital Store not found." });
-      }
-
-      targetStore.isBanned = !targetStore.isBanned;
-      targetStore.status = targetStore.isBanned ? 'disabled' : 'active';
-      if (banReason) targetStore.banReason = banReason;
-      const now = new Date().toISOString();
-      const title = targetStore.isBanned ? 'Merchant platform disabled' : 'Merchant platform restored';
-      const message = `Your Digital Market store (${targetStore.storeName}) is ${targetStore.status}.${targetStore.isBanned && targetStore.banReason ? ` Reason: ${targetStore.banReason}` : ''}`;
-      const linkedIds = new Set([targetStore.userId, targetStore.parentUserId,
-        ...(store.digitalMarketApplications || []).filter((a: any) => normalizeEmail(a.studentEmail) === normalizeEmail(targetStore.studentEmail)).flatMap((a: any) => [a.userId, a.parentUserId]),
-        ...(store.users || []).map(accountData).filter((u: any) => u.role === 'merchant' && u.merchantStoreId === targetStore.id).map((u: any) => u.parentUserId)].filter(Boolean));
-      const primaries = (store.users || []).map(accountData).filter((u: any) => u.role === 'user' && linkedIds.has(u.id));
-      store.notifications ||= [];
-      store.notifications.unshift({ id: crypto.randomUUID(), sellerStoreId: targetStore.id, targetRole: 'merchant',
-        title, message, scope: 'market', type: targetStore.isBanned ? 'warning' : 'success', read: false, date: now });
-      for (const primary of primaries) store.notifications.unshift({ id: crypto.randomUUID(), targetRole: 'user', targetAccountId: primary.id, userId: primary.id,
-        title, message, scope: 'market', type: targetStore.isBanned ? 'warning' : 'success', read: false, date: now });
-      syncManagedStore();
-
-
-      savePersistentStore(store);
-      syncStore();
-
-      return res.json({ 
-        success: true, 
-        isBanned: targetStore.isBanned, 
-        message: targetStore.isBanned ? `Store "${targetStore.storeName}" has been banned/disabled.` : `Store "${targetStore.storeName}" has been unbanned and restored to active state.` 
-      });
-    } catch (err: any) {
-      console.error("Error toggling store ban:", err);
-      return res.status(500).json({ error: "Failed to toggle store ban state." });
-    }
-  });
+  app.post("/api/admin/digital-market/toggle-ban-store", requireAuth(["admin"]), (_req, res) => res.status(410).json({ error: 'Single-administrator account bans are retired. Use Accounts to submit a five-administrator proposal.' }));
 
   // Place Order / Request Campus Meetup
   app.post("/api/digital-market/orders", requireAuth(["user"]), async (req: any, res) => {
@@ -5700,6 +5282,7 @@ async function startServer() {
       if (!product) {
         return res.status(404).json({ error: "Product not found or no longer available." });
       }
+      if (governedMarketBanned(store, product.storeId)) return res.status(403).json({ error: 'This seller account is temporarily unavailable. New orders cannot be placed.' });
 
       const seller = store.digitalMarketStores.find((s: any) => s.id === product.storeId) || { id: product.storeId, studentEmail: product.sellerEmail, userId: product.sellerId };
       if (ownsMarketStore(req.user, seller, store)) return res.status(403).json({ error: 'You cannot order items or services from your own store.' });
@@ -6672,6 +6255,8 @@ async function startServer() {
       if (!matchedOfficer) {
         return res.status(401).json({ error: "Invalid officer credentials. Please check your official email/Officer ID and password." });
       }
+      const officerAccess = accountAccess(store, matchedOfficer.id, 'verification_team');
+      if (officerAccess.banned) return res.status(403).json(banResponse(officerAccess));
 
       if (!activeOfficerAccount({ ...matchedOfficer, role: 'verification_team' }, store.verificationTeams || [])) {
         return res.status(403).json({ error: `Officer account is currently ${matchedOfficer.status}. Please contact PineVela Administration.` });
@@ -7059,44 +6644,7 @@ async function startServer() {
   });
 
   // 8. Manager Verifications: Admin Suspends Manager
-  app.put("/api/manager-verifications/:id/suspend", requireAuth(["admin"]), async (req: any, res) => {
-    try {
-      const { id } = req.params;
-      const { adminNotes } = req.body || {};
-      const allRecords = await dbGetManagerVerifications(managerVerifications);
-      const target = allRecords.find(v => v.id === id) || managerVerifications.find(v => v.id === id);
-
-      if (!target) {
-        return res.status(404).json({ error: "Manager verification application not found." });
-      }
-
-      const now = new Date().toISOString();
-      target.status = 'suspended';
-      target.adminNotes = adminNotes || 'Manager account suspended by system administrator.';
-      target.reviewedBy = req.user?.name || 'SuperAdmin';
-      target.reviewedAt = now;
-
-      await dbUpdateManagerVerificationStatus(id, 'suspended', target.adminNotes, target.reviewedBy);
-
-      const auditLog = {
-        id: `val-${Date.now()}`,
-        action: 'MANAGER_SUSPENDED',
-        targetType: 'manager',
-        targetId: target.managerId,
-        targetName: target.managerName,
-        performedBy: req.user?.name || 'Admin',
-        role: 'admin',
-        details: { adminNotes: target.adminNotes },
-        timestamp: now
-      };
-      verificationAuditLogs.unshift(auditLog);
-      await dbCreateVerificationAuditLog(auditLog);
-
-      return res.json({ success: true, verification: target });
-    } catch (err: any) {
-      return res.status(500).json({ error: err.message || "Failed to suspend manager." });
-    }
-  });
+  app.put("/api/manager-verifications/:id/suspend", requireAuth(["admin"]), (_req, res) => res.status(410).json({ error: 'Single-administrator account bans are retired. Use Accounts to submit a five-administrator proposal.' }));
 
   // Helper: Aggregate all managers across sources (verifications, requests, mock users) with their assigned hostels
   async function getUnifiedHostelManagersList() {
@@ -10821,134 +10369,22 @@ async function startServer() {
   // --- All Registered User Accounts Endpoint for Admin ---
   app.get("/api/admin/all-users", requireAuth(["admin"]), async (req: any, res) => {
     try {
-      const dbUsers = await dbGetUsers(MOCK_USERS).catch(() => []);
       const store = getStoreInstance();
-      const combinedUsers = [...MOCK_USERS, ...(dbUsers || []), ...(persistentData.users || []), ...(store?.users || [])];
-      
-      const mgrs = await dbGetManagerRequests().catch(() => []);
-      const staffList = (store as any)?.staff || (persistentData as any)?.staff || [];
-      const officers = store?.verificationTeams || persistentData?.verificationTeams || [];
-      const merchants = store?.digitalMarketStores || persistentData?.digitalMarketStores || [];
-
-      const usersMap = new Map<string, any>();
-
-      // Standardize & deduplicate user accounts
-      combinedUsers.forEach((u: any) => {
-        if (!u) return;
-        const usr = u.user || u;
-        if (!usr || typeof usr !== 'object') return;
-        const email = (usr.email || u.email || '').toLowerCase().trim();
-        const name = (usr.name || usr.username || usr.fullName || '').trim();
-        if (!email && !name) return;
-
-        const key = email || (usr.id ? String(usr.id) : `user-${name}`);
-        if (!usersMap.has(key)) {
-          usersMap.set(key, {
-            id: usr.id || key,
-            name: name || 'Registered Account',
-            email: email || 'N/A',
-            phone: usr.phone || usr.phoneNumber || 'N/A',
-            role: usr.role || 'user',
-            status: usr.status || 'Active',
-            registeredAt: usr.createdAt || usr.registeredAt || new Date().toISOString()
-          });
-        }
+      const allUsersList = moderationAccounts(store).map(account => {
+        const access = accountAccess(store, account.id, account.role);
+        return { id: account.id, name: account.name, role: account.role, email: account.email,
+          phone: account.phone, hostelName: account.hostelName, registeredAt: account.registeredAt,
+          status: access.banned ? 'Banned' : access.restrictions.length ? 'Restricted' : account.status || 'Active', accountAccess: access };
       });
-
-      // Add manager accounts
-      (mgrs || []).forEach((m: any) => {
-        if (!m) return;
-        const email = (m.email || m.managerEmail || '').toLowerCase().trim();
-        const name = (m.name || m.fullName || m.managerName || '').trim();
-        if (!email && !name) return;
-        const key = email || `mgr-${m.id}`;
-        if (!usersMap.has(key)) {
-          usersMap.set(key, {
-            id: m.id || key,
-            name: name || 'Hostel Manager',
-            email: email || 'N/A',
-            phone: m.phone || m.phoneNumber || 'N/A',
-            role: 'manager',
-            status: m.status || 'Approved',
-            hostelName: m.hostelName || m.propertyName || 'Registered Hostel',
-            registeredAt: m.createdAt || new Date().toISOString()
-          });
-        }
-      });
-
-      // Add staff accounts
-      (staffList || []).forEach((s: any) => {
-        if (!s) return;
-        const email = (s.email || '').toLowerCase().trim();
-        const name = (s.name || s.fullName || '').trim();
-        if (!email && !name) return;
-        const key = email || `staff-${s.id}`;
-        if (!usersMap.has(key)) {
-          usersMap.set(key, {
-            id: s.id || key,
-            name: name || 'Staff Member',
-            email: email || 'N/A',
-            phone: s.phone || 'N/A',
-            role: 'staff',
-            status: s.status || 'Verified',
-            assignedHostel: s.hostelName || 'PineVela Residence',
-            registeredAt: s.createdAt || new Date().toISOString()
-          });
-        }
-      });
-
-      // Add field officer accounts
-      (officers || []).forEach((o: any) => {
-        if (!o) return;
-        const email = (o.email || '').toLowerCase().trim();
-        const name = (o.fullName || o.name || '').trim();
-        if (!email && !name) return;
-        const key = email || `officer-${o.id}`;
-        if (!usersMap.has(key)) {
-          usersMap.set(key, {
-            id: o.id || key,
-            name: name || 'Field Officer',
-            email: email || 'N/A',
-            phone: o.phone || 'N/A',
-            role: 'verification_officer',
-            status: o.status || 'Active',
-            zone: o.assignedZone || 'Main Zone',
-            registeredAt: o.createdAt || new Date().toISOString()
-          });
-        }
-      });
-
-      // Add student merchant accounts
-      (merchants || []).forEach((m: any) => {
-        if (!m) return;
-        const email = (m.studentEmail || m.parentUserEmail || m.email || '').toLowerCase().trim();
-        const name = (m.storeName || m.studentName || m.name || '').trim();
-        if (!email && !name) return;
-        const key = email || `merchant-${m.id}`;
-        if (!usersMap.has(key)) {
-          usersMap.set(key, {
-            id: m.id || key,
-            name: name || 'Student Merchant',
-            email: email || 'N/A',
-            phone: m.phone || 'N/A',
-            role: 'student_merchant',
-            status: m.banned ? 'Banned' : 'Active',
-            registeredAt: m.createdAt || new Date().toISOString()
-          });
-        }
-      });
-
-      const allUsersList = Array.from(usersMap.values());
-
       const breakdown = {
         total: allUsersList.length,
-        residents: allUsersList.filter(u => u.role === 'student' || u.role === 'user' || u.role === 'resident').length,
+        residents: allUsersList.filter(u => ['user', 'student', 'resident'].includes(u.role)).length,
         managers: allUsersList.filter(u => u.role === 'manager').length,
         staff: allUsersList.filter(u => u.role === 'staff').length,
-        officers: allUsersList.filter(u => u.role === 'verification_officer' || u.role === 'officer').length,
-        merchants: allUsersList.filter(u => u.role === 'student_merchant' || u.role === 'seller').length,
+        officers: allUsersList.filter(u => u.role === 'verification_team').length,
+        merchants: allUsersList.filter(u => u.role === 'merchant').length,
         admins: allUsersList.filter(u => u.role === 'admin').length,
-        others: allUsersList.filter(u => !['student', 'user', 'resident', 'manager', 'staff', 'verification_officer', 'officer', 'student_merchant', 'seller', 'admin'].includes(u.role)).length
+        others: allUsersList.filter(u => !['user', 'student', 'resident', 'manager', 'staff', 'verification_team', 'merchant', 'admin'].includes(u.role)).length
       };
 
       return res.json({

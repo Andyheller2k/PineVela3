@@ -14,6 +14,13 @@ export async function sessionFetch(input: RequestInfo | URL, options: RequestIni
   headers.delete('Authorization');
   headers.set('X-PineVela-Session', 'cookie');
   const response = await globalThis.fetch(input, { ...options, headers, credentials: 'same-origin' });
+  if (response.status === 403) {
+    const body = await response.clone().json().catch(() => null);
+    if (body?.accountBanned || body?.accountRestricted) {
+      if (body.accountBanned || !['GET', 'HEAD'].includes((options.method || (input instanceof Request ? input.method : 'GET')).toUpperCase())) window.dispatchEvent(new CustomEvent('pinevela-account-access', { detail: body }));
+      if (body.accountBanned) window.dispatchEvent(new Event('pinevela-session-expired'));
+    }
+  }
   if (response.status === 503) {
     const body = await response.clone().json().catch(() => null);
     if (body?.maintenanceMode === true) window.dispatchEvent(new Event('pinevela-maintenance'));

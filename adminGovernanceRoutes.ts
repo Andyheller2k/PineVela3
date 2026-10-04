@@ -1,12 +1,13 @@
 import type { Express } from 'express';
 import { AdminGovernance, GovernanceError } from './adminGovernance.js';
+import { AccountModerationError } from './accountModeration.js';
 
 export function installAdminGovernance(app: Express, requireAuth: any, governance: AdminGovernance) {
   const route = (action: (req: any) => any) => async (req: any, res: any) => {
     res.set('Cache-Control', 'no-store');
     try { return res.json(await governance.run(() => action(req))); }
     catch (error) {
-      if (error instanceof GovernanceError) {
+      if (error instanceof GovernanceError || error instanceof AccountModerationError) {
         if (error.status === 429) res.set('Retry-After', '900');
         return res.status(error.status).json({ error: error.message });
       }
@@ -22,6 +23,11 @@ export function installAdminGovernance(app: Express, requireAuth: any, governanc
   app.post(`${root}/pricing`, auth, route(req => governance.proposePricing(req.user.id, req.body)));
   app.post(`${root}/pricing/:id/vote`, auth, route(req => governance.decidePricing(req.user.id, req.params.id, req.body)));
   app.post(`${root}/pricing/:id/apply`, auth, route(req => governance.applyPricing(req.user.id, req.params.id, req.body)));
+  app.post(`${root}/accounts/preview`, auth, route(req => governance.moderation.preview(req.body.targetId, req.body.targetRole)));
+  app.post(`${root}/accounts`, auth, route(req => governance.moderation.propose(req.user.id, req.body)));
+  app.post(`${root}/accounts/:id/vote`, auth, route(req => governance.moderation.vote(req.user.id, req.params.id, req.body)));
+  app.post(`${root}/accounts/:id/apply`, auth, route(req => governance.moderation.apply(req.user.id, req.params.id, req.body)));
+  app.post(`${root}/accounts/:id/final-reject`, auth, route(req => governance.moderation.rejectFinal(req.user.id, req.params.id, req.body)));
   app.post(`${root}/invitations`, auth, route(req => governance.invite(req.user.id, req.body)));
   app.post(`${root}/invitations/:id/cancel`, auth, route(req => governance.cancelInvitation(req.user.id, req.params.id, req.body.privateKey)));
   app.post('/api/auth/admin-invitation/accept', route(req => governance.acceptInvitation(req.body)));

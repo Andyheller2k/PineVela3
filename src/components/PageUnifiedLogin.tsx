@@ -994,7 +994,7 @@ export default function PageUnifiedLogin() {
                   <span className="text-slate-900">Security Verification</span>
                 ) : activeTab === 'login' ? (
                   <span 
-                    className="text-black font-black"
+                    className="login-brand-heading text-black font-black"
                     style={{ 
                       color: '#000000', 
                       WebkitTextStroke: '1.5px #2563eb', 
@@ -1005,7 +1005,7 @@ export default function PageUnifiedLogin() {
                   </span>
                 ) : (
                   <span 
-                    className="text-black font-black"
+                    className="login-brand-heading text-black font-black"
                     style={{ 
                       color: '#000000', 
                       WebkitTextStroke: '1.5px #2563eb', 

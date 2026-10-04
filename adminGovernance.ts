@@ -4,6 +4,7 @@ import { clearRecordSession } from './sessionSecurity.js';
 import { buildWipePlan, applyWipePlan, parseWipeScopes, type WipeScope } from './adminWipeScope.js';
 import { WipeRecovery } from './adminWipeRecovery.js';
 import { validatePlatformSettings, publicPlatformSettings, pricingSettings, validatePricingSettings, type PricingSettings } from './platformSettings.js';
+import { AccountModeration, reconcileDeletedAccountPolicies, type AccountPolicy, type AccountProposal } from './accountModeration.js';
 
 export class GovernanceError extends Error { constructor(public status: number, message: string) { super(message); } }
 const fail = (status: number, message: string): never => { throw new GovernanceError(status, message); };
@@ -20,7 +21,7 @@ type Proposal = { id: string; scopes: WipeScope[]; reason: string; createdBy: st
 type Invitation = { id: string; email: string; name: string; slot: number; tokenHash: string; expiresAt: string };
 type Change = { id: string; targetId: string; action: 'remove' | 'reset-key' | 'reset-settings-key'; reason: string; requestedBy: string; revision: number; expiresAt: string; status: 'pending' | 'approved' | 'rejected' | 'invalidated'; votes: Vote[] };
 type PricingProposal = { id: string; before: PricingSettings; prices: PricingSettings; reason: string; createdBy: string; createdAt: string; expiresAt: string; revision: number; status: 'pending' | 'approved' | 'rejected' | 'invalidated' | 'expired' | 'applied'; votes: Vote[]; roster: { id: string; slot: number; name: string }[]; appliedBy?: string; appliedAt?: string };
-export interface AdminGovernanceState { version: 1; mainId: string; revision: number; members: Member[]; proposals: Proposal[]; invitations: Invitation[]; changes: Change[]; attempts: Record<string, { count: number; until: number }>; pricingProposals?: PricingProposal[] }
+export interface AdminGovernanceState { version: 1; mainId: string; revision: number; members: Member[]; proposals: Proposal[]; invitations: Invitation[]; changes: Change[]; attempts: Record<string, { count: number; until: number }>; pricingProposals?: PricingProposal[]; accountProposals?: AccountProposal[]; accountPolicies?: Record<string, AccountPolicy> }
 
 export function initializeAdminGovernance(store: any, configuredMain = process.env.PINEVELA_MAIN_ADMIN_ID): boolean {
   if (store.adminGovernance) return false;
@@ -44,6 +45,10 @@ export function activeAdministrator(store: any, id: string): boolean {
 export class AdminGovernance {
   private queue: Promise<unknown> = Promise.resolve();
   blocked = false;
+  get moderation() { return new AccountModeration({ getStore: this.getStore, commit: () => this.commit(),
+    guard: (id, key, main) => { if (this.blocked) fail(503, 'Account changes are blocked pending offline recovery.'); if (main) this.main(id); else this.member(id); this.fullRoster(); this.verifyKey(id, key); },
+    roster: () => this.state.members.map(m => ({ id: m.id, slot: m.slot, name: accountData(this.account(m.id)).name || accountData(this.account(m.id)).email })),
+    recovery: this.recovery, busy: this.otherWrites, now: this.now, block: () => { this.blocked = true; } }); }
   constructor(private getStore: () => any, private save: () => void, readonly recovery = new WipeRecovery(), private otherWrites = () => 0, private now = () => Date.now()) { this.blocked = recovery.isBlocked(); }
   run<T>(fn: () => Promise<T> | T): Promise<T> {
     const next = this.queue.catch(() => {}).then(fn); this.queue = next; return next;
@@ -81,6 +86,7 @@ export class AdminGovernance {
     for (const p of this.state.proposals) if (['pending', 'approved'].includes(p.status)) p.status = 'invalidated';
     for (const c of this.state.changes) if (c.status === 'pending') c.status = 'invalidated';
     for (const p of this.state.pricingProposals || []) if (['pending', 'approved'].includes(p.status)) p.status = 'invalidated';
+    for (const p of this.state.accountProposals || []) if (['pending', 'approved'].includes(p.status)) p.status = 'invalidated';
   }
   verifySettingsKey(id: string, key: unknown) {
     if (this.blocked) fail(503, 'Settings writes are blocked pending offline recovery.');
@@ -193,6 +199,7 @@ export class AdminGovernance {
         status: ['pending', 'approved'].includes(p.status) && Date.parse(p.expiresAt) <= this.now() ? 'expired' : p.status, preview: p.preview, votes: p.votes, roster: p.roster, executedAt: p.executedAt })),
       invitations: id === this.state.mainId ? this.state.invitations.filter(i => Date.parse(i.expiresAt) > this.now()).map(({ tokenHash, ...i }) => i) : [],
       pricingProposals: (this.state.pricingProposals || []).map(({ revision, ...p }) => ({ ...p, status: ['pending', 'approved'].includes(p.status) && Date.parse(p.expiresAt) <= this.now() ? 'expired' : p.status })),
+      accountProposals: (this.state.accountProposals || []).map(({ fingerprint, revision, ...p }) => ({ ...p, status: ['pending', 'approved'].includes(p.status) && Date.parse(p.expiresAt) <= this.now() ? 'expired' : p.status })),
       changes: this.state.changes.map(({ revision, ...c }) => c), blocked: this.blocked };
   }
   async enroll(id: string, password: unknown) {
@@ -326,6 +333,7 @@ export class AdminGovernance {
     try {
       rollbackMedia = backup.stage();
       applyWipePlan(store, plan); p.status = 'executed'; p.executedAt = new Date(this.now()).toISOString(); p.backup = backup.file;
+      reconcileDeletedAccountPolicies(store);
       for (const other of this.state.proposals) if (other.id !== p.id && ['pending', 'approved'].includes(other.status)) other.status = 'invalidated';
       this.commit();
     } catch {

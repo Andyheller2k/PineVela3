@@ -3706,12 +3706,9 @@ export default function PageManagerDashboard() {
       {/* ZOOMED IMAGE OVERLAY */}
       <AnimatePresence>
         {zoomedImage && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+          <DashboardOverlay aria-label="Image preview" onClose={() => setZoomedImage(null)}
             onClick={() => setZoomedImage(null)}
-            className="fixed inset-0 bg-black/90 z-55 flex items-center justify-center p-4 cursor-zoom-out"
+            className="bg-black/90 flex items-center justify-center p-4 cursor-zoom-out"
           >
             <motion.img
               initial={{ scale: 0.95 }}
@@ -3722,12 +3719,13 @@ export default function PageManagerDashboard() {
               className="max-w-full max-h-[90vh] object-contain rounded-xl shadow-2xl"
             />
             <button
+              aria-label="Close image preview"
               onClick={() => setZoomedImage(null)}
               className="absolute top-6 right-6 p-2 bg-white/10 hover:bg-white/20 text-white rounded-full transition-all"
             >
               <XCircle className="w-6 h-6" />
             </button>
-          </motion.div>
+          </DashboardOverlay>
         )}
       </AnimatePresence>
     </div>

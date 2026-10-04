@@ -3,6 +3,7 @@ import { validatePricingSettings } from './platformSettings.js';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { spawnSync } from 'node:child_process';
+import { ACCOUNT_FEATURES } from './accountFeatures.js';
 
 export const JSON_COLLECTIONS = [
   'hostels', 'issueReports', 'activities', 'hostelVerifications', 'managerRegistrationRequests',
@@ -57,7 +58,23 @@ export function validateDatabase(bytes: Buffer): any {
       if (!Array.isArray(p.votes) || p.votes.length < 1 || p.votes.length > 5 || !p.votes.every((v: any) => object(v) && p.roster.some((r: any) => r.id === v.id && r.slot === v.slot) && typeof v.name === 'string' && ['approved', 'rejected'].includes(v.decision) && Number.isFinite(Date.parse(v.at))) || new Set(p.votes.map((v: any) => v.id)).size !== p.votes.length) return false;
       return /^[a-f0-9-]{36}$/.test(p.id) && typeof p.reason === 'string' && p.reason.length >= 3 && p.reason.length <= 500 && Number.isFinite(Date.parse(p.createdAt)) && Number.isFinite(Date.parse(p.expiresAt)) && Number.isSafeInteger(p.revision) && p.revision >= 1 && ['pending', 'approved', 'rejected', 'invalidated', 'expired', 'applied'].includes(p.status) && (p.status !== 'applied' || p.appliedBy === g.mainId && Number.isFinite(Date.parse(p.appliedAt)) && p.votes.filter((v: any) => v.decision === 'approved').length >= 3);
     });
-    if (g.version !== 1 || typeof g.mainId !== 'string' || !Number.isSafeInteger(g.revision) || g.revision < 1 || !validMembers || !validArrays || !validPricing || !object(g.attempts) || (g.mainId && !g.members.some((m: any) => m.id === g.mainId && m.slot === 1))) {
+    const validAccountProposals = g.accountProposals === undefined || Array.isArray(g.accountProposals) && g.accountProposals.length <= 100 && g.accountProposals.every((p: any) =>
+      object(p) && /^[a-f0-9-]{36}$/.test(p.id) && typeof p.targetId === 'string' && typeof p.targetRole === 'string' && p.targetRole !== 'admin' &&
+      typeof p.reason === 'string' && p.reason.length >= 3 && p.reason.length <= 500 && ['ban', 'restrict', 'restore', 'delete'].includes(p.action) &&
+      /^[a-f0-9]{64}$/.test(p.fingerprint) && Number.isSafeInteger(p.revision) && Number.isFinite(Date.parse(p.createdAt)) && Number.isFinite(Date.parse(p.expiresAt)) &&
+      ['pending', 'approved', 'rejected', 'expired', 'invalidated', 'applied'].includes(p.status) && Array.isArray(p.features) && p.features.every((f: string) => Object.hasOwn(ACCOUNT_FEATURES, f)) && new Set(p.features).size === p.features.length &&
+      (p.action !== 'restrict' || p.features.length > 0) && (p.action !== 'ban' || object(p.duration) && Number.isSafeInteger(p.duration.amount) && p.duration.amount > 0 && ['hours', 'days', 'weeks', 'months', 'years'].includes(p.duration.unit) && Number.isSafeInteger(p.duration.milliseconds) && p.duration.milliseconds > 0 && p.duration.milliseconds <= 100 * 365 * 86400_000) &&
+      Array.isArray(p.roster) && p.roster.length === 5 && new Set(p.roster.map((r: any) => r.id)).size === 5 && new Set(p.roster.map((r: any) => r.slot)).size === 5 &&
+      p.roster.every((r: any) => object(r) && typeof r.id === 'string' && Number.isInteger(r.slot) && r.slot >= 1 && r.slot <= 5 && typeof r.name === 'string') &&
+      Array.isArray(p.votes) && p.votes.length >= 1 && p.votes.length <= 5 && new Set(p.votes.map((v: any) => v.id)).size === p.votes.length &&
+      p.votes.every((v: any) => object(v) && p.roster.some((r: any) => r.id === v.id && r.slot === v.slot) && ['approved', 'rejected'].includes(v.decision) && Number.isFinite(Date.parse(v.at))) &&
+      (p.status !== 'applied' || p.appliedBy === g.mainId && Number.isFinite(Date.parse(p.appliedAt)) && p.votes.length === 5 && p.votes.every((v: any) => v.decision === 'approved')));
+    const validAccountPolicies = g.accountPolicies === undefined || object(g.accountPolicies) && Object.values(g.accountPolicies).every((p: any) => object(p) &&
+      Number.isSafeInteger(p.revision) && p.revision >= 1 && typeof p.reason === 'string' && p.reason.length <= 500 && typeof p.proposalId === 'string' &&
+      Number.isFinite(Date.parse(p.appliedAt)) && typeof p.appliedBy === 'string' && (!p.banUntil || Number.isFinite(Date.parse(p.banUntil))) &&
+      Array.isArray(p.features) && p.features.every((f: string) => Object.hasOwn(ACCOUNT_FEATURES, f)) &&
+      (p.deniedSessions === undefined || Array.isArray(p.deniedSessions) && p.deniedSessions.length <= 8 && p.deniedSessions.every((s: any) => object(s) && /^[a-f0-9]{64}$/.test(s.tokenHash) && Number.isFinite(s.expiresAt))));
+    if (g.version !== 1 || typeof g.mainId !== 'string' || !Number.isSafeInteger(g.revision) || g.revision < 1 || !validMembers || !validArrays || !validPricing || !validAccountProposals || !validAccountPolicies || !object(g.attempts) || (g.mainId && !g.members.some((m: any) => m.id === g.mainId && m.slot === 1))) {
       return failure('INVALID_DATABASE', 'Administrator governance metadata is invalid. Preserve the database and inspect it offline.');
     }
     if (g.invitations.length + g.members.length > 5 || g.proposals.some((p: any) => !Array.isArray(p.scopes) || !p.scopes.length || p.scopes.some((s: string) => !['hostels', 'markets', 'managers', 'residents', 'users', 'total'].includes(s)) || !Array.isArray(p.votes) || !Array.isArray(p.roster) || !object(p.preview) || !/^[a-f0-9]{64}$/.test(p.fingerprint)) || g.changes.some((c: any) => !['remove', 'reset-key', 'reset-settings-key'].includes(c.action) || !Array.isArray(c.votes))) {

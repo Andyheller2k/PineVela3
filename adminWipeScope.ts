@@ -11,7 +11,7 @@ export function parseWipeScopes(input: unknown): WipeScope[] {
   return WIPE_SCOPES.filter(s => input.includes(s));
 }
 const linkedAccountFields = ['parentUserId', 'userId', 'claimedByUserId', 'ownerId'];
-const personFields = ['managerId', 'assignedManagerId', 'staffId', 'assignedStaffId', 'studentId', 'residentId', 'assignedStudentId', 'buyerId', 'sellerId', 'reviewerId', 'requesterId', 'recipientId', 'targetAccountId', 'accountId', 'actorId', ...linkedAccountFields];
+const personFields = ['managerId', 'assignedManagerId', 'staffId', 'assignedStaffId', 'officerId', 'assignedOfficerId', 'studentId', 'residentId', 'assignedStudentId', 'buyerId', 'sellerId', 'reviewerId', 'requesterId', 'recipientId', 'targetAccountId', 'accountId', 'actorId', ...linkedAccountFields];
 const homeFields = ['hostelId', 'residenceId', 'propertyId'];
 const marketFields = ['storeId', 'sellerStoreId', 'merchantStoreId', 'marketId'];
 const walk = (v: any, fn: (key: string, value: any) => boolean): boolean => !!v && typeof v === 'object' && Object.entries(v).some(([k, x]) => fn(k, x) || (x && typeof x === 'object' && walk(x, fn)));
@@ -33,11 +33,15 @@ export interface WipePlan {
   removed: Record<string, any[]>; kept: Record<string, any[]>;
   retired: Record<string, any[]>; settings: Record<string, any>;
   media: string[]; notes: string[];
+  signupState?: any; roomAttemptState?: any;
 }
 /** Resolve cascading relationships on the server. IDs never come from the proposal body. */
-export function buildWipePlan(store: any, scopes: WipeScope[]): WipePlan {
+export function buildWipePlan(store: any, scopes: WipeScope[], target?: { accountIds: string[]; marketIds?: string[]; officerIds?: string[] }): WipePlan {
   const total = scopes.includes('total'), users = store.users || [];
   const ids = new Set<string>(), homes = new Set<string>(), markets = new Set<string>(), products = new Set<string>(), orders = new Set<string>(), staff = new Set<string>();
+  for (const id of target?.accountIds || []) ids.add(id);
+  for (const id of target?.officerIds || []) ids.add(id);
+  for (const id of target?.marketIds || []) markets.add(id);
   const roomAccounts = new Map<string, any[]>();
   for (const u of users) if (['student', 'resident'].includes(accountRole(u))) {
     const key = String(accountData(u).roomKey || u.roomKey || '').toUpperCase();
@@ -60,14 +64,14 @@ export function buildWipePlan(store: any, scopes: WipeScope[]): WipePlan {
       }
     }
     for (const m of [...(store.digitalMarketStores || []), ...(store.digitalMarketApplications || [])]) if (total || scopes.includes('markets') || has(m, personFields, ids)) markets.add(String(m.id));
-    for (const member of store.staff || []) if (total || has(member, personFields, ids) || has(member, homeFields, homes)) {
+    for (const member of store.staff || []) if (total || ids.has(String(member.id)) || has(member, personFields, ids) || has(member, homeFields, homes)) {
       staff.add(String(member.id)); if (member.userId) ids.add(String(member.userId));
     }
     for (const u of users) if (accountRole(u) !== 'admin') {
       const data = accountData(u), r = accountRole(u);
       if (has(u, linkedAccountFields, ids) || ['staff', 'student', 'resident'].includes(r) && has(u, homeFields, homes) || r === 'staff' && (staff.has(accountId(u)) || has(u, ['staffId', 'managerId'], new Set([...ids, ...staff]))) || r === 'merchant' && (has(u, marketFields, markets) || has(u, linkedAccountFields, ids))) ids.add(accountId(u));
       // Legacy seller records do not all carry a store ID: use their unique matching store's primary ID.
-      if (r === 'merchant' && (store.digitalMarketStores || []).some((m: any) => markets.has(String(m.id)) && normalizeEmail(m.studentEmail || m.email) === normalizeEmail(data.email) && !!data.email)) ids.add(accountId(u));
+      if (r === 'merchant' && (store.digitalMarketStores || []).filter((m: any) => normalizeEmail(m.studentEmail || m.email) === normalizeEmail(data.email) && !!data.email).length === 1 && (store.digitalMarketStores || []).some((m: any) => markets.has(String(m.id)) && normalizeEmail(m.studentEmail || m.email) === normalizeEmail(data.email) && !!data.email)) ids.add(accountId(u));
     }
     changed = size !== ids.size + homes.size + markets.size + staff.size;
   }
@@ -86,6 +90,7 @@ export function buildWipePlan(store: any, scopes: WipeScope[]): WipePlan {
       key === 'digitalMarketProducts' && products.has(String(v?.id)) ||
       key === 'digitalMarketOrders' && orders.has(String(v?.id)) ||
       key === 'staff' && staff.has(String(v?.id)) ||
+      key === 'verificationTeams' && ids.has(String(v?.id)) ||
       (key.startsWith('digitalMarket') || key === 'marketMedia' || key === 'paymentTransactions' && v?.purpose !== 'housing') && scopes.includes('markets') ||
       key === 'retiredRoomKeys' && scopes.includes('hostels') || related(v);
     removed[key] = list.filter(shouldRemove); kept[key] = list.filter((v: any) => !shouldRemove(v));
@@ -108,15 +113,40 @@ export function buildWipePlan(store: any, scopes: WipeScope[]): WipePlan {
   }
   const retired = Object.fromEntries(Object.entries(store.retiredFeatureRecords || {}).map(([k, v]) => [k, (v as any[]).filter(r => !total && !related(r) && !has(r, references, removedIds) && !has(r, ['roomKey', 'assignedRoomKey'], removedKeys))]));
   for (const [k, v] of Object.entries(retired)) if (v.length !== store.retiredFeatureRecords[k].length) counts[`archived.${k}`] = store.retiredFeatureRecords[k].length - v.length;
-  const settings = Object.fromEntries(Object.entries(store.managerAccountSettings || {}).filter(([id]) => !total && !ids.has(id)));
+  const deletedManagerEmails = new Set(removed.users.filter(u => accountRole(u) === 'manager').map(u => normalizeEmail(accountData(u).email || u.email)));
+  const retainedManagerEmails = new Set(kept.users.filter(u => accountRole(u) === 'manager').map(u => normalizeEmail(accountData(u).email || u.email)));
+  const settings = Object.fromEntries(Object.entries(store.managerAccountSettings || {}).filter(([id]) => !total && !ids.has(id) && !(deletedManagerEmails.has(normalizeEmail(id)) && !retainedManagerEmails.has(normalizeEmail(id)))));
   const removedSettings = Object.keys(store.managerAccountSettings || {}).length - Object.keys(settings).length;
   if (removedSettings) counts.managerAccountSettings = removedSettings;
-  const deletedMedia = uploadReferences({ removed, removedArchive: store.retiredFeatureRecords, removedSettings: store.managerAccountSettings });
+  // Kept primary identities can hold legacy cached sub-account credentials/room summaries.
+  const embedded: any[] = [];
+  kept.users = kept.users.map(original => {
+    let copy = original;
+    for (const nested of [false, true]) {
+      const data = nested ? original.user : original, registered = data?.registeredAccounts;
+      if (!registered || typeof registered !== 'object') continue;
+      const next: any = { ...registered }; let changed = false;
+      const deleted = (value: any) => related(value) || ids.has(accountId(value)) || has(value, references, removedIds) || has(value, ['roomKey', 'assignedRoomKey'], removedKeys);
+      for (const [key, value] of Object.entries(registered)) {
+        if (Array.isArray(value)) { const removedRows = value.filter(deleted); if (removedRows.length) { embedded.push(...removedRows); next[key] = value.filter(v => !deleted(v)); changed = true; } }
+        else if (value && typeof value === 'object' && deleted(value)) { embedded.push(value); delete next[key]; changed = true; }
+      }
+      if (changed) { if (copy === original) copy = { ...original }; if (nested) copy.user = { ...original.user, registeredAccounts: next }; else copy.registeredAccounts = next; }
+    }
+    return copy;
+  });
+  if (embedded.length) counts.cachedAccountRecords = embedded.length;
+  const accountLimitHashes = new Set([...ids].map(id => crypto.createHash('sha256').update(`account:${id}`).digest('hex')));
+  const signupLimitHashes = new Set([...exclusiveEmails].flatMap(email => ['send-email', 'verify-email'].map(scope => crypto.createHash('sha256').update(`${scope}:${email}`).digest('hex'))));
+  const signupState = store.signupVerification ? { ...store.signupVerification, pending: (store.signupVerification.pending || []).filter((p: any) => !exclusiveEmails.has(normalizeEmail(p.email))), limits: (store.signupVerification.limits || []).filter((l: any) => !signupLimitHashes.has(l.key)) } : undefined;
+  const roomAttemptState = store.roomKeyAttempts ? { ...store.roomKeyAttempts, limits: (store.roomKeyAttempts.limits || []).filter((l: any) => !accountLimitHashes.has(l.key)) } : undefined;
+  const deletedMedia = uploadReferences({ removed, embedded, removedArchive: store.retiredFeatureRecords, removedSettings: store.managerAccountSettings });
   const retainedMedia = uploadReferences({ kept, retired, settings, platformSettings: total ? {} : store.platformSettings });
   const media = [...deletedMedia].filter(p => !retainedMedia.has(p)).sort();
-  const fingerprint = crypto.createHash('sha256').update(JSON.stringify({ scopes, removed, retired, settings, media,
+  const fingerprint = crypto.createHash('sha256').update(JSON.stringify({ scopes, removed, retired, settings, media, embedded,
+    signupState: target ? signupState : undefined, roomAttemptState: target ? roomAttemptState : undefined,
     totalState: total ? { signupVerification: store.signupVerification, roomKeyAttempts: store.roomKeyAttempts, platformSettings: store.platformSettings } : undefined })).digest('hex');
-  return { scopes, counts, fingerprint, kept, removed, retired, settings, media, notes: [
+  return { scopes, counts, fingerprint, kept, removed, retired, settings, media, signupState, roomAttemptState, notes: [
     'Manager deletion also removes owned residences, their staff, activated room accounts, and related records.',
     'Primary user deletion also removes linked accounts and their owned residences or markets.',
     'Hostel deletion ends activated room accounts and staff employment; unrelated primary accounts and administrators remain.',
@@ -131,6 +161,8 @@ export function applyWipePlan(store: any, plan: WipePlan): void {
     store[key].splice(0, store[key].length, ...rows);
   }
   Object.assign(store, { retiredFeatureRecords: plan.retired, managerAccountSettings: plan.settings });
+  if (plan.signupState && store.signupVerification) Object.assign(store.signupVerification, plan.signupState);
+  if (plan.roomAttemptState && store.roomKeyAttempts) Object.assign(store.roomKeyAttempts, plan.roomAttemptState);
   if (plan.scopes.includes('total')) {
     store.signupVerification = { pending: [], limits: [] }; store.roomKeyAttempts = { limits: [] };
     Object.assign(store.platformSettings, { registrationFee: 0, commission: 0, announcement: '', maintenanceMode: false });

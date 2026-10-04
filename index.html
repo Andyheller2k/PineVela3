@@ -3,6 +3,15 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+      // Apply the last device appearance before rendering, including after logout/reload.
+      try {
+        var savedAppearance = localStorage.getItem('pinevela:appearance');
+        var appearance = savedAppearance === 'light' || savedAppearance === 'dark' ? savedAppearance : (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        document.documentElement.dataset.theme = appearance;
+        document.documentElement.style.colorScheme = appearance;
+      } catch (_) { document.documentElement.dataset.theme = 'light'; }
+    </script>
     <title>PineVela</title>
     <meta name="description" content="A universal global dashboard for modern student living, featuring student and manager portals for hostel accommodations." />
     <meta property="og:title" content="PineVela" />
@@ -13,4 +22,3 @@
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
-

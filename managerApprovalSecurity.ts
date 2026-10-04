@@ -30,6 +30,7 @@ export function managerIsApproved(entry: any, store: { users?: any[]; managerVer
   return current.every(u => accountData(u)?.isVerified === true && status(accountData(u)?.verificationStatus) === 'approved');
 }
 export function managerOnboardingRequest(method: string, route: string) {
-  return (method === 'GET' && ['/api/auth/me', '/api/manager-requests', '/api/manager-verifications'].includes(route)) ||
+  return (['GET', 'PUT'].includes(method) && route === '/api/auth/appearance') ||
+    (method === 'GET' && ['/api/auth/me', '/api/auth/account-access', '/api/manager-requests', '/api/manager-verifications'].includes(route)) ||
     (method === 'POST' && ['/api/manager-verifications/submit', '/api/manager-requests'].includes(route));
 }
