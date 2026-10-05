@@ -17,20 +17,21 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setTheme] = useState<Theme>(initialTheme);
   const [savePending, setSavePending] = useState(false);
   const current = useRef(theme);
+  const paintFrame = useRef(0);
   const account = useRef(identity);
   const revision = useRef(0);
-  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const pending = useRef<{ identity: string; theme: Theme; revision: number } | null>(null);
   const writing = useRef(false);
   account.current = identity;
 
-  const apply = useCallback((next: Theme, animate = true) => {
+  const apply = useCallback((next: Theme) => {
     const root = document.documentElement;
-    clearTimeout(timer.current);
-    if (animate && current.current !== next) {
-      root.classList.add('theme-changing');
-      timer.current = setTimeout(() => root.classList.remove('theme-changing'), 1100);
-    }
+    cancelAnimationFrame(paintFrame.current);
+    root.classList.add('theme-changing');
+    // Existing transition-all utilities must not animate thousands of surfaces.
+    paintFrame.current = requestAnimationFrame(() => {
+      paintFrame.current = requestAnimationFrame(() => root.classList.remove('theme-changing'));
+    });
     root.dataset.theme = next;
     root.style.colorScheme = next;
     current.current = next;
@@ -69,9 +70,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     const key = `${DEVICE_KEY}:${identity}`;
     const unsynced = read(`${key}:unsynced`);
     const cached = read(key);
-    if (cached) apply(cached, false);
+    if (cached) apply(cached);
     if (unsynced) {
-      apply(unsynced, false);
+      apply(unsynced);
       pending.current = { identity, theme: unsynced, revision: revision.current };
       setSavePending(true);
       void flush();
@@ -83,7 +84,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       if (!response.ok) return;
       const data = await response.json();
       if (controller.signal.aborted || account.current !== identity || revision.current !== version) return;
-      if (valid(data.theme)) { cache(key, data.theme); apply(data.theme, false); }
+      if (valid(data.theme)) { cache(key, data.theme); apply(data.theme); }
       else {
         // A new account inherits this device's current mode once; other accounts are untouched.
         pending.current = { identity, theme: current.current, revision: ++revision.current };
@@ -104,7 +105,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     };
     window.addEventListener('online', reconnect);
     window.addEventListener('storage', sync);
-    return () => { window.removeEventListener('online', reconnect); window.removeEventListener('storage', sync); clearTimeout(timer.current); };
+    return () => { window.removeEventListener('online', reconnect); window.removeEventListener('storage', sync); cancelAnimationFrame(paintFrame.current); document.documentElement.classList.remove('theme-changing'); };
   }, [apply, flush]);
 
   const toggleTheme = useCallback(() => {

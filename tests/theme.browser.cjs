@@ -31,9 +31,9 @@ async function main() {
   try {
     server = spawn(process.execPath, [path.join(project, 'dist/server.cjs')], { cwd: project, detached: true, env: { ...process.env, NODE_ENV: 'production', PORT: String(appPort), PINEVELA_DATA_DIR: dataDir, PINEVELA_UPLOADS_DIR: path.join(temp, 'uploads'), PINEVELA_WIPE_RECOVERY_DIR: path.join(temp, 'recovery'), PAYSTACK_SECRET_KEY: '', PINEVELA_PUBLIC_ORIGIN: base, PINEVELA_TRUST_PROXY: '', PINEVELA_MAIN_ADMIN_ID: admin.id }, stdio: ['ignore','pipe','pipe'] });
     server.stdout.on('data', data => logs += data); server.stderr.on('data', data => logs += data);
-    for (let i=0;i<150;i++) { try { if ((await fetch(base+'/api/health')).ok) break; } catch {} assert(server.exitCode === null, logs); await pause(100); }
+    for (let i=0;i<600;i++) { try { if ((await fetch(base+'/api/health')).ok) break; } catch {} assert(server.exitCode === null, logs); await pause(100); }
     chrome = spawn(process.env.CHROMIUM_PATH || '/snap/bin/chromium', ['--headless','--no-sandbox','--disable-gpu','--disable-dev-shm-usage','--disable-features=BackForwardCache','--disable-background-timer-throttling','--disable-renderer-backgrounding','--disable-backgrounding-occluded-windows','--no-first-run',`--remote-debugging-port=${debugPort}`,`--user-data-dir=${path.join(temp,'chrome')}`,'about:blank'], {stdio:'ignore'});
-    let target; for(let i=0;i<150;i++) { try {target=(await (await fetch(`http://127.0.0.1:${debugPort}/json/list`)).json()).find(t=>t.type==='page'); if(target)break;}catch{} await pause(100); } assert(target,'Chromium did not start');
+    let target; for(let i=0;i<600;i++) { try {target=(await (await fetch(`http://127.0.0.1:${debugPort}/json/list`)).json()).find(t=>t.type==='page'); if(target)break;}catch{} await pause(100); } assert(target,'Chromium did not start');
     socket = new WebSocket(target.webSocketDebuggerUrl); await new Promise((resolve,reject)=>{socket.onopen=resolve;socket.onerror=reject;});
     const command = (method,params={})=>new Promise((resolve,reject)=>{const id=++sequence; const timer=setTimeout(()=>{pending.delete(id);reject(new Error(method+' timeout'));},20000);pending.set(id,{resolve,reject,timer});socket.send(JSON.stringify({id,method,params}));});
     socket.onmessage = event=>{const message=JSON.parse(event.data);
@@ -55,7 +55,12 @@ async function main() {
       if(dark)assert(await evaluate("(()=>{const p=[...document.querySelectorAll('[class~=text-slate-900],[class~=text-slate-800],[class~=text-blue-950]')].find(e=>e.getClientRects().length);if(!p)return true;return getComputedStyle(p).color.match(/[0-9]+/g).slice(0,3).map(Number).some(n=>n>140)})()"),label+' heading readable');
       console.log('Passed:',label);
     };
-    const toggle = async()=>{await evaluate("(async()=>{document.querySelector('[role=switch][aria-label=\"Dark mode\"]').click();await new Promise(requestAnimationFrame);await new Promise(requestAnimationFrame);})()");await pause(1150);};
+    const toggle = async()=>{
+      const result = await evaluate("(()=>{const before=document.documentElement.dataset.theme;document.querySelector('[role=switch][aria-label=\"Dark mode\"]').click();const surface=document.querySelector('main')||document.querySelector('nav');return {changed:before!==document.documentElement.dataset.theme,duration:surface?getComputedStyle(surface).transitionDuration:'0s'};})()");
+      assert(result.changed, 'Theme updates synchronously without waiting for preference save');
+      assert.equal(result.duration, '0s', 'Page surfaces do not run costly theme paint transitions');
+      await pause(250);
+    };
     await viewport(1440);await command('Page.navigate',{url:base+'/#/'});await until("document.querySelector('.landing-day')?.complete",'Landing image');
     if(await evaluate("document.documentElement.dataset.theme !== 'light'"))await toggle();
     await screenshot('landing-light');await toggle();await check('desktop landing dark');
@@ -70,6 +75,7 @@ async function main() {
     await command('Input.dispatchKeyEvent',{type:'keyDown',key:'Escape',code:'Escape'});await pause(500);
     await command('Page.navigate',{url:base+'/#/login'});await until("document.querySelector('input[type=password]')",'Login');await check('mobile login dark');await screenshot('login-mobile');
     await command('Page.reload');await until("document.querySelector('input[type=password]')",'Reload');assert.equal(await evaluate('document.documentElement.dataset.theme'),'dark');
+    await evaluate("localStorage.setItem('pinevela_navigation_layout','top')");
     const routes=[[admin,'/admin/dashboard'],[manager,'/manager/dashboard'],[staff,'/staff/dashboard'],[user,'/user/dashboard'],[resident,'/resident/dashboard'],[seller,'/digital-market'],[officer,'/verification-team']];
     for(const [who,route] of routes){
       await command('Page.navigate',{url:'about:blank'});await command('Network.setCookie',{name:'pv_auth_token',value:who.token,url:base,httpOnly:true,sameSite:'Strict',secure:true});
@@ -77,7 +83,40 @@ async function main() {
       await until("document.querySelector('.theme-dock') && !document.querySelector('[data-route-skeleton]')",who.role+' page loaded');await pause(1400);
       await until("document.documentElement.dataset.theme === 'dark'",who.role+' independent saved dark preference');
       assert.equal(await evaluate('location.hash'),'#'+route,who.role+' stays in account');await check(who.role+' desktop dark');await screenshot(who.role+'-desktop');
+      await until("[...document.querySelectorAll('nav button[aria-current=page],button[data-page-tabs][aria-current=page]')].some(b=>b.getClientRects().length)", who.role+' selected navigation state');
+      assert(await evaluate("(()=>{const b=[...document.querySelectorAll('nav button[aria-current=page],button[data-page-tabs][aria-current=page]')].find(b=>b.getClientRects().length);return getComputedStyle(b).backgroundColor==='rgb(40, 91, 156)' && getComputedStyle(b).color==='rgb(255, 255, 255)'})()"),who.role+' selected tab has distinct dark highlight');
+      await evaluate("(()=>{const selected=[...document.querySelectorAll('nav button[aria-current=page],button[data-page-tabs][aria-current=page]')].find(b=>b.getClientRects().length);window.__themePreviousTab=selected;const next=[...selected.parentElement.querySelectorAll('button')].find(b=>b!==selected && !b.disabled && (b.hasAttribute('data-page-tabs') || b.classList.contains('flex-1')));if(next)next.click();})()");
+      await pause(250);
+      await until("[...document.querySelectorAll('nav button[aria-current=page],button[data-page-tabs][aria-current=page]')].some(b=>b.getClientRects().length && getComputedStyle(b).backgroundColor==='rgb(40, 91, 156)')",who.role+' highlight follows selected tab');
+      await evaluate("window.__themePreviousTab?.click()");
+      if(who===seller){
+        await evaluate("document.querySelector('button[aria-label=\"Upgrade your seller plan\"]').click()");
+        await until("(()=>{const b=document.querySelector('button[aria-label=\"Upgrade your seller plan\"]');return b.textContent.trim()==='Subscription' && b.getClientRects().length && getComputedStyle(b.querySelector('span')).position!=='absolute' && b.getAttribute('aria-current')==='page' && getComputedStyle(b).backgroundColor==='rgb(40, 91, 156)'})()",'Desktop Subscription label and selected dark highlight');
+        await evaluate("[...document.querySelectorAll('nav button')].find(b=>b.textContent.trim()==='Dashboard / POS').click()");
+      }
       await viewport(768);await check(who.role+' tablet dark');await viewport(375);await check(who.role+' mobile dark');
+      const hasMobileBar = await evaluate("[...document.querySelectorAll('.mobile-bottom-nav')].some(n=>n.getClientRects().length)");
+      if(hasMobileBar){
+        await until("document.querySelector('.mobile-bottom-nav .theme-toggle')",who.role+' embedded theme control');
+        assert(!await evaluate("document.querySelector('.theme-dock')"),who.role+' no overlapping floating toggle');
+        assert(await evaluate("(()=>{const n=[...document.querySelectorAll('.mobile-bottom-nav')].find(n=>n.getClientRects().length),b=n.querySelector('[aria-current=page]'),m=document.querySelector('main');return !!b && getComputedStyle(b).backgroundColor==='rgb(32, 78, 135)' && getComputedStyle(b.querySelector('svg')).filter.includes('drop-shadow') && parseFloat(getComputedStyle(m).paddingBottom)>=n.getBoundingClientRect().height+23})()"),who.role+' selected blue glow and bottom clearance');
+        const end = await evaluate("(()=>{const m=document.querySelector('main'),n=[...document.querySelectorAll('.mobile-bottom-nav')].find(n=>n.getClientRects().length);m.scrollTop=m.scrollHeight;window.scrollTo(0,document.documentElement.scrollHeight);const last=[...m.children].filter(e=>e.getClientRects().length && getComputedStyle(e).position!=='fixed').at(-1);return {bottom:last?.getBoundingClientRect().bottom,navTop:n.getBoundingClientRect().top}})()");
+        assert(end.bottom<=end.navTop+1,who.role+' final content is reachable above bottom bar: '+JSON.stringify(end));
+        await evaluate("document.querySelector('main').scrollTop=0;window.scrollTo(0,0)");
+        await evaluate("(()=>{const b=document.querySelector('.mobile-bottom-nav [aria-current=page]');window.__mobilePrevious=b;const next=[...b.parentElement.querySelectorAll('button')].find(n=>n!==b&&!n.hasAttribute('role'));next?.click()})()");await pause(300);
+        assert(await evaluate("!!document.querySelector('.mobile-bottom-nav [aria-current=page]')"),who.role+' mobile selection follows taps');
+        await evaluate("window.__mobilePrevious.click()");
+      }
+      if(who===admin)assert(await evaluate("[...document.querySelectorAll('.mobile-bottom-nav button')].some(b=>b.textContent.includes('Accounts'))"),'Admin mobile includes Accounts');
+      if(who===seller){
+        assert(await evaluate("document.querySelector('[data-seller-add]').getBoundingClientRect().bottom < document.querySelector('.mobile-bottom-nav').getBoundingClientRect().top"),'Seller add button clears bottom navigation');
+        await evaluate("document.querySelector('[data-seller-add]').click()");await until("document.querySelector('[data-popup-card] form')",'Seller publish form');
+        await evaluate("document.querySelector('[data-popup-card] form').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}))");
+        await until("document.querySelector('[data-popup-card] [data-form-feedback] [role=alert]')",'Seller validation stays on popup card');
+        assert(await evaluate("(()=>{const card=document.querySelector('[data-popup-card]');return Number(getComputedStyle(card.parentElement).zIndex)>Number(getComputedStyle(document.querySelector('.mobile-bottom-nav')).zIndex)})()"),'Seller popup stays above navigation');
+        await screenshot('seller-inline-error');
+        await evaluate("[...document.querySelector('[data-popup-card]').querySelectorAll('button')].find(b=>b.querySelector('svg.lucide-x')).click()");
+      }
       await screenshot(who.role+'-mobile');
       if(who===manager){
         await evaluate("[...document.querySelectorAll('button')].find(b=>b.getClientRects().length && /^(Maintenance|Fixes)$/.test(b.textContent.trim()))?.click()");

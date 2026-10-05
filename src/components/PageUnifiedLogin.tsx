@@ -1,3 +1,4 @@
+import { routePopupFeedback } from '../lib/feedback';
 import PasswordStrengthGauge from './PasswordStrengthGauge';
 import OnboardingProgress, { SIGNUP_STEPS, MANAGER_ACCOUNT_STEPS, ROOM_ACTIVATION_STEPS } from './OnboardingProgress';
 import { sessionFetch as fetch } from '../lib/session';
@@ -384,6 +385,7 @@ export default function PageUnifiedLogin() {
   const [toastType, setToastType] = useState<'success' | 'error' | 'info'>('info');
 
   const triggerToast = (msg: string, type: 'success' | 'error' | 'info' = 'info') => {
+    if (routePopupFeedback(msg, type)) return;
     setToastMessage(msg);
     setToastType(type);
     setTimeout(() => setToastMessage(null), 3500);
@@ -1027,9 +1029,10 @@ export default function PageUnifiedLogin() {
 
             {/* Tab Selector */}
             {!verificationPending && (
-              <div className="flex bg-slate-100 p-1.5 rounded-2xl border border-slate-200/60">
+              <div className="login-mode-toggle flex bg-slate-100 p-1.5 rounded-2xl border border-slate-200/60">
                 <button
                   type="button"
+                  aria-pressed={activeTab === 'login'}
                   onClick={() => setActiveTab('login')}
                   className={`flex-1 py-2 text-xs font-black rounded-xl transition-all cursor-pointer ${
                     activeTab === 'login' ? 'bg-white text-blue-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'
@@ -1039,6 +1042,7 @@ export default function PageUnifiedLogin() {
                 </button>
                 <button
                   type="button"
+                  aria-pressed={activeTab === 'register'}
                   onClick={() => setActiveTab('register')}
                   className={`flex-1 py-2 text-xs font-black rounded-xl transition-all cursor-pointer ${
                     activeTab === 'register' ? 'bg-white text-blue-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'
@@ -1332,7 +1336,7 @@ export default function PageUnifiedLogin() {
       {/* HOSTEL MANAGER REGISTRATION WIZARD */}
       {showRegModal && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 border border-slate-100 shadow-2xl relative flex flex-col max-h-[90vh] overflow-y-auto animate-fade-in text-left">
+          <div data-popup-card className="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 border border-slate-100 shadow-2xl relative flex flex-col max-h-[90vh] overflow-y-auto animate-fade-in text-left">
             
             {/* Close Button */}
             <button 
@@ -1987,7 +1991,7 @@ export default function PageUnifiedLogin() {
       {/* MODAL: Pending Approval / Verification Notice */}
       {pendingApprovalModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-blue-950/60 backdrop-blur-md animate-fadeIn">
-          <div className="bg-white rounded-3xl border-2 border-amber-200/80 shadow-2xl max-w-md w-full p-6 md:p-8 space-y-6 text-center relative overflow-hidden">
+          <div data-popup-card className="bg-white rounded-3xl border-2 border-amber-200/80 shadow-2xl max-w-md w-full p-6 md:p-8 space-y-6 text-center relative overflow-hidden">
             {/* PineVela Signature Top Gradient */}
             <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-blue-900 via-amber-400 to-emerald-600" />
             
@@ -2043,7 +2047,7 @@ export default function PageUnifiedLogin() {
       {/* MODAL: Blocked / Restricted Manager Account Popup */}
       {blockedAccountModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md animate-fadeIn">
-          <div className="bg-white rounded-3xl border-2 border-rose-300 shadow-2xl max-w-md w-full p-6 md:p-8 space-y-6 text-center relative overflow-hidden">
+          <div data-popup-card className="bg-white rounded-3xl border-2 border-rose-300 shadow-2xl max-w-md w-full p-6 md:p-8 space-y-6 text-center relative overflow-hidden">
             {/* Red Accent Header */}
             <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-rose-600 via-red-500 to-amber-600" />
             
@@ -2100,7 +2104,7 @@ export default function PageUnifiedLogin() {
       {/* RESIDENT & STUDENT DIGITAL ROOM KEY ONBOARDING MODAL */}
       {showStudentKeyModal && (
         <div className="fixed inset-0 bg-slate-950/75 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-4 animate-fade-in overflow-y-auto">
-          <div className="bg-white/95 backdrop-blur-2xl rounded-3xl max-w-xl w-full p-6 sm:p-8 border border-blue-200/80 shadow-2xl relative flex flex-col max-h-[92vh] overflow-y-auto text-left space-y-5">
+          <div data-popup-card className="bg-white/95 backdrop-blur-2xl rounded-3xl max-w-xl w-full p-6 sm:p-8 border border-blue-200/80 shadow-2xl relative flex flex-col max-h-[92vh] overflow-y-auto text-left space-y-5">
             
             {/* Close Button */}
             <button 

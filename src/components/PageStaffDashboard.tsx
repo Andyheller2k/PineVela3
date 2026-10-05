@@ -1,3 +1,4 @@
+import { routePopupFeedback } from '../lib/feedback';
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { } from '../lib/queryClient';
@@ -100,6 +101,7 @@ export default function PageStaffDashboard() {
   }, [staffRecord, user, profileDirty]);
 
   const triggerToast = (text: string, type: 'success' | 'error' | 'info' = 'info') => {
+    if (routePopupFeedback(text, type)) return;
     setToastMessage({ text, type });
     setTimeout(() => setToastMessage(null), 1500);
   };
@@ -428,7 +430,7 @@ export default function PageStaffDashboard() {
 
       {/* MOBILE BOTTOM NAV (lg:hidden) */}
       <nav className="mobile-bottom-nav lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-sky-100/70 backdrop-blur-xl border-t border-white/70 shadow-[0_-10px_40px_rgba(0,0,0,0.08)]">
-        <div className="flex items-center justify-around px-2 py-2 pb-safe">
+        <div data-mobile-nav-items className="flex items-center justify-around px-2 py-2 pb-safe">
           {[
             { id: 'notifications', icon: Bell, label: 'Alerts', badge: notifications.length },
             { id: 'settings', icon: Settings, label: 'Settings' },
@@ -438,6 +440,7 @@ export default function PageStaffDashboard() {
           ].map(tab => (
             <button
               key={tab.id}
+              aria-current={activeTab === tab.id ? 'page' : undefined}
               onClick={() => setActiveTab(tab.id as any)}
               className={`flex flex-col items-center justify-center w-16 h-12 rounded-xl transition-all relative ${
                 activeTab === tab.id ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'
@@ -475,7 +478,7 @@ export default function PageStaffDashboard() {
           <span className="text-[9px] font-bold text-slate-500">Profile</span>
         </button>
         <div className="w-px h-6 bg-slate-200/70 shrink-0" />
-        {[{ id: 'maintenance', label: 'Fixes', icon: Wrench, badge: employment ? assignedIssues.filter(i => i.status !== 'Resolved' && !i.staffCompleted).length : 0 }, { id: 'notifications', label: 'Alerts', icon: Bell, badge: notifications.length }, { id: 'settings', label: 'Settings', icon: Settings }].map(tab => <button key={tab.id} onClick={() => setActiveTab(tab.id as any)} aria-label={`${tab.label}${tab.badge ? ` (${tab.badge})` : ''}`} className={`flex-1 min-w-0 flex flex-col items-center gap-0.5 py-1.5 rounded-xl text-[9px] font-bold cursor-pointer ${activeTab === tab.id ? 'text-blue-700 bg-blue-100/65' : 'text-slate-500 hover:bg-white/70'}`}><span className="relative inline-flex"><tab.icon className="w-4 h-4" /><TopNavBadge count={tab.badge} /></span><span className="truncate max-w-full">{tab.label}</span></button>)}<button onClick={() => setShowLogoutConfirm(true)} title="Sign Out" className="shrink-0 flex flex-col items-center gap-0.5 px-2 py-1.5 text-[9px] font-bold text-rose-600 hover:bg-rose-50 rounded-xl cursor-pointer"><LogOutIcon className="w-4 h-4" /><span>Sign Out</span></button><button onClick={() => setIsSidebarTopNav(false)} title="Show sidebar" className="p-2 text-slate-500 hover:text-blue-700 cursor-pointer"><PanelLeftOpen className="w-4 h-4" /></button></div></nav>}
+        {[{ id: 'maintenance', label: 'Fixes', icon: Wrench, badge: employment ? assignedIssues.filter(i => i.status !== 'Resolved' && !i.staffCompleted).length : 0 }, { id: 'notifications', label: 'Alerts', icon: Bell, badge: notifications.length }, { id: 'settings', label: 'Settings', icon: Settings }].map(tab => <button aria-current={activeTab === tab.id ? 'page' : undefined} key={tab.id} onClick={() => setActiveTab(tab.id as any)} aria-label={`${tab.label}${tab.badge ? ` (${tab.badge})` : ''}`} className={`flex-1 min-w-0 flex flex-col items-center gap-0.5 py-1.5 rounded-xl text-[9px] font-bold cursor-pointer ${activeTab === tab.id ? 'text-blue-700 bg-blue-100/65' : 'text-slate-500 hover:bg-white/70'}`}><span className="relative inline-flex"><tab.icon className="w-4 h-4" /><TopNavBadge count={tab.badge} /></span><span className="truncate max-w-full">{tab.label}</span></button>)}<button onClick={() => setShowLogoutConfirm(true)} title="Sign Out" className="shrink-0 flex flex-col items-center gap-0.5 px-2 py-1.5 text-[9px] font-bold text-rose-600 hover:bg-rose-50 rounded-xl cursor-pointer"><LogOutIcon className="w-4 h-4" /><span>Sign Out</span></button><button onClick={() => setIsSidebarTopNav(false)} title="Show sidebar" className="p-2 text-slate-500 hover:text-blue-700 cursor-pointer"><PanelLeftOpen className="w-4 h-4" /></button></div></nav>}
       {!isSidebarTopNav && <aside className={`hidden lg:flex ${isSidebarCollapsed ? 'w-20 p-4' : 'w-72 p-6'} my-6 ml-6 h-[calc(100vh-3rem)] bg-gradient-to-br from-sky-100/90 via-blue-100/85 to-amber-50/40 backdrop-blur-3xl border border-sky-200/80 shadow-2xl rounded-3xl flex flex-col justify-between shrink-0 overflow-y-auto z-20 transition-all duration-300 relative`}>
         <button onClick={() => setIsSidebarTopNav(true)} title="Use top navigation" className="absolute top-3 right-3 p-2 rounded-xl text-slate-500 hover:text-blue-700 hover:bg-white/70 cursor-pointer"><PanelLeftClose className="w-4 h-4" /></button>
 
@@ -1136,7 +1139,7 @@ export default function PageStaffDashboard() {
       {/* Decline Dialog Modal */}
       {showDeclineModal && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-55 animate-fadeIn">
-          <div className="bg-blue-50/90 backdrop-blur-xl rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl border border-slate-200/80 space-y-5">
+          <div data-popup-card className="bg-blue-50/90 backdrop-blur-xl rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl border border-slate-200/80 space-y-5">
             <div className="flex justify-between items-center border-b pb-3 border-slate-100">
               <h3 className="text-sm font-black text-slate-900">Decline Work Order Assignment</h3>
               <button onClick={() => setShowDeclineModal(null)} className="text-slate-400 hover:text-slate-600">
@@ -1174,7 +1177,7 @@ export default function PageStaffDashboard() {
       {/* Reschedule/SLA Extension Modal */}
       {showRescheduleModal && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-55 animate-fadeIn">
-          <div className="bg-blue-50/90 backdrop-blur-xl rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl border border-slate-200/80 space-y-5">
+          <div data-popup-card className="bg-blue-50/90 backdrop-blur-xl rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl border border-slate-200/80 space-y-5">
             <div className="flex justify-between items-center border-b pb-3 border-slate-100">
               <h3 className="text-sm font-black text-slate-900">Request SLA Timeframe Extension</h3>
               <button onClick={() => setShowRescheduleModal(null)} className="text-slate-400 hover:text-slate-600">
@@ -1229,7 +1232,7 @@ export default function PageStaffDashboard() {
       {/* Completion Signoff Modal with Image attachment upload */}
       {showCompleteModal && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-55 animate-fadeIn">
-          <div className="bg-blue-50/90 backdrop-blur-xl rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl border border-slate-200/80 space-y-5">
+          <div data-popup-card className="bg-blue-50/90 backdrop-blur-xl rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl border border-slate-200/80 space-y-5">
             <div className="flex justify-between items-center border-b pb-3 border-slate-100">
               <h3 className="text-sm font-black text-slate-900">Submit Repair Resolution Details</h3>
               <button onClick={() => setShowCompleteModal(null)} className="text-slate-400 hover:text-slate-600">
@@ -1343,7 +1346,7 @@ export default function PageStaffDashboard() {
       {/* QUIT / RESIGN FROM JOB & BARGAIN MODAL — CRYSTAL FROSTY BLUE PINEVELA THEME */}
       {showResignModal && employment && (
         <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-white/90 backdrop-blur-2xl rounded-3xl max-w-xl w-full p-6 sm:p-7 shadow-2xl shadow-blue-950/25 border border-blue-200/80 space-y-5 animate-in fade-in zoom-in duration-150 max-h-[90vh] overflow-y-auto">
+          <div data-popup-card className="bg-white/90 backdrop-blur-2xl rounded-3xl max-w-xl w-full p-6 sm:p-7 shadow-2xl shadow-blue-950/25 border border-blue-200/80 space-y-5 animate-in fade-in zoom-in duration-150 max-h-[90vh] overflow-y-auto">
             <div className="flex items-start justify-between gap-3.5 pb-3 border-b border-blue-100/70">
               <div className="flex items-start gap-3.5">
                 <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-600 via-indigo-600 to-sky-500 text-white flex items-center justify-center shrink-0 shadow-lg shadow-blue-600/30 ring-4 ring-blue-100/80">

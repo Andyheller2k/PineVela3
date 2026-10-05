@@ -490,6 +490,7 @@ export default function PageVerificationTeamPortal() {
             <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200">
               <button
                 type="button"
+                data-page-tabs aria-current={activeTab === 'inspections' ? 'page' : undefined}
                 onClick={() => {
                   setActiveTab('inspections');
                   setActiveInspection(null);
@@ -509,7 +510,7 @@ export default function PageVerificationTeamPortal() {
 
               <button
                 type="button"
-                onClick={() => setActiveTab('options')}
+                data-page-tabs aria-current={activeTab === 'options' ? 'page' : undefined} onClick={() => setActiveTab('options')}
                 className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
                   activeTab === 'options'
                     ? 'bg-white text-blue-900 shadow-xs border border-slate-200/60'

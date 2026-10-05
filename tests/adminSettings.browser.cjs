@@ -61,8 +61,8 @@ async function main() {
     };
     await command('Page.enable'); await command('Runtime.enable'); await command('Network.enable');
     const evaluate = async expression => { const result = await command('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true }); if (result.exceptionDetails) throw new Error(result.exceptionDetails.exception?.description || result.exceptionDetails.text); return result.result.value; };
-    const until = async (expression, label) => { for (let attempt = 0; attempt < 300; attempt++) { if (await evaluate(expression)) return; await pause(100); } throw new Error(`${label}: ${await evaluate('JSON.stringify({hash:location.hash,text:document.body.innerText.slice(-3000)})')}`); };
-    const click = async expression => { await until(`${expression}?.getClientRects().length > 0`, 'Visible control'); await evaluate(`${expression}.click()`); };
+    const until = async (expression, label) => { for (let attempt = 0; attempt < 300; attempt++) { if (await evaluate(`(async()=>Boolean(await (${expression})))()`)) return; await pause(100); } throw new Error(`${label}: ${await evaluate('JSON.stringify({hash:location.hash,text:document.body.innerText.slice(-3000)})')}`); };
+    const click = async expression => { await until(`${expression}?.getClientRects().length > 0 && !${expression}.disabled`, 'Enabled visible control'); await evaluate(`${expression}.click()`); };
     const button = label => `[...document.querySelectorAll('button')].find(button => button.getClientRects().length && button.innerText.trim() === ${JSON.stringify(label)})`;
     const input = async (selector, value) => { await evaluate(`(()=>{const element=document.querySelector(${JSON.stringify(selector)}); const setter=Object.getOwnPropertyDescriptor(${selector.includes('textarea') ? 'HTMLTextAreaElement' : 'HTMLInputElement'}.prototype,'value').set; setter.call(element,${JSON.stringify(value)});element.dispatchEvent(new Event('input',{bubbles:true}));})()`); };
     const viewport = async width => command('Emulation.setDeviceMetricsOverride', { width, height: 900, deviceScaleFactor: 1, mobile: width < 768 });
@@ -101,6 +101,11 @@ async function main() {
     }
     await input('[aria-label="Propose marketplace pricing"] input[type=text]', 'Reviewed registration and subscription pricing');
     await input('[aria-label="Administrator settings"] input[autocomplete="off"]', settingsKeys[0]);
+    await input('[aria-label="Administrator settings"] input[autocomplete="off"]', 'invalid-key'); await click(button('Submit pricing proposal'));
+    await until("document.querySelector('[aria-label=\"Propose marketplace pricing\"] [data-form-feedback] [role=alert]')", 'Invalid key explains failure under change');
+    assert(await evaluate("[...document.querySelectorAll('body > [role=alert]')].some(e=>e.getBoundingClientRect().top>=0 && e.getBoundingClientRect().top<100 && e.textContent.includes('Change failed:'))"), 'Invalid key notification is at top of screen');
+    assert.equal((await api('/api/settings', admins[0].token)).registrationFee, 50, 'Rejected change leaves saved settings untouched');
+    await input('[aria-label="Administrator settings"] input[autocomplete="off"]', settingsKeys[0]);
     await click(button('Submit pricing proposal'));
     await until("document.body.innerText.includes('1 approvals')", 'Initial proposal approval');
     assert.equal((await api('/api/settings', admins[0].token)).registrationFee, 50, 'Proposal alone does not change prices');
@@ -123,6 +128,7 @@ async function main() {
     await input('[aria-label="Administrator settings"] input[autocomplete="off"]', settingsKeys[0]); await click(button('Final push — apply approved pricing'));
     await until("document.body.innerText.includes('Approved pricing applied by administrator #1')", 'Main final push saved');
     await until("document.body.innerText.includes('Applied by administrator #1')", 'Applied audit visible');
+    await until("document.querySelector('[aria-label=\"Administrator settings\"] input[autocomplete=off]').value === ''", 'Final push finishes and clears its key');
     await input('textarea', 'Browser configured announcement <script>window.__announcementXss = true</script>');
     await input('[aria-label="Administrator settings"] input[autocomplete="off"]', settingsKeys[0]);
     await click(button('Save Admin Settings'));
@@ -160,10 +166,38 @@ async function main() {
     await until("document.body.innerText.includes('PineVela is undergoing maintenance')", 'Live maintenance boundary');
     // Any in-flight non-admin polling is intentionally denied with a 503. No successful
     // protected operation or raw-record response is expected during maintenance.
-    await api('/api/settings', admins[1].token, { registrationFee: 62.5, commission: 7.5, announcement: '', maintenanceMode: false, settingsKey: settingsKeys[1] });
+    await switchAccount(admins[1].token, '/#/admin/dashboard');
+    await until("document.body.innerText.includes('Shared approvals')", 'Maintenance administrator dashboard');
+    await click(matchingButton('Settings'));
+    await until("document.querySelector('[aria-label=\"Platform Maintenance Mode\"]')?.checked", 'Lockdown is enabled');
+    await click("document.querySelector('[aria-label=\"Platform Maintenance Mode\"]')");
+    await until("document.querySelector('form[aria-label=\"Portal settings\"] textarea[required]') !== null", 'Returning-user message is required');
+    assert(!(await evaluate("document.querySelector('form[aria-label=\"Portal settings\"]').checkValidity()")), 'Blank message prevents unlocking');
+    await input('form[aria-label="Portal settings"] textarea[required]', 'Thank you for your patience. Welcome back to PineVela.');
+    await input('[aria-label="Administrator settings"] input[autocomplete="off"]', settingsKeys[1]);
+    await click(button('Save Admin Settings'));
+    await until("document.querySelector('.maintenance-return-dialog')?.open", 'Administrator receives return notice');
+    await click("document.querySelector('[aria-label=\"Close administrator message\"]')");
+    await until("!document.querySelector('.maintenance-return-dialog')", 'Administrator dismisses notice');
+    await switchAccount(primary.token, '/#/student/dashboard');
     await until("!document.body.innerText.includes('PineVela is undergoing maintenance') && !document.querySelector('[aria-label=\"PineVela system announcement\"]')", 'Service automatically resumes and cleared banner disappears');
+    await until("document.querySelector('.maintenance-return-dialog')?.open", 'Return popup appears');
+    assert(await evaluate("document.querySelector('.maintenance-return-dialog').matches(':modal')"), 'Notice traps focus above the page');
+    assert(await evaluate("document.querySelector('.maintenance-return-dialog').innerText.includes('Thank you for your patience. Welcome back to PineVela.')"));
+    await noOverflow('Mobile maintenance popup');
+    await command('Page.captureScreenshot', {format:'png'}).then(result=>fs.writeFile('/tmp/pinevela-maintenance-return.png',Buffer.from(result.data,'base64')));
+    await click("document.querySelector('[aria-label=\"Close administrator message\"]')");
+    await until("!document.querySelector('.maintenance-return-dialog')", 'X dismisses notice');
+    await command('Page.reload'); await until("document.querySelector('.theme-toggle')", 'Reload after dismissal');
+    assert(!(await evaluate("Boolean(document.querySelector('.maintenance-return-dialog'))")), 'Dismissal survives reload');
+    await switchAccount(merchant.token, '/#/digital-market');
+    await until("document.querySelector('.maintenance-return-dialog')?.open", 'Seller independently receives notice');
+    await command('Page.bringToFront');
+    await command('Input.dispatchKeyEvent',{type:'rawKeyDown',key:'Escape',code:'Escape',windowsVirtualKeyCode:27});
+    await command('Input.dispatchKeyEvent',{type:'keyUp',key:'Escape',code:'Escape',windowsVirtualKeyCode:27});
+    await until("!document.querySelector('.maintenance-return-dialog')", 'Escape dismisses notice');
     assert.deepEqual(exceptions, [], 'Browser console and runtime errors');
-    assert(apiErrors.every(error => error.status === 503), 'Only deliberate maintenance denials are allowed');
+    assert(apiErrors.every(error => error.status === 503 || error.status === 403 && error.url.endsWith('/api/admin/governance/pricing')), 'Only deliberate maintenance and invalid-key denials are allowed');
     console.log('Shared pricing proposal, three separate keyed approvals, main-only final push and applied audit passed at desktop/tablet/mobile widths. Applied registration/three-plan/two-month prices reflected on seller plans; photograph upload/reload, announcement inbox delivery and maintenance/resumption passed. No console/runtime errors; no operational data touched.');
   } finally {
     if (command && socket?.readyState === WebSocket.OPEN) { try { await command('Browser.close'); } catch {} } socket?.close();

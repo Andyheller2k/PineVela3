@@ -1,3 +1,6 @@
+import { useActionFeedback } from '../lib/useActionFeedback';
+import AdminAccountDirectory from './AdminAccountDirectory';
+import { routePopupFeedback } from '../lib/feedback';
 import PasswordStrengthGauge from './PasswordStrengthGauge';
 import OnboardingProgress, { OFFICER_ACCOUNT_STEPS } from './OnboardingProgress';
 import AdminSettingsPanel from './AdminSettingsPanel';
@@ -56,8 +59,6 @@ export default function PageAdminDashboard() {
     breakdown: { total: 0, residents: 0, managers: 0, staff: 0, officers: 0, merchants: 0, admins: 0, others: 0 },
     users: []
   });
-  const [userRoleFilter, setUserRoleFilter] = useState<string>('all');
-  const [userAccountSearchQuery, setUserAccountSearchQuery] = useState<string>('');
   
   // Digital Student Market Admin States
   const [digitalMarketApps, setDigitalMarketApps] = useState<any[]>([]);
@@ -72,6 +73,7 @@ export default function PageAdminDashboard() {
   useEffect(() => {
     saveNavigationLayout(isSidebarTopNav);
   }, [isSidebarTopNav]);
+  const actionFeedback = useActionFeedback();
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // Edit Residence State
@@ -192,6 +194,8 @@ export default function PageAdminDashboard() {
   }, [activeTab]);
 
   const triggerToast = (msg: string) => {
+    if (routePopupFeedback(msg, /success|submitted|updated|copied|approved|accepted|retained|removed|dispatched|verified|thank you/i.test(msg) && !/fail|invalid|unable|cannot|could not/i.test(msg) ? 'success' : 'error')) return;
+    if (/fail|invalid|denied|unable|cannot|could not|cancelled|key.*(enroll|incorrect)/i.test(msg)) { actionFeedback.fail(msg, actionFeedback.begin()); return; }
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3500);
   };
@@ -206,7 +210,7 @@ export default function PageAdminDashboard() {
       setResidences(prev => prev.map(r => r.id === updatedResidence.id ? { ...r, ...fresh } : r));
       triggerToast(`Residence "${updatedResidence.name}" updated successfully!`);
     } catch (err: any) {
-      triggerToast(err.message || 'Failed to update residence.');
+      throw err;
     }
   };
 
@@ -467,7 +471,8 @@ export default function PageAdminDashboard() {
       await apiFetch(`/api/manager-verifications/${reqId}/approve`, {
         method: 'PUT',
         body: JSON.stringify({ status: 'approved', force: true })
-      }).catch(async () => {
+      }).catch(async (error) => {
+        if (error.status !== 404) throw error;
         return await apiFetch(`/api/manager-requests/${reqId}/approve`, {
           method: 'PUT',
           body: JSON.stringify({ status: 'approved', force: true })
@@ -635,7 +640,7 @@ export default function PageAdminDashboard() {
 
 
   return (
-    <div className="min-h-screen h-screen flex flex-col lg:flex-row bg-gradient-to-br from-slate-50 via-blue-50/70 to-indigo-50/50 text-slate-800 overflow-hidden font-sans">
+    <div onClickCapture={actionFeedback.capture} onSubmitCapture={actionFeedback.capture} className="min-h-screen h-screen flex flex-col lg:flex-row bg-gradient-to-br from-slate-50 via-blue-50/70 to-indigo-50/50 text-slate-800 overflow-hidden font-sans">
       {/* Toast Notification */}
       <AnimatePresence>
         {toastMessage && (
@@ -669,9 +674,10 @@ export default function PageAdminDashboard() {
 
       {/* MOBILE BOTTOM NAV (lg:hidden) */}
       <nav className="mobile-bottom-nav lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-xl border-t border-slate-200 shadow-[0_-10px_40px_rgba(0,0,0,0.08)]">
-        <div className="flex items-center gap-1 overflow-x-auto px-2 py-2 pb-safe snap-x hide-scrollbar">
+        <div data-mobile-nav-items className="flex items-center gap-1 overflow-x-auto px-2 py-2 pb-safe snap-x hide-scrollbar">
           {[
             { id: 'overview', label: 'Overview', icon: ShieldCheck },
+            { id: 'user_accounts', label: 'Accounts', icon: Users },
             { id: 'residences', label: 'Residences', icon: Building2, badge: pendingHostelsCount },
             { id: 'managers', label: 'Managers', icon: Users, badge: pendingManagersCount },
             { id: 'digital_market', label: 'Market', icon: ShoppingBag, badge: digitalMarketApps.filter(a => a.status === 'pending').length || null },
@@ -680,6 +686,7 @@ export default function PageAdminDashboard() {
           ].map(tab => (
             <button
               key={tab.id}
+              aria-current={activeTab === tab.id ? 'page' : undefined}
               onClick={() => setActiveTab(tab.id as any)}
               className={`snap-center shrink-0 flex flex-col items-center justify-center w-[72px] h-12 rounded-xl transition-all relative ${
                 activeTab === tab.id ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'
@@ -712,7 +719,7 @@ export default function PageAdminDashboard() {
         <div className="w-px h-6 bg-slate-200/70 shrink-0" />
         {[
         { id: 'overview', label: 'Overview', icon: ShieldCheck }, { id: 'user_accounts', label: 'Accounts', icon: Users, badge: allUsersData.totalUsers }, { id: 'residences', label: 'Residences', icon: Building2, badge: pendingHostelsCount }, { id: 'managers', label: 'Managers', icon: Users, badge: pendingManagersCount }, { id: 'digital_market', label: 'Market', icon: ShoppingBag, badge: digitalMarketApps.filter(a => a.status === 'pending').length }, { id: 'notifications', label: 'Alerts', icon: Bell, badge: adminAlertCount }, { id: 'governance', label: 'Approvals', icon: ShieldCheck, badge: pendingGovernance }, { id: 'settings', label: 'Settings', icon: Edit3 }
-      ].map(tab => <button key={tab.id} onClick={() => setActiveTab(tab.id as any)} aria-label={`${tab.label}${tab.badge ? ` (${tab.badge})` : ''}`} className={`flex-1 min-w-0 flex flex-col items-center gap-0.5 py-1.5 rounded-xl text-[9px] font-bold cursor-pointer ${activeTab === tab.id ? 'text-blue-700 bg-blue-100/65' : 'text-slate-500 hover:bg-white/70'}`}><span className="relative inline-flex"><tab.icon className="w-4 h-4" /><TopNavBadge count={tab.badge} /></span><span className="truncate max-w-full">{tab.label}</span></button>)}<button onClick={() => setShowLogoutConfirm(true)} title="Sign Out" className="shrink-0 flex flex-col items-center gap-0.5 px-2 py-1.5 text-[9px] font-bold text-rose-600 hover:bg-rose-50 rounded-xl cursor-pointer"><LogOutIcon className="w-4 h-4" /><span>Sign Out</span></button><button onClick={() => setIsSidebarTopNav(false)} title="Show sidebar" className="p-2 text-slate-500 hover:text-blue-700 cursor-pointer"><PanelLeftOpen className="w-4 h-4" /></button></div></nav>}
+      ].map(tab => <button aria-current={activeTab === tab.id ? 'page' : undefined} key={tab.id} onClick={() => setActiveTab(tab.id as any)} aria-label={`${tab.label}${tab.badge ? ` (${tab.badge})` : ''}`} className={`flex-1 min-w-0 flex flex-col items-center gap-0.5 py-1.5 rounded-xl text-[9px] font-bold cursor-pointer ${activeTab === tab.id ? 'text-blue-700 bg-blue-100/65' : 'text-slate-500 hover:bg-white/70'}`}><span className="relative inline-flex"><tab.icon className="w-4 h-4" /><TopNavBadge count={tab.badge} /></span><span className="truncate max-w-full">{tab.label}</span></button>)}<button onClick={() => setShowLogoutConfirm(true)} title="Sign Out" className="shrink-0 flex flex-col items-center gap-0.5 px-2 py-1.5 text-[9px] font-bold text-rose-600 hover:bg-rose-50 rounded-xl cursor-pointer"><LogOutIcon className="w-4 h-4" /><span>Sign Out</span></button><button onClick={() => setIsSidebarTopNav(false)} title="Show sidebar" className="p-2 text-slate-500 hover:text-blue-700 cursor-pointer"><PanelLeftOpen className="w-4 h-4" /></button></div></nav>}
       {!isSidebarTopNav && <aside className={`hidden lg:flex ${isSidebarCollapsed ? 'w-20 p-4' : 'w-72 p-6'} my-6 ml-6 h-[calc(100vh-3rem)] bg-gradient-to-br from-sky-100/90 via-blue-100/85 to-amber-50/40 backdrop-blur-3xl border border-sky-200/80 shadow-2xl rounded-3xl flex flex-col justify-between shrink-0 overflow-y-auto transition-all duration-300 relative`}>
         <button onClick={() => setIsSidebarTopNav(true)} title="Use top navigation" className="absolute top-3 right-3 p-2 rounded-xl text-slate-500 hover:text-blue-700 hover:bg-white/70 cursor-pointer"><PanelLeftClose className="w-4 h-4" /></button>
 
@@ -737,7 +744,7 @@ export default function PageAdminDashboard() {
             )}
             {[
               { id: 'overview', label: 'Dashboard Overview', icon: ShieldCheck, sub: 'Metrics & activity audit' },
-              { id: 'user_accounts', label: 'All Registered Accounts', icon: Users, badge: allUsersData.totalUsers || null, sub: 'Residents, Managers, Staff & Officers' },
+              { id: 'user_accounts', label: 'All Registered Accounts', icon: Users, badge: allUsersData.totalUsers || null, sub: 'Primary users and their linked accounts' },
               { id: 'residences', label: 'Available Residences', icon: Building2, badge: pendingHostelsCount || null, sub: 'Hostels, Hotels & Lounges' },
               { id: 'managers', label: 'Managers & Staffs', icon: Users, badge: pendingManagersCount || null, sub: 'Approvals, contact & history' },
               { id: 'digital_market', label: 'Student Digital Market', icon: ShoppingBag, badge: digitalMarketApps.filter(a => a.status === 'pending').length || null, sub: 'Stores, products & applications' },
@@ -749,6 +756,7 @@ export default function PageAdminDashboard() {
               return (
                 <button
                   key={tab.id}
+                  aria-current={activeTab === tab.id ? 'page' : undefined}
                   onClick={() => setActiveTab(tab.id as any)}
                   title={tab.label}
                   className={`w-full flex items-center ${isSidebarCollapsed ? 'justify-center' : 'justify-between'} px-4 py-3.5 rounded-2xl font-medium transition-all duration-300 cursor-pointer text-left group relative ${
@@ -933,170 +941,7 @@ export default function PageAdminDashboard() {
         {activeTab === 'user_accounts' && (
           <div className="space-y-6 animate-fadeIn relative z-10">
             <AccountModerationPanel target={moderationTarget} onClose={() => setModerationTarget(null)} onApplied={fetchAdminData} />
-            <div className="flex flex-col md:flex-row items-center justify-between gap-4 bg-white/80 border border-blue-200/80 p-6 rounded-3xl backdrop-blur-xl shadow-xl">
-              <div>
-                <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-                  <Users className="w-5 h-5 text-blue-600" />
-                  <span>All Registered User Accounts</span>
-                </h3>
-                <p className="text-xs text-slate-500 mt-1">Complete system directory of all authentic registered user accounts across PineVela</p>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
-                <div className="relative flex-1 md:w-64">
-                  <Search className="absolute left-3.5 top-3 w-4 h-4 text-slate-400" />
-                  <input
-                    type="text"
-                    placeholder="Search name, email, phone..."
-                    value={userAccountSearchQuery}
-                    onChange={(e) => setUserAccountSearchQuery(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 bg-blue-50/60 border border-blue-200 rounded-2xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-600"
-                  />
-                </div>
-
-                <select
-                  value={userRoleFilter}
-                  onChange={(e) => setUserRoleFilter(e.target.value)}
-                  className="px-4 py-2 bg-blue-50/60 border border-blue-200 rounded-2xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-blue-600 cursor-pointer"
-                >
-                  <option value="all">All Roles ({allUsersData.totalUsers})</option>
-                  <option value="student">Residents & Students ({allUsersData.breakdown.residents})</option>
-                  <option value="manager">Hostel Managers ({allUsersData.breakdown.managers})</option>
-                  <option value="staff">Staff Members ({allUsersData.breakdown.staff})</option>
-                  <option value="verification_officer">Field Officers ({allUsersData.breakdown.officers})</option>
-                  <option value="student_merchant">Student Merchants ({allUsersData.breakdown.merchants})</option>
-                  <option value="admin">Admins ({allUsersData.breakdown.admins})</option>
-                </select>
-              </div>
-            </div>
-
-            {/* Account Role Summary Badges */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-              {[
-                { label: 'Residents/Students', count: allUsersData.breakdown.residents, roleKey: 'student', color: 'bg-indigo-50 border-indigo-200 text-indigo-700' },
-                { label: 'Hostel Managers', count: allUsersData.breakdown.managers, roleKey: 'manager', color: 'bg-blue-50 border-blue-200 text-blue-700' },
-                { label: 'Staff Members', count: allUsersData.breakdown.staff, roleKey: 'staff', color: 'bg-cyan-50 border-cyan-200 text-cyan-700' },
-                { label: 'Field Officers', count: allUsersData.breakdown.officers, roleKey: 'verification_officer', color: 'bg-emerald-50 border-emerald-200 text-emerald-700' },
-                { label: 'Student Merchants', count: allUsersData.breakdown.merchants, roleKey: 'student_merchant', color: 'bg-amber-50 border-amber-200 text-amber-700' },
-                { label: 'Admins', count: allUsersData.breakdown.admins, roleKey: 'admin', color: 'bg-purple-50 border-purple-200 text-purple-700' }
-              ].map((badgeItem, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => setUserRoleFilter(badgeItem.roleKey)}
-                  className={`p-3 rounded-2xl border transition-all text-left cursor-pointer ${
-                    userRoleFilter === badgeItem.roleKey ? 'ring-2 ring-blue-500 shadow-md ' + badgeItem.color : badgeItem.color + ' opacity-90 hover:opacity-100'
-                  }`}
-                >
-                  <div className="text-[10px] font-bold uppercase tracking-wider">{badgeItem.label}</div>
-                  <div className="text-xl font-black mt-0.5">{badgeItem.count}</div>
-                </button>
-              ))}
-            </div>
-
-            {/* Accounts Table */}
-            <div className="bg-white/90 backdrop-blur-xl border border-blue-200/80 rounded-3xl shadow-xl overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="bg-slate-50/80 border-b border-slate-200 text-[11px] uppercase font-bold text-slate-500 tracking-wider">
-                      <th className="p-4 pl-6">User Account</th>
-                      <th className="p-4">Account Role</th>
-                      <th className="p-4">Email Address</th>
-                      <th className="p-4">Phone Number</th>
-                      <th className="p-4">Property / Detail</th>
-                      <th className="p-4">Status</th>
-                      <th className="p-4 pr-6">Registered On</th>
-                      <th className="p-4">Account Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 text-xs">
-                    {allUsersData.users
-                      .filter((u: any) => {
-                        if (userRoleFilter !== 'all') {
-                          const r = (u.role || '').toLowerCase();
-                          if (userRoleFilter === 'student' && !['student', 'user', 'resident'].includes(r)) return false;
-                          if (userRoleFilter === 'manager' && r !== 'manager') return false;
-                          if (userRoleFilter === 'staff' && r !== 'staff') return false;
-                          if (userRoleFilter === 'verification_officer' && !['verification_officer', 'officer', 'verification_team'].includes(r)) return false;
-                          if (userRoleFilter === 'student_merchant' && !['student_merchant', 'seller', 'merchant'].includes(r)) return false;
-                          if (userRoleFilter === 'admin' && r !== 'admin') return false;
-                        }
-                        if (userAccountSearchQuery.trim()) {
-                          const q = userAccountSearchQuery.toLowerCase();
-                          return (
-                            (u.name || '').toLowerCase().includes(q) ||
-                            (u.email || '').toLowerCase().includes(q) ||
-                            (u.phone || '').toLowerCase().includes(q) ||
-                            (u.role || '').toLowerCase().includes(q)
-                          );
-                        }
-                        return true;
-                      })
-                      .map((account: any, index: number) => {
-                        const role = (account.role || '').toLowerCase();
-                        let roleBadgeClass = 'bg-slate-100 text-slate-700 border-slate-200';
-                        let roleLabel = account.role;
-                        if (['student', 'user', 'resident'].includes(role)) {
-                          roleBadgeClass = 'bg-indigo-50 text-indigo-700 border-indigo-200';
-                          roleLabel = 'Student Resident';
-                        } else if (role === 'manager') {
-                          roleBadgeClass = 'bg-blue-50 text-blue-700 border-blue-200';
-                          roleLabel = 'Hostel Manager';
-                        } else if (role === 'staff') {
-                          roleBadgeClass = 'bg-cyan-50 text-cyan-700 border-cyan-200';
-                          roleLabel = 'Staff Member';
-                        } else if (['verification_officer', 'officer', 'verification_team'].includes(role)) {
-                          roleBadgeClass = 'bg-emerald-50 text-emerald-700 border-emerald-200';
-                          roleLabel = 'Field Officer';
-                        } else if (['student_merchant', 'seller', 'merchant'].includes(role)) {
-                          roleBadgeClass = 'bg-amber-50 text-amber-700 border-amber-200';
-                          roleLabel = 'Student Merchant';
-                        } else if (role === 'admin') {
-                          roleBadgeClass = 'bg-purple-50 text-purple-700 border-purple-200';
-                          roleLabel = 'System Admin';
-                        }
-
-                        return (
-                          <tr key={`${account.role}:${account.id}`} className="hover:bg-blue-50/40 transition-colors">
-                            <td className="p-4 pl-6 font-bold text-slate-900">
-                              <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-800 font-black flex items-center justify-center text-xs shrink-0">
-                                  {(account.name || 'U').charAt(0).toUpperCase()}
-                                </div>
-                                <div>
-                                  <div className="font-bold text-slate-900">{account.name}</div>
-                                  <div className="text-[10px] text-slate-400 font-mono">ID: {account.id}</div>
-                                </div>
-                              </div>
-                            </td>
-                            <td className="p-4">
-                              <span className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold border ${roleBadgeClass}`}>
-                                {roleLabel}
-                              </span>
-                            </td>
-                            <td className="p-4 font-mono text-slate-700">{account.email}</td>
-                            <td className="p-4 text-slate-600">{account.phone}</td>
-                            <td className="p-4 text-slate-600">
-                              {account.hostelName || account.assignedHostel || account.zone || 'PineVela System'}
-                            </td>
-                            <td className="p-4">
-                              <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${
-                                account.status === 'Banned' ? 'bg-rose-100 text-rose-800' : 'bg-emerald-100 text-emerald-800'
-                              }`}>
-                                {account.status || 'Active'}
-                              </span>
-                            </td>
-                            <td className="p-4 pr-6 text-slate-500 text-[11px]">
-                              {account.registeredAt ? new Date(account.registeredAt).toLocaleDateString() : 'Active'}
-                            </td>
-                            <td className="p-4">{account.role === 'admin' ? <span className="text-xs text-slate-500">Protected founder account</span> : <button className="whitespace-nowrap rounded-xl bg-blue-600 px-3 py-2 font-bold text-white" onClick={() => setModerationTarget(account)}>Manage account</button>}</td>
-                          </tr>
-                        );
-                      })}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+            <AdminAccountDirectory accounts={allUsersData.users} onManage={setModerationTarget} />
           </div>
         )}
 
@@ -2657,7 +2502,7 @@ export default function PageAdminDashboard() {
         {/* BAN STORE MODAL */}
         {banningStoreTarget && (
           <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-md flex items-center justify-center p-4">
-            <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4 animate-scaleIn">
+            <div data-popup-card className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4 animate-scaleIn">
               <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                 <h3 className="text-base font-black text-rose-700 flex items-center gap-2">
                   <Ban className="w-5 h-5 text-rose-600" />
@@ -2710,7 +2555,7 @@ export default function PageAdminDashboard() {
       {/* FULL 10-STEP HOSTEL REGISTRATION WIZARD: MANUALLY REGISTER RESIDENCE */}
       {showAddResidenceModal && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/70 backdrop-blur-md p-2 sm:p-4 md:p-8 flex items-start justify-center animate-fadeIn">
-          <div className="w-full max-w-5xl bg-white rounded-3xl shadow-2xl overflow-hidden border border-blue-200 my-auto">
+          <div data-popup-card className="w-full max-w-5xl bg-white rounded-3xl shadow-2xl overflow-hidden border border-blue-200 my-auto">
             <HostelRegistration
               currentUserId={user?.id || 'admin_user'}
               onSuccess={(newHostel) => {
@@ -2733,7 +2578,7 @@ export default function PageAdminDashboard() {
       {/* MODAL: READ-ONLY INSPECTION FOR PENDING RESIDENCE APPROVAL */}
       {inspectingResidenceModal && (
         <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-white border border-blue-200 rounded-3xl max-w-4xl w-full max-h-[92vh] overflow-y-auto p-6 sm:p-8 space-y-6 shadow-2xl animate-fadeIn">
+          <div data-popup-card className="bg-white border border-blue-200 rounded-3xl max-w-4xl w-full max-h-[92vh] overflow-y-auto p-6 sm:p-8 space-y-6 shadow-2xl animate-fadeIn">
             {/* Header */}
             <div className="flex items-center justify-between border-b border-slate-100 pb-4">
               <div className="flex items-center gap-3">
@@ -2977,7 +2822,7 @@ export default function PageAdminDashboard() {
       {/* MODAL: DETAILED REJECTION REASON FOR RESIDENCE APPLICATION */}
       {rejectingResidenceModal && (
         <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-white border border-rose-200 rounded-3xl max-w-lg w-full p-6 space-y-5 shadow-2xl animate-fadeIn">
+          <div data-popup-card className="bg-white border border-rose-200 rounded-3xl max-w-lg w-full p-6 space-y-5 shadow-2xl animate-fadeIn">
             <div className="flex items-center justify-between border-b pb-3">
               <div className="flex items-center gap-2.5 text-rose-700">
                 <AlertCircle className="w-5 h-5" />
@@ -3132,7 +2977,7 @@ export default function PageAdminDashboard() {
 
         return (
           <div className="fixed inset-0 z-[100] bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 md:p-6">
-            <div className="bg-white border border-slate-100 rounded-3xl p-6 max-w-6xl w-full max-h-[96vh] flex flex-col space-y-4 shadow-2xl animate-in fade-in zoom-in-95 duration-150 overflow-hidden">
+            <div data-popup-card className="bg-white border border-slate-100 rounded-3xl p-6 max-w-6xl w-full max-h-[96vh] flex flex-col space-y-4 shadow-2xl animate-in fade-in zoom-in-95 duration-150 overflow-hidden">
               
               {/* Header block */}
               <div className="flex items-center justify-between border-b pb-3">
@@ -3447,7 +3292,7 @@ export default function PageAdminDashboard() {
       {/* MODAL: DISPATCH PINEVELA VERIFICATION TEAM OFFICER */}
       {dispatchModalManager && (
         <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-white border border-slate-200 rounded-3xl p-6 max-w-lg w-full space-y-5 shadow-2xl animate-fadeIn">
+          <div data-popup-card className="bg-white border border-slate-200 rounded-3xl p-6 max-w-lg w-full space-y-5 shadow-2xl animate-fadeIn">
             <div className="flex items-center justify-between border-b pb-3">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-2xl bg-blue-900 text-sky-400 flex items-center justify-center font-bold shadow-md shadow-blue-900/30">
@@ -3552,7 +3397,7 @@ export default function PageAdminDashboard() {
       {/* MODAL: REVIEW LIVE ON-SITE INSPECTION REPORT */}
       {reviewReportInspection && (
         <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white border border-slate-200 rounded-3xl p-6 max-w-2xl w-full space-y-6 shadow-2xl my-8 animate-fadeIn max-h-[90vh] overflow-y-auto">
+          <div data-popup-card className="bg-white border border-slate-200 rounded-3xl p-6 max-w-2xl w-full space-y-6 shadow-2xl my-8 animate-fadeIn max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b pb-4">
               <div className="flex items-center gap-3">
                 <div className="w-11 h-11 rounded-2xl bg-blue-900 text-white flex items-center justify-center font-bold shadow-md">
@@ -3747,7 +3592,7 @@ export default function PageAdminDashboard() {
       {/* MODAL: REGISTER NEW PINEVELA VERIFICATION OFFICER */}
       {showRegisterOfficerModal && (
         <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-white border border-slate-200 rounded-3xl p-6 max-w-md w-full space-y-5 shadow-2xl animate-fadeIn">
+          <div data-popup-card className="bg-white border border-slate-200 rounded-3xl p-6 max-w-md w-full space-y-5 shadow-2xl animate-fadeIn">
             <div className="flex items-center justify-between border-b pb-3">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-2xl bg-blue-900 text-sky-400 flex items-center justify-center font-bold shadow-md shadow-blue-900/30">
@@ -3858,7 +3703,7 @@ export default function PageAdminDashboard() {
       {/* MODAL: OFFICIAL OFFICER CREDENTIALS ID CARD (FOR HANDOVER) */}
       {createdOfficerCredentials && (
         <div className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-white border border-slate-200 rounded-3xl p-6 max-w-md w-full space-y-5 shadow-2xl animate-fadeIn">
+          <div data-popup-card className="bg-white border border-slate-200 rounded-3xl p-6 max-w-md w-full space-y-5 shadow-2xl animate-fadeIn">
             <div className="flex items-center justify-between border-b pb-3">
               <div className="flex items-center gap-2">
                 <ShieldCheck className="w-5 h-5 text-blue-900" />
@@ -3949,7 +3794,7 @@ export default function PageAdminDashboard() {
       {/* MODAL: REJECT MANAGER APPLICATION WITH DETAILED REASON */}
       {rejectManagerModal && (
         <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-white border border-rose-200 rounded-3xl p-6 max-w-md w-full space-y-5 shadow-2xl animate-fadeIn">
+          <div data-popup-card className="bg-white border border-rose-200 rounded-3xl p-6 max-w-md w-full space-y-5 shadow-2xl animate-fadeIn">
             <div className="flex items-center justify-between border-b pb-3">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-2xl bg-rose-600 text-white flex items-center justify-center font-bold shadow-md shadow-rose-500/30">
@@ -4012,7 +3857,7 @@ export default function PageAdminDashboard() {
       {/* MODAL: BLOCK / RESTRICT MANAGER ACCESS WITH REQUIRED DETAILED REASON */}
       {blockManagerModal && (
         <div className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-white border-2 border-rose-300 rounded-3xl p-6 max-w-md w-full space-y-5 shadow-2xl animate-fadeIn">
+          <div data-popup-card className="bg-white border-2 border-rose-300 rounded-3xl p-6 max-w-md w-full space-y-5 shadow-2xl animate-fadeIn">
             <div className="flex items-center justify-between border-b pb-3">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-2xl bg-rose-600 text-white flex items-center justify-center font-bold shadow-md shadow-rose-500/30">

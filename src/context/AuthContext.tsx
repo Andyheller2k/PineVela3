@@ -1,3 +1,5 @@
+import { needsApprovalKey } from '../../adminApprovalSecurity';
+import { requestKeyedApproval } from '../lib/approvalPrompt';
 import { sessionFetch as fetch, clearLegacySessionStorage } from '../lib/session';
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { safeJson } from '../lib/api';
@@ -276,6 +278,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const apiFetch = async (url: string, options: RequestInit = {}): Promise<any> => {
+    const body = typeof options.body === 'string' ? JSON.parse(options.body) : undefined;
+    if (user?.role === 'admin' && needsApprovalKey(options.method || 'GET', url, body) && !body?.privateKey) {
+      return requestKeyedApproval(key => apiFetch(url, { ...options, body: JSON.stringify({ ...body, privateKey: key }) }));
+    }
     const headers = {
       'Content-Type': 'application/json',
       ...(options.headers || {})
@@ -293,7 +299,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return [];
         }
         const errData = await safeJson(res);
-        throw new Error(errData.error || errData.message || `HTTP error ${res.status}`);
+        throw Object.assign(new Error(errData.error || errData.message || `HTTP error ${res.status}`), { status: res.status });
       }
 
       const data = await safeJson(res);

@@ -31,6 +31,6 @@ export function managerIsApproved(entry: any, store: { users?: any[]; managerVer
 }
 export function managerOnboardingRequest(method: string, route: string) {
   return (['GET', 'PUT'].includes(method) && route === '/api/auth/appearance') ||
-    (method === 'GET' && ['/api/auth/me', '/api/auth/account-access', '/api/manager-requests', '/api/manager-verifications'].includes(route)) ||
-    (method === 'POST' && ['/api/manager-verifications/submit', '/api/manager-requests'].includes(route));
+    (method === 'GET' && ['/api/auth/me', '/api/auth/account-access', '/api/auth/maintenance-notice', '/api/manager-requests', '/api/manager-verifications'].includes(route)) ||
+    (method === 'POST' && ['/api/manager-verifications/submit', '/api/manager-requests', '/api/auth/maintenance-notice/dismiss'].includes(route));
 }

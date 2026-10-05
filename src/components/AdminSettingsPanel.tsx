@@ -1,3 +1,4 @@
+import { useActionFeedback } from '../lib/useActionFeedback';
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { usePlatformSettings } from '../context/PlatformSettingsContext';
@@ -13,12 +14,14 @@ const priceRows: { label: string; value: (prices: PricingSettings) => number; un
   ...(['default', 'star', 'pro'] as const).map(plan => ({ label: `Pine ${plan[0].toUpperCase() + plan.slice(1)} (monthly)`, value: (p: PricingSettings) => p.subscriptionPrices[plan], unit: 'GHS' }))
 ];
 export default function AdminSettingsPanel() {
+  const feedback = useActionFeedback();
   const { apiFetch, user, updateUser } = useAuth(), { settings } = usePlatformSettings(), { data: governance } = useAdminGovernance();
   const self = governance?.members.find((member: any) => member.id === user?.id);
   const [fee, setFee] = useState(''), [commission, setCommission] = useState(''), [announcement, setAnnouncement] = useState(''), [maintenance, setMaintenance] = useState(false);
   const [semesterFee, setSemesterFee] = useState(''), [planPrices, setPlanPrices] = useState({ default: '', star: '', pro: '' });
+  const [recoveryMessage, setRecoveryMessage] = useState('');
   const [key, setKey] = useState(''), [password, setPassword] = useState(''), [newKey, setNewKey] = useState('');
-  const [busy, setBusy] = useState(false), [error, setError] = useState(''), [notice, setNotice] = useState(''), [dirty, setDirty] = useState(false);
+  const [busy, setBusy] = useState(false), [, setError] = useState(''), [notice, setNotice] = useState(''), [dirty, setDirty] = useState(false);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [receiving, setReceiving] = useState<any>(null), [receivingCode, setReceivingCode] = useState('');
   const [pricingReason, setPricingReason] = useState(''), [portalDirty, setPortalDirty] = useState(false);
@@ -29,8 +32,9 @@ export default function AdminSettingsPanel() {
   useEffect(() => { if (settings && !portalDirty) { setAnnouncement(settings.announcement); setMaintenance(settings.maintenanceMode); } }, [settings, portalDirty]);
   async function act(action: () => Promise<void>) {
     if (busy) return;
+    const origin = feedback.begin();
     setBusy(true); setError(''); setNotice('');
-    try { await action(); } catch (err: any) { setError(err.message || 'This change could not be saved.'); }
+    try { await action(); } catch (err: any) { setError(err.message || 'This change could not be saved.'); feedback.fail(err.message || 'This change could not be saved.', origin); }
     finally { setBusy(false); setPassword(''); setKey(''); }
   }
   async function post(path: string, body: any) {
@@ -47,9 +51,9 @@ export default function AdminSettingsPanel() {
     if (!result.success || !result.user) throw new Error('Your profile photograph could not be saved.');
     updateUser?.({ photo: result.user.photo, avatar: result.user.photo }); setPhotoFile(null); setNotice('Your profile photograph has been saved.');
   }
-  return <section className="space-y-6 text-slate-900" aria-label="Administrator settings">
+  return <section onClickCapture={feedback.capture} onSubmitCapture={feedback.capture} className="space-y-6 text-slate-900" aria-label="Administrator settings">
     <header className="rounded-3xl border border-blue-200 bg-white/65 p-6"><h3 className="text-xl font-bold">PineVela Admin Settings</h3><p className="mt-2 text-xs text-slate-600">Configure marketplace registration and subscription fees in GHS, commission accounting, system announcements, and platform maintenance.</p></header>
-    {error && <p role="alert" className="rounded-xl bg-red-50 p-4 text-sm text-red-700">{error}</p>}{notice && <p role="status" className="rounded-xl bg-blue-50 p-4 text-sm text-blue-900">{notice}</p>}
+    {notice && <p role="status" className="rounded-xl bg-blue-50 p-4 text-sm text-blue-900">{notice}</p>}
     {!self ? <p role="status">Loading administrator key status…</p> : !self.settingsKeyEnrolled && <form className="space-y-4 rounded-3xl border border-blue-200 bg-white/65 p-6" onSubmit={event => { event.preventDefault(); void act(async () => { const result = await post('/api/admin/governance/keys/settings/enroll', { password }); setNewKey(result.settingsKey); setNotice(result.message); await queryClient.invalidateQueries({ queryKey: ['adminGovernance'] }); }); }}>
       <h4 className="font-bold">Enroll your separate settings key</h4><p className="text-sm text-slate-600">Verify your own login password to receive a private settings key. Wipe approval keys cannot change these settings.</p>
       <label className="block text-sm">Current login password<input type="password" autoComplete="current-password" required value={password} onChange={event => setPassword(event.target.value)} className={input} /></label><button className={button} disabled={busy}>Generate my settings key</button>
@@ -83,10 +87,11 @@ export default function AdminSettingsPanel() {
         </article>;
       })}
     </section>
-    <form aria-label="Portal settings" className="space-y-6 rounded-3xl border border-blue-200 bg-white/65 p-6" onSubmit={event => { event.preventDefault(); void act(async () => { const result = await post('/api/settings', { announcement, maintenanceMode: maintenance, settingsKey: key }); if (!result.success) throw new Error('Settings could not be saved.'); setPortalDirty(false); queryClient.setQueryData(['settings'], result.settings); setNotice('Platform settings saved. All portals will receive the update.'); }); }}>
+    <form aria-label="Portal settings" className="space-y-6 rounded-3xl border border-blue-200 bg-white/65 p-6" onSubmit={event => { event.preventDefault(); void act(async () => { const result = await post('/api/settings', { announcement, maintenanceMode: maintenance, settingsKey: key, ...(settings?.maintenanceMode && !maintenance ? { maintenanceRecoveryMessage: recoveryMessage } : {}) }); if (!result.success) throw new Error('Settings could not be saved.'); setPortalDirty(false); setRecoveryMessage(''); queryClient.setQueryData(['settings'], result.settings); setNotice('Platform settings saved. All portals will receive the update.'); }); }}>
       <h4 className="font-bold">Announcements and maintenance</h4>
       <label className="block text-sm font-semibold">Global System Announcement<textarea rows={3} maxLength={2000} value={announcement} onChange={event => { setPortalDirty(true); setAnnouncement(event.target.value); }} className={input} /><span className="text-xs font-normal text-slate-600">Sent to non-admin accounts’ notifications. Clear the text to stop publishing an announcement.</span></label>
       <label className="flex items-center justify-between gap-4 rounded-2xl border border-blue-200 bg-blue-50/60 p-4"><span><strong className="block text-sm">Platform Maintenance Mode</strong><span className="text-xs text-slate-600">Temporary restrict non admin accounts during database updates</span></span><input aria-label="Platform Maintenance Mode" type="checkbox" checked={maintenance} onChange={event => { setPortalDirty(true); setMaintenance(event.target.checked); }} className="h-5 w-5 accent-blue-600" /></label>
+      {settings?.maintenanceMode && !maintenance && <label className="block text-sm font-semibold">Message for returning users<textarea required rows={4} maxLength={2000} value={recoveryMessage} onChange={event => setRecoveryMessage(event.target.value)} className={input} /><span className="text-xs font-normal text-slate-600">Users will see this message in a popup when they sign in after maintenance. Each account can dismiss it.</span></label>}
       <button className={button} disabled={busy || !key || !self?.settingsKeyEnrolled || !settings}>Save Admin Settings</button>
     </form>
     <section className="space-y-4 rounded-3xl border border-blue-200 bg-white/65 p-6" aria-label="Payment receiving account">

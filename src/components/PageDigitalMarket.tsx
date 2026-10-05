@@ -1,3 +1,4 @@
+import { routePopupFeedback } from '../lib/feedback';
 import { usePlatformSettings } from '../context/PlatformSettingsContext';
 import { openPaymentCheckout } from '../lib/payments';
 import { effectiveMarketPlan, PLAN_LIMITS } from '../../marketPlans';
@@ -454,6 +455,7 @@ export default function PageDigitalMarket() {
   const [toastMessage, setToastMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
   const triggerToast = (text: string, type: 'success' | 'error' = 'success') => {
+    if (routePopupFeedback(text, type)) return;
     setToastMessage({ text, type });
     setTimeout(() => setToastMessage(null), 4000);
   };
@@ -1196,7 +1198,7 @@ export default function PageDigitalMarket() {
             <nav className="flex space-x-1 py-2">
               <button
                 type="button"
-                onClick={() => setActiveTab('dashboard')}
+                data-page-tabs aria-current={activeTab === 'dashboard' ? 'page' : undefined} onClick={() => setActiveTab('dashboard')}
                 className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 cursor-pointer ${
                   activeTab === 'dashboard'
                     ? 'bg-blue-600 text-white shadow-md'
@@ -1209,7 +1211,7 @@ export default function PageDigitalMarket() {
 
               <button
                 type="button"
-                onClick={() => setActiveTab('inventory')}
+                data-page-tabs aria-current={activeTab === 'inventory' ? 'page' : undefined} onClick={() => setActiveTab('inventory')}
                 className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 cursor-pointer ${
                   activeTab === 'inventory'
                     ? 'bg-blue-600 text-white shadow-md'
@@ -1222,7 +1224,7 @@ export default function PageDigitalMarket() {
 
               <button
                 type="button"
-                onClick={() => setActiveTab('services')}
+                data-page-tabs aria-current={activeTab === 'services' ? 'page' : undefined} onClick={() => setActiveTab('services')}
                 className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 cursor-pointer ${
                   activeTab === 'services'
                     ? 'bg-blue-600 text-white shadow-md'
@@ -1234,7 +1236,7 @@ export default function PageDigitalMarket() {
 
               <button
                 type="button"
-                onClick={() => setActiveTab('sales')}
+                data-page-tabs aria-current={activeTab === 'sales' ? 'page' : undefined} onClick={() => setActiveTab('sales')}
                 className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 cursor-pointer ${
                   activeTab === 'sales'
                     ? 'bg-blue-600 text-white shadow-md'
@@ -1247,7 +1249,7 @@ export default function PageDigitalMarket() {
 
               <button
                 type="button"
-                onClick={() => setActiveTab('notifications')}
+                data-page-tabs aria-current={activeTab === 'notifications' ? 'page' : undefined} onClick={() => setActiveTab('notifications')}
                 className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 cursor-pointer ${
                   activeTab === 'notifications'
                     ? 'bg-blue-600 text-white shadow-md'
@@ -1263,9 +1265,9 @@ export default function PageDigitalMarket() {
                 )}
               </button>
 
-              <button type="button" onClick={() => setActiveTab('messages')} className={`px-4 py-2.5 rounded-xl text-xs font-black flex items-center gap-2 cursor-pointer ${activeTab === 'messages' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-600 hover:bg-blue-50'}`}><span className="relative inline-flex"><MessageSquare className="w-4 h-4" /><TopNavBadge count={sellerMessageUnreadCount} /></span><span>Messages</span></button>
-              <button type="button" title="Upgrade your seller plan" aria-label="Upgrade your seller plan" onClick={() => setActiveTab("upgrade")} className={`px-3 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 cursor-pointer ${activeTab === "upgrade" ? "bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 shadow-md" : "text-amber-700 hover:bg-amber-50"}`}><CreditCard className="w-4 h-4" /><span className="sr-only">Upgrade</span></button>
-              <button type="button" onClick={() => setActiveTab("profile")} className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 cursor-pointer ${activeTab === "profile" ? "bg-blue-600 text-white shadow-md" : "text-slate-600 hover:bg-slate-100/80 hover:text-slate-900"}`}><ShieldCheck className="w-4 h-4" /><span>Store Profile</span></button>
+              <button type="button" data-page-tabs aria-current={activeTab === 'messages' ? 'page' : undefined} onClick={() => setActiveTab('messages')} className={`px-4 py-2.5 rounded-xl text-xs font-black flex items-center gap-2 cursor-pointer ${activeTab === 'messages' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-600 hover:bg-blue-50'}`}><span className="relative inline-flex"><MessageSquare className="w-4 h-4" /><TopNavBadge count={sellerMessageUnreadCount} /></span><span>Messages</span></button>
+              <button type="button" title="Upgrade your seller plan" aria-label="Upgrade your seller plan" data-page-tabs aria-current={activeTab === 'upgrade' ? 'page' : undefined} onClick={() => setActiveTab("upgrade")} className={`px-3 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 cursor-pointer ${activeTab === "upgrade" ? "bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 shadow-md" : "text-amber-700 hover:bg-amber-50"}`}><CreditCard className="w-4 h-4" /><span>Subscription</span></button>
+              <button type="button" data-page-tabs aria-current={activeTab === 'profile' ? 'page' : undefined} onClick={() => setActiveTab("profile")} className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 cursor-pointer ${activeTab === "profile" ? "bg-blue-600 text-white shadow-md" : "text-slate-600 hover:bg-slate-100/80 hover:text-slate-900"}`}><ShieldCheck className="w-4 h-4" /><span>Store Profile</span></button>
             </nav>
           </div>
         </div>
@@ -2524,7 +2526,7 @@ export default function PageDigitalMarket() {
       {/* MODAL 1: PUBLISH PRODUCT (MANDATORY DESCRIPTION AND IMAGE) */}
       {showAddModal && (
         <div className="fixed inset-0 z-50 bg-slate-950/40 backdrop-blur-sm flex items-center justify-center p-4 overflow-hidden">
-          <div className="bg-white rounded-3xl max-w-xl w-full max-h-[90vh] flex flex-col p-6 sm:p-8 shadow-2xl border border-slate-100 animate-scaleIn">
+          <div data-popup-card className="bg-white rounded-3xl max-w-xl w-full max-h-[90vh] flex flex-col p-6 sm:p-8 shadow-2xl border border-slate-100 animate-scaleIn">
             
             {/* Header: Fixed & static */}
             <div className="flex items-center justify-between pb-4 border-b border-slate-100 shrink-0">
@@ -2773,7 +2775,7 @@ export default function PageDigitalMarket() {
       {/* MODAL: OFFER / EDIT CAMPUS SERVICE */}
       {showServiceModal && (
         <div className="fixed inset-0 z-50 bg-slate-950/40 backdrop-blur-sm flex items-center justify-center p-4 overflow-hidden">
-          <div className="bg-white rounded-3xl max-w-xl w-full max-h-[90vh] flex flex-col p-6 sm:p-8 shadow-2xl border border-slate-100 animate-scaleIn">
+          <div data-popup-card className="bg-white rounded-3xl max-w-xl w-full max-h-[90vh] flex flex-col p-6 sm:p-8 shadow-2xl border border-slate-100 animate-scaleIn">
             {/* Header */}
             <div className="flex items-center justify-between pb-4 border-b border-slate-100 shrink-0">
               <div className="flex items-center gap-2.5">
@@ -3255,7 +3257,7 @@ export default function PageDigitalMarket() {
       {/* MODAL 2: OTP VERIFICATION POPUP */}
       {verifyingOrder && (
         <div className="fixed inset-0 z-50 bg-slate-950/40 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-slate-100 space-y-6 animate-scaleIn">
+          <div data-popup-card className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-slate-100 space-y-6 animate-scaleIn">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2.5">
                 <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
@@ -3332,7 +3334,7 @@ export default function PageDigitalMarket() {
       {/* VIEW ORDER PINNED MEETUP SPOT MODAL */}
       {viewingOrderMap && (
         <div className="fixed inset-0 z-[200] bg-slate-950/75 backdrop-blur-xl flex items-center justify-center p-3 sm:p-6 animate-fadeIn">
-          <div className="max-w-[calc(100vw-1rem)] sm:max-w-2xl w-full">
+          <div data-popup-card className="max-w-[calc(100vw-1rem)] sm:max-w-2xl w-full">
             <CampusMeetupMapPicker
               latitude={viewingOrderMap.meetingLatitude || 6.6745}
               longitude={viewingOrderMap.meetingLongitude || -1.5716}
@@ -3355,7 +3357,7 @@ export default function PageDigitalMarket() {
             setShowAddModal(true);
           }
         }}
-        className="sm:hidden fixed bottom-20 right-6 z-40 w-14 h-14 bg-gradient-to-tr from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-full shadow-[0_8px_32px_rgba(59,130,246,0.35)] flex items-center justify-center transition-all transform active:scale-95 cursor-pointer border border-blue-400/30"
+        data-seller-add className="sm:hidden fixed bottom-20 right-6 z-40 w-14 h-14 bg-gradient-to-tr from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-full shadow-[0_8px_32px_rgba(59,130,246,0.35)] flex items-center justify-center transition-all transform active:scale-95 cursor-pointer border border-blue-400/30"
         title={activeTab === 'services' ? "Offer New Service" : "Publish New Item"}
       >
         <Plus className="w-7 h-7 text-white" />
@@ -3365,7 +3367,7 @@ export default function PageDigitalMarket() {
       <div className="mobile-bottom-nav fixed bottom-0 left-0 right-0 z-50 sm:hidden bg-sky-100/95 backdrop-blur-xl border-t border-blue-200/80 px-2 py-1.5 flex items-center justify-around shadow-[0_-8px_32px_rgba(59,130,246,0.12)] pb-safe">
         <button
           type="button"
-          onClick={() => {
+          data-page-tabs aria-current={activeTab === 'dashboard' ? 'page' : undefined} onClick={() => {
             setActiveTab('dashboard');
             window.scrollTo({ top: 0, behavior: 'smooth' });
           }}
@@ -3381,7 +3383,7 @@ export default function PageDigitalMarket() {
 
         <button
           type="button"
-          onClick={() => {
+          data-page-tabs aria-current={activeTab === 'inventory' ? 'page' : undefined} onClick={() => {
             setActiveTab('inventory');
             window.scrollTo({ top: 0, behavior: 'smooth' });
           }}
@@ -3397,7 +3399,7 @@ export default function PageDigitalMarket() {
 
         <button
           type="button"
-          onClick={() => {
+          data-page-tabs aria-current={activeTab === 'services' ? 'page' : undefined} onClick={() => {
             setActiveTab('services');
             window.scrollTo({ top: 0, behavior: 'smooth' });
           }}
@@ -3413,7 +3415,7 @@ export default function PageDigitalMarket() {
 
         <button
           type="button"
-          onClick={() => {
+          data-page-tabs aria-current={activeTab === 'sales' ? 'page' : undefined} onClick={() => {
             setActiveTab('sales');
             window.scrollTo({ top: 0, behavior: 'smooth' });
           }}
@@ -3429,7 +3431,7 @@ export default function PageDigitalMarket() {
 
         <button
           type="button"
-          onClick={() => {
+          data-page-tabs aria-current={activeTab === 'notifications' ? 'page' : undefined} onClick={() => {
             setActiveTab('notifications');
             window.scrollTo({ top: 0, behavior: 'smooth' });
           }}
@@ -3448,11 +3450,11 @@ export default function PageDigitalMarket() {
           )}
         </button>
 
-        <button type="button" onClick={() => setActiveTab('messages')} className={`flex flex-col items-center gap-0.5 p-1 text-[9px] font-black rounded-xl min-w-0 ${activeTab === 'messages' ? 'text-blue-600' : 'text-slate-600'}`}><span className="relative inline-flex"><MessageSquare className="w-4.5 h-4.5" /><TopNavBadge count={sellerMessageUnreadCount} /></span><span>Messages</span></button>
+        <button type="button" data-page-tabs aria-current={activeTab === 'messages' ? 'page' : undefined} onClick={() => setActiveTab('messages')} className={`flex flex-col items-center gap-0.5 p-1 text-[9px] font-black rounded-xl min-w-0 ${activeTab === 'messages' ? 'text-blue-600' : 'text-slate-600'}`}><span className="relative inline-flex"><MessageSquare className="w-4.5 h-4.5" /><TopNavBadge count={sellerMessageUnreadCount} /></span><span>Messages</span></button>
 
         <button
           type="button"
-          onClick={() => {
+          data-page-tabs aria-current={activeTab === 'upgrade' ? 'page' : undefined} onClick={() => {
             setActiveTab('upgrade');
             window.scrollTo({ top: 0, behavior: 'smooth' });
           }}
@@ -3470,7 +3472,7 @@ export default function PageDigitalMarket() {
       {/* SELECT SERVICE LOCATION ON MAP MODAL */}
       {isMapLocationPickerOpen && (
         <div className="fixed inset-0 z-[200] bg-slate-950/75 backdrop-blur-xl flex items-center justify-center p-3 sm:p-6 animate-fadeIn">
-          <div className="max-w-[calc(100vw-1rem)] sm:max-w-2xl w-full">
+          <div data-popup-card className="max-w-[calc(100vw-1rem)] sm:max-w-2xl w-full">
             <CampusMeetupMapPicker
               latitude={servLat}
               longitude={servLng}
@@ -3494,7 +3496,7 @@ export default function PageDigitalMarket() {
       {/* VIEW EXACT SERVICE LOCATION PIN MODAL */}
       {viewingServiceMap && (
         <div className="fixed inset-0 z-[200] bg-slate-950/75 backdrop-blur-xl flex items-center justify-center p-3 sm:p-6 animate-fadeIn">
-          <div className="max-w-[calc(100vw-1rem)] sm:max-w-2xl w-full">
+          <div data-popup-card className="max-w-[calc(100vw-1rem)] sm:max-w-2xl w-full">
             <CampusMeetupMapPicker
               latitude={viewingServiceMap.lat || viewingServiceMap.latitude || 6.6745}
               longitude={viewingServiceMap.lng || viewingServiceMap.longitude || -1.5716}
@@ -3510,7 +3512,7 @@ export default function PageDigitalMarket() {
       {/* SERVICE RATINGS & STUDENT REVIEWS MODAL */}
       {viewingServiceReviews && (
         <div className="fixed inset-0 z-[200] bg-slate-950/75 backdrop-blur-xl flex items-center justify-center p-4 animate-fadeIn">
-          <div className="bg-white rounded-3xl max-w-lg w-full max-h-[85vh] flex flex-col p-6 shadow-2xl border border-slate-100 animate-scaleUp">
+          <div data-popup-card className="bg-white rounded-3xl max-w-lg w-full max-h-[85vh] flex flex-col p-6 shadow-2xl border border-slate-100 animate-scaleUp">
             {/* Header */}
             <div className="flex items-center justify-between pb-4 border-b border-slate-100 shrink-0">
               <div className="flex items-center gap-3">

@@ -147,7 +147,15 @@ owner then signs in and enrolls again; resetting this key preserves the wipe key
   render as plain text across non-admin portals; clear the text to remove them.
 - Maintenance blocks existing non-admin sessions, non-admin logins, signup and other
   account operations before body parsing. Administrators remain able to log in and disable
-  it with their own settings keys. Public settings, health, invalidation streams, logout
+  it with their own settings keys and a required return message (1–2,000 characters).
+  Public maintenance copy reveals neither database work nor administrator access.
+  The latest return message is available only via authenticated
+  `GET /api/auth/maintenance-notice`. Every account sees a modal on returning;
+  `POST /api/auth/maintenance-notice/dismiss` accepts only the notice ID and derives
+  the dismissal owner from the session. Messages and per-account dismissals persist
+  in private platform settings, survive restarts, and reset for the next lockdown.
+  During PostgreSQL migration, preserve these notices and owner-only acknowledgements
+  with RLS. Public settings, health, invalidation streams, logout
   and secret administrator-invitation acceptance remain available. These public streams
   contain no account records and retain their connection/resource limits.
 - New marketplace applications snapshot the configured registration fee. Existing quoted
@@ -181,3 +189,7 @@ No operational
 maintenance setting or administrator credentials are changed by the tests.
 
 System announcements are delivered as private, unread notifications to existing non-admin accounts when an administrator publishes new text. They do not create floating banners or toasts. Unchanged saves do not duplicate announcements; clearing the setting preserves notification history.
+
+Registration approval requires the authenticated administrator’s private approval key. This is enforced before manager approval aliases, marketplace application approval, hostel verification approvals, approved-state hostel edits, and administrator hostel creation. Settings keys and another administrator’s keys cannot authorize approval; keys are stripped before domain records are updated and share the existing attempt limit. The UI asks for the key in a modal and keeps failed approval reasons on that card.
+
+The Accounts directory lists primary user identities only. Its account tree derives registered room, manager, seller and staff relationships from stored parent/manager IDs. Each node opens the existing governed account actions; moderation quorum and primary-account inheritance remain enforced. Unlinked legacy accounts are not assigned to users by guessing from email addresses. Settings and governance failures appear under the initiating change with a dismissible top-screen notification.

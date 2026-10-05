@@ -41,6 +41,7 @@ export interface PersistentStore {
   credentialsRevokedAt?: string;
   keyDispatches?: any[];
   platformSettings: {
+    maintenanceRecoveryNotice?: { id: string; message: string; dismissedBy: string[] };
     paystackSettlement?: { code: string; mode: string; updatedBy: string; updatedAt: string };
     semesterFee?: number;
     subscriptionPrices?: Record<string, number>;

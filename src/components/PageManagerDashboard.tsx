@@ -1,3 +1,4 @@
+import { routePopupFeedback } from '../lib/feedback';
 import RouteSkeleton from './RouteSkeleton';
 import DashboardOverlay from './DashboardOverlay';
 import PasswordStrengthGauge from './PasswordStrengthGauge';
@@ -252,6 +253,7 @@ export default function PageManagerDashboard() {
   };
 
   const triggerToast = (msg: string) => {
+    if (routePopupFeedback(msg, /success|submitted|updated|copied|approved|accepted|retained|removed|dispatched|verified|thank you/i.test(msg) && !/fail|invalid|unable|cannot|could not/i.test(msg) ? 'success' : 'error')) return;
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 1500);
   };
@@ -965,7 +967,7 @@ export default function PageManagerDashboard() {
 
       {/* MOBILE BOTTOM NAV (lg:hidden) */}
       <nav className="mobile-bottom-nav lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-xl border-t border-slate-200 shadow-[0_-10px_40px_rgba(0,0,0,0.08)]">
-        <div className="flex items-center gap-1 overflow-x-auto px-2 py-2 pb-safe snap-x hide-scrollbar">
+        <div data-mobile-nav-items className="flex items-center gap-1 overflow-x-auto px-2 py-2 pb-safe snap-x hide-scrollbar">
           {[
             { id: 'overview', label: 'Overview', icon: ShieldCheck, locked: !hasApprovedProperty },
             { id: 'properties', label: 'Properties', icon: Building2, locked: !hasApprovedProperty },
@@ -1001,6 +1003,7 @@ export default function PageManagerDashboard() {
             return (
               <button
                 key={tab.id}
+                aria-current={activeTab === tab.id ? 'page' : undefined}
                 onClick={() => !tab.locked && setActiveTab(tab.id as any)}
                 disabled={tab.locked}
                 className={`snap-center shrink-0 flex flex-col items-center justify-center w-[64px] h-12 rounded-xl transition-all relative ${
@@ -1040,7 +1043,7 @@ export default function PageManagerDashboard() {
         <div className="w-px h-6 bg-slate-200/70 shrink-0" />
         {[
         { id: 'overview', label: 'Overview', icon: ShieldCheck }, { id: 'properties', label: 'Properties', icon: Building2 }, { id: 'blocks', label: 'Blocks', icon: Layers }, { id: 'staff', label: 'Staff', icon: Users, badge: staffBargains.filter(b => (b.status || '').toLowerCase() === 'pending').length || staffList.length }, { id: 'maintenance', label: 'Fixes', icon: Wrench, badge: maintenanceIssues.filter(i => !i.closedByManager && (i.status === 'Pending' || i.status === 'Resolved' || i.rescheduleRequested || i.staffRescheduleRequested || i.staffDeclined)).length || activeIssues }, { id: 'meetings', label: 'Meetings', icon: CalendarCheck }, { id: 'notifications', label: 'Alerts', icon: Bell, badge: (systemNotifications || []).filter(n => !n.read).length + boardRequests.filter(r => r.status === 'Pending' || r.adminNotes).length }
-      ].map(tab => <button key={tab.id} disabled={!hasApprovedProperty && tab.id !== 'notifications'} onClick={() => setActiveTab(tab.id as any)} aria-label={`${tab.label}${tab.badge ? ` (${tab.badge})` : ''}`} className={`flex-1 min-w-0 flex flex-col items-center gap-0.5 py-1.5 rounded-xl text-[9px] font-bold ${activeTab === tab.id ? 'text-blue-700 bg-blue-100/65' : 'text-slate-500 hover:bg-white/70'} disabled:opacity-40 cursor-pointer`}><span className="relative inline-flex"><tab.icon className="w-4 h-4" /><TopNavBadge count={tab.badge} /></span><span className="truncate max-w-full">{tab.label}</span></button>)}<button onClick={() => setShowLogoutConfirm(true)} title="Sign Out" className="shrink-0 flex flex-col items-center gap-0.5 px-2 py-1.5 text-[9px] font-bold text-rose-600 hover:bg-rose-50 rounded-xl cursor-pointer"><LogOutIcon className="w-4 h-4" /><span>Sign Out</span></button><button onClick={() => setIsSidebarTopNav(false)} title="Show sidebar" className="p-2 text-slate-500 hover:text-blue-700 cursor-pointer"><PanelLeftOpen className="w-4 h-4" /></button></div></nav>}
+      ].map(tab => <button aria-current={activeTab === tab.id ? 'page' : undefined} key={tab.id} disabled={!hasApprovedProperty && tab.id !== 'notifications'} onClick={() => setActiveTab(tab.id as any)} aria-label={`${tab.label}${tab.badge ? ` (${tab.badge})` : ''}`} className={`flex-1 min-w-0 flex flex-col items-center gap-0.5 py-1.5 rounded-xl text-[9px] font-bold ${activeTab === tab.id ? 'text-blue-700 bg-blue-100/65' : 'text-slate-500 hover:bg-white/70'} disabled:opacity-40 cursor-pointer`}><span className="relative inline-flex"><tab.icon className="w-4 h-4" /><TopNavBadge count={tab.badge} /></span><span className="truncate max-w-full">{tab.label}</span></button>)}<button onClick={() => setShowLogoutConfirm(true)} title="Sign Out" className="shrink-0 flex flex-col items-center gap-0.5 px-2 py-1.5 text-[9px] font-bold text-rose-600 hover:bg-rose-50 rounded-xl cursor-pointer"><LogOutIcon className="w-4 h-4" /><span>Sign Out</span></button><button onClick={() => setIsSidebarTopNav(false)} title="Show sidebar" className="p-2 text-slate-500 hover:text-blue-700 cursor-pointer"><PanelLeftOpen className="w-4 h-4" /></button></div></nav>}
       {!isSidebarTopNav && <aside className={`hidden lg:flex ${isSidebarCollapsed ? 'w-20 p-4' : 'w-72 p-6'} my-6 ml-6 h-[calc(100vh-3rem)] bg-gradient-to-br from-sky-100/90 via-blue-100/85 to-amber-50/40 backdrop-blur-3xl border border-sky-200/80 shadow-2xl rounded-3xl flex flex-col justify-between shrink-0 overflow-y-auto z-20 transition-all duration-300 relative`}>
         <button onClick={() => setIsSidebarTopNav(true)} title="Use top navigation" className="absolute top-3 right-3 p-2 rounded-xl text-slate-500 hover:text-blue-700 hover:bg-white/70 cursor-pointer"><PanelLeftClose className="w-4 h-4" /></button>
 
@@ -1142,6 +1145,7 @@ export default function PageManagerDashboard() {
               return (
                 <button
                   key={tab.id}
+                  aria-current={activeTab === tab.id ? 'page' : undefined}
                   onClick={() => !isLocked && setActiveTab(tab.id as any)}
                   disabled={isLocked}
                   title={tab.label}
@@ -2605,7 +2609,7 @@ export default function PageManagerDashboard() {
                 {/* LOG MAINTENANCE MODAL */}
                 {showAddIssueModal && (
                   <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-                    <div className="bg-white rounded-3xl p-6 md:p-8 max-w-lg w-full shadow-2xl border border-blue-200/80 space-y-6">
+                    <div data-popup-card className="bg-white rounded-3xl p-6 md:p-8 max-w-lg w-full shadow-2xl border border-blue-200/80 space-y-6">
                       <div className="flex justify-between items-center border-b border-slate-100 pb-4">
                         <h3 className="text-lg font-bold text-slate-900">Log Maintenance Work Order</h3>
                         <button onClick={() => setShowAddIssueModal(false)} className="text-slate-400 hover:text-slate-600">
@@ -3061,7 +3065,7 @@ export default function PageManagerDashboard() {
       {/* ======================================================== */}
       {selectedBargainToReview && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-white rounded-3xl max-w-xl w-full p-6 md:p-8 shadow-2xl border border-slate-200 space-y-6 max-h-[90vh] overflow-y-auto">
+          <div data-popup-card className="bg-white rounded-3xl max-w-xl w-full p-6 md:p-8 shadow-2xl border border-slate-200 space-y-6 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-slate-100 pb-4">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center font-bold">
@@ -3263,7 +3267,7 @@ export default function PageManagerDashboard() {
       {/* ======================================================== */}
       {dispatchModalOpen && selectedKeyForDispatch && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-fadeIn">
-          <div className="bg-white/95 rounded-[2rem] max-w-lg w-full p-6 sm:p-8 shadow-2xl border border-blue-100 backdrop-blur-2xl space-y-5 animate-scaleUp">
+          <div data-popup-card className="bg-white/95 rounded-[2rem] max-w-lg w-full p-6 sm:p-8 shadow-2xl border border-blue-100 backdrop-blur-2xl space-y-5 animate-scaleUp">
             
             {/* Modal Header */}
             <div className="flex items-start justify-between border-b border-slate-100 pb-4">
@@ -3417,7 +3421,7 @@ export default function PageManagerDashboard() {
       {/* ADD STAFF MODAL */}
       {showAddStaffModal && (
         <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-md flex items-center justify-center p-4 z-[999] overflow-y-auto">
-          <div className="onboarding-fields my-auto max-h-[calc(100dvh-2rem)] overflow-y-auto bg-white rounded-3xl p-6 md:p-8 max-w-lg w-full shadow-2xl border border-slate-200 space-y-6 relative z-[1000] text-slate-900">
+          <div data-popup-card className="onboarding-fields my-auto max-h-[calc(100dvh-2rem)] overflow-y-auto bg-white rounded-3xl p-6 md:p-8 max-w-lg w-full shadow-2xl border border-slate-200 space-y-6 relative z-[1000] text-slate-900">
             <div className="flex justify-between items-center border-b border-slate-100 pb-4">
               <div>
                 <h3 className="text-lg font-bold text-slate-900">Add Staff Member</h3>
@@ -3605,7 +3609,7 @@ export default function PageManagerDashboard() {
       <AnimatePresence>
         {showWelcomePopup && (
           <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-blue-950/40 backdrop-blur-xl">
-            <motion.div
+            <motion.div data-popup-card
               initial={{ opacity: 0, scale: 0.95, y: 15 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 15 }}
@@ -3657,7 +3661,7 @@ export default function PageManagerDashboard() {
 
       {roomAccessAction && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-950/70 backdrop-blur-md p-4" role="dialog" aria-modal="true" aria-labelledby="room-access-title">
-          <div className="w-full max-w-lg rounded-3xl border border-slate-200 bg-white p-6 space-y-4 shadow-2xl">
+          <div data-popup-card className="w-full max-w-lg rounded-3xl border border-slate-200 bg-white p-6 space-y-4 shadow-2xl">
             <h3 id="room-access-title" className="text-lg font-black text-slate-900">
               {roomAccessAction.type === 'release' ? `Remove occupant from Room ${roomAccessAction.room.roomNumber}?` : 'Reshuffle all room keys?'}
             </h3>

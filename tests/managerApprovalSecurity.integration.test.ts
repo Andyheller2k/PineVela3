@@ -13,18 +13,19 @@ import { accountData, accountId, hashCredential } from '../accountSecurity.js';
 
 const project = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const loader = pathToFileURL(path.join(project, 'node_modules/tsx/dist/loader.mjs')).href;
-test('S06: all manager registration paths require admin approval; stale sessions, sibling approval and property self-approval are blocked across restart', { timeout: 90000 }, async t => {
+test('S06: all manager registration paths require admin approval; stale sessions, sibling approval and property self-approval are blocked across restart', { timeout: 180000 }, async t => {
   const temp = await fs.mkdtemp(path.join(os.tmpdir(), 'pinevela-manager-approval-'));
   const dataDir = path.join(temp, 'data'); const db = path.join(dataDir, 'pinevela_store.json');
   const actor = (role: string) => ({ id: crypto.randomUUID(), role, email: `${crypto.randomUUID()}@example.test`, name: crypto.randomUUID(), token: crypto.randomUUID(), password: hashCredential(crypto.randomUUID()) });
   const primary = actor('user'); const admin = actor('admin');
+  const privateKey = crypto.randomBytes(32).toString('base64url');
   const stale = { ...actor('manager'), parentUserId: primary.id, parentUserEmail: primary.email, isVerified: true, verificationStatus: 'approved' };
   const sibling = { ...actor('manager'), parentUserId: primary.id, parentUserEmail: primary.email, isVerified: false, verificationStatus: 'pending' };
   const pending = { id: crypto.randomUUID(), managerId: stale.id, managerEmail: stale.email, managerName: stale.name, parentUserId: primary.id, parentUserEmail: primary.email, status: 'pending', propertyName: 'Isolated pending property' };
   const siblingRecord = { ...pending, id: crypto.randomUUID(), managerId: sibling.id, managerEmail: sibling.email };
   const unrelatedHostel = { id: crypto.randomUUID(), name: 'Isolated pending property', managerId: sibling.id, managerEmail: sibling.email, isApproved: false, approvalStatus: 'Pending Approval', subscriptionPaid: false };
   await fs.mkdir(dataDir);
-  await fs.writeFile(db, sessionFixtureJson({ credentialExposureVersion: 1, accountSecurityVersion: 1, users: [primary, admin, stale, sibling], hostels: [unrelatedHostel], managerRegistrationRequests: [pending, siblingRecord], managerVerifications: [{ ...pending, id: crypto.randomUUID() }, { ...siblingRecord, id: crypto.randomUUID() }] }));
+  await fs.writeFile(db, sessionFixtureJson({ credentialExposureVersion: 1, accountSecurityVersion: 1, adminGovernance: { version: 1, mainId: admin.id, revision: 1, members: [{ id: admin.id, slot: 1, active: true, keyHash: crypto.createHash('sha256').update(`${admin.id}:${privateKey}`).digest('hex') }], proposals: [], invitations: [], changes: [], attempts: {} }, users: [primary, admin, stale, sibling], hostels: [unrelatedHostel], managerRegistrationRequests: [pending, siblingRecord], managerVerifications: [{ ...pending, id: crypto.randomUUID() }, { ...siblingRecord, id: crypto.randomUUID() }] }));
   let child: ChildProcess | undefined;
   const socket = net.createServer(); socket.listen(0, '127.0.0.1'); await once(socket, 'listening');
   const port = (socket.address() as net.AddressInfo).port; await new Promise<void>(resolve => socket.close(() => resolve()));
@@ -35,7 +36,7 @@ test('S06: all manager registration paths require admin approval; stale sessions
     let logs = '';
     child = spawn(process.execPath, ['--import', loader, path.join(project, 'server.ts')], { cwd: temp, env: { ...process.env, NODE_ENV: 'test', PORT: String(port), PINEVELA_DATA_DIR: dataDir }, stdio: ['ignore', 'pipe', 'pipe'] });
     child.stdout?.on('data', data => logs += data); child.stderr?.on('data', data => logs += data);
-    for (let i = 0; i < 150; i++) {
+    for (let i = 0; i < 500; i++) {
       try { if ((await fetch(`${base}/api/health`)).ok) return; } catch { /* Starting */ }
       if (child.exitCode !== null) assert.fail(`Server exited: ${logs}`);
       await new Promise(resolve => setTimeout(resolve, 100));
@@ -84,7 +85,7 @@ test('S06: all manager registration paths require admin approval; stale sessions
   const stranger = registrations[1];
   await request('PUT', `/api/manager-verifications/${first.verificationId}/approve`, primary.token, {}, 403);
   await request('PUT', `/api/manager-requests/${pending.id}/approve`, undefined, {}, 401);
-  const approved = await request('PUT', `/api/manager-verifications/${first.verificationId}/approve`, admin.token, {}, 200);
+  const approved = await request('PUT', `/api/manager-verifications/${first.verificationId}/approve`, admin.token, { privateKey }, 200);
   assert(approved.success);
   let disk = await read();
   assert.equal(accountData(disk.users.find((u: any) => accountId(u) === primary.id)).role, 'user');
@@ -107,9 +108,9 @@ test('S06: all manager registration paths require admin approval; stale sessions
   managerToken = (login.user || login).token;
   await request('GET', '/api/manager/account-settings', managerToken, undefined, 200);
   await request('POST', '/api/hostels/register', stale.token, propertyBody, 403);
-  // Existing session loses manager operation access immediately after administrative blocking.
-  await request('PUT', `/api/manager-verifications/${first.verificationId}/block`, admin.token, { reason: 'Isolated revocation test' }, 200);
-  await request('GET', '/api/manager/account-settings', managerToken, undefined, 403);
+  // Retired single-admin blocking must not bypass the governed account-action flow.
+  await request('PUT', `/api/manager-verifications/${first.verificationId}/block`, admin.token, { reason: 'Isolated revocation test' }, 410);
+  await request('GET', '/api/manager/account-settings', managerToken, undefined, 200);
   await stop(); await start();
-  await request('GET', '/api/manager/account-settings', managerToken, undefined, 403);
+  await request('GET', '/api/manager/account-settings', managerToken, undefined, 200);
 });

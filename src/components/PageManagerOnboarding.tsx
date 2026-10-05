@@ -1,3 +1,4 @@
+import { routePopupFeedback } from '../lib/feedback';
 import RouteSkeleton from './RouteSkeleton';
 import PasswordStrengthGauge from './PasswordStrengthGauge';
 import OnboardingProgress from './OnboardingProgress';
@@ -180,6 +181,7 @@ export default function PageManagerOnboarding() {
   const [toastType, setToastType] = useState<'success' | 'error' | 'info'>('info');
 
   const triggerToast = (msg: string, type: 'success' | 'error' | 'info' = 'info') => {
+    if (routePopupFeedback(msg, type)) return;
     setToastMessage(msg);
     setToastType(type);
     setTimeout(() => {
@@ -1020,7 +1022,7 @@ export default function PageManagerOnboarding() {
       {/* Account Deletion Modal */}
       {showDeleteModal && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fadeIn">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-slate-100 space-y-6 relative">
+          <div data-popup-card className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-slate-100 space-y-6 relative">
             <button
               type="button"
               onClick={() => setShowDeleteModal(false)}

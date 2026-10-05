@@ -1,3 +1,5 @@
+import { installAdminApprovalSecurity } from './adminApprovalSecurity.js';
+import { installMaintenanceNotice } from './maintenanceNotice.js';
 import { installPaystackPayments, PaystackPayments, marketAccessPaid, publicPaidStore, hasVerifiedRegistration } from './paystackPayments.js';
 import { effectiveMarketPlan, PLAN_LIMITS, planCapacityError } from './marketPlans.js';
 import { AdminGovernance, GovernanceError, initializeAdminGovernance, activeAdministrator } from './adminGovernance.js';
@@ -10,7 +12,7 @@ import { meetingVisible, notificationVisible, notificationReaderKey, notificatio
 import { ownsMarketStore } from './marketOwnership.js';
 import { marketMediaFields, MarketMediaError } from './marketMediaSecurity.js';
 import { createSessionToken, setRecordSession, clearRecordSession, sessionMatches, requestSessionToken, revokeMatchingSessions, cookieSessionRequest, setSessionCookie, clearSessionCookie, sessionOriginGuard, sessionLifetimeMs } from './sessionSecurity.js';
-import { moderationAccounts, accountAccess, banResponse, accountRestriction, tokenAccount, revokedBanNotice, governedMarketBanned } from './accountModeration.js';
+import { moderationAccounts, accountDirectoryRelations, accountAccess, banResponse, accountRestriction, tokenAccount, revokedBanNotice, governedMarketBanned } from './accountModeration.js';
 import { createImageStorage, ImageUploadError } from './imageUploadSecurity.js';
 import { createResourceProtection, EventConnections, guardAsyncRoutes, ResourceLimitError, resourceFailure, trustedProxyAddresses, UPLOAD_ROUTE, MARKET_UPLOAD_ROUTE, ADMIN_PROFILE_UPLOAD_ROUTE, isImageUploadRoute } from './resourceSecurity.js';
 import { installMarketRatings, verifiedMarketRatings, publicMarketRating, ratingSummary } from './marketRatingSecurity.js';
@@ -1167,6 +1169,8 @@ async function startServer() {
   });
 
 
+
+  installAdminApprovalSecurity(app, requireAuth, (id, key) => governance.verifyApprovalKey(id, key));
 
   app.get("/api/settings", async (req, res) => {
     res.set('Cache-Control', 'no-store').json(publicPlatformSettings(getStoreInstance()));
@@ -2563,6 +2567,7 @@ async function startServer() {
   app.post("/api/auth/profile", requireAuth(), handleProfileUpdate);
 
   installThemePreferences(app, requireAuth, getStoreInstance, syncManagedStore);
+  installMaintenanceNotice(app, requireAuth, getStoreInstance, syncManagedStore);
 
   installAdminGovernance(app, requireAuth, governance);
 
@@ -10370,10 +10375,10 @@ async function startServer() {
   app.get("/api/admin/all-users", requireAuth(["admin"]), async (req: any, res) => {
     try {
       const store = getStoreInstance();
-      const allUsersList = moderationAccounts(store).map(account => {
+      const allUsersList = accountDirectoryRelations(store).map(({ account, parentId, parentRole, primaryAccountId }) => {
         const access = accountAccess(store, account.id, account.role);
         return { id: account.id, name: account.name, role: account.role, email: account.email,
-          phone: account.phone, hostelName: account.hostelName, registeredAt: account.registeredAt,
+          phone: account.phone, hostelName: account.hostelName, registeredAt: account.registeredAt, parentId, parentRole, primaryAccountId,
           status: access.banned ? 'Banned' : access.restrictions.length ? 'Restricted' : account.status || 'Active', accountAccess: access };
       });
       const breakdown = {

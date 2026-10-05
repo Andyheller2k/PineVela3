@@ -8,7 +8,7 @@ export function validatePricingSettings(body: any): PricingSettings {
   if (!body || typeof body !== 'object' || Array.isArray(body) || Object.keys(body).length !== 4 || Object.keys(body).some(key => !['registrationFee', 'commission', 'semesterFee', 'subscriptionPrices'].includes(key))) throw new Error('Supply only registration, commission, semester and all three monthly prices.');
   return pricingSettings(validatePlatformSettings({ ...body, announcement: '', maintenanceMode: false }));
 }
-export const MAINTENANCE_MESSAGE = 'PineVela is temporarily unavailable during database updates. Administrator accounts can still sign in.';
+export const MAINTENANCE_MESSAGE = 'PineVela is temporarily unavailable ,please try again later,thank you.';
 export function publicPlatformSettings(store: any): PlatformSettings {
   const settings = store.platformSettings || {};
   return {
@@ -22,11 +22,12 @@ export function publicPlatformSettings(store: any): PlatformSettings {
 }
 function validMoney(value: any): boolean { return typeof value === "number" && Number.isFinite(value) && value >= 0 && value <= 1_000_000 && Math.abs(value * 100 - Math.round(value * 100)) < 0.00001 && (value === 0 || value >= 0.1); }
 export function validatePlatformSettings(body: any, current?: any): PlatformSettings {
-  if (!body || typeof body !== 'object' || Array.isArray(body) || Object.keys(body).some(key => !['registrationFee', 'commission', 'announcement', 'maintenanceMode', 'settingsKey', 'semesterFee', 'subscriptionPrices'].includes(key))) throw new Error('Only platform settings may be changed.');
+  if (!body || typeof body !== 'object' || Array.isArray(body) || Object.keys(body).some(key => !['registrationFee', 'commission', 'announcement', 'maintenanceMode', 'settingsKey', 'semesterFee', 'subscriptionPrices', 'maintenanceRecoveryMessage'].includes(key))) throw new Error('Only platform settings may be changed.');
   if (typeof body.registrationFee !== 'number' || !Number.isFinite(body.registrationFee) || body.registrationFee < 0 || body.registrationFee > 1_000_000 || Math.abs(body.registrationFee * 100 - Math.round(body.registrationFee * 100)) > 0.00001) throw new Error('Registration fee must be a valid GHS amount with at most two decimal places.');
   if (typeof body.commission !== 'number' || !Number.isFinite(body.commission) || body.commission < 0 || body.commission > 100) throw new Error('Commission must be a number between 0 and 100 percent.');
   if (typeof body.announcement !== 'string' || body.announcement.length > 2000) throw new Error('Announcement must contain at most 2,000 characters.');
   if (typeof body.maintenanceMode !== 'boolean') throw new Error('Maintenance mode must be a boolean.');
+  if (body.maintenanceRecoveryMessage !== undefined && (typeof body.maintenanceRecoveryMessage !== 'string' || body.maintenanceRecoveryMessage.trim().length > 2000)) throw new Error('Return message must contain at most 2,000 characters.');
   const defaults = publicPlatformSettings({ platformSettings: current });
   const semesterFee = body.semesterFee === undefined ? defaults.semesterFee : body.semesterFee;
   const subscriptionPrices = body.subscriptionPrices === undefined ? defaults.subscriptionPrices : body.subscriptionPrices;

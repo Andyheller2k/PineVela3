@@ -1,3 +1,4 @@
+import { routePopupFeedback } from '../lib/feedback';
 import RouteSkeleton from './RouteSkeleton';
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -151,6 +152,7 @@ export default function PageResidentDashboard() {
   const hasMaintenanceUpdates = activeUpdatedIssues.length > 0;
 
   const triggerToast = (msg: string) => {
+    if (routePopupFeedback(msg, /success|submitted|updated|copied|approved|accepted|retained|removed|dispatched|verified|thank you/i.test(msg) && !/fail|invalid|unable|cannot|could not/i.test(msg) ? 'success' : 'error')) return;
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3000);
   };
@@ -374,7 +376,7 @@ export default function PageResidentDashboard() {
           <span className="text-[9px] font-bold text-slate-500">Profile</span>
         </button>
         <div className="w-px h-6 bg-slate-200/70 shrink-0" />
-        {[{ id: 'room', label: 'Room', icon: Home }, { id: 'complaints', label: 'Issues', icon: Wrench, badge: unconfirmedIssues.length || activeUpdatedIssues.length }, { id: 'alerts', label: 'Alerts', icon: Bell, badge: unreadCount }, { id: 'settings', label: 'Settings', icon: Settings }].map(tab => <button key={tab.id} onClick={() => setActiveTab(tab.id as any)} aria-label={`${tab.label}${tab.badge ? ` (${tab.badge})` : ''}`} className={`flex-1 min-w-0 flex flex-col items-center gap-0.5 py-1.5 rounded-xl text-[9px] font-bold cursor-pointer ${activeTab === tab.id ? 'text-blue-700 bg-blue-100/65' : 'text-slate-500 hover:bg-white/70'}`}><span className="relative inline-flex"><tab.icon className="w-4 h-4" /><TopNavBadge count={tab.badge} /></span><span className="truncate max-w-full">{tab.label}</span></button>)}<button onClick={() => setShowSignoutConfirmModal(true)} className="shrink-0 flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-xl text-[9px] font-bold text-rose-600 hover:bg-rose-50 cursor-pointer" title="Sign Out"><LogOut className="w-4 h-4" /><span>Sign Out</span></button><button onClick={() => setIsSidebarTopNav(false)} title="Show sidebar" className="p-2 text-slate-500 hover:text-blue-700 cursor-pointer"><PanelLeftOpen className="w-4 h-4" /></button></div></nav>}
+        {[{ id: 'room', label: 'Room', icon: Home }, { id: 'complaints', label: 'Issues', icon: Wrench, badge: unconfirmedIssues.length || activeUpdatedIssues.length }, { id: 'alerts', label: 'Alerts', icon: Bell, badge: unreadCount }, { id: 'settings', label: 'Settings', icon: Settings }].map(tab => <button aria-current={activeTab === tab.id ? 'page' : undefined} key={tab.id} onClick={() => setActiveTab(tab.id as any)} aria-label={`${tab.label}${tab.badge ? ` (${tab.badge})` : ''}`} className={`flex-1 min-w-0 flex flex-col items-center gap-0.5 py-1.5 rounded-xl text-[9px] font-bold cursor-pointer ${activeTab === tab.id ? 'text-blue-700 bg-blue-100/65' : 'text-slate-500 hover:bg-white/70'}`}><span className="relative inline-flex"><tab.icon className="w-4 h-4" /><TopNavBadge count={tab.badge} /></span><span className="truncate max-w-full">{tab.label}</span></button>)}<button onClick={() => setShowSignoutConfirmModal(true)} className="shrink-0 flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-xl text-[9px] font-bold text-rose-600 hover:bg-rose-50 cursor-pointer" title="Sign Out"><LogOut className="w-4 h-4" /><span>Sign Out</span></button><button onClick={() => setIsSidebarTopNav(false)} title="Show sidebar" className="p-2 text-slate-500 hover:text-blue-700 cursor-pointer"><PanelLeftOpen className="w-4 h-4" /></button></div></nav>}
       {!isSidebarTopNav && <aside className={`hidden lg:flex ${isSidebarCollapsed ? 'w-20 p-4' : 'w-72 p-6'} my-6 ml-6 h-[calc(100vh-3rem)] bg-gradient-to-br from-sky-100/90 via-blue-100/85 to-amber-50/40 backdrop-blur-3xl border border-sky-200/80 shadow-2xl rounded-3xl flex flex-col justify-between shrink-0 overflow-y-auto z-20 transition-all duration-300 relative`}>
         <button onClick={() => setIsSidebarTopNav(true)} title="Use top navigation" className="absolute top-3 right-3 p-2 rounded-xl text-slate-500 hover:text-blue-700 hover:bg-white/70 cursor-pointer"><PanelLeftClose className="w-4 h-4" /></button>
 
@@ -508,7 +510,7 @@ export default function PageResidentDashboard() {
       {/* MOBILE BOTTOM NAVIGATION */}
       <nav className="mobile-bottom-nav lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200/80 flex items-center justify-around py-2 shadow-lg">
         <button 
-          onClick={() => setActiveTab('room')}
+          aria-current={activeTab === 'room' ? 'page' : undefined} onClick={() => setActiveTab('room')}
           className={`flex flex-col items-center p-1.5 cursor-pointer relative ${activeTab === 'room' ? 'text-blue-900' : 'text-slate-400'}`}
         >
           <div className="relative">
@@ -523,7 +525,7 @@ export default function PageResidentDashboard() {
           <span className="text-[10px] font-bold mt-0.5">My Room</span>
         </button>
         <button 
-          onClick={() => setActiveTab('complaints')}
+          aria-current={activeTab === 'complaints' ? 'page' : undefined} onClick={() => setActiveTab('complaints')}
           className={`flex flex-col items-center p-1.5 cursor-pointer relative ${activeTab === 'complaints' ? 'text-blue-900' : hasMaintenanceUpdates ? 'text-red-600 font-bold' : 'text-slate-400'}`}
         >
           <div className="relative">
@@ -538,14 +540,14 @@ export default function PageResidentDashboard() {
           <span className="text-[10px] font-bold mt-0.5">Complaints</span>
         </button>
         <button 
-          onClick={() => setActiveTab('alerts')}
+          aria-current={activeTab === 'alerts' ? 'page' : undefined} onClick={() => setActiveTab('alerts')}
           className={`flex flex-col items-center p-1.5 cursor-pointer ${activeTab === 'alerts' ? 'text-blue-900' : 'text-slate-400'}`}
         >
           <Bell size={18} />
           <span className="text-[10px] font-bold mt-0.5">Bulletins</span>
         </button>
         <button 
-          onClick={() => setActiveTab('settings')}
+          aria-current={activeTab === 'settings' ? 'page' : undefined} onClick={() => setActiveTab('settings')}
           className={`flex flex-col items-center p-1.5 cursor-pointer ${activeTab === 'settings' ? 'text-blue-900' : 'text-slate-400'}`}
         >
           <Settings size={18} />
@@ -1382,7 +1384,7 @@ export default function PageResidentDashboard() {
       {/* NEW COMPLAINT MODAL */}
       {showNewIssueModal && (
         <div className="fixed inset-0 bg-slate-950/40 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-          <motion.div 
+          <motion.div data-popup-card
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-sky-200/80 space-y-4 max-h-[90vh] overflow-y-auto"
@@ -1602,7 +1604,7 @@ export default function PageResidentDashboard() {
       {/* VERIFY RESOLUTION & RATE STAFF MODAL */}
       {selectedIssueForConfirm && (
         <div className="fixed inset-0 bg-slate-950/50 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-6 space-y-4 shadow-2xl border border-slate-100 animate-scale-in max-h-[90vh] overflow-y-auto">
+          <div data-popup-card className="bg-white rounded-3xl max-w-lg w-full p-6 space-y-4 shadow-2xl border border-slate-100 animate-scale-in max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold">
@@ -1738,7 +1740,7 @@ export default function PageResidentDashboard() {
       {/* SIGN OUT CONFIRMATION MODAL */}
       {showSignoutConfirmModal && (
         <div className="fixed inset-0 bg-slate-950/40 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-3xl max-w-sm w-full p-6 space-y-4 text-center border border-slate-100 shadow-2xl">
+          <div data-popup-card className="bg-white rounded-3xl max-w-sm w-full p-6 space-y-4 text-center border border-slate-100 shadow-2xl">
             <div className="flex items-center justify-center gap-2 pt-1 pb-1">
               <PineLogo size={28} />
               <span className="font-black text-slate-900 tracking-tight text-sm">PineVela Housing</span>
@@ -1774,7 +1776,7 @@ export default function PageResidentDashboard() {
           className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4"
           onClick={() => setLightboxPhoto(null)}
         >
-          <div className="relative max-w-4xl w-full bg-slate-900 rounded-3xl overflow-hidden p-2 shadow-2xl border border-slate-700" onClick={e => e.stopPropagation()}>
+          <div data-popup-card className="relative max-w-4xl w-full bg-slate-900 rounded-3xl overflow-hidden p-2 shadow-2xl border border-slate-700" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between p-3 border-b border-slate-800 text-white">
               <span className="text-xs font-black tracking-wide flex items-center gap-2">
                 <Camera size={14} className="text-blue-400" />

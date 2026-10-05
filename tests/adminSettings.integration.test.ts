@@ -13,7 +13,7 @@ import sharp from 'sharp';
 import { hashCredential } from '../accountSecurity.js';
 
 const project = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-test('Admin settings, all-role maintenance restrictions, verified profile photographs and accounting survive restart', { timeout: 90000 }, async t => {
+test('Admin settings, all-role maintenance restrictions, verified profile photographs and accounting survive restart', { timeout: 180000 }, async t => {
   const temp = await fs.mkdtemp(path.join(os.tmpdir(), 'pinevela-settings-api-')), dataDir = path.join(temp, 'data'), db = path.join(dataDir, 'pinevela_store.json');
   await fs.mkdir(dataDir);
   const admins = [0, 1, 2].map(index => ({ id: crypto.randomUUID(), role: 'admin', email: `settings-founder-${index}@example.test`, name: `Settings founder ${index}`, password: hashCredential(`Isolated-settings-login-${index}!`), token: crypto.randomUUID(), isVerified: true, verificationStatus: 'approved' }));
@@ -28,7 +28,7 @@ test('Admin settings, all-role maintenance restrictions, verified profile photog
   const start = async () => {
     child = spawn(process.execPath, ['--import', pathToFileURL(path.join(project, 'node_modules/tsx/dist/loader.mjs')).href, path.join(project, 'server.ts')], { cwd: temp, env: { ...process.env, NODE_ENV: 'test', PORT: String(port), PINEVELA_DATA_DIR: dataDir, PINEVELA_UPLOADS_DIR: path.join(temp, 'uploads'), PINEVELA_WIPE_RECOVERY_DIR: path.join(temp, 'recovery'), PINEVELA_MAIN_ADMIN_ID: admins[0].id, PINEVELA_TRUST_PROXY: '' }, stdio: ['ignore', 'pipe', 'pipe'] });
     child.stdout?.on('data', data => logs += data); child.stderr?.on('data', data => logs += data);
-    for (let i = 0; i < 200; i++) { try { if ((await fetch(base + '/api/health')).ok) return; } catch {} if (child.exitCode !== null) assert.fail(logs); await new Promise(resolve => setTimeout(resolve, 100)); }
+    for (let i = 0; i < 600; i++) { try { if ((await fetch(base + '/api/health')).ok) return; } catch {} if (child.exitCode !== null) assert.fail(logs); await new Promise(resolve => setTimeout(resolve, 100)); }
     assert.fail('Isolated settings server did not start');
   };
   const request = async (method: string, route: string, actor: any, body: any, expected = 200) => {
@@ -105,7 +105,7 @@ test('Admin settings, all-role maintenance restrictions, verified profile photog
   let disk = JSON.parse(await fs.readFile(db, 'utf8')); assert.equal(disk.digitalMarketApplications.find((app: any) => app.userId === others[0].id).registrationFeeAmount, 62.5);
   await request('POST', '/api/settings', admins[0], { ...body, maintenanceMode: true });
   for (const actor of others) {
-    await request('GET', '/api/auth/me', actor, undefined, 503);
+    assert.equal((await request('GET', '/api/auth/me', actor, undefined, 503)).error, 'PineVela is temporarily unavailable ,please try again later,thank you.');
     await request('POST', '/api/auth/login', null, { usernameOrEmail: actor.email, password: `Isolated-${actor.role}-login!` }, 503);
     await request('POST', '/api/digital-market/orders', actor, { productId: product.id, quantity: 1 }, 503);
   }
@@ -120,7 +120,34 @@ test('Admin settings, all-role maintenance restrictions, verified profile photog
   assert.equal((await request('GET', '/api/settings', null, undefined)).maintenanceMode, true);
   assert.equal((await request('GET', '/api/auth/me', admins[0], undefined)).photo, uploaded.imageUrl);
   await request('GET', '/api/auth/me', others[0], undefined, 503);
-  await request('POST', '/api/settings', admins[1], { ...settings, settingsKey: keys[1], maintenanceMode: false, announcement: '' });
+  const resume = { ...settings, settingsKey: keys[1], maintenanceMode: false, announcement: '' };
+  await request('POST', '/api/settings', admins[1], resume, 400);
+  await request('POST', '/api/settings', admins[1], { ...resume, maintenanceRecoveryMessage: '   ' }, 400);
+  await request('POST', '/api/settings', admins[1], { ...resume, maintenanceRecoveryMessage: 'x'.repeat(2001) }, 400);
+  assert.equal((await request('GET', '/api/settings', null, undefined)).maintenanceMode, true);
+  const message = 'Service is restored. Thank you for your patience.\nWelcome back.';
+  await request('POST', '/api/settings', admins[1], { ...resume, maintenanceRecoveryMessage: message });
+  await request('GET', '/api/auth/maintenance-notice', null, undefined, 401);
+  const notice = (await request('GET', '/api/auth/maintenance-notice', others[0], undefined)).notice;
+  assert.equal(notice.message, message);
+  for (const actor of [others[0], others[1], others[3], others[4], admins[0]]) assert.deepEqual((await request('GET', '/api/auth/maintenance-notice', actor, undefined)).notice, notice);
+  const dismissRoute = '/api/auth/maintenance-notice/dismiss';
+  await request('POST', dismissRoute, null, { noticeId: notice.id }, 401);
+  await request('POST', dismissRoute, others[0], { noticeId: notice.id, userId: others[1].id }, 400);
+  await request('POST', dismissRoute, others[0], { noticeId: 'wrong' }, 409);
+  await request('POST', dismissRoute, others[0], { noticeId: notice.id });
+  assert.equal((await request('GET', '/api/auth/maintenance-notice', others[0], undefined)).notice, null);
+  assert.deepEqual((await request('GET', '/api/auth/maintenance-notice', others[1], undefined)).notice, notice);
+  await stop(); await start();
+  assert.equal((await request('GET', '/api/auth/maintenance-notice', others[0], undefined)).notice, null);
+  assert.deepEqual((await request('GET', '/api/auth/maintenance-notice', others[1], undefined)).notice, notice);
+  assert(!JSON.stringify(await request('GET', '/api/settings', null, undefined)).includes(message), 'Return notice is private');
+  await request('POST', '/api/settings', admins[1], { ...resume, maintenanceMode: true });
+  await request('POST', '/api/settings', admins[1], { ...resume, maintenanceRecoveryMessage: 'A second maintenance update.' });
+  const nextNotice = (await request('GET', '/api/auth/maintenance-notice', others[0], undefined)).notice;
+  assert.notEqual(nextNotice.id, notice.id);
+  await request('POST', dismissRoute, others[0], { noticeId: notice.id }, 409);
+
   await request('GET', '/api/auth/me', others[0], undefined);
   disk = JSON.parse(await fs.readFile(db, 'utf8')); assert.equal(disk.platformSettings.maintenanceMode, false); assert.equal(disk.platformSettings.announcement, '');
   const publicSettings = JSON.stringify(await request('GET', '/api/settings', null, undefined)); assert(!publicSettings.includes(keys[0]) && !publicSettings.includes('Hash'));

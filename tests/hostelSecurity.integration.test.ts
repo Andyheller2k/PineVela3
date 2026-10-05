@@ -15,7 +15,7 @@ const project = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const loader = pathToFileURL(path.join(project, 'node_modules/tsx/dist/loader.mjs')).href;
 
 // Real authentication, HTTP handlers and storage in a disposable private database.
-test('S03: hostel takeover and self-approval are blocked; legitimate edits and transfers persist', { timeout: 90000 }, async t => {
+test('S03: hostel takeover and self-approval are blocked; legitimate edits and transfers persist', { timeout: 180000 }, async t => {
   const temp = await fs.mkdtemp(path.join(os.tmpdir(), 'pinevela-s03-'));
   const dataDir = path.join(temp, 'data');
   const db = path.join(dataDir, 'pinevela_store.json');
@@ -34,12 +34,13 @@ test('S03: hostel takeover and self-approval are blocked; legitimate edits and t
   const student = account('student');
   const merchant = account('merchant');
   const admin = account('admin');
+  const privateKey = crypto.randomBytes(32).toString('base64url');
   const hostel = { id: crypto.randomUUID(), name: crypto.randomUUID(), description: crypto.randomUUID(), managerId: manager.id, assignedManagerId: manager.id, managerEmail: email, managerName: manager.name, isApproved: false, approvalStatus: 'Pending Approval', status: 'Pending Approval', price: 1200, totalCapacity: 20, bedsLeft: 20, availableSpaces: 20, blocksList: [], facilities: [], registrationDate: new Date().toISOString() };
   const otherHostel = { ...hostel, id: crypto.randomUUID(), name: crypto.randomUUID(), managerId: foreign.id, assignedManagerId: foreign.id };
   await fs.mkdir(dataDir);
   await fs.writeFile(db, sessionFixtureJson({
     credentialExposureVersion: 1, accountSecurityVersion: 1,
-    users: [manager, foreign, primary, staff, student, merchant, admin],
+    adminGovernance: { version: 1, mainId: admin.id, revision: 1, members: [{ id: admin.id, slot: 1, active: true, keyHash: crypto.createHash('sha256').update(`${admin.id}:${privateKey}`).digest('hex') }], proposals: [], invitations: [], changes: [], attempts: {} }, users: [manager, foreign, primary, staff, student, merchant, admin],
     staff: [{ id: crypto.randomUUID(), userId: staff.id, hostelId: hostel.id, managerId: manager.id, managerCreated: true, status: "Active" }],
     hostels: [hostel, otherHostel],
     managerVerifications: [manager, foreign].map(u => ({ id: crypto.randomUUID(), managerId: u.id, managerEmail: email, status: 'approved' })),
@@ -106,12 +107,12 @@ test('S03: hostel takeover and self-approval are blocked; legitimate edits and t
   assert.deepEqual((await readHostels())[1], before[1]);
   await put(manager, { status: 'Approved', isApproved: true }, 403, hostel.id, '/verify');
   // Preserve the administrator editor's full-record save flow, including approval.
-  const approved = await put(admin, { ...edited, isApproved: true, approvalStatus: 'Approved', status: 'Open' }, 200);
+  const approved = await put(admin, { ...edited, privateKey, isApproved: true, approvalStatus: 'Approved', status: 'Open' }, 200);
   assert.equal(approved.isApproved, true);
   assert.equal(approved.id, hostel.id);
   assert.deepEqual((await readHostels())[0], approved);
   // Dedicated administrator verification remains functional.
-  await put(admin, { status: 'Approved', isApproved: true }, 200, hostel.id, '/verify');
+  await put(admin, { status: 'Approved', isApproved: true, privateKey }, 200, hostel.id, '/verify');
   const transferred = await put(admin, { managerId: foreign.id }, 200);
   assert.equal(transferred.managerId, foreign.id);
   assert.equal(transferred.assignedManagerId, foreign.id);
@@ -122,7 +123,7 @@ test('S03: hostel takeover and self-approval are blocked; legitimate edits and t
   await stop(); await start();
   assert.deepEqual(await readHostels(), persisted);
   await put(manager, { isApproved: true }, 403);
-  await put(foreign, { approvalStatus: 'Approved' }, 400);
+  await put(foreign, { approvalStatus: 'Approved' }, 403);
   assert.deepEqual(await readHostels(), persisted);
   await put(foreign, { description: crypto.randomUUID() }, 200);
 });

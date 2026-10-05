@@ -5,6 +5,8 @@ import { useAuth } from './AuthContext';
 import { sessionFetch } from '../lib/session';
 
 import type { PlatformSettings as Settings } from '../../platformSettings';
+import MaintenanceReturnNotice from '../components/MaintenanceReturnNotice';
+import { MAINTENANCE_MESSAGE } from '../../platformSettings';
 import { DEFAULT_SUBSCRIPTION_PRICES } from '../../marketPlans';
 const PlatformSettingsContext = createContext<{ settings?: Settings }>({});
 export const usePlatformSettings = () => useContext(PlatformSettingsContext);
@@ -28,9 +30,9 @@ export function PlatformAccessBoundary({ children }: { children: React.ReactNode
   const adminEntry = location.pathname === '/login' || location.pathname === '/admin-invitation';
   if (settings?.maintenanceMode && user?.role !== 'admin' && !adminEntry && location.pathname !== '/') return <main className="flex min-h-screen flex-col items-center justify-center gap-5 bg-gradient-to-br from-sky-50 to-blue-100 p-6 text-center text-blue-950">
     <h1 className="text-2xl font-bold">PineVela is undergoing maintenance</h1>
-    <p>Non-admin accounts are temporarily restricted during database updates. Access will return automatically when maintenance ends.</p>
-    <Link to="/login" className="rounded-xl bg-blue-600 px-5 py-3 font-semibold text-white">Administrator sign in</Link>
+    <p>{MAINTENANCE_MESSAGE}</p>
+    <Link to="/login" className="rounded-xl bg-blue-600 px-5 py-3 font-semibold text-white">Sign in</Link>
   </main>;
   return <>
-    {settings?.maintenanceMode && location.pathname === '/' && <aside role="status" className="fixed bottom-5 left-1/2 z-[60] w-[min(42rem,calc(100%_-_2rem))] -translate-x-1/2 rounded-2xl bg-blue-950 px-5 py-3 text-sm text-white">Temporary maintenance: non-admin accounts are restricted during database updates.</aside>}{children}</>;
+    {settings?.maintenanceMode && location.pathname === '/' && <aside role="status" className="fixed bottom-5 left-1/2 z-[60] w-[min(42rem,calc(100%_-_2rem))] -translate-x-1/2 rounded-2xl bg-blue-950 px-5 py-3 text-sm text-white">{MAINTENANCE_MESSAGE}</aside>}{children}{user && !settings?.maintenanceMode && <MaintenanceReturnNotice />}</>;
 }

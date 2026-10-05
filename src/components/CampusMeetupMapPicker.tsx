@@ -106,6 +106,7 @@ export default function CampusMeetupMapPicker({
   );
   const [locationName, setLocationName] = useState<string>(initialLocationName || coordinatesLabel(currentLat, currentLng));
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [mapError, setMapError] = useState('');
   const [isGeolocating, setIsGeolocating] = useState<boolean>(false);
   const [isReverseGeocoding, setIsReverseGeocoding] = useState<boolean>(false);
   const [copiedCoords, setCopiedCoords] = useState<boolean>(false);
@@ -232,8 +233,9 @@ export default function CampusMeetupMapPicker({
   };
 
   const handleUseCurrentLocation = () => {
+    setMapError('');
     if (!navigator.geolocation) {
-      alert('Geolocation is not supported by your browser.');
+      setMapError('Geolocation is not supported by your browser.');
       return;
     }
     setIsGeolocating(true);
@@ -252,7 +254,7 @@ export default function CampusMeetupMapPicker({
       (err) => {
         setIsGeolocating(false);
         console.warn('Geolocation failed:', err.message);
-        alert('Could not detect your exact position. Please click or drag the marker manually on the campus map.');
+        setMapError('Could not detect your exact position. Please click or drag the marker manually on the campus map.');
       },
       { enableHighAccuracy: true, timeout: 10000 }
     );
@@ -290,7 +292,7 @@ export default function CampusMeetupMapPicker({
             markerRef.current.openPopup();
           }
         } else {
-          alert(`No exact location match for "${searchQuery}". Try a campus landmark like "KNUST Commercial Area" or drag the marker directly.`);
+          setMapError(`No exact location match for "${searchQuery}". Try a campus landmark like "KNUST Commercial Area" or drag the marker directly.`);
         }
       }
     } catch (err) {
@@ -326,6 +328,7 @@ export default function CampusMeetupMapPicker({
 
   return (
     <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl overflow-hidden flex flex-col max-h-[88dvh] w-full">
+      {mapError && <p role="alert" className="m-3 shrink-0 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">{mapError}</p>}
       {/* Header */}
       <div className="p-4 sm:p-5 bg-gradient-to-r from-slate-900 via-blue-950 to-slate-900 text-white flex items-center justify-between">
         <div className="flex items-center gap-3">

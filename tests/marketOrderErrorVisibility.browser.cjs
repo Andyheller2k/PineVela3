@@ -23,7 +23,7 @@ async function main() {
   const owner = actor('user', `${crypto.randomUUID()}@example.test`);
   const seller = actor('merchant', `${crypto.randomUUID()}@example.test`);
   const manager = { ...actor('manager', `${crypto.randomUUID()}@example.test`), isVerified: true, verificationStatus: 'approved' };
-  const store = { id: crypto.randomUUID(), userId: owner.id, studentEmail: seller.email, storeName: 'Isolated seller', status: 'active', setupCompleted: true, registrationFeePaid: true, subscriptionPlan: 'pro' };
+  const store = { id: crypto.randomUUID(), userId: owner.id, studentEmail: seller.email, storeName: 'Isolated seller', status: 'active', setupCompleted: true, registrationFeePaid: true, subscriptionPlan: 'pro', subscriptionStatus: 'active', semesterExpiresAt: new Date(Date.now()+86400000).toISOString(), subscriptionExpiresAt: new Date(Date.now()+86400000).toISOString() };
   Object.assign(seller, { merchantStoreId: store.id, parentUserId: owner.id, merchantSetupCompleted: true, merchantRegistrationFeePaid: true });
   const application = { id: crypto.randomUUID(), userId: owner.id, studentEmail: seller.email, status: 'approved' };
   const photos = ['/images/company/about-us.jpg', '/images/company/our-vision.jpg', '/images/company/partner-with-us.jpg', '/images/company/partner-with-us-enhanced.webp'];
@@ -39,12 +39,12 @@ async function main() {
     { id: crypto.randomUUID(), userId: buyer.id, orderId: order.id, scope: 'market', title: 'Order tracking changed', message: 'Your order status changed', read: false },
     { id: crypto.randomUUID(), userId: buyer.id, scope: 'market', title: 'Merchant application update', message: 'Your merchant platform status changed', read: false }];
   const hostel = { id: crypto.randomUUID(), managerId: manager.id, managerEmail: manager.email, name: 'Isolated approved residence', isApproved: true, approvalStatus: 'Approved', totalCapacity: 10, price: 3000, subscriptionPaid: true, amenities: [], facilities: [], blocks: [], imageUrl: photos[0] };
-  await fs.writeFile(path.join(dataDir, 'pinevela_store.json'), sessionFixtureJson({ credentialExposureVersion: 1, accountSecurityVersion: 1, users: [buyer, owner, seller, manager], digitalMarketApplications: [application], digitalMarketStores: [store], digitalMarketProducts: [product, service], digitalMarketOrders: [order, receipt], digitalMarketMessages: [inquiry, reply], notifications: notices, hostels: [hostel], managerVerifications: [{ id: crypto.randomUUID(), managerId: manager.id, managerEmail: manager.email, status: 'approved' }] }));
+  await fs.writeFile(path.join(dataDir, 'pinevela_store.json'), sessionFixtureJson({ credentialExposureVersion: 1, accountSecurityVersion: 1, users: [buyer, owner, seller, manager], digitalMarketApplications: [application], digitalMarketStores: [store], digitalMarketProducts: [product, service], digitalMarketOrders: [order, receipt], digitalMarketMessages: [inquiry, reply], notifications: notices, paymentTransactions: [{ id: crypto.randomUUID(), storeId: store.id, purpose: 'activation', status: 'fulfilled', mode: 'free' }], hostels: [hostel], managerVerifications: [{ id: crypto.randomUUID(), managerId: manager.id, managerEmail: manager.email, status: 'approved' }] }));
   const port = await freePort(), debugPort = await freePort(), base = `http://127.0.0.1:${port}`;
   let server, chrome, socket, command; let serverLogs = '', chromeLogs = '';
   try {
     // Test the actual production bundle with isolated persistence.
-    server = spawn(production ? process.execPath : 'npm', production ? [path.join(project, 'dist/server.cjs')] : ['run', 'dev'], { cwd: project, detached: true, env: { ...process.env, NODE_ENV: 'production', PORT: String(port), PINEVELA_DATA_DIR: dataDir, PINEVELA_UPLOADS_DIR: path.join(temp, 'uploads'), PINEVELA_DEV_SIGNUP_CODES: 'false', SUPABASE_URL: '', SUPABASE_ANON_KEY: '' }, stdio: ['ignore', 'pipe', 'pipe'] });
+    server = spawn(production ? process.execPath : 'npm', production ? [path.join(project, 'dist/server.cjs')] : ['run', 'dev'], { cwd: project, detached: true, env: { ...process.env, NODE_ENV: 'production', PORT: String(port), PINEVELA_DATA_DIR: dataDir, PINEVELA_UPLOADS_DIR: path.join(temp, 'uploads'), PINEVELA_PUBLIC_ORIGIN: base, PINEVELA_TRUST_PROXY: '', PINEVELA_DEV_SIGNUP_CODES: 'false', SUPABASE_URL: '', SUPABASE_ANON_KEY: '' }, stdio: ['ignore', 'pipe', 'pipe'] });
     server.stdout.on('data', data => serverLogs += data); server.stderr.on('data', data => serverLogs += data);
     let healthy = false;
     for (let attempt = 0; attempt < 300; attempt++) {
@@ -114,7 +114,7 @@ async function main() {
       await click(`document.querySelector('[aria-label="Request to Buy or Book"] button[type=submit]')`);
       await until("document.querySelector('[aria-label=\"Request to Buy or Book\"] [role=alert]')", 'Self-purchase error inside open dialog');
       const notice = await evaluate("(()=>{const n=document.querySelector('[data-market-action-error]');const r=n.getBoundingClientRect();return {text:n.textContent,top:r.top,bottom:r.bottom,height:innerHeight,inside:Boolean(n.closest('[role=dialog]'))}})()");
-      assert(/own|self/i.test(notice.text)); assert(notice.inside);
+      assert(/own|self/i.test(notice.text), 'Unexpected order denial: '+notice.text); assert(notice.inside);
       await pause(400);
       assert(await evaluate("(()=>{const r=document.querySelector('[data-market-action-error]').getBoundingClientRect();return r.top>=0&&r.bottom<=innerHeight})()"),'Error scrolled into view');
       await noOverflow(`${width}px order error`);

@@ -88,6 +88,10 @@ export class AdminGovernance {
     for (const p of this.state.pricingProposals || []) if (['pending', 'approved'].includes(p.status)) p.status = 'invalidated';
     for (const p of this.state.accountProposals || []) if (['pending', 'approved'].includes(p.status)) p.status = 'invalidated';
   }
+  verifyApprovalKey(id: string, key: unknown) {
+    if (this.blocked) fail(503, 'Approvals are blocked pending offline recovery.');
+    this.verifyKey(id, key);
+  }
   verifySettingsKey(id: string, key: unknown) {
     if (this.blocked) fail(503, 'Settings writes are blocked pending offline recovery.');
     const member = this.member(id), bucket = `settings:${id}`, now = this.now(), attempts = this.state.attempts[bucket];
@@ -122,6 +126,11 @@ export class AdminGovernance {
     try { settings = validatePlatformSettings({ ...current, ...body }, current); } catch (error: any) { fail(400, error.message); }
     if (JSON.stringify(pricingSettings(settings)) !== JSON.stringify(pricingSettings(current))) fail(409, 'Pricing changes require at least three administrator approvals and a final push by administrator #1. Submit a pricing proposal.');
     const store = this.getStore(), previousAnnouncement = store.platformSettings.announcement;
+    if (current.maintenanceMode && !settings.maintenanceMode) {
+      const message = body.maintenanceRecoveryMessage?.trim();
+      if (!message) fail(400, 'Write a message for users before ending maintenance.');
+      store.platformSettings.maintenanceRecoveryNotice = { id: crypto.randomUUID(), message, dismissedBy: [] };
+    }
     Object.assign(store.platformSettings, settings);
     if (settings.announcement && (settings.announcement !== previousAnnouncement || !(store.notifications || []).some((n: any) => n.category === 'system_announcement' && n.message === settings.announcement))) {
       const date = new Date(this.now()).toISOString();

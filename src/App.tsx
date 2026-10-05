@@ -1,3 +1,5 @@
+import ApprovalKeyPrompt from './components/ApprovalKeyPrompt';
+import FormFeedback from './components/FormFeedback';
 import { PlatformSettingsProvider, PlatformAccessBoundary } from './context/PlatformSettingsContext';
 import { sessionFetch as fetch } from './lib/session';
 import React, { useState, useEffect, lazy, Suspense } from 'react';
@@ -369,6 +371,8 @@ export default function App() {
                   <div className="app-canvas min-h-screen flex flex-col relative overflow-hidden">
                     <ThemeEnvironment />
                     <ThemeDock />
+                    <FormFeedback />
+                    <ApprovalKeyPrompt />
                     <AccountAccessNotice />
                     <div className="flex-1 z-10 flex flex-col">
                       <AppContent />

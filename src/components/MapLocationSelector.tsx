@@ -78,6 +78,7 @@ export default function MapLocationSelector({
 
   const [searchQuery, setSearchQuery] = useState(initialAddressHint || '');
   const [isSearching, setIsSearching] = useState(false);
+  const [mapError, setMapError] = useState('');
   const [isGeolocating, setIsGeolocating] = useState(false);
   const [isReverseGeocoding, setIsReverseGeocoding] = useState(false);
   const [detectedAddress, setDetectedAddress] = useState<string>('');
@@ -296,8 +297,9 @@ export default function MapLocationSelector({
 
   // Locate Current User Geolocation
   const handleUseCurrentLocation = () => {
+    setMapError('');
     if (!navigator.geolocation) {
-      alert('Geolocation is not supported by your browser.');
+      setMapError('Geolocation is not supported by your browser.');
       return;
     }
 
@@ -315,6 +317,7 @@ export default function MapLocationSelector({
       (err) => {
         setIsGeolocating(false);
         console.warn('Geolocation access failed:', err.message);
+        setMapError('Could not detect your position. Select a location on the map.');
       },
       { timeout: 12000, enableHighAccuracy: true }
     );
@@ -328,6 +331,7 @@ export default function MapLocationSelector({
 
   return (
     <div className="space-y-4">
+      {mapError && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">{mapError}</p>}
       {/* Top Search & Actions Bar */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
         <div className="relative flex-1">

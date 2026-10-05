@@ -38,6 +38,7 @@ export default function EditResidenceModal({
 
   const [activeSection, setActiveSection] = useState<'basics' | 'stay' | 'blocks' | 'amenities' | 'rules' | 'manager'>('basics');
   const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState('');
 
   // Form State
   const [name, setName] = useState(residence.name || '');
@@ -112,14 +113,15 @@ export default function EditResidenceModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError('');
     const streetCheck = validateHostelStreetAddress(location);
     if (!streetCheck.isValid) {
-      alert(streetCheck.error);
+      setError(streetCheck.error || 'Enter a valid street address.');
       return;
     }
     const gpsCheck = validateDigitalAddress(digitalAddress, true);
     if (!gpsCheck.isValid) {
-      alert(gpsCheck.error);
+      setError(gpsCheck.error || 'Enter a valid digital address.');
       return;
     }
     setIsSaving(true);
@@ -154,8 +156,8 @@ export default function EditResidenceModal({
 
       await onSave(updatedData);
       onClose();
-    } catch (err) {
-      console.error("Save error:", err);
+    } catch (err: any) {
+      setError(err.message || 'This residence could not be saved.');
     } finally {
       setIsSaving(false);
     }
@@ -163,7 +165,7 @@ export default function EditResidenceModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-fadeIn overflow-y-auto">
-      <div className="bg-white border border-blue-200 rounded-3xl max-w-4xl w-full shadow-2xl overflow-hidden my-6 flex flex-col max-h-[90vh]">
+      <div data-popup-card className="bg-white border border-blue-200 rounded-3xl max-w-4xl w-full shadow-2xl overflow-hidden my-6 flex flex-col max-h-[90vh]">
         {/* Header */}
         <div className="p-6 bg-gradient-to-r from-sky-400/25 via-blue-500/20 to-indigo-400/25 backdrop-blur-xl border-b border-sky-200/80 text-slate-900 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
@@ -182,6 +184,8 @@ export default function EditResidenceModal({
             <X className="w-4 h-4" />
           </button>
         </div>
+
+        {error && <p role="alert" className="mx-6 mt-4 shrink-0 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">{error}</p>}
 
         {/* Navigation Tabs */}
         <div className="flex border-b border-slate-200 bg-slate-50 px-6 overflow-x-auto shrink-0 gap-2 py-2">

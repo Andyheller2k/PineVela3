@@ -1,3 +1,4 @@
+import { useActionFeedback } from '../lib/useActionFeedback';
 import OnboardingProgress, { ADMIN_INVITATION_STEPS } from './OnboardingProgress';
 import AdministratorLabel from './AdministratorLabel';
 import React, { useState, useEffect } from 'react';
@@ -25,9 +26,10 @@ function Counts({ preview }: { preview: any }) {
   </div>;
 }
 export default function AdminGovernancePanel() {
+  const feedback = useActionFeedback();
   const { apiFetch } = useAuth(), { data, error, isPending } = useAdminGovernance();
   const [privateKey, setPrivateKey] = useState(''), [password, setPassword] = useState('');
-  const [busy, setBusy] = useState(false), [notice, setNotice] = useState(''), [failure, setFailure] = useState('');
+  const [busy, setBusy] = useState(false), [notice, setNotice] = useState(''), [, setFailure] = useState('');
   const [secret, setSecret] = useState<{ title: string; value: string; kind?: 'invitation' } | null>(null);
   const [name, setName] = useState(''), [email, setEmail] = useState('');
   const [scopes, setScopes] = useState<string[]>([]), [reason, setReason] = useState(''), [preview, setPreview] = useState<any>(null);
@@ -35,6 +37,7 @@ export default function AdminGovernancePanel() {
   const [confirmations, setConfirmations] = useState<Record<string, string>>({});
   async function act(path: string, body: any, complete?: (result: any) => void) {
     if (busy) return;
+    const origin = feedback.begin();
     setBusy(true); setFailure(''); setNotice('');
     try {
       const result = await apiFetch(path, { method: 'POST', body: JSON.stringify(body) });
@@ -43,11 +46,11 @@ export default function AdminGovernancePanel() {
       setNotice(result.message || 'Saved. All administrator dashboards will receive the update.');
       await queryClient.invalidateQueries({ queryKey: ['adminGovernance'] });
       if (result.status === 'executed') await queryClient.invalidateQueries();
-    } catch (err: any) { setFailure(err.message || 'This action could not be completed.'); }
+    } catch (err: any) { setFailure(err.message || 'This action could not be completed.'); feedback.fail(err.message || 'This action could not be completed.', origin); }
     finally { setBusy(false); }
   }
   useEffect(() => { if (secret?.kind === 'invitation') document.getElementById('admin-invitation-link')?.scrollIntoView({ block: 'center', behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' }); }, [secret]);
-  async function copySecret() { try { await navigator.clipboard.writeText(secret!.value); setNotice('Copied. Store it privately.'); } catch { setFailure('Copy is unavailable. Select and copy the value manually.'); } }
+  async function copySecret() { try { await navigator.clipboard.writeText(secret!.value); setNotice('Copied. Store it privately.'); } catch { feedback.fail('Copy is unavailable. Select and copy the value manually.', feedback.begin()); } }
   if (isPending) return <div role="status" className="rounded-3xl bg-blue-50/70 p-8 animate-pulse">Loading administrator approvals…</div>;
   if (error || !data) return <p role="alert" className="text-red-700">{error?.message || 'Administrator governance is unavailable.'}</p>;
   const self = data.members.find((m: any) => m.id === data.currentId), main = data.currentId === data.mainId;
@@ -58,14 +61,13 @@ export default function AdminGovernancePanel() {
       <textarea aria-label={secret?.kind === 'invitation' ? 'Private administrator invitation link' : secret!.title} readOnly value={secret!.value} className={`${control} min-h-24 break-all font-mono`} />
       <div className="flex flex-wrap gap-3"><button className={button} onClick={copySecret}><Copy className="mr-1 inline h-4 w-4" /> {secret?.kind === 'invitation' ? 'Copy invitation link' : 'Copy'}</button><button className={button} onClick={() => setSecret(null)}>I have saved it</button></div>
     </div>) : null;
-  return <section className="space-y-6 text-slate-900" aria-label="Administrator governance">
+  return <section onClickCapture={feedback.capture} onSubmitCapture={feedback.capture} className="space-y-6 text-slate-900" aria-label="Administrator governance">
     <header className="rounded-3xl border border-blue-200 bg-white/65 p-6 backdrop-blur-xl">
       <h2 className="text-xl font-bold"><AdministratorLabel slot={self?.slot} name={self?.name} /></h2>
       <p className="mt-1 break-all text-xs text-slate-600">Account ID: {data.currentId}</p>
       <p className="mt-3 text-sm text-slate-600">Wipes need five independent approvals. Keys belong to each administrator and are separate from login passwords. A rejected, expired or changed proposal cannot execute.</p>
     </header>
     {notice && <p role="status" className="rounded-xl bg-blue-50 p-4 text-blue-800">{notice}</p>}
-    {failure && <p role="alert" className="rounded-xl bg-red-50 p-4 text-red-800">{failure}</p>}
     {data.blocked && <p role="alert" className="rounded-xl bg-red-100 p-4 text-red-900">Writes are blocked. Stop the server and inspect the recovery archive offline.</p>}
     {secret && secret.kind !== 'invitation' && secretPanel}
     {!self?.keyEnrolled && <form className="space-y-3 rounded-2xl border border-blue-200 bg-white/70 p-5" onSubmit={e => { e.preventDefault(); act(`${root}/keys/enroll`, { password }, r => setSecret({ title: 'Your private approval key', value: r.privateKey })); }}>

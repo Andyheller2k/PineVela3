@@ -1,3 +1,4 @@
+import { routePopupFeedback } from '../lib/feedback';
 import { usePlatformSettings } from '../context/PlatformSettingsContext';
 import RouteSkeleton from './RouteSkeleton';
 import PasswordStrengthGauge from './PasswordStrengthGauge';
@@ -618,6 +619,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const triggerToast = (msg: string, type: 'success' | 'warning' | 'info' | 'error' = 'info') => {
+    if (routePopupFeedback(msg, type)) return;
     pushToast(msg, undefined, type);
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 2500);
@@ -2054,10 +2056,11 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
 
       {/* MOBILE BOTTOM NAV (lg:hidden) */}
       <nav className="mobile-bottom-nav lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/70 backdrop-blur-md border-t border-slate-200/60 shadow-[0_-10px_35px_rgba(0,0,0,0.06)]">
-        <div className="flex items-center gap-1 overflow-x-auto px-2 py-2 pb-safe snap-x hide-scrollbar">
+        <div data-mobile-nav-items className="flex items-center gap-1 overflow-x-auto px-2 py-2 pb-safe snap-x hide-scrollbar">
           {navItems.map(tab => (
             <button
               key={tab.id}
+              aria-current={activeTab === tab.id ? 'page' : undefined}
               onClick={() => handleNavClick(tab.id)}
               className={`snap-center shrink-0 flex flex-col items-center justify-center w-[64px] h-12 rounded-xl transition-all relative ${
                 activeTab === tab.id ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'
@@ -2101,6 +2104,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
               return (
                 <button
                   key={tab.id}
+                  aria-current={isActive ? 'page' : undefined}
                   onClick={() => handleNavClick(tab.id)}
                   title={tab.label}
                   className={`flex-1 min-w-0 flex flex-col items-center justify-center gap-0.5 py-1.5 rounded-xl transition-all cursor-pointer ${isActive ? 'text-blue-700 bg-blue-100/65' : 'text-slate-500 hover:text-slate-800 hover:bg-white/70'}`}
@@ -2165,6 +2169,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
               return (
                 <button
                   key={tab.id}
+                  aria-current={isActive ? 'page' : undefined}
                   onClick={() => handleNavClick(tab.id)}
                   title={tab.label}
                   className={`w-full flex items-center justify-between px-3.5 py-3 rounded-2xl transition-all duration-150 group cursor-pointer ${

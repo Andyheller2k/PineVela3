@@ -45,6 +45,25 @@ export function moderationAccounts(store: any): Account[] {
   }
   return [...accounts.values()];
 }
+/** Build directory relationships solely from persisted IDs, never matching emails. */
+export function accountDirectoryRelations(store: any) {
+  const accounts = moderationAccounts(store);
+  const parentOf = (account: Account) => {
+    const primary = accounts.find(candidate => candidate.role === 'user' && candidate.id === account.parentId);
+    if (primary && primary !== account) return primary;
+    if (account.role === 'staff') {
+      const data = accountData(account.records[0]);
+      const managerId = data.managerId || account.records[0].managerId || (store.staff || []).find((staff: any) => staff.userId === account.id || staff.id === data.staffId)?.managerId;
+      return accounts.find(candidate => candidate.role === 'manager' && candidate.id === managerId);
+    }
+  };
+  return accounts.map(account => {
+    const parent = parentOf(account), seen = new Set<string>();
+    let root: Account | undefined = account;
+    while (root && root.role !== 'user' && !seen.has(keyFor(root.id, root.role))) { seen.add(keyFor(root.id, root.role)); root = parentOf(root); }
+    return { account, parentId: parent?.id, parentRole: parent?.role, primaryAccountId: root?.role === 'user' ? root.id : undefined };
+  });
+}
 export function accountFor(store: any, id: string, role: string): Account | undefined {
   return moderationAccounts(store).find(a => a.role === role && a.aliases.includes(id));
 }
