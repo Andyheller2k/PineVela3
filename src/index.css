@@ -206,18 +206,46 @@ html.marketplace-scrollbar-hidden::-webkit-scrollbar {
   min-width: 0;
 }
 .mobile-bottom-nav > button,
-.mobile-bottom-nav > div > button {
+.mobile-bottom-nav > div > button:not(.theme-toggle) {
   flex: 1 1 0 !important;
   width: auto !important;
-  min-width: clamp(36px, 11vw, 64px) !important;
+  min-width: 0 !important;
   max-width: none !important;
   padding: 0.25rem 0.125rem !important;
 }
 .mobile-bottom-nav > button > svg,
 .mobile-bottom-nav > div > button > svg,
-.mobile-bottom-nav > div > button > div > svg {
+.mobile-bottom-nav > div > button > div > svg,
+.mobile-bottom-nav > button > div > svg {
   width: clamp(0.875rem, 4vw, 1.125rem) !important;
   height: clamp(0.875rem, 4vw, 1.125rem) !important;
+}
+
+/* Every tab shares the available width, including the account theme control. */
+.mobile-bottom-nav,
+.mobile-bottom-nav > [data-mobile-nav-items] {
+  overflow: clip;
+  flex-wrap: nowrap;
+  gap: 0;
+  justify-content: space-around;
+}
+.mobile-bottom-nav .mobile-nav-theme {
+  flex: 1 1 0;
+  min-width: 0;
+  padding-inline: 2px;
+}
+.mobile-nav-theme .theme-toggle {
+  width: min(54px, 100%);
+}
+.mobile-nav-theme .theme-toggle-orb {
+  left: auto;
+  right: 2px;
+  transform: none;
+}
+.mobile-nav-theme .theme-toggle[data-dark="true"] .theme-toggle-orb {
+  left: 2px;
+  right: auto;
+  transform: none;
 }
 .mobile-bottom-nav > button > span,
 .mobile-bottom-nav > div > button > span {

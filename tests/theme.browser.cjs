@@ -98,6 +98,13 @@ async function main() {
       const hasMobileBar = await evaluate("[...document.querySelectorAll('.mobile-bottom-nav')].some(n=>n.getClientRects().length)");
       if(hasMobileBar){
         await until("document.querySelector('.mobile-bottom-nav .theme-toggle')",who.role+' embedded theme control');
+        for (const width of [320, 375, 430]) {
+          await viewport(width); await pause(100);
+          const layout = await evaluate("(()=>{const n=[...document.querySelectorAll('.mobile-bottom-nav')].find(n=>n.getClientRects().length),row=n.querySelector('[data-mobile-nav-items]')||n,r=n.getBoundingClientRect(),buttons=[...row.children];row.scrollLeft=100;return {scrollable:row.scrollWidth>row.clientWidth+1,scrollLeft:row.scrollLeft,fit:buttons.every(b=>{const v=b.getBoundingClientRect();return v.width>0&&v.left>=r.left-1&&v.right<=r.right+1}),icons:buttons.every(b=>{const i=b.querySelector('svg,.theme-toggle');if(!i)return false;const v=i.getBoundingClientRect();return v.left>=r.left-1&&v.right<=r.right+1})}})()");
+          assert.deepEqual(layout, {scrollable:false,scrollLeft:0,fit:true,icons:true}, who.role+' all mobile tabs fit without scrolling at '+width);
+          assert(await evaluate("document.querySelector('.mobile-bottom-nav .theme-toggle').getBoundingClientRect().width >= 26"), who.role+' theme switch retains a visible orb at '+width);
+        }
+        await viewport(375);
         assert(!await evaluate("document.querySelector('.theme-dock')"),who.role+' no overlapping floating toggle');
         assert(await evaluate("(()=>{const n=[...document.querySelectorAll('.mobile-bottom-nav')].find(n=>n.getClientRects().length),b=n.querySelector('[aria-current=page]'),m=document.querySelector('main');return !!b && getComputedStyle(b).backgroundColor==='rgb(32, 78, 135)' && getComputedStyle(b.querySelector('svg')).filter.includes('drop-shadow') && parseFloat(getComputedStyle(m).paddingBottom)>=n.getBoundingClientRect().height+23})()"),who.role+' selected blue glow and bottom clearance');
         const end = await evaluate("(()=>{const m=document.querySelector('main'),n=[...document.querySelectorAll('.mobile-bottom-nav')].find(n=>n.getClientRects().length);m.scrollTop=m.scrollHeight;window.scrollTo(0,document.documentElement.scrollHeight);const last=[...m.children].filter(e=>e.getClientRects().length && getComputedStyle(e).position!=='fixed').at(-1);return {bottom:last?.getBoundingClientRect().bottom,navTop:n.getBoundingClientRect().top}})()");

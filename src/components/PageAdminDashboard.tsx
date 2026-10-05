@@ -674,7 +674,7 @@ export default function PageAdminDashboard() {
 
       {/* MOBILE BOTTOM NAV (lg:hidden) */}
       <nav className="mobile-bottom-nav lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-xl border-t border-slate-200 shadow-[0_-10px_40px_rgba(0,0,0,0.08)]">
-        <div data-mobile-nav-items className="flex items-center gap-1 overflow-x-auto px-2 py-2 pb-safe snap-x hide-scrollbar">
+        <div data-mobile-nav-items className="flex items-center justify-around px-2 py-2 pb-safe">
           {[
             { id: 'overview', label: 'Overview', icon: ShieldCheck },
             { id: 'user_accounts', label: 'Accounts', icon: Users },

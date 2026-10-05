@@ -2058,7 +2058,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
 
       {/* MOBILE BOTTOM NAV (lg:hidden) */}
       <nav className="mobile-bottom-nav lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/70 backdrop-blur-md border-t border-slate-200/60 shadow-[0_-10px_35px_rgba(0,0,0,0.06)]">
-        <div data-mobile-nav-items className="flex items-center gap-1 overflow-x-auto px-2 py-2 pb-safe snap-x hide-scrollbar">
+        <div data-mobile-nav-items className="flex items-center justify-around px-2 py-2 pb-safe">
           {navItems.map(tab => (
             <button
               key={tab.id}

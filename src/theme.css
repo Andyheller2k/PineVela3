@@ -171,12 +171,11 @@ html[data-theme="dark"] :is(nav button, button[data-page-tabs])[aria-current="pa
 
 .mobile-bottom-nav { padding-bottom: env(safe-area-inset-bottom); }
 .mobile-bottom-nav > [data-mobile-nav-items] { padding-bottom: 8px; }
-.mobile-nav-theme { min-width: 68px; min-height: 48px; }
+.mobile-nav-theme { min-height: 48px; }
 .mobile-nav-theme .theme-toggle { width: 54px; height: 28px; }
 .mobile-nav-theme .theme-toggle-orb { width: 22px; height: 22px; top: 2px; left: 2px; transform: translateX(26px); }
 .mobile-nav-theme .theme-toggle[data-dark="true"] .theme-toggle-orb { transform: translateX(0); }
-.mobile-bottom-nav:not(:has([data-mobile-nav-items])) { overflow-x: auto; justify-content: flex-start; gap: 4px; }
-.mobile-bottom-nav:not(:has([data-mobile-nav-items])) > button { flex: 0 0 58px; min-height: 48px; border-radius: 12px; }
+.mobile-bottom-nav:not(:has([data-mobile-nav-items])) > button { min-height: 48px; border-radius: 12px; }
 html[data-mobile-navigation="true"] .app-canvas main {
   padding-bottom: calc(var(--pv-mobile-nav-height, 72px) + 24px) !important;
   scroll-padding-bottom: calc(var(--pv-mobile-nav-height, 72px) + 24px);
