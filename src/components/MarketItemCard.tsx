@@ -1,3 +1,5 @@
+import ListingPlanBadge from './ListingPlanBadge';
+import type { MarketPlan } from '../../marketPlans';
 import React, { memo } from 'react';
 import { Heart, GraduationCap, Store, ChevronRight, Star, MapPin } from 'lucide-react';
 import { useCardActivation } from './useCardActivation';
@@ -5,6 +7,8 @@ import { optimizeImageDisplayUrl } from '../lib/imageOptimizer';
 
 export interface MarketProductItem {
   id: string;
+  subscriptionPlan?: MarketPlan;
+  hasPriorityPlacement?: boolean;
   storeId?: string;
   storeName: string;
   sellerId?: string;
@@ -95,7 +99,8 @@ export const MarketItemCard: React.FC<MarketItemCardProps> = memo(
         onPointerDown={activation.onPointerDown}
         onPointerMove={activation.onPointerMove}
         onPointerCancel={activation.onPointerCancel}
-        className="relative cursor-pointer focus-within:ring-2 focus-within:ring-blue-400 bg-white/90 border border-slate-200/80 rounded-2xl sm:rounded-3xl overflow-hidden shadow-xs hover:border-blue-400 hover:shadow-md transition-all duration-150 flex flex-col justify-between"
+        data-market-plan={product.subscriptionPlan || 'default'} data-listing-id={product.id}
+        className="market-plan-card relative cursor-pointer focus-within:ring-2 focus-within:ring-blue-400 bg-white/90 border border-slate-200/80 rounded-2xl sm:rounded-3xl overflow-hidden shadow-xs hover:border-blue-400 hover:shadow-md transition-all duration-150 flex flex-col justify-between"
       >
         <div>
           {/* Product Thumbnail Container with Lazy Loading */}
@@ -110,6 +115,7 @@ export const MarketItemCard: React.FC<MarketItemCardProps> = memo(
               className={`w-full h-full ${isService ? "object-cover" : "object-contain"} transition-opacity duration-200`}
             />
 
+            <ListingPlanBadge plan={product.subscriptionPlan} />
             {/* Category / PineVela (Service) Tag */}
             {isService ? (
               <div className="absolute top-1.5 left-1.5 sm:top-2 sm:left-2 px-2 py-0.5 bg-gradient-to-r from-blue-700 via-blue-600 to-indigo-700 text-white text-[8px] sm:text-[9.5px] font-black rounded-md shadow-xs flex items-center gap-1 border border-blue-400/30 tracking-wide pointer-events-none">

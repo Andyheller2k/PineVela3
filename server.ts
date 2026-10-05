@@ -1,7 +1,7 @@
 import { installAdminApprovalSecurity } from './adminApprovalSecurity.js';
 import { installMaintenanceNotice } from './maintenanceNotice.js';
 import { installPaystackPayments, PaystackPayments, marketAccessPaid, publicPaidStore, hasVerifiedRegistration } from './paystackPayments.js';
-import { effectiveMarketPlan, PLAN_LIMITS, planCapacityError } from './marketPlans.js';
+import { effectiveMarketPlan, marketPlanBenefits, compareMarketPriority, PLAN_LIMITS, planCapacityError } from './marketPlans.js';
 import { AdminGovernance, GovernanceError, initializeAdminGovernance, activeAdministrator } from './adminGovernance.js';
 import { publicPlatformSettings, MAINTENANCE_MESSAGE } from './platformSettings.js';
 import { installAdminGovernance } from './adminGovernanceRoutes.js';
@@ -4746,18 +4746,19 @@ async function startServer() {
         return { storeRating: avg, ratingCount: count };
       };
 
+      const storesById = new Map(store.digitalMarketStores.map(seller => [seller.id, seller]));
       const enrichProducts = (prodList: any[]) => {
         return prodList.map((p: any) => {
           const s = store.digitalMarketStores.find((storeObj: any) => 
             storeObj.id === p.storeId || 
             (p.sellerEmail && storeObj.studentEmail?.toLowerCase() === p.sellerEmail.toLowerCase())
           );
-          const currentPlan = effectiveMarketPlan(s, Date.now(), process.env.NODE_ENV === 'production');
+          const currentPlan = effectiveMarketPlan(storesById.get(p.storeId), Date.now(), process.env.NODE_ENV === 'production');
           const storeSummary = getStoreRatingSummary(p.storeId || s?.id);
           const itemRating = ratingSummary(verifiedRatings.filter((r: any) => r.productId === p.id));
           return {
             ...p,
-            subscriptionPlan: currentPlan, isPineStar: currentPlan !== "default", hasPriorityPlacement: currentPlan !== "default", allowsAiImageTools: currentPlan !== "default", allowsCustomAnimatedCard: currentPlan === "pro",
+            ...marketPlanBenefits(currentPlan), allowsAiImageTools: currentPlan !== "default", allowsCustomAnimatedCard: currentPlan === "pro",
             rating: itemRating.averageRating,
             reviewCount: itemRating.ratingCount,
             storeName: s?.storeName || p.storeName,
@@ -4767,7 +4768,7 @@ async function startServer() {
             storeRating: storeSummary.storeRating,
             ratingCount: storeSummary.ratingCount
           };
-        });
+        }).sort(compareMarketPriority);
       };
 
       if (includeAll === 'true' || cleanStoreId || cleanEmail) {
@@ -4860,9 +4861,7 @@ async function startServer() {
       const newProduct = {
         id: `dmprod-${Date.now()}`,
         storeId: targetStore.id,
-        subscriptionPlan: currentPlan,
-        isPineStar: currentPlan === "star" || currentPlan === "pro",
-        hasPriorityPlacement: currentPlan === "star" || currentPlan === "pro",
+        ...marketPlanBenefits(currentPlan),
         allowsAiImageTools: currentPlan === "star" || currentPlan === "pro",
         allowsCustomAnimatedCard: currentPlan === "pro",
         storeName: targetStore.storeName,

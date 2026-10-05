@@ -1,3 +1,5 @@
+import ListingPlanBadge from './ListingPlanBadge';
+import { compareMarketPriority } from '../../marketPlans';
 import { routePopupFeedback } from '../lib/feedback';
 import { usePlatformSettings } from '../context/PlatformSettingsContext';
 import RouteSkeleton from './RouteSkeleton';
@@ -579,7 +581,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
         if (priceSortOption === 'price-asc') return (a.price || 0) - (b.price || 0);
         if (priceSortOption === 'price-desc') return (b.price || 0) - (a.price || 0);
         if (priceSortOption === 'newest') return (b.id || '').localeCompare(a.id || '');
-        return 0;
+        return compareMarketPriority(a, b);
       });
   }, [publicCatalog, catalogCategory, catalogSearch, homeSearchQuery, minPriceFilter, maxPriceFilter, priceSortOption]);
 
@@ -4748,9 +4750,11 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                         {publicCatalog.filter(p => wishlist.includes(p.id)).map(product => (
                           <div 
                             key={product.id}
-                            className="bg-white/75 border border-slate-200/60 rounded-3xl overflow-hidden shadow-2xs hover:bg-white/90 hover:border-rose-400 hover:shadow-xs transition-all duration-200 flex flex-col justify-between transform-gpu"
+                            data-market-plan={product.subscriptionPlan || 'default'}
+                            className="market-plan-card bg-white/75 border border-slate-200/60 rounded-3xl overflow-hidden shadow-2xs hover:bg-white/90 hover:border-rose-400 hover:shadow-xs transition-all duration-200 flex flex-col justify-between transform-gpu"
                           >
                             <div className="relative h-28 bg-slate-900/5 overflow-hidden flex items-center justify-center p-1 shrink-0">
+                              <ListingPlanBadge plan={product.subscriptionPlan} />
                               <img 
                                 src={optimizeImageDisplayUrl(product.imageUrl, 220, 30)}
                                 alt={product.title}

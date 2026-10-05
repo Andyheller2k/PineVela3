@@ -9,6 +9,14 @@ export function effectiveMarketPlan(seller: any, now = Date.now(), production = 
   return seller.subscriptionPlan;
 }
 
+/** Benefits are derived from the store's effective plan, never listing-supplied flags. */
+export function marketPlanBenefits(plan: MarketPlan) {
+  return { subscriptionPlan: plan, isPineStar: plan === 'star' || plan === 'pro', hasGoldFrame: plan === 'pro', hasPriorityPlacement: plan === 'pro' };
+}
+export function compareMarketPriority(a: { hasPriorityPlacement?: boolean }, b: { hasPriorityPlacement?: boolean }) {
+  return Number(b.hasPriorityPlacement === true) - Number(a.hasPriorityPlacement === true);
+}
+
 export function planCapacityError(products: any[], storeId: string, plan: MarketPlan, candidate: any, replaceId?: string): string | null {
   const isService = (p: any) => Boolean(p.isService || String(p.category || '').toLowerCase().includes('service'));
   if (!isService(candidate) && (!Number.isSafeInteger(candidate.stockQuantity) || candidate.stockQuantity < (replaceId ? 0 : 1))) return 'Inventory quantity must be a finite whole number.';

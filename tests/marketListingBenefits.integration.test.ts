@@ -1,0 +1,50 @@
+import { sessionFixtureJson } from './sessionFixtures.cjs';
+import assert from 'node:assert/strict';
+import crypto from 'node:crypto';
+import { test } from 'node:test';
+import fs from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+import net from 'node:net';
+import { spawn, type ChildProcess } from 'node:child_process';
+import { once } from 'node:events';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+
+const project = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+test('Catalog benefits follow active store plans, prioritize Pro and reject listing/email spoofing across upgrades and restart', { timeout: 180000 }, async t => {
+  const temp = await fs.mkdtemp(path.join(os.tmpdir(), 'pinevela-listing-benefits-')), dataDir = path.join(temp, 'data'); await fs.mkdir(dataDir);
+  const actors = ['default', 'star', 'pro', 'expired', 'inactive', 'test'].map(plan => ({ id: `seller-${plan}`, role: 'merchant', email: `${plan}@example.test`, token: crypto.randomUUID(), merchantStoreId: `store-${plan}`, isVerified: true, isDigitalMarketOnly: true }));
+  const future = new Date(Date.now()+86400000).toISOString();
+  const stores = actors.map((actor, index) => ({ id: actor.merchantStoreId, userId: actor.id, studentEmail: actor.email, storeName: `Isolated ${index}`, status: 'active', setupCompleted: true, setupDetailsSaved: true, subscriptionPlan: ['default','star','pro','pro','pro','pro'][index], subscriptionStatus: index === 4 ? 'inactive' : index === 5 ? 'test_active' : 'active', subscriptionExpiresAt: index === 3 ? '2020-01-01' : future, semesterExpiresAt: future }));
+  const products = stores.flatMap((store, index) => [false, true].map(service => ({ id: `${index}-${service?'service':'item'}`, storeId: store.id, sellerEmail: actors[index].email, sellerId: actors[index].id, title: `Shared ${service?'service':'item'} ${index}`, description: 'Isolated catalog regression', storeName: store.storeName, stockQuantity: 1, price: 10, isAvailable: true, isService: service, category: service ? 'Services' : 'Electronics', serviceLocationMode: 'flexible', subscriptionPlan: 'pro', isPineStar: true, hasGoldFrame: true, hasPriorityPlacement: true })));
+  products.push({ ...products[0], id: 'spoofed-email', storeId: 'missing-store', sellerEmail: actors[2].email });
+  const db = path.join(dataDir, 'pinevela_store.json');
+  await fs.writeFile(db, sessionFixtureJson({ credentialExposureVersion: 1, accountSecurityVersion: 1, users: actors, hostels: [], digitalMarketStores: stores, digitalMarketProducts: products, digitalMarketApplications: actors.map(actor=>({id:`app-${actor.id}`, userId:actor.id, studentEmail:actor.email,status:'approved'})), paymentTransactions: stores.map(store=>({id:crypto.randomUUID(),storeId:store.id,purpose:'activation',status:'fulfilled',mode:'free'})), platformSettings: { registrationFee: 0, semesterFee: 0, subscriptionPrices: {default:0,star:0,pro:0}, commission:0,announcement:'',maintenanceMode:false } }));
+  const listener = net.createServer(); listener.listen(0, '127.0.0.1'); await once(listener, 'listening'); const port = (listener.address() as net.AddressInfo).port; await new Promise<void>(resolve=>listener.close(()=>resolve()));
+  const base = `http://127.0.0.1:${port}`; let child: ChildProcess | undefined, logs = '';
+  const stop = async()=>{if(child?.exitCode===null){const done=once(child,'exit');child.kill('SIGTERM');await done;}};
+  t.after(async()=>{await stop();await fs.rm(temp,{recursive:true,force:true});});
+  const start = async()=>{
+    child=spawn(process.execPath,['--import',pathToFileURL(path.join(project,'node_modules/tsx/dist/loader.mjs')).href,path.join(project,'server.ts')],{cwd:temp,env:{...process.env,NODE_ENV:'production',PORT:String(port),PINEVELA_DATA_DIR:dataDir,PINEVELA_UPLOADS_DIR:path.join(temp,'uploads'),PAYSTACK_SECRET_KEY:'',PINEVELA_PUBLIC_ORIGIN:'https://listing-regression.example.test',PINEVELA_TRUST_PROXY:''},stdio:['ignore','pipe','pipe']});
+    child.stdout?.on('data',value=>logs+=value);child.stderr?.on('data',value=>logs+=value);
+    for(let i=0;i<600;i++){try{if((await fetch(base+'/api/health')).ok)return;}catch{}if(child.exitCode!==null)assert.fail(logs);await new Promise(resolve=>setTimeout(resolve,100));}assert.fail(logs);
+  };
+  const request=async(method:string,route:string,actor?:any,body?:any,status=200)=>{const response=await fetch(base+route,{method,headers:{'Content-Type':'application/json',...(actor?{Authorization:`Bearer ${actor.token}`}:{})},...(body?{body:JSON.stringify(body)}:{})});const value=await response.json();assert.equal(response.status,status,value.error);return value;};
+  await start();
+  const all=await request('GET','/api/digital-market/products?includeAll=true');
+  assert.deepEqual(all.slice(0,2).map((p:any)=>p.storeId),['store-pro','store-pro']);
+  for(const p of all){const star=p.storeId==='store-star',pro=p.storeId==='store-pro';assert.equal(p.isPineStar,star||pro,p.id);assert.equal(p.hasGoldFrame,pro,p.id);assert.equal(p.hasPriorityPlacement,pro,p.id);assert.equal(p.subscriptionPlan,pro?'pro':star?'star':'default');}
+  assert.equal(all.find((p:any)=>p.id==='spoofed-email').subscriptionPlan,'default','Same seller email cannot grant another store benefits');
+  const filtered=await request('GET','/api/digital-market/products?storeId=store-star');assert(filtered.every((p:any)=>p.subscriptionPlan==='star'&&!p.hasPriorityPlacement));
+  const publicItems=await request('GET','/api/digital-market/products');assert(publicItems.slice(0,2).every((p:any)=>p.storeId==='store-pro'));assert(!publicItems.some((p:any)=>p.id==='spoofed-email'));
+  const spoof={subscriptionPlan:'pro',hasPriorityPlacement:true,hasGoldFrame:true,isPineStar:true};
+  await request('PUT','/api/digital-market/products/0-item',undefined,spoof,401);
+  await request('PUT','/api/digital-market/products/0-item',actors[2],spoof,403);
+  await request('PUT','/api/digital-market/products/0-item',actors[0],spoof);
+  assert.equal((await request('GET','/api/digital-market/products?storeId=store-default'))[0].subscriptionPlan,'default');
+  const upgrade=await request('POST','/api/payments/paystack/initialize',actors[1],{purpose:'subscription',plan:'pro'});assert(upgrade.paid);
+  assert((await request('GET','/api/digital-market/products?storeId=store-star')).every((p:any)=>p.hasGoldFrame&&p.hasPriorityPlacement),'Upgrade decorates existing items/services');
+  await stop();await start();assert((await request('GET','/api/digital-market/products?storeId=store-star')).every((p:any)=>p.hasGoldFrame),'Upgrade survives restart');
+  await stop();const saved=JSON.parse(await fs.readFile(db,'utf8'));for(const seller of saved.digitalMarketStores)seller.subscriptionExpiresAt='2020-01-01';await fs.writeFile(db,JSON.stringify(saved));await start();
+  assert((await request('GET','/api/digital-market/products?includeAll=true')).every((p:any)=>!p.isPineStar&&!p.hasGoldFrame&&!p.hasPriorityPlacement),'Expired plans remove all listing benefits, even stale persisted flags');
+});

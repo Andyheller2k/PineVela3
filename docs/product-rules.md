@@ -206,3 +206,14 @@ Administrator manual resident enrollment is retired; resident accounts activate 
 the authenticated room-key flow. The removed wizard only wrote browser-local records and
 used the shared activity endpoint; it had no dedicated backend creation endpoint. Actual
 resident directories and room activation APIs remain supported.
+
+## Seller subscription listing benefits
+
+An active Pine Star plan adds a small glowing PineVela star badge to item and service cards.
+Pine Pro includes that badge, gold card frames and priority among matching listings in
+Featured marketplace results. Explicit price/newest sorting keeps the buyer's chosen order.
+Benefits are derived from the listing's stored store ID and its current effective subscription,
+not from seller-supplied listing flags. Expired or inactive paid plans lose these benefits on
+catalog refresh, including listings published before upgrading. The same decoration appears
+in seller inventory/services and buyer catalog/wishlist cards. Preserve these server-derived
+entitlements and store ownership boundaries during PostgreSQL/RLS migration.

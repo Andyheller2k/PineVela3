@@ -770,6 +770,10 @@ export interface ServicePriceCategory {
 
 export interface DigitalMarketProduct {
   id: string;
+  subscriptionPlan?: 'default' | 'star' | 'pro';
+  hasPriorityPlacement?: boolean;
+  hasGoldFrame?: boolean;
+  isPineStar?: boolean;
   storeId: string;
   storeName: string;
   sellerId: string;
