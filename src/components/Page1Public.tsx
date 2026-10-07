@@ -1,8 +1,10 @@
+import PublicHeader from './PublicHeader';
+import PublicMarketCatalog from './PublicMarketCatalog';
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Hostel } from '../types';
 import PineLogo from './PineLogo';
-import { Search, MapPin, Phone, ArrowRight, X, Sparkles, Shield, User, Landmark, ChevronDown, LogOut, ShieldCheck, Wifi, Zap, BedDouble, Building2, CheckCircle2, ChevronLeft, ChevronRight, Maximize2, ImageIcon, ShoppingBag } from 'lucide-react';
+import { MapPin, Phone, ArrowRight, X, Sparkles, Shield, User, Landmark, ShieldCheck, Wifi, Zap, BedDouble, Building2, CheckCircle2, ChevronLeft, ChevronRight, Maximize2, ImageIcon, ShoppingBag } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '../context/AuthContext';
 import { } from '../lib/api';
@@ -13,7 +15,6 @@ import { } from '../utils/formValidation';
 
 import dayImage from '../../assets/pinevela-day.webp';
 import nightImage from '../../assets/pinevela-night.webp';
-import ThemeToggle from './ThemeToggle';
 
 interface Page1PublicProps {
   hostels: Hostel[];
@@ -31,7 +32,8 @@ export default function Page1Public({
   onNavigate
 }: Page1PublicProps) {
   const navigate = useNavigate();
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchParams] = useSearchParams();
+  const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
 
   const { user, logout } = useAuth();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
@@ -104,105 +106,14 @@ export default function Page1Public({
       <div className="absolute top-0 right-0 w-96 h-96 bg-amber-100 rounded-full blur-3xl opacity-30 -z-10" />
       <div className="absolute top-1/2 left-0 w-80 h-80 bg-blue-100 rounded-full blur-3xl opacity-30 -z-10" />
 
-      {/* Fixed Header Bar at top with frost/glassmorphism */}
-      <header
-        id="public-header"
-        className="fixed top-0 left-0 right-0 z-40 px-4 sm:px-6 md:px-12 py-3 bg-transparent backdrop-blur-none border-b border-transparent shadow-none transition-all duration-300"
-      >
-        <div className="max-w-7xl mx-auto w-full flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
-          <div className="cursor-pointer shrink-0" onClick={() => {
-            document.getElementById('welcome-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          }}>
-            <PineLogo />
-          </div>
-          
-          {/* Global Search Bar with Search trigger */}
-          <form 
-            onSubmit={(e) => {
-              e.preventDefault();
-              document.getElementById('hostels-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }}
-            className="relative w-full max-w-md flex items-center"
-          >
-            <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-              <Search size={16} />
-            </span>
-            <input
-              type="text"
-              placeholder="Search for hostels, locations, or staff names..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  document.getElementById('hostels-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                }
-              }}
-              className="w-full pl-10 pr-20 py-2 border border-blue-400/85 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/70 bg-white/20 backdrop-blur-md text-slate-800 text-xs sm:text-sm font-semibold transition-all shadow-[0_0_0_1px_rgba(59,130,246,0.28),0_0_18px_rgba(59,130,246,0.32)]"
-            />
-            {searchQuery && (
-              <button
-                type="button"
-                onClick={() => setSearchQuery('')}
-                className="absolute right-14 text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
-                title="Clear search"
-              >
-                <X size={14} />
-              </button>
-            )}
-            <button
-              type="submit"
-              className="absolute right-1 px-3 py-1 bg-blue-900 hover:bg-blue-800 text-white text-xs font-bold rounded-lg transition-all cursor-pointer shadow-xs"
-            >
-              Search
-            </button>
-          </form>
-
-          <div className="flex items-center gap-3 text-sm font-medium shrink-0">
-            <ThemeToggle />
-            {user ? (
-              <div className="flex items-center gap-2 sm:gap-3">
-                <span className="text-xs font-bold text-slate-800 hidden sm:inline">
-                  {user.name} ({user.role})
-                </span>
-                <button
-                  onClick={() => setShowLogoutConfirm(true)}
-                  className="px-3.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-extrabold rounded-xl text-xs shadow-xs transition-all cursor-pointer flex items-center gap-1.5"
-                >
-                  <LogOut className="w-3.5 h-3.5" />
-                  <span>Logout</span>
-                </button>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => navigate('/login?mode=register', { state: { mode: 'register' } })}
-                  className="px-4 py-2 bg-white/90 hover:bg-white text-blue-800 border border-white font-extrabold rounded-xl text-xs shadow-sm backdrop-blur-md transition-all cursor-pointer hover:scale-102 active:scale-98"
-                >
-                  Sign Up
-                </button>
-                <button
-                  onClick={() => onNavigate('student-login')}
-                  className="px-5 py-2 bg-blue-900 hover:bg-blue-800 text-white font-extrabold rounded-xl text-xs shadow-md transition-all cursor-pointer hover:scale-102 active:scale-98"
-                >
-                  Login
-                </button>
-              </div>
-            )}
-            <button
-              onClick={() => setCompanyStorySection('about-us')}
-              aria-haspopup="dialog"
-              className="px-3 py-2 bg-white/85 hover:bg-white text-slate-800 border border-white/80 font-semibold rounded-xl text-xs backdrop-blur-md cursor-pointer flex items-center gap-1.5 whitespace-nowrap"
-            >
-              About Us <ChevronDown size={14} aria-hidden="true" />
-            </button>
-          </div>
-        </div>
-      </header>
+      <PublicHeader searchQuery={searchQuery} setSearchQuery={setSearchQuery}
+        onSearch={() => document.getElementById('hostels-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+        onHome={() => document.getElementById('welcome-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+        setCompanyStorySection={setCompanyStorySection} setShowLogoutConfirm={setShowLogoutConfirm} />
       {companyStorySection && <CompanyStory initialSection={companyStorySection} onClose={() => setCompanyStorySection(null)} />}
 
       {/* Top Section Container holding Welcome Section with Welcome Background Image covering entire top */}
-      <div className="relative overflow-hidden rounded-b-[4.5rem] w-full border-none shadow-none pt-24 sm:pt-28 md:pt-32">
+      <div style={{ paddingTop: 'var(--pv-public-header-height, 100px)' }} className="relative overflow-hidden rounded-b-[4.5rem] w-full border-none shadow-none pt-24 sm:pt-28 md:pt-32">
         {/* Background Image covering entire top section */}
         <div className="absolute inset-0 z-0 w-full h-full">
           <img src={dayImage} alt="" fetchPriority="high" className="landing-theme-image landing-day" />
@@ -312,8 +223,12 @@ export default function Page1Public({
       {/* Main Container */}
       <main className="w-full pt-0 space-y-16">
 
+        <section id="pinemarket-section" className="relative max-w-7xl mx-auto px-6 md:px-12 w-full mt-16 scroll-mt-48">
+          <PublicMarketCatalog preview />
+        </section>
+
         {/* Available Hostels Section */}
-        <motion.section 
+        {searchQuery.trim() && <motion.section
           id="hostels-section" 
           className="relative max-w-7xl mx-auto px-6 md:px-12 w-full mt-16 bg-transparent border-none shadow-none scroll-mt-28"
           initial={{ opacity: 0.3, y: 30 }}
@@ -324,23 +239,9 @@ export default function Page1Public({
           <div className="relative z-10 space-y-8 w-full">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b border-slate-200/40">
               <div>
-                <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">Available Residences</h2>
+                <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">Residence search results</h2>
                 <p className="text-slate-700 font-medium text-sm mt-1">Browse high-quality student accommodations across all campus zones.</p>
-                {/* Status Color Guide */}
-                <div className="flex items-center gap-6 text-xs text-slate-600 font-bold mt-4">
-                  <span className="flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
-                    OPEN
-                  </span>
-                  <span className="flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded-full bg-rose-500" />
-                    FULL
-                  </span>
-                  <span className="flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
-                    MAINTENANCE
-                  </span>
-                </div>
+
               </div>
 
             </div>
@@ -466,7 +367,7 @@ export default function Page1Public({
             </div>
           )}
           </div>
-        </motion.section>
+        </motion.section>}
 
         {/* Benefits Badges Section */}
         <motion.section 
@@ -799,74 +700,9 @@ export default function Page1Public({
                     <p className="text-sm text-slate-800 leading-relaxed font-semibold">
                       {selectedHostel.description && selectedHostel.description.trim() !== ''
                         ? selectedHostel.description
-                        : `${selectedHostel.name} is a certified ${selectedHostel.wing || selectedHostel.hostel_type || 'student accommodation'} located in ${selectedHostel.location || 'Kumasi'}. Featuring ${selectedHostel.totalCapacity || selectedHostel.availableSpaces || 120} total beds across ${selectedHostel.totalBlocks || (Array.isArray(selectedHostel.blocks) ? selectedHostel.blocks.length : 1)} residential block(s), offering modern student amenities and verified campus proximity.`
+                        : `${selectedHostel.name} is a certified ${selectedHostel.wing || selectedHostel.hostel_type || 'student accommodation'} located in ${selectedHostel.location || 'Kumasi'}. Featuring ${selectedHostel.totalCapacity || selectedHostel.availableSpaces || 120} total beds across ${selectedHostel.totalBlocks || (Array.isArray(selectedHostel.blocks) ? selectedHostel.blocks.length : 1)} residential block(s), with room configuration and campus location details.`
                       }
                     </p>
-                  </div>
-
-                  {/* Highlighted Facilities & Amenities Crystal Glass Card */}
-                  <div className="bg-white/70 backdrop-blur-xl p-6 sm:p-8 rounded-3xl border border-white/90 shadow-lg shadow-sky-900/5 space-y-6">
-                    <h2 className="text-xl font-black text-slate-950 tracking-tight flex items-center gap-2">
-                      <Zap className="w-5 h-5 text-amber-500" />
-                      <span>Residence Features & Amenities</span>
-                    </h2>
-
-                    {(() => {
-                      const hostFacilities: string[] = Array.isArray(selectedHostel.facilities) && selectedHostel.facilities.length > 0
-                        ? selectedHostel.facilities
-                        : Array.isArray(selectedHostel.amenities) && selectedHostel.amenities.length > 0
-                        ? selectedHostel.amenities
-                        : ['Fiber-Optic Wi-Fi', '24/7 Power Backup', 'CCTV Surveillance', 'Borehole Water Supply'];
-
-                      return (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                          {hostFacilities.map((facility: string, fIdx: number) => {
-                            let IconComp = Zap;
-                            let colorClass = 'bg-amber-100 text-amber-900';
-                            let desc = 'Configured amenity available for all verified property residents.';
-
-                            const lowerF = facility.toLowerCase();
-                            if (lowerF.includes('wifi') || lowerF.includes('internet') || lowerF.includes('fiber')) {
-                              IconComp = Wifi;
-                              colorClass = 'bg-blue-100 text-blue-900';
-                              desc = 'High-speed internet broadband access across rooms & study spaces.';
-                            } else if (lowerF.includes('power') || lowerF.includes('generator') || lowerF.includes('plant')) {
-                              IconComp = Zap;
-                              colorClass = 'bg-amber-100 text-amber-900';
-                              desc = 'Automatic standby power source ensuring zero outage during study hours.';
-                            } else if (lowerF.includes('security') || lowerF.includes('cctv') || lowerF.includes('guard') || lowerF.includes('gate')) {
-                              IconComp = ShieldCheck;
-                              colorClass = 'bg-emerald-100 text-emerald-900';
-                              desc = 'Secure perimeter with 24-hour security monitoring and ID verification.';
-                            } else if (lowerF.includes('water') || lowerF.includes('borehole')) {
-                              IconComp = CheckCircle2;
-                              colorClass = 'bg-sky-100 text-sky-900';
-                              desc = 'Continuous clean water supply supported by mechanized storage tanks.';
-                            } else if (lowerF.includes('study') || lowerF.includes('hall') || lowerF.includes('library')) {
-                              IconComp = Building2;
-                              colorClass = 'bg-indigo-100 text-indigo-900';
-                              desc = 'Dedicated quiet zone engineered for study, research, and collaborative work.';
-                            } else if (lowerF.includes('air') || lowerF.includes('ac') || lowerF.includes('cooling')) {
-                              IconComp = Sparkles;
-                              colorClass = 'bg-cyan-100 text-cyan-900';
-                              desc = 'Climate-controlled room ventilation and cooling units.';
-                            }
-
-                            return (
-                              <div key={fIdx} className="p-4 bg-white/80 backdrop-blur-md rounded-2xl border border-sky-100 flex items-start gap-3 shadow-xs">
-                                <div className={`w-10 h-10 rounded-xl ${colorClass} flex items-center justify-center font-extrabold shrink-0`}>
-                                  <IconComp size={20} />
-                                </div>
-                                <div>
-                                  <h4 className="text-xs font-black text-slate-950">{facility}</h4>
-                                  <p className="text-[11px] text-slate-700 font-bold mt-0.5">{desc}</p>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      );
-                    })()}
                   </div>
 
                   {/* Standard Room Configuration Overview */}

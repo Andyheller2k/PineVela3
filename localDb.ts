@@ -540,11 +540,12 @@ export async function dbRegisterHostelAtomic(registrationPayload: any, fallbackH
     approvalStatus: registrationPayload.approvalStatus || (registrationPayload.isApproved ? 'Approved' : 'Pending Approval'),
     blocksList: registrationPayload.blocksList || [],
     pricingTiers: registrationPayload.pricingTiers || [],
-    facilities: registrationPayload.facilities || [],
-    amenities: registrationPayload.facilities || registrationPayload.amenities || [],
     campusProximity: registrationPayload.campusProximity || '5-10 Mins Walk',
     campusProximityDetails: registrationPayload.campusProximityDetails || 'Shuttle & walking routes',
     gallery: registrationPayload.gallery || (registrationPayload.imageUrl ? [registrationPayload.imageUrl] : []),
+    contact_phone: registrationPayload.contactPhone,
+    contact_phone_country: registrationPayload.contactPhoneCountry,
+    contact_email: registrationPayload.contactEmail || '',
     hostel_type: registrationPayload.hostelType || registrationPayload.hostel_type || 'Hostel'
   };
 

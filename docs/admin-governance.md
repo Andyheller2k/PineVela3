@@ -28,8 +28,13 @@ account does not exist. Multiple existing administrators without either selectio
 offline reconciliation. More than five existing admins cause startup to fail safely.
 
 Administrator #1 may suspend/reactivate another admin immediately; suspension revokes its
-sessions. Permanent account removal requires #1's key plus a different existing admin's
-key approval. A key reset requires two active admins other than the key owner, so other
+sessions. Permanent account removal requires #1 and three other active administrators' approval keys,
+excluding the targeted account. Two approvals keep voting open. After all four approvals,
+the target receives a 24-hour plea window. Only #1 can accept a plea (revoking all votes),
+reject a plea, or explicitly confirm removal after rejection or an unanswered deadline.
+Plea decisions produce private prompts for the target; plea text is visible only to #1
+and the target. Membership changes invalidate outstanding removals. A key reset requires
+two active admins other than the key owner, so other
 founders can recover a lost #1 key without knowing it. The owner then enrolls a new key
 with their login password. #1 cannot be suspended/deleted. Generic account/password APIs
 cannot delete an administrator or reset another admin's login password.
@@ -150,10 +155,15 @@ owner then signs in and enrolls again; resetting this key preserves the wipe key
   it with their own settings keys and a required return message (1–2,000 characters).
   Public maintenance copy reveals neither database work nor administrator access.
   The latest return message is available only via authenticated
-  `GET /api/auth/maintenance-notice`. Every account sees a modal on returning;
+  `GET /api/auth/maintenance-notice`. For 24 hours after restoration, only non-admin
+  credential accounts present at restoration can see the modal. The server snapshots
+  their account identities, including dedicated seller/officer accounts, so accounts
+  created afterward are excluded even if they share an existing account's email.
+  Open popups close at expiry; expired notices and legacy notices without a reliable
+  restoration time and audience are not delivered.
   `POST /api/auth/maintenance-notice/dismiss` accepts only the notice ID and derives
   the dismissal owner from the session. Messages and per-account dismissals persist
-  in private platform settings, survive restarts, and reset for the next lockdown.
+  in private platform settings, survive restarts without extending expiry, and reset for the next lockdown.
   During PostgreSQL migration, preserve these notices and owner-only acknowledgements
   with RLS. Public settings, health, invalidation streams, logout
   and secret administrator-invitation acceptance remain available. These public streams

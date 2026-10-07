@@ -1,24 +1,24 @@
 import { canManageHostel } from './accountSecurity.js';
+import { internationalPhone } from './internationalPhone.js';
+import { retiredHostelFields } from './hostelRegistrationFields.js';
 
 const TEXT_FIELDS = new Set([
   'name', 'description', 'location', 'wing', 'hostel_type', 'type', 'gender',
-  'contact_email', 'contact_phone', 'alternative_phone', 'website',
+  'contact_email', 'contact_phone', 'contact_phone_country', 'contactPhone', 'contactPhoneCountry', 'alternative_phone', 'website',
   'address_line_1', 'address_line_2', 'city', 'region', 'country', 'postal_code',
   'digitalAddress', 'digital_address', 'landmark', 'formattedAddress',
   'campusProximity', 'campusProximityDetails', 'image', 'imageUrl', 'image_url',
   'imagePath', 'image_path', 'exteriorPhotoUrl', 'paymentFrequency',
-  'billingFrequency', 'frequency', 'currency', 'curfew', 'minStay', 'maxStay',
-  'visitorPolicy', 'guestPolicy', 'smokingPolicy', 'petPolicy', 'noisePolicy',
-  'cancellationPolicy', 'checkInTime', 'checkOutTime'
+  'billingFrequency', 'frequency', 'currency'
 ]);
 const NUMBER_FIELDS = new Set([
   'price', 'securityDeposit', 'applicationFee', 'totalCapacity', 'capacity',
   'totalBlocks', 'totalFloors', 'totalRooms', 'totalBeds', 'bedsLeft',
   'availableSpaces', 'year_established'
 ]);
-const STRING_ARRAY_FIELDS = new Set(['amenities', 'facilities', 'gallery', 'customRules']);
+const STRING_ARRAY_FIELDS = new Set(['gallery']);
 const ARRAY_FIELDS = new Set(['blocks', 'blocksList', 'pricingTiers']);
-const OBJECT_FIELDS = new Set(['pricing', 'rules']);
+const OBJECT_FIELDS = new Set(['pricing']);
 const UNSAFE_FIELDS = new Set(['__proto__', 'constructor', 'prototype']);
 
 export function canUpdateHostel(actor: any, hostel: any): boolean {
@@ -56,6 +56,11 @@ export function buildHostelUpdate(body: unknown, actor: any, hostel: any): Recor
   const updates: Record<string, unknown> = {};
   for (const [field, value] of Object.entries(body)) {
     if (UNSAFE_FIELDS.has(field)) throw new HostelUpdateValidationError('Invalid hostel field');
+    if (retiredHostelFields.has(field)) {
+      // Old full-record saves preserve archived fields; they cannot create or change them.
+      if (Object.hasOwn(hostel, field) && JSON.stringify(value) === JSON.stringify(hostel[field])) continue;
+      throw new HostelUpdateValidationError('Facilities, amenities and property policies have been retired.');
+    }
     if (field === 'id') {
       if (value !== hostel.id) throw new HostelUpdateValidationError('Hostel identity cannot be changed');
       continue; // Existing full-record administrator saves include this immutable ID.
@@ -64,6 +69,16 @@ export function buildHostelUpdate(body: unknown, actor: any, hostel: any): Recor
       throw new HostelUpdateValidationError('Managers may edit valid property details only; ownership, approval and lifecycle fields are protected');
     }
     updates[field] = value;
+  }
+  if (['contact_phone', 'contactPhone', 'contact_phone_country', 'contactPhoneCountry'].some(key => key in updates)) {
+    try {
+      const country = updates.contactPhoneCountry ?? updates.contact_phone_country ?? hostel.contact_phone_country;
+      const values = [updates.contactPhone, updates.contact_phone].filter(value => value !== undefined);
+      const contacts = (values.length ? values : [hostel.contact_phone]).map(value => internationalPhone(value, country));
+      if (contacts.some(contact => contact.number !== contacts[0].number) || updates.contactPhoneCountry && updates.contact_phone_country && updates.contactPhoneCountry !== updates.contact_phone_country) throw new Error('Phone aliases must agree.');
+      delete updates.contactPhone; delete updates.contactPhoneCountry;
+      updates.contact_phone = contacts[0].number; updates.contact_phone_country = contacts[0].country;
+    } catch (error) { throw new HostelUpdateValidationError((error as Error).message); }
   }
   if (!Object.keys(updates).length) throw new HostelUpdateValidationError('No hostel changes supplied');
 

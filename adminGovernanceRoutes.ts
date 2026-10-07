@@ -34,6 +34,10 @@ export function installAdminGovernance(app: Express, requireAuth: any, governanc
   app.post(`${root}/members/:id/status`, auth, route(req => governance.setActive(req.user.id, req.params.id, req.body.active, req.body.privateKey)));
   app.post(`${root}/members/:id/changes`, auth, route(req => governance.requestChange(req.user.id, req.params.id, req.body)));
   app.post(`${root}/changes/:id/vote`, auth, route(req => governance.decideChange(req.user.id, req.params.id, req.body)));
+  app.post(`${root}/changes/:id/plea`, auth, route(req => governance.submitRemovalPlea(req.user.id, req.params.id, req.body)));
+  app.post(`${root}/changes/:id/plea/decision`, auth, route(req => governance.decideRemovalPlea(req.user.id, req.params.id, req.body)));
+  app.post(`${root}/changes/:id/plea/acknowledge`, auth, route(req => governance.acknowledgeRemovalPlea(req.user.id, req.params.id)));
+  app.post(`${root}/changes/:id/confirm-removal`, auth, route(req => governance.confirmRemoval(req.user.id, req.params.id, req.body)));
   app.post(`${root}/preview`, auth, route(req => governance.preview(req.user.id, req.body.scopes)));
   app.post(`${root}/proposals`, auth, route(req => governance.propose(req.user.id, req.body)));
   app.post(`${root}/proposals/:id/vote`, auth, route(req => governance.decide(req.user.id, req.params.id, req.body)));

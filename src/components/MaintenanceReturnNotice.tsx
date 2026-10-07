@@ -13,15 +13,22 @@ export default function MaintenanceReturnNotice() {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const queryKey = ['maintenance-return-notice', user?.role, user?.id];
-  const { data } = useQuery<{ notice: { id: string; message: string } | null }>({
-    queryKey, enabled: !!user, refetchInterval: 5000,
+  const { data } = useQuery<{ serverTime: string; notice: { id: string; message: string; expiresAt: string } | null }>({
+    queryKey, enabled: !!user && user.role !== 'admin', refetchInterval: 5000,
     queryFn: async () => {
       const response = await sessionFetch('/api/auth/maintenance-notice');
       if (!response.ok) throw new Error('Notice could not load.');
       return response.json();
     },
   });
-  const notice = data?.notice;
+  const notice = user?.role !== 'admin' ? data?.notice : null;
+  useEffect(() => {
+    if (!notice || !data?.serverTime) return;
+    const remaining = Date.parse(notice.expiresAt) - Date.parse(data.serverTime);
+    if (!Number.isFinite(remaining) || remaining <= 0) { client.setQueryData(queryKey, { ...data, notice: null }); return; }
+    const timer = window.setTimeout(() => client.setQueryData(queryKey, { ...data, notice: null }), remaining);
+    return () => window.clearTimeout(timer);
+  }, [notice?.id, notice?.expiresAt, data?.serverTime, user?.id, user?.role, client]);
   useEffect(() => {
     const element = dialog.current;
     if (notice && element && !element.open) element.showModal();

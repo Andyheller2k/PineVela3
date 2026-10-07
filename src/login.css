@@ -1,0 +1,35 @@
+.mobile-login-backdrop, .mobile-login-photo, .login-mobile-theme { display: none; }
+
+@media (max-width: 1023px) {
+  .unified-login { min-height: 100svh; isolation: isolate; }
+  .mobile-login-backdrop { display: none; }
+  .mobile-login-backdrop img { position: absolute; width: 100%; height: 100%; object-fit: cover; filter: blur(24px); transform: scale(1.08); }
+  .mobile-login-photo { display: block; position: fixed; inset: 0; width: 100%; height: 100dvh; padding: 0; border: 0; background: #0b1426; cursor: pointer; z-index: -1; }
+  .mobile-login-photo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .unified-login .login-header { position: absolute; inset: 0 0 auto; padding: 16px 20px; }
+  .login-header .login-logo-link { padding: 6px 0; background: transparent; backdrop-filter: none; }
+  .login-home-link, .unified-login > div[class*="-z-10"], .login-card-logo, .login-brand-line { display: none; }
+  .login-mobile-theme { display: block; }
+  body:has(.unified-login) .theme-dock { display: none; }
+  .unified-login .login-main { display: flex; align-items: flex-start; padding: clamp(180px, 36svh, 360px) 12px 0; gap: 0; }
+  .unified-login .login-auth-card { padding: 22px 22px 26px; gap: 20px; border-radius: 32px; background: rgba(255,255,255,.86); border-color: rgba(255,255,255,.85); backdrop-filter: blur(24px) saturate(1.2); box-shadow: 0 16px 48px rgba(15,23,42,.12); }
+  .unified-login .login-auth-card > * { margin-block: 0; }
+  .unified-login .login-mode-toggle { order: -2; padding: 5px; border-radius: 18px; }
+  .unified-login .login-mode-toggle button { min-height: 44px; font-size: 14px; border-radius: 13px; }
+  .login-card-heading h2 { font-size: 28px; line-height: 1.15; }
+  .unified-login .login-brand-heading { color: #0f172a !important; -webkit-text-stroke: 0 !important; }
+  .login-card-heading p:empty { display: none; }
+  .unified-login .login-auth-card input { min-height: 46px; font-size: 16px; }
+  .unified-login .login-auth-card button[type="submit"], .login-google-button { min-height: 48px; font-size: 14px; }
+  .unified-login .login-footer { color: #475569; padding: 18px 12px max(18px, env(safe-area-inset-bottom)); }
+  html[data-theme="dark"] .mobile-login-backdrop { background: #0b1426; }
+  html[data-theme="dark"] .mobile-login-photo img { filter: brightness(.68); }
+  html[data-theme="dark"] .mobile-login-backdrop img { filter: blur(24px) brightness(.55); }
+  html[data-theme="dark"] .unified-login .login-auth-card { background: rgba(16,28,48,.9); border-color: rgba(148,185,232,.25); }
+  html[data-theme="dark"] .unified-login .login-brand-heading { color: #f1f5f9 !important; }
+  html[data-theme="dark"] .unified-login .login-footer { color: #cbd5e1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mobile-login-photo img, .mobile-login-backdrop img { transition: none; }
+}

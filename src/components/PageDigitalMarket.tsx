@@ -1,4 +1,5 @@
 import ListingPlanBadge from './ListingPlanBadge';
+import { servicePoint } from '../../serviceLocation';
 import type { MarketPlan } from '../../marketPlans';
 import { routePopupFeedback } from '../lib/feedback';
 import { usePlatformSettings } from '../context/PlatformSettingsContext';
@@ -871,9 +872,10 @@ export default function PageDigitalMarket() {
     setServOpeningTime((service as any).openingTime || '08:00 AM');
     setServClosingTime((service as any).closingTime || '06:00 PM');
     setServIsOpen247(Boolean((service as any).isOpen247));
-    setServLat(Number((service as any).lat) || 6.6745);
-    setServLng(Number((service as any).lng) || -1.5716);
-    setServLocationPinned(Boolean((service as any).lat && (service as any).lng));
+    const existingPin = servicePoint((service as any).lat, (service as any).lng);
+    setServLat(existingPin?.lat ?? 6.6745);
+    setServLng(existingPin?.lng ?? -1.5716);
+    setServLocationPinned(Boolean(existingPin));
     setShowServiceModal(true);
   };
 

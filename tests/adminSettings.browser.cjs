@@ -176,9 +176,9 @@ async function main() {
     await input('form[aria-label="Portal settings"] textarea[required]', 'Thank you for your patience. Welcome back to PineVela.');
     await input('[aria-label="Administrator settings"] input[autocomplete="off"]', settingsKeys[1]);
     await click(button('Save Admin Settings'));
-    await until("document.querySelector('.maintenance-return-dialog')?.open", 'Administrator receives return notice');
-    await click("document.querySelector('[aria-label=\"Close administrator message\"]')");
-    await until("!document.querySelector('.maintenance-return-dialog')", 'Administrator dismisses notice');
+    await until("fetch('/api/settings').then(r=>r.json()).then(settings=>!settings.maintenanceMode)", 'Administrator restores service');
+    assert(!(await evaluate("Boolean(document.querySelector('.maintenance-return-dialog'))")), 'Administrator never receives a return popup');
+    assert.equal(await evaluate("fetch('/api/auth/maintenance-notice').then(r=>r.json()).then(result=>result.notice)"), null);
     await switchAccount(primary.token, '/#/student/dashboard');
     await until("!document.body.innerText.includes('PineVela is undergoing maintenance') && !document.querySelector('[aria-label=\"PineVela system announcement\"]')", 'Service automatically resumes and cleared banner disappears');
     await until("document.querySelector('.maintenance-return-dialog')?.open", 'Return popup appears');

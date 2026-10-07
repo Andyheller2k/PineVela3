@@ -14,6 +14,7 @@ import TopNavBadge from './TopNavBadge';
 import PineLogo from './PineLogo';
 import HostelRegistration from './HostelRegistration';
 import ManagerProfileModal from './ManagerProfileModal';
+import ManagerAccountControls from './ManagerAccountControls';
 import { ManagerMeetingsTab } from './ManagerMeetingsTab';
 import LogoutConfirmationModal from './LogoutConfirmationModal';
 import ManagerDigitalKeysView from './ManagerDigitalKeysView';
@@ -94,6 +95,7 @@ export default function PageManagerDashboard() {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [selectedBlock, setSelectedBlock] = useState<any | null>(null);
   const [showRegistration, setShowRegistration] = useState(false);
+  const [showAccountControls, setShowAccountControls] = useState(false);
   const [showEditProfileModal, setShowEditProfileModal] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [showWelcomePopup, setShowWelcomePopup] = useState(false);
@@ -458,9 +460,6 @@ export default function PageManagerDashboard() {
             { type: '2 in a Room (Deluxe Ensuite)', spaces: Math.round(totalRooms * bedsPerRoom * 0.2) },
             { type: '1 in a Room (Executive Private)', spaces: Math.round(totalRooms * bedsPerRoom * 0.1) }
           ],
-          amenities: property.facilities || property.amenities || [
-            'Fiber-Optic Wi-Fi', 'Standby Generator', '24/7 Uniformed Security', 'Borehole Water', 'Study Hall'
-          ]
         };
       });
     }
@@ -483,7 +482,6 @@ export default function PageManagerDashboard() {
           roomTypes: b.roomTypes || [
             { type: `${bedsPerRoom} in a Room (Standard)`, spaces: totalRooms * bedsPerRoom }
           ],
-          amenities: b.amenities || property.facilities || []
         };
       });
     }
@@ -504,7 +502,6 @@ export default function PageManagerDashboard() {
         roomTypes: [
           { type: '3 in a Room (Standard)', spaces: Math.ceil(cap / 2) }
         ],
-        amenities: property.facilities || property.amenities || ['Fiber-Optic Wi-Fi', 'Standby Generator', 'Security']
       },
       {
         id: 'block-2',
@@ -520,7 +517,6 @@ export default function PageManagerDashboard() {
         roomTypes: [
           { type: '3 in a Room (Standard)', spaces: Math.ceil(cap / 2) }
         ],
-        amenities: property.facilities || property.amenities || ['Fiber-Optic Wi-Fi', 'Standby Generator', 'Security']
       }
     ];
   };
@@ -1316,9 +1312,9 @@ export default function PageManagerDashboard() {
                       <div>
                         <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
                           <Building2 className="w-5 h-5 text-blue-600" />
-                          <span>Residence Architecture & Facilities</span>
+                          <span>Residence Architecture & Capacity</span>
                         </h3>
-                        <p className="text-xs text-slate-500 mt-0.5">High-level overview of physical infrastructure and amenities.</p>
+                        <p className="text-xs text-slate-500 mt-0.5">High-level overview of physical infrastructure and capacity.</p>
                       </div>
                       <button 
                         onClick={() => setActiveTab('blocks')}
@@ -1354,21 +1350,6 @@ export default function PageManagerDashboard() {
                           </div>
                         </div>
                       ))}
-                    </div>
-
-                    {/* Amenities pills */}
-                    <div className="space-y-2 pt-2 border-t border-slate-100">
-                      <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Verified Facilities</span>
-                      <div className="flex flex-wrap gap-2">
-                        {(primaryProperty?.facilities || primaryProperty?.amenities || [
-                          'Fiber-Optic Wi-Fi', 'Standby Generator / Plant', '24/7 Uniformed Security', 'Borehole & Mechanized Water', 'Quiet Study Hall', 'Smart Biometric Access'
-                        ]).map((facility: string, idx: number) => (
-                          <span key={idx} className="px-3 py-1 bg-white text-xs font-semibold text-slate-700 rounded-xl border border-slate-200 shadow-sm flex items-center gap-1.5">
-                            <Check className="w-3.5 h-3.5 text-emerald-500" />
-                            <span>{facility}</span>
-                          </span>
-                        ))}
-                      </div>
                     </div>
                   </div>
 
@@ -1447,7 +1428,7 @@ export default function PageManagerDashboard() {
                       <div>
                         <p className="font-bold text-amber-950">Accredited Property Lock Active</p>
                         <p className="text-amber-800 mt-0.5">
-                          Direct editing of live residence specs (blocks, amenities, rules, fees) is restricted to maintain residence allocation integrity. To request updates, submit a change request to the PineVela Admin Board.
+                          Direct editing of live residence specs (blocks, capacity, fees) is restricted to maintain residence allocation integrity. To request updates, submit a change request to the PineVela Admin Board.
                         </p>
                       </div>
                     </div>
@@ -1520,32 +1501,6 @@ export default function PageManagerDashboard() {
                           <div className="p-4 bg-white border border-slate-100 rounded-2xl shadow-sm text-center">
                             <span className="text-[10px] font-bold uppercase text-slate-400">Digital GPS</span>
                             <span className="block text-sm font-black text-indigo-700 mt-1">GA-183-9022</span>
-                          </div>
-                        </div>
-
-                        {/* Facilities */}
-                        <div className="space-y-2">
-                          <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Accredited Facilities & Infrastructure</span>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                            {(p.facilities || p.amenities || [
-                              'Fiber-Optic Wi-Fi', 'Standby Generator / Plant', '24/7 Uniformed Security', 'Borehole & Mechanized Water', 'Quiet Study Hall', 'Smart Biometric Access'
-                            ]).map((facility: string, idx: number) => (
-                              <div key={idx} className="p-3 bg-slate-50 border border-slate-100 rounded-xl flex items-center gap-2 text-xs font-semibold text-slate-800">
-                                <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
-                                <span>{facility}</span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-
-                        {/* Rules & Operational Policies */}
-                        <div className="p-5 bg-gradient-to-br from-slate-50 to-blue-50/50 border border-blue-100 rounded-2xl space-y-3">
-                          <span className="text-xs font-bold uppercase tracking-wider text-blue-900">Standard Residence Policies</span>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-slate-600">
-                            <div><strong className="text-slate-800">Curfew:</strong> 10:00 PM (Main Gate Security Lock)</div>
-                            <div><strong className="text-slate-800">Min Stay:</strong> 1 Academic Semester</div>
-                            <div><strong className="text-slate-800">Visitors:</strong> Permitted in lobby until 8:00 PM</div>
-                            <div><strong className="text-slate-800">Smoking:</strong> Strictly Non-Smoking Campus</div>
                           </div>
                         </div>
                       </div>
@@ -3254,12 +3209,15 @@ export default function PageManagerDashboard() {
         </div>
       )}
 
+      {showAccountControls && <ManagerAccountControls onClose={() => setShowAccountControls(false)} />}
+
       {/* MANAGER PROFILE EDIT MODAL */}
       {showEditProfileModal && <ManagerProfileModal
         isOpen={showEditProfileModal}
         onClose={() => setShowEditProfileModal(false)}
         currentUser={user}
         onSave={handleSaveProfile}
+        onManageAccount={() => { setShowEditProfileModal(false); setShowAccountControls(true); }}
       />}
 
       {/* ======================================================== */}

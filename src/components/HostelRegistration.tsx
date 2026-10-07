@@ -1,3 +1,6 @@
+import InternationalPhoneInput from './InternationalPhoneInput';
+import { internationalPhone, phoneDraft } from '../../internationalPhone';
+import { activeHostelFields } from '../../hostelRegistrationFields';
 import OnboardingProgress from './OnboardingProgress';
 import { sessionFetch as fetch } from '../lib/session';
 import React, { useState, useEffect } from 'react';
@@ -41,28 +44,6 @@ import HostelMapPicker from './HostelMapPicker';
 import HostelImageUploader from './HostelImageUploader';
 
 const DRAFT_STORAGE_KEY = 'pinevela_hostel_registration_draft_v1';
-
-// All standard university residence amenities in Ghana & Africa
-const STANDARD_FACILITIES = [
-  'Fiber-Optic Wi-Fi',
-  'Standby Generator / Plant',
-  '24/7 Uniformed Security',
-  'CCTV Surveillance',
-  'Borehole & Mechanized Water',
-  'Air Conditioning',
-  'Quiet Study Hall',
-  'Student Kitchenettes',
-  'Modern Laundry Deck',
-  'Dining Hall / Cafeteria',
-  'Indoor Games Arena',
-  'Fitness Center / Gym',
-  'Smart Biometric Access',
-  'Fire Safety & Smoke Alarms',
-  'Daily Sanitation & Cleaning',
-  'Campus Shuttle Bus Service',
-  'First Aid & Health Bay',
-  'Car & Bicycle Parking'
-];
 
 export const getBillingFrequenciesForPropertyType = (wingOrType?: string) => {
   const t = (wingOrType || '').toLowerCase();
@@ -127,7 +108,7 @@ export default function HostelRegistration({
 }: HostelRegistrationProps) {
   const { user } = useAuth();
   
-  // Master 10-Step Draft Initial State
+  // Four-step residence registration draft
   const initialDraftState: HostelRegistrationDraft = {
     // Step 1: Basic Info
     name: '',
@@ -139,6 +120,7 @@ export default function HostelRegistration({
     yearEstablished: new Date().getFullYear(),
     contactEmail: '',
     contactPhone: '',
+    contactPhoneCountry: 'GH',
     alternativePhone: '',
     website: '',
     wing: 'Hostel',
@@ -182,34 +164,17 @@ export default function HostelRegistration({
       { id: 'block-2', name: 'Block B (Beta)', floors: 4, totalRooms: 20, roomPrefix: 'B', startNum: 201, bedsPerRoom: 3 }
     ],
 
-    // Step 5: Facilities
-    facilities: [],
-    customFacilities: [],
-
-    // Step 6: Rules
-    checkInTime: '10:00 AM',
-    checkOutTime: '02:00 PM',
-    minStay: '1 Semester',
-    maxStay: '1 Academic Year',
-    guestPolicy: 'Visitors permitted in common lobby only until 8:00 PM',
-    curfew: '10:00 PM (Hostel main gate lock)',
-    smokingPolicy: 'Strictly Non-Smoking',
-    petPolicy: 'No Pets',
-    noisePolicy: 'Strict silence hours observed between 10:00 PM and 6:00 AM',
-    cancellationPolicy: 'Full refund 14 days before semester commencement, 50% thereafter',
-    customRules: [],
-
     // Stay cycle
     paymentFrequency: 'Per Academic Year',
 
-    // Step 8: Manager
+    // Manager assignment
     assignedManagerId: '',
     managerName: '',
     managerEmail: '',
     managerPhone: '',
     isNewManager: true,
 
-    // Step 8: Confirmation
+    // Submission confirmation
     agreeTerms: false,
     accuracyCertified: false
   };
@@ -225,8 +190,6 @@ export default function HostelRegistration({
   const [registeredResult, setRegisteredResult] = useState<Hostel | null>(null);
 
   // Custom additions temporary states
-  const [newFacilityInput, setNewFacilityInput] = useState('');
-  const [newRuleInput, setNewRuleInput] = useState('');
   const [isTermsExpanded, setIsTermsExpanded] = useState(true);
   const [showTermsModal, setShowTermsModal] = useState(false);
 
@@ -235,9 +198,7 @@ export default function HostelRegistration({
     { num: 1, title: 'Basic Info', icon: Building2, desc: 'Identity & category' },
     { num: 2, title: 'Map Pin', icon: Compass, desc: 'Location, address & entrance' },
     { num: 3, title: 'Image Upload', icon: ImageIcon, desc: 'Property photograph' },
-    { num: 4, title: 'Capacity', icon: Users, desc: 'Blocks, rooms & beds' },
-    { num: 5, title: 'Facilities', icon: ShieldCheck, desc: 'Amenities & utilities' },
-    { num: 6, title: 'Policies', icon: FileText, desc: 'Curfew, rules & refund' }
+    { num: 4, title: 'Capacity', icon: Users, desc: 'Blocks, rooms & beds' }
   ];
 
   // 1. Load draft from localStorage on mount
@@ -250,10 +211,9 @@ export default function HostelRegistration({
           const { defaultFee, securityDeposit, applicationFee, currency, ...currentDraft } = parsed;
           setFormData((prev) => ({
             ...initialDraftState,
-            ...currentDraft,
+            ...activeHostelFields(currentDraft),
+            ...phoneDraft(parsed.contactPhone, parsed.contactPhoneCountry),
             blocksList: Array.isArray(parsed.blocksList) && parsed.blocksList.length > 0 ? parsed.blocksList : initialDraftState.blocksList,
-            facilities: Array.isArray(parsed.facilities) ? parsed.facilities : initialDraftState.facilities,
-            customRules: Array.isArray(parsed.customRules) ? parsed.customRules : initialDraftState.customRules
           }));
           if (parsed.name) {
             setDraftBannerVisible(true);
@@ -310,6 +270,7 @@ export default function HostelRegistration({
         errors.contactEmail = 'Valid contact email is required';
       }
       if (!formData.contactPhone.trim()) errors.contactPhone = 'Contact phone number is required';
+      else try { internationalPhone(formData.contactPhone, formData.contactPhoneCountry); } catch (error) { errors.contactPhone = (error as Error).message; }
     } else if (step === 3) {
       if (!formData.imageUrl && !formData.imagePreviewUrl) {
         errors.image = 'You must upload an actual photograph of your residence exterior.';
@@ -332,7 +293,7 @@ export default function HostelRegistration({
 
   const handleNext = () => {
     if (validateStep(currentStep)) {
-      if (currentStep < 6) {
+      if (currentStep < STEPS.length) {
         setCurrentStep((prev) => prev + 1);
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }
@@ -492,45 +453,11 @@ export default function HostelRegistration({
     recalculateBlockTotals(nextBlocks);
   };
 
-  // Facility toggle
-  const toggleFacility = (facility: string) => {
-    const exists = formData.facilities.includes(facility);
-    const next = exists
-      ? formData.facilities.filter((f) => f !== facility)
-      : [...formData.facilities, facility];
-    updateFormData({ facilities: next });
-  };
-
-  const addCustomFacility = () => {
-    if (!newFacilityInput.trim()) return;
-    const val = newFacilityInput.trim();
-    if (!formData.facilities.includes(val) && !formData.customFacilities.includes(val)) {
-      updateFormData({
-        facilities: [...formData.facilities, val],
-        customFacilities: [...formData.customFacilities, val]
-      });
-    }
-    setNewFacilityInput('');
-  };
-
-  // Custom rule adder
-  const addCustomRule = () => {
-    if (!newRuleInput.trim()) return;
-    updateFormData({
-      customRules: [...formData.customRules, newRuleInput.trim()]
-    });
-    setNewRuleInput('');
-  };
-
-  const removeCustomRule = (idx: number) => {
-    const next = [...formData.customRules];
-    next.splice(idx, 1);
-    updateFormData({ customRules: next });
-  };
-
   // Final Atomic Submission
   const handleFinalSubmit = async () => {
-    if (!validateStep(9)) return;
+    for (let step = 1; step <= STEPS.length; step++) {
+      if (!validateStep(step)) { setCurrentStep(step); return; }
+    }
 
     setIsSubmitting(true);
     setSubmitError(null);
@@ -578,7 +505,8 @@ export default function HostelRegistration({
         genderCategory: formData.genderCategory,
         yearEstablished: formData.yearEstablished,
         contactEmail: formData.contactEmail,
-        contactPhone: formData.contactPhone,
+        contactPhone: internationalPhone(formData.contactPhone, formData.contactPhoneCountry).number,
+        contactPhoneCountry: formData.contactPhoneCountry,
         alternativePhone: formData.alternativePhone,
         website: formData.website,
         addressLine1: formData.addressLine1,
@@ -607,20 +535,6 @@ export default function HostelRegistration({
         totalFloors: formData.totalFloors,
         totalRooms: formData.totalRooms,
         blocksList: formData.blocksList,
-        facilities: formData.facilities,
-        rules: {
-          checkInTime: formData.checkInTime,
-          checkOutTime: formData.checkOutTime,
-          minStay: formData.minStay,
-          maxStay: formData.maxStay,
-          guestPolicy: formData.guestPolicy,
-          curfew: formData.curfew,
-          smokingPolicy: formData.smokingPolicy,
-          petPolicy: formData.petPolicy,
-          noisePolicy: formData.noisePolicy,
-          cancellationPolicy: formData.cancellationPolicy,
-          customRules: formData.customRules
-        },
         managerId: currentUserId || user?.id || `MGR-${Date.now()}`,
         managerName: user?.name || formData.managerName || 'Anthony Davis',
         managerEmail: user?.email || formData.managerEmail || 'manager@pinevela.com',
@@ -694,7 +608,7 @@ export default function HostelRegistration({
           </h2>
           <p className="text-sm text-slate-600 max-w-lg mx-auto">
             The hostel record has been created in the database with all {formData.blocksList.length} blocks,
-            amenities, manager assignments, and uploaded photography.
+            manager assignments and uploaded photography.
           </p>
         </div>
 
@@ -860,42 +774,26 @@ export default function HostelRegistration({
                         const val = e.target.value;
                         let defaultHType = 'Student accommodation';
                         let defaultFreq = 'Per Academic Year';
-                        let defaultMinStay = '1 Semester';
-                        let defaultMaxStay = '1 Academic Year';
-                        let defaultCancellation = 'Full refund 14 days before semester commencement, 50% thereafter';
-                        let defaultCurfew = '10:00 PM (Hostel main gate lock)';
 
                         if (val === 'Inn') {
                           defaultHType = 'Guesthouse / Inn';
                           defaultFreq = 'Per Night';
-                          defaultMinStay = '1 Night';
-                          defaultMaxStay = '14 Nights';
-                          defaultCancellation = 'Free cancellation up to 48 hours prior to check-in date.';
-                          defaultCurfew = '11:00 PM (Host / Manager on duty)';
+
                         } else if (val === 'Hotel') {
                           defaultHType = 'Hotel / Commercial';
                           defaultFreq = 'Per Night';
-                          defaultMinStay = '1 Night';
-                          defaultMaxStay = '30 Nights';
-                          defaultCancellation = 'Free cancellation up to 24 hours prior to check-in date.';
-                          defaultCurfew = '24/7 Front Desk & Electronic Keycard Access';
+
                         } else if (val === 'Estate') {
                           defaultHType = 'Residential Estate / Apartment';
                           defaultFreq = 'Monthly';
-                          defaultMinStay = '1 Month';
-                          defaultMaxStay = '1 Year';
-                          defaultCancellation = '1-month advance written notice required prior to lease termination.';
-                          defaultCurfew = '24/7 Gated Security & Perimeter Patrol';
+
                         }
 
                         updateFormData({ 
                           wing: val,
                           hostelType: defaultHType,
                           paymentFrequency: defaultFreq,
-                          minStay: defaultMinStay,
-                          maxStay: defaultMaxStay,
-                          cancellationPolicy: defaultCancellation,
-                          curfew: defaultCurfew
+
                         });
                       }}
                       className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-900 text-slate-800"
@@ -949,23 +847,8 @@ export default function HostelRegistration({
                     )}
                   </div>
 
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-700">
-                      Primary Contact Phone <span className="text-rose-500">*</span>
-                    </label>
-                    <input
-                      type="tel"
-                      placeholder="+233 24 000 0000"
-                      value={formData.contactPhone}
-                      onChange={(e) => updateFormData({ contactPhone: e.target.value })}
-                      className={`w-full px-3.5 py-2.5 bg-slate-50 border rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-900 text-slate-800 ${
-                        validationErrors.contactPhone ? 'border-rose-400 bg-rose-50/30' : 'border-slate-200'
-                      }`}
-                    />
-                    {validationErrors.contactPhone && (
-                      <p className="text-[11px] text-rose-600 font-semibold">{validationErrors.contactPhone}</p>
-                    )}
-                  </div>
+                  <InternationalPhoneInput value={formData.contactPhone} country={formData.contactPhoneCountry}
+                    error={validationErrors.contactPhone} onChange={(contactPhone, contactPhoneCountry) => updateFormData({ contactPhone, contactPhoneCountry })} />
 
                   <div className="space-y-1.5">
                     <label className="text-xs font-bold text-slate-700">Alternative Phone (Optional)</label>
@@ -1310,195 +1193,6 @@ export default function HostelRegistration({
               </div>
             )}
 
-            {/* STEP 6: FACILITIES & AMENITIES */}
-            {currentStep === 5 && (
-              <div className="space-y-6">
-                <div className="space-y-4">
-                  <h3 className="text-lg font-black text-slate-900 tracking-tight">Step 5: Facilities & Amenities</h3>
-                  <p className="text-xs text-slate-500">
-                    Select verified facilities and utilities provided on the hostel property.
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-                  {STANDARD_FACILITIES.map((facility) => {
-                    const isSelected = formData.facilities.includes(facility);
-                    return (
-                      <button
-                        key={facility}
-                        type="button"
-                        onClick={() => toggleFacility(facility)}
-                        className={`flex items-center gap-2.5 p-3 rounded-xl border text-left text-xs font-bold transition-all ${
-                          isSelected
-                            ? 'bg-blue-900 text-white border-blue-900 shadow-sm'
-                            : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100/80'
-                        }`}
-                      >
-                        <div
-                          className={`w-4 h-4 rounded flex items-center justify-center text-[10px] shrink-0 ${
-                            isSelected ? 'bg-white text-blue-900' : 'border border-slate-300 bg-white'
-                          }`}
-                        >
-                          {isSelected && <Check size={12} strokeWidth={3} />}
-                        </div>
-                        <span className="truncate">{facility}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {/* Add Custom Facility Input */}
-                <div className="pt-2 border-t border-slate-100 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-                  <input
-                    type="text"
-                    placeholder="Add custom amenity or specialized utility..."
-                    value={newFacilityInput}
-                    onChange={(e) => setNewFacilityInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        addCustomFacility();
-                      }
-                    }}
-                    className="flex-1 px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-900 text-slate-800"
-                  />
-                  <button
-                    type="button"
-                    onClick={addCustomFacility}
-                    className="px-4 py-2.5 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-bold transition-colors shrink-0"
-                  >
-                    Add Amenity
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* STEP 7: RULES & POLICIES */}
-            {currentStep === 6 && (
-              <div className="space-y-6">
-                <div className="space-y-4">
-                  <h3 className="text-lg font-black text-slate-900 tracking-tight">Step 6: Rules & Policies</h3>
-                  <p className="text-xs text-slate-500">Define curfew times, visitor guidelines, quiet hours, and cancellation terms.</p>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-700">Night Curfew / Gate Closure</label>
-                    <input
-                      type="text"
-                      value={formData.curfew}
-                      onChange={(e) => updateFormData({ curfew: e.target.value })}
-                      placeholder="e.g. 10:00 PM (Main Gate Closes)"
-                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-900 text-slate-800"
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-700">Visitor & Guest Policy</label>
-                    <input
-                      type="text"
-                      value={formData.guestPolicy}
-                      onChange={(e) => updateFormData({ guestPolicy: e.target.value })}
-                      placeholder="e.g. Guests permitted in lobby only until 8:00 PM"
-                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-900 text-slate-800"
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-700">Smoking Policy</label>
-                    <select
-                      value={formData.smokingPolicy}
-                      onChange={(e: any) => updateFormData({ smokingPolicy: e.target.value })}
-                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-900 text-slate-800"
-                    >
-                      <option value="Strictly Non-Smoking">Strictly Non-Smoking (Entire Property)</option>
-                      <option value="Designated Areas Only">Designated Outdoor Areas Only</option>
-                      <option value="Prohibited">Prohibited Under Penalty of Eviction</option>
-                    </select>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-700">Pet Policy</label>
-                    <select
-                      value={formData.petPolicy}
-                      onChange={(e: any) => updateFormData({ petPolicy: e.target.value })}
-                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-900 text-slate-800"
-                    >
-                      <option value="No Pets">No Pets Allowed</option>
-                      <option value="Service Animals Only">Service / Guide Animals Only</option>
-                      <option value="Allowed with Approval">Small Pets with Prior Written Approval</option>
-                    </select>
-                  </div>
-
-                  <div className="sm:col-span-2 space-y-1.5">
-                    <label className="text-xs font-bold text-slate-700">Quiet Hours & Noise Policy</label>
-                    <input
-                      type="text"
-                      value={formData.noisePolicy}
-                      onChange={(e) => updateFormData({ noisePolicy: e.target.value })}
-                      placeholder="e.g. Quiet study hours observed strictly from 10:00 PM to 6:00 AM"
-                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-900 text-slate-800"
-                    />
-                  </div>
-
-                  <div className="sm:col-span-2 space-y-1.5">
-                    <label className="text-xs font-bold text-slate-700">Refund & Cancellation Terms</label>
-                    <textarea
-                      rows={2}
-                      value={formData.cancellationPolicy}
-                      onChange={(e) => updateFormData({ cancellationPolicy: e.target.value })}
-                      placeholder="Cancellation terms before and after semester begins..."
-                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-900 text-slate-800"
-                    />
-                  </div>
-                </div>
-
-                {/* Custom Rules List */}
-                <div className="space-y-2 pt-2 border-t border-slate-100">
-                  <span className="text-xs font-bold text-slate-700">Specialized House Rules</span>
-                  {formData.customRules.length > 0 && (
-                    <div className="space-y-1.5">
-                      {formData.customRules.map((rule, idx) => (
-                        <div key={idx} className="flex items-center justify-between p-2 rounded-xl bg-slate-50 text-xs text-slate-800">
-                          <span>• {rule}</span>
-                          <button
-                            type="button"
-                            onClick={() => removeCustomRule(idx)}
-                            className="text-rose-500 hover:text-rose-700 p-1"
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      placeholder="e.g. No high-power heating elements (hot plates) in rooms..."
-                      value={newRuleInput}
-                      onChange={(e) => setNewRuleInput(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          addCustomRule();
-                        }
-                      }}
-                      className="flex-1 px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-900 text-slate-800"
-                    />
-                    <button
-                      type="button"
-                      onClick={addCustomRule}
-                      className="px-3 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-bold"
-                    >
-                      Add Rule
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-
         {/* Bottom Navigation Buttons */}
         <div className="border-t border-slate-100 pt-6 mt-6 flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="flex items-center gap-2 w-full sm:w-auto">
@@ -1529,7 +1223,7 @@ export default function HostelRegistration({
           </div>
 
           <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
-            {currentStep < 6 ? (
+            {currentStep < STEPS.length ? (
               <button
                 type="button"
                 onClick={handleNext}

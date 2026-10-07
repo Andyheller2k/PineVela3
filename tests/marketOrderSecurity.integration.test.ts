@@ -24,7 +24,7 @@ test('S14/S15: HTTP catalog pricing, strict quantities, legacy orders and concur
   const otherSeller = { ...seller, id: crypto.randomUUID(), userId: otherApp.userId, studentEmail: otherApp.studentEmail };
   const product = { id: crypto.randomUUID(), storeId: seller.id, sellerId: seller.userId, sellerEmail: seller.studentEmail, title: 'Isolated test product', price: 100, stockQuantity: 2, isAvailable: true,
     priceCategories: [{ id: crypto.randomUUID(), name: 'Catalog category', price: 125.25 }] };
-  const service = { ...product, id: crypto.randomUUID(), isService: true, serviceLocationMode: 'fixed', location: 'Stored service location', stockQuantity: 99 };
+  const service = { ...product, id: crypto.randomUUID(), isService: true, serviceLocationMode: 'fixed', location: 'Stored service location', lat: 0, lng: 0, stockQuantity: 99 };
   const corrupt = { id: crypto.randomUUID(), productId: product.id, sellerEmail: seller.studentEmail, storeId: seller.id, quantity: -2, productPrice: 100, totalAmount: -200, status: 'Pending Meetup', otpPin: '1234' };
   await fs.mkdir(dataDir); await fs.writeFile(db, sessionFixtureJson({ credentialExposureVersion: 1, accountSecurityVersion: 1, users: [buyer], digitalMarketApplications: [app, otherApp], ...paidMarketFixture([seller, otherSeller]), digitalMarketProducts: [product, service], digitalMarketOrders: [corrupt] }));
   const socket = net.createServer(); socket.listen(0, '127.0.0.1'); await once(socket, 'listening');
@@ -65,7 +65,8 @@ test('S14/S15: HTTP catalog pricing, strict quantities, legacy orders and concur
   const named = await checked('/api/digital-market/orders', create({ priceCategory: product.priceCategories[0].name }), 201); assert.equal(named.order.totalAmount, 125.25);
   await checked(update(named.order.id), { newStatus: 'Cancelled' }, 200, buyer.token);
   await checked(update(named.order.id), { action: 'agree-location' }, 409, app.merchantToken);
-  const serviceOrder = await checked('/api/digital-market/orders', create({ productId: service.id, serviceLocationOption: 'seller-location', meetingLocation: 'Forged location', price: 1 }), 201);
+  const serviceOrder = await checked('/api/digital-market/orders', create({ productId: service.id, serviceLocationOption: 'seller-location', meetingLocation: 'Forged location', meetingLatitude: 90, meetingLongitude: 180, price: 1 }), 201);
+  assert.equal(serviceOrder.order.meetingLatitude, 0); assert.equal(serviceOrder.order.meetingLongitude, 0);
   assert.equal(serviceOrder.order.meetingLocation, service.location); assert.equal(serviceOrder.order.productPrice, 100);
   const a = (await checked('/api/digital-market/orders', create({ quantity: 2, price: 1 }), 201)).order;
   await checked('/api/digital-market/orders', create({ quantity: 2 }), 409);

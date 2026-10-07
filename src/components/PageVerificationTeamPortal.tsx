@@ -877,7 +877,7 @@ export default function PageVerificationTeamPortal() {
                         />
                         <div className="text-xs">
                           <strong className="text-slate-900 block">Basic Property Info Verified</strong>
-                          <span className="text-slate-500">Confirmed room count, layout, structure type, and functional amenities.</span>
+                          <span className="text-slate-500">Confirmed room count, layout, structure type, and property condition.</span>
                         </div>
                       </label>
 

@@ -100,7 +100,20 @@ test('S03: hostel takeover and self-approval are blocked; legitimate edits and t
     await put(manager, body, 400);
     assert.deepEqual(await readHostels(), before);
   }
-  const patch = { description: crypto.randomUUID(), price: 1400, facilities: ['Wi-Fi'], blocksList: [], rules: { curfew: '' }, latitude: null };
+  for (const body of [{contact_phone: '+12025550123', contact_phone_country: 'GH'}, {contact_phone: 'letters', contact_phone_country: 'GH'}, {contact_phone: '0241234567', contact_phone_country: 'XX'}, {facilities: ['New facility']}, {rules: {curfew: 'New policy'}}]) {
+    for (const actor of [manager, admin]) await put(actor, body, 400);
+    assert.deepEqual(await readHostels(), before);
+  }
+  const register = async (actor: any, body: any, expected: number, route='/api/hostels/register') => {
+    const response=await fetch(base+route,{method:'POST',headers:{'Content-Type':'application/json',...(actor?.token?{Authorization:`Bearer ${actor.token}`}:{})},body:JSON.stringify(body)});
+    const result=await response.json();assert.equal(response.status,expected,result.error);return result;
+  };
+  const contact={name:'Validated contact residence',contactPhone:'+442079460018',contactPhoneCountry:'GB',managerId:'contact-property-manager'};
+  await register(undefined,contact,401);
+  for(const bad of [{contactPhone:'letters'},{contactPhoneCountry:'GH'},{contactPhoneCountry:'XX'},{contactPhoneCountry:undefined},{contactPhone:undefined},{facilities:['Facility']},{rules:{curfew:'Policy'}}]) {
+    await register(admin,{...contact,...bad},400);assert.deepEqual(await readHostels(),before);
+  }
+  const patch = { description: crypto.randomUUID(), price: 1400, contact_phone: '+233302123456', contact_phone_country: 'GH', blocksList: [], latitude: null };
   const edited = await put(manager, patch, 200);
   assert.deepEqual(edited, { ...before[0], ...patch, updatedAt: edited.updatedAt });
   assert.deepEqual((await readHostels())[0], edited);
@@ -119,6 +132,13 @@ test('S03: hostel takeover and self-approval are blocked; legitimate edits and t
   await put(manager, { description: crypto.randomUUID() }, 403);
   assert.deepEqual((await readHostels())[0], transferred);
   await put(foreign, { description: crypto.randomUUID() }, 200);
+  const registered = await register(admin,contact,201);
+  assert.equal(registered.hostel.contact_phone,'+442079460018');assert.equal(registered.hostel.contact_phone_country,'GB');
+  assert(!('facilities' in registered.hostel));assert(!('amenities' in registered.hostel));assert(!('rules' in registered.hostel));
+  const adminCreate={id:crypto.randomUUID(),name:'Alternative admin creation',contactPhone:'0302123456',contactPhoneCountry:'GH',privateKey};
+  await register(admin,{...adminCreate,facilities:['Attempted legacy field']},400,'/api/hostels');
+  const created=await register(admin,adminCreate,201,'/api/hostels');assert.equal(created.contact_phone,'+233302123456');
+  await register(admin,{id:created.id,privateKey,rules:{curfew:'Attempted legacy update'}},400,'/api/hostels');
   const persisted = await readHostels();
   await stop(); await start();
   assert.deepEqual(await readHostels(), persisted);

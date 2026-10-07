@@ -96,7 +96,7 @@ test('S06: all manager registration paths require admin approval; stale sessions
   let login = await request('POST', '/api/auth/login', undefined, { usernameOrEmail: first.email, password: first.password }, 200);
   let managerToken = (login.user || login).token;
   await request('GET', '/api/manager/account-settings', managerToken, undefined, 200);
-  const propertyBody = { name: 'Isolated new property', location: 'Kumasi KNUST Ayeduase', totalCapacity: 12, isApproved: true, approvalStatus: 'Approved', subscriptionPaid: true, managerId: sibling.id, managerEmail: sibling.email, status: 'Open' };
+  const propertyBody = { name: 'Isolated new property', contactPhone: '+233241234567', contactPhoneCountry: 'GH', location: 'Kumasi KNUST Ayeduase', totalCapacity: 12, isApproved: true, approvalStatus: 'Approved', subscriptionPaid: true, managerId: sibling.id, managerEmail: sibling.email, status: 'Open' };
   await request('POST', '/api/hostels/register', managerToken, { ...propertyBody, id: unrelatedHostel.id }, 409);
   const property = await request('POST', '/api/hostels/register', managerToken, propertyBody, 201);
   assert.equal(property.hostel.managerId, first.id); assert.equal(property.hostel.isApproved, false);

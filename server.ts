@@ -32,6 +32,10 @@ import { buildHostelUpdate, canUpdateHostel, HostelUpdateValidationError } from 
 import { activeOfficerAccount, buildInspectionReport, currentReportOfficer, inspectionSubmissionTarget, InspectionSubmissionError } from "./inspectionReportSecurity.js";
 import { SignupGuard, signupInput } from "./signupSecurity.js";
 import { signupProviderConfig, sendSignupVerification, confirmSignupVerification, SignupError } from "./supabaseSignup.js";
+import { installGoogleAuth, googlePrimaryAccount, googleAccountBlocked, googleRequestLogUrl } from './googleAuth.js';
+import { servicePoint } from './serviceLocation.js';
+import { internationalPhone } from './internationalPhone.js';
+import { retiredHostelFields } from './hostelRegistrationFields.js';
 import { developmentSignupRequest, isDevelopmentSignup } from "./developmentSignup.js";
 import { managerIsApproved, managerRecordMatches, managerForDossier, managerOnboardingRequest } from "./managerApprovalSecurity.js";
 import { installMarketMessaging, isMarketMessageNotification, sellerStore } from './marketMessaging.js';
@@ -366,7 +370,6 @@ let hostelVerifications: any[] = [
     totalBlocks: 3,
     pricePerYear: 4200,
     currency: 'GHS',
-    facilities: ['High Speed Wi-Fi', '24/7 Security & CCTV', 'Standby Generator', 'Private Bathrooms', 'Study Lounge'],
     imageUrl: 'https://images.unsplash.com/photo-1555854877-bab0e564b8d5?auto=format&fit=crop&w=800&q=80',
     managerId: 'manager_101',
     managerName: 'Anthony Davis',
@@ -1134,7 +1137,7 @@ async function startServer() {
 
   // Middleware: Request Logger
   app.use((req, res, next) => {
-    console.log(`[API ${new Date().toISOString()}] ${req.method} ${req.url}`);
+    console.log(`[API ${new Date().toISOString()}] ${req.method} ${googleRequestLogUrl(req.url)}`);
     next();
   });
 
@@ -1715,6 +1718,25 @@ async function startServer() {
   }, 60000);
   signupCleanup.unref();
   const existingSignupEmail = (email: string) => MOCK_USERS.some(u => normalizeEmail(accountData(u).email || u.email) === email);
+  installGoogleAuth(app, (identity, mode) => signupGuard.exclusive(identity.email, async () => {
+    let entry = googlePrimaryAccount(MOCK_USERS, identity, mode);
+    if (entry) {
+      const profile = accountData(entry);
+      const status = String(profile.accountStatus || entry.accountStatus || profile.status || entry.status || '').toLowerCase();
+      if (accountAccess(getStoreInstance(), accountId(entry), 'user').banned || profile.isBanned || entry.isBanned || profile.isDeleted || entry.isDeleted || ['banned', 'blocked', 'disabled', 'suspended', 'deleted'].includes(status)) googleAccountBlocked();
+    } else {
+      entry = {
+        email: identity.email, username: identity.email.split('@')[0].replace(/[^a-z0-9]/g, ''),
+        password: await hashCredentialAsync(crypto.randomBytes(48).toString('base64url')),
+        user: { id: `user_${crypto.randomUUID()}`, name: identity.name, email: identity.email, role: 'user', isVerified: true, verificationStatus: 'approved', emailVerificationProvider: 'supabase-google', supabaseUserId: identity.id, emailVerifiedAt: identity.verifiedAt },
+      };
+      MOCK_USERS.push(entry);
+    }
+    const token = createSessionToken('usr');
+    setRecordSession(entry, token);
+    syncStore();
+    return token;
+  }), setSessionCookie);
   const signupFailure = (res: express.Response, error: unknown) => {
     if (error instanceof SignupError) return res.status(error.status).json({ error: error.message });
     // Provider payloads can contain credentials or tokens; do not log raw exceptions.
@@ -3641,12 +3663,15 @@ async function startServer() {
           matchedMgrUser?.isVerified ? 'approved' : null,
         ].filter(Boolean).map(s => String(s).toLowerCase().trim());
 
-        const isBlocked = allStatusValues.includes('blocked') || matchedVerif?.isBlocked === true || matchedMgrReq?.isBlocked === true || matchedMgrUser?.isBlocked === true || matchedMgrUser?.user?.isBlocked === true;
-        const isApproved = !isBlocked && (allStatusValues.includes('approved') || allStatusValues.includes('verified'));
-        const isRejected = !isBlocked && !isApproved && allStatusValues.includes('rejected');
-        const rawStatus = isBlocked ? 'blocked' : (isApproved ? 'approved' : (isRejected ? 'rejected' : 'pending'));
-        const displayStatus = isBlocked ? 'Blocked' : (isApproved ? 'Approved' : (isRejected ? 'Rejected' : 'Pending Admin Approval'));
-        const blockReason = isBlocked ? (matchedVerif?.blockReason || matchedMgrReq?.blockReason || (matchedMgrUser as any)?.blockReason || (matchedMgrUser?.user as any)?.blockReason || matchedVerif?.adminNotes || matchedMgrReq?.adminNotes || 'Manager account access has been restricted by administration.') : null;
+        const managerAccess = accountAccess(store, matchedVerif?.managerId || matchedMgrReq?.managerId || accountId(matchedMgrUser), 'manager');
+        const isBlocked = managerAccess.banned || allStatusValues.some(s => ['blocked', 'disabled', 'banned'].includes(s)) || matchedVerif?.isBlocked === true || matchedMgrReq?.isBlocked === true || matchedMgrUser?.isBlocked === true || matchedMgrUser?.user?.isBlocked === true;
+        const isSuspended = !isBlocked && allStatusValues.includes('suspended');
+        const isRejected = !isBlocked && !isSuspended && allStatusValues.includes('rejected');
+        const moreInfoRequired = !isBlocked && !isSuspended && !isRejected && allStatusValues.includes('more_info_required');
+        const isApproved = !isBlocked && !isSuspended && !isRejected && !moreInfoRequired && (allStatusValues.includes('approved') || allStatusValues.includes('verified'));
+        const rawStatus = isBlocked ? 'blocked' : isSuspended ? 'suspended' : isRejected ? 'rejected' : moreInfoRequired ? 'more_info_required' : isApproved ? 'approved' : 'pending';
+        const displayStatus = isBlocked ? 'Blocked' : isSuspended ? 'Suspended' : isRejected ? 'Rejected' : moreInfoRequired ? 'More Information Required' : isApproved ? 'Approved' : 'Pending Admin Approval';
+        const blockReason = isBlocked ? (managerAccess.reason || matchedVerif?.blockReason || matchedMgrReq?.blockReason || (matchedMgrUser as any)?.blockReason || (matchedMgrUser?.user as any)?.blockReason || matchedVerif?.adminNotes || matchedMgrReq?.adminNotes || 'Manager account access has been restricted by administration.') : null;
 
         if (isApproved) {
           if (matchedVerif) matchedVerif.status = 'approved';
@@ -3673,6 +3698,8 @@ async function startServer() {
           phone: matchedVerif?.phone || matchedMgrReq?.managerPhone || (matchedMgrReq as any)?.phone || matchedMgrUser?.phone || 'N/A',
           idType: matchedVerif?.idType || 'Ghana Card (National ID)',
           idNumber: matchedVerif?.idNumber || 'N/A',
+          isRestricted: managerAccess.restrictions.length > 0,
+          restrictionReason: managerAccess.restrictions.map(r => r.reason).join('; '),
           status: rawStatus,
           rawStatus: rawStatus,
           displayStatus: displayStatus,
@@ -3807,6 +3834,7 @@ async function startServer() {
     if (typeof req.body.newPassword !== 'string' || req.body.newPassword.length < 6) return res.status(400).json({ error: 'A new password of at least 6 characters is required.' });
     const email = normalizeEmail(req.body.email);
     const role = String(req.body.role || '').toLowerCase();
+    if (role === 'manager' && (req.user.role !== 'manager' || email !== normalizeEmail(req.user.email))) return res.status(403).json({ error: 'Manage your manager password from your own manager account.' });
     if (!['manager', 'resident', 'student'].includes(role)) return res.status(403).json({ error: 'This account is not managed through primary-account controls.' });
     const candidates = passwordRecords(email, role);
     if (!candidates.length) return res.status(404).json({ error: 'Account not found.' });
@@ -3832,6 +3860,14 @@ async function startServer() {
         return res.status(400).json({ error: "Role and email are required to delete account." });
       }
       const cleanEmail = email.toLowerCase().trim();
+      if (role === 'manager') {
+        if (req.user.role !== 'manager' || cleanEmail !== normalizeEmail(req.user.email)) return res.status(403).json({ error: 'Delete a manager registration only from its own manager account.' });
+        // The legacy purge uses manager email. Fail closed for ambiguous identities instead
+        // of allowing a same-email manager account to delete another manager's records.
+        const managers = [...MOCK_USERS, ...(getStoreInstance().users || [])].filter(entry => accountRole(entry) === 'manager' && normalizeEmail(accountData(entry).email) === cleanEmail);
+        const ids = new Set(managers.map(entry => accountId(entry)));
+        if (ids.size !== 1 || !ids.has(req.user.id)) return res.status(409).json({ error: 'This manager identity requires administrator review before deletion.' });
+      }
 
       // PROTECT ADMIN ACCOUNTS: Never allow admin accounts to be deleted
       const userIndex = MOCK_USERS.findIndex(u => (u.email || u.user?.email || u.username || '').toLowerCase().trim() === cleanEmail);
@@ -4534,7 +4570,13 @@ async function startServer() {
         (userId && s.userId === userId)
       );
 
+      const merchantAccount = moderationAccounts(store).find(a => a.role === 'merchant' && (a.marketIds.includes(application?.id) || a.marketIds.includes(digitalStore?.id)));
+      const merchantAccess = merchantAccount ? accountAccess(store, merchantAccount.id, 'merchant') : null;
       if (digitalStore) {
+        digitalStore = { ...digitalStore,
+          ...(merchantAccess?.banned ? { status: 'disabled', isBanned: true, banReason: merchantAccess.reason } : {}),
+          ...(merchantAccess?.restrictions.length ? { accountStatus: 'restricted', banReason: merchantAccess.restrictions.map(r => r.reason).join('; ') } : {})
+        };
         if (!store.digitalMarketRatings) store.digitalMarketRatings = [];
         const cleanSId = (digitalStore.id || '').toString().trim();
         const matchedRatings = verifiedMarketRatings(store).filter((r: any) => cleanSId && r.storeId === cleanSId);
@@ -4550,7 +4592,7 @@ async function startServer() {
       }
 
       return res.json({
-        application: application || null,
+        application: application ? { ...application, ...(merchantAccess?.banned ? { accountStatus: 'disabled', banReason: merchantAccess.reason } : merchantAccess?.restrictions.length ? { accountStatus: 'restricted', banReason: merchantAccess.restrictions.map(r => r.reason).join('; ') } : {}) } : null,
         store: digitalStore || null
       });
     } catch (err: any) {
@@ -4799,7 +4841,7 @@ async function startServer() {
 
       const nonBannedStoreIds = new Set(
         store.digitalMarketStores
-          .filter((s: any) => !s.isBanned && !governedMarketBanned(store, s.id) && marketAccessPaid(store, s))
+          .filter((s: any) => s.status === 'active' && !s.isBanned && !governedMarketBanned(store, s.id) && marketAccessPaid(store, s))
           .map((s: any) => s.id)
       );
 
@@ -4840,6 +4882,9 @@ async function startServer() {
       if (isServiceItem && ['fixed', 'hybrid'].includes(serviceLocationMode) && !String(req.body.location || meetingLocation || '').trim()) {
         return res.status(400).json({ error: 'Fixed and Hybrid services require the seller to pin a service location.' });
       }
+      const pin = servicePoint(req.body.lat, req.body.lng);
+      if (isServiceItem && ['fixed', 'hybrid'].includes(serviceLocationMode) && !pin) return res.status(400).json({ error: 'Fixed and Hybrid services require valid latitude and longitude for the seller location.' });
+      if ((req.body.lat !== undefined || req.body.lng !== undefined) && !pin) return res.status(400).json({ error: 'Invalid service coordinates.' });
 
       const plan = effectiveMarketPlan(targetStore, Date.now(), process.env.NODE_ENV === "production");
       const limits = PLAN_LIMITS[plan];
@@ -4880,8 +4925,8 @@ async function startServer() {
         condition: condition || 'Like New',
         meetingLocation: meetingLocation || req.body.location || targetStore.location || 'Campus Enclave',
         location: req.body.location || meetingLocation || targetStore.location || 'Campus Enclave',
-        lat: req.body.lat !== undefined ? Number(req.body.lat) : 6.6745,
-        lng: req.body.lng !== undefined ? Number(req.body.lng) : -1.5716,
+        lat: pin?.lat,
+        lng: pin?.lng,
         workingDays: req.body.workingDays || 'Mon - Sat',
         openingTime: req.body.openingTime || '08:00 AM',
         closingTime: req.body.closingTime || '08:00 PM',
@@ -4923,6 +4968,14 @@ async function startServer() {
       if (!product) {
         return res.status(404).json({ error: "Product not found." });
       }
+
+      const candidate = { ...product, ...req.body };
+      const candidateService = Boolean(candidate.isService || candidate.serviceCategory || String(candidate.category || '').toLowerCase().includes('service'));
+      const candidateMode = String(candidate.serviceLocationMode || 'flexible').toLowerCase();
+      const candidatePin = servicePoint(candidate.lat, candidate.lng);
+      if (candidateService && !['flexible', 'fixed', 'hybrid'].includes(candidateMode)) return res.status(400).json({ error: 'Invalid service location mode.' });
+      if ((lat !== undefined || lng !== undefined) && !candidatePin) return res.status(400).json({ error: 'Invalid service coordinates.' });
+      if (candidateService && ['fixed', 'hybrid'].includes(candidateMode) && (!candidatePin || !String(candidate.location || candidate.meetingLocation || '').trim())) return res.status(400).json({ error: 'Fixed and Hybrid services require a valid seller location and map pin.' });
 
       const mediaFields = marketMediaFields(req.body, req.user, store);
       const safeImageUrl = imageUrl === undefined ? undefined : imageUrl === product.imageUrl ? imageUrl : await saveMarketCover(imageUrl, req);
@@ -5046,7 +5099,7 @@ async function startServer() {
           storeName: appItem.storeName || `${appItem.fullName}'s Campus Store`,
           category: appItem.categoryToSell || 'Electronics & Gadgets',
           description: `Official student digital market store by ${appItem.fullName} at ${appItem.university}.`,
-          phone: appItem.phone || '+233201234567',
+          phone: appItem.phone || '',
           logoUrl: '',
           bannerUrl: '',
           studentEmail: appItem.studentEmail,
@@ -5305,7 +5358,7 @@ async function startServer() {
       if (isServiceOrder && locationMode === 'fixed' && requestedLocationOption !== 'seller-location') {
         return res.status(400).json({ error: 'This service is only available at the provider\'s fixed location.' });
       }
-      if (isServiceOrder && (locationMode === 'fixed' || (locationMode === 'hybrid' && requestedLocationOption === 'seller-location')) && !String(product.location || product.meetingLocation || '').trim()) {
+      if (isServiceOrder && (locationMode === 'fixed' || (locationMode === 'hybrid' && requestedLocationOption === 'seller-location')) && (!String(product.location || product.meetingLocation || '').trim() || !servicePoint(product.lat, product.lng))) {
         return res.status(400).json({ error: 'The provider has not set a fixed service location yet.' });
       }
       if (isServiceOrder && (locationMode === 'flexible' || (locationMode === 'hybrid' && requestedLocationOption === 'buyer-location')) && !String(meetingLocation || '').trim()) {
@@ -5316,8 +5369,9 @@ async function startServer() {
 
       const usesSellerLocation = isServiceOrder && (locationMode === 'fixed' || (locationMode === 'hybrid' && requestedLocationOption === 'seller-location'));
       const finalMeetingLocation = usesSellerLocation ? (product.location || product.meetingLocation) : (meetingLocation || 'KNUST Main Library Car Park');
-      const parsedLat = usesSellerLocation ? Number(product.lat) || undefined : (meetingLatitude !== undefined && meetingLatitude !== null && !isNaN(Number(meetingLatitude)) ? Number(meetingLatitude) : undefined);
-      const parsedLng = usesSellerLocation ? Number(product.lng) || undefined : (meetingLongitude !== undefined && meetingLongitude !== null && !isNaN(Number(meetingLongitude)) ? Number(meetingLongitude) : undefined);
+      const orderPin = usesSellerLocation ? servicePoint(product.lat, product.lng) : servicePoint(meetingLatitude, meetingLongitude);
+      if (!usesSellerLocation && (meetingLatitude !== undefined || meetingLongitude !== undefined) && !orderPin) return res.status(400).json({ error: 'Invalid meetup coordinates.' });
+      const parsedLat = orderPin?.lat, parsedLng = orderPin?.lng;
 
       const nowIso = new Date().toISOString();
       const newOrder = {
@@ -7376,6 +7430,12 @@ async function startServer() {
         return res.status(400).json({ error: "Hostel name is required." });
       }
 
+      if (Object.keys(registrationData).some(key => retiredHostelFields.has(key))) return res.status(400).json({ error: 'Facilities, amenities and property policies have been retired.' });
+      try {
+        const phone = internationalPhone(registrationData.contactPhone, registrationData.contactPhoneCountry);
+        registrationData.contactPhone = phone.number;
+      } catch (error) { return res.status(400).json({ error: (error as Error).message }); }
+
       const isManager = req.user.role === 'manager';
       const existingId = registrationData.hostelId || registrationData.id;
       if (existingId && (getStoreInstance().hostels || []).some(h => h.id === existingId)) return res.status(409).json({ error: 'This hostel already exists. Use its authorized edit route.' });
@@ -7858,6 +7918,16 @@ async function startServer() {
   });
 
   app.post("/api/hostels", requireAuth(["admin"]), async (req: any, res) => {
+    const existing = req.body.id && hostels.find(h => h.id === req.body.id);
+    try {
+      if (existing) req.body = { id: existing.id, ...buildHostelUpdate(req.body, req.user, existing) };
+      else {
+        if (Object.keys(req.body).some(key => retiredHostelFields.has(key))) return res.status(400).json({ error: 'Facilities, amenities and property policies have been retired.' });
+        const phone = internationalPhone(req.body.contactPhone ?? req.body.contact_phone, req.body.contactPhoneCountry ?? req.body.contact_phone_country);
+        req.body.contact_phone = phone.number; req.body.contact_phone_country = phone.country;
+        delete req.body.contactPhone; delete req.body.contactPhoneCountry;
+      }
+    } catch (error) { return res.status(400).json({ error: (error as Error).message }); }
     // If an id is provided and already exists, update instead of duplicating
     if (req.body.id) {
       const existingIdx = hostels.findIndex(h => h.id === req.body.id);
@@ -10804,7 +10874,7 @@ async function startServer() {
 
   // 404 handler for API routes to prevent falling through to SPA HTML
   app.all('/api/*', (req, res) => {
-    console.warn(`[API 404] ${req.method} ${req.url}`);
+    console.warn(`[API 404] ${req.method} ${googleRequestLogUrl(req.url)}`);
     res.status(404).json({ error: `API route not found: ${req.method} ${req.url}` });
   });
 

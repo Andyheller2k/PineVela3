@@ -37,7 +37,7 @@ async function main() {
     }
     assert(target, chromeLogs); socket = new WebSocket(target.webSocketDebuggerUrl);
     await new Promise((resolve, reject) => { socket.onopen = resolve; socket.onerror = reject; });
-    let sequence = 0; const pending = new Map(), exceptions = [], apiErrors = [];
+    let sequence = 0, anonymousSignup = false; const pending = new Map(), exceptions = [], apiErrors = [];
     const heldChunks = new Set();
     command = (method, params = {}) => new Promise((resolve, reject) => {
       const id = ++sequence, timer = setTimeout(() => { pending.delete(id); reject(new Error(`Browser command timed out: ${method}`)); }, 20000);
@@ -53,7 +53,11 @@ async function main() {
       if (message.id) { const request = pending.get(message.id); if (!request) return; pending.delete(message.id); clearTimeout(request.timer); message.error ? request.reject(new Error(message.error.message)) : request.resolve(message.result); }
       else if (message.method === 'Runtime.exceptionThrown') exceptions.push(message.params.exceptionDetails.exception?.description || message.params.exceptionDetails.text);
       else if (message.method === 'Runtime.consoleAPICalled' && message.params.type === 'error') exceptions.push(message.params.args.map(item => item.value || item.description).join(' '));
-      else if (message.method === 'Network.responseReceived' && message.params.response.url.includes('/api/') && message.params.response.status >= 400) apiErrors.push({ url: message.params.response.url, status: message.params.response.status });
+      else if (message.method === 'Network.responseReceived' && message.params.response.url.includes('/api/') && message.params.response.status >= 400) {
+        const response = message.params.response;
+        // The login screen checks for a session; anonymous signup intentionally has none.
+        if (!(anonymousSignup && response.status === 401 && new URL(response.url).pathname === '/api/auth/me')) apiErrors.push({ url: response.url, status: response.status });
+      }
     };
     await command('Page.enable'); await command('Runtime.enable'); await command('Network.enable');
     const evaluate = async expression => { const result = await command('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true, userGesture: true }); if (result.exceptionDetails) throw new Error(result.exceptionDetails.exception?.description || result.exceptionDetails.text); return result.result.value; };
@@ -64,6 +68,7 @@ async function main() {
     const viewport = async width => command('Emulation.setDeviceMetricsOverride', { width, height: 900, deviceScaleFactor: 1, mobile: width < 768 });
     const switchAccount = async (token, url) => {
       await command('Page.navigate', { url: 'about:blank' });
+      anonymousSignup = false;
       await command('Network.setCookie', { name: 'pv_auth_token', value: token, url: base, httpOnly: true, sameSite: 'Strict', secure: production });
       await command('Page.navigate', { url: base + url });
       await until("document.readyState === 'complete' && document.querySelector('#root')?.childElementCount > 0", 'App initialized');
@@ -80,21 +85,26 @@ async function main() {
       await until("document.body.innerText.includes('Register New Residence')", 'Admin dashboard');
       assert(!(await evaluate("document.body.innerText.includes('Manually Register Resident')")), 'Retired manual registration absent');
       await click(matchingButton('Register New Residence'));
-      await until("document.querySelector('[role=progressbar][aria-label=\"Residence registration completion\"]')", 'Six-phase residence onboarding');
+      await until("document.querySelector('[role=progressbar][aria-label=\"Residence registration completion\"]')", 'Four-phase residence onboarding');
       assert.equal(await evaluate("document.querySelector('[role=progressbar]').getAttribute('aria-valuenow')"), '10');
-      assert.equal(await evaluate("document.querySelector('ol[aria-label=\"Residence registration steps\"]').children.length"), 6);
+      assert.equal(await evaluate("document.querySelector('ol[aria-label=\"Residence registration steps\"]').children.length"), 4);
       assert(await evaluate("[...document.querySelectorAll('ol[aria-label=\"Residence registration steps\"] button')].slice(1).every(b=>b.disabled)"));
       await noOverflow(`${width}px residence onboarding`);
       console.log(`${width}px: residence icon steps, blue progress bar, protected future steps and no page overflow passed.`);
     }
+    await command('Page.navigate', {url:'about:blank'});
     await command('Network.deleteCookies', {name:'pv_auth_token',url:base});
+    anonymousSignup = true;
     await command('Page.navigate', {url:base+'/#/login'});
     await click(button('Sign Up'));
     await until("document.querySelector('[role=progressbar][aria-label=\"Account signup completion\"]')", 'Primary signup progress');
     await noOverflow('Primary signup');
     console.log('Primary signup uses the shared icon progress design.');
     const change = await api(`/api/admin/governance/members/${admins[4].id}/changes`, admins[0].token, { privateKey: keys[0], action: 'remove', reason: 'Isolated invitation copy UI check' });
-    await api(`/api/admin/governance/changes/${change.id}/vote`, admins[1].token, { privateKey: keys[1], decision: 'approved' });
+    for (let i = 1; i <= 3; i++) await api(`/api/admin/governance/changes/${change.id}/vote`, admins[i].token, { privateKey: keys[i], decision: 'approved' });
+    await api(`/api/admin/governance/changes/${change.id}/plea`, admins[4].token, { message: 'Please reconsider the isolated test removal.' });
+    await api(`/api/admin/governance/changes/${change.id}/plea/decision`, admins[0].token, { privateKey: keys[0], decision: 'rejected', reason: 'A vacancy is needed for the invitation test.' });
+    await api(`/api/admin/governance/changes/${change.id}/confirm-removal`, admins[0].token, { privateKey: keys[0], confirmation: 'REMOVE ADMINISTRATOR' });
     await viewport(375); await switchAccount(admins[0].token, '/#/admin/dashboard');
     await click(matchingButton('Shared approvals'));
     await until("document.body.innerText.includes('Invite a founder')", 'Founder invitation');

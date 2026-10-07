@@ -10,6 +10,7 @@ import { hashCredential, publicAccountData } from '../accountSecurity.js';
 import { validateDatabase } from '../jsonStoreSafety.js';
 import { publicPlatformSettings, validatePlatformSettings } from '../platformSettings.js';
 import { buildWipePlan } from '../adminWipeScope.js';
+import { createMaintenanceRecoveryNotice, eligibleMaintenanceNotice, MAINTENANCE_NOTICE_LIFETIME_MS } from '../maintenanceNotice.js';
 
 test('Settings keys are independent, private, actor-bound, limited and recoverable only by other administrators', async t => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'pinevela-admin-settings-')); t.after(() => fs.rmSync(directory, { force: true, recursive: true }));
@@ -62,4 +63,28 @@ test('Administrator profile photographs and ownership records survive marketplac
     const plan = buildWipePlan(store, [...scopes]);
     assert.equal(plan.kept.marketMedia.length, 1); assert.equal(plan.media.length, 0);
   }
+});
+
+test('Maintenance recovery notices expire exactly after 24 hours and snapshot non-admin credential identities', () => {
+  const now = Date.now(), existing = { id: 'existing', role: 'user', email: 'same@example.test' };
+  const store: any = { users: [existing, { id: existing.id, role: 'admin' }, { user: { id: 'manager', role: 'manager' } }],
+    verificationTeams: [{ id: 'officer' }], digitalMarketApplications: [{ id: 'application', studentEmail: 'seller@example.test' }],
+    digitalMarketStores: [{ id: 'store', applicationId: 'application', studentEmail: 'seller@example.test' }], platformSettings: { maintenanceMode: false } };
+  const notice = createMaintenanceRecoveryNotice(store, 'notice', 'Service restored.', now);
+  store.platformSettings.maintenanceRecoveryNotice = notice;
+  assert.equal(Date.parse(notice.expiresAt!) - Date.parse(notice.createdAt!), MAINTENANCE_NOTICE_LIFETIME_MS);
+  for (const account of [existing, { id: 'manager', role: 'manager' }, { id: 'officer', role: 'verification_team' }, { id: 'merchant:application', role: 'merchant' }])
+    assert.equal(eligibleMaintenanceNotice(store.platformSettings, account, now)?.id, notice.id);
+  assert.equal(eligibleMaintenanceNotice(store.platformSettings, existing, now + MAINTENANCE_NOTICE_LIFETIME_MS - 1)?.id, notice.id);
+  assert.equal(eligibleMaintenanceNotice(store.platformSettings, existing, now + MAINTENANCE_NOTICE_LIFETIME_MS), null);
+  assert.equal(eligibleMaintenanceNotice(store.platformSettings, existing, now + MAINTENANCE_NOTICE_LIFETIME_MS + 1), null);
+  for (const account of [{ ...existing, role: 'admin' }, { ...existing, role: 'staff' }, { id: 'later', role: 'user', email: existing.email, createdAt: new Date(now - 1000).toISOString() }]) {
+    store.users.push(account);
+    assert.equal(eligibleMaintenanceNotice(store.platformSettings, account, now + 1), null);
+  }
+  assert.equal(eligibleMaintenanceNotice(structuredClone(store.platformSettings), existing, now + MAINTENANCE_NOTICE_LIFETIME_MS), null, 'Restart does not extend expiry');
+  assert.equal(eligibleMaintenanceNotice({ ...store.platformSettings, maintenanceMode: true }, existing, now), null);
+  assert.equal(eligibleMaintenanceNotice({ maintenanceRecoveryNotice: { id: 'legacy', message: 'Old message', dismissedBy: [] } }, existing, now), null);
+  notice.expiresAt = new Date(now + 2 * MAINTENANCE_NOTICE_LIFETIME_MS).toISOString();
+  assert.equal(eligibleMaintenanceNotice(store.platformSettings, existing, now + MAINTENANCE_NOTICE_LIFETIME_MS), null, 'Expiry cannot exceed the lifetime');
 });

@@ -1,3 +1,7 @@
+import { matchesMarketCategory } from '../lib/marketCatalog';
+import MarketplaceFilters from './MarketplaceFilters';
+import { servicePoint } from '../../serviceLocation';
+import NearbyServicesMap from './NearbyServicesMap';
 import ListingPlanBadge from './ListingPlanBadge';
 import { compareMarketPriority } from '../../marketPlans';
 import { routePopupFeedback } from '../lib/feedback';
@@ -10,7 +14,13 @@ import { marketNoticeKind } from '../lib/marketNotifications';
 import { sessionFetch as fetch } from '../lib/session';
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { } from '../lib/queryClient';
+import { queryClient } from '../lib/queryClient';
+import { useQuery } from '@tanstack/react-query';
+import AccountStatusDialog from './AccountStatusDialog';
+import MerchantAccountPanel from './MerchantAccountPanel';
+import ManagerRegistrationCard from './ManagerRegistrationCard';
+import RegistrationStatusButton from './RegistrationStatusButton';
+import { managerRegistrationStatus, merchantRegistrationStatus, type ManagerRegistration } from '../lib/registrationStatus';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
 import { safeJson } from '../lib/api';
@@ -58,11 +68,8 @@ import {
   Store,
   Package,
   Tag,
-  DollarSign,
   BadgeCheck, LogIn,
-  Compass, SlidersHorizontal,
-  ArrowUpDown,
-  RotateCcw,
+  Compass,
   Heart,
   PanelLeftClose,
   PanelLeftOpen
@@ -80,7 +87,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
   const { user, logout, apiFetch, updateUser, setSessionUser } = useAuth();
   const { notifications, unreadCount, registeredAccounts, markAsRead, pushToast, refreshNotifications } = useNotifications();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const requestedTab = searchParams.get('tab');
   const queryTab = ['home', 'notifications', 'options', 'overview', 'issues', 'announcements', 'settings', 'register-resident', 'login-room', 'digital-market'].includes(requestedTab || '') ? requestedTab as any : undefined;
@@ -90,18 +97,33 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
 
   // Navigation tabs
   const [activeTab, setActiveTab] = useState<'home' | 'notifications' | 'options' | 'overview' | 'issues' | 'announcements' | 'settings' | 'register-resident' | 'login-room' | 'digital-market'>(
-    initialTab || queryTab || (isMerchantUser ? 'digital-market' : 'home')
+    (queryTab || initialTab) === 'register-resident' ? 'home' : queryTab || initialTab || (isMerchantUser ? 'digital-market' : 'home')
   );
 
-  // Digital Student Market states
-  const [digitalMarketApp, setDigitalMarketApp] = useState<DigitalMarketApplication | null>(null);
-  const [digitalMarketStore, setDigitalMarketStore] = useState<DigitalMarketStore | null>(null);
+  // Registration status comes from the current authenticated account, including deletions.
+  const merchantRegistration = useQuery<{ application: DigitalMarketApplication | null; store: DigitalMarketStore | null }>({
+    queryKey: ['digital-market', 'registration', user?.id],
+    queryFn: async () => { const data = await apiFetch('/api/digital-market/status'); if (!data || !('application' in data) || !('store' in data)) throw new Error('Could not check merchant registration.'); return data; },
+    enabled: Boolean(user), refetchInterval: 6000, refetchOnWindowFocus: true,
+  });
+  const managerRegistration = useQuery<{ managerAccount: ManagerRegistration | null }>({
+    queryKey: ['userData', 'registration', user?.id],
+    queryFn: async () => { const data = await apiFetch('/api/users/my-registered-accounts'); if (!data || !('managerAccount' in data)) throw new Error('Could not check manager registration.'); return data; },
+    enabled: Boolean(user), refetchInterval: 6000, refetchOnWindowFocus: true,
+  });
+  const digitalMarketApp = merchantRegistration.data?.application || null;
+  const digitalMarketStore = merchantRegistration.data?.store || null;
+  const managerAccount = managerRegistration.data?.managerAccount || null;
+  const merchantStatus = merchantRegistrationStatus(digitalMarketApp, digitalMarketStore);
+  const managerStatus = managerRegistrationStatus(managerAccount);
+  const [showMerchantCard, setShowMerchantCard] = useState(false);
+  const [showManagerCard, setShowManagerCard] = useState(false);
+  const [showMarketChat, setShowMarketChat] = useState(false);
+  const [checkingMerchant, setCheckingMerchant] = useState(false);
+  const [checkingManager, setCheckingManager] = useState(false);
   const [digitalMarketOrders, setDigitalMarketOrders] = useState<DigitalMarketOrder[]>([]);
   const [digitalMarketProducts, setDigitalMarketProducts] = useState<DigitalMarketProduct[]>([]);
   const [publicCatalog, setPublicCatalog] = useState<DigitalMarketProduct[]>([]);
-  const [marketTabMode, setMarketTabMode] = useState<'catalog' | 'vendor' | 'orders' | 'chats'>(
-    initialMarketMode || queryMode || 'vendor'
-  );
 
   // Store Rating States for Buyers
   const [ratingOrderTarget, setRatingOrderTarget] = useState<DigitalMarketOrder | null>(null);
@@ -109,21 +131,23 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
   const [ratingReview, setRatingReview] = useState<string>('');
   const [isSubmittingRating, setIsSubmittingRating] = useState<boolean>(false);
 
+  // Old registration/chat links open their relocated dialog instead of restoring retired tabs.
   useEffect(() => {
-    if (initialTab) {
-      setActiveTab(initialTab);
-    } else if (queryTab) {
-      setActiveTab(queryTab);
+    const tab = queryTab || initialTab;
+    const mode = queryMode || (!queryTab ? initialMarketMode : undefined);
+    if (tab === 'register-resident') {
+      setActiveTab('home');
+      setHomeFilterType('hostels');
+      setShowManagerCard(true);
+    } else if (tab === 'digital-market' && mode && mode !== 'orders') {
+      setActiveTab('home');
+      setHomeFilterType('market');
+      if (mode === 'vendor') setShowMerchantCard(true);
+      if (mode === 'chats') setShowMarketChat(true);
+    } else if (tab) {
+      setActiveTab(tab);
     }
-  }, [initialTab, queryTab]);
-
-  useEffect(() => {
-    if (initialMarketMode) {
-      setMarketTabMode(initialMarketMode);
-    } else if (queryMode) {
-      setMarketTabMode(queryMode);
-    }
-  }, [initialMarketMode, queryMode]);
+  }, [initialTab, queryTab, initialMarketMode, queryMode]);
 
   // Keep the user-facing market scrollable while removing the browser's side gutter.
   useEffect(() => {
@@ -296,60 +320,21 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
   const [catalogSearch, setCatalogSearch] = useState<string>('');
   const [catalogCategory, setCatalogCategory] = useState<string>('All');
 
-  // Broad flexible category matcher helper
-  const matchesCategory = (productCategory: string = '', selectedCat: string = '') => {
-    if (!selectedCat || selectedCat === 'All') return true;
-    const pCat = (productCategory || '').toLowerCase().trim();
-    const sCat = selectedCat.toLowerCase().trim();
-
-    if (!pCat) return true;
-    if (pCat === sCat || pCat.includes(sCat) || sCat.includes(pCat)) return true;
-
-    const sWords = sCat.split(/[\s,&/]+/).filter(w => w.length > 2 && w !== 'and' && w !== 'the' && w !== 'for');
-    for (const word of sWords) {
-      if (pCat.includes(word)) return true;
-    }
-
-    const techKeywords = ['electronic', 'gadget', 'laptop', 'phone', 'computing', 'gear', 'accessory', 'accessories', 'tech', 'audio', 'instrument', 'device', 'charger', 'headphone', 'macbook', 'iphone', 'android', 'powerbank'];
-    const isTechSelected = techKeywords.some(k => sCat.includes(k));
-    const isTechProd = techKeywords.some(k => pCat.includes(k));
-    if (isTechSelected && isTechProd) return true;
-
-    const bookKeywords = ['textbook', 'book', 'study', 'handout', 'material', 'stationery', 'print', 'binding', 'paper', 'note'];
-    const isBookSelected = bookKeywords.some(k => sCat.includes(k));
-    const isBookProd = bookKeywords.some(k => pCat.includes(k));
-    if (isBookSelected && isBookProd) return true;
-
-    const applianceKeywords = ['appliance', 'hostel', 'cookware', 'kitchen', 'utensil', 'fridge', 'iron', 'provision', 'microwave', 'kettle', 'blender'];
-    const isApplianceSelected = applianceKeywords.some(k => sCat.includes(k));
-    const isApplianceProd = applianceKeywords.some(k => pCat.includes(k));
-    if (isApplianceSelected && isApplianceProd) return true;
-
-    const fashionKeywords = ['fashion', 'footwear', 'thrift', 'boutique', 'apparel', 'clothing', 'beauty', 'skincare', 'haircare', 'grooming', 'shoe', 'shirt', 'dress'];
-    const isFashionSelected = fashionKeywords.some(k => sCat.includes(k));
-    const isFashionProd = fashionKeywords.some(k => pCat.includes(k));
-    if (isFashionSelected && isFashionProd) return true;
-
-    const furnitureKeywords = ['furniture', 'bedding', 'mattress', 'curtain', 'decor', 'desk', 'chair', 'table', 'pillow'];
-    const isFurnitureSelected = furnitureKeywords.some(k => sCat.includes(k));
-    const isFurnitureProd = furnitureKeywords.some(k => pCat.includes(k));
-    if (isFurnitureSelected && isFurnitureProd) return true;
-
-    const serviceKeywords = ['service', 'tutoring', 'repair', 'graphic', 'printing', 'laundry', 'cleaning'];
-    const isServiceSelected = serviceKeywords.some(k => sCat.includes(k));
-    const isServiceProd = serviceKeywords.some(k => pCat.includes(k));
-    if (isServiceSelected && isServiceProd) return true;
-
-    return false;
-  };
   const [minPriceFilter, setMinPriceFilter] = useState<number>(0);
   const [maxPriceFilter, setMaxPriceFilter] = useState<number>(5000);
   const [priceSortOption, setPriceSortOption] = useState<'featured' | 'price-asc' | 'price-desc' | 'newest'>('featured');
   const [showPriceFilterPanel, setShowPriceFilterPanel] = useState<boolean>(false);
   const [marketActionError, setMarketActionError] = useState('');
   const [selectedProductForBuy, setSelectedProductForBuy] = useState<DigitalMarketProduct | null>(null);
+  const [showNearbyServices, setShowNearbyServices] = useState(false);
+  const [nearbyDirections, setNearbyDirections] = useState('');
+  const previousInspection = useRef(false);
+  useEffect(() => {
+    if (previousInspection.current && !selectedProductForBuy) { setShowNearbyServices(false); setNearbyDirections(''); }
+    previousInspection.current = !!selectedProductForBuy;
+  }, [selectedProductForBuy]);
   const [selectedPriceCategory, setSelectedPriceCategory] = useState<{ id?: string; name: string; price: number; imageUrl?: string } | null>(null);
-  const [showPendingModal, setShowPendingModal] = useState<boolean>(false);
+
 
   // Data states
   const [issueReports, setIssueReports] = useState<IssueReport[]>([]);
@@ -418,8 +403,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Could not contact the seller.');
       if (data.success) {
-        setActiveTab('digital-market');
-        setMarketTabMode('chats');
+        setShowMarketChat(true);
         setActiveChatEmail(product.sellerEmail);
         setSelectedProductForBuy(null);
         triggerToast(`Inquiry sent to ${product.storeName}! Chat is open below.`);
@@ -470,7 +454,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
 
   // Reset Password Modal states
   const [showResetPasswordModal, setShowResetPasswordModal] = useState<boolean>(false);
-  const [resetTargetRole, setResetTargetRole] = useState<'manager' | 'resident'>('manager');
+  const [resetTargetRole, setResetTargetRole] = useState<'resident'>('resident');
   const [resetTargetEmail, setResetTargetEmail] = useState<string>('');
   const [newPasswordInput, setNewPasswordInput] = useState<string>('');
   const [confirmPasswordInput, setConfirmPasswordInput] = useState<string>('');
@@ -480,13 +464,11 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
 
   // Delete Account Modal states
   const [showDeleteAccountModal, setShowDeleteAccountModal] = useState<boolean>(false);
-  const [deleteTargetRole, setDeleteTargetRole] = useState<'manager' | 'resident'>('manager');
+  const [deleteTargetRole, setDeleteTargetRole] = useState<'resident'>('resident');
   const [deleteTargetEmail, setDeleteTargetEmail] = useState<string>('');
   const [deletePasswordInput, setDeletePasswordInput] = useState<string>('');
   const [deleteAccountError, setDeleteAccountError] = useState<string | null>(null);
   const [deletingAccount, setDeletingAccount] = useState<boolean>(false);
-  const [deleteReasonInput, setDeleteReasonInput] = useState<string>('');
-  const [requestBypass, setRequestBypass] = useState<boolean>(false);
 
   useEffect(() => {
     if (user && user.id) {
@@ -497,6 +479,22 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
       }
     }
   }, [user]);
+
+  useEffect(() => {
+    const itemId = searchParams.get('marketItem');
+    if (showWelcomePopup || !itemId || user?.role !== 'user' || !publicCatalog.length) return;
+    const product = publicCatalog.find(item => item.id === itemId);
+    if (product) {
+      setActiveTab('home');
+      setSelectedProductForBuy(product);
+      const priceIndex = Number(searchParams.get('marketPrice'));
+      setSelectedPriceCategory((Number.isSafeInteger(priceIndex) && priceIndex >= 0 ? product.priceCategories?.[priceIndex] : null) || product.priceCategories?.[0] || null);
+    }
+    const next = new URLSearchParams(searchParams);
+    next.delete('marketItem');
+    next.delete('marketPrice');
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams, publicCatalog, user?.role, showWelcomePopup]);
 
   // Image zoom viewer modal
   const [zoomedImage, setZoomedImage] = useState<string | null>(null);
@@ -541,8 +539,6 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
 
   const mainScrollRef = React.useRef<HTMLDivElement>(null);
 
-  const isPriceFiltered = minPriceFilter > 0 || maxPriceFilter < 5000;
-
   // Memoized search and filter results for high performance 60fps scrolling
   const filteredProducts = useMemo(() => {
     const query = catalogSearch.toLowerCase().trim();
@@ -555,7 +551,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
             if (!isServ) return false;
           } else {
             if (isServ) return false;
-            if (!matchesCategory(p.category, catalogCategory)) return false;
+            if (!matchesMarketCategory(p.category, catalogCategory)) return false;
           }
         }
         if (query) {
@@ -816,10 +812,8 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
     try {
       const targetEmail = currentUser?.email || user?.email || '';
       const targetId = currentUser?.id || user?.id || '';
-      const statusRes = await apiFetch(`/api/digital-market/status?email=${encodeURIComponent(targetEmail)}&userId=${encodeURIComponent(targetId)}`).catch(() => null);
+      const { data: statusRes } = await merchantRegistration.refetch();
       if (statusRes) {
-        setDigitalMarketApp((prev: any) => JSON.stringify(prev) === JSON.stringify(statusRes.application || null) ? prev : (statusRes.application || null));
-        setDigitalMarketStore((prev: any) => JSON.stringify(prev) === JSON.stringify(statusRes.store || null) ? prev : (statusRes.store || null));
         if (statusRes.application && !initialStoreSetupFilledRef.current) {
           initialStoreSetupFilledRef.current = true;
           const app = statusRes.application;
@@ -1118,7 +1112,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
   };
 
   // Open reset password modal
-  const openResetPasswordModal = (role: 'manager' | 'resident', email: string) => {
+  const openResetPasswordModal = (role: 'resident', email: string) => {
     setResetTargetRole(role);
     setResetTargetEmail(email);
     setCurrentPasswordInput('');
@@ -1179,12 +1173,10 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
   };
 
   // Open delete account modal
-  const openDeleteAccountModal = (role: 'manager' | 'resident', email: string) => {
+  const openDeleteAccountModal = (role: 'resident', email: string) => {
     setDeleteTargetRole(role);
     setDeleteTargetEmail(email);
     setDeletePasswordInput('');
-    setDeleteReasonInput('');
-    setRequestBypass(false);
     setDeleteAccountError(null);
     setShowDeleteAccountModal(true);
   };
@@ -1206,7 +1198,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
           role: deleteTargetRole,
           email: deleteTargetEmail,
           password: deletePasswordInput,
-          deletionReason: (deleteTargetRole === 'manager' && requestBypass) ? deleteReasonInput.trim() : ''
+          deletionReason: ''
         })
       });
       const data = await safeJson(res);
@@ -1219,26 +1211,8 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
         
         const tEmail = (deleteTargetEmail || currentUser?.email || user?.email || '').toLowerCase().trim();
         const activeUserEmail = (user?.email || currentUser?.email || '').toLowerCase().trim();
-        const isTargetingActiveSession = 
-          (activeUserEmail !== '' && activeUserEmail === tEmail) || 
-          (deleteTargetRole === 'manager' && user?.role === 'manager'); if (deleteTargetRole === 'manager') {
-          try {
-            const localMgrs = JSON.parse(localStorage.getItem('pinevela_registered_managers') || '[]');
-            const filteredMgrs = localMgrs.filter((m: any) => {
-              const mEmail = (m.email || '').toLowerCase().trim();
-              const mParentEmail = (m.parentUserEmail || '').toLowerCase().trim();
-              const matchT = tEmail && (mEmail === tEmail || mParentEmail === tEmail);
-              const matchU = activeUserEmail && (mEmail === activeUserEmail || mParentEmail === activeUserEmail);
-              return !matchT && !matchU;
-            });
-            localStorage.setItem('pinevela_registered_managers', JSON.stringify(filteredMgrs));
-            if (tEmail) localStorage.removeItem(`pinevela_avatar_${tEmail}`);
-          } catch (e) {
-            console.warn(e);
-          }
-        } else if (deleteTargetRole === 'resident') {
-          setRoomKeyDetails(null);
-        }
+        const isTargetingActiveSession = activeUserEmail !== '' && activeUserEmail === tEmail;
+        setRoomKeyDetails(null);
 
         if (isTargetingActiveSession) {
           if (!await logout()) return;
@@ -1251,7 +1225,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
             role: 'user',
             registeredAccounts: {
               ...(currentUser?.registeredAccounts || user?.registeredAccounts || {}),
-              [deleteTargetRole === 'manager' ? 'managerAccount' : 'residentAccount']: null
+              residentAccount: null
             }
           });
         }
@@ -1268,56 +1242,63 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
 
   const unreadNotificationsCount = notifications.filter(n => !n.read).length;
   const marketUnread = notifications.filter(n => !n.read && marketNoticeKind(n) !== null);
-  const marketUnreadCount = marketUnread.length;
-  const chatUnreadCount = marketUnread.filter(n => marketNoticeKind(n) === 'chat').length;
   const orderUnreadCount = marketUnread.filter(n => marketNoticeKind(n) === 'order').length;
-  const vendorUnreadCount = marketUnread.filter(n => marketNoticeKind(n) === 'vendor').length;
-  const tabUnreadCount = (id: string) => id === 'notifications' ? unreadNotificationsCount : id === 'digital-market' ? marketUnreadCount : 0;
+  const tabUnreadCount = (id: string) => id === 'notifications' ? unreadNotificationsCount : id === 'digital-market' ? orderUnreadCount : 0;
   useEffect(() => {
-    if (activeTab !== 'digital-market' || !['orders', 'vendor'].includes(marketTabMode)) return;
-    const kind = marketTabMode === 'orders' ? 'order' : 'vendor';
-    void Promise.all(notifications.filter(n => !n.read && marketNoticeKind(n) === kind).map(n => markAsRead(n.id)));
-  }, [activeTab, marketTabMode, notifications, markAsRead]);
-
+    if (activeTab !== 'digital-market') return;
+    void Promise.all(notifications.filter(n => !n.read && marketNoticeKind(n) === 'order').map(n => markAsRead(n.id)));
+  }, [activeTab, notifications, markAsRead]);
 
   const navItems = [
     { id: 'home', label: 'Home Tab', sub: 'Residents & Staff Hire', icon: Home },
-    { 
-      id: 'digital-market', 
-      label: digitalMarketStore ? 'Digital Student Market' : 'Digital Market', 
-      sub: digitalMarketStore 
-        ? (digitalMarketStore.isBanned ? 'Store Disabled' : 'Active Merchant Platform') 
-        : (digitalMarketApp?.status === 'pending' ? 'Pending Admin Approval' : 'Student Store Gateway'), 
-      icon: ShoppingBag 
-    },
+    { id: 'digital-market', label: 'Purchases & Tracking', sub: 'Orders, Pickup & Delivery', icon: Package },
     { 
       id: 'login-room', 
       label: (roomKeyDetails || currentUser?.roomKey) ? 'Resident Room' : 'Log Into Your Room', 
       sub: (roomKeyDetails || currentUser?.roomKey) ? `${roomKeyDetails?.blockName || 'Block'} - Room ${roomKeyDetails?.roomNumber || currentUser?.roomNumber || ''}` : 'Activate Digital Room Key', 
       icon: Key 
     },
-    { 
-      id: 'register-resident', 
-      label: registeredAccounts.managerAccount ? 'Hostel Manager' : 'Register Your Resident', 
-      sub: registeredAccounts.managerAccount 
-        ? ((registeredAccounts.managerAccount.status?.toLowerCase() === 'blocked' || registeredAccounts.managerAccount.isBlocked) ? 'Blocked / Restricted' : (registeredAccounts.managerAccount.status?.toLowerCase() === 'approved') ? 'Verified Account' : (registeredAccounts.managerAccount.status?.toLowerCase() === 'rejected') ? 'Rejected' : 'Pending Approval') 
-        : 'Hostel Manager Gateway', 
-      icon: Building2 
-    }, { id: 'notifications', label: 'Notifications Tab', sub: `${unreadNotificationsCount > 0 ? `${unreadNotificationsCount} New Alert${unreadNotificationsCount > 1 ? 's' : ''}` : 'Bulletins & Alerts'}`, icon: Bell },
+    { id: 'notifications', label: 'Notifications Tab', sub: `${unreadNotificationsCount > 0 ? `${unreadNotificationsCount} New Alert${unreadNotificationsCount > 1 ? 's' : ''}` : 'Bulletins & Alerts'}`, icon: Bell },
     { id: 'options', label: 'Options Tab', sub: 'Profile & Settings', icon: Settings },
   ];
 
   const handleNavClick = (tabId: string) => {
-    if (tabId === 'register-resident') {
-      setActiveTab('register-resident' as any);
-    } else if (tabId === 'login-room') {
-      setActiveTab('login-room' as any);
-    } else {
-      setActiveTab(tabId as any);
-    }
+    setActiveTab(tabId as any);
+    // Replace stale mode links when navigating so reloads stay on the selected destination.
+    setSearchParams(prev => { const next = new URLSearchParams(prev); next.set('tab', tabId); next.delete('mode'); return next; });
   };
 
-  // Quick Login to Student Digital Merchant Account Handler
+  const startMerchantRegistration = () => {
+    setShowMerchantCard(false);
+    setDmWizardPhase(1);
+    setDmFullName(''); setDmStudentEmail(''); setDmPassword(''); setDmConfirmPassword('');
+    setShowDmPassword(false); setDmIdNumber(''); setDmProposedStoreName(''); setDmCertifyAccepted(false);
+    setDmUniversity('Kwame Nkrumah University of Science and Technology (KNUST)');
+    setDmCategory(DIGITAL_MARKET_CATEGORIES[0]); setDmRegError(null);
+    setShowDMRegModal(true);
+  };
+
+  const openMerchantRegistration = async () => {
+    setCheckingMerchant(true);
+    try {
+      const result = await merchantRegistration.refetch();
+      if (!result.data || result.isError) { triggerToast('Could not check merchant registration. Please try again.', 'error'); return; }
+      if (!result.data.application && !result.data.store) startMerchantRegistration();
+      else setShowMerchantCard(true);
+    } finally { setCheckingMerchant(false); }
+  };
+
+  const openManagerRegistration = async () => {
+    setCheckingManager(true);
+    try {
+      const result = await managerRegistration.refetch();
+      if (!result.data || result.isError) { triggerToast('Could not check manager registration. Please try again.', 'error'); return; }
+      if (managerRegistrationStatus(result.data.managerAccount) === 'unregistered') navigate('/register-manager');
+      else setShowManagerCard(true);
+    } finally { setCheckingManager(false); }
+  };
+
+  // Dedicated merchant login entry point
   const [quickLoggingInMerchant, setQuickLoggingInMerchant] = useState<boolean>(false);
   const [showMerchantStoreLoginModal, setShowMerchantStoreLoginModal] = useState<boolean>(false);
   const [storeLoginEmail, setStoreLoginEmail] = useState<string>('');
@@ -1326,7 +1307,6 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
   const [storeLoginLoading, setStoreLoginLoading] = useState<boolean>(false);
 
   const handleQuickMerchantLogin = async () => {
-    triggerToast("Direct quick-login from within the account is disabled. Redirecting to the main login page...", "info");
     navigate('/login');
   };
 
@@ -1460,7 +1440,8 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
 
       if (res && res.success) {
         setShowDMRegModal(false);
-        setShowPendingModal(true);
+        queryClient.setQueryData(['digital-market', 'registration', user?.id], { application: res.application, store: null });
+        setShowMerchantCard(true);
         triggerToast("Digital Student Market Application Submitted! 🎉");
         await loadDigitalMarketData();
       } else {
@@ -1562,7 +1543,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
 
       if (res && res.success) {
         setSelectedProdForOrder(null);
-        setMarketTabMode('orders');
+        handleNavClick('digital-market');
         triggerToast("Campus Meetup Coordinates Transmitted to Seller! 📍🛍️");
         await loadDigitalMarketData();
       } else {
@@ -2074,9 +2055,8 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
               </div>
               <span className={`text-[9px] font-bold mt-0.5 ${activeTab === tab.id ? 'text-blue-700' : 'text-slate-500'}`}>
                 {tab.id === 'home' ? 'Home' :
-                 tab.id === 'digital-market' ? 'Market' :
+                 tab.id === 'digital-market' ? 'Purchases' :
                  tab.id === 'login-room' ? 'Room' :
-                 tab.id === 'register-resident' ? (registeredAccounts.managerAccount ? 'Manager' : 'Register') :
                  tab.id === 'notifications' ? 'Alerts' :
                  tab.id === 'options' ? 'Options' :
                  tab.label.split(' ')[0]}
@@ -2112,7 +2092,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                   className={`flex-1 min-w-0 flex flex-col items-center justify-center gap-0.5 py-1.5 rounded-xl transition-all cursor-pointer ${isActive ? 'text-blue-700 bg-blue-100/65' : 'text-slate-500 hover:text-slate-800 hover:bg-white/70'}`}
                 >
                   <span className="relative inline-flex"><Icon className="w-4 h-4" /><TopNavBadge color="blue" count={tabUnreadCount(tab.id)} /></span>
-                  <span className="max-w-full truncate text-[9px] font-bold">{tab.id === 'digital-market' ? 'Market' : tab.id === 'notifications' ? 'Alerts' : tab.id === 'options' ? 'Options' : tab.label.split(' ')[0]}</span>
+                  <span className="max-w-full truncate text-[9px] font-bold">{tab.id === 'digital-market' ? 'Purchases' : tab.id === 'notifications' ? 'Alerts' : tab.id === 'options' ? 'Options' : tab.label.split(' ')[0]}</span>
                 </button>
               );
             })}
@@ -2279,191 +2259,31 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
             {homeFilterType === 'market' && (
               <div id="home-market-section" className="bg-transparent border-0 rounded-3xl p-0 shadow-none space-y-6 animate-fadeIn">
                   {/* Header Title and Subtitle - scrolls up naturally */}
-                  <div className="border-b border-slate-100 pb-3">
-                    <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
+                  <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-3">
+                    <div>
+                    <h3 className="text-lg font-black text-slate-900 flex flex-wrap items-center gap-2">
                       <ShoppingBag className="w-5 h-5 text-blue-700" />
-                      Pinevela Digital Marketplace
+                      Digital Student Market
+                      <span className="rounded-full border border-blue-200 bg-blue-50 px-2 py-1 text-[9px] font-bold uppercase tracking-wide">PineVela Verified P2P</span>
                     </h3>
                     <p className="text-xs text-slate-500 font-semibold mt-0.5">
                       Buy, sell, and trade textbooks, electronics, appliances & room gear with verified students.
                     </p>
-                  </div>
-
-                  {/* STICKY SEARCH & FILTER CONTROL BAR - Stays locked at top while scrolling cards */}
-                  <div className="sticky top-0 z-30 py-2.5 px-3.5 bg-white/45 backdrop-blur-xl border border-white/70 rounded-2xl shadow-[0_10px_30px_rgba(37,99,235,0.12)] transition-all flex flex-wrap items-center justify-between gap-2.5">
-                    {/* Search Bar inside Marketplace */}
-                    <div className="relative w-full sm:w-64 group">
-                      <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
-                      <input
-                        type="text"
-                        placeholder="Search marketplace items..."
-                        value={catalogSearch}
-                        onChange={e => setCatalogSearch(e.target.value)}
-                        className="w-full pl-8 pr-8 py-1.5 bg-white/65 border border-blue-300/70 rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 shadow-[0_0_0_1px_rgba(59,130,246,0.18),0_0_18px_rgba(59,130,246,0.18)] focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-400 focus:shadow-[0_0_0_2px_rgba(96,165,250,0.24),0_0_28px_rgba(59,130,246,0.42)] transition-all"
-                      />
-                      {catalogSearch && (
-                        <button
-                          type="button"
-                          onClick={() => setCatalogSearch('')}
-                          className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-slate-400 hover:text-slate-600 cursor-pointer"
-                        >
-                          <X size={13} />
-                        </button>
-                      )}
                     </div>
-
-                    <div className="flex flex-wrap items-center gap-2">
-                      {/* Toggle Price Range Slider Button */}
-                      <button
-                        type="button"
-                        onClick={() => setShowPriceFilterPanel(!showPriceFilterPanel)}
-                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer border ${
-                          showPriceFilterPanel || isPriceFiltered
-                            ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
-                            : 'bg-white/55 text-slate-700 border-white/80 hover:bg-white/85'
-                        }`}
-                      >
-                        <SlidersHorizontal className="w-3.5 h-3.5" />
-                        <span>Price Filter</span>
-                        {isPriceFiltered && (
-                          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                        )}
-                      </button>
-
-                      {/* Price Sort Dropdown */}
-                      <div className="relative inline-flex items-center">
-                        <ArrowUpDown className="w-3.5 h-3.5 text-slate-500 absolute left-2.5 pointer-events-none" />
-                        <select
-                          value={priceSortOption}
-                          onChange={(e) => setPriceSortOption(e.target.value as any)}
-                          className="pl-8 pr-3 py-1.5 bg-white/55 border border-white/80 text-slate-800 text-xs font-bold rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 cursor-pointer"
-                        >
-                          <option value="featured">Sort: Featured</option>
-                          <option value="price-asc">Price: Low to High 📈</option>
-                          <option value="price-desc">Price: High to Low 📉</option>
-                          <option value="newest">Sort: Newest Items ⚡</option>
-                        </select>
-                      </div>
-
-                      <span className="px-3 py-1 bg-blue-100/70 text-blue-900 border border-blue-200/70 font-black text-xs rounded-full shrink-0">
-                        {filteredProducts.length} {filteredProducts.length === 1 ? 'Item' : 'Items'}
-                      </span>
+                    <div className="flex flex-wrap gap-2">
+                      <button type="button" onClick={() => setShowNearbyServices(true)} className="flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-4 py-2.5 text-xs font-bold text-blue-700"><MapPin size={16} />Services near you</button>
+                      <RegistrationStatusButton kind="merchant" status={merchantStatus} loading={merchantRegistration.isPending || checkingMerchant}
+                        error={merchantRegistration.isError} onClick={() => void openMerchantRegistration()} />
                     </div>
                   </div>
 
-                  {/* Expandable Price Range Slider Panel */}
-                  {(showPriceFilterPanel || isPriceFiltered) && (
-                    <div className="p-4 bg-gradient-to-r from-blue-50/80 to-indigo-50/60 border border-blue-200/80 rounded-2xl space-y-3.5 animate-fadeIn">
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <div className="flex items-center gap-2">
-                          <DollarSign className="w-4 h-4 text-blue-700" />
-                          <span className="text-xs font-black text-slate-900">Price Range Slider Filter</span>
-                          <span className="text-[11px] font-bold text-blue-800 bg-white/80 px-2.5 py-0.5 rounded-md border border-blue-200 font-mono">
-                            GHS {minPriceFilter} – GHS {maxPriceFilter >= 5000 ? '5,000+' : maxPriceFilter}
-                          </span>
-                        </div>
-
-                        {isPriceFiltered && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setMinPriceFilter(0);
-                              setMaxPriceFilter(5000);
-                            }}
-                            className="text-[11px] font-bold text-rose-600 hover:text-rose-800 flex items-center gap-1 cursor-pointer"
-                          >
-                            <RotateCcw className="w-3 h-3" />
-                            <span>Reset Price Filter</span>
-                          </button>
-                        )}
-                      </div>
-
-                      {/* Sliders Grid */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {/* Minimum Price Slider */}
-                        <div className="space-y-1.5">
-                          <div className="flex items-center justify-between text-xs">
-                            <span className="font-bold text-slate-700">Minimum Price:</span>
-                            <span className="font-black text-blue-900 font-mono">GHS {minPriceFilter}</span>
-                          </div>
-                          <input
-                            type="range"
-                            min="0"
-                            max={Math.min(maxPriceFilter, 5000)}
-                            step="10"
-                            value={minPriceFilter}
-                            onChange={(e) => setMinPriceFilter(Number(e.target.value))}
-                            className="w-full accent-blue-600 cursor-pointer h-2 bg-slate-200 rounded-lg"
-                          />
-                        </div>
-
-                        {/* Maximum Price Slider */}
-                        <div className="space-y-1.5">
-                          <div className="flex items-center justify-between text-xs">
-                            <span className="font-bold text-slate-700">Maximum Price:</span>
-                            <span className="font-black text-blue-900 font-mono">
-                              GHS {maxPriceFilter >= 5000 ? '5,000+' : maxPriceFilter}
-                            </span>
-                          </div>
-                          <input
-                            type="range"
-                            min={minPriceFilter}
-                            max="5000"
-                            step="25"
-                            value={maxPriceFilter}
-                            onChange={(e) => setMaxPriceFilter(Number(e.target.value))}
-                            className="w-full accent-blue-600 cursor-pointer h-2 bg-slate-200 rounded-lg"
-                          />
-                        </div>
-                      </div>
-
-                      {/* Quick Preset Pills */}
-                      <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                        <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 mr-1">Quick Presets:</span>
-                        {[
-                          { label: 'Under GHS 100', min: 0, max: 100 },
-                          { label: 'GHS 100 - 500', min: 100, max: 500 },
-                          { label: 'GHS 500 - 1,500', min: 500, max: 1500 },
-                          { label: 'GHS 1,500 - 5,000', min: 1500, max: 5000 },
-                          { label: 'All Prices', min: 0, max: 5000 }
-                        ].map((preset) => {
-                          const isActive = minPriceFilter === preset.min && maxPriceFilter === preset.max;
-                          return (
-                            <button
-                              key={preset.label}
-                              type="button"
-                              onClick={() => {
-                                setMinPriceFilter(preset.min);
-                                setMaxPriceFilter(preset.max);
-                              }}
-                              className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
-                                isActive
-                                  ? 'bg-blue-700 text-white shadow-xs'
-                                  : 'bg-white/80 text-slate-700 hover:bg-white border border-blue-100'
-                              }`}
-                            >
-                              {preset.label}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Category Pills inside Marketplace */}
-                  <div className="flex items-center gap-1.5 overflow-x-auto pb-2 -mx-1 px-1">
-                    {['All', 'Services','Electronics', 'Textbooks', 'Appliances', 'Fashion', 'Furniture'].map(cat => (
-                      <button
-                        key={cat}
-                        onClick={() => setCatalogCategory(cat)}
-                        className={`px-3 py-1.5 rounded-xl text-[11px] font-bold transition-all whitespace-nowrap cursor-pointer ${
-                          catalogCategory === cat ? 'bg-blue-600 text-white shadow-xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                        }`}
-                      >
-                        {cat}
-                      </button>
-                    ))}
-                  </div>
+                  <MarketplaceFilters catalogSearch={catalogSearch} setCatalogSearch={setCatalogSearch}
+                    catalogCategory={catalogCategory} setCatalogCategory={setCatalogCategory}
+                    minPriceFilter={minPriceFilter} setMinPriceFilter={setMinPriceFilter}
+                    maxPriceFilter={maxPriceFilter} setMaxPriceFilter={setMaxPriceFilter}
+                    priceSortOption={priceSortOption} setPriceSortOption={setPriceSortOption}
+                    showPriceFilterPanel={showPriceFilterPanel} setShowPriceFilterPanel={setShowPriceFilterPanel}
+                    itemCount={filteredProducts.length} />
 
                   {/* Main Marketplace Grid */}
                   <div className="space-y-4">
@@ -2514,7 +2334,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
             {/* Available Hostels Section */}
             {homeFilterType === 'hostels' && (
                 <div id="home-hostels-section" className="bg-transparent border-0 rounded-3xl p-0 shadow-none space-y-6 animate-fadeIn">
-                  <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                  <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-4">
                     <div>
                       <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
                         <Building2 className="w-5 h-5 text-blue-700" />
@@ -2524,9 +2344,13 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                         Explore verified student residences and accommodations available across PineVela.
                       </p>
                     </div>
+                    <div className="flex flex-wrap items-center gap-3">
+                    <RegistrationStatusButton kind="manager" status={managerStatus} loading={managerRegistration.isPending || checkingManager}
+                      error={managerRegistration.isError} onClick={() => void openManagerRegistration()} />
                     <span className="px-3 py-1 bg-blue-100/70 text-blue-900 border border-blue-200/70 font-black text-xs rounded-full animate-pulse-subtle">
                       {filteredHostels.length} {filteredHostels.length === 1 ? 'Residence' : 'Residences'} Found
                     </span>
+                    </div>
                   </div>
 
                   {filteredHostels.length === 0 ? (
@@ -2681,182 +2505,6 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                 ))}
               </div>
             </div>
-          </div>
-        )}
-
-        {/* TAB 3: REGISTER RESIDENT / MANAGER TAB */}
-        {activeTab === 'register-resident' && (
-          <div className="space-y-6 animate-fadeIn relative z-10 max-w-4xl">
-            {registeredAccounts.managerAccount ? (
-              <div className="bg-white/95 border border-emerald-300 rounded-3xl p-6 sm:p-8 shadow-xl space-y-6 backdrop-blur-md">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-emerald-100">
-                  <div className="flex items-center gap-4">
-                    <div className="w-14 h-14 rounded-2xl bg-emerald-100 text-emerald-900 flex items-center justify-center font-bold shadow-xs">
-                      <Building2 className="w-8 h-8" />
-                    </div>
-                    <div>
-                      <h3 className="text-xl font-black text-slate-900">
-                        {registeredAccounts.managerAccount.name}
-                      </h3>
-                      <p className="text-xs text-slate-500 font-semibold mt-0.5">
-                        {registeredAccounts.managerAccount.organizationName || 'PineVela Property Manager'}
-                      </p>
-                    </div>
-                  </div>
-                  
-                  <div>
-                    {(registeredAccounts.managerAccount.status?.toLowerCase() === 'blocked' || registeredAccounts.managerAccount.isBlocked) ? (
-                      <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-rose-100 text-rose-900 border border-rose-300 rounded-full text-xs font-black shadow-xs">
-                        <ShieldAlert className="w-4 h-4 text-rose-600" />
-                        <span>Manager Account Blocked</span>
-                      </span>
-                    ) : (registeredAccounts.managerAccount.status?.toLowerCase() === 'approved') ? (
-                      <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-full text-xs font-black">
-                        <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                        <span>Approved & Verified Manager</span>
-                      </span>
-                    ) : (registeredAccounts.managerAccount.status?.toLowerCase() === 'rejected') ? (
-                      <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-rose-100 text-rose-800 border border-rose-300 rounded-full text-xs font-black">
-                        <AlertTriangle className="w-4 h-4 text-rose-600" />
-                        <span>Registration Rejected</span>
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-amber-100 text-amber-900 border border-amber-300 rounded-full text-xs font-black">
-                        <Clock className="w-4 h-4 text-amber-600 animate-spin" />
-                        <span>Pending Admin Approval</span>
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                <div className="bg-slate-50/80 border border-slate-200/80 rounded-2xl p-5 space-y-3">
-                  <h4 className="text-xs font-black uppercase tracking-wider text-slate-500">Official Manager Credentials & Details</h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 text-xs">
-                    <div>
-                      <span className="text-slate-400 block font-medium">Full Name</span>
-                      <span className="font-bold text-slate-800">{registeredAccounts.managerAccount.name}</span>
-                    </div>
-                    <div>
-                      <span className="text-slate-400 block font-medium">Organization / Property</span>
-                      <span className="font-bold text-slate-800">{registeredAccounts.managerAccount.organizationName || 'PineVela'}</span>
-                    </div>
-                    <div>
-                      <span className="text-slate-400 block font-medium">Work Email (Manager Logins)</span>
-                      <span className="font-bold text-emerald-900 font-mono break-all">{registeredAccounts.managerAccount.email}</span>
-                    </div>
-                    <div>
-                      <span className="text-slate-400 block font-medium">Phone Number</span>
-                      <span className="font-bold text-slate-800">{registeredAccounts.managerAccount.phone || 'Provided'}</span>
-                    </div>
-                    <div>
-                      <span className="text-slate-400 block font-medium">National / Org ID</span>
-                      <span className="font-bold text-slate-800 font-mono">
-                        {registeredAccounts.managerAccount.idNumber ? `••••${registeredAccounts.managerAccount.idNumber.slice(-4)}` : 'Verified Document'}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-slate-400 block font-medium">Registration Date</span>
-                      <span className="font-bold text-slate-800">
-                        {registeredAccounts.managerAccount.createdAt ? new Date(registeredAccounts.managerAccount.createdAt).toLocaleDateString() : 'Active'}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Detailed Admin Notice for Blocked or Rejected Managers */}
-                {(registeredAccounts.managerAccount.status?.toLowerCase() === 'blocked' || registeredAccounts.managerAccount.isBlocked) ? (
-                  <div className="p-5 bg-rose-50 border-2 border-rose-300 rounded-2xl text-xs text-rose-950 font-medium space-y-3 shadow-xs">
-                    <div className="flex items-center gap-2 text-rose-900 font-black text-sm">
-                      <ShieldAlert className="w-5 h-5 text-rose-600 shrink-0" />
-                      <span>Manager Account Restricted & Properties Unlisted</span>
-                    </div>
-                    <div className="p-3.5 bg-white/90 border border-rose-200 rounded-xl space-y-1">
-                      <span className="block text-[10px] font-black text-rose-600 uppercase tracking-wider">Reason Provided by Administrator:</span>
-                      <p className="text-xs font-bold text-rose-950 leading-relaxed">
-                        "{registeredAccounts.managerAccount.blockReason || registeredAccounts.managerAccount.adminNotes || 'Account access has been restricted by administration.'}"
-                      </p>
-                    </div>
-                    <p className="text-[11px] text-rose-800 leading-relaxed font-semibold">
-                      ⛔ <strong>Notice:</strong> Your Manager Console login access is temporarily blocked and your registered hostel property has been removed from live student searches. <strong>Please wait until further notice</strong> or contact PineVela Administration for clarification.
-                    </p>
-                  </div>
-                ) : registeredAccounts.managerAccount.adminNotes && (
-                  <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl text-xs text-amber-950 font-medium space-y-1">
-                    <span className="font-black text-amber-900 block">Administrator Review Feedback:</span>
-                    <p>{registeredAccounts.managerAccount.adminNotes}</p>
-                  </div>
-                )}
-
-                {(registeredAccounts.managerAccount.status?.toLowerCase() === 'blocked' || registeredAccounts.managerAccount.isBlocked) ? null : (registeredAccounts.managerAccount.status?.toLowerCase() !== 'approved') ? (
-                  <div className="p-4 bg-amber-50/90 border border-amber-300 rounded-2xl flex items-start gap-3">
-                    <Clock className="w-5 h-5 text-amber-700 shrink-0 mt-0.5 animate-pulse" />
-                    <div className="text-xs text-amber-950 font-medium leading-relaxed">
-                      <strong className="block text-amber-900 font-bold mb-0.5">Verification in Progress — Manager Login Locked:</strong>
-                      Admin has received your residence submission and is scheduling an on-site physical inspection. You cannot log into the Manager Console until your property has been verified by the administrator.
-                    </div>
-                  </div>
-                ) : (
-                  <div className="p-4 bg-emerald-50/90 border border-emerald-300 rounded-2xl flex items-start gap-3">
-                    <CheckCircle2 className="w-5 h-5 text-emerald-700 shrink-0 mt-0.5" />
-                    <div className="text-xs text-emerald-950 font-medium leading-relaxed">
-                      <strong className="block text-emerald-900 font-bold mb-0.5">Approved & Verified Property:</strong>
-                      Your manager credentials and student residence are officially verified. You can now use the Manager Console to oversee room access and operations.
-                    </div>
-                  </div>
-                )}
-
-                <div className="p-3 bg-blue-50/70 border border-blue-200/80 rounded-xl text-xs text-blue-900 flex items-center gap-2">
-                  <Bell className="w-4 h-4 text-blue-600 shrink-0" />
-                  <span>Real-time status updates are sent directly to your Alerts feed. You cannot create a duplicate manager account while this registration is active.</span>
-                </div>
-
-                <div className="pt-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => openResetPasswordModal('manager', registeredAccounts.managerAccount.email)}
-                      className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs rounded-xl transition-all flex items-center gap-1.5 cursor-pointer"
-                    >
-                      <KeyRound className="w-3.5 h-3.5" />
-                      <span>Reset Password</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => openDeleteAccountModal('manager', registeredAccounts.managerAccount.email)}
-                      className="px-4 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-xs rounded-xl transition-all flex items-center gap-1.5 cursor-pointer"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                      <span>Delete Account & Restart Registration</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="bg-white/90 border border-emerald-200/80 rounded-3xl p-6 sm:p-8 shadow-xl space-y-6 backdrop-blur-md">
-                <div className="flex items-center gap-4">
-                  <div className="w-14 h-14 rounded-2xl bg-emerald-100 text-emerald-900 flex items-center justify-center font-bold">
-                    <Building2 className="w-8 h-8" />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-black text-slate-900">
-                      Register Your Resident
-                    </h3>
-                    <p className="text-sm text-slate-600 font-medium leading-relaxed mt-1">
-                      Initiate the hostel manager creation flow for KNUST-accredited student residences in Kumasi. Register your property securely and gain access to the powerful Manager Console.
-                    </p>
-                  </div>
-                </div>
-                <div className="pt-4 border-t border-slate-100 flex items-center justify-end">
-                  <button
-                    onClick={() => navigate('/register-manager')}
-                    className="px-8 py-3 bg-emerald-700 hover:bg-emerald-800 text-white font-black text-sm rounded-xl shadow-md transition-all flex items-center gap-2 cursor-pointer"
-                  >
-                    <span>Start Registration Process</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            )}
           </div>
         )}
 
@@ -3060,448 +2708,17 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
         {/* TAB: DIGITAL STUDENT MARKET */}
         {activeTab === 'digital-market' && (
           <div className="space-y-6 animate-fadeIn relative z-10 max-w-6xl">
-            {/* Top Mode Selector Bar */}
-            <div className="bg-white/90 backdrop-blur-md border border-slate-200/80 rounded-3xl p-4 sm:p-6 shadow-xl flex flex-wrap items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <div className="p-3 bg-gradient-to-br from-blue-900 to-indigo-900 text-white rounded-2xl shadow-md">
-                  <ShoppingBag className="w-6 h-6" />
-                </div>
-                <div>
-                  <h2 className="text-xl font-black text-slate-900 flex items-center gap-2">
-                    Digital Student Market
-                    <span className="px-2.5 py-0.5 bg-blue-100 text-blue-900 text-[10px] font-bold rounded-full uppercase tracking-wider border border-blue-200">
-                      PineVela Verified P2P
-                    </span>
-                  </h2>
-                  <p className="text-xs text-slate-500 font-medium">
-                    Buy, sell, and trade textbooks, electronics, appliances & room gear with verified university students.
-                  </p>
-                </div>
-              </div>
-
-              {/* Sub-tab Toggle */}
-              <div className="grid grid-cols-1 md:flex md:items-center p-1.5 md:p-1 bg-slate-100 rounded-3xl md:rounded-2xl border border-slate-200 w-full lg:w-auto gap-1.5 md:gap-0">
-                <button
-                  type="button"
-                  onClick={() => setMarketTabMode('vendor')}
-                  className={`px-4 py-2.5 md:py-2 rounded-2xl md:rounded-xl text-xs font-bold transition-all flex items-center justify-center md:justify-start gap-2 cursor-pointer ${
-                    marketTabMode === 'vendor' ? 'bg-white text-blue-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  <Package className="w-4 h-4" />
-                  <span>My Merchant Platform</span><span className="relative inline-flex ml-1 mr-3"><TopNavBadge color="blue" count={vendorUnreadCount} /></span>
-                  {(digitalMarketStore?.status === 'active' || digitalMarketApp?.status === 'approved') ? (
-                    <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 text-[10px] font-black rounded-full border border-emerald-300">
-                      Verified & Active
-                    </span>
-                  ) : digitalMarketApp?.status === 'pending' ? (
-                    <span className="px-2 py-0.5 bg-blue-100 text-blue-900 text-[10px] font-black rounded-full border border-blue-200">
-                      Pending
-                    </span>
-                  ) : null}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setMarketTabMode('orders')}
-                  className={`px-4 py-2.5 md:py-2 rounded-2xl md:rounded-xl text-xs font-bold transition-all flex items-center justify-center md:justify-start gap-2 cursor-pointer ${
-                    marketTabMode === 'orders' ? 'bg-white text-blue-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  <Clock className="w-4 h-4" />
-                  <span>Purchases & Tracking</span>
-                  {orderUnreadCount > 0 && (
-                    <span className="px-1.5 py-0.5 bg-blue-600 text-white text-[10px] font-black rounded-full">
-                      {orderUnreadCount}
-                    </span>
-                  )}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setMarketTabMode('chats')}
-                  className={`px-4 py-2.5 md:py-2 rounded-2xl md:rounded-xl text-xs font-bold transition-all flex items-center justify-center md:justify-start gap-2 cursor-pointer ${
-                    marketTabMode === 'chats' ? 'bg-white text-blue-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  <MessageSquare className="w-4 h-4" />
-                  <span>Chat & Logistics</span><span className="relative inline-flex ml-1 mr-3"><TopNavBadge color="blue" count={chatUnreadCount} /></span>
-
-                </button>
+            <div className="flex items-center gap-3 rounded-3xl border border-slate-200 bg-white/90 p-5 sm:p-6 shadow-xl">
+              <div className="rounded-2xl bg-blue-600 p-3 text-white"><Package className="h-6 w-6" /></div>
+              <div><h2 className="text-xl font-black text-slate-900">Purchases & Tracking</h2>
+                <p className="mt-1 text-xs font-medium text-slate-500">View your purchases, follow order updates, and track pickup or delivery.</p>
               </div>
             </div>
-
-            {/* Anti-Scam Safety Banner */}
-            <div className="bg-blue-50/80 border border-blue-200/90 rounded-2xl p-4 shadow-sm flex items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <ShieldAlert className="w-5 h-5 text-blue-700 shrink-0" />
-                <div>
-                  <h4 className="text-xs font-black text-blue-950 uppercase tracking-wider">PineVela Anti-Scam Safety Guarantee</h4>
-                  <p className="text-xs text-blue-900 font-medium mt-0.5">
-                    <strong>Policy:</strong> Inspect and receive the physical item from the student seller on campus <strong>before making any payment</strong>. Never make upfront online payments.
-                  </p>
-                </div>
-              </div>
-              
-            </div>
-
-            {/* MODE 2: MY MERCHANT PLATFORM */}
-            {marketTabMode === 'vendor' && (() => {
-              const effectiveMarketStore = (digitalMarketStore && digitalMarketStore.setupCompleted && digitalMarketStore.registrationFeePaid) ? digitalMarketStore : null;
-
-              return (
-              <div className="space-y-6">
-                {/* 1. APPROVED MERCHANT MANDATORY STORE CREATION & PAYSTACK ONBOARDING SCREEN */}
-                {digitalMarketApp && digitalMarketApp.status === 'approved' && !effectiveMarketStore && (
-                  <div className="bg-white/95 border-2 border-blue-300/90 rounded-3xl p-6 sm:p-10 shadow-2xl space-y-6 backdrop-blur-md">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-blue-100">
-                      <div className="flex items-center gap-4">
-                        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-600 via-indigo-700 to-blue-900 text-white flex items-center justify-center shadow-lg shadow-blue-600/30 shrink-0">
-                          <CheckCircle2 className="w-7 h-7" />
-                        </div>
-                        <div>
-                          <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-100 text-emerald-900 text-xs font-black rounded-full mb-1">
-                            <span className="w-2 h-2 rounded-full bg-emerald-600 animate-pulse" />
-                            <span>Approved by Campus Admin</span>
-                          </div>
-                          <h2 className="text-xl sm:text-2xl font-black text-slate-900">Your Student Merchant Store is Approved! 🎉</h2>
-                          <p className="text-xs text-slate-600 font-medium mt-0.5">
-                            Log into your digital market account to complete your mandatory multi-phase store onboarding and secure Paystack activation.
-                          </p>
-                        </div>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={() => handleQuickMerchantLogin()}
-                        className="px-8 py-4 bg-gradient-to-r from-blue-900 via-indigo-900 to-blue-800 hover:from-blue-800 hover:to-indigo-800 text-white font-black text-xs rounded-xl shadow-lg shadow-blue-900/20 transition-all flex items-center gap-2 cursor-pointer shrink-0"
-                      >
-                        <LogIn className="w-4 h-4" />
-                        <span>Login to your Digital Market Account</span>
-                        <ArrowRight className="w-4 h-4" />
-                      </button>
-                    </div>
-
-                    <div className="p-4 bg-blue-50/80 rounded-2xl border border-blue-200/90 text-xs text-blue-950 flex items-center gap-3">
-                      <ShieldCheck className="w-5 h-5 text-blue-700 shrink-0" />
-                      <div>
-                        <span className="font-bold">Mandatory First-Time Onboarding:</span> As per PineVela security policies, logging into your digital market account for the first time will guide you through our clean multi-phase store creation wizard (Store Details, Campus Location, and Paystack Checkout).
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* 2. UNREGISTERED LANDING STATE */}
-                {!digitalMarketApp && !effectiveMarketStore && (
-                  <div className="bg-white/90 border border-slate-200/80 rounded-3xl p-6 sm:p-10 shadow-xl space-y-8 backdrop-blur-md">
-                    <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 pb-6 border-b border-slate-100">
-                      <div>
-                        <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-100/70 text-blue-900 border border-blue-200/70 text-xs font-bold rounded-full mb-3">
-                          <span>Student Digital Store Gateway</span>
-                        </div>
-                        <h2 className="text-2xl font-black text-slate-900">Own Your Digital Market Platform</h2>
-                        <p className="text-xs text-slate-600 font-medium mt-1 max-w-xl">
-                          Launch your official online store, sell products to fellow university residents, and manage real-time inventory on PineVela.
-                        </p>
-                      </div>
-
-                      <div className="bg-gradient-to-br from-blue-50 via-indigo-50/50 to-blue-100/50 border border-blue-200/80 rounded-2xl p-4 text-center shrink-0 w-full md:w-auto">
-                        <div className="text-xs font-extrabold text-blue-950 uppercase">Registration Fee</div>
-                        <div className="text-2xl font-black text-blue-900 mt-0.5">{marketPrices?.registrationFee ?? "…"} GHS <span className="text-xs font-medium text-slate-500">one-time</span></div>
-                        <div className="text-[10px] text-slate-500 mt-0.5">+ {marketPrices?.semesterFee ?? "…"} GHS every two months, plus selected monthly plan</div>
-                      </div>
-                    </div>
-
-                    {/* Qualifications & Policy List */}
-                    <div className="space-y-4">
-                      <h3 className="text-sm font-extrabold text-slate-900 uppercase tracking-wider">Qualification Requirements</h3>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-2">
-                          <School className="w-6 h-6 text-blue-700" />
-                          <h4 className="text-xs font-bold text-slate-900">1. Accredited University Student</h4>
-                          <p className="text-[11px] text-slate-600 leading-relaxed font-medium">
-                            Must be an enrolled student at KNUST, UG, UCC, UPSA, UMaT, UDS, UHAS, or other accredited Ghanaian universities.
-                          </p>
-                        </div>
-
-                        <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-2">
-                          <Mail className="w-6 h-6 text-blue-700" />
-                          <h4 className="text-xs font-bold text-slate-900">2. Valid Student Email</h4>
-                          <p className="text-[11px] text-slate-600 leading-relaxed font-medium">
-                            Must provide an accredited university student email address for identity validation.
-                          </p>
-                        </div>
-
-                        <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-2">
-                          <BadgeCheck className="w-6 h-6 text-indigo-700" />
-                          <h4 className="text-xs font-bold text-slate-900">3. Verifiable Student ID / Ghana Card</h4>
-                          <p className="text-[11px] text-slate-600 leading-relaxed font-medium">
-                            Submit a valid Ghana Card or Student ID Number for Admin verification.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
-                      <p className="text-xs text-slate-500 font-medium">
-                        Once submitted, your application is reviewed by PineVela Admin for quick approval.
-                      </p>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setDmWizardPhase(1);
-                          setDmFullName('');
-                          setDmStudentEmail('');
-                          setDmPassword('');
-                          setDmConfirmPassword('');
-                          setShowDmPassword(false);
-                          setDmIdNumber('');
-                          setDmProposedStoreName('');
-                          setDmCertifyAccepted(false);
-                          setDmUniversity('Kwame Nkrumah University of Science and Technology (KNUST)');
-                          setDmCategory(DIGITAL_MARKET_CATEGORIES[0]);
-                          setDmRegError(null);
-                          setShowDMRegModal(true);
-                        }}
-                        className="px-8 py-3.5 bg-gradient-to-r from-blue-900 via-indigo-900 to-blue-800 hover:from-blue-800 hover:to-indigo-800 text-white font-black text-xs rounded-xl shadow-lg shadow-blue-900/20 transition-all flex items-center gap-2 cursor-pointer"
-                      >
-                        <span>Register Your Digital Market</span>
-                        <ArrowRight className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {/* 2. SUBMITTED CARD PENDING (AWAITING ADMIN APPROVAL) */}
-                {digitalMarketApp && digitalMarketApp.status === 'pending' && !effectiveMarketStore && (
-                  <div className="bg-white/95 border-2 border-blue-200/90 rounded-3xl p-6 sm:p-8 shadow-xl space-y-6 backdrop-blur-md">
-                    {/* Status Header */}
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-blue-100">
-                      <div className="flex items-center gap-3.5">
-                        <div className="w-12 h-12 rounded-2xl bg-blue-100 border border-blue-300 text-blue-800 flex items-center justify-center shrink-0">
-                          <Clock className="w-6 h-6 animate-pulse" />
-                        </div>
-                        <div>
-                          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-100 border border-blue-300 text-blue-900 text-[10px] font-black tracking-wide uppercase mb-1">
-                            <span className="w-2 h-2 rounded-full bg-blue-600 animate-ping" />
-                            <span>Application Pending Admin Review</span>
-                          </div>
-                          <h3 className="text-lg font-black text-slate-900">Submitted Market Application Card</h3>
-                        </div>
-                      </div>
-
-                      <div className="text-right shrink-0">
-                        <div className="text-[10px] uppercase font-bold text-slate-400">Application Ref</div>
-                        <div className="text-xs font-mono font-bold text-blue-900 bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-200">
-                          {digitalMarketApp.id}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Pending Application Details Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="p-4 bg-slate-50/90 rounded-2xl border border-slate-200/80 space-y-1">
-                        <div className="text-[10px] uppercase font-extrabold text-slate-400 flex items-center gap-1.5">
-                          <User className="w-3.5 h-3.5 text-blue-600" />
-                          <span>Applicant Full Legal Name</span>
-                        </div>
-                        <div className="text-sm font-black text-slate-900">{digitalMarketApp.fullName}</div>
-                      </div>
-
-                      <div className="p-4 bg-slate-50/90 rounded-2xl border border-slate-200/80 space-y-1">
-                        <div className="text-[10px] uppercase font-extrabold text-slate-400 flex items-center gap-1.5">
-                          <School className="w-3.5 h-3.5 text-blue-600" />
-                          <span>Accredited Ghanaian University</span>
-                        </div>
-                        <div className="text-sm font-black text-slate-900">{digitalMarketApp.university}</div>
-                      </div>
-
-                      <div className="p-4 bg-slate-50/90 rounded-2xl border border-slate-200/80 space-y-1">
-                        <div className="text-[10px] uppercase font-extrabold text-slate-400 flex items-center gap-1.5">
-                          <Mail className="w-3.5 h-3.5 text-blue-600" />
-                          <span>Ghanaian Student Email Address</span>
-                        </div>
-                        <div className="text-sm font-black text-slate-900 font-mono">{digitalMarketApp.studentEmail}</div>
-                      </div>
-
-                      <div className="p-4 bg-slate-50/90 rounded-2xl border border-slate-200/80 space-y-1">
-                        <div className="text-[10px] uppercase font-extrabold text-slate-400 flex items-center gap-1.5">
-                          <BadgeCheck className="w-3.5 h-3.5 text-indigo-600" />
-                          <span>Verifiable Ghana Card / Student ID</span>
-                        </div>
-                        <div className="text-sm font-black text-slate-900 font-mono">{digitalMarketApp.idNumber}</div>
-                      </div>
-
-                      <div className="p-4 bg-slate-50/90 rounded-2xl border border-slate-200/80 space-y-1">
-                        <div className="text-[10px] uppercase font-extrabold text-slate-400 flex items-center gap-1.5">
-                          <ShoppingBag className="w-3.5 h-3.5 text-blue-700" />
-                          <span>Proposed Selling Category</span>
-                        </div>
-                        <div className="text-sm font-black text-slate-900">{digitalMarketApp.categoryToSell}</div>
-                      </div>
-
-                      <div className="p-4 bg-slate-50/90 rounded-2xl border border-slate-200/80 space-y-1">
-                        <div className="text-[10px] uppercase font-extrabold text-slate-400 flex items-center gap-1.5">
-                          <Calendar className="w-3.5 h-3.5 text-slate-600" />
-                          <span>Submission Timestamp</span>
-                        </div>
-                        <div className="text-sm font-semibold text-slate-800">
-                          {new Date(digitalMarketApp.submittedAt || Date.now()).toLocaleDateString(undefined, { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })} at {new Date(digitalMarketApp.submittedAt || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Progress Pipeline */}
-                    <div className="bg-blue-50/70 border border-blue-200/90 rounded-2xl p-5 space-y-4">
-                      <div className="text-xs font-black text-blue-950 uppercase tracking-wider flex items-center gap-2">
-                        <span>Platform Verification & Activation Pipeline</span>
-                      </div>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 text-xs">
-                        <div className="p-3 bg-white rounded-xl border border-emerald-300 shadow-xs flex items-center gap-2.5">
-                          <div className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-xs shrink-0">✓</div>
-                          <div>
-                            <div className="font-bold text-slate-900 text-[11px]">1. Form Submitted</div>
-                            <div className="text-[10px] text-emerald-700 font-semibold">Completed</div>
-                          </div>
-                        </div>
-
-                        <div className="p-3 bg-white rounded-xl border-2 border-blue-500 shadow-xs flex items-center gap-2.5">
-                          <div className="w-6 h-6 rounded-full bg-blue-100 text-blue-900 flex items-center justify-center font-bold text-xs shrink-0 animate-pulse">2</div>
-                          <div>
-                            <div className="font-bold text-slate-900 text-[11px]">2. Admin Review</div>
-                            <div className="text-[10px] text-blue-900 font-bold">In Progress</div>
-                          </div>
-                        </div>
-
-                        <div className="p-3 bg-white/70 rounded-xl border border-slate-200 shadow-xs flex items-center gap-2.5 opacity-60">
-                          <div className="w-6 h-6 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center font-bold text-xs shrink-0">3</div>
-                          <div>
-                            <div className="font-bold text-slate-900 text-[11px]">3. Verification Approval</div>
-                            <div className="text-[10px] text-slate-500">Upcoming</div>
-                          </div>
-                        </div>
-
-                        <div className="p-3 bg-white/70 rounded-xl border border-slate-200 shadow-xs flex items-center gap-2.5 opacity-60">
-                          <div className="w-6 h-6 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center font-bold text-xs shrink-0">4</div>
-                          <div>
-                            <div className="font-bold text-slate-900 text-[11px]">4. Live Campus Store</div>
-                            <div className="text-[10px] text-slate-500">Upcoming</div>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="p-3.5 bg-white/90 border border-blue-200 rounded-xl text-xs text-slate-700 font-medium leading-relaxed flex items-start gap-2.5">
-                        <ShieldAlert className="w-4 h-4 text-blue-700 shrink-0 mt-0.5" />
-                        <div>
-                          <strong>Verification in Progress:</strong> PineVela administrators verify student email accreditation. Please check back later. Once an admin approves your submission, your official Digital Market platform card will activate immediately.
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* 3. VERIFIED & ACTIVE DIGITAL MARKET CARD & STORE DASHBOARD */}
-                {effectiveMarketStore && (effectiveMarketStore.status === 'active' || digitalMarketApp?.status === 'approved') && (
-                  <div className="space-y-6">
-                    {/* DIGITAL MARKET DETAILED STORE CARD */}
-                    <div className="relative overflow-hidden bg-white/80 backdrop-blur-md border-2 border-blue-400/35 rounded-3xl p-6 sm:p-8 shadow-[0_12px_45px_rgba(59,130,246,0.12)] text-slate-800">
-                      {/* Decorative Background Accents */}
-                      <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none" />
-                      <div className="absolute bottom-0 left-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-2xl -ml-20 -mb-20 pointer-events-none" />
-
-                      <div className="relative z-10 space-y-6">
-                        {/* Top Card Bar */}
-                        <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-slate-200">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-blue-550/10 text-blue-600 flex items-center justify-center font-black border border-blue-200 shadow-sm">
-                              <ShoppingBag className="w-5 h-5 text-blue-600" />
-                            </div>
-                            <div>
-                              <div className="text-[10px] tracking-widest uppercase font-extrabold text-blue-600">PineVela Digital Student Market</div>
-                              <div className="text-sm font-black text-slate-900">Official Merchant Accreditation Card</div>
-                            </div>
-                          </div>
-
-                          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-300 text-xs font-black tracking-wider uppercase backdrop-blur-md">
-                            <BadgeCheck className="w-4 h-4 text-emerald-600" />
-                            <span>VERIFIED & ACTIVE</span>
-                          </div>
-                        </div>
-
-                        {/* Store Brand & Merchant Details */}
-                        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-                          <div className="space-y-2.5">
-                            <div className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-                              <span>{effectiveMarketStore.storeName}</span>
-                            </div>
-                            <div className="text-xs text-slate-700 font-bold flex items-center gap-2 flex-wrap">
-                              <School className="w-4 h-4 text-blue-600" />
-                              <span>{effectiveMarketStore.university}</span>
-                              <span className="text-slate-300">•</span>
-                              <span className="text-indigo-600 font-extrabold">{effectiveMarketStore.category}</span>
-                            </div>
-                            <div className="text-xs text-slate-600 font-mono flex items-center gap-2 flex-wrap">
-                              <Mail className="w-3.5 h-3.5 text-slate-500" />
-                              <span className="font-bold text-slate-800">{effectiveMarketStore.studentEmail || effectiveMarketStore.parentUserEmail}</span>
-                              <span className="text-slate-300">•</span>
-                              <Phone className="w-3.5 h-3.5 text-slate-500" />
-                              <span className="text-slate-800">{effectiveMarketStore.phone || '+233201234567'}</span>
-                            </div>
-                          </div>
-
-                          {/* Unified Single Login to Digital Store Action */}
-                          <div className="flex items-center gap-3 w-full md:w-auto">
-                            <button
-                              type="button"
-                              disabled={quickLoggingInMerchant}
-                              onClick={handleQuickMerchantLogin}
-                              className="w-full md:w-auto px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-black text-xs rounded-xl shadow-lg shadow-blue-600/30 hover:shadow-blue-500/40 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-                              title="Secure isolated login into your merchant store management platform"
-                            >
-                              {quickLoggingInMerchant ? (
-                                <>
-                                  <RefreshCw className="w-4 h-4 animate-spin text-white" />
-                                  <span>Authenticating...</span>
-                                </>
-                              ) : (
-                                <>
-                                  <LogIn className="w-4 h-4 text-white" />
-                                  <span>Log In to Digital Store</span>
-                                </>
-                              )}
-                            </button>
-                          </div>
-                        </div>
-
-                        {/* Security Notice on Card */}
-                        <div className="p-3.5 bg-blue-50/70 border border-blue-200 rounded-2xl text-[11px] text-blue-900 font-semibold flex items-start gap-2.5">
-                          <ShieldCheck className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
-                          <p className="leading-relaxed">
-                            <strong>Security Isolation Active:</strong> To prevent account tampering, managing your inventory, adjusting stock, publishing listings, and verifying buyer pickup PINs are exclusively handled on your dedicated <strong>Digital Market Platform</strong>. Your primary account credentials cannot be used to modify your digital store.
-                          </p>
-                        </div>
-
-                        {/* Card Footer: Platform Fee & ID */}
-                        <div className="pt-4 border-t border-slate-200 flex flex-wrap items-center justify-between gap-3 text-[11px] text-slate-600 font-medium">
-                          <div className="flex items-center gap-4">
-                            <span className="text-emerald-600 font-bold">● Activation Fee: 50.00 GHS (Paid & Verified)</span>
-                            <span className="text-blue-700">● Semester Status: Active Seller</span>
-                          </div>
-                          <div className="font-mono text-slate-500 text-[10px]">
-                            Ref: {effectiveMarketStore.paymentTransactionRef || `PINE-MM-PAY-378466`}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-              );
-            })()}
             {/* MODE 3: PURCHASES & ORDER TRACKING */}
-            {marketTabMode === 'orders' && (
+            {(
               <div className="space-y-6">
                 <div className="bg-white/90 border border-slate-200/80 rounded-3xl p-6 shadow-xl space-y-6 backdrop-blur-md">
-                  <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                  <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-4">
                     <div>
                       <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
                         <Clock className="w-5 h-5 text-blue-600" />
@@ -3758,43 +2975,26 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
               </div>
             )}
 
-            {/* MODE 4: PRIVATE MEETUP LOGISTICS & CHAT */}
-            {marketTabMode === 'chats' && <MarketplaceInbox initialPeerEmail={activeChatEmail} />}
           </div>
         )}
 
 
 
-        {/* PENDING APPROVAL WARM POPUP */}
-        {showPendingModal && (
-          <DashboardOverlay aria-label="Application Submitted" onClose={() => setShowPendingModal(false)} className="fixed inset-0 bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-4">
-            <div className="bg-gradient-to-br from-white via-sky-50 to-indigo-100 rounded-[2rem] max-w-md w-full p-7 text-center space-y-5 shadow-2xl border border-blue-200/80 animate-scaleIn relative overflow-hidden">
-              <div className="w-16 h-16 bg-gradient-to-br from-blue-600 to-indigo-800 rounded-2xl flex items-center justify-center mx-auto text-cyan-100 shadow-lg shadow-blue-500/30">
-                <Clock className="w-8 h-8 animate-pulse" />
-              </div>
+        {showMerchantCard && <AccountStatusDialog title="Merchant Registration" onClose={() => setShowMerchantCard(false)}>
+          {merchantRegistration.isPending ? <p role="status">Checking registration…</p> : merchantRegistration.isError ?
+            <p role="alert">Could not refresh your merchant registration. Close this card and retry the status button.</p> :
+            <MerchantAccountPanel digitalMarketApp={digitalMarketApp} digitalMarketStore={digitalMarketStore} marketPrices={marketPrices}
+              onRegister={() => void openMerchantRegistration()} handleQuickMerchantLogin={handleQuickMerchantLogin} />}
+        </AccountStatusDialog>}
+        {showManagerCard && <AccountStatusDialog title="Manager Registration" onClose={() => setShowManagerCard(false)}>
+          {managerRegistration.isPending ? <p role="status">Checking registration…</p> : managerRegistration.isError ?
+            <p role="alert">Could not refresh your manager registration. Close this card and retry the status button.</p> :
+            <ManagerRegistrationCard managerAccount={managerAccount} onRegister={() => void openManagerRegistration()} onLogin={() => navigate('/login')} />}
+        </AccountStatusDialog>}
+        {showMarketChat && <AccountStatusDialog title="Buyer–Seller Messages" onClose={() => setShowMarketChat(false)}>
+          <MarketplaceInbox initialPeerEmail={activeChatEmail} />
+        </AccountStatusDialog>}
 
-              <div>
-                <h3 className="text-xl font-black text-blue-950">Application Submitted!</h3>
-                <p className="text-xs text-slate-600 font-medium mt-2 leading-relaxed">
-                  Your Digital Student Market platform application has been submitted successfully and is currently <strong>awaiting Admin review and approval</strong>.
-                </p>
-                <p className="text-[11px] text-blue-900 font-bold mt-3 bg-white/80 p-3 rounded-2xl border border-blue-200 shadow-sm">
-                  You can check back later. Once approved, you can log in and set up your student store inventory!
-                </p>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setShowPendingModal(false)}
-                className="w-full py-3 bg-gradient-to-r from-blue-700 to-indigo-800 hover:from-blue-600 hover:to-indigo-700 text-white font-black text-xs rounded-xl transition-all cursor-pointer shadow-lg shadow-blue-700/20"
-              >
-                Understood, I will check back later
-              </button>
-            </div>
-          </DashboardOverlay>
-        )}
-
-        {/* SELLER CHECKOUT ENTRY */}
         {showStoreSetupModal && <DashboardOverlay onClose={() => setShowStoreSetupModal(false)} aria-label="Seller checkout" className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4"><section className="w-full max-w-md space-y-4 rounded-3xl bg-white p-6"><h2 className="text-xl font-bold">Activate your seller account</h2><p>Sign in with your seller password to save store details and pay the current registration, monthly plan and two-month fees through Paystack.</p><button onClick={() => navigate('/login')} className="rounded-xl bg-blue-600 px-5 py-3 text-white">Sign in as seller</button><button onClick={() => setShowStoreSetupModal(false)} className="ml-3 text-slate-600">Close</button></section></DashboardOverlay>}
 
         {/* DIGITAL STORE LOGIN MODAL */}
@@ -3990,6 +3190,12 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
           </DashboardOverlay>
         )}
 
+        {showNearbyServices && <NearbyServicesMap products={publicCatalog} onClose={() => { setShowNearbyServices(false); setNearbyDirections(''); }} onInspect={(product, url) => {
+          setSelectedProductForBuy(product as DigitalMarketProduct);
+          setSelectedPriceCategory(product.priceCategories?.[0] || null);
+          setNearbyDirections(url);
+        }} />}
+
         {/* BUY / INSPECT / SERVICE PRODUCT MODAL */}
         {selectedProductForBuy && (() => {
           const isSelectedService = Boolean(
@@ -4027,6 +3233,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                 </div>
 
                 <div className="space-y-3">
+                  {isSelectedService && nearbyDirections && <a href={nearbyDirections} target="_blank" rel="noopener noreferrer" referrerPolicy="no-referrer" className="block text-xs font-bold text-blue-700">Open Google Maps directions</a>}
                   <MarketImageGallery title={selectedProductForBuy.title} imageUrl={selectedPriceCategory?.imageUrl || selectedProductForBuy.imageUrl}
                     additionalImages={isSelectedService ? [selectedProductForBuy.imageUrl, ...(selectedProductForBuy.priceCategories || []).map(c => c.imageUrl || '')] : selectedProductForBuy.additionalImages} />
 
@@ -4210,8 +3417,9 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                         setServiceLocationOption(useSellerLocation ? 'seller-location' : 'buyer-location');
                         if (useSellerLocation) {
                           setOrderMeetupLocation((selectedProductForBuy as any).location || selectedProductForBuy.meetingLocation || 'Provider service location');
-                          setOrderMeetupLat(Number((selectedProductForBuy as any).lat) || 6.6745);
-                          setOrderMeetupLng(Number((selectedProductForBuy as any).lng) || -1.5716);
+                          const pin = servicePoint(selectedProductForBuy.lat, selectedProductForBuy.lng);
+                          setOrderMeetupLat(pin?.lat ?? null);
+                          setOrderMeetupLng(pin?.lng ?? null);
                         } else if (isService) {
                           setOrderMeetupLocation('');
                           setOrderMeetupLat(null);
@@ -4348,7 +3556,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                       <div className="rounded-2xl border border-blue-200 bg-blue-50/70 p-3 space-y-2">
                         <p className="text-xs font-black text-slate-800">Choose how you want this service fulfilled</p>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                          <button type="button" onClick={() => { setServiceLocationOption('seller-location'); setOrderMeetupLocation((selectedProdForOrder as any).location || selectedProdForOrder.meetingLocation || 'Provider service location'); setOrderMeetupLat(Number((selectedProdForOrder as any).lat) || 6.6745); setOrderMeetupLng(Number((selectedProdForOrder as any).lng) || -1.5716); }} className={`rounded-xl border p-2 text-left text-[11px] font-bold ${serviceLocationOption === 'seller-location' ? 'border-blue-600 bg-white text-blue-900' : 'border-blue-100 bg-white/60 text-slate-600'}`}>Meet at provider's fixed location</button>
+                          <button type="button" onClick={() => { setServiceLocationOption('seller-location'); setOrderMeetupLocation((selectedProdForOrder as any).location || selectedProdForOrder.meetingLocation || 'Provider service location'); const pin = servicePoint(selectedProdForOrder.lat, selectedProdForOrder.lng); setOrderMeetupLat(pin?.lat ?? null); setOrderMeetupLng(pin?.lng ?? null); }} className={`rounded-xl border p-2 text-left text-[11px] font-bold ${serviceLocationOption === 'seller-location' ? 'border-blue-600 bg-white text-blue-900' : 'border-blue-100 bg-white/60 text-slate-600'}`}>Meet at provider's fixed location</button>
                           <button type="button" onClick={() => setServiceLocationOption('buyer-location')} className={`rounded-xl border p-2 text-left text-[11px] font-bold ${serviceLocationOption === 'buyer-location' ? 'border-blue-600 bg-white text-blue-900' : 'border-blue-100 bg-white/60 text-slate-600'}`}>Request delivery / choose my location</button>
                         </div>
                       </div>
@@ -4438,8 +3646,8 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
           <DashboardOverlay aria-label="Choose Meetup Location" onClose={() => setShowMeetupMapModal(false)} layer={300} className="fixed inset-0 bg-slate-950/75 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 animate-fadeIn">
             <div className="max-w-2xl w-full">
               <CampusMeetupMapPicker
-                latitude={orderMeetupLat || 6.6745}
-                longitude={orderMeetupLng || -1.5716}
+                latitude={orderMeetupLat ?? 6.6745}
+                longitude={orderMeetupLng ?? -1.5716}
                 initialLocationName={orderMeetupLocation}
                 preferredUniversity={selectedProdForOrder?.sellerUniversity || currentUser?.hostelName || 'KNUST'}
                 readOnly={Boolean(selectedProdForOrder && ((selectedProdForOrder as any).serviceLocationMode === 'fixed' || ((selectedProdForOrder as any).serviceLocationMode === 'hybrid' && serviceLocationOption === 'seller-location')))}
@@ -4461,8 +3669,8 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
           <DashboardOverlay aria-label="Order Meetup Location" onClose={() => setViewingOrderMap(null)} className="fixed inset-0 bg-slate-950/75 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 animate-fadeIn">
             <div className="max-w-2xl w-full">
               <CampusMeetupMapPicker
-                latitude={viewingOrderMap.meetingLatitude || 6.6745}
-                longitude={viewingOrderMap.meetingLongitude || -1.5716}
+                latitude={viewingOrderMap.meetingLatitude ?? 6.6745}
+                longitude={viewingOrderMap.meetingLongitude ?? -1.5716}
                 initialLocationName={viewingOrderMap.meetingLocation}
                 readOnly={true}
                 preferredUniversity={viewingOrderMap.university}
@@ -5553,7 +4761,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                 </div>
                 <div>
                   <h3 className="text-base font-black text-slate-900">
-                    Reset {resetTargetRole === 'manager' ? 'Manager' : 'Resident'} Password
+                    Reset Resident Password
                   </h3>
                   <p className="text-xs text-slate-500 font-medium truncate max-w-xs">{resetTargetEmail}</p>
                 </div>
@@ -5650,7 +4858,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                 </div>
                 <div>
                   <h3 className="text-base font-black text-slate-900">
-                    Delete {deleteTargetRole === 'manager' ? 'Hostel Manager' : 'Resident'} Account
+                    Delete Resident Account
                   </h3>
                   <p className="text-xs text-slate-500 font-medium truncate max-w-xs">{deleteTargetEmail}</p>
                 </div>
@@ -5674,13 +4882,13 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
             <form onSubmit={handleDeleteRegisteredAccount} className="space-y-4">
               <div className="space-y-1">
                 <label className="text-xs font-black text-slate-800 block">
-                  {deleteTargetRole === 'manager' ? 'Manager Account Email' : 'Account Email'}
+                  Resident Account Email
                 </label>
                 <input
                   type="email"
                   value={deleteTargetEmail}
                   onChange={(e) => setDeleteTargetEmail(e.target.value)}
-                  placeholder="Enter registered manager account email"
+                  placeholder="Enter registered resident account email"
                   className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-rose-600"
                   required
                 />
@@ -5688,52 +4896,17 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
 
               <div className="space-y-1">
                 <label className="text-xs font-black text-slate-800 block">
-                  {deleteTargetRole === 'manager' ? 'Manager Account Password' : deleteTargetRole === 'resident' ? 'Resident Account Password *' : 'Confirm Password'}
+                  Resident Account Password *
                 </label>
                 <input
                   type="password"
                   value={deletePasswordInput}
                   onChange={(e) => setDeletePasswordInput(e.target.value)}
-                  placeholder={deleteTargetRole === 'manager' ? "Enter password used when creating manager account" : deleteTargetRole === 'resident' ? "Enter the Resident Account's password to delete" : "Enter account password to confirm"}
+                  placeholder="Enter your resident account password"
                   className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-rose-600 font-mono"
                   required
                 />
               </div>
-
-              {deleteTargetRole === 'manager' && (
-                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
-                  <label className="flex items-start gap-2.5 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={requestBypass}
-                      onChange={(e) => setRequestBypass(e.target.checked)}
-                      className="mt-0.5 w-4 h-4 rounded border-slate-300 text-rose-600 focus:ring-rose-500 accent-rose-600 cursor-pointer"
-                    />
-                    <span className="text-xs text-slate-700 font-extrabold leading-relaxed">
-                      I plan to register a new Manager account and wish to submit a bypass request for the 30-day restriction.
-                    </span>
-                  </label>
-
-                  {requestBypass && (
-                    <div className="space-y-1.5 animate-in slide-in-from-top-2 duration-150">
-                      <label className="block text-[10px] font-extrabold text-rose-900 uppercase tracking-wider">
-                        Detailed Reason for Deletion & Restart (Sent to Admin for Approval)
-                      </label>
-                      <textarea
-                        value={deleteReasonInput}
-                        onChange={(e) => setDeleteReasonInput(e.target.value)}
-                        placeholder="Please provide a detailed reason why you are deleting this account to restart registration (e.g. correct misspelling, updated organization, etc.)"
-                        required={requestBypass}
-                        rows={3}
-                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-800 focus:outline-none focus:ring-1 focus:ring-rose-500"
-                      />
-                      <p className="text-[10px] text-slate-400 font-semibold leading-relaxed">
-                        If the Admin approves your reason, the 30-day restriction will be waived instantly. Otherwise, the restriction will remain active.
-                      </p>
-                    </div>
-                  )}
-                </div>
-              )}
 
               {deleteAccountError && (
                 <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-900 font-semibold flex items-center gap-2">

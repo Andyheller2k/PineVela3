@@ -31,6 +31,7 @@ export interface HostelRegistrationDraft {
   yearEstablished: number;
   contactEmail: string;
   contactPhone: string;
+  contactPhoneCountry: import('libphonenumber-js').CountryCode;
   alternativePhone: string;
   website: string;
   wing: string;
@@ -49,13 +50,13 @@ export interface HostelRegistrationDraft {
   campusProximity?: string; // e.g. "5-10 Mins Walk"
   campusProximityDetails?: string; // e.g. "Shuttle & walking routes"
 
-  // Step 3: Map Location
+  // Step 2: Map Location
   latitude: number;
   longitude: number;
   formattedAddress?: string;
   isLocationConfirmed: boolean;
 
-  // Step 4: Hostel Image
+  // Step 3: Hostel Image
   imageFile?: File | null;
   imageUrl: string;
   imagePreviewUrl?: string;
@@ -63,30 +64,13 @@ export interface HostelRegistrationDraft {
   imageStorageType?: 'local' | 'external';
   gallery?: string[];
 
-  // Step 5: Capacity & Structure
+  // Step 4: Capacity & Structure
   totalBlocks: number;
   totalFloors: number;
   totalRooms: number;
   totalBeds: number;
   maximumCapacity: number;
   blocksList: HostelBlockConfig[];
-
-  // Step 6: Facilities & Amenities
-  facilities: string[];
-  customFacilities: string[];
-
-  // Step 7: Rules & Policies
-  checkInTime: string;
-  checkOutTime: string;
-  minStay: string;
-  maxStay: string;
-  guestPolicy: string;
-  curfew: string;
-  smokingPolicy: 'Strictly Non-Smoking' | 'Designated Areas Only' | 'Prohibited';
-  petPolicy: 'No Pets' | 'Service Animals Only' | 'Allowed with Approval';
-  noisePolicy: string;
-  cancellationPolicy: string;
-  customRules: string[];
 
   // Stay cycle; optional monetary fields retained for legacy stored drafts only.
   defaultFee?: number;
@@ -95,7 +79,7 @@ export interface HostelRegistrationDraft {
   applicationFee?: number;
   currency?: 'GHS' | 'USD' | 'EUR' | 'GBP';
 
-  // Step 9: Manager Assignment
+  // Manager Assignment
   assignedManagerId?: string;
   managerName: string;
   managerEmail: string;
@@ -147,13 +131,12 @@ export interface Hostel {
   approvalStatus?: 'Approved' | 'Pending Approval' | 'Rejected';
   isDeleted?: boolean;
   blocks?: any[];
-  amenities?: string[];
-  facilities?: string[];
   hostel_type?: string;
   gender?: string;
   year_established?: number;
   contact_email?: string;
   contact_phone?: string;
+  contact_phone_country?: string;
   alternative_phone?: string;
   website?: string;
   address_line_1?: string;
@@ -169,7 +152,6 @@ export interface Hostel {
   image_url?: string;
   image_path?: string;
   capacity?: number;
-  rules?: any;
   pricing?: any;
   campusProximity?: string;
   campusProximityDetails?: string;
@@ -485,7 +467,6 @@ export interface HostelVerificationRecord {
   totalBlocks: number;
   pricePerYear: number;
   currency: string;
-  facilities: string[];
   imageUrl?: string;
 
   // Manager details
@@ -726,14 +707,16 @@ export interface DigitalMarketApplication {
   status: 'pending' | 'approved' | 'rejected';
   registrationFeePaid: boolean;
   setupCompleted?: boolean;
-  registrationFeeAmount: number; // 50 GHS
-  semesterFeeAmount: number; // 300 GHS
+  registrationFeeAmount: number; // Recorded application/payment fee
+  semesterFeeAmount: number; // Recorded two-month access fee
   paymentMethod?: string;
   paymentTransactionRef?: string;
   paidAt?: string;
   submittedAt: string;
   reviewedAt?: string;
   adminNotes?: string;
+  accountStatus?: 'disabled' | 'restricted';
+  banReason?: string;
 }
 
 export interface DigitalMarketStore {
@@ -750,6 +733,10 @@ export interface DigitalMarketStore {
   bannerUrl?: string;
   phone: string;
   isBanned: boolean;
+  banReason?: string;
+  accountStatus?: 'restricted';
+  semesterExpiresAt?: string;
+  registrationFeeAmount?: number;
   isVerified: boolean;
   registrationFeePaid?: boolean;
   setupCompleted?: boolean;

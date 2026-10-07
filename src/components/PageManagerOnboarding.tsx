@@ -548,6 +548,7 @@ export default function PageManagerOnboarding() {
 
               {/* Action Buttons */}
               <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-slate-100">
+                {user?.role === 'manager' && (existingManagerRecord.managerId || existingManagerRecord.id) === user.id && (
                 <button
                   type="button"
                   onClick={() => {
@@ -560,6 +561,7 @@ export default function PageManagerOnboarding() {
                   <Trash2 className="w-4 h-4" />
                   <span>Delete Account & Restart Registration</span>
                 </button>
+                )}
 
                 <div className="flex items-center gap-3 w-full sm:w-auto">
                   <button

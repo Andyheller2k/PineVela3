@@ -104,9 +104,36 @@ test('Real Express governance: authenticated quorum, anti-bypass, suspension, pr
   admins[0].token = freshLogin.token || freshLogin.user?.token;
   const secondLogin = await request('POST', '/api/auth/login', undefined, { usernameOrEmail: admins[1].email, password: 'Test-login-1!independent' });
   admins[1].token = secondLogin.token || secondLogin.user?.token;
+  for (let i = 2; i < 5; i++) {
+    const session = await request('POST', '/api/auth/login', undefined, { usernameOrEmail: admins[i].email, password: `Test-login-${i}!independent` });
+    admins[i].token = session.token || session.user?.token;
+  }
   const removedSlot = (await view()).members.find((m: any) => m.id === admins[4].id).slot;
   const change = await post(`/members/${admins[4].id}/changes`, admins[0], { privateKey: keys[0], action: 'remove', reason: 'Isolated founder replacement' });
   await post(`/changes/${change.id}/vote`, admins[1], { privateKey: keys[1], decision: 'approved' });
+  assert.equal((await view(admins[2])).changes.find((c: any) => c.id === change.id).status, 'pending', 'Two approvals keep voting open');
+  assert(!(await view(admins[4])).changes.some((c: any) => c.id === change.id), 'Target is notified only after four approvals');
+  await post(`/changes/${change.id}/vote`, admins[4], { privateKey: keys[4], decision: 'approved' }, 403);
+  for (let i = 2; i <= 3; i++) await post(`/changes/${change.id}/vote`, admins[i], { privateKey: keys[i], decision: 'approved' });
+  await post(`/changes/${change.id}/confirm-removal`, admins[0], { privateKey: keys[0], confirmation: 'REMOVE ADMINISTRATOR' }, 409);
+  await post(`/changes/${change.id}/plea`, admins[3], { message: 'Impersonating the targeted administrator', targetId: admins[4].id }, 403);
+  await post(`/changes/${change.id}/plea`, undefined, { message: 'Unauthenticated plea' }, 401);
+  await stop(); await start();
+  assert.equal((await view(admins[4])).changes.find((c: any) => c.id === change.id).status, 'awaiting-plea', 'Plea window persists across restart');
+  await post(`/changes/${change.id}/plea`, admins[4], { message: 'Please reconsider my removal.' });
+  assert(!(await view(admins[2])).changes.find((c: any) => c.id === change.id).plea, 'Plea text is private to main and target');
+  await post(`/changes/${change.id}/plea/decision`, admins[1], { privateKey: keys[1], decision: 'rejected', reason: 'Unauthorized decision' }, 403);
+  await post(`/changes/${change.id}/plea/decision`, admins[0], { privateKey: keys[0], decision: 'rejected', reason: 'Replacement remains necessary.' });
+  const targetNotices = (await request('GET', '/api/notifications', admins[4], undefined));
+  // Notifications are arrays; the request helper adds a status property, retaining numeric entries.
+  assert(Object.values(targetNotices).some((n: any) => n?.title === 'Plea rejected' && n.targetAccountId === admins[4].id));
+  const otherNotices = await request('GET', '/api/notifications', admins[2], undefined);
+  assert(!Object.values(otherNotices).some((n: any) => n?.changeId === change.id), 'Other admins cannot read target or main notifications');
+  await post(`/changes/${change.id}/plea/acknowledge`, admins[4], {});
+  await post(`/changes/${change.id}/confirm-removal`, admins[1], { privateKey: keys[1], confirmation: 'REMOVE ADMINISTRATOR' }, 403);
+  await post(`/changes/${change.id}/confirm-removal`, admins[0], { privateKey: keys[0], confirmation: 'REMOVE ADMINISTRATOR' });
+  await request('GET', '/api/auth/me', admins[4], undefined, 401);
+  await request('POST', '/api/auth/login', undefined, { usernameOrEmail: admins[4].email, password: 'Test-login-4!independent' }, 401);
   const invite = await post('/invitations', admins[0], { privateKey: keys[0], name: 'New isolated founder', email: 'newfounder@example.test' });
   await request('POST', '/api/auth/admin-invitation/accept', undefined, {}, 400);
   await request('POST', '/api/auth/admin-invitation/accept', undefined, { invitationToken: crypto.randomBytes(32).toString('base64url'), password: 'Distinct-founder-login!123' }, 403);

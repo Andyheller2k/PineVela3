@@ -60,3 +60,7 @@ The integration tests use the real HTTP server, bearer-session authentication an
 The change covers the reported generic PUT vulnerability and its database updater. Other audit findings and their distinct endpoints remain separate. Existing creation, registration, recruitment and verification workflows were not broadly rewritten.
 
 Restart the application server to load this fix, and apply it to each deployed instance. No S03 commit, push or remote deployment was performed.
+
+2026-10-07 update: facilities, amenities and property-policy fields are retired. The current
+update allowlist rejects new/changed values for these fields; unchanged historical fields
+are ignored in full-record saves. Primary contact changes require country-aware validation.

@@ -91,8 +91,7 @@ A hostel/residence contains:
 * identity
 * location
 * address
-* facilities
-* policies
+* public contact phone in E.164 format with its selected country
 * images
 * managers
 * fee structures
@@ -291,3 +290,9 @@ securely before another restore; do not remove it blindly. Unreadable/oversized 
 require an operator to preserve them offline before recovery. A last-good snapshot can
 predate recent operations; verify account approvals, room allocation and orders after
 restore. Credential recovery also refuses a missing database or a running writer.
+
+Residence facilities, amenities and property policies are retired from registration, editing,
+verification submissions and presentation. Historical JSON values remain archived in place
+during migration; the application rejects attempts to create or change them. An unchanged
+archived value in a full-record save is ignored, preserving existing records. No new active
+PostgreSQL columns or RLS policies should be introduced for these retired sections.

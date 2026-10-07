@@ -35,7 +35,7 @@ test('S03: manager patches reject ownership, approval, lifecycle and unknown fie
 
 test('S03: managers can edit typed property details while leaving protected state untouched', () => {
   const hostel = { id: crypto.randomUUID(), status: 'Pending Approval', isApproved: false };
-  const body = { name: crypto.randomUUID(), description: crypto.randomUUID(), price: 1200, totalCapacity: 20, facilities: ['Wi-Fi'], blocksList: [], latitude: null, longitude: 0, rules: { curfew: '' }, pricing: { defaultFee: 1200 } };
+  const body = { name: crypto.randomUUID(), description: crypto.randomUUID(), price: 1200, totalCapacity: 20, blocksList: [], latitude: null, longitude: 0, pricing: { defaultFee: 1200 } };
   const patch = buildHostelUpdate(body, { role: 'manager' }, hostel);
   assert.deepEqual({ ...patch, updatedAt: undefined }, { ...body, updatedAt: undefined });
   assert.equal('status' in patch, false);

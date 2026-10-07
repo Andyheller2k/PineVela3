@@ -27,6 +27,10 @@ export interface MarketProductItem {
   storeRating?: number;
   ratingCount?: number;
   isService?: boolean;
+  serviceLocationMode?: 'flexible' | 'fixed' | 'hybrid';
+  isAvailable?: boolean;
+  lat?: number;
+  lng?: number;
   serviceCategory?: string;
   callLine?: string;
   location?: string;
@@ -100,7 +104,7 @@ export const MarketItemCard: React.FC<MarketItemCardProps> = memo(
         onPointerMove={activation.onPointerMove}
         onPointerCancel={activation.onPointerCancel}
         data-market-plan={product.subscriptionPlan || 'default'} data-listing-id={product.id}
-        className="market-plan-card relative cursor-pointer focus-within:ring-2 focus-within:ring-blue-400 bg-white/90 border border-slate-200/80 rounded-2xl sm:rounded-3xl overflow-hidden shadow-xs hover:border-blue-400 hover:shadow-md transition-all duration-150 flex flex-col justify-between"
+        className="market-plan-card isolate relative cursor-pointer focus-within:ring-2 focus-within:ring-blue-400 bg-white/90 border border-slate-200/80 rounded-2xl sm:rounded-3xl overflow-hidden shadow-xs hover:border-blue-400 hover:shadow-md transition-all duration-150 flex flex-col justify-between"
       >
         <div>
           {/* Product Thumbnail Container with Lazy Loading */}

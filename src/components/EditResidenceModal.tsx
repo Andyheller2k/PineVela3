@@ -13,21 +13,6 @@ interface EditResidenceModalProps {
   onSave: (updatedResidence: any) => Promise<void> | void;
 }
 
-const DEFAULT_AMENITY_OPTIONS = [
-  'Fiber-Optic Wi-Fi',
-  'Standby Generator / Plant',
-  '24/7 Uniformed Security',
-  'Borehole & Mechanized Water',
-  'Quiet Study Hall',
-  'Smart Biometric Access',
-  'Air Conditioning',
-  'CCTV Surveillance',
-  'Cafeteria / Canteen',
-  'Gym & Fitness Studio',
-  'Laundry Facility',
-  'Shuttle Bus Service'
-];
-
 export default function EditResidenceModal({
   isOpen,
   onClose,
@@ -36,7 +21,7 @@ export default function EditResidenceModal({
 }: EditResidenceModalProps) {
   if (!isOpen || !residence) return null;
 
-  const [activeSection, setActiveSection] = useState<'basics' | 'stay' | 'blocks' | 'amenities' | 'rules' | 'manager'>('basics');
+  const [activeSection, setActiveSection] = useState<'basics' | 'stay' | 'blocks' | 'manager'>('basics');
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -52,19 +37,6 @@ export default function EditResidenceModal({
   const [totalCapacity, setTotalCapacity] = useState(residence.totalCapacity || residence.capacity || 1200);
   const [totalBlocks, setTotalBlocks] = useState(residence.totalBlocks || 2);
   
-  // Amenities
-  const [amenities, setAmenities] = useState<string[]>(() => {
-    const list = residence.facilities || residence.amenities || [];
-    return Array.isArray(list) ? list : [];
-  });
-  const [customAmenity, setCustomAmenity] = useState('');
-
-  // Rules
-  const [curfew, setCurfew] = useState(residence.curfew || '10:00 PM (Main Gate Security Lock)');
-  const [minStay, setMinStay] = useState(residence.minStay || '1 Academic Semester');
-  const [visitorPolicy, setVisitorPolicy] = useState(residence.visitorPolicy || 'Permitted in lobby until 8:00 PM');
-  const [smokingPolicy, setSmokingPolicy] = useState(residence.smokingPolicy || 'Strictly Non-Smoking Campus');
-
   // Manager
   const [managerName, setManagerName] = useState(residence.managerName || '');
   const [managerPhone, setManagerPhone] = useState(residence.managerPhone || '');
@@ -93,23 +65,6 @@ export default function EditResidenceModal({
     }
     return res;
   });
-
-  const toggleAmenity = (item: string) => {
-    if (amenities.includes(item)) {
-      setAmenities(amenities.filter(a => a !== item));
-    } else {
-      setAmenities([...amenities, item]);
-    }
-  };
-
-  const handleAddCustomAmenity = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!customAmenity.trim()) return;
-    if (!amenities.includes(customAmenity.trim())) {
-      setAmenities([...amenities, customAmenity.trim()]);
-    }
-    setCustomAmenity('');
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -141,12 +96,6 @@ export default function EditResidenceModal({
         imageUrl: imageUrl.trim() || residence.imageUrl,
         totalCapacity: Number(totalCapacity),
         totalBlocks: Number(totalBlocks),
-        facilities: amenities,
-        amenities: amenities,
-        curfew: curfew.trim(),
-        minStay: minStay.trim(),
-        visitorPolicy: visitorPolicy.trim(),
-        smokingPolicy: smokingPolicy.trim(),
         managerName: managerName.trim(),
         managerPhone: managerPhone.trim(),
         managerEmail: managerEmail.trim(),
@@ -193,8 +142,6 @@ export default function EditResidenceModal({
             { id: 'basics', label: 'Basic Info' },
             { id: 'stay', label: 'Stay Cycle' },
             { id: 'blocks', label: 'Blocks & Capacity' },
-            { id: 'amenities', label: 'Amenities & Facilities' },
-            { id: 'rules', label: 'Rules & Policies' },
             { id: 'manager', label: 'Assigned Manager' }
           ].map(tab => (
             <button
@@ -395,107 +342,7 @@ export default function EditResidenceModal({
             </div>
           )}
 
-          {/* SECTION 4: AMENITIES */}
-          {activeSection === 'amenities' && (
-            <div className="space-y-4 animate-fadeIn">
-              <h4 className="text-sm font-bold text-slate-900 border-b pb-2">Verified Amenities & Facilities</h4>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
-                {DEFAULT_AMENITY_OPTIONS.map((item, idx) => {
-                  const isChecked = amenities.includes(item);
-                  return (
-                    <button
-                      type="button"
-                      key={idx}
-                      onClick={() => toggleAmenity(item)}
-                      className={`p-3 rounded-xl border text-left text-xs font-semibold flex items-center justify-between transition-all cursor-pointer ${
-                        isChecked 
-                          ? 'bg-blue-50 border-blue-300 text-blue-900 shadow-xs' 
-                          : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
-                      }`}
-                    >
-                      <span>{item}</span>
-                      <div className={`w-4 h-4 rounded flex items-center justify-center ${
-                        isChecked ? 'bg-blue-600 text-white' : 'border border-slate-300'
-                      }`}>
-                        {isChecked && <Check className="w-3 h-3 stroke-[3]" />}
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Add custom amenity */}
-              <div className="pt-2 border-t border-slate-100">
-                <label className="block text-xs font-bold text-slate-700 mb-1">Add Custom Amenity or Feature</label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    placeholder="e.g. Rooftop Terrace / Solar Inverter"
-                    value={customAmenity}
-                    onChange={(e) => setCustomAmenity(e.target.value)}
-                    className="flex-1 px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:border-blue-600"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleAddCustomAmenity}
-                    className="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-bold cursor-pointer"
-                  >
-                    Add
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* SECTION 5: RULES */}
-          {activeSection === 'rules' && (
-            <div className="space-y-4 animate-fadeIn">
-              <h4 className="text-sm font-bold text-slate-900 border-b pb-2">Standard Residence Rules & Policies</h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Curfew Policy</label>
-                  <input
-                    type="text"
-                    value={curfew}
-                    onChange={(e) => setCurfew(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:border-blue-600 focus:bg-white"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Minimum Stay Requirement</label>
-                  <input
-                    type="text"
-                    value={minStay}
-                    onChange={(e) => setMinStay(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:border-blue-600 focus:bg-white"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Visitor Policy</label>
-                  <input
-                    type="text"
-                    value={visitorPolicy}
-                    onChange={(e) => setVisitorPolicy(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:border-blue-600 focus:bg-white"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Smoking / Campus Policy</label>
-                  <input
-                    type="text"
-                    value={smokingPolicy}
-                    onChange={(e) => setSmokingPolicy(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:border-blue-600 focus:bg-white"
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* SECTION 6: MANAGER */}
+          {/* SECTION 4: MANAGER */}
           {activeSection === 'manager' && (
             <div className="space-y-4 animate-fadeIn">
               <h4 className="text-sm font-bold text-slate-900 border-b pb-2">Assigned Property Manager Profile</h4>

@@ -20,6 +20,7 @@ import { ThemeDock } from './components/ThemeToggle';
 
 // Component imports
 import Page1Public from './components/Page1Public';
+const PagePublicMarket = lazy(() => import('./components/PagePublicMarket'));
 const PagePaymentReturn = lazy(() => import('./components/PagePaymentReturn'));
 const PageAdminInvitation = lazy(() => import('./components/PageAdminInvitation'));
 import PageUnifiedLogin from './components/PageUnifiedLogin';
@@ -167,6 +168,8 @@ function AppContent() {
             </PageWrapper>
           }
         />
+
+        <Route path="/pinemarket" element={<PageWrapper><PagePublicMarket /></PageWrapper>} />
 
         {/* 2. UNIFIED LOGIN ROUTE */}
         <Route

@@ -5,6 +5,7 @@ interface ManagerProfileModalProps {
   isOpen: boolean;
   onClose: () => void;
   currentUser: any;
+  onManageAccount?: () => void;
   onSaveProfile?: (updatedProfile: any) => Promise<void> | void;
   onSave?: (updatedProfile: any) => Promise<void> | void;
 }
@@ -22,6 +23,7 @@ export default function ManagerProfileModal({
   isOpen,
   onClose,
   currentUser,
+  onManageAccount,
   onSaveProfile,
   onSave
 }: ManagerProfileModalProps) {
@@ -223,6 +225,8 @@ export default function ManagerProfileModal({
               className="w-full px-3.5 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-xs font-medium text-slate-500 cursor-not-allowed"
             />
           </div>
+
+          {currentUser?.role === 'manager' && onManageAccount && <button type="button" onClick={onManageAccount} className="flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-xs font-bold text-blue-800"><Lock className="h-4 w-4" />Manager Account Security</button>}
 
           {/* Actions */}
           <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">

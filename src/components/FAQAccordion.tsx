@@ -70,7 +70,7 @@ export default function FAQAccordion() {
     },
     {
       question: "What documents/information are required?",
-      answer: "You are required to submit your legal contact name, verified email, official residency address, detailed room capacities, operational rules, and precise geographic coordinates for map placement.",
+      answer: "You are required to submit your legal contact name, verified email, official residency address, detailed room capacities and precise geographic coordinates for map placement.",
       icon: <FileText className="text-indigo-500" size={16} />
     },
     {
@@ -236,7 +236,7 @@ export default function FAQAccordion() {
             General Residency Info
           </h4>
           <p className="text-xs text-slate-500 mt-1">
-            General living, amenities, and resident guidance.
+            General living and resident guidance.
           </p>
         </div>
 

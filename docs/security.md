@@ -360,7 +360,8 @@ and recipient/ownership RLS remain required for future multi-worker deployments.
 System wipes require exactly five active, independently enrolled administrator approvals
 bound to an immutable, expiring proposal and server-derived deletion preview. Administrator
 #1 explicitly executes after quorum; single-password wipe routes are retired. Membership
-changes invalidate proposals. Removal/key recovery need independent approval, active admin
+changes invalidate proposals. Administrator removal needs four approvals excluding the target, followed by a 24-hour
+plea window and main-administrator confirmation. Key recovery needs independent approval. Active admin
 status is checked on every request, and generic resets cannot take over another admin.
 Encrypted verified recovery and an external audit precede deletion; partial execution fails
 closed across restart. See [setup, boundaries and recovery](admin-governance.md).
@@ -378,3 +379,14 @@ Wipe keys cannot authorize settings/profile changes. Key/password attempts are
 limited and lost-key resets require two other administrators. Maintenance authorization
 is server-enforced for all non-admin roles and existing sessions, with administrators
 retaining access to restore service. See [administrator setup](admin-governance.md).
+
+Service discovery uses the existing public live catalogue. Seller coordinates must be finite
+latitude/longitude pairs in geographic bounds; Fixed and Hybrid publication requires an
+explicit seller pin. Listing updates keep authenticated ownership checks, and bookings at
+the seller location derive coordinates from the stored listing, ignoring buyer overrides.
+Device location is a discovery hint, not proof of identity, proximity, ownership or authority.
+PineVela neither stores it nor accepts it as an authorization boundary. Browser location
+can be spoofed; authenticated seller coordinates do not attest physical presence.
+OpenStreetMap receives map tile requests; selected directions and waypoint coordinates
+are shared with Google only when opening the external directions link. Profile pin labels
+use DOM text and profile images use permitted local/public-storage URLs.

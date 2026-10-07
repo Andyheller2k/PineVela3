@@ -42,7 +42,7 @@ export function hostelVerificationSubmission(actor: any, body: any, store: any) 
     ...evidence, id: crypto.randomUUID(), hostelId: hostel.id, hostelName: hostel.name,
     location: hostel.location || '', digitalAddress, totalCapacity: hostel.totalCapacity,
     totalRooms: hostel.totalRooms, totalBlocks: hostel.totalBlocks, pricePerYear: hostel.pricePerYear,
-    currency: hostel.currency || 'GHS', facilities: hostel.facilities || [], imageUrl: hostel.imageUrl || '',
+    currency: hostel.currency || 'GHS', imageUrl: hostel.imageUrl || '',
     managerId: actor.id, managerName: actor.name, managerEmail: actor.email, managerPhone: actor.phone || '',
     managerApproved: true, systemValidation,
     validationPassed: !systemValidation.missingInfo && !systemValidation.conflictingInfo && systemValidation.capacityPricingValid && identityVerified && systemValidation.ownershipEvidencePresent,

@@ -6,6 +6,7 @@ import OnboardingProgress, { OFFICER_ACCOUNT_STEPS } from './OnboardingProgress'
 import AdminSettingsPanel from './AdminSettingsPanel';
 import AdministratorLabel from './AdministratorLabel';
 import AdminGovernancePanel, { useAdminGovernance } from './AdminGovernancePanel';
+import AdminRemovalNotice from './AdminRemovalNotice';
 import AccountModerationPanel from './AccountModerationPanel';
 import { sessionFetch as fetch } from '../lib/session';
 import React, { useState, useEffect } from 'react';
@@ -641,6 +642,7 @@ export default function PageAdminDashboard() {
 
   return (
     <div onClickCapture={actionFeedback.capture} onSubmitCapture={actionFeedback.capture} className="min-h-screen h-screen flex flex-col lg:flex-row bg-gradient-to-br from-slate-50 via-blue-50/70 to-indigo-50/50 text-slate-800 overflow-hidden font-sans">
+      <AdminRemovalNotice />
       {/* Toast Notification */}
       <AnimatePresence>
         {toastMessage && (
@@ -1203,7 +1205,7 @@ export default function PageAdminDashboard() {
                             <button
                               onClick={() => setEditingResidence(residence)}
                               className="px-3.5 py-2 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer border border-blue-200"
-                              title="Edit residence, blocks, amenities, rules & payments"
+                              title="Edit residence, blocks & payments"
                             >
                               <Edit3 className="w-3.5 h-3.5" />
                               <span>Edit</span>
@@ -2552,7 +2554,7 @@ export default function PageAdminDashboard() {
 
       </main>
 
-      {/* FULL 10-STEP HOSTEL REGISTRATION WIZARD: MANUALLY REGISTER RESIDENCE */}
+      {/* Four-step residence registration wizard */}
       {showAddResidenceModal && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/70 backdrop-blur-md p-2 sm:p-4 md:p-8 flex items-start justify-center animate-fadeIn">
           <div data-popup-card className="w-full max-w-5xl bg-white rounded-3xl shadow-2xl overflow-hidden border border-blue-200 my-auto">

@@ -37,6 +37,6 @@ export function ThemeDock() {
     return () => { observer.disconnect(); resize.disconnect(); window.removeEventListener('resize', measure); delete document.documentElement.dataset.mobileNavigation; };
   }, [pathname]);
   if (bar) return createPortal(<div className="mobile-nav-theme flex shrink-0 flex-col items-center justify-center gap-1 px-2"><ThemeToggle /><span className="text-[9px] font-bold text-slate-500">Theme</span></div>, bar);
-  if (pathname === '/') return null;
+  if (pathname === '/' || pathname === '/pinemarket') return null;
   return <div className="theme-dock"><ThemeToggle /></div>;
 }

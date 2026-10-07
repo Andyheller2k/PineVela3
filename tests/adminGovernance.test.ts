@@ -124,7 +124,12 @@ test('Membership changes invalidate approvals; main is protected; removal and re
   const change = service.requestChange(admins[0].id, admins[4].id, { action: 'remove', privateKey: keys[0], reason: 'Test replacement' });
   denied(() => service.decideChange(admins[0].id, change.id, { privateKey: keys[0], decision: 'approved' }), 403);
   denied(() => service.decideChange(admins[4].id, change.id, { privateKey: keys[4], decision: 'approved' }), 403);
-  service.decideChange(admins[1].id, change.id, { privateKey: keys[1], decision: 'approved' }); assert.equal(f.store.users.filter((u: any) => u.role === 'admin').length, 4);
+  for (let i = 1; i <= 3; i++) service.decideChange(admins[i].id, change.id, { privateKey: keys[i], decision: 'approved' });
+  assert.equal(f.store.users.filter((u: any) => u.role === 'admin').length, 5);
+  service.submitRemovalPlea(admins[4].id, change.id, { message: 'Please reconsider replacement.' });
+  service.decideRemovalPlea(admins[0].id, change.id, { privateKey: keys[0], decision: 'rejected', reason: 'Replacement remains necessary.' });
+  service.confirmRemoval(admins[0].id, change.id, { privateKey: keys[0], confirmation: 'REMOVE ADMINISTRATOR' });
+  assert.equal(f.store.users.filter((u: any) => u.role === 'admin').length, 4);
   const invitation = service.invite(admins[0].id, { email: 'replacement@example.test', name: 'Test replacement founder', privateKey: keys[0] }); assert.equal(invitation.slot, removedSlot);
   denied(() => service.invite(admins[0].id, { email: 'sixth@example.test', name: 'Sixth administrator', privateKey: keys[0] }), 409);
   const accepted = await service.acceptInvitation({ invitationToken: invitation.invitationToken, password: 'Independent-new-login!123' }); assert.equal(accepted.slot, removedSlot);
@@ -146,4 +151,48 @@ test('In-flight operations and disk commit failures fail closed and preserve enc
   assert(fs.existsSync(path.join(g.uploads, 'hostels/item.jpg')));
   assert(fs.existsSync(path.join(g.recovery.directory, `${other}.pvwipe`)));
   const restarted = new AdminGovernance(() => g.store, () => {}, g.recovery); assert(restarted.blocked);
+});
+
+test('Removal keeps voting after two approvals, excludes target, accepts a private plea and revokes all votes', async t => {
+  const f = fixture(t), keys = await f.enroll(), { service: s, admins: a } = f;
+  const change = s.requestChange(a[0].id, a[4].id, { action: 'remove', privateKey: keys[0], reason: 'Review account removal' });
+  const vote = (i: number) => s.decideChange(a[i].id, change.id, { privateKey: keys[i], decision: 'approved' });
+  const view = (i: number) => s.view(a[i].id).changes.find(c => c.id === change.id)!;
+  vote(1); assert.equal(view(2).status, 'pending'); assert.equal(view(2).votes.length, 2);
+  assert.equal(view(4), undefined); denied(() => vote(4), 403); denied(() => vote(1), 403);
+  denied(() => s.requestChange(a[1].id, a[4].id, { action: 'remove', privateKey: keys[1], reason: 'Unauthorized removal' }), 403);
+  vote(2); vote(3); assert.equal(view(4).status, 'awaiting-plea'); assert.equal(f.store.users.filter((u: any) => u.role === 'admin').length, 5);
+  const deadline = view(4).pleaUntil!; assert.equal(Date.parse(deadline)-Date.parse(view(4).votes[3].at),24*3600_000);
+  denied(() => s.confirmRemoval(a[0].id, change.id, { privateKey: keys[0], confirmation: 'REMOVE ADMINISTRATOR' }), 409);
+  denied(() => s.submitRemovalPlea(a[1].id, change.id, { message: 'Impersonated plea', targetId: a[4].id }), 403);
+  s.submitRemovalPlea(a[4].id, change.id, { message: 'Private explanation only for main.' });
+  assert.equal(view(0).plea?.message, 'Private explanation only for main.'); assert.equal(view(2).plea, undefined);
+  denied(() => s.submitRemovalPlea(a[4].id, change.id, { message: 'Duplicate plea' }), 409);
+  denied(() => s.decideRemovalPlea(a[2].id, change.id, { privateKey: keys[2], decision: 'accepted', reason: 'Unauthorized override' }), 403);
+  s.decideRemovalPlea(a[0].id, change.id, { privateKey: keys[0], decision: 'accepted', reason: 'Explanation accepted.' });
+  assert.equal(view(4).status, 'revoked'); assert.equal(view(4).votes.length, 0);
+  assert(f.store.notifications.some((n: any) => n.title === 'Plea accepted' && n.targetAccountId === a[4].id && n.targetRole === 'admin'));
+  denied(() => s.acknowledgeRemovalPlea(a[1].id, change.id), 403);
+  s.setActive(a[0].id, a[2].id, false, keys[0]); // Historical decision prompts remain dismissible after roster changes.
+  s.acknowledgeRemovalPlea(a[4].id, change.id); assert(view(4).plea?.acknowledgedAt);
+  f.setNow(Date.parse(deadline)+1); denied(() => s.confirmRemoval(a[0].id, change.id, { privateKey: keys[0], confirmation: 'REMOVE ADMINISTRATOR' }), 409);
+  assert(f.store.users.some((u: any) => u.id === a[4].id));
+});
+
+test('After 24 hours no response permits main-only explicit removal; roster changes invalidate approval', async t => {
+  const f = fixture(t), keys = await f.enroll(), { service: s, admins: a } = f;
+  const propose = () => s.requestChange(a[0].id, a[4].id, { action: 'remove', privateKey: keys[0], reason: 'Review membership' }).id;
+  const approve = (id: string) => { for (let i=1;i<=3;i++) s.decideChange(a[i].id,id,{privateKey:keys[i],decision:'approved'}); };
+  const first = propose(); approve(first); s.setActive(a[0].id,a[2].id,false,keys[0]);
+  denied(() => s.submitRemovalPlea(a[4].id,first,{message:'Stale proposal plea'}),409);
+  assert.equal(s.view(a[0].id).changes.find(c=>c.id===first)?.status,'invalidated');
+  denied(() => propose(),409); s.setActive(a[0].id,a[2].id,true,keys[0]);
+  const id=propose(); approve(id); const until=s.view(a[0].id).changes.find(c=>c.id===id)!.pleaUntil!;
+  f.setNow(Date.parse(until)-1); denied(()=>s.confirmRemoval(a[0].id,id,{privateKey:keys[0],confirmation:'REMOVE ADMINISTRATOR'}),409);
+  f.setNow(Date.parse(until)); denied(()=>s.submitRemovalPlea(a[4].id,id,{message:'Too late'}),409);
+  denied(()=>s.confirmRemoval(a[1].id,id,{privateKey:keys[1],confirmation:'REMOVE ADMINISTRATOR'}),403);
+  denied(()=>s.confirmRemoval(a[0].id,id,{privateKey:keys[0],confirmation:'yes'}),400);
+  assert.equal(s.confirmRemoval(a[0].id,id,{privateKey:keys[0],confirmation:'REMOVE ADMINISTRATOR'}).status,'executed');
+  denied(()=>s.confirmRemoval(a[0].id,id,{privateKey:keys[0],confirmation:'REMOVE ADMINISTRATOR'}),409);
+  assert(!f.store.users.some((u:any)=>u.id===a[4].id)); assert.equal(f.store.users.filter((u:any)=>u.role==='admin').length,4);
 });

@@ -119,8 +119,8 @@ export class AttemptBudgets {
 const ipOf = (req: Request) => req.ip || req.socket.remoteAddress || 'unknown';
 const routeOf = (req: Request) => req.path.toLowerCase().replace(/\/+$/, '');
 const loginPaths = new Set(['/api/auth/login', '/api/digital-market/login', '/api/verification-teams/login', '/api/auth/verification-team-login']);
-const credentialPaths = /(?:admin-invitation\/accept|admin\/governance\/keys|login|register|verify-unified|password|residents\/onboard|room-keys\/claim|manager-verifications\/submit|\/staff$|delete-registered-account|delete-room|clear-registered-accounts|\/verification-teams$)/;
-const smallBody = (route: string) => route.startsWith('/api/payments/paystack') || route.startsWith('/api/admin/payments') || route === '/api/settings' || route.startsWith('/api/admin/governance') || route === '/api/auth/admin-invitation/accept' || loginPaths.has(route) || /(?:password|verify-unified|register-unified)$/.test(route);
+const credentialPaths = /(?:admin-invitation\/accept|admin\/governance\/keys|auth\/google\/start|login|register|verify-unified|password|residents\/onboard|room-keys\/claim|manager-verifications\/submit|\/staff$|delete-registered-account|delete-room|clear-registered-accounts|\/verification-teams$)/;
+const smallBody = (route: string) => route.startsWith('/api/payments/paystack') || route.startsWith('/api/admin/payments') || route === '/api/settings' || route.startsWith('/api/admin/governance') || route === '/api/auth/admin-invitation/accept' || route === '/api/auth/google/start' || loginPaths.has(route) || /(?:password|verify-unified|register-unified)$/.test(route);
 export const UPLOAD_ROUTE = '/api/storage/upload-hostel-image';
 export const MARKET_UPLOAD_ROUTE = '/api/storage/upload-market-image';
 export const ADMIN_PROFILE_UPLOAD_ROUTE = '/api/storage/upload-admin-profile';

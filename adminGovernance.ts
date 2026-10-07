@@ -5,6 +5,7 @@ import { buildWipePlan, applyWipePlan, parseWipeScopes, type WipeScope } from '.
 import { WipeRecovery } from './adminWipeRecovery.js';
 import { validatePlatformSettings, publicPlatformSettings, pricingSettings, validatePricingSettings, type PricingSettings } from './platformSettings.js';
 import { AccountModeration, reconcileDeletedAccountPolicies, type AccountPolicy, type AccountProposal } from './accountModeration.js';
+import { createMaintenanceRecoveryNotice } from './maintenanceNotice.js';
 
 export class GovernanceError extends Error { constructor(public status: number, message: string) { super(message); } }
 const fail = (status: number, message: string): never => { throw new GovernanceError(status, message); };
@@ -19,7 +20,10 @@ type Vote = { id: string; slot: number; name: string; decision: 'approved' | 're
 type Proposal = { id: string; scopes: WipeScope[]; reason: string; createdBy: string; createdAt: string; expiresAt: string; revision: number;
   status: 'pending' | 'approved' | 'rejected' | 'expired' | 'invalidated' | 'executed'; preview: any; fingerprint: string; votes: Vote[]; roster: { id: string; slot: number; name: string }[]; executedAt?: string; backup?: string };
 type Invitation = { id: string; email: string; name: string; slot: number; tokenHash: string; expiresAt: string };
-type Change = { id: string; targetId: string; action: 'remove' | 'reset-key' | 'reset-settings-key'; reason: string; requestedBy: string; revision: number; expiresAt: string; status: 'pending' | 'approved' | 'rejected' | 'invalidated'; votes: Vote[] };
+type Change = { id: string; targetId: string; action: 'remove' | 'reset-key' | 'reset-settings-key'; reason: string; requestedBy: string; revision: number; expiresAt: string;
+  status: 'pending' | 'approved' | 'rejected' | 'invalidated' | 'expired' | 'awaiting-plea' | 'plea-submitted' | 'plea-rejected' | 'revoked' | 'executed'; votes: Vote[];
+  removalVersion?: 2; eligibleIds?: string[]; pleaUntil?: string; executedAt?: string;
+  plea?: { message: string; submittedAt: string; decision?: 'accepted' | 'rejected'; decisionReason?: string; decidedAt?: string; acknowledgedAt?: string }; };
 type PricingProposal = { id: string; before: PricingSettings; prices: PricingSettings; reason: string; createdBy: string; createdAt: string; expiresAt: string; revision: number; status: 'pending' | 'approved' | 'rejected' | 'invalidated' | 'expired' | 'applied'; votes: Vote[]; roster: { id: string; slot: number; name: string }[]; appliedBy?: string; appliedAt?: string };
 export interface AdminGovernanceState { version: 1; mainId: string; revision: number; members: Member[]; proposals: Proposal[]; invitations: Invitation[]; changes: Change[]; attempts: Record<string, { count: number; until: number }>; pricingProposals?: PricingProposal[]; accountProposals?: AccountProposal[]; accountPolicies?: Record<string, AccountPolicy> }
 
@@ -84,7 +88,7 @@ export class AdminGovernance {
   private changedMembership() {
     this.state.revision++;
     for (const p of this.state.proposals) if (['pending', 'approved'].includes(p.status)) p.status = 'invalidated';
-    for (const c of this.state.changes) if (c.status === 'pending') c.status = 'invalidated';
+    for (const c of this.state.changes) if (['pending', 'awaiting-plea', 'plea-submitted', 'plea-rejected'].includes(c.status)) c.status = 'invalidated';
     for (const p of this.state.pricingProposals || []) if (['pending', 'approved'].includes(p.status)) p.status = 'invalidated';
     for (const p of this.state.accountProposals || []) if (['pending', 'approved'].includes(p.status)) p.status = 'invalidated';
   }
@@ -129,7 +133,7 @@ export class AdminGovernance {
     if (current.maintenanceMode && !settings.maintenanceMode) {
       const message = body.maintenanceRecoveryMessage?.trim();
       if (!message) fail(400, 'Write a message for users before ending maintenance.');
-      store.platformSettings.maintenanceRecoveryNotice = { id: crypto.randomUUID(), message, dismissedBy: [] };
+      store.platformSettings.maintenanceRecoveryNotice = createMaintenanceRecoveryNotice(store, crypto.randomUUID(), message, this.now());
     }
     Object.assign(store.platformSettings, settings);
     if (settings.announcement && (settings.announcement !== previousAnnouncement || !(store.notifications || []).some((n: any) => n.category === 'system_announcement' && n.message === settings.announcement))) {
@@ -209,7 +213,12 @@ export class AdminGovernance {
       invitations: id === this.state.mainId ? this.state.invitations.filter(i => Date.parse(i.expiresAt) > this.now()).map(({ tokenHash, ...i }) => i) : [],
       pricingProposals: (this.state.pricingProposals || []).map(({ revision, ...p }) => ({ ...p, status: ['pending', 'approved'].includes(p.status) && Date.parse(p.expiresAt) <= this.now() ? 'expired' : p.status })),
       accountProposals: (this.state.accountProposals || []).map(({ fingerprint, revision, ...p }) => ({ ...p, status: ['pending', 'approved'].includes(p.status) && Date.parse(p.expiresAt) <= this.now() ? 'expired' : p.status })),
-      changes: this.state.changes.map(({ revision, ...c }) => c), blocked: this.blocked };
+      changes: this.state.changes.filter(c => c.action !== 'remove' || c.targetId !== id || c.removalVersion === 2 && !!c.pleaUntil).map(({ revision, plea, ...c }) => ({ ...c,
+        status: c.status === 'pending' && Date.parse(c.expiresAt) <= this.now() ? 'expired' : c.status,
+        ...(plea && (id === c.targetId || id === this.state.mainId) ? { plea } : {}),
+        canSubmitPlea: c.status === 'awaiting-plea' && c.targetId === id && Date.parse(c.pleaUntil || '') > this.now(),
+        canConfirmRemoval: c.removalVersion === 2 && id === this.state.mainId && (c.status === 'plea-rejected' || c.status === 'awaiting-plea' && Date.parse(c.pleaUntil || '') <= this.now())
+      })), blocked: this.blocked };
   }
   async enroll(id: string, password: unknown) {
     const m = this.member(id), a = this.account(id);
@@ -262,38 +271,111 @@ export class AdminGovernance {
     m!.active = active as boolean; clearRecordSession(this.account(targetId)); this.changedMembership(); this.commit(); return { success: true };
   }
   requestChange(id: string, targetId: string, body: any) {
+    if (this.blocked) fail(503, 'Administrator changes are blocked pending recovery.');
     if (body.action === 'remove') this.main(id); else this.member(id);
     this.verifyKey(id, body.privateKey);
     if (!['remove', 'reset-key', 'reset-settings-key'].includes(body.action)) fail(400, 'Unknown administrator change.');
     if (!this.state.members.some(m => m.id === targetId)) fail(404, 'Administrator not found.');
     if (body.action !== 'remove' && id === targetId) fail(403, 'Two different administrators must authorize a lost-key reset for its owner.');
     if (body.action === 'remove' && targetId === this.state.mainId) fail(403, 'Administrator #1 cannot be deleted.');
+    const eligibleIds = body.action === 'remove' ? this.removalElectorate(targetId) : undefined;
+    if (this.state.changes.some(c => c.targetId === targetId && c.action === body.action && ['pending', 'awaiting-plea', 'plea-submitted', 'plea-rejected'].includes(c.status) && (c.status !== 'pending' || Date.parse(c.expiresAt) > this.now()))) fail(409, 'This administrator already has an outstanding change of this kind.');
     const change: Change = { id: crypto.randomUUID(), targetId, action: body.action, reason: cleanText(body.reason, 'Reason'), requestedBy: id,
-      revision: this.state.revision, expiresAt: new Date(this.now() + 24 * 3600_000).toISOString(), status: 'pending', votes: [this.vote(id, 'approved')] };
+      revision: this.state.revision, expiresAt: new Date(this.now() + 24 * 3600_000).toISOString(), status: 'pending', votes: [this.vote(id, 'approved')],
+      ...(eligibleIds ? { removalVersion: 2 as const, eligibleIds } : {}) };
     this.state.changes = [...this.state.changes.slice(-99), change]; this.commit(); return { id: change.id };
   }
   decideChange(id: string, changeId: string, body: any) {
+    if (this.blocked) fail(503, 'Administrator changes are blocked pending recovery.');
     this.verifyKey(id, body.privateKey);
     const c = this.state.changes.find(c => c.id === changeId); if (!c) fail(404, 'Administrator change not found.');
     if (c!.status !== 'pending' || c!.revision !== this.state.revision || Date.parse(c!.expiresAt) <= this.now()) fail(409, 'This administrator change is no longer pending.');
     if (id === c!.requestedBy || id === c!.targetId || c!.votes.some(v => v.id === id)) fail(403, 'A different existing administrator must independently approve this change.');
     if (!['approved', 'rejected'].includes(body.decision)) fail(400, 'Select approve or reject.');
+    if (c!.action === 'remove') {
+      const eligible = this.removalElectorate(c!.targetId);
+      if (c!.eligibleIds && (eligible.some(member => !c!.eligibleIds!.includes(member)) || c!.eligibleIds.length !== 4)) fail(409, 'The eligible administrator roster changed. Start a new proposal.');
+      c!.eligibleIds ||= eligible; c!.removalVersion = 2;
+      if (!eligible.includes(id)) fail(403, 'The targeted administrator cannot vote on removal.');
+      c!.votes.push(this.vote(id, body.decision));
+      if (body.decision === 'rejected') c!.status = 'rejected';
+      else if (c!.votes.length === 4) {
+        this.removalQuorum(c!);
+        c!.status = 'awaiting-plea'; c!.pleaUntil = new Date(this.now() + 24 * 3600_000).toISOString();
+        this.removalNotice(c!, c!.targetId, 'Administrator removal proposed', 'Four eligible administrators have approved your removal. You have 24 hours to submit a plea to the main administrator.');
+      }
+      this.commit(); return { success: true, status: c!.status };
+    }
     c!.votes.push(this.vote(id, body.decision));
     if (body.decision === 'rejected') c!.status = 'rejected';
     else {
       const target = this.state.members.find(m => m.id === c!.targetId)!;
-      if (c!.action === 'remove') {
-        const index = this.getStore().users.findIndex((u: any) => accountRole(u) === 'admin' && accountId(u) === target.id);
-        if (index >= 0) this.getStore().users.splice(index, 1);
-        this.state.members = this.state.members.filter(m => m.id !== target.id); delete this.state.attempts[target.id];
-      } else {
-        if (c!.action === 'reset-settings-key') { delete target.settingsKeyHash; delete this.state.attempts[`settings:${target.id}`]; delete this.state.attempts[`settings-enroll:${target.id}`]; }
-        else delete target.keyHash;
-        clearRecordSession(this.account(target.id));
-      }
+      if (c!.action === 'reset-settings-key') { delete target.settingsKeyHash; delete this.state.attempts[`settings:${target.id}`]; delete this.state.attempts[`settings-enroll:${target.id}`]; }
+      else delete target.keyHash;
+      clearRecordSession(this.account(target.id));
       c!.status = 'approved'; this.changedMembership();
     }
     this.commit(); return { success: true };
+  }
+  private removalElectorate(targetId: string) {
+    const eligible = this.state.members.filter(m => m.id !== targetId);
+    if (eligible.length !== 4 || !eligible.some(m => m.id === this.state.mainId) || eligible.some(m => !m.active || !m.keyHash || !this.account(m.id))) fail(409, 'Removal requires the main administrator and three other active administrators with enrolled approval keys, excluding the target.');
+    return eligible.map(m => m.id);
+  }
+  private removalQuorum(c: Change) {
+    const eligible = this.removalElectorate(c.targetId);
+    if (c.revision !== this.state.revision || c.removalVersion !== 2 || c.eligibleIds?.length !== 4 || eligible.some(id => !c.eligibleIds!.includes(id)) ||
+        c.votes.length !== 4 || new Set(c.votes.map(v => v.id)).size !== 4 || c.votes.some(v => v.decision !== 'approved' || !eligible.includes(v.id))) fail(409, 'Four distinct eligible approvals, including the main administrator, are required.');
+  }
+  private removalChange(changeId: string) {
+    if (this.blocked) fail(503, 'Administrator changes are blocked pending recovery.');
+    const c = this.state.changes.find(c => c.id === changeId && c.action === 'remove' && c.removalVersion === 2);
+    if (!c || c.revision !== this.state.revision || ['invalidated', 'executed', 'rejected', 'expired'].includes(c.status)) fail(409, 'This removal proposal is no longer actionable.');
+    return c!;
+  }
+  private removalNotice(c: Change, recipient: string, title: string, message: string) {
+    const store = this.getStore(); store.notifications ||= [];
+    store.notifications.unshift({ id: `admin-removal-${crypto.randomUUID()}`, targetAccountId: recipient, targetRole: 'admin', title, message,
+      type: 'info', category: 'admin-governance', scope: 'admin', changeId: c.id, date: new Date(this.now()).toISOString(), read: false });
+  }
+  submitRemovalPlea(id: string, changeId: string, body: any) {
+    this.member(id); const c = this.removalChange(changeId);
+    if (c.targetId !== id) fail(403, 'Only the targeted administrator may submit this plea.');
+    if (c.status !== 'awaiting-plea' || Date.parse(c.pleaUntil || '') <= this.now() || c.plea) fail(409, 'The 24-hour plea window is closed or a plea was already submitted.');
+    this.removalQuorum(c); c.plea = { message: cleanText(body.message, 'Plea', 2000), submittedAt: new Date(this.now()).toISOString() }; c.status = 'plea-submitted';
+    this.removalNotice(c, this.state.mainId, 'Administrator removal plea submitted', 'The targeted administrator has submitted a plea for your decision.');
+    this.commit(); return { success: true };
+  }
+  decideRemovalPlea(id: string, changeId: string, body: any) {
+    this.main(id); this.verifyKey(id, body.privateKey); const c = this.removalChange(changeId);
+    if (c.status !== 'plea-submitted' || !c.plea) fail(409, 'There is no pending plea to decide.');
+    this.removalQuorum(c);
+    if (!['accepted', 'rejected'].includes(body.decision)) fail(400, 'Accept or reject the plea.');
+    const reason = cleanText(body.reason, 'Decision reason');
+    c.plea.decision = body.decision; c.plea.decisionReason = reason; c.plea.decidedAt = new Date(this.now()).toISOString();
+    if (body.decision === 'accepted') { c.status = 'revoked'; c.votes = []; }
+    else c.status = 'plea-rejected';
+    this.removalNotice(c, c.targetId, body.decision === 'accepted' ? 'Plea accepted' : 'Plea rejected', body.decision === 'accepted' ? `Your plea was accepted and all removal votes were revoked. ${reason}` : `Your plea was rejected. The main administrator may now confirm removal. ${reason}`);
+    this.commit(); return { success: true, status: c.status };
+  }
+  acknowledgeRemovalPlea(id: string, changeId: string) {
+    this.member(id);
+    if (this.blocked) fail(503, 'Administrator changes are blocked pending recovery.');
+    const c = this.state.changes.find(c => c.id === changeId && c.action === 'remove' && c.removalVersion === 2);
+    if (!c || c.targetId !== id) fail(403, 'Only the targeted administrator may acknowledge this decision.');
+    if (!c!.plea?.decision) fail(409, 'There is no plea decision.');
+    c!.plea!.acknowledgedAt ||= new Date(this.now()).toISOString(); this.commit(); return { success: true };
+  }
+  confirmRemoval(id: string, changeId: string, body: any) {
+    this.main(id); this.verifyKey(id, body.privateKey); const c = this.removalChange(changeId); this.removalQuorum(c);
+    if (!(c.status === 'plea-rejected' || c.status === 'awaiting-plea' && !c.plea && Date.parse(c.pleaUntil || '') <= this.now())) fail(409, 'Decide the submitted plea or wait until the 24-hour plea window ends.');
+    if (body.confirmation !== 'REMOVE ADMINISTRATOR') fail(400, 'Type REMOVE ADMINISTRATOR to confirm.');
+    const store = this.getStore(), target = this.account(c.targetId);
+    if (!target || c.targetId === this.state.mainId) fail(409, 'This target cannot be removed.');
+    clearRecordSession(target); store.users = store.users.filter((u: any) => !(accountRole(u) === 'admin' && accountId(u) === c.targetId));
+    this.state.members = this.state.members.filter(m => m.id !== c.targetId);
+    for (const key of [c.targetId, `settings:${c.targetId}`, `settings-enroll:${c.targetId}`]) delete this.state.attempts[key];
+    c.status = 'executed'; c.executedAt = new Date(this.now()).toISOString(); this.changedMembership(); this.commit(); return { success: true, status: c.status };
   }
   preview(id: string, input: unknown) {
     this.member(id); let scopes: WipeScope[];

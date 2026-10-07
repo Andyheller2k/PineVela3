@@ -27,6 +27,9 @@ import { safeJson } from '../lib/api';
 import manager2Img from '../../assets/manager2.jpeg';
 import plumberImg from '../../assets/plumber1.jpeg';
 import girlsImg from '../../assets/girls.jpeg';
+import ThemeToggle from './ThemeToggle';
+import GoogleAuthButton from './GoogleAuthButton';
+import '../login.css';
 
 const slides = [
   {
@@ -157,6 +160,19 @@ export default function PageUnifiedLogin() {
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
+    const googleErrors: Record<string, string> = {
+      expired: 'Your Google sign-in expired. Please try again.',
+      cancelled: 'Google sign-in was cancelled. Please try again.',
+      provider_exchange: 'Google accepted your sign-in, but our sign-in provider could not complete it. Please use email and password while this is resolved.',
+      provider_failed: 'Google authentication is temporarily unavailable. Please try again later or use email and password.',
+      signup_disabled: 'Google account registration is currently unavailable. Please use email registration or try again later.',
+      email_unverified: 'Please verify your Google account email before signing in.',
+      failed: 'Google sign-in could not complete. Please try again.',
+      missing: 'No PineVela account is connected to this Google account. Choose Sign Up to create one.',
+      conflict: 'This email already has a PineVela account. Sign in with your existing credentials.',
+      blocked: 'This PineVela account is not permitted to sign in.',
+    };
+    if (params.has('google_error')) setLoginError(googleErrors[params.get('google_error') || ''] || googleErrors.failed);
     if (params.get('mode') === 'register' || (location.state as any)?.mode === 'register') {
       setActiveTab('register');
     }
@@ -852,7 +868,17 @@ export default function PageUnifiedLogin() {
   };
 
   return (
-    <div className="min-h-screen bg-transparent flex flex-col font-sans justify-between relative overflow-hidden">
+    <div className="unified-login min-h-screen bg-transparent flex flex-col font-sans justify-between relative overflow-hidden">
+      <div className="mobile-login-backdrop" aria-hidden="true">
+        <AnimatePresence initial={false}>
+          <motion.img key={currentSlide} src={slides[currentSlide].image} alt="" initial={{ opacity: 0 }} animate={{ opacity: 0.32 }} exit={{ opacity: 0 }} transition={{ duration: 0.7 }} />
+        </AnimatePresence>
+      </div>
+      <button type="button" className="mobile-login-photo" aria-label="Show next feature photograph" onClick={() => setCurrentSlide(prev => (prev + 1) % slides.length)}>
+        <AnimatePresence initial={false}>
+          <motion.img key={currentSlide} src={slides[currentSlide].image} alt={slides[currentSlide].title} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.7 }} />
+        </AnimatePresence>
+      </button>
       
       {/* Decorative gradient backdrops */}
       <div className="absolute top-0 right-0 w-96 h-96 bg-amber-100 rounded-full blur-3xl opacity-30 -z-10" />
@@ -874,11 +900,11 @@ export default function PageUnifiedLogin() {
       )}
 
       {/* Header */}
-      <header className="bg-transparent px-6 py-4 flex items-center justify-between z-10 sticky top-0">
-        <div className="cursor-pointer" onClick={() => navigate('/')}>
+      <header className="login-header bg-transparent px-6 py-4 flex items-center justify-between z-10 sticky top-0">
+        <button type="button" aria-label="PineVela home" className="login-logo-link cursor-pointer" onClick={() => navigate('/')}>
           <PineLogo />
-        </div>
-        <div>
+        </button>
+        <div className="login-home-link">
           <button 
             onClick={() => navigate('/')}
             className="text-xs font-bold text-blue-700 hover:text-blue-900 hover:bg-blue-50 flex items-center gap-1.5 bg-transparent px-3 py-1.5 rounded-lg transition-all"
@@ -887,10 +913,11 @@ export default function PageUnifiedLogin() {
             <span>Home</span>
           </button>
         </div>
+        <div className="login-mobile-theme"><ThemeToggle /></div>
       </header>
 
       {/* Main Container */}
-      <main className="flex-1 grid grid-cols-1 lg:grid-cols-12 items-center justify-center w-full px-5 sm:px-6 md:px-10 py-8 gap-8 lg:gap-12 z-10 max-w-[1380px] mx-auto">
+      <main className="login-main flex-1 grid grid-cols-1 lg:grid-cols-12 items-center justify-center w-full px-5 sm:px-6 md:px-10 py-8 gap-8 lg:gap-12 z-10 max-w-[1380px] mx-auto">
         
         
         {/* Left Side: Enlarged Picture Card Showcase (Covers balanced half of the login page) */}
@@ -982,13 +1009,13 @@ export default function PageUnifiedLogin() {
         {/* Right Side: Login & Signup Box */}
         <div className="lg:col-span-6 flex flex-col items-stretch justify-center w-full max-w-2xl mx-auto lg:max-w-none">
           
-          <div className="bg-blue-50/90 backdrop-blur-lg rounded-3xl border border-blue-200/70 shadow-2xl p-8 sm:p-10 space-y-6 relative overflow-hidden flex flex-col justify-between w-full">
+          <div className="login-auth-card bg-blue-50/90 backdrop-blur-lg rounded-3xl border border-blue-200/70 shadow-2xl p-8 sm:p-10 space-y-6 relative overflow-hidden flex flex-col justify-between w-full">
             
             {/* Top design brand line */}
-            <div className="absolute top-0 left-0 right-0 h-1.5 bg-blue-900" />
+            <div className="login-brand-line absolute top-0 left-0 right-0 h-1.5 bg-blue-900" />
 
-            <div className="text-center space-y-2 pt-1">
-              <div className="flex justify-center">
+            <div className="login-card-heading text-center space-y-2 pt-1">
+              <div className="login-card-logo flex justify-center">
                 <PineLogo size={58} hideText={true} />
               </div>
               <h2 className="text-3xl sm:text-4xl font-black tracking-tight">
@@ -1033,17 +1060,17 @@ export default function PageUnifiedLogin() {
                 <button
                   type="button"
                   aria-pressed={activeTab === 'login'}
-                  onClick={() => setActiveTab('login')}
+                  onClick={() => { setActiveTab('login'); setLoginError(null); }}
                   className={`flex-1 py-2 text-xs font-black rounded-xl transition-all cursor-pointer ${
                     activeTab === 'login' ? 'bg-white text-blue-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'
                   }`}
                 >
-                  Sign In
+                  <span className="hidden lg:inline">Sign In</span><span className="lg:hidden">Login</span>
                 </button>
                 <button
                   type="button"
                   aria-pressed={activeTab === 'register'}
-                  onClick={() => setActiveTab('register')}
+                  onClick={() => { setActiveTab('register'); setLoginError(null); }}
                   className={`flex-1 py-2 text-xs font-black rounded-xl transition-all cursor-pointer ${
                     activeTab === 'register' ? 'bg-white text-blue-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'
                   }`}
@@ -1322,6 +1349,9 @@ export default function PageUnifiedLogin() {
               </form>
             )}
 
+            {!verificationPending && <GoogleAuthButton mode={activeTab === 'register' ? 'signup' : 'login'} onError={setLoginError} />}
+            {activeTab === 'register' && !verificationPending && loginError && <p role="alert" className="text-xs font-semibold text-rose-800">{loginError}</p>}
+
           </div>
 
         </div>
@@ -1329,7 +1359,7 @@ export default function PageUnifiedLogin() {
       </main>
 
       {/* Footer - Fixed Clean Base */}
-      <footer className="text-center py-4 text-[10px] text-slate-400 bg-transparent shrink-0 z-20">
+      <footer className="login-footer text-center py-4 text-[10px] text-slate-400 bg-transparent shrink-0 z-20">
         &copy; 2026 PineVela Residence Solutions.
       </footer>
 
@@ -1366,7 +1396,7 @@ export default function PageUnifiedLogin() {
                 </div>
 
                 <div className="p-3 bg-blue-50/70 border border-blue-100 rounded-xl text-[11px] text-blue-900 leading-relaxed">
-                  🛡️ <strong>Manager Verification Policy:</strong> Managers must provide verifiable national identity and operational credentials. Once registered, you will be able to request and complete the 10-step hostel registration directly within your dashboard.
+                  🛡️ <strong>Manager Verification Policy:</strong> Managers must provide verifiable national identity and operational credentials. Once registered, you will be able to request and complete the four-step hostel registration directly within your dashboard.
                 </div>
               </div>
             )}

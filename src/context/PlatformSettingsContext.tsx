@@ -34,5 +34,5 @@ export function PlatformAccessBoundary({ children }: { children: React.ReactNode
     <Link to="/login" className="rounded-xl bg-blue-600 px-5 py-3 font-semibold text-white">Sign in</Link>
   </main>;
   return <>
-    {settings?.maintenanceMode && location.pathname === '/' && <aside role="status" className="fixed bottom-5 left-1/2 z-[60] w-[min(42rem,calc(100%_-_2rem))] -translate-x-1/2 rounded-2xl bg-blue-950 px-5 py-3 text-sm text-white">{MAINTENANCE_MESSAGE}</aside>}{children}{user && !settings?.maintenanceMode && <MaintenanceReturnNotice />}</>;
+    {settings?.maintenanceMode && location.pathname === '/' && <aside role="status" className="fixed bottom-5 left-1/2 z-[60] w-[min(42rem,calc(100%_-_2rem))] -translate-x-1/2 rounded-2xl bg-blue-950 px-5 py-3 text-sm text-white">{MAINTENANCE_MESSAGE}</aside>}{children}{user && user.role !== 'admin' && !settings?.maintenanceMode && <MaintenanceReturnNotice />}</>;
 }
