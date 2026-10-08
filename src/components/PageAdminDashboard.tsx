@@ -20,7 +20,7 @@ import { useNotifications } from '../context/NotificationContext';
 import PineLogo from './PineLogo';
 import TopNavBadge from './TopNavBadge';
 import HostelRegistration from './HostelRegistration';
-import EditResidenceModal from './EditResidenceModal';
+import { AdminResidenceRequests } from './ResidenceChangeRequests';
 import LogoutConfirmationModal from './LogoutConfirmationModal';
 import { getPdfBlobUrl, downloadPdfDocument } from '../utils/pdfHelper';
 import { 
@@ -78,7 +78,6 @@ export default function PageAdminDashboard() {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // Edit Residence State
-  const [editingResidence, setEditingResidence] = useState<any | null>(null);
   const [inspectingResidenceModal, setInspectingResidenceModal] = useState<any | null>(null);
   const [rejectingResidenceModal, setRejectingResidenceModal] = useState<any | null>(null);
   const [residenceRejectionReason, setResidenceRejectionReason] = useState('');
@@ -138,9 +137,6 @@ export default function PageAdminDashboard() {
 
   // Board Requests & Notifications State
   const [boardRequests, setBoardRequests] = useState<any[]>([]);
-  const [boardFilter, setBoardFilter] = useState<'all' | 'pending' | 'acknowledged' | 'resolved'>('all');
-  const [replyingRequestId, setReplyingRequestId] = useState<string | null>(null);
-  const [replyNotes, setReplyNotes] = useState('');
   const [notifSubTab, setNotifSubTab] = useState<'manager_requests'>('manager_requests');
   const [docPreviewModal, setDocPreviewModal] = useState<{
     title: string;
@@ -199,20 +195,6 @@ export default function PageAdminDashboard() {
     if (/fail|invalid|denied|unable|cannot|could not|cancelled|key.*(enroll|incorrect)/i.test(msg)) { actionFeedback.fail(msg, actionFeedback.begin()); return; }
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3500);
-  };
-
-  const handleSaveResidenceEdit = async (updatedResidence: any) => {
-    try {
-      const res = await apiFetch(`/api/hostels/${updatedResidence.id}`, {
-        method: 'PUT',
-        body: JSON.stringify(updatedResidence)
-      });
-      const fresh = res.hostel || res || updatedResidence;
-      setResidences(prev => prev.map(r => r.id === updatedResidence.id ? { ...r, ...fresh } : r));
-      triggerToast(`Residence "${updatedResidence.name}" updated successfully!`);
-    } catch (err: any) {
-      throw err;
-    }
   };
 
   // TanStack Query for server-state caching and automatic refetching
@@ -442,24 +424,6 @@ export default function PageAdminDashboard() {
       fetchAdminData();
     } catch (err: any) {
       triggerToast(err.message || 'Failed to reject bypass request.');
-    }
-  };
-
-  const handleUpdateBoardRequest = async (id: string, status: 'Acknowledged' | 'Resolved', notes?: string) => {
-    try {
-      const updated = await apiFetch(`/api/board-requests/${id}`, {
-        method: 'PUT',
-        body: JSON.stringify({
-          status,
-          adminNotes: notes !== undefined ? notes : replyNotes
-        })
-      });
-      setBoardRequests(prev => prev.map(r => r.id === id ? updated : r));
-      setReplyingRequestId(null);
-      setReplyNotes('');
-      triggerToast(`Request updated to ${status}. Manager notified.`);
-    } catch (err: any) {
-      triggerToast(err.message || 'Failed to update request');
     }
   };
 
@@ -1189,7 +1153,6 @@ export default function PageAdminDashboard() {
                           </div>
                         )}
                         <div className="flex items-center gap-2">
-                          {!isApproved ? (
                             <button
                               onClick={() => {
                                 setInspectingResidenceModal(residence);
@@ -1201,16 +1164,7 @@ export default function PageAdminDashboard() {
                               <Eye className="w-3.5 h-3.5 text-indigo-600" />
                               <span>Details</span>
                             </button>
-                          ) : (
-                            <button
-                              onClick={() => setEditingResidence(residence)}
-                              className="px-3.5 py-2 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer border border-blue-200"
-                              title="Edit residence, blocks & payments"
-                            >
-                              <Edit3 className="w-3.5 h-3.5" />
-                              <span>Edit</span>
-                            </button>
-                          )}
+
                           <button
                             onClick={async () => {
                               if (!confirm(`Are you sure you want to delete "${residence.name}"?`)) return;
@@ -1896,11 +1850,10 @@ export default function PageAdminDashboard() {
                           <h5 className="text-sm font-bold text-slate-900 truncate">{res.name}</h5>
                           <p className="text-xs text-slate-500">📍 {res.location}</p>
                           <p className="text-xs text-slate-600 mt-1">
-                            Manager: <strong className="text-slate-800">{res.managerName || 'Assigned Manager'}</strong> ({res.managerPhone || '+233 24 123 4567'})
+                            Manager: <strong className="text-slate-800">{res.managerName || 'Assigned Manager'}</strong> ({res.managerPhone || 'Contact not provided'})
                           </p>
                         </div>
-                      <div className="flex items-center justify-between pt-2 border-t border-slate-100"><span className="text-xs font-semibold text-blue-600">{res.totalCapacity || 100} Beds</span><div className="flex items-center gap-2">
-                      </div>
+                      <div className="flex items-center justify-between pt-2 border-t border-slate-100"><span className="text-xs font-semibold text-blue-600">{res.totalCapacity ?? 0} Beds</span>
                           <button
                             onClick={() => {
                               setInspectingResidenceModal(res);
@@ -1973,230 +1926,7 @@ export default function PageAdminDashboard() {
             {/* VERIFIED STAFFS CREDENTIAL REVIEW SECTION */}
 
 
-            {/* MANAGER REQUESTS TO ADMIN BOARD */}
-            {notifSubTab === 'manager_requests' && (
-            <div className="bg-white/90 border border-blue-200/80 p-6 rounded-3xl backdrop-blur-xl shadow-xl space-y-5">
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-blue-100 pb-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-2xl bg-indigo-600 text-white flex items-center justify-center font-bold shadow-md shadow-indigo-500/30">
-                    <MessageSquare className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h4 className="text-base font-extrabold text-slate-900 flex items-center gap-2">
-                      <span>Manager Requests to Admin Board</span>
-                      <span className="px-2.5 py-0.5 rounded-full text-xs font-black bg-indigo-100 text-indigo-800">
-                        {boardRequests.length} Total
-                      </span>
-                    </h4>
-                    <p className="text-xs text-slate-500">Operational requests, capacity updates, and maintenance tickets submitted by registered managers.</p>
-                  </div>
-                </div>
-
-                {/* Filter Buttons */}
-                <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl text-xs font-semibold">
-                  {(['all', 'pending', 'acknowledged', 'resolved'] as const).map(f => (
-                    <button
-                      key={f}
-                      onClick={() => setBoardFilter(f)}
-                      className={`px-3 py-1.5 rounded-lg capitalize transition-all cursor-pointer ${
-                        boardFilter === f
-                          ? 'bg-white text-blue-700 shadow-xs font-bold'
-                          : 'text-slate-600 hover:text-slate-900'
-                      }`}
-                    >
-                      {f}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Requests List */}
-              {boardRequests.length === 0 ? (
-                <div className="text-center py-12 bg-slate-50/70 border border-slate-200/60 rounded-2xl space-y-2">
-                  <MessageSquare className="w-10 h-10 text-slate-300 mx-auto" />
-                  <p className="text-xs font-semibold text-slate-700">No requests from managers at this time</p>
-                  <p className="text-[11px] text-slate-400">Managers can submit requests to the Admin Board directly from their dashboard.</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {boardRequests
-                    .filter(req => {
-                      if (boardFilter === 'pending') return req.status === 'Pending';
-                      if (boardFilter === 'acknowledged') return req.status === 'Acknowledged';
-                      if (boardFilter === 'resolved') return req.status === 'Resolved';
-                      return true;
-                    })
-                    .map((req, idx) => {
-                      const isPending = req.status === 'Pending';
-                      const isResolved = req.status === 'Resolved';
-                      const isReplying = replyingRequestId === req.id;
-
-                      return (
-                        <div
-                          key={`${req.id || 'board'}-${idx}`}
-                          className={`p-5 rounded-2xl border transition-all ${
-                            isPending
-                              ? 'bg-indigo-50/50 border-indigo-200 shadow-xs'
-                              : isResolved
-                              ? 'bg-slate-50/70 border-slate-200 opacity-90'
-                              : 'bg-blue-50/40 border-blue-200'
-                          }`}
-                        >
-                          <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-3 border-b border-blue-100/60 pb-3">
-                            <div className="flex items-center gap-3">
-                              <div className="w-9 h-9 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-xs uppercase shadow-xs">
-                                {(req.managerName || 'M').charAt(0)}
-                              </div>
-                              <div>
-                                <div className="flex items-center gap-2">
-                                  <span className="font-bold text-sm text-slate-900">{req.managerName || 'Property Manager'}</span>
-                                  <span className="text-xs text-slate-500">• {req.hostelName || 'Assigned Property'}</span>
-                                </div>
-                                <p className="text-[11px] text-slate-500">
-                                  {req.managerEmail || ''} {req.managerPhone ? `| ${req.managerPhone}` : ''}
-                                </p>
-                              </div>
-                            </div>
-
-                            <div className="flex items-center gap-2">
-                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-200/80 text-slate-700">
-                                {req.category || 'General'}
-                              </span>
-                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                                req.priority === 'Urgent'
-                                  ? 'bg-rose-100 text-rose-800 border border-rose-200'
-                                  : req.priority === 'High'
-                                  ? 'bg-amber-100 text-amber-800 border border-amber-200'
-                                  : 'bg-slate-100 text-slate-700'
-                              }`}>
-                                {req.priority || 'Normal'} Priority
-                              </span>
-                              <span className={`text-[10px] font-black px-2.5 py-0.5 rounded-full ${
-                                req.status === 'Pending'
-                                  ? 'bg-amber-500 text-white'
-                                  : req.status === 'Acknowledged'
-                                  ? 'bg-blue-600 text-white'
-                                  : 'bg-emerald-600 text-white'
-                              }`}>
-                                {req.status}
-                              </span>
-                            </div>
-                          </div>
-
-                          <div className="py-3 space-y-1">
-                            <h5 className="text-sm font-bold text-slate-900">{req.subject}</h5>
-                            <p className="text-xs text-slate-700 leading-relaxed whitespace-pre-wrap">{req.message}</p>
-                            <p className="text-[10px] text-slate-400 pt-1">
-                              Submitted: {new Date(req.createdAt).toLocaleString()}
-                            </p>
-                          </div>
-
-                          {/* Existing Admin Notes */}
-                          {req.adminNotes && (
-                            <div className="p-3 bg-white rounded-xl border border-blue-200/70 text-xs text-blue-900 space-y-1 my-2">
-                              <span className="font-bold text-[10px] uppercase text-blue-600">Admin Response:</span>
-                              <p className="text-xs">{req.adminNotes}</p>
-                            </div>
-                          )}
-
-                          {/* Reply / Note Drawer */}
-                          {isReplying && (
-                            <div className="mt-3 p-4 bg-white rounded-xl border border-blue-300 space-y-2">
-                              <label className="text-xs font-bold text-slate-700">Reply / Note to Manager:</label>
-                              <textarea
-                                value={replyNotes}
-                                onChange={(e) => setReplyNotes(e.target.value)}
-                                rows={2}
-                                placeholder="Enter operational reply or resolution instructions for manager..."
-                                className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-800"
-                              />
-                              <div className="flex items-center justify-end gap-2">
-                                <button
-                                  onClick={() => {
-                                    setReplyingRequestId(null);
-                                    setReplyNotes('');
-                                  }}
-                                  className="px-3 py-1.5 rounded-lg text-xs text-slate-500 hover:text-slate-700 cursor-pointer"
-                                >
-                                  Cancel
-                                </button>
-                                <button
-                                  onClick={() => handleUpdateBoardRequest(req.id, 'Acknowledged')}
-                                  className="px-3 py-1.5 rounded-lg text-xs bg-blue-600 hover:bg-blue-700 text-white font-semibold cursor-pointer"
-                                >
-                                  Save as Acknowledged
-                                </button>
-                                <button
-                                  onClick={() => handleUpdateBoardRequest(req.id, 'Resolved')}
-                                  className="px-3 py-1.5 rounded-lg text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-semibold cursor-pointer"
-                                >
-                                  Save & Resolve
-                                </button>
-                              </div>
-                            </div>
-                          )}
-
-                          {/* Action Toolbar */}
-                          <div className="flex flex-wrap items-center justify-between pt-3 border-t border-blue-100/60 gap-2">
-                            <div className="flex items-center gap-3">
-                              <button
-                                onClick={() => {
-                                  setReplyingRequestId(isReplying ? null : req.id);
-                                  setReplyNotes(req.adminNotes || '');
-                                }}
-                                className="text-xs font-semibold text-blue-600 hover:text-blue-800 flex items-center gap-1 cursor-pointer"
-                              >
-                                <MessageSquare className="w-3.5 h-3.5" />
-                                <span>{req.adminNotes ? 'Edit Response' : 'Reply to Manager'}</span>
-                              </button>
-
-                              {(() => {
-                                const matchingRes = residences.find(r => 
-                                  (r.name && req.hostelName && r.name.toLowerCase() === req.hostelName.toLowerCase()) ||
-                                  (r.id && req.hostelId && r.id === req.hostelId)
-                                );
-                                if (matchingRes) {
-                                  return (
-                                    <button
-                                      onClick={() => setEditingResidence(matchingRes)}
-                                      className="text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-3 py-1 rounded-xl border border-indigo-200 flex items-center gap-1.5 transition-all cursor-pointer"
-                                    >
-                                      <Edit3 className="w-3.5 h-3.5" />
-                                      <span>Edit {matchingRes.name}</span>
-                                    </button>
-                                  );
-                                }
-                                return null;
-                              })()}
-                            </div>
-
-                            <div className="flex items-center gap-2">
-                              {req.status !== 'Acknowledged' && req.status !== 'Resolved' && (
-                                <button
-                                  onClick={() => handleUpdateBoardRequest(req.id, 'Acknowledged', req.adminNotes)}
-                                  className="text-xs px-3 py-1.5 rounded-xl bg-blue-100 text-blue-800 hover:bg-blue-200 font-bold transition-all cursor-pointer"
-                                >
-                                  Acknowledge
-                                </button>
-                              )}
-                              {req.status !== 'Resolved' && (
-                                <button
-                                  onClick={() => handleUpdateBoardRequest(req.id, 'Resolved', req.adminNotes)}
-                                  className="text-xs px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold transition-all cursor-pointer flex items-center gap-1"
-                                >
-                                  <Check className="w-3.5 h-3.5" />
-                                  <span>Mark Resolved</span>
-                                </button>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                </div>
-              )}
-            </div>
-            )}
+            {notifSubTab === 'manager_requests' && <AdminResidenceRequests />}
 
             {/* REGISTERED RESIDENTS OVERVIEW */}
             <div className="bg-white/90 border border-blue-200/80 p-6 rounded-3xl backdrop-blur-xl shadow-xl space-y-4">
@@ -2900,16 +2630,6 @@ export default function PageAdminDashboard() {
             </div>
           </div>
         </div>
-      )}
-
-      {/* MODAL: EDIT REGISTERED RESIDENCE */}
-      {editingResidence && (
-        <EditResidenceModal
-          isOpen={Boolean(editingResidence)}
-          onClose={() => setEditingResidence(null)}
-          residence={editingResidence}
-          onSave={handleSaveResidenceEdit}
-        />
       )}
 
       {/* MODAL: DOCUMENT PREVIEW (CV PDF & NATIONAL ID FRONT/BACK) */}

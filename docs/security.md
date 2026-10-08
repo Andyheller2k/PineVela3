@@ -390,3 +390,22 @@ can be spoofed; authenticated seller coordinates do not attest physical presence
 OpenStreetMap receives map tile requests; selected directions and waypoint coordinates
 are shared with Google only when opening the external directions link. Profile pin labels
 use DOM text and profile images use permitted local/public-storage URLs.
+
+
+## Reviewed Residence Changes and Manager Operation Keys
+
+Direct hostel PUT/upsert and the legacy manager-assignment editing route cannot modify
+properties. Structured requests derive manager identity from the session and validate current
+residence assignment; allowed fields are enforced before storing a request. New image
+references must belong to that manager’s validated hostel uploads. Review receipts are
+bound to the administrator, request fingerprint and a 30-minute expiry. Approval/rejection
+requires the approval key; manager-key resets require the independent settings key.
+
+Manager operation keys contain 256 bits of random entropy and are stored only as a
+purpose/account-bound SHA-256 digest. Constant-time comparison and persistent five-attempt,
+15-minute limits protect verification. The authenticated middleware checks every manager
+mutation, including uploads, staff and room operations. Initial residence onboarding,
+key issue/recovery and server popup delivery receipts are explicit lifecycle exceptions.
+Keys cannot be retrieved after issuance. Reset removes the old digest; only that manager
+receives the replacement. Business changes, notices and cooldown timestamps persist across
+restart. Popup acknowledgement does not delete a notice or mark it read.

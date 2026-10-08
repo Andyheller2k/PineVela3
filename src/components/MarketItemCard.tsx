@@ -72,6 +72,7 @@ export const getServiceActionLabel = (item: {
 
 interface MarketItemCardProps {
   product: MarketProductItem;
+  transparent?: boolean;
   isFavorite: boolean;
   onToggleFavorite: (id: string) => void;
   onInspect: (product: MarketProductItem) => void;
@@ -82,7 +83,7 @@ interface MarketItemCardProps {
  * Compact catalog preview with native buttons and scroll-safe touch activation.
  */
 export const MarketItemCard: React.FC<MarketItemCardProps> = memo(
-  ({ product, isFavorite, onToggleFavorite, onInspect }) => {
+  ({ product, transparent = false, isFavorite, onToggleFavorite, onInspect }) => {
     const handleFavoriteClick = (e: React.MouseEvent) => {
       e.stopPropagation();
       onToggleFavorite(product.id);
@@ -103,12 +104,13 @@ export const MarketItemCard: React.FC<MarketItemCardProps> = memo(
         onPointerDown={activation.onPointerDown}
         onPointerMove={activation.onPointerMove}
         onPointerCancel={activation.onPointerCancel}
+        data-market-surface={transparent ? "transparent" : "glass"}
         data-market-plan={product.subscriptionPlan || 'default'} data-listing-id={product.id}
-        className="market-plan-card isolate relative cursor-pointer focus-within:ring-2 focus-within:ring-blue-400 bg-white/90 border border-slate-200/80 rounded-2xl sm:rounded-3xl overflow-hidden shadow-xs hover:border-blue-400 hover:shadow-md transition-all duration-150 flex flex-col justify-between"
+        className={`market-plan-card isolate relative cursor-pointer focus-within:ring-2 focus-within:ring-blue-400 ${transparent ? "bg-transparent border-0 shadow-none" : "bg-white/90 border border-slate-200/80 shadow-xs hover:border-blue-400 hover:shadow-md"} rounded-2xl sm:rounded-3xl overflow-hidden transition-all duration-150 flex flex-col justify-between`}
       >
         <div>
           {/* Product Thumbnail Container with Lazy Loading */}
-          <div className={`relative h-28 sm:h-36 bg-slate-100 overflow-hidden flex items-center justify-center border-b border-slate-100 select-none ${isService ? "p-0 bg-slate-900" : "p-1"}`}>
+          <div className={`relative h-28 sm:h-36 overflow-hidden flex items-center justify-center select-none ${transparent ? "bg-transparent" : `bg-slate-100 border-b border-slate-100 ${isService ? "bg-slate-900" : ""}`} ${isService ? "p-0" : "p-1"}`}>
             <img
               src={optimizeImageDisplayUrl(product.imageUrl, 180, 30)}
               alt={product.title}

@@ -79,6 +79,6 @@ export const notificationReaderKey = (actor: any): string => JSON.stringify([act
 
 export function notificationForActor(notice: any, actor: any): any {
   const read = Boolean(notice.read || notice.isRead || Array.isArray(notice.readBy) && notice.readBy.includes(notificationReaderKey(actor)));
-  const { readBy, ...visible } = notice;
+  const { readBy, popupAcknowledgedBy, ...visible } = notice;
   return { ...visible, read, isRead: read };
 }

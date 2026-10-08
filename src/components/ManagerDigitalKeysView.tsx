@@ -316,7 +316,7 @@ export default function ManagerDigitalKeysView({
     onTriggerToast(`Exported ${filteredKeys.length} digital room keys as CSV!`);
   }, [filteredKeys, activeBlock, onTriggerToast]);
 
-  const totalBlockRooms = activeBlock?.totalRooms || blockKeys.length || 20;
+  const totalBlockRooms = activeBlock?.totalRooms ?? blockKeys.length;
   const availableCount = useMemo(() => blockKeys.filter(k => !k.isAssigned && k.status !== 'Occupied').length, [blockKeys]);
   const occupiedCount = blockKeys.length - availableCount;
   const occupancyPercent = blockKeys.length > 0 ? Math.round((occupiedCount / blockKeys.length) * 100) : 0;
@@ -417,7 +417,7 @@ export default function ManagerDigitalKeysView({
                 </span>
               </div>
               <p className="text-xs text-slate-500 mt-0.5">
-                {activeBlock?.floors || 4} Floors • {blockKeys.length} Total Rooms • {occupancyPercent}% Occupancy Rate
+                {activeBlock?.floors ?? 0} Floors • {blockKeys.length} Total Rooms • {occupancyPercent}% Occupancy Rate
               </p>
             </div>
           </div>

@@ -1,18 +1,28 @@
+.unified-login .login-feature-card { background: transparent; border: 0; box-shadow: none; }
+.unified-login .login-auth-card { background: rgba(255,255,255,.76); border-color: rgba(191,219,254,.5); border-radius: 32px; box-shadow: 0 20px 60px rgba(30,64,175,.08); backdrop-filter: blur(24px) saturate(1.12); }
+.unified-login .login-brand-heading { color: #172554 !important; -webkit-text-stroke: 0 !important; text-shadow: none !important; }
+.unified-login .login-auth-card input { border-radius: 16px; box-shadow: none; }
+.unified-login .login-mode-toggle { background: rgba(226,232,240,.5); border-color: rgba(203,213,225,.35); }
+html[data-theme="dark"] .unified-login .login-auth-card { background: rgba(16,28,48,.86); border-color: rgba(148,185,232,.2); box-shadow: 0 20px 60px rgba(0,0,0,.2); }
+html[data-theme="dark"] .unified-login .login-brand-heading { color: #e5efff !important; -webkit-text-stroke: 0 !important; text-shadow: none !important; }
+html[data-theme="dark"] .unified-login .login-feature-card img { filter: brightness(.82); }
+html[data-theme="dark"] .unified-login .login-mode-toggle { background: rgba(30,41,59,.65); border-color: rgba(148,163,184,.16); }
 .mobile-login-backdrop, .mobile-login-photo, .login-mobile-theme { display: none; }
 
 @media (max-width: 1023px) {
   .unified-login { min-height: 100svh; isolation: isolate; }
-  .mobile-login-backdrop { display: none; }
-  .mobile-login-backdrop img { position: absolute; width: 100%; height: 100%; object-fit: cover; filter: blur(24px); transform: scale(1.08); }
-  .mobile-login-photo { display: block; position: fixed; inset: 0; width: 100%; height: 100dvh; padding: 0; border: 0; background: #0b1426; cursor: pointer; z-index: -1; }
-  .mobile-login-photo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-  .unified-login .login-header { position: absolute; inset: 0 0 auto; padding: 16px 20px; }
+  .mobile-login-backdrop { display: block; position: fixed; inset: 0; overflow: hidden; background: linear-gradient(155deg, #f3f8ff, #dbeafe 65%, #edf5ff); z-index: -2; pointer-events: none; }
+  .mobile-login-backdrop img { position: absolute; width: 100%; height: 100%; object-fit: cover; filter: blur(16px) opacity(.12); transform: scale(1.05); }
+  .mobile-login-photo { display: block; position: fixed; inset: 0; width: 100%; height: 100dvh; padding: 0; border: 0; background: transparent; pointer-events: none; z-index: -1; }
+  .mobile-login-photo img { position: absolute; inset: 0 0 auto; width: 100%; height: max(340px, 70svh); object-fit: contain; object-position: center 20%; }
+  .unified-login .login-header { position: fixed; inset: 0 0 auto; padding: max(16px, env(safe-area-inset-top)) 20px 16px; z-index: 30; }
   .login-header .login-logo-link { padding: 6px 0; background: transparent; backdrop-filter: none; }
-  .login-home-link, .unified-login > div[class*="-z-10"], .login-card-logo, .login-brand-line { display: none; }
+  .login-home-link, .unified-login > div[class*="-z-10"], .login-card-logo { display: none; }
   .login-mobile-theme { display: block; }
   body:has(.unified-login) .theme-dock { display: none; }
-  .unified-login .login-main { display: flex; align-items: flex-start; padding: clamp(180px, 36svh, 360px) 12px 0; gap: 0; }
-  .unified-login .login-auth-card { padding: 22px 22px 26px; gap: 20px; border-radius: 32px; background: rgba(255,255,255,.86); border-color: rgba(255,255,255,.85); backdrop-filter: blur(24px) saturate(1.2); box-shadow: 0 16px 48px rgba(15,23,42,.12); }
+  .unified-login .login-main { display: flex; align-items: flex-end; min-height: 100svh; padding: 96px 12px max(32px, env(safe-area-inset-bottom)); gap: 0; pointer-events: none; }
+  .unified-login .login-main > * { pointer-events: auto; }
+  .unified-login .login-auth-card { padding: 22px 22px 26px; gap: 20px; border-radius: 32px; background: rgba(255,255,255,.82); border-color: rgba(255,255,255,.65); backdrop-filter: blur(24px) saturate(1.2); box-shadow: 0 16px 48px rgba(15,23,42,.12); }
   .unified-login .login-auth-card > * { margin-block: 0; }
   .unified-login .login-mode-toggle { order: -2; padding: 5px; border-radius: 18px; }
   .unified-login .login-mode-toggle button { min-height: 44px; font-size: 14px; border-radius: 13px; }
@@ -21,10 +31,10 @@
   .login-card-heading p:empty { display: none; }
   .unified-login .login-auth-card input { min-height: 46px; font-size: 16px; }
   .unified-login .login-auth-card button[type="submit"], .login-google-button { min-height: 48px; font-size: 14px; }
-  .unified-login .login-footer { color: #475569; padding: 18px 12px max(18px, env(safe-area-inset-bottom)); }
+  .unified-login .login-footer { position: absolute; inset: auto 0 0; color: #475569; padding: 6px 12px; pointer-events: none; }
   html[data-theme="dark"] .mobile-login-backdrop { background: #0b1426; }
+  html[data-theme="dark"] .mobile-login-backdrop img { filter: blur(24px) brightness(.55) opacity(.12); }
   html[data-theme="dark"] .mobile-login-photo img { filter: brightness(.68); }
-  html[data-theme="dark"] .mobile-login-backdrop img { filter: blur(24px) brightness(.55); }
   html[data-theme="dark"] .unified-login .login-auth-card { background: rgba(16,28,48,.9); border-color: rgba(148,185,232,.25); }
   html[data-theme="dark"] .unified-login .login-brand-heading { color: #f1f5f9 !important; }
   html[data-theme="dark"] .unified-login .login-footer { color: #cbd5e1; }
@@ -32,4 +42,8 @@
 
 @media (prefers-reduced-motion: reduce) {
   .mobile-login-photo img, .mobile-login-backdrop img { transition: none; }
+}
+
+@media (min-width: 1024px) {
+  .unified-login .login-main { max-width: 1480px; column-gap: 40px; }
 }

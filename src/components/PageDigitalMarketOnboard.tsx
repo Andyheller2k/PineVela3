@@ -341,7 +341,7 @@ export default function PageDigitalMarketOnboard() {
               <div>
                 <h2 className="text-xl font-black text-slate-900">Step 3: Review your market fees</h2>
                 <p className="text-xs text-slate-500 font-medium mt-0.5">
-                  Pay securely through Paystack. Registration is one-time, the selected plan renews monthly, and the semester fee renews every two months.
+                  {checkoutTotal === 0 ? 'Your selected fees are waived. Continue to verify and activate your store without a payment.' : 'Pay securely through Paystack. Registration is one-time, the selected plan renews monthly, and the semester fee renews every two months.'}
                 </p>
               </div>
 
@@ -360,7 +360,7 @@ export default function PageDigitalMarketOnboard() {
 
                 <label className="block text-sm font-semibold">Monthly plan<select value={selectedPlan} onChange={event => setSelectedPlan(event.target.value as typeof selectedPlan)} className="mt-2 w-full rounded-xl border border-blue-200 p-3">{(['default', 'star', 'pro'] as const).map(plan => <option key={plan} value={plan}>Pine {plan} — GHS {settings?.subscriptionPrices[plan] ?? '…'} / month</option>)}</select></label>
                 <dl className="space-y-2 text-sm"><div className="flex justify-between"><dt>Registration (one-time)</dt><dd>GHS {registrationFee ?? '…'}</dd></div><div className="flex justify-between"><dt>Semester fee (every two months)</dt><dd>GHS {settings?.semesterFee ?? '…'}</dd></div><div className="flex justify-between"><dt>Selected plan (monthly)</dt><dd>GHS {settings?.subscriptionPrices[selectedPlan] ?? '…'}</dd></div></dl>
-                <p className="text-xs text-slate-600">Paystack collects your payment details on its secure checkout. Closing checkout does not activate your store.</p>
+                <p className="text-xs text-slate-600">{checkoutTotal === 0 ? 'No payment details are needed. PineVela verifies the current fee exemption when you continue.' : 'Zero-valued fees are waived. Paystack collects any remaining payment on its secure checkout. Closing checkout does not activate your store.'}</p>
               </div>
 
               <div className="pt-4 flex items-center justify-between border-t border-slate-100">
@@ -380,11 +380,11 @@ export default function PageDigitalMarketOnboard() {
                   {submitting ? (
                     <>
                       <Clock className="w-4 h-4 animate-spin" />
-                      <span>Opening secure checkout…</span>
+                      <span>{checkoutTotal === 0 ? 'Verifying free activation…' : 'Opening secure checkout…'}</span>
                     </>
                   ) : (
                     <>
-                      <span>Continue to Paystack</span>
+                      <span>{checkoutTotal === 0 ? 'Continue and activate store' : 'Continue to Paystack'}</span>
                       <ArrowRight className="w-4 h-4" />
                     </>
                   )}

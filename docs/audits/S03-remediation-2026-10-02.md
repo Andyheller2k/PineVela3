@@ -1,3 +1,7 @@
+> Historical audit. The 2026-10-07 residence-request workflow supersedes direct edits:
+> managers submit limited changes with their secret key; admins review and approve/reject
+> with their approval key. See `docs/product-rules.md` for the current policy.
+
 # S03 remediation — 2026-10-02
 
 Status: implemented and verified locally for `PUT /api/hostels/:id`, with database-update hardening. This report covers S03 only. Running and separately deployed servers must load the changes before being treated as remediated.

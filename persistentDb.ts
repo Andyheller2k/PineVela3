@@ -26,6 +26,9 @@ export interface PersistentStore {
   users: any[];
   notifications: any[];
   boardRequests?: any[];
+  managerOperationKeys?: Record<string, any>;
+  managerKeyPetitions?: any[];
+  hostelMedia?: any[];
   meetings?: any[];
   ratings?: any[];
   onboardingPayments?: any[];
@@ -130,6 +133,9 @@ export function loadPersistentStore(defaultStore: PersistentStore): PersistentSt
     }
     const result: PersistentStore = {
       adminGovernance: parsed.adminGovernance,
+      managerOperationKeys: parsed.managerOperationKeys || {},
+      managerKeyPetitions: parsed.managerKeyPetitions || [],
+      hostelMedia: parsed.hostelMedia || [],
       roomKeyAttempts: { limits: Array.isArray(parsed.roomKeyAttempts?.limits) ? parsed.roomKeyAttempts.limits : [] },
       signupVerification: { pending: Array.isArray(parsed.signupVerification?.pending) ? parsed.signupVerification.pending : [], limits: Array.isArray(parsed.signupVerification?.limits) ? parsed.signupVerification.limits : [] },
       hostels: deduplicateById(Array.isArray(parsed.hostels) ? parsed.hostels : defaultStore.hostels),

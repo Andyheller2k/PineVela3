@@ -2,7 +2,6 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { internationalPhone, phoneCountries, phoneDraft } from '../internationalPhone.js';
 import { activeHostelFields, retiredHostelFields } from '../hostelRegistrationFields.js';
-import { buildHostelUpdate, HostelUpdateValidationError } from '../hostelSecurity.js';
 
 test('International contact validation accepts mobile, landline and toll-free numbers across countries', () => {
   for (const [country, input, expected] of [
@@ -23,15 +22,4 @@ test('Restored drafts retain their actual phone country and drop retired propert
   assert.deepEqual(phoneDraft('0241234567'),{contactPhone:'241234567',contactPhoneCountry:'GH'});
   const archive={name:'Saved draft',contactPhone:'0241234567',facilities:['Wi-Fi'],rules:{curfew:'Old policy'},minStay:'Old term'};
   assert.deepEqual(activeHostelFields(archive),{name:'Saved draft',contactPhone:'0241234567'});assert.equal(archive.facilities.length,1);
-});
-test('Both admin and manager property updates reject retired sections and validate contact aliases',()=>{
-  for(const role of ['admin','manager']) {
-    const hostel={id:'owned-property',facilities:['Historical facility'],rules:{curfew:'Historical policy'},contact_phone:'+233241234567',contact_phone_country:'GH'};
-    for(const field of retiredHostelFields) assert.throws(()=>buildHostelUpdate({[field]:'New value'},{role},hostel),HostelUpdateValidationError);
-    const patch=buildHostelUpdate({name:'Updated property',facilities:hostel.facilities,rules:hostel.rules},{role},hostel);
-    assert.equal('facilities' in patch,false);assert.equal('rules' in patch,false);assert.deepEqual(hostel.facilities,['Historical facility']);
-    const phone=buildHostelUpdate({contact_phone:'0302123456',contact_phone_country:'GH'},{role},hostel);assert.equal(phone.contact_phone,'+233302123456');
-    assert.throws(()=>buildHostelUpdate({contact_phone:'+12025550123',contact_phone_country:'GH'},{role},hostel),HostelUpdateValidationError);
-    assert.throws(()=>buildHostelUpdate({contactPhone:'0241234567',contact_phone:'+233302123456',contactPhoneCountry:'GH'},{role},hostel),HostelUpdateValidationError);
-  }
 });

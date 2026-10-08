@@ -296,3 +296,19 @@ verification submissions and presentation. Historical JSON values remain archive
 during migration; the application rejects attempts to create or change them. An unchanged
 archived value in a full-record save is ignored, preserving existing records. No new active
 PostgreSQL columns or RLS policies should be introduced for these retired sections.
+
+
+## Residence Request Workflow During Migration
+
+The transitional JSON store persists `boardRequests` with immutable manager/residence IDs,
+before/after snapshots, review receipts and final decisions; historical general requests remain
+read-only. `managerOperationKeys` contains only private account-bound hashes and rate limits.
+`managerKeyPetitions` records recovery requests; `hostelMedia` binds validated uploads to their
+manager. Notification popup acknowledgements are keyed by role and account ID, separately
+from read receipts. These fields survive load/save and are never exposed as a public catalog.
+
+A PostgreSQL migration must implement transactional approval with a baseline/version check,
+a database-enforced cooldown, private key/rate-limit storage and manager-owned requests under
+RLS. Only server-authorized admin decisions may write approved residence fields. Key resets
+must atomically revoke the old digest. Preserve archived JSON records until that replacement
+is verified; this workflow currently runs on the transitional backend.

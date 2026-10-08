@@ -8,7 +8,7 @@ import { ACCOUNT_FEATURES } from './accountFeatures.js';
 export const JSON_COLLECTIONS = [
   'hostels', 'issueReports', 'activities', 'hostelVerifications', 'managerRegistrationRequests',
   'managerVerifications', 'managerRequests', 'managerProfiles', 'verificationAuditLogs', 'users',
-  'notifications', 'boardRequests', 'meetings', 'ratings', 'onboardingPayments', 'paymentTransactions', 'staff',
+  'notifications', 'boardRequests', 'managerKeyPetitions', 'hostelMedia', 'meetings', 'ratings', 'onboardingPayments', 'paymentTransactions', 'staff',
   'staffAuditLogs', 'staffReviews', 'staffBargains', 'roomKeys', 'retiredRoomKeys', 'keyDispatches',
   'managerRestrictions', 'digitalMarketApplications', 'digitalMarketStores', 'digitalMarketProducts',
   'marketMedia', 'digitalMarketOrders', 'digitalMarketMessages', 'digitalMarketRatings',
@@ -34,7 +34,7 @@ export function validateDatabase(bytes: Buffer): any {
   for (const key of JSON_COLLECTIONS) if (key in value && !Array.isArray(value[key])) {
     return failure('INVALID_DATABASE', `Database collection ${key} must be an array. Existing data is preserved.`);
   }
-  for (const key of ['platformSettings', 'managerAccountSettings', 'retiredFeatureRecords', 'signupVerification', 'roomKeyAttempts', 'adminGovernance']) {
+  for (const key of ['platformSettings', 'managerOperationKeys', 'managerAccountSettings', 'retiredFeatureRecords', 'signupVerification', 'roomKeyAttempts', 'adminGovernance']) {
     if (key in value && !object(value[key])) return failure('INVALID_DATABASE', `Database field ${key} must be an object. Existing data is preserved.`);
   }
   for (const [key, fields] of [['signupVerification', ['pending', 'limits']], ['roomKeyAttempts', ['limits']]] as const) {

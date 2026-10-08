@@ -12,7 +12,7 @@ import 'leaflet/dist/leaflet.css';
 import markerIconUrl from 'leaflet/dist/images/marker-icon.png';
 import markerRetinaUrl from 'leaflet/dist/images/marker-icon-2x.png';
 import markerShadowUrl from 'leaflet/dist/images/marker-shadow.png';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion } from 'motion/react';
 import {
   validateEmail,
   validateManagerWorkEmail,
@@ -24,30 +24,13 @@ import {
 import { safeJson } from '../lib/api';
 
 // Static asset imports
-import manager2Img from '../../assets/manager2.jpeg';
-import plumberImg from '../../assets/plumber1.jpeg';
-import girlsImg from '../../assets/girls.jpeg';
+import marketImg from '../../assets/login-market.png';
 import ThemeToggle from './ThemeToggle';
 import GoogleAuthButton from './GoogleAuthButton';
 import '../login.css';
 
-const slides = [
-  {
-    image: manager2Img,
-    title: "Hostel Management Simplified",
-    description: "PineVela - Manage your hostel seamlessly from anywhere. No worries, just connect."
-  },
-  {
-    image: plumberImg,
-    title: "Stay Connected Instantly",
-    description: "PineVela - Stay in touch with your manager from anywhere, anytime."
-  },
-  {
-    image: girlsImg,
-    title: "Student Digital Marketplace",
-    description: "A secure digital marketplace where students and other verified entities can easily engage in trade, exchange goods, and access student commerce."
-  }
-];
+const featureImage = marketImg;
+const featureDescription = "PineVela- The unified digital ecosystem connecting Properties, People, and Services into one seamless campus platform.";
 
 export default function PageUnifiedLogin() {
   const { login, user, setSessionUser } = useAuth();
@@ -78,9 +61,6 @@ export default function PageUnifiedLogin() {
   const [signupId, setSignupId] = useState('');
   const [developmentSignupCode, setDevelopmentSignupCode] = useState('');
   const [verifyingCode, setVerifyingCode] = useState(false);
-
-  // Slideshow states
-  const [currentSlide, setCurrentSlide] = useState(0);
 
   // Manager registration onboarding states
   const [showRegModal, setShowRegModal] = useState(false);
@@ -287,13 +267,6 @@ export default function PageUnifiedLogin() {
       .catch((err) => {
         console.warn("Could not fetch test cards from backend, using local synthetic cards:", err);
       });
-  }, []);
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % slides.length);
-    }, 15000); // 15 seconds
-    return () => clearInterval(timer);
   }, []);
 
   // Map References
@@ -870,15 +843,11 @@ export default function PageUnifiedLogin() {
   return (
     <div className="unified-login min-h-screen bg-transparent flex flex-col font-sans justify-between relative overflow-hidden">
       <div className="mobile-login-backdrop" aria-hidden="true">
-        <AnimatePresence initial={false}>
-          <motion.img key={currentSlide} src={slides[currentSlide].image} alt="" initial={{ opacity: 0 }} animate={{ opacity: 0.32 }} exit={{ opacity: 0 }} transition={{ duration: 0.7 }} />
-        </AnimatePresence>
+        <img src={featureImage} alt="" />
       </div>
-      <button type="button" className="mobile-login-photo" aria-label="Show next feature photograph" onClick={() => setCurrentSlide(prev => (prev + 1) % slides.length)}>
-        <AnimatePresence initial={false}>
-          <motion.img key={currentSlide} src={slides[currentSlide].image} alt={slides[currentSlide].title} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.7 }} />
-        </AnimatePresence>
-      </button>
+      <div className="mobile-login-photo" aria-hidden="true">
+        <img src={featureImage} alt="PineVela student marketplace" />
+      </div>
       
       {/* Decorative gradient backdrops */}
       <div className="absolute top-0 right-0 w-96 h-96 bg-amber-100 rounded-full blur-3xl opacity-30 -z-10" />
@@ -920,86 +889,16 @@ export default function PageUnifiedLogin() {
       <main className="login-main flex-1 grid grid-cols-1 lg:grid-cols-12 items-center justify-center w-full px-5 sm:px-6 md:px-10 py-8 gap-8 lg:gap-12 z-10 max-w-[1380px] mx-auto">
         
         
-        {/* Left Side: Enlarged Picture Card Showcase (Covers balanced half of the login page) */}
+        {/* Left side: feature image */}
         <div className="lg:col-span-6 hidden lg:flex flex-col items-stretch justify-center w-full lg:sticky lg:top-24 select-none">
           <div className="space-y-7 flex flex-col justify-between w-full">
-            
-            {/* Image Slider Section */}
-            {(() => {
-              const activeSlide = slides[currentSlide] || slides[0] || {
-                image: manager2Img,
-                title: "Hostel Management Simplified",
-                description: "PineVela - Manage your hostel seamlessly from anywhere."
-              };
-              return (
-                <div
-                  className="relative aspect-[4/3] w-full rounded-2xl overflow-hidden cursor-pointer"
-                  role="button"
-                  tabIndex={0}
-                  aria-label="Show next feature"
-                  onClick={() => setCurrentSlide((prev) => (prev + 1) % slides.length)}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter' || event.key === ' ') {
-                      event.preventDefault();
-                      setCurrentSlide((prev) => (prev + 1) % slides.length);
-                    }
-                  }}
-                >
-                  <AnimatePresence initial={false} mode="sync">
-                    <motion.img
-                      key={currentSlide}
-                      src={activeSlide.image || manager2Img}
-                      alt={activeSlide.title || 'PineVela'}
-                      loading="eager"
-                      fetchPriority="high"
-                      initial={false}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: -20 }}
-                      transition={{ duration: 0.5, ease: "easeInOut" }}
-                      className="w-full h-full object-cover"
-                    />
-                  </AnimatePresence>
-
-                </div>
-              );
-            })()}
-
-            {/* Captions and Dots */}
-            {(() => {
-              const activeSlide = slides[currentSlide] || slides[0] || {
-                image: manager2Img,
-                title: "Hostel Management Simplified",
-                description: "PineVela - Manage your hostel seamlessly from anywhere."
-              };
-              return (
-                <div className="space-y-4 px-1">
-                  <div className="flex items-center justify-between gap-4">
-                    <h3 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight leading-tight">
-                      {activeSlide.title}
-                    </h3>
-                    
-                    {/* Dot indicators */}
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      {slides.map((_, index) => (
-                        <button
-                          key={index}
-                          type="button"
-                          onClick={() => setCurrentSlide(index)}
-                          className={`h-2 rounded-full transition-all duration-300 ${
-                            currentSlide === index ? 'w-6 bg-blue-900' : 'w-2 bg-slate-200 hover:bg-slate-300'
-                          }`}
-                          aria-label={`Go to slide ${index + 1}`}
-                        />
-                      ))}
-                    </div>
-                  </div>
-
-                  <p className="text-slate-650 text-sm sm:text-base leading-relaxed min-h-[3.5rem] font-semibold">
-                    {activeSlide.description}
-                  </p>
-                </div>
-              );
-            })()}
+            <div className="login-feature-card relative aspect-[5/4] w-full rounded-3xl overflow-hidden">
+              <img src={featureImage} alt="PineVela student marketplace" loading="eager" fetchPriority="high" className="absolute inset-0 w-full h-full object-contain" />
+            </div>
+            <div className="space-y-4 px-1">
+              <h3 className="text-2xl sm:text-3xl font-black tracking-tight leading-tight"><span className="text-slate-950">Pine</span><span className="text-blue-900">Vela</span></h3>
+              <p className="text-slate-650 text-sm sm:text-base leading-relaxed font-semibold">{featureDescription}</p>
+            </div>
 
             {/* Design brand line divider */}
             <div className="pt-2 border-t border-slate-200/50" />
@@ -1011,9 +910,6 @@ export default function PageUnifiedLogin() {
           
           <div className="login-auth-card bg-blue-50/90 backdrop-blur-lg rounded-3xl border border-blue-200/70 shadow-2xl p-8 sm:p-10 space-y-6 relative overflow-hidden flex flex-col justify-between w-full">
             
-            {/* Top design brand line */}
-            <div className="login-brand-line absolute top-0 left-0 right-0 h-1.5 bg-blue-900" />
-
             <div className="login-card-heading text-center space-y-2 pt-1">
               <div className="login-card-logo flex justify-center">
                 <PineLogo size={58} hideText={true} />

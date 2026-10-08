@@ -13,7 +13,17 @@ export async function sessionFetch(input: RequestInfo | URL, options: RequestIni
   new Headers(options.headers).forEach((value, key) => headers.set(key, value));
   headers.delete('Authorization');
   headers.set('X-PineVela-Session', 'cookie');
-  const response = await globalThis.fetch(input, { ...options, headers, credentials: 'same-origin' });
+  const retryInput = input instanceof Request ? input.clone() : input;
+  let response = await globalThis.fetch(input, { ...options, headers, credentials: 'same-origin' });
+  if (response.status === 403 && !headers.has('X-PineVela-Manager-Key')) {
+    const body = await response.clone().json().catch(() => null);
+    if (body?.managerKeyRequired) response = await new Promise<Response>((resolve, reject) => {
+      window.dispatchEvent(new CustomEvent('pinevela-manager-key', { detail: { resolve, reject, execute: (key: string) => {
+        const keyed = new Headers(headers); keyed.set('X-PineVela-Manager-Key', key);
+        return globalThis.fetch(retryInput instanceof Request ? retryInput.clone() : retryInput, { ...options, headers: keyed, credentials: 'same-origin' });
+      } } }));
+    });
+  }
   if (response.status === 403) {
     const body = await response.clone().json().catch(() => null);
     if (body?.accountBanned || body?.accountRestricted) {

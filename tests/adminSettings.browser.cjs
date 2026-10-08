@@ -23,13 +23,16 @@ async function main() {
   const primary = { id: crypto.randomUUID(), role: 'user', name: 'Browser primary user', email: 'browser-primary@example.test', token: crypto.randomUUID(), isVerified: true };
   const merchant = { id: crypto.randomUUID(), role: 'merchant', name: 'Browser seller', email: 'browser-seller@example.test', token: crypto.randomUUID(), isDigitalMarketOnly: true, isVerified: true, merchantStoreId: 'browser-paid-store', merchantSetupCompleted: true, merchantRegistrationFeePaid: true };
   const paidStore = { id: merchant.merchantStoreId, studentEmail: merchant.email, userId: merchant.id, storeName: 'Browser seller store', status: 'active', setupCompleted: true, registrationFeePaid: true, subscriptionPlan: 'default', subscriptionStatus: 'free', subscriptionExpiresAt: '2099-01-01T00:00:00.000Z', semesterExpiresAt: '2099-01-01T00:00:00.000Z', paymentMode: 'free' };
+  const freeCheckout = process.argv.includes('--free-checkout');
+  if (freeCheckout) { merchant.merchantSetupCompleted = false; merchant.merchantRegistrationFeePaid = false; paidStore.setupCompleted = false; paidStore.registrationFeePaid = false; }
   const keys = admins.map(() => crypto.randomBytes(32).toString('base64url'));
   const governance = { version: 1, mainId: admins[0].id, revision: 1, members: admins.map((a, i) => ({ id: a.id, slot: i + 1, active: true, keyHash: crypto.createHash('sha256').update(`${a.id}:${keys[i]}`).digest('hex'), ...(i ? { settingsKeyHash: crypto.createHash('sha256').update(`settings:${a.id}:${settingsKeys[i]}`).digest('hex') } : {}) })), proposals: [], invitations: [], changes: [], attempts: {} };
   await fs.writeFile(path.join(dataDir, 'pinevela_store.json'), sessionFixtureJson({ credentialExposureVersion: 1, accountSecurityVersion: 1, users: [...admins, primary, merchant], digitalMarketStores: [paidStore], digitalMarketApplications: [{ id: 'browser-paid-app', studentEmail: merchant.email, userId: merchant.id, status: 'approved' }], paymentTransactions: [{ id: 'browser-paid-transaction', storeId: paidStore.id, purpose: 'activation', status: 'fulfilled', mode: 'free' }], hostels: [], adminGovernance: governance, platformSettings: { registrationFee: 50, commission: 5, announcement: '', maintenanceMode: false } }));
+  if (freeCheckout) { const initial = JSON.parse(await fs.readFile(path.join(dataDir, 'pinevela_store.json'), 'utf8')); initial.paymentTransactions = []; Object.assign(initial.digitalMarketApplications[0], { fullName: merchant.name, university: 'Isolated workflow university' }); await fs.writeFile(path.join(dataDir, 'pinevela_store.json'), JSON.stringify(initial)); }
   const port = await freePort(), debugPort = await freePort(), base = `http://127.0.0.1:${port}`;
   let server, chrome, socket, command; let serverLogs = '', chromeLogs = '';
   try {
-    server = spawn(process.execPath, [path.join(project, 'dist/server.cjs')], { cwd: project, detached: true, env: { ...process.env, NODE_ENV: 'production', PORT: String(port), PINEVELA_PUBLIC_ORIGIN: base, PAYSTACK_SECRET_KEY: '', PINEVELA_DATA_DIR: dataDir, PINEVELA_UPLOADS_DIR: path.join(temp, 'uploads'), PINEVELA_WIPE_RECOVERY_DIR: path.join(temp, 'recovery'), PINEVELA_MAIN_ADMIN_ID: admins[0].id, PINEVELA_TRUST_PROXY: '' }, stdio: ['ignore', 'pipe', 'pipe'] });
+    server = spawn(process.execPath, [path.join(project, 'dist/server.cjs')], { cwd: project, detached: true, env: { ...process.env, NODE_ENV: 'production', PORT: String(port), PINEVELA_PUBLIC_ORIGIN: freeCheckout ? '' : base, PAYSTACK_SECRET_KEY: '', PINEVELA_DATA_DIR: dataDir, PINEVELA_UPLOADS_DIR: path.join(temp, 'uploads'), PINEVELA_WIPE_RECOVERY_DIR: path.join(temp, 'recovery'), PINEVELA_MAIN_ADMIN_ID: admins[0].id, PINEVELA_TRUST_PROXY: '' }, stdio: ['ignore', 'pipe', 'pipe'] });
     server.stdout.on('data', data => serverLogs += data); server.stderr.on('data', data => serverLogs += data);
     for (let i = 0; i < 200; i++) { try { if ((await fetch(base + '/api/health')).ok) break; } catch {} if (server.exitCode !== null) throw new Error(serverLogs); await pause(100); }
     chrome = spawn(process.env.CHROMIUM_PATH || '/snap/bin/chromium', ['--headless', '--no-sandbox', '--disable-gpu', '--disable-dev-shm-usage', '--disable-features=BackForwardCache', '--no-first-run', `--remote-debugging-port=${debugPort}`, `--user-data-dir=${path.join(temp, 'chrome')}`, 'about:blank'], { stdio: ['ignore', 'pipe', 'pipe'] });
@@ -95,9 +98,41 @@ async function main() {
       assert(await evaluate("document.querySelector('[aria-label=\"Payment receiving account\"]') !== null"));
       assert(await evaluate("document.querySelector('[aria-label=\"Payment receiving account\"] a').href === 'https://dashboard.paystack.com/'"));
     }
+    if (freeCheckout) {
+      const fields = 'form[aria-label="Propose marketplace pricing"] fieldset';
+      assert.equal(await evaluate(`document.querySelectorAll(${JSON.stringify(fields)}).length`), 5, 'All five fees have an explicit no-payment option');
+      for (let index = 0; index < 5; index++) {
+        const field = `document.querySelectorAll(${JSON.stringify(fields)})[${index}]`;
+        if (await evaluate(`${field}.querySelector('input[type=checkbox]').checked`)) {
+          await click(`${field}.querySelector('input[type=checkbox]')`);
+          assert(await evaluate(`!${field}.querySelector('input[type=number]').disabled && ${field}.querySelector('input[type=number]').required`), 'Removing a waiver requires a price');
+        }
+        await click(`${field}.querySelector('input[type=checkbox]')`);
+        assert(await evaluate(`${field}.querySelector('input[type=number]').disabled && ${field}.querySelector('input[type=number]').value === '0'`));
+      }
+      await input('[aria-label="Propose marketplace pricing"] input[type=text]', 'Verify administrator fee waiver policy');
+      await input('[aria-label="Administrator settings"] input[autocomplete="off"]', settingsKeys[0]);
+      await click(button('Submit pricing proposal')); await until("document.querySelector('[data-pricing-proposal]')", 'Fee-waiver proposal created');
+      const id = await evaluate("document.querySelector('[data-pricing-proposal]').getAttribute('data-pricing-proposal')");
+      for (const index of [1,2]) await api(`/api/admin/governance/pricing/${id}/vote`, admins[index].token, { decision: 'approved', settingsKey: settingsKeys[index] });
+      await until("document.body.innerText.includes('3 approvals')", 'Fee-waiver quorum reached');
+      await input('[aria-label="Administrator settings"] input[autocomplete="off"]', settingsKeys[0]); await click(button('Final push — apply approved pricing'));
+      await until("document.body.innerText.includes('Approved pricing applied by administrator #1')", 'Approved fee waivers applied');
+      const prices = await api('/api/settings', admins[0].token); assert.equal(prices.registrationFee, 0); assert.equal(prices.semesterFee, 0); assert.deepEqual(prices.subscriptionPrices, {default:0,star:0,pro:0});
+      await switchAccount(merchant.token, '/#/digital-market/onboard');
+      await click(button('Continue to Campus Location')); await click(button('Continue to Secure Checkout'));
+      await until("document.body.innerText.includes('No payment details are needed')", 'Free activation explanation');
+      await click(button('Continue and activate store')); await until("location.hash === '#/digital-market'", 'Free registration reaches the merchant dashboard');
+      assert(!await evaluate("Boolean(sessionStorage.getItem('pinevela.pendingPayment'))"), 'No Paystack navigation or pending provider payment');
+      const saved = JSON.parse(await fs.readFile(path.join(dataDir,'pinevela_store.json'),'utf8'));
+      assert.equal(saved.paymentTransactions.length,1); assert.equal(saved.paymentTransactions[0].mode,'free'); assert.equal(saved.paymentTransactions[0].amount,0); assert.equal(saved.paymentTransactions[0].status,'fulfilled');
+      assert(saved.digitalMarketStores[0].setupCompleted && saved.digitalMarketStores[0].registrationFeePaid);
+      await command('Page.reload'); await until("document.querySelector('[aria-label=\"Upgrade your seller plan\"]')", 'Free activation survives reload');
+      assert.deepEqual(exceptions,[]); console.log('Passed five admin fee waivers, governed pricing approval and immediate free store activation in production without Paystack configuration.'); return;
+    }
     await input('input[type=number][max="1000000"]', '62.50'); await input('input[type=number][max="100"]', '7.5');
     for (const [label, amount] of [['Semester fee', '210.25'], ['Pine Default', '0'], ['Pine Star', '45.5'], ['Pine Pro', '99.75']]) {
-      const selector = await evaluate(`(()=>{const labels=[...document.querySelectorAll('[aria-label="Administrator settings"] label')]; const found=labels.find(l=>l.textContent.startsWith(${JSON.stringify(label)})); const field=found?.querySelector('input'); if(!field)throw new Error('Price field missing');field.id='price-field';return '#price-field';})()`); await input(selector, amount); await evaluate("document.querySelector('#price-field').removeAttribute('id')");
+      const selector = await evaluate(`(()=>{const field=[...document.querySelectorAll('[aria-label="Administrator settings"] input[type=number][aria-label]')].find(f=>f.getAttribute('aria-label').startsWith(${JSON.stringify(label)})); if(!field)throw new Error('Price field missing');field.id='price-field';return '#price-field';})()`); await input(selector, amount); await evaluate("document.querySelector('#price-field').removeAttribute('id')");
     }
     await input('[aria-label="Propose marketplace pricing"] input[type=text]', 'Reviewed registration and subscription pricing');
     await input('[aria-label="Administrator settings"] input[autocomplete="off"]', settingsKeys[0]);

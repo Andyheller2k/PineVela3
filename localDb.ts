@@ -435,7 +435,8 @@ export async function dbGetNotifications(userId?: string | any[], ..._args: any[
   return store.notifications;
 }
 
-export async function dbCreateNotification(notifData: any, ..._args: any[]): Promise<any> {
+export async function dbCreateNotification(notifData: any, _fallback?: any[], actor?: any): Promise<any> {
+  if (actor?.role === 'admin') { notifData.adminMessage = true; notifData.senderRole = 'admin'; }
   const store = getStore();
   if (!store.notifications) store.notifications = [];
   const newNotif = { 
@@ -747,72 +748,12 @@ export async function dbCreateOnboardingPayment(payment: any, ..._args: any[]): 
   return newPayment;
 }
 
-export async function dbAssignHostelManager(hostelId: string, managerId: string, managerName?: string, managerEmail?: string, managerPhone?: string, ..._args: any[]): Promise<any> {
-  const store = getStore();
-  const hostel = store.hostels.find((h: any) => h.id === hostelId);
-  if (hostel) {
-    hostel.managerId = managerId;
-    if (managerName) hostel.managerName = managerName;
-    if (managerEmail) hostel.managerEmail = managerEmail;
-    if (managerPhone) hostel.managerPhone = managerPhone;
-    persistStore();
-    return hostel;
-  }
-  return { id: hostelId, managerId };
-}
-
 export async function dbDeleteHostel(id: string): Promise<boolean> {
   const store = getStore();
   const initialLen = store.hostels.length;
   store.hostels = store.hostels.filter((h: any) => h.id !== id);
   persistStore();
   return store.hostels.length < initialLen;
-}
-
-export async function dbGetBoardRequests(): Promise<any[]> {
-  const store = getStore();
-  if (!store.boardRequests) store.boardRequests = [];
-  return store.boardRequests;
-}
-
-export async function dbCreateBoardRequest(requestData: any): Promise<any> {
-  const store = getStore();
-  if (!store.boardRequests) store.boardRequests = [];
-  const newReq = {
-    id: requestData.id || `req-board-${Date.now()}`,
-    managerId: requestData.managerId || '',
-    managerName: requestData.managerName || 'Resident Manager',
-    managerEmail: requestData.managerEmail || '',
-    managerPhone: requestData.managerPhone || '+233 24 123 4567',
-    managerPhoto: requestData.managerPhoto || '',
-    hostelName: requestData.hostelName || 'Registered Property',
-    category: requestData.category || 'General Inquiry',
-    priority: requestData.priority || 'Normal',
-    subject: requestData.subject || 'Manager Operational Request',
-    message: requestData.message || '',
-    status: requestData.status || 'Pending',
-    adminNotes: requestData.adminNotes || '',
-    createdAt: new Date().toISOString()
-  };
-  store.boardRequests.unshift(newReq);
-  persistStore();
-  return newReq;
-}
-
-export async function dbUpdateBoardRequest(id: string, updates: any): Promise<any> {
-  const store = getStore();
-  if (!store.boardRequests) store.boardRequests = [];
-  const idx = store.boardRequests.findIndex((r: any) => r.id === id);
-  if (idx >= 0) {
-    store.boardRequests[idx] = {
-      ...store.boardRequests[idx],
-      ...updates,
-      updatedAt: new Date().toISOString()
-    };
-    persistStore();
-    return store.boardRequests[idx];
-  }
-  return null;
 }
 
 // ==========================================
@@ -866,8 +807,8 @@ export async function dbGenerateHostelRoomKeys(hostel: any): Promise<any[]> {
   const generatedKeys: any[] = [];
 
   // Bound client-controlled generation before mutating keys or entering nested loops.
-  const counts = blocks.map((block: any) => Number(block.totalRooms || block.rooms || 20));
-  if (hostelName.length > 200 || blocks.length > 100 || counts.some((count: number) => !Number.isSafeInteger(count) || count < 1) || counts.reduce((sum: number, count: number) => sum + count, 0) > 2000 || blocks.some((block: any, idx: number) => {
+  const counts = blocks.map((block: any) => Number(block.totalRooms ?? block.rooms ?? 20));
+  if (hostelName.length > 200 || blocks.length > 100 || counts.some((count: number) => !Number.isSafeInteger(count) || count < 0) || counts.reduce((sum: number, count: number) => sum + count, 0) > 2000 || blocks.some((block: any, idx: number) => {
     const name = block.name || block.blockName || '', prefix = block.roomPrefix || '';
     const start = Number(block.startNum || (idx + 1) * 100 + 1);
     return typeof name !== 'string' || name.length > 120 || typeof prefix !== 'string' || prefix.length > 16 || !Number.isSafeInteger(start) || start < 1 || start > 1000000;

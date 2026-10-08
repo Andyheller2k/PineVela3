@@ -21,15 +21,13 @@ interface Page1PublicProps {
   onSelectHostel: (hostel: Hostel) => void;
   selectedHostel: Hostel | null;
   onCloseDrawer: () => void;
-  onNavigate: (screen: 'student-login' | 'manager-login') => void;
 }
 
 export default function Page1Public({
   hostels,
   onSelectHostel,
   selectedHostel,
-  onCloseDrawer,
-  onNavigate
+  onCloseDrawer
 }: Page1PublicProps) {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -295,9 +293,7 @@ export default function Page1Public({
                       <span className={`text-[10px] uppercase tracking-wider font-extrabold px-2.5 py-1 rounded-full ${statusColor}`}>
                         {statusText}
                       </span>
-                      <span className="bg-blue-900/90 text-white text-[10px] font-bold px-2.5 py-1 rounded-full shadow-sm backdrop-blur-sm">
-                        {hostel.bedsLeft ?? hostel.availableSpaces ?? hostel.totalCapacity ?? 0} BEDS LEFT
-                      </span>
+
                     </div>
                   </div>
 
@@ -388,18 +384,17 @@ export default function Page1Public({
         >
           <div className="relative z-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 w-full">
           <motion.div 
-            className="bg-blue-50/20 backdrop-blur-sm p-6 rounded-2xl border border-blue-200/20 shadow-md space-y-3 cursor-pointer"
+            className="landing-benefit bg-transparent p-6 space-y-3"
             variants={{
               hidden: { opacity: 0, y: 30 },
               visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: "easeOut" } }
             }}
             whileHover={{ 
               y: -8, 
-              scale: 1.02,
-              boxShadow: "0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)"
+              scale: 1.02
             }}
           >
-            <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-900">
+            <div className="w-10 h-10 flex items-center justify-center text-blue-900">
               <Shield size={20} />
             </div>
             <h4 className="font-extrabold text-slate-900 text-lg">Verified Properties</h4>
@@ -409,18 +404,17 @@ export default function Page1Public({
           </motion.div>
 
           <motion.div 
-            className="bg-blue-50/20 backdrop-blur-sm p-6 rounded-2xl border border-blue-200/20 shadow-md space-y-3 cursor-pointer"
+            className="landing-benefit bg-transparent p-6 space-y-3"
             variants={{
               hidden: { opacity: 0, y: 30 },
               visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: "easeOut" } }
             }}
             whileHover={{ 
               y: -8, 
-              scale: 1.02,
-              boxShadow: "0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)"
+              scale: 1.02
             }}
           >
-            <div className="w-10 h-10 rounded-xl bg-rose-50 flex items-center justify-center text-rose-500">
+            <div className="w-10 h-10 flex items-center justify-center text-rose-500">
               <Landmark size={20} />
             </div>
             <h4 className="font-extrabold text-slate-900 text-lg">Easy Management</h4>
@@ -430,18 +424,17 @@ export default function Page1Public({
           </motion.div>
 
           <motion.div 
-            className="bg-blue-50/20 backdrop-blur-sm p-6 rounded-2xl border border-blue-200/20 shadow-md space-y-3 cursor-pointer"
+            className="landing-benefit bg-transparent p-6 space-y-3"
             variants={{
               hidden: { opacity: 0, y: 30 },
               visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: "easeOut" } }
             }}
             whileHover={{ 
               y: -8, 
-              scale: 1.02,
-              boxShadow: "0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)"
+              scale: 1.02
             }}
           >
-            <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600">
+            <div className="w-10 h-10 flex items-center justify-center text-blue-600">
               <ShoppingBag size={20} />
             </div>
             <h4 className="font-extrabold text-slate-900 text-lg">Student Digital Market</h4>
@@ -594,10 +587,6 @@ export default function Page1Public({
                     <ShieldCheck size={14} />
                     <span>{selectedHostel.status || 'Active Accreditation'}</span>
                   </span>
-                  <span className="bg-blue-900/95 text-white text-xs font-black px-3.5 py-1.5 rounded-full shadow-lg backdrop-blur-md uppercase tracking-wider flex items-center gap-1.5">
-                    <BedDouble size={14} />
-                    <span>{selectedHostel.bedsLeft ?? selectedHostel.availableSpaces ?? selectedHostel.totalCapacity ?? 0} Beds Available</span>
-                  </span>
                 </div>
 
                 {/* Hero Overlay Details Bottom Left */}
@@ -652,21 +641,7 @@ export default function Page1Public({
               </div>
 
               {/* Highlighted Stat Cards Grid (Crystal Glass Tabs) */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="bg-white/70 backdrop-blur-xl p-5 rounded-2xl border border-white/90 shadow-lg shadow-sky-900/5 flex flex-col">
-                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-600">Total Capacity</span>
-                  <span className="text-2xl font-black text-slate-950 mt-1">{selectedHostel.totalCapacity ?? 120} Beds</span>
-                  <span className="text-xs text-slate-700 mt-1 font-bold">Fully certified beds</span>
-                </div>
-
-                <div className="bg-emerald-50/70 backdrop-blur-xl border border-emerald-200/80 p-5 rounded-2xl shadow-lg shadow-emerald-900/5 flex flex-col">
-                  <span className="text-[10px] font-black uppercase tracking-wider text-emerald-900">Available Spaces</span>
-                  <span className="text-2xl font-black text-emerald-950 mt-1">
-                    {selectedHostel.bedsLeft ?? selectedHostel.availableSpaces ?? 0} Beds Left
-                  </span>
-                  <span className="text-xs text-emerald-900 mt-1 font-bold">Ready for room activation</span>
-                </div>
-
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="bg-blue-50/70 backdrop-blur-xl border border-blue-200/80 p-5 rounded-2xl shadow-lg shadow-blue-900/5 flex flex-col">
                   <span className="text-[10px] font-black uppercase tracking-wider text-blue-900">Verification Status</span>
                   <span className="text-xl font-black text-blue-950 mt-1 flex items-center gap-1.5">
@@ -700,7 +675,7 @@ export default function Page1Public({
                     <p className="text-sm text-slate-800 leading-relaxed font-semibold">
                       {selectedHostel.description && selectedHostel.description.trim() !== ''
                         ? selectedHostel.description
-                        : `${selectedHostel.name} is a certified ${selectedHostel.wing || selectedHostel.hostel_type || 'student accommodation'} located in ${selectedHostel.location || 'Kumasi'}. Featuring ${selectedHostel.totalCapacity || selectedHostel.availableSpaces || 120} total beds across ${selectedHostel.totalBlocks || (Array.isArray(selectedHostel.blocks) ? selectedHostel.blocks.length : 1)} residential block(s), with room configuration and campus location details.`
+                        : `${selectedHostel.name} is a certified ${selectedHostel.wing || selectedHostel.hostel_type || 'student accommodation'} located in ${selectedHostel.location || 'Kumasi'}. Across ${selectedHostel.totalBlocks || (Array.isArray(selectedHostel.blocks) ? selectedHostel.blocks.length : 1)} residential block(s), with room configuration and campus location details.`
                       }
                     </p>
                   </div>
@@ -728,13 +703,13 @@ export default function Page1Public({
                               {Array.isArray(block.roomTypes) && block.roomTypes.length > 0 ? block.roomTypes.map((room: any, roomIndex: number) => (
                                 <div key={room.id || roomIndex} className="text-xs text-slate-700">
                                   <span className="font-bold">{room.typeName || room.type}</span>
-                                  {room.totalRooms != null && <span> · {room.totalRooms} rooms</span>}
-                                  {room.bedsPerRoom != null && <span> · {room.bedsPerRoom} beds per room</span>}
+
+
                                 </div>
                               )) : (
                                 <p className="text-xs text-slate-700">
-                                  {block.totalRooms != null && <span>{block.totalRooms} rooms</span>}
-                                  {block.bedsPerRoom != null && <span> · {block.bedsPerRoom} beds per room</span>}
+
+
                                 </p>
                               )}
                             </div>

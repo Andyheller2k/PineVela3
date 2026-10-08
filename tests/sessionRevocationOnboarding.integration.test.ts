@@ -1,3 +1,4 @@
+import { managerKeyHash } from '../residenceRequests.js';
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import crypto from 'node:crypto';
@@ -30,7 +31,10 @@ test('S22/S26: current officer and employment status revoke sessions permanently
   const member = (user: any, status = 'Active') => ({ id: crypto.randomUUID(), userId: user.id, name: user.name, email: user.email, hostelId: hostel.id, managerId: manager.id, managerCreated: true, status });
   const roster = member(staff), resignation = member(resigning), quittingMember = member(quitting), dismissed = member(legacyDismissed, 'Dismissed');
   const foreignRequest = { id: crypto.randomUUID(), managerId: otherManager.id, managerEmail: manager.email, status: 'approved' };
-  await fs.writeFile(db, sessionFixtureJson({ credentialExposureVersion: 1, accountSecurityVersion: 1,
+  const keyedManagers = [manager, otherManager, pendingManager];
+  const managerSecrets = new Map(keyedManagers.map(actor => [actor.id, crypto.randomBytes(32).toString('base64url')]));
+  const managerOperationKeys = Object.fromEntries(keyedManagers.map(actor => [actor.id, { hash: managerKeyHash(actor.id, managerSecrets.get(actor.id)!) }]));
+  await fs.writeFile(db, sessionFixtureJson({ credentialExposureVersion: 1, accountSecurityVersion: 1, managerOperationKeys,
     users: [admin, primary, manager, otherManager, pendingManager, officer, siblingOfficer, { ...inactiveOfficer, status: 'active' }, staff, resigning, quitting, directQuitter, legacyDismissed],
     staff: [roster, resignation, quittingMember, member(directQuitter), dismissed], hostels: [hostel, pendingHostel, foreignHostel],
     verificationTeams: [officer, siblingOfficer, inactiveOfficer], managerRegistrationRequests: [foreignRequest],
@@ -47,7 +51,7 @@ test('S22/S26: current officer and employment status revoke sessions permanently
     assert.fail('Isolated server did not start');
   };
   const request = async (method: string, route: string, token: string | undefined, body: any, expected: number | number[]) => {
-    const response = await fetch(base + route, { method, headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) }, ...(body === undefined ? {} : { body: JSON.stringify(body) }) });
+    const response = await fetch(base + route, { method, headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}`, ...(keyedManagers.some(actor => actor.token === token) ? { 'X-PineVela-Manager-Key': managerSecrets.get(keyedManagers.find(actor => actor.token === token)!.id)! } : {}) } : {}) }, ...(body === undefined ? {} : { body: JSON.stringify(body) }) });
     const result = await response.json(); assert([expected].flat().includes(response.status), `${method} ${route}: expected ${expected}, got ${response.status}; ${result.error || ''}`); return result;
   };
   const read = async () => JSON.parse(await fs.readFile(db, 'utf8'));

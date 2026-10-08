@@ -32,7 +32,7 @@ export interface WipePlan {
   scopes: WipeScope[]; counts: Record<string, number>; fingerprint: string;
   removed: Record<string, any[]>; kept: Record<string, any[]>;
   retired: Record<string, any[]>; settings: Record<string, any>;
-  media: string[]; notes: string[];
+  media: string[]; notes: string[]; managerKeys: Record<string, any>;
   signupState?: any; roomAttemptState?: any;
 }
 /** Resolve cascading relationships on the server. IDs never come from the proposal body. */
@@ -116,6 +116,9 @@ export function buildWipePlan(store: any, scopes: WipeScope[], target?: { accoun
   const deletedManagerEmails = new Set(removed.users.filter(u => accountRole(u) === 'manager').map(u => normalizeEmail(accountData(u).email || u.email)));
   const retainedManagerEmails = new Set(kept.users.filter(u => accountRole(u) === 'manager').map(u => normalizeEmail(accountData(u).email || u.email)));
   const settings = Object.fromEntries(Object.entries(store.managerAccountSettings || {}).filter(([id]) => !total && !ids.has(id) && !(deletedManagerEmails.has(normalizeEmail(id)) && !retainedManagerEmails.has(normalizeEmail(id)))));
+  const managerKeys = Object.fromEntries(Object.entries(store.managerOperationKeys || {}).filter(([id]) => !total && !ids.has(id)));
+  const removedManagerKeys = Object.fromEntries(Object.entries(store.managerOperationKeys || {}).filter(([id]) => total || ids.has(id)));
+  if (Object.keys(removedManagerKeys).length) counts.managerOperationKeys = Object.keys(removedManagerKeys).length;
   const removedSettings = Object.keys(store.managerAccountSettings || {}).length - Object.keys(settings).length;
   if (removedSettings) counts.managerAccountSettings = removedSettings;
   // Kept primary identities can hold legacy cached sub-account credentials/room summaries.
@@ -143,10 +146,10 @@ export function buildWipePlan(store: any, scopes: WipeScope[], target?: { accoun
   const deletedMedia = uploadReferences({ removed, embedded, removedArchive: store.retiredFeatureRecords, removedSettings: store.managerAccountSettings });
   const retainedMedia = uploadReferences({ kept, retired, settings, platformSettings: total ? {} : store.platformSettings });
   const media = [...deletedMedia].filter(p => !retainedMedia.has(p)).sort();
-  const fingerprint = crypto.createHash('sha256').update(JSON.stringify({ scopes, removed, retired, settings, media, embedded,
+  const fingerprint = crypto.createHash('sha256').update(JSON.stringify({ scopes, removed, retired, settings, media, embedded, removedManagerKeys,
     signupState: target ? signupState : undefined, roomAttemptState: target ? roomAttemptState : undefined,
     totalState: total ? { signupVerification: store.signupVerification, roomKeyAttempts: store.roomKeyAttempts, platformSettings: store.platformSettings } : undefined })).digest('hex');
-  return { scopes, counts, fingerprint, kept, removed, retired, settings, media, signupState, roomAttemptState, notes: [
+  return { scopes, counts, fingerprint, kept, removed, retired, settings, managerKeys, media, signupState, roomAttemptState, notes: [
     'Manager deletion also removes owned residences, their staff, activated room accounts, and related records.',
     'Primary user deletion also removes linked accounts and their owned residences or markets.',
     'Hostel deletion ends activated room accounts and staff employment; unrelated primary accounts and administrators remain.',
@@ -160,7 +163,7 @@ export function applyWipePlan(store: any, plan: WipePlan): void {
     if (!Array.isArray(store[key])) store[key] = [];
     store[key].splice(0, store[key].length, ...rows);
   }
-  Object.assign(store, { retiredFeatureRecords: plan.retired, managerAccountSettings: plan.settings });
+  Object.assign(store, { retiredFeatureRecords: plan.retired, managerAccountSettings: plan.settings, managerOperationKeys: plan.managerKeys });
   if (plan.signupState && store.signupVerification) Object.assign(store.signupVerification, plan.signupState);
   if (plan.roomAttemptState && store.roomKeyAttempts) Object.assign(store.roomKeyAttempts, plan.roomAttemptState);
   if (plan.scopes.includes('total')) {

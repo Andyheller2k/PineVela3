@@ -35,17 +35,27 @@ async function main() {
       await open(width);
       assert(await evaluate('document.documentElement.scrollWidth<=innerWidth+1'),'No horizontal overflow at '+width);
       assert.equal(await visible('.mobile-login-photo'),width<1024);
+      assert(await evaluate("document.querySelector('.login-brand-line')===null"),'Blue strip removed from login and signup');
+      assert(await evaluate("(()=>{const style=getComputedStyle(document.querySelector('.login-feature-card'));return style.backgroundColor==='rgba(0, 0, 0, 0)'&&style.boxShadow==='none'&&parseFloat(style.borderWidth)===0})()"),'Photo card has no background, border or shadow');
+      assert(await evaluate("document.querySelector('[aria-label=\"Show next feature\"] img').src.includes('login-manager-')"),'Transparent manager photograph loads');
+      assert.equal(await evaluate("getComputedStyle(document.querySelector('[aria-label=\"Show next feature\"] img')).objectFit"),'contain','Desktop card preserves the full photograph');
       if(width<1024) {
-        assert.equal(await evaluate("getComputedStyle(document.querySelector('.mobile-login-photo img')).objectFit"),'cover','Photograph covers the full screen');
+        assert.equal(await evaluate("getComputedStyle(document.querySelector('.mobile-login-photo img')).objectFit"),'contain','New photograph remains fully framed over the full-screen backdrop');
         const bounds=await evaluate("(()=>{const p=document.querySelector('.mobile-login-photo').getBoundingClientRect(),c=document.querySelector('.login-auth-card').getBoundingClientRect(),t=document.querySelector('.login-mode-toggle').getBoundingClientRect(),h=document.querySelector('.login-card-heading').getBoundingClientRect();return {photo:p.top===0&&p.left===0&&Math.abs(p.width-innerWidth)<=1&&Math.abs(p.height-innerHeight)<=1&&c.top<p.bottom&&c.bottom>p.top,rounded:parseFloat(getComputedStyle(document.querySelector('.login-auth-card')).borderRadius)>=30,tabs:t.top<h.top,glass:getComputedStyle(document.querySelector('.login-auth-card')).backdropFilter}})()");
         assert(bounds.photo&&bounds.rounded&&bounds.tabs&&bounds.glass.includes('blur'),'Full-screen photograph behind curved frosted card and top tabs');
+        assert(await evaluate("(()=>{const card=document.querySelector('.login-auth-card').getBoundingClientRect();return Math.abs(innerHeight-card.bottom-32)<2})()"),'Login card sits at the bottom at '+width);
+        assert(await evaluate("document.querySelector('.mobile-login-photo img').getBoundingClientRect().height<innerHeight*.75"),'Photograph has a wider, less zoomed framing');
+        assert(await visible('.mobile-login-backdrop'),'Matching photograph fills the entire background');
         assert.equal(await evaluate("getComputedStyle(document.querySelector('.login-logo-link')).backgroundColor"),'rgba(0, 0, 0, 0)','Logo blends into the photograph');
         assert(!await visible('.login-home-link'));
         assert.equal(await evaluate("[...document.querySelectorAll('.login-header button')].filter(b=>b.getClientRects().length && b.textContent.includes('Login')).length"),0);
         assert(!await visible('.login-brand-line'));
       }
       await screenshot('light-'+width);
-      await evaluate("[...document.querySelectorAll('[role=switch][aria-label=\"Dark mode\"]')].find(b=>b.getClientRects().length).click()");
+      const switchPoint = await evaluate("(()=>{const b=[...document.querySelectorAll('[role=switch][aria-label=\"Dark mode\"]')].find(b=>b.getClientRects().length),r=b.getBoundingClientRect(),x=r.left+r.width/2,y=r.top+r.height/2;return {x,y,reachable:b.contains(document.elementFromPoint(x,y))}})()");
+      assert(switchPoint.reachable,'A real tap reaches the theme switch at '+width);
+      await command('Input.dispatchMouseEvent',{type:'mousePressed',x:switchPoint.x,y:switchPoint.y,button:'left',clickCount:1});
+      await command('Input.dispatchMouseEvent',{type:'mouseReleased',x:switchPoint.x,y:switchPoint.y,button:'left',clickCount:1});
       await pause(150); assert(await evaluate("document.documentElement.dataset.theme==='dark'"));
       if(width<1024) assert(await evaluate("getComputedStyle(document.querySelector('.mobile-login-photo img')).filter.includes('brightness(0.68)')"));
       await screenshot('dark-'+width);
@@ -59,11 +69,18 @@ async function main() {
       console.log('Passed mobile/desktop light, dark and signup:',width);
     }
     await open(375,667);
+    await until("document.querySelectorAll('.mobile-login-photo img').length===1", 'Initial photo transition settles');
     const first=await evaluate("document.querySelector('.mobile-login-photo img').src");
-    await evaluate("document.querySelector('.mobile-login-photo').click()");await pause(800);
+    const photoPoint=await evaluate("(()=>{const card=document.querySelector('.login-auth-card').getBoundingClientRect(),x=innerWidth/2,y=Math.max(90,Math.min(160,card.top-16)),photo=document.querySelector('.mobile-login-photo');return {x,y,reachable:photo.contains(document.elementFromPoint(x,y))}})()");
+    assert(photoPoint.reachable,'A real tap reaches the photograph above the card');
+    await command('Input.dispatchMouseEvent',{type:'mousePressed',x:photoPoint.x,y:photoPoint.y,button:'left',clickCount:1});
+    await command('Input.dispatchMouseEvent',{type:'mouseReleased',x:photoPoint.x,y:photoPoint.y,button:'left',clickCount:1});
+    await until(`document.querySelectorAll('.mobile-login-photo img').length===1 && document.querySelector('.mobile-login-photo img').src!==${JSON.stringify(first)}`, 'First photo shuffle settles');
     const second=await evaluate("document.querySelector('.mobile-login-photo img').src");assert.notEqual(first,second);
-    await evaluate("document.querySelector('.mobile-login-photo').click()");await pause(800);
+    await evaluate("document.querySelector('.mobile-login-photo').click()");
+    await until(`document.querySelectorAll('.mobile-login-photo img').length===1 && document.querySelector('.mobile-login-photo img').src!==${JSON.stringify(second)}`, 'Second photo shuffle settles');
     const third=await evaluate("document.querySelector('.mobile-login-photo img').src");assert.equal(new Set([first,second,third]).size,3);
+    for (const name of ['login-manager-', 'login-resident-', 'login-market-']) assert([first,second,third].some(src=>src.includes(name)&&new URL(src).pathname.endsWith('.png')), 'Transparent carousel photograph: '+name);
     await pause(16000);assert.notEqual(await evaluate("document.querySelector('.mobile-login-photo img').src"),third,'Automatic shuffle continues');
     await command('Emulation.setDeviceMetricsOverride',{width:375,height:400,deviceScaleFactor:1,mobile:true});
     await evaluate("document.querySelector('.login-google-button').scrollIntoView({block:'center'})");
@@ -87,7 +104,7 @@ async function main() {
       await pause(500);
     }
     socket?.close();
-    for(const child of [chrome,server]) if(child&&child.exitCode===null){const done=once(child,'exit');try { child.kill('SIGTERM'); } catch(error) { if(error.code!=='EACCES') throw error; } await Promise.race([done,pause(5000)]);}
+    for(const child of [chrome,server]) if(child&&child.exitCode===null){const done=once(child,'exit').catch(error=>{if(error.code!=='EACCES') throw error;});try { child.kill('SIGTERM'); } catch(error) { if(error.code!=='EACCES') throw error; } await Promise.race([done,pause(5000)]);}
     await fs.rm(temp,{recursive:true,force:true});
   }
 }

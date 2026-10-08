@@ -1,3 +1,4 @@
+import { managerKeyHash } from '../residenceRequests.js';
 import { sessionFixtureJson } from './sessionFixtures.cjs';
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
@@ -25,8 +26,11 @@ test('S23: pre-auth body limits, shared login budgets, upload quotas and SSE cap
   const residence = { id: crypto.randomUUID(), name: 'Disposable S23 residence', managerId: manager.id, isApproved: true, blocks: [{ name: 'A', totalRooms: 2, startNum: 101 }] };
   const excessiveResidence = { ...residence, id: crypto.randomUUID(), blocks: [{ name: 'A', totalRooms: 1000000000 }] };
   const room = { id: crypto.randomUUID(), hostelId: residence.id, hostelName: residence.name, blockName: 'A', roomNumber: 'A-101', roomKey: `S23-A-${crypto.randomInt(100000, 1000000)}`, isAssigned: false, status: 'Available' };
+  const keyedManagers = [manager];
+  const managerSecrets = new Map(keyedManagers.map(actor => [actor.id, crypto.randomBytes(32).toString('base64url')]));
+  const managerOperationKeys = Object.fromEntries(keyedManagers.map(actor => [actor.id, { hash: managerKeyHash(actor.id, managerSecrets.get(actor.id)!) }]));
   await fs.writeFile(path.join(dataDir, 'pinevela_store.json'), sessionFixtureJson({
-    credentialExposureVersion: 1, accountSecurityVersion: 1, users: [admin, manager, buyer, otherBuyer], verificationTeams: [officer], hostels: [residence, excessiveResidence], roomKeys: [room],
+    credentialExposureVersion: 1, accountSecurityVersion: 1, managerOperationKeys, users: [admin, manager, buyer, otherBuyer], verificationTeams: [officer], hostels: [residence, excessiveResidence], roomKeys: [room],
     managerVerifications: [{ id: crypto.randomUUID(), managerId: manager.id, managerEmail: manager.email, status: 'approved' }]
   }));
   const limitsFile = path.join(dataDir, 'request-limits.json');
@@ -52,13 +56,13 @@ test('S23: pre-auth body limits, shared login budgets, upload quotas and SSE cap
     assert.fail('Isolated server did not become ready.');
   };
   const request = async (route: string, status: number, body?: any, token?: string, extra: Record<string, string> = {}) => {
-    const response = await fetch(base + route, { method: body === undefined ? 'GET' : 'POST', headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}), ...extra }, ...(body === undefined ? {} : { body: JSON.stringify(body) }), signal: AbortSignal.timeout(15000) });
+    const response = await fetch(base + route, { method: body === undefined ? 'GET' : 'POST', headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}`, ...(keyedManagers.some(actor => actor.token === token) ? { 'X-PineVela-Manager-Key': managerSecrets.get(keyedManagers.find(actor => actor.token === token)!.id)! } : {}) } : {}), ...extra }, ...(body === undefined ? {} : { body: JSON.stringify(body) }), signal: AbortSignal.timeout(15000) });
     const data = await response.json(); assert.equal(response.status, status, `${route}: ${data.error || 'Unexpected status'}`);
     if (status === 429) { assert(Number(response.headers.get('retry-after')) > 0); assert.equal(response.headers.get('cache-control'), 'no-store'); }
     return data;
   };
   const declaredBody = (route: string, token?: string, method = 'POST'): Promise<number> => new Promise((resolve, reject) => {
-    const req = http.request(base + route, { method, headers: { 'Content-Type': 'application/json', 'Content-Length': '100000000', ...(token ? { Authorization: `Bearer ${token}` } : {}) } }, res => { res.resume(); res.once('end', () => resolve(res.statusCode!)); });
+    const req = http.request(base + route, { method, headers: { 'Content-Type': 'application/json', 'Content-Length': '100000000', ...(token ? { Authorization: `Bearer ${token}`, ...(keyedManagers.some(actor => actor.token === token) ? { 'X-PineVela-Manager-Key': managerSecrets.get(keyedManagers.find(actor => actor.token === token)!.id)! } : {}) } : {}) } }, res => { res.resume(); res.once('end', () => resolve(res.statusCode!)); });
     req.setTimeout(5000, () => req.destroy(new Error(`Early rejection timed out for ${route} (${token ? 'authenticated' : 'anonymous'}); server state: ${logs.slice(-1500)}`))); req.once('error', reject); req.end('{}');
   });
   const oversizedStream = (route: string, maximum: number): Promise<number> => new Promise((resolve, reject) => {

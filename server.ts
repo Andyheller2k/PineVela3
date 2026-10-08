@@ -1,3 +1,5 @@
+import { residenceForViewer } from './hostelSecurity.js';
+import { ResidenceRequests, ResidenceRequestError, installResidenceRequests } from './residenceRequests.js';
 import { installAdminApprovalSecurity } from './adminApprovalSecurity.js';
 import { installMaintenanceNotice } from './maintenanceNotice.js';
 import { installPaystackPayments, PaystackPayments, marketAccessPaid, publicPaidStore, hasVerifiedRegistration } from './paystackPayments.js';
@@ -28,7 +30,6 @@ dotenv.config();
 import crypto from "crypto";
 import { accountData, accountId, accountKey, accountRole, canManageHostel, credentialValues, hasActiveRoom, hashCredentialAsync, normalizeEmail, passwordIsReusedAsync, publicAccountData, releaseRoom, verifyCredentialAsync, findAsync } from "./accountSecurity.js";
 import { buildIssueDetailsUpdate, canEditIssueDetails, IssueEditValidationError } from "./issueReportSecurity.js";
-import { buildHostelUpdate, canUpdateHostel, HostelUpdateValidationError } from "./hostelSecurity.js";
 import { activeOfficerAccount, buildInspectionReport, currentReportOfficer, inspectionSubmissionTarget, InspectionSubmissionError } from "./inspectionReportSecurity.js";
 import { SignupGuard, signupInput } from "./signupSecurity.js";
 import { signupProviderConfig, sendSignupVerification, confirmSignupVerification, SignupError } from "./supabaseSignup.js";
@@ -85,12 +86,8 @@ import {
   dbCreateVerificationAuditLog,
   dbGetVerificationAuditLogs,
   dbCreateOnboardingPayment,
-  dbAssignHostelManager,
   getStoreInstance,
   dbDeleteHostel,
-  dbGetBoardRequests,
-  dbCreateBoardRequest,
-  dbUpdateBoardRequest,
   dbGetRoomKeys,
   dbGetRoomKeyByCode,
   dbAssignRoomKey,
@@ -2134,7 +2131,7 @@ async function startServer() {
         read: false
       };
       notifications.unshift(mgrNotif);
-      await dbCreateNotification(mgrNotif, notifications);
+      await dbCreateNotification(mgrNotif, notifications, (req as any).user);
 
       syncStore();
       return res.status(201).json({
@@ -2152,12 +2149,15 @@ async function startServer() {
   // Keep module mutations and legacy in-memory arrays synchronized before persistence.
   function syncManagedStore() {
     const store = getStoreInstance();
+    hostels = store.hostels;
     MOCK_USERS = store.users; staff = store.staff || [];
     staffReviews = store.staffReviews || []; notifications = store.notifications || [];
     syncStore();
   }
 
   syncManagedStore(); // Align legacy array aliases before scoped governance mutations.
+
+  const residenceRequests = new ResidenceRequests(getStoreInstance, syncManagedStore, governance);
 
   // Authentication validation middleware
   function requireAuth(allowedRoles?: ("student" | "manager" | "admin" | "staff" | "user" | "resident" | string)[]) {
@@ -2324,6 +2324,10 @@ async function startServer() {
 
       req.user = user;
       req.sessionToken = token;
+      try { residenceRequests.gate(req); } catch (error: any) {
+        if (error instanceof ResidenceRequestError) return res.status(error.status).json({ error: error.message, ...error.details });
+        throw error;
+      }
       next();
     };
   }
@@ -2530,27 +2534,6 @@ async function startServer() {
           vt.photo = updatedPhoto;
           vt.avatarUrl = updatedPhoto;
           vt.photoUrl = updatedPhoto;
-        }
-      }
-
-      // Sync across all registered hostels if user is manager or staff
-      const currentHostels = await dbGetHostels(hostels);
-      for (const h of currentHostels) {
-        if (
-          (h.managerId && h.managerId === userId) || 
-          (h.assignedManagerId && h.assignedManagerId === userId) || 
-          (h.managerEmail && cleanEmail && h.managerEmail.toLowerCase().trim() === cleanEmail)
-        ) {
-          h.managerName = updatedName;
-          h.managerPhone = updatedPhone;
-          h.managerPhoto = updatedPhoto;
-          h.managerAvatar = updatedPhoto;
-          await dbUpdateHostel(h.id, {
-            managerName: updatedName,
-            managerPhone: updatedPhone,
-            managerPhoto: updatedPhoto,
-            managerAvatar: updatedPhoto
-          }, hostels);
         }
       }
 
@@ -2962,7 +2945,7 @@ async function startServer() {
             read: false
           };
           notifications.unshift(apprNotif);
-          await dbCreateNotification(apprNotif, notifications);
+          await dbCreateNotification(apprNotif, notifications, req.user);
         }
       }
 
@@ -3144,7 +3127,7 @@ async function startServer() {
           read: false
         };
         notifications.unshift(rejNotif);
-        await dbCreateNotification(rejNotif, notifications);
+        await dbCreateNotification(rejNotif, notifications, req.user);
       }
 
       syncStore();
@@ -3525,7 +3508,7 @@ async function startServer() {
         read: false
       };
       notifications.unshift(userNotif);
-      await dbCreateNotification(userNotif, notifications);
+      await dbCreateNotification(userNotif, notifications, req.user);
 
       // Send Admin alert notification
       const adminNotif = {
@@ -3538,7 +3521,7 @@ async function startServer() {
         read: false
       };
       notifications.unshift(adminNotif);
-      await dbCreateNotification(adminNotif, notifications);
+      await dbCreateNotification(adminNotif, notifications, req.user);
 
       syncStore();
 
@@ -3673,29 +3656,19 @@ async function startServer() {
         const displayStatus = isBlocked ? 'Blocked' : isSuspended ? 'Suspended' : isRejected ? 'Rejected' : moreInfoRequired ? 'More Information Required' : isApproved ? 'Approved' : 'Pending Admin Approval';
         const blockReason = isBlocked ? (managerAccess.reason || matchedVerif?.blockReason || matchedMgrReq?.blockReason || (matchedMgrUser as any)?.blockReason || (matchedMgrUser?.user as any)?.blockReason || matchedVerif?.adminNotes || matchedMgrReq?.adminNotes || 'Manager account access has been restricted by administration.') : null;
 
-        if (isApproved) {
-          if (matchedVerif) matchedVerif.status = 'approved';
-          if (matchedMgrReq) matchedMgrReq.status = 'approved';
-          if (matchedMgrUser) {
-            if (matchedMgrUser.user) {
-              matchedMgrUser.user.verificationStatus = 'approved';
-              matchedMgrUser.user.isVerified = true;
-            }
-            matchedMgrUser.verificationStatus = 'approved';
-            matchedMgrUser.isVerified = true;
-          }
-        }
+        const currentManagerId = matchedVerif?.managerId || matchedMgrReq?.managerId || accountId(matchedMgrUser);
+        const currentResidence = store.hostels.find(h => h.managerId === currentManagerId || h.assignedManagerId === currentManagerId);
 
         const mgrWorkEmail = matchedVerif?.managerEmail || matchedMgrReq?.managerEmail || matchedMgrUser?.email || matchedMgrUser?.user?.email || '';
 
         managerAccount = {
           id: matchedVerif?.id || matchedMgrReq?.id || matchedMgrUser?.id || `mgr-rec-${Date.now()}`,
           managerId: matchedVerif?.managerId || matchedMgrReq?.managerId || matchedMgrUser?.id,
-          name: matchedVerif?.managerName || matchedMgrReq?.managerName || matchedMgrUser?.name || matchedMgrUser?.user?.name || 'Hostel Manager',
+          name: currentResidence?.managerName || matchedVerif?.managerName || matchedMgrReq?.managerName || matchedMgrUser?.name || matchedMgrUser?.user?.name || 'Hostel Manager',
           email: mgrWorkEmail,
           organizationName: matchedVerif?.organizationName || matchedVerif?.organization || (matchedMgrReq as any)?.organizationName || matchedMgrReq?.organization || 'Sole Proprietorship',
-          hostelName: matchedVerif?.hostelName || matchedMgrReq?.proposedHostelName || matchedMgrReq?.propertyName || 'General Operations',
-          phone: matchedVerif?.phone || matchedMgrReq?.managerPhone || (matchedMgrReq as any)?.phone || matchedMgrUser?.phone || 'N/A',
+          hostelName: currentResidence?.name || matchedVerif?.hostelName || matchedMgrReq?.proposedHostelName || matchedMgrReq?.propertyName || 'General Operations',
+          phone: currentResidence?.managerPhone || matchedVerif?.phone || matchedMgrReq?.managerPhone || (matchedMgrReq as any)?.phone || matchedMgrUser?.phone || 'N/A',
           idType: matchedVerif?.idType || 'Ghana Card (National ID)',
           idNumber: matchedVerif?.idNumber || 'N/A',
           isRestricted: managerAccess.restrictions.length > 0,
@@ -4225,7 +4198,7 @@ async function startServer() {
         read: false
       };
       notifications.unshift(delNotif);
-      await dbCreateNotification(delNotif, notifications);
+      await dbCreateNotification(delNotif, notifications, req.user);
 
       await dbCreateActivity({
         id: `act-del-${Date.now()}`,
@@ -4315,7 +4288,7 @@ async function startServer() {
         read: false
       };
       notifications.unshift(bypassNotif);
-      await dbCreateNotification(bypassNotif, notifications);
+      await dbCreateNotification(bypassNotif, notifications, req.user);
       
       await dbCreateActivity({
         id: `act-bypass-${Date.now()}`,
@@ -4364,7 +4337,7 @@ async function startServer() {
         read: false
       };
       notifications.unshift(rejectNotif);
-      await dbCreateNotification(rejectNotif, notifications);
+      await dbCreateNotification(rejectNotif, notifications, req.user);
       
       await dbCreateActivity({
         id: `act-bypass-rej-${Date.now()}`,
@@ -5238,7 +5211,7 @@ async function startServer() {
           read: false
         };
         notifications.unshift(notif);
-        await dbCreateNotification(notif, notifications);
+        await dbCreateNotification(notif, notifications, req.user);
       }
 
       return res.json({ 
@@ -5298,7 +5271,7 @@ async function startServer() {
           read: false
         };
         notifications.unshift(rejNotif);
-        await dbCreateNotification(rejNotif, notifications);
+        await dbCreateNotification(rejNotif, notifications, req.user);
       }
 
       return res.json({ success: true, message: "Application rejected and user notified." });
@@ -5439,7 +5412,7 @@ async function startServer() {
         read: false
       };
       notifications.unshift(sellerNotif);
-      await dbCreateNotification(sellerNotif, notifications);
+      await dbCreateNotification(sellerNotif, notifications, req.user);
 
       return res.status(201).json({ success: true, order: publicMarketOrder(newOrder, req.user), message: "Order placed successfully! Proposed meetup transmitted to seller for confirmation." });
     } catch (err: any) {
@@ -5567,7 +5540,7 @@ async function startServer() {
           read: false
         };
         notifications.unshift(buyerNotif);
-        await dbCreateNotification(buyerNotif, notifications);
+        await dbCreateNotification(buyerNotif, notifications, req.user);
 
         return res.json({ success: true, order: publicMarketOrder(order, req.user), message: "Meetup location agreed! Purchase confirmed." });
       }
@@ -5609,7 +5582,7 @@ async function startServer() {
           read: false
         };
         notifications.unshift(buyerNotif);
-        await dbCreateNotification(buyerNotif, notifications);
+        await dbCreateNotification(buyerNotif, notifications, req.user);
 
         return res.json({ success: true, order: publicMarketOrder(order, req.user), message: "Proposed location declined." });
       }
@@ -5643,7 +5616,7 @@ async function startServer() {
       });
 
       store.notifications ||= [];
-      store.notifications.unshift({ id: `notif-ord-${crypto.randomUUID()}`, orderId: order.id,
+      store.notifications.unshift({ adminMessage: req.user?.role === 'admin', senderRole: req.user?.role, id: `notif-ord-${crypto.randomUUID()}`, orderId: order.id,
         ...(req.user.role === 'merchant' ? { targetRole: 'user', targetAccountId: order.buyerId, userId: order.buyerId }
           : { targetRole: 'merchant', sellerStoreId: order.storeId }),
         title: isCompletionStatus ? 'Purchase completed' : 'Order cancelled',
@@ -5855,7 +5828,7 @@ async function startServer() {
             read: false
           };
           notifications.unshift(mgrApprNotif);
-          await dbCreateNotification(mgrApprNotif, notifications);
+          await dbCreateNotification(mgrApprNotif, notifications, req.user);
         }
       }
 
@@ -6088,7 +6061,7 @@ async function startServer() {
             read: false
           };
           notifications.unshift(mgrRejNotif);
-          await dbCreateNotification(mgrRejNotif, notifications);
+          await dbCreateNotification(mgrRejNotif, notifications, req.user);
         }
       }
 
@@ -6555,6 +6528,7 @@ async function startServer() {
 
       // Send Notification to Officer
       const officerNotif = {
+        adminMessage: true, senderRole: 'admin', targetRole: 'verification_team', targetAccountId: officer.id,
         id: `notif-insp-off-${Date.now()}`,
         studentId: officer.id,
         userId: officer.id,
@@ -6571,6 +6545,7 @@ async function startServer() {
 
       // Send Notification to Manager
       const mgrNotif = {
+        adminMessage: true, senderRole: 'admin', targetRole: 'manager', targetAccountId: verif.managerId,
         id: `notif-insp-mgr-${Date.now()}`,
         studentId: verif.managerId,
         userId: verif.managerId,
@@ -6667,7 +6642,7 @@ async function startServer() {
       officer.totalInspectionsCompleted = (officer.totalInspectionsCompleted || 0) + 1;
       verificationTeams = store.verificationTeams || [];
       for (const admin of store.users.map(accountData).filter((account: any) => account?.role === 'admin' && account.id)) {
-        notifications.unshift({
+        notifications.unshift({ adminMessage: req.user?.role === 'admin', senderRole: req.user?.role,
           id: `notif-rep-sub-${crypto.randomUUID()}`,
           studentId: admin.id, userId: admin.id, recipientEmail: admin.email,
           title: `Verification Report Submitted: ${inspection.hostelName}`,
@@ -6845,60 +6820,7 @@ async function startServer() {
     }
   });
 
-  // 8c. Assign / Reassign Manager to Hostel
-  app.post("/api/hostel-managers/assign", requireAuth(["admin"]), async (req: any, res) => {
-    try {
-      const { hostelId, managerId } = req.body || {};
-      if (!hostelId || !managerId) {
-        return res.status(400).json({ error: "hostelId and managerId are required." });
-      }
-
-      const allManagers = await getUnifiedHostelManagersList();
-      const targetManager = allManagers.find(m => m.id === managerId);
-      if (!targetManager) {
-        return res.status(404).json({ error: "Manager not found." });
-      }
-
-      const currentHostels = await dbGetHostels(hostels);
-      const targetHostel = currentHostels.find(h => h.id === hostelId) || hostels.find(h => h.id === hostelId);
-      if (!targetHostel) {
-        return res.status(404).json({ error: "Hostel not found." });
-      }
-
-      // Update hostel fields
-      targetHostel.managerId = targetManager.id;
-      targetHostel.managerName = targetManager.name;
-      targetHostel.managerPhone = targetManager.phone || targetHostel.managerPhone;
-      targetHostel.managerEmail = targetManager.email || targetHostel.managerEmail;
-
-      await dbUpdateHostel(hostelId, {
-        managerId: targetManager.id,
-        managerName: targetManager.name,
-        managerPhone: targetManager.phone,
-        managerEmail: targetManager.email
-      }, hostels);
-
-      // Persist in local hostel_managers
-      await dbAssignHostelManager(
-        hostelId,
-        targetManager.id,
-        targetManager.name,
-        targetManager.phone,
-        targetManager.email
-      );
-
-      syncStore();
-
-      return res.json({
-        success: true,
-        message: `Manager ${targetManager.name} assigned to hostel "${targetHostel.name}".`,
-        hostel: targetHostel,
-        manager: targetManager
-      });
-    } catch (err: any) {
-      return res.status(500).json({ error: err.message || "Failed to assign hostel manager." });
-    }
-  });
+  app.post('/api/hostel-managers/assign', requireAuth(['admin']), (_req, res) => res.status(410).json({ error: 'Direct manager/hostel profile editing is retired. Use the reviewed residence change workflow.' }));
 
   // 9. Hostel System Validation (Phase 2 automated check before payment)
   app.post("/api/hostel-verifications/validate", async (req: any, res) => {
@@ -7284,17 +7206,10 @@ async function startServer() {
   });
 
   // --- Public/Protected Hostels Endpoints ---
-  app.get("/api/hostels", async (req, res) => {
+  app.get("/api/hostels", (req, res, next) => requestSessionToken(req) ? requireAuth()(req, res, next) : next(), async (req: any, res) => {
     try {
       const list = await dbGetHostels(hostels);
-      const authHeader = requestSessionToken(req);
-      let isAdmin = false;
-      if (authHeader) {
-        const token = requestSessionToken(req);
-        const foundUser = MOCK_USERS.find(u => sessionMatches(u, token));
-        const userRole = (foundUser?.user?.role || foundUser?.role || '').toLowerCase();
-        if (userRole === 'admin') isAdmin = true;
-      }
+      const isAdmin = req.user?.role === 'admin';
 
       if (isAdmin) {
         return res.json(list || hostels || []);
@@ -7340,10 +7255,10 @@ async function startServer() {
         return true;
       });
 
-      return res.json(activeList);
+      return res.json(activeList.map(h => residenceForViewer(h, req.user, getStoreInstance())));
     } catch (err) {
       console.error("Error retrieving hostels from db:", err);
-      return res.json(hostels || []);
+      return res.json((hostels || []).map(h => residenceForViewer(h, req.user, getStoreInstance())));
     }
   });
 
@@ -7438,7 +7353,7 @@ async function startServer() {
 
       const isManager = req.user.role === 'manager';
       const existingId = registrationData.hostelId || registrationData.id;
-      if (existingId && (getStoreInstance().hostels || []).some(h => h.id === existingId)) return res.status(409).json({ error: 'This hostel already exists. Use its authorized edit route.' });
+      if (existingId && (getStoreInstance().hostels || []).some(h => h.id === existingId)) return res.status(409).json({ error: 'This hostel already exists. Submit a residence change request for administrator review.' });
       if (isManager) {
         // Set protected fields before the first database write, not after insertion.
         registrationData.isApproved = false;
@@ -7575,23 +7490,8 @@ async function startServer() {
 
       const allHostels = await dbGetHostels(hostels);
       let target = allHostels.find(h => h.id === id) || hostels.find(h => h.id === id);
-      if (!target) {
-        target = {
-          id,
-          name: req.body?.name || `Hostel ${id}`,
-          location: req.body?.location || 'Campus Zone, Accra',
-          wing: req.body?.wing || 'North Wing',
-          status: isRejection ? 'Rejected' : 'Open',
-          bedsLeft: Number(req.body?.bedsLeft ?? 50),
-          totalCapacity: Number(req.body?.totalCapacity ?? 100),
-          availableSpaces: Number(req.body?.availableSpaces ?? 50),
-          price: Number(req.body?.price ?? 3500),
-          rating: 4.8,
-          isApproved: !isRejection,
-          approvalStatus: isRejection ? 'Rejected' : 'Approved'
-        };
-        await dbCreateHostel(target, hostels);
-      } else {
+      if (!target) return res.status(404).json({ error: 'Registered residence not found.' });
+      {
         if (isRejection) {
           target.isApproved = false;
           target.approvalStatus = 'Rejected';
@@ -7703,76 +7603,7 @@ async function startServer() {
     }
   });
 
-  // --- Manager Operational Requests to Admin Board ---
-  app.get("/api/board-requests", requireAuth(["admin", "manager"]), async (req: any, res) => {
-    try {
-      const all = await dbGetBoardRequests();
-      if (req.user?.role === 'manager') {
-        const filtered = all.filter(r => r.managerId === req.user?.id || r.managerEmail === req.user?.email);
-        return res.json(filtered);
-      }
-      return res.json(all);
-    } catch (err: any) {
-      return res.status(500).json({ error: "Failed to fetch board requests" });
-    }
-  });
-
-  app.post("/api/board-requests", requireAuth(["manager"]), async (req: any, res) => {
-    try {
-      const { subject, category, priority, message, hostelName } = req.body;
-      if (!subject || !message) {
-        return res.status(400).json({ error: "Subject and message are required" });
-      }
-      const newReq = await dbCreateBoardRequest({
-        managerId: req.user?.id || 'manager_101',
-        managerName: req.user?.name || 'Resident Manager',
-        managerEmail: req.user?.email || 'manager@pinevela.com',
-        managerPhone: req.user?.phone || '+233 24 123 4567',
-        managerPhoto: req.user?.photo || req.user?.avatar || '',
-        hostelName: hostelName || 'Registered Property',
-        category: category || 'General Inquiry',
-        priority: priority || 'Normal',
-        subject,
-        message,
-        status: 'Pending'
-      });
-
-      await dbCreateActivity({
-        id: `act-new-${Date.now()}`,
-        text: `Manager ${req.user?.name || 'Anthony Davis'} submitted request to Admin Board: "${subject}"`,
-        time: 'Just now',
-        type: 'info'
-      }, activities);
-
-      syncStore();
-      return res.status(201).json(newReq);
-    } catch (err: any) {
-      return res.status(500).json({ error: err.message || "Failed to create board request" });
-    }
-  });
-
-  app.put("/api/board-requests/:id", requireAuth(["admin"]), async (req: any, res) => {
-    try {
-      const { id } = req.params;
-      const { status, adminNotes } = req.body;
-      const updated = await dbUpdateBoardRequest(id, { status, adminNotes });
-      if (!updated) {
-        return res.status(404).json({ error: "Request not found" });
-      }
-
-      await dbCreateActivity({
-        id: `act-new-${Date.now()}`,
-        text: `Admin updated board request "${updated.subject}" to ${status}`,
-        time: 'Just now',
-        type: 'success'
-      }, activities);
-
-      syncStore();
-      return res.json(updated);
-    } catch (err: any) {
-      return res.status(500).json({ error: err.message || "Failed to update board request" });
-    }
-  });
+  installResidenceRequests(app, requireAuth, residenceRequests, getStoreInstance, syncManagedStore);
 
   // Admin Reject Verification of registered hostel / residence
   app.put("/api/hostels/:id/reject-verification", requireAuth(["admin"]), async (req: any, res) => {
@@ -7784,24 +7615,8 @@ async function startServer() {
       }
       const allHostels = await dbGetHostels(hostels);
       let target = allHostels.find(h => h.id === id) || hostels.find(h => h.id === id);
-      if (!target) {
-        target = {
-          id,
-          name: req.body?.name || `Residence ${id}`,
-          location: req.body?.location || 'Campus Zone, Accra',
-          wing: req.body?.wing || 'North Wing',
-          status: 'Rejected',
-          bedsLeft: Number(req.body?.bedsLeft ?? 50),
-          totalCapacity: Number(req.body?.totalCapacity ?? 100),
-          availableSpaces: Number(req.body?.availableSpaces ?? 50),
-          price: Number(req.body?.price ?? 3500),
-          rating: 4.8,
-          isApproved: false,
-          approvalStatus: 'Rejected',
-          rejectionReason: rawReason
-        };
-        await dbCreateHostel(target, hostels);
-      } else {
+      if (!target) return res.status(404).json({ error: 'Registered residence not found.' });
+      {
         target.isApproved = false;
         target.approvalStatus = 'Rejected';
         target.rejectionReason = rawReason;
@@ -7829,7 +7644,7 @@ async function startServer() {
           read: false
         };
         notifications.unshift(notif);
-        await dbCreateNotification(notif, notifications);
+        await dbCreateNotification(notif, notifications, req.user);
       }
 
       await dbCreateActivity({
@@ -7898,7 +7713,10 @@ async function startServer() {
 
   app.post("/api/storage/upload-hostel-image", requireAuth(["admin", "manager"]), async (req: any, res) => {
     try {
-      return res.json(await imageStorage.save(req.body, bytes => resources.reserveUpload(`${req.user.role}:${req.user.id}`, req.ip || req.socket.remoteAddress || 'unknown', bytes)));
+      const result = await imageStorage.save(req.body, bytes => resources.reserveUpload(`${req.user.role}:${req.user.id}`, req.ip || req.socket.remoteAddress || 'unknown', bytes));
+      const store = getStoreInstance(); store.hostelMedia ||= [];
+      store.hostelMedia.push({ imageUrl: result.imageUrl, managerId: req.user.id, createdAt: new Date().toISOString() });
+      syncManagedStore(); return res.json(result);
     } catch (err: any) {
       if (err instanceof ResourceLimitError) return resourceFailure(res, err);
       if (err instanceof ImageUploadError) return res.status(err.status).json({ error: err.message });
@@ -7917,102 +7735,8 @@ async function startServer() {
     }
   });
 
-  app.post("/api/hostels", requireAuth(["admin"]), async (req: any, res) => {
-    const existing = req.body.id && hostels.find(h => h.id === req.body.id);
-    try {
-      if (existing) req.body = { id: existing.id, ...buildHostelUpdate(req.body, req.user, existing) };
-      else {
-        if (Object.keys(req.body).some(key => retiredHostelFields.has(key))) return res.status(400).json({ error: 'Facilities, amenities and property policies have been retired.' });
-        const phone = internationalPhone(req.body.contactPhone ?? req.body.contact_phone, req.body.contactPhoneCountry ?? req.body.contact_phone_country);
-        req.body.contact_phone = phone.number; req.body.contact_phone_country = phone.country;
-        delete req.body.contactPhone; delete req.body.contactPhoneCountry;
-      }
-    } catch (error) { return res.status(400).json({ error: (error as Error).message }); }
-    // If an id is provided and already exists, update instead of duplicating
-    if (req.body.id) {
-      const existingIdx = hostels.findIndex(h => h.id === req.body.id);
-      if (existingIdx !== -1) {
-        hostels[existingIdx] = {
-          ...hostels[existingIdx],
-          ...req.body,
-          status: req.body.status || hostels[existingIdx].status || 'Open',
-          bedsLeft: Number(req.body.bedsLeft ?? req.body.availableSpaces ?? hostels[existingIdx].bedsLeft ?? 50),
-          totalCapacity: Number(req.body.totalCapacity ?? hostels[existingIdx].totalCapacity ?? 100),
-          availableSpaces: Number(req.body.availableSpaces ?? req.body.bedsLeft ?? hostels[existingIdx].availableSpaces ?? 50),
-          price: Number(req.body.price || req.body.pricing?.defaultFee || hostels[existingIdx].price || 3500),
-          managerName: req.body.managerName || hostels[existingIdx].managerName || 'Resident Manager',
-          managerPhone: req.body.managerPhone || hostels[existingIdx].managerPhone || '+233201234567',
-          image: req.body.image || req.body.imageUrl || hostels[existingIdx].image || 'https://images.unsplash.com/photo-1555854877-bab0e564b8d5?auto=format&fit=crop&w=800&q=80',
-          imageUrl: req.body.imageUrl || req.body.image || hostels[existingIdx].imageUrl || 'https://images.unsplash.com/photo-1555854877-bab0e564b8d5?auto=format&fit=crop&w=800&q=80',
-          isApproved: true,
-          approvalStatus: 'Approved'
-        };
-        await dbUpdateHostel(req.body.id, hostels[existingIdx], hostels);
-        syncStore();
-        return res.json(hostels[existingIdx]);
-      }
-    }
-
-    const defaultPrice = Number(req.body.price || req.body.pricing?.defaultFee || 3500);
-    const newHostel = {
-      id: req.body.id || `hostel-new-${Date.now()}`,
-      name: req.body.name || 'New Hostel Property',
-      location: req.body.location || 'Campus Road, Accra, Ghana',
-      wing: req.body.wing || 'North Wing',
-      status: req.body.status || 'Open',
-      rating: 4.8,
-      bedsLeft: Number(req.body.bedsLeft ?? req.body.availableSpaces ?? req.body.totalCapacity ?? 100),
-      totalCapacity: Number(req.body.totalCapacity || 100),
-      availableSpaces: Number(req.body.availableSpaces ?? req.body.bedsLeft ?? req.body.totalCapacity ?? 100),
-      price: defaultPrice,
-      subscriptionPaid: false,
-      registrationDate: new Date().toISOString().split('T')[0],
-      managerName: req.body.managerName || 'Resident Manager',
-      managerPhone: req.body.managerPhone || '+233201234567',
-      managerEmail: req.body.managerEmail || '',
-      image: req.body.image || req.body.imageUrl || 'https://images.unsplash.com/photo-1555854877-bab0e564b8d5?auto=format&fit=crop&w=800&q=80',
-      imageUrl: req.body.imageUrl || req.body.image || 'https://images.unsplash.com/photo-1555854877-bab0e564b8d5?auto=format&fit=crop&w=800&q=80',
-      description: req.body.description || 'Modern student accommodation community.',
-      isApproved: true,
-      approvalStatus: 'Approved',
-      ...req.body
-    };
-    const saved = await dbCreateHostel(newHostel, hostels);
-    syncStore();
-    await dbCreateActivity({
-      id: `act-new-${Date.now()}`,
-      text: `Admin registered new property: "${saved.name}"`,
-      time: 'Just now',
-      type: 'success'
-    }, activities);
-    syncStore();
-    res.status(201).json(saved);
-  });
-
-  app.put("/api/hostels/:id", requireAuth(["admin", "manager"]), async (req: any, res) => {
-    try {
-      const { id } = req.params;
-      const list = await dbGetHostels(hostels);
-      const existing = list.find(h => h.id === id);
-      if (!existing) return res.status(404).json({ error: "Hostel not found" });
-      if (!canUpdateHostel(req.user, existing)) {
-        return res.status(403).json({ error: "You are not authorized to update this hostel" });
-      }
-      const updates = buildHostelUpdate(req.body, req.user, existing);
-      const updated = await dbUpdateHostel(id, updates, hostels);
-      if (!updated) return res.status(404).json({ error: "Hostel not found" });
-      // syncStore must persist the updated authoritative list, not a stale copy.
-      hostels = list;
-      syncStore();
-      return res.json(updated);
-    } catch (err: any) {
-      if (err instanceof HostelUpdateValidationError) {
-        return res.status(400).json({ error: err.message });
-      }
-      console.error("Error updating hostel:", err);
-      return res.status(500).json({ error: "Failed to update hostel" });
-    }
-  });
+  app.post("/api/hostels", requireAuth(["admin"]), (_req, res) => res.status(410).json({ error: 'Use residence registration for new properties. Existing properties require manager-requested, reviewed approval.' }));
+  app.put("/api/hostels/:id", requireAuth(["admin", "manager"]), (_req, res) => res.status(403).json({ error: 'Direct residence editing is disabled. The assigned manager must submit a change request for administrator review.' }));
 
   // --- Protected Issue Reports Endpoints ---
   app.get("/api/issue-reports", requireAuth(), async (req: any, res) => {
@@ -8290,7 +8014,7 @@ async function startServer() {
         link: '/manager/dashboard'
       };
       notifications.unshift(mgrNotif);
-      await dbCreateNotification(mgrNotif, notifications);
+      await dbCreateNotification(mgrNotif, notifications, (req as any).user);
       if (store.notifications) store.notifications.unshift(mgrNotif);
 
       const stuNotif = {
@@ -8307,7 +8031,7 @@ async function startServer() {
         link: '/resident/dashboard'
       };
       notifications.unshift(stuNotif);
-      await dbCreateNotification(stuNotif, notifications);
+      await dbCreateNotification(stuNotif, notifications, req.user);
       if (store.notifications) store.notifications.unshift(stuNotif);
 
       res.status(201).json(saved);
@@ -8418,7 +8142,7 @@ async function startServer() {
         link: '/staff/dashboard'
       };
       notifications.unshift(staffNotif);
-      await dbCreateNotification(staffNotif, notifications);
+      await dbCreateNotification(staffNotif, notifications, req.user);
       if (store.notifications) store.notifications.unshift(staffNotif);
 
       // 2. Send notification to student/resident that manager reviewed and assigned staff
@@ -8436,7 +8160,7 @@ async function startServer() {
         link: '/resident/dashboard'
       };
       notifications.unshift(resNotif);
-      await dbCreateNotification(resNotif, notifications);
+      await dbCreateNotification(resNotif, notifications, req.user);
       if (store.notifications) store.notifications.unshift(resNotif);
 
       res.json(updated);
@@ -8496,7 +8220,7 @@ async function startServer() {
         link: '/resident/dashboard'
       };
       notifications.unshift(resAcceptNotif);
-      await dbCreateNotification(resAcceptNotif, notifications);
+      await dbCreateNotification(resAcceptNotif, notifications, req.user);
       if (store.notifications) store.notifications.unshift(resAcceptNotif);
 
       // Notify manager
@@ -8517,7 +8241,7 @@ async function startServer() {
         link: '/manager/dashboard'
       };
       notifications.unshift(mgrAcceptNotif);
-      await dbCreateNotification(mgrAcceptNotif, notifications);
+      await dbCreateNotification(mgrAcceptNotif, notifications, req.user);
       if (store.notifications) store.notifications.unshift(mgrAcceptNotif);
 
       res.json(updated);
@@ -8580,7 +8304,7 @@ async function startServer() {
         link: '/manager/dashboard'
       };
       notifications.unshift(mgrDeclineNotif);
-      await dbCreateNotification(mgrDeclineNotif, notifications);
+      await dbCreateNotification(mgrDeclineNotif, notifications, req.user);
       if (store.notifications) store.notifications.unshift(mgrDeclineNotif);
 
       res.json(updated);
@@ -8649,7 +8373,7 @@ async function startServer() {
         link: '/manager/dashboard'
       };
       notifications.unshift(mgrReschedNotif);
-      await dbCreateNotification(mgrReschedNotif, notifications);
+      await dbCreateNotification(mgrReschedNotif, notifications, req.user);
       if (store.notifications) store.notifications.unshift(mgrReschedNotif);
 
       res.json(updated);
@@ -8733,7 +8457,7 @@ async function startServer() {
         link: '/resident/dashboard'
       };
       notifications.unshift(resReschedNotif);
-      await dbCreateNotification(resReschedNotif, notifications);
+      await dbCreateNotification(resReschedNotif, notifications, req.user);
       if (store.notifications) store.notifications.unshift(resReschedNotif);
 
       // Notify staff of approval
@@ -8751,7 +8475,7 @@ async function startServer() {
         link: '/staff/dashboard'
       };
       notifications.unshift(staffReschedNotif);
-      await dbCreateNotification(staffReschedNotif, notifications);
+      await dbCreateNotification(staffReschedNotif, notifications, req.user);
       if (store.notifications) store.notifications.unshift(staffReschedNotif);
 
       res.json(updated);
@@ -8811,7 +8535,7 @@ async function startServer() {
         link: '/staff/dashboard'
       };
       notifications.unshift(staffDecNotif);
-      await dbCreateNotification(staffDecNotif, notifications);
+      await dbCreateNotification(staffDecNotif, notifications, req.user);
       if (store.notifications) store.notifications.unshift(staffDecNotif);
 
       res.json(updated);
@@ -8877,7 +8601,7 @@ async function startServer() {
         link: '/resident/dashboard'
       };
       notifications.unshift(resFixNotif);
-      await dbCreateNotification(resFixNotif, notifications);
+      await dbCreateNotification(resFixNotif, notifications, req.user);
       if (store.notifications) store.notifications.unshift(resFixNotif);
 
       // Notify Manager
@@ -8898,7 +8622,7 @@ async function startServer() {
         link: '/manager/dashboard'
       };
       notifications.unshift(mgrFixNotif);
-      await dbCreateNotification(mgrFixNotif, notifications);
+      await dbCreateNotification(mgrFixNotif, notifications, req.user);
       if (store.notifications) store.notifications.unshift(mgrFixNotif);
 
       res.json(updated);
@@ -9003,7 +8727,7 @@ async function startServer() {
         link: '/manager/dashboard'
       };
       notifications.unshift(mgrConfirmNotif);
-      await dbCreateNotification(mgrConfirmNotif, notifications);
+      await dbCreateNotification(mgrConfirmNotif, notifications, req.user);
       if (store.notifications) store.notifications.unshift(mgrConfirmNotif);
 
       // Notify staff of review
@@ -9023,7 +8747,7 @@ async function startServer() {
         link: '/staff/dashboard'
       };
       notifications.unshift(staffReviewNotif);
-      await dbCreateNotification(staffReviewNotif, notifications);
+      await dbCreateNotification(staffReviewNotif, notifications, req.user);
       if (store.notifications) store.notifications.unshift(staffReviewNotif);
 
       res.json(updated);
@@ -9104,7 +8828,7 @@ async function startServer() {
         link: '/resident/dashboard'
       };
       notifications.unshift(resArchivedNotif);
-      await dbCreateNotification(resArchivedNotif, notifications);
+      await dbCreateNotification(resArchivedNotif, notifications, req.user);
       if (store.notifications) store.notifications.unshift(resArchivedNotif);
 
       res.json(updated);
@@ -9269,7 +8993,7 @@ async function startServer() {
 
       // Create manager notification
       const dispatchTarget = [dispatchInfo.recipientEmail, dispatchInfo.recipientPhone].filter(Boolean).join(' / ');
-      notifications.unshift({
+      notifications.unshift({ adminMessage: req.user?.role === 'admin', senderRole: req.user?.role,
         id: `notif-disp-${Date.now()}`,
         studentId: req.user?.id || 'mgr',
         title: `Room Key Dispatched: ${keyRecord.roomNumber}`,
@@ -9823,7 +9547,7 @@ async function startServer() {
         read: false
       };
       notifications.unshift(residentNotif);
-      await dbCreateNotification(residentNotif, notifications);
+      await dbCreateNotification(residentNotif, notifications, req.user);
 
       // 2. Add activity feed log for Manager and System
       await dbCreateActivity({
@@ -9947,7 +9671,7 @@ async function startServer() {
       const managerId = targetHostel?.managerId || targetHostel?.assignedManagerId;
 
       if (managerId) {
-        notifications.unshift({
+        notifications.unshift({ adminMessage: req.user?.role === 'admin', senderRole: req.user?.role,
           id: `notif-${Date.now()}-mgr-resign`,
           studentId: managerId,
           title: `Staff Resignation Notice`,
@@ -9959,7 +9683,7 @@ async function startServer() {
       }
 
       // Notify the staff member
-      notifications.unshift({
+      notifications.unshift({ adminMessage: req.user?.role === 'admin', senderRole: req.user?.role,
         id: `notif-${Date.now()}-stf-resign`,
         studentId: userId,
         title: `Resignation Processed Successfully`,
@@ -10106,7 +9830,7 @@ async function startServer() {
         staffBargains.unshift(quitRecord);
 
         if (managerId) {
-          notifications.unshift({
+          notifications.unshift({ adminMessage: req.user?.role === 'admin', senderRole: req.user?.role,
             id: `notif-${Date.now()}-mgr-quit`,
             studentId: managerId,
             title: `Staff Resignation Notice`,
@@ -10117,7 +9841,7 @@ async function startServer() {
           });
         }
 
-        notifications.unshift({
+        notifications.unshift({ adminMessage: req.user?.role === 'admin', senderRole: req.user?.role,
           id: `notif-${Date.now()}-stf-quit`,
           studentId: userId,
           title: `Resignation Processed`,
@@ -10186,7 +9910,7 @@ async function startServer() {
       staffBargains.unshift(newBargain);
 
       if (managerId) {
-        notifications.unshift({
+        notifications.unshift({ adminMessage: req.user?.role === 'admin', senderRole: req.user?.role,
           id: `notif-${Date.now()}-mgr-bargain`,
           studentId: managerId,
           title: `Staff Retention & Bargain Proposal`,
@@ -10197,7 +9921,7 @@ async function startServer() {
         });
       }
 
-      notifications.unshift({
+      notifications.unshift({ adminMessage: req.user?.role === 'admin', senderRole: req.user?.role,
         id: `notif-${Date.now()}-stf-bargain-sub`,
         studentId: userId,
         title: `Bargain Proposal Forwarded to Manager`,
@@ -10260,7 +9984,7 @@ async function startServer() {
         }
 
         // Notify the staff member
-        notifications.unshift({
+        notifications.unshift({ adminMessage: req.user?.role === 'admin', senderRole: req.user?.role,
           id: `notif-${Date.now()}-deal-accepted`,
           studentId: bargain.staffId,
           title: `Deal Accepted by Manager! 🎉`,
@@ -10282,7 +10006,7 @@ async function startServer() {
         bargain.resolvedAt = new Date().toISOString();
 
         // Notify the staff member that deal was rejected and they can choose to quit or stay
-        notifications.unshift({
+        notifications.unshift({ adminMessage: req.user?.role === 'admin', senderRole: req.user?.role,
           id: `notif-${Date.now()}-deal-rejected`,
           studentId: bargain.staffId,
           title: `Bargain Proposal Declined by Manager`,
@@ -10345,7 +10069,7 @@ async function startServer() {
         }
 
         if (bargain.managerId) {
-          notifications.unshift({
+          notifications.unshift({ adminMessage: req.user?.role === 'admin', senderRole: req.user?.role,
             id: `notif-${Date.now()}-mgr-quit-post`,
             studentId: bargain.managerId,
             title: `Staff Final Decision: Resigned`,
@@ -10356,7 +10080,7 @@ async function startServer() {
           });
         }
 
-        notifications.unshift({
+        notifications.unshift({ adminMessage: req.user?.role === 'admin', senderRole: req.user?.role,
           id: `notif-${Date.now()}-stf-quit-post`,
           studentId: userId,
           title: `Resignation Finalized`,
@@ -10384,7 +10108,7 @@ async function startServer() {
         bargain.resolvedAt = new Date().toISOString();
 
         if (bargain.managerId) {
-          notifications.unshift({
+          notifications.unshift({ adminMessage: req.user?.role === 'admin', senderRole: req.user?.role,
             id: `notif-${Date.now()}-mgr-stay`,
             studentId: bargain.managerId,
             title: `Staff Final Decision: Staying on Duty`,
@@ -10395,7 +10119,7 @@ async function startServer() {
           });
         }
 
-        notifications.unshift({
+        notifications.unshift({ adminMessage: req.user?.role === 'admin', senderRole: req.user?.role,
           id: `notif-${Date.now()}-stf-stay`,
           studentId: userId,
           title: `Staying on Duty Confirmed`,
@@ -10658,7 +10382,7 @@ async function startServer() {
       const recipientId = targetMeeting.studentId || targetMeeting.requesterId;
       if (recipientId) {
         const notifStatus = status || 'Updated';
-        await dbCreateNotification({
+        await dbCreateNotification({ adminMessage: req.user?.role === 'admin', senderRole: req.user?.role,
           id: `notif-meet-${Date.now()}`,
           studentId: recipientId,
           title: `Meeting Request ${notifStatus}`,

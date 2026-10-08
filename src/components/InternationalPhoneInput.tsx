@@ -2,8 +2,8 @@ import { useEffect, useId, useRef, useState } from 'react';
 import { ChevronDown, Check } from 'lucide-react';
 import { internationalPhone, phoneCountries, getCountryCallingCode, type CountryCode } from '../../internationalPhone';
 
-type Props = { value: string; country: CountryCode; onChange: (value: string, country: CountryCode) => void; error?: string };
-export default function InternationalPhoneInput({ value, country, onChange, error }: Props) {
+type Props = { label?: string; value: string; country: CountryCode; onChange: (value: string, country: CountryCode) => void; error?: string };
+export default function InternationalPhoneInput({ value, country, onChange, error, label = 'Primary Contact Phone' }: Props) {
   const id = useId(), root = useRef<HTMLDivElement>(null), searchInput = useRef<HTMLInputElement>(null);
   const [open, setOpen] = useState(false), [search, setSearch] = useState(''), [inputError, setInputError] = useState(''), [touched, setTouched] = useState(false);
   const selected = phoneCountries.find(item => item.code === country)!;
@@ -19,7 +19,7 @@ export default function InternationalPhoneInput({ value, country, onChange, erro
     document.addEventListener('pointerdown', outside); return () => document.removeEventListener('pointerdown', outside);
   }, [open]);
   return <div ref={root} className="relative space-y-1.5" onKeyDown={event => { if (open && event.key === 'Escape') { event.stopPropagation(); setOpen(false); root.current?.querySelector('button')?.focus(); } }}>
-    <label htmlFor={id} className="text-xs font-bold text-slate-700">Primary Contact Phone <span className="text-rose-500">*</span></label>
+    <label htmlFor={id} className="text-xs font-bold text-slate-700">{label} <span className="text-rose-500">*</span></label>
     <div className={`flex min-w-0 rounded-xl border bg-slate-50 ${message ? 'border-rose-400' : 'border-slate-200'}`}>
       <button type="button" aria-label={`Phone country: ${selected.name} +${selected.callingCode}`} aria-expanded={open} aria-controls={`${id}-countries`} onClick={() => { setSearch(''); setOpen(v => !v); }} className="flex shrink-0 items-center gap-1 border-r border-slate-200 px-3 py-2.5 text-xs font-bold text-slate-800"><span>{country} +{getCountryCallingCode(country)}</span><ChevronDown size={14} /></button>
       <input id={id} type="tel" inputMode="numeric" autoComplete="tel-national" aria-label="Primary contact phone number" aria-describedby={message ? `${id}-error` : `${id}-help`} aria-invalid={!!message} value={value} maxLength={17}

@@ -2363,7 +2363,6 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                       {filteredHostels.map((hostel: any, idx: number) => {
                         const coverImg = hostel?.image || hostel?.imageUrl || hostel?.exteriorPhotoUrl || hostel?.images?.[0] || 'https://images.unsplash.com/photo-1555854877-bab0e564b8d5?auto=format&fit=crop&w=800&q=80';
-                        const capacity = hostel.availableSpaces ?? hostel.bedsLeft ?? hostel.totalCapacity ?? 'Available';
                         const managerName = hostel.managerName || hostel.managerEmail || 'Verified Manager';
 
                         return (
@@ -2380,9 +2379,6 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                                   className="w-full h-full object-cover"
                                 />
                                 <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5">
-                                  <span className="px-2.5 py-0.5 bg-blue-900/90 backdrop-blur-sm text-white text-[10px] font-extrabold rounded-full">
-                                    {capacity} Spaces
-                                  </span>
                                   {hostel.hostelType && (
                                     <span className="px-2.5 py-0.5 bg-white/90 backdrop-blur-sm text-slate-800 text-[10px] font-black rounded-full shadow-xs">
                                       {hostel.hostelType}
@@ -5037,9 +5033,6 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                     >
                       <X className="w-5 h-5" />
                     </button>
-                    <div className="absolute bottom-3 left-3 bg-blue-900/90 text-white text-xs font-black px-3 py-1 rounded-full backdrop-blur-sm border border-blue-400/30">
-                      {viewingHostelModal?.availableSpaces ?? viewingHostelModal?.bedsLeft ?? viewingHostelModal?.totalCapacity ?? 'Available'} Bedspaces Open
-                    </div>
                   </div>
 
                   {galleryList.length > 1 && (
@@ -5067,27 +5060,12 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                   <span className="text-[10px] font-black uppercase tracking-wider text-blue-800 bg-blue-50 px-2.5 py-0.5 rounded-md border border-blue-200">
                     {viewingHostelModal?.hostelType || viewingHostelModal?.wing || 'Student Residence'}
                   </span>
-                  <span className="text-[10px] font-bold text-slate-500">
-                    ID: {viewingHostelModal?.id || 'RES-01'}
-                  </span>
                 </div>
                 <h3 className="text-xl font-black text-slate-900 mt-1">{viewingHostelModal?.name}</h3>
                 <p className="text-xs text-slate-500 font-medium flex items-center gap-1 mt-1">
                   <MapPin className="w-3.5 h-3.5 text-rose-500 shrink-0" />
                   <span>{viewingHostelModal?.digitalAddress ? `${viewingHostelModal.digitalAddress} • ` : ''}{viewingHostelModal?.location || viewingHostelModal?.addressLine1 || 'PineVela Campus Zone'}</span>
                 </p>
-              </div>
-
-              {/* Price & Capacity Summary */}
-              <div className="grid grid-cols-2 gap-2.5 text-xs bg-emerald-50/80 p-3.5 rounded-2xl border border-emerald-200/80">
-                <div>
-                  <span className="text-[10px] font-bold text-slate-500 uppercase block">Open Bedspaces</span>
-                  <span className="font-extrabold text-blue-900">{viewingHostelModal?.availableSpaces ?? viewingHostelModal?.bedsLeft ?? viewingHostelModal?.totalCapacity ?? 10} Open</span>
-                </div>
-                <div>
-                  <span className="text-[10px] font-bold text-slate-500 uppercase block">Total Capacity</span>
-                  <span className="font-bold text-slate-700">{viewingHostelModal?.totalCapacity || 50} Beds</span>
-                </div>
               </div>
 
               {viewingHostelModal?.description && (

@@ -1,3 +1,4 @@
+import { ManagerResidenceRequests } from './ResidenceChangeRequests';
 import { routePopupFeedback } from '../lib/feedback';
 import RouteSkeleton from './RouteSkeleton';
 import DashboardOverlay from './DashboardOverlay';
@@ -180,11 +181,6 @@ export default function PageManagerDashboard() {
 
   // Board requests state
   const [boardRequests, setBoardRequests] = useState<any[]>([]);
-  const [newRequestSubject, setNewRequestSubject] = useState('');
-  const [newRequestCategory, setNewRequestCategory] = useState('Room Capacity Adjustment');
-  const [newRequestPriority, setNewRequestPriority] = useState<'Normal' | 'High' | 'Urgent'>('Normal');
-  const [newRequestMessage, setNewRequestMessage] = useState('');
-  const [isSubmittingRequest, setIsSubmittingRequest] = useState(false);
 
   // Digital Room Keys & Dispatch state
   const [roomKeysList, setRoomKeysList] = useState<any[]>([]);
@@ -435,94 +431,23 @@ export default function PageManagerDashboard() {
     }, 2200);
   };
 
-  // Helper to extract normalized blocks from registered hostel
+  // Display the registered structure without inventing room types, floors or bed counts.
   const getNormalizedBlocks = (property: any) => {
-    if (!property) return [];
-    if (Array.isArray(property.blocksList) && property.blocksList.length > 0) {
-      return property.blocksList.map((b: any, idx: number) => {
-        const totalRooms = b.totalRooms || 20;
-        const floors = b.floors || 4;
-        const bedsPerRoom = b.bedsPerRoom || 3;
-        const roomsPerFloor = Math.ceil(totalRooms / floors);
-        return {
-          id: b.id || `block-${idx + 1}`,
-          blockName: b.name || `Block ${String.fromCharCode(65 + idx)} (${idx === 0 ? 'Alpha' : 'Beta'})`,
-          floors,
-          totalRooms,
-          roomsPerFloor,
-          bedsPerRoom,
-          totalBeds: totalRooms * bedsPerRoom,
-          roomPrefix: b.roomPrefix || String.fromCharCode(65 + idx),
-          startNum: b.startNum || (idx + 1) * 100 + 1,
-          genderCategory: idx === 0 ? 'Male & Female (Co-Ed Wing)' : 'Female Wing & Executive',
-          roomTypes: [
-            { type: `${bedsPerRoom} in a Room (Standard)`, spaces: Math.round(totalRooms * bedsPerRoom * 0.7) },
-            { type: '2 in a Room (Deluxe Ensuite)', spaces: Math.round(totalRooms * bedsPerRoom * 0.2) },
-            { type: '1 in a Room (Executive Private)', spaces: Math.round(totalRooms * bedsPerRoom * 0.1) }
-          ],
-        };
-      });
-    }
-    
-    if (Array.isArray(property.blocks) && property.blocks.length > 0) {
-      return property.blocks.map((b: any, idx: number) => {
-        const bedsPerRoom = b.bedsPerRoom || 3;
-        const totalRooms = b.totalRooms || 20;
-        return {
-          id: b.id || `block-${idx + 1}`,
-          blockName: b.blockName || b.name || `Block ${String.fromCharCode(65 + idx)}`,
-          floors: b.floors || 4,
-          totalRooms,
-          roomsPerFloor: b.roomsPerFloor || Math.ceil(totalRooms / (b.floors || 4)),
-          bedsPerRoom,
-          totalBeds: b.totalBeds || (totalRooms * bedsPerRoom),
-          roomPrefix: b.roomPrefix || String.fromCharCode(65 + idx),
-          startNum: b.startNum || (idx + 1) * 100 + 1,
-          genderCategory: b.genderCategory || 'Mixed Community',
-          roomTypes: b.roomTypes || [
-            { type: `${bedsPerRoom} in a Room (Standard)`, spaces: totalRooms * bedsPerRoom }
-          ],
-        };
-      });
-    }
-
-    const cap = property.totalCapacity || property.capacity || 1200;
-    return [
-      {
-        id: 'block-1',
-        blockName: 'Block A (Alpha)',
-        floors: 4,
-        totalRooms: Math.ceil(cap / 6),
-        roomsPerFloor: Math.ceil(cap / 24),
-        bedsPerRoom: 3,
-        totalBeds: Math.ceil(cap / 2),
-        roomPrefix: 'A',
-        startNum: 101,
-        genderCategory: 'Male & Female (Co-Ed)',
-        roomTypes: [
-          { type: '3 in a Room (Standard)', spaces: Math.ceil(cap / 2) }
-        ],
-      },
-      {
-        id: 'block-2',
-        blockName: 'Block B (Beta)',
-        floors: 4,
-        totalRooms: Math.ceil(cap / 6),
-        roomsPerFloor: Math.ceil(cap / 24),
-        bedsPerRoom: 3,
-        totalBeds: Math.ceil(cap / 2),
-        roomPrefix: 'B',
-        startNum: 201,
-        genderCategory: 'Executive & Quiet Wing',
-        roomTypes: [
-          { type: '3 in a Room (Standard)', spaces: Math.ceil(cap / 2) }
-        ],
-      }
-    ];
+    const blocks = Array.isArray(property?.blocksList) && property.blocksList.length ? property.blocksList : Array.isArray(property?.blocks) ? property.blocks : [];
+    return blocks.map((block: any) => {
+      const totalRooms = Number(block.totalRooms ?? (Array.isArray(block.rooms) ? block.rooms.length : block.rooms) ?? 0);
+      const floors = Array.isArray(block.floors) ? block.floors.length : Number(block.floors ?? block.totalFloors ?? 0);
+      const bedsPerRoom = Number(block.bedsPerRoom ?? 0);
+      const totalBeds = Number(block.totalBeds ?? totalRooms * bedsPerRoom);
+      return { ...block, blockName: block.name || block.blockName || '', totalRooms, floors, bedsPerRoom, totalBeds,
+        roomsPerFloor: Number(block.roomsPerFloor ?? (floors > 0 ? Math.ceil(totalRooms / floors) : 0)),
+        genderCategory: block.genderCategory || block.gender || '',
+        roomTypes: Array.isArray(block.roomTypes) ? block.roomTypes : bedsPerRoom > 0 && totalRooms > 0 ? [{ type: `${bedsPerRoom} beds per room`, spaces: totalBeds }] : [] };
+    });
   };
 
   const propertyBlocks = getNormalizedBlocks(primaryProperty);
-  // Staff assignments use saved names only; display fallback blocks are not assignments.
+  // Staff assignments use saved block names only.
   const staffWingNames = useMemo(() => {
     const blocks = primaryProperty?.blocksList?.length ? primaryProperty.blocksList : primaryProperty?.blocks;
     if (!Array.isArray(blocks)) return [];
@@ -537,36 +462,6 @@ export default function PageManagerDashboard() {
   useEffect(() => {
     if (managerUpdatedBlock && managerUpdatedBlock !== 'All Blocks' && !staffWingNames.includes(managerUpdatedBlock)) setManagerUpdatedBlock('');
   }, [staffWingNames, managerUpdatedBlock]);
-
-  const handleSendBoardRequest = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newRequestSubject.trim() || !newRequestMessage.trim()) {
-      triggerToast('Please provide both a subject and message.');
-      return;
-    }
-    setIsSubmittingRequest(true);
-    try {
-      const primaryProp = primaryProperty?.name || 'Registered Residence';
-      const created = await apiFetch('/api/board-requests', {
-        method: 'POST',
-        body: JSON.stringify({
-          subject: newRequestSubject.trim(),
-          category: newRequestCategory,
-          priority: newRequestPriority,
-          message: newRequestMessage.trim(),
-          hostelName: primaryProp
-        })
-      });
-      setBoardRequests(prev => [created, ...prev]);
-      setNewRequestSubject('');
-      setNewRequestMessage('');
-      triggerToast('Request transmitted to PineVela Admin Board successfully!');
-    } catch (err: any) {
-      triggerToast(err.message || 'Failed to submit request to admin board.');
-    } finally {
-      setIsSubmittingRequest(false);
-    }
-  };
 
   const handleSaveProfile = async (updatedProfile: any) => {
     try {
@@ -1266,8 +1161,8 @@ export default function PageManagerDashboard() {
                 {/* Metrics Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                   {[
-                    { label: 'Total Capacity', value: `${(primaryProperty?.totalCapacity || 1200).toLocaleString()} Beds`, sub: `${propertyBlocks.length} Physical Blocks • Verified Wings`, icon: Building2, color: 'bg-blue-600 text-white' },
-                    { label: 'Available Beds', value: `${(availableBeds || primaryProperty?.totalCapacity || 1200).toLocaleString()} Available`, sub: 'Ready for resident allocation', icon: Users, color: 'bg-emerald-600 text-white' },
+                    { label: 'Total Capacity', value: `${(primaryProperty?.totalCapacity ?? primaryProperty?.capacity ?? 0).toLocaleString()} Beds`, sub: `${propertyBlocks.length} Physical Blocks • Verified Wings`, icon: Building2, color: 'bg-blue-600 text-white' },
+                    { label: 'Available Beds', value: `${availableBeds.toLocaleString()} Available`, sub: 'Ready for resident allocation', icon: Users, color: 'bg-emerald-600 text-white' },
                     { label: 'Staff On Duty', value: `${staffList.filter(s => s.status === 'Active').length} Personnel`, sub: `${staffList.length} Total Enrolled Staff`, icon: UserPlus, color: 'bg-indigo-600 text-white' },
                     { 
                       label: 'Active Tickets', 
@@ -1434,8 +1329,8 @@ export default function PageManagerDashboard() {
                     </div>
                     <button
                       onClick={() => {
-                        setNewRequestCategory('General Hostel Inquiry');
-                        setNewRequestSubject(`Request update to residence details: ${primaryProperty?.name || 'My Hostel'}`);
+
+
                         setActiveTab('notifications');
                       }}
                       className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl transition-all shadow-sm shrink-0 cursor-pointer flex items-center gap-1.5"
@@ -1492,7 +1387,7 @@ export default function PageManagerDashboard() {
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                           <div className="p-4 bg-white border border-slate-100 rounded-2xl shadow-sm text-center">
                             <span className="text-[10px] font-bold uppercase text-slate-400">Total Beds</span>
-                            <span className="block text-xl font-black text-slate-900 mt-0.5">{(p.totalCapacity || 1200).toLocaleString()}</span>
+                            <span className="block text-xl font-black text-slate-900 mt-0.5">{(p.totalCapacity ?? p.capacity ?? 0).toLocaleString()}</span>
                           </div>
                           <div className="p-4 bg-white border border-slate-100 rounded-2xl shadow-sm text-center">
                             <span className="text-[10px] font-bold uppercase text-slate-400">Total Blocks</span>
@@ -1564,8 +1459,8 @@ export default function PageManagerDashboard() {
                   </div>
                   <button
                     onClick={() => {
-                      setNewRequestCategory('Room Capacity Adjustment');
-                      setNewRequestSubject(`Request block adjustment for ${primaryProperty?.name || 'Hostel'}`);
+
+
                       setActiveTab('notifications');
                     }}
                     className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl transition-colors shadow-xs shrink-0 cursor-pointer flex items-center gap-1.5"
@@ -1600,8 +1495,8 @@ export default function PageManagerDashboard() {
                   }}
                   onTriggerToast={triggerToast}
                   onRequestBlockChange={() => {
-                    setNewRequestCategory('Room Capacity Adjustment');
-                    setNewRequestSubject(`Request block adjustment for ${primaryProperty?.name || 'Hostel'}`);
+
+
                     setActiveTab('notifications');
                   }}
                 />
@@ -2864,144 +2759,7 @@ export default function PageManagerDashboard() {
                       )}
                     </div>
 
-                    <h2 className="text-2xl font-black text-slate-800 tracking-tight">Admin Board Direct Line</h2>
-
-                    {/* MANAGER TO ADMIN BOARD REQUESTS */}
-                    <div className="bg-white/90 border border-blue-200/70 p-6 md:p-8 rounded-3xl backdrop-blur-xl shadow-lg space-y-6">
-                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 border-b border-blue-100 pb-4">
-                        <div>
-                          <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                            <MessageSquare className="w-5 h-5 text-blue-600" />
-                            <span>Send Operational Request to Admin Board</span>
-                          </h3>
-                          <p className="text-xs text-slate-500">Submit official requests, capacity updates, inquiries, or urgent alerts directly to the PineVela administrative board.</p>
-                        </div>
-                        <span className="text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200 px-3 py-1 rounded-full self-start md:self-auto">
-                          Direct Line to Admin
-                        </span>
-                      </div>
-
-                      <form onSubmit={handleSendBoardRequest} className="space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div className="md:col-span-1">
-                        <label className="block text-xs font-bold text-slate-700 mb-1">Request Category</label>
-                        <select
-                          value={newRequestCategory}
-                          onChange={(e) => setNewRequestCategory(e.target.value)}
-                          className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:border-blue-600 focus:bg-white transition-all"
-                        >
-                          <option value="Room Capacity Adjustment">Room Capacity Adjustment</option>
-                          <option value="Property Details Revision">Property Details Revision</option>
-                          <option value="Verification & Compliance">Verification & Compliance</option>
-                          <option value="Urgent Maintenance / Inspection">Urgent Maintenance / Inspection</option>
-                          <option value="General Inquiry">General Inquiry</option>
-                        </select>
-                      </div>
-
-                      <div className="md:col-span-1">
-                        <label className="block text-xs font-bold text-slate-700 mb-1">Priority Level</label>
-                        <select
-                          value={newRequestPriority}
-                          onChange={(e) => setNewRequestPriority(e.target.value as any)}
-                          className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:border-blue-600 focus:bg-white transition-all"
-                        >
-                          <option value="Normal">Normal Priority</option>
-                          <option value="High">High Priority</option>
-                          <option value="Urgent">Urgent Priority</option>
-                        </select>
-                      </div>
-
-                      <div className="md:col-span-1">
-                        <label className="block text-xs font-bold text-slate-700 mb-1">Request Subject</label>
-                        <input
-                          type="text"
-                          value={newRequestSubject}
-                          onChange={(e) => setNewRequestSubject(e.target.value)}
-                          placeholder="e.g., Request to add 10 beds to North Wing"
-                          className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:border-blue-600 focus:bg-white transition-all"
-                          required
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 mb-1">Detailed Explanation / Justification</label>
-                      <textarea
-                        rows={3}
-                        value={newRequestMessage}
-                        onChange={(e) => setNewRequestMessage(e.target.value)}
-                        placeholder="Provide relevant details or documentation regarding your operational request..."
-                        className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:border-blue-600 focus:bg-white transition-all resize-none"
-                        required
-                      />
-                    </div>
-
-                    <div className="flex justify-end">
-                      <button
-                        type="submit"
-                        disabled={isSubmittingRequest}
-                        className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-bold text-xs py-2.5 px-6 rounded-xl shadow-md transition-all cursor-pointer disabled:opacity-50"
-                      >
-                        <Send className="w-3.5 h-3.5" />
-                        <span>{isSubmittingRequest ? 'Transmitting...' : 'Send Request to Admin Board'}</span>
-                      </button>
-                    </div>
-                  </form>
-
-                  {/* Sent Requests Audit */}
-                  <div className="pt-4 border-t border-slate-100">
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3 flex items-center justify-between">
-                      <span>Your Sent Requests to Admin Board</span>
-                      <span className="text-[10px] font-bold bg-slate-100 px-2 py-0.5 rounded-full">{boardRequests.length} Total</span>
-                    </h4>
-
-                    {boardRequests.length === 0 ? (
-                      <div className="text-center py-8 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
-                        <p className="text-xs text-slate-400">No requests sent to the Admin Board yet.</p>
-                      </div>
-                    ) : (
-                      <div className="space-y-3">
-                        {boardRequests.map((req: any, i: number) => (
-                          <div key={`${req.id || 'board'}-${i}`} className="bg-slate-50/80 border border-slate-200 p-4 rounded-2xl flex flex-col md:flex-row md:items-start justify-between gap-3">
-                            <div className="space-y-1.5 flex-1">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${
-                                  req.status === 'Resolved' ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' :
-                                  req.status === 'Acknowledged' ? 'bg-blue-100 text-blue-800 border border-blue-200' :
-                                  'bg-amber-100 text-amber-800 border border-amber-200'
-                                }`}>
-                                  Status: {req.status || 'Pending'}
-                                </span>
-                                <span className="text-[10px] font-semibold text-slate-600 bg-white border border-slate-200 px-2 py-0.5 rounded">
-                                  {req.category}
-                                </span>
-                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${
-                                  req.priority === 'Urgent' ? 'bg-red-100 text-red-700' :
-                                  req.priority === 'High' ? 'bg-orange-100 text-orange-700' :
-                                  'bg-slate-200 text-slate-700'
-                                }`}>
-                                  {req.priority} Priority
-                                </span>
-                                <span className="text-[10px] text-slate-400">
-                                  {req.createdAt ? new Date(req.createdAt).toLocaleDateString() : 'Recent'}
-                                </span>
-                              </div>
-                              <h5 className="text-sm font-bold text-slate-900">{req.subject}</h5>
-                              <p className="text-xs text-slate-600 leading-relaxed">{req.message}</p>
-
-                              {req.adminNotes && (
-                                <div className="mt-2 bg-emerald-50 border border-emerald-200 p-2.5 rounded-xl">
-                                  <p className="text-[10px] font-bold text-emerald-800 uppercase tracking-wider">Admin Board Response:</p>
-                                  <p className="text-xs text-emerald-900 mt-0.5">{req.adminNotes}</p>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
+                    <ManagerResidenceRequests />
                 </>
                 )}
               </div>

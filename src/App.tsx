@@ -1,3 +1,5 @@
+import ManagerSecretKey from './components/ManagerSecretKey';
+import AdminMessageNotice from './components/AdminMessageNotice';
 import ApprovalKeyPrompt from './components/ApprovalKeyPrompt';
 import FormFeedback from './components/FormFeedback';
 import { PlatformSettingsProvider, PlatformAccessBoundary } from './context/PlatformSettingsContext';
@@ -161,9 +163,6 @@ function AppContent() {
                 selectedHostel={selectedPublicHostel}
                 onSelectHostel={(hostel) => setSelectedPublicHostel(hostel)}
                 onCloseDrawer={() => setSelectedPublicHostel(null)}
-                onNavigate={(screen) => {
-                  navigate('/login');
-                }}
               />
             </PageWrapper>
           }
@@ -376,6 +375,8 @@ export default function App() {
                     <ThemeDock />
                     <FormFeedback />
                     <ApprovalKeyPrompt />
+                    <AdminMessageNotice />
+                    <ManagerSecretKey />
                     <AccountAccessNotice />
                     <div className="flex-1 z-10 flex flex-col">
                       <AppContent />

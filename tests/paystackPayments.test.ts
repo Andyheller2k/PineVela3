@@ -2,7 +2,7 @@ import { buildWipePlan } from '../adminWipeScope.js';
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import crypto from 'node:crypto';
-import { PaystackPayments, PaymentError, addMonths, validPaystackSignature, marketAccessPaid, paystackConfig } from '../paystackPayments.js';
+import { PaystackPayments, PaymentError, addMonths, validPaystackSignature, marketAccessPaid, paystackConfig, paymentOrigin } from '../paystackPayments.js';
 import { effectiveMarketPlan, PLAN_LIMITS } from '../marketPlans.js';
 import { publicPlatformSettings, validatePlatformSettings } from '../platformSettings.js';
 function setup() {
@@ -18,6 +18,48 @@ function setup() {
   }, () => now);
   return { actor, seller, store, payments, requests, setEvidence: (value: any) => evidence = value, advance: (value: number) => now = value, now: () => now };
 }
+test('Production-build payment returns allow actual localhost peers and reject remote or forwarded origin spoofing', () => {
+  setup(); process.env.NODE_ENV = 'production'; process.env.PINEVELA_PUBLIC_ORIGIN = '';
+  const request = (host: string, peer = '127.0.0.1') => ({ get: (name: string) => name === 'host' ? host : 'https://attacker.invalid', socket: { remoteAddress: peer }, headers: { 'x-forwarded-host': 'localhost:3000', 'x-forwarded-for': '127.0.0.1', 'x-forwarded-proto': 'https' } });
+  try {
+    assert.equal(paymentOrigin(request('localhost:3000')), 'http://localhost:3000');
+    assert.equal(paymentOrigin(request('127.0.0.1:4500')), 'http://127.0.0.1:4500');
+    assert.equal(paymentOrigin(request('[::1]:3000', '::1')), 'http://[::1]:3000');
+    assert.throws(() => paymentOrigin());
+    for (const [host, peer] of [['localhost:3000', '203.0.113.1'], ['attacker.invalid', '127.0.0.1'], ['user:secret@localhost:3000', '127.0.0.1'], ['localhost:3000/path', '127.0.0.1']]) assert.throws(() => paymentOrigin(request(host, peer)));
+    process.env.PINEVELA_PUBLIC_ORIGIN = 'https://pinevela.example'; assert.equal(paymentOrigin(request('attacker.invalid', '203.0.113.1')), 'https://pinevela.example');
+    for (const origin of ['http://pinevela.example', 'https://user:password@pinevela.example', 'https://pinevela.example/path', 'https://pinevela.example?redirect=evil', 'https://pinevela.example#evil']) { process.env.PINEVELA_PUBLIC_ORIGIN = origin; assert.throws(() => paymentOrigin(request('localhost:3000'))); }
+  } finally { process.env.NODE_ENV = 'test'; process.env.PINEVELA_PUBLIC_ORIGIN = 'http://localhost:3000'; }
+});
+test('Zero-total activation works in production without Paystack or a return origin, while positive fees cannot be forged free', async () => {
+  const f = setup(); f.store.platformSettings.registrationFee = 0; f.store.platformSettings.semesterFee = 0; f.store.platformSettings.subscriptionPrices.pro = 0;
+  process.env.NODE_ENV = 'production'; process.env.PAYSTACK_SECRET_KEY = ''; process.env.PINEVELA_PUBLIC_ORIGIN = 'invalid configuration';
+  try {
+    await assert.rejects(f.payments.initialize({ ...f.actor, email: 'foreign@example.test' }, { purpose: 'activation', amount: 0 }), (e: any) => e.status === 403);
+    const free = await f.payments.initialize(f.actor, { purpose: 'activation', plan: 'pro' });
+    assert.equal(free.paid, true); assert.equal(free.paymentRequired, false); assert.equal(free.mode, 'free'); assert.equal(f.requests.length, 0); assert(marketAccessPaid(f.store, f.seller, f.now()));
+    assert.equal((await f.payments.verify(f.actor, free.reference)).paid, true); assert.equal(f.requests.length, 0);
+    f.store.platformSettings.subscriptionPrices.pro = 10;
+    await assert.rejects(f.payments.initialize(f.actor, { purpose: 'subscription', plan: 'pro', amount: 0, paid: true }), (e: any) => e.status === 503);
+    assert.equal(f.store.paymentTransactions.length, 1);
+  } finally { process.env.NODE_ENV = 'test'; }
+});
+test('Mixed activation fees charge only positive components and bind the localhost callback in a production build', async () => {
+  const f = setup(); f.store.platformSettings.registrationFee = 0; f.store.platformSettings.subscriptionPrices.star = 0;
+  process.env.NODE_ENV = 'production'; process.env.PAYSTACK_SECRET_KEY = ['sk', 'live', 'isolated'].join('_'); process.env.PINEVELA_PUBLIC_ORIGIN = '';
+  try {
+    const quote = await f.payments.initialize(f.actor, { purpose: 'activation', plan: 'star', amount: 0 }, { get: () => 'localhost:3000', socket: { remoteAddress: '127.0.0.1' } });
+    assert.equal(quote.paymentRequired, true); assert.equal(quote.amount, 123); assert.equal(f.requests[0].body.amount, 12300); assert.equal(f.requests[0].body.callback_url, 'http://localhost:3000/api/payments/paystack/callback'); assert(!f.seller.registrationFeePaid);
+  } finally { process.env.NODE_ENV = 'test'; }
+});
+test('Free activation can recover a failed disk commit without contacting a payment provider', async () => {
+  const f = setup(); f.store.platformSettings.registrationFee = 0; f.store.platformSettings.semesterFee = 0;
+  let commits = 0;
+  const payments = new PaystackPayments(() => f.store, () => { if (++commits === 2) throw new Error('Isolated disk failure'); }, async () => { assert.fail('A free checkout must not call Paystack'); }, f.now);
+  await assert.rejects(payments.initialize(f.actor, { purpose: 'activation', plan: 'default' }), /Isolated disk failure/);
+  assert(!f.seller.registrationFeePaid); assert.equal(f.store.paymentTransactions[0].status, 'pending');
+  const restored = await payments.verify(f.actor, f.store.paymentTransactions[0].reference); assert.equal(restored.paid, true); assert.equal(restored.paymentRequired, false);
+});
 test('Prices are validated, configurable for all plans and preserve current values on unrelated saves', () => {
   const f = setup(), prices = publicPlatformSettings(f.store);
   assert.equal(prices.semesterFee, 123); assert.deepEqual(prices.subscriptionPrices, { default: 0, star: 37.5, pro: 71 });

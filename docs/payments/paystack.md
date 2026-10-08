@@ -4,10 +4,10 @@ Set these **locally** in `.env`; the file is ignored by Git:
 
 ```
 PAYSTACK_SECRET_KEY=
-PINEVELA_PUBLIC_ORIGIN=http://localhost:3000
+PINEVELA_PUBLIC_ORIGIN=
 ```
 
-Put the actual secret in the first variable locally. Do not paste it into chat, use a `VITE_` variable, or commit it. Development may use a Paystack test secret. Production requires a live secret and an HTTPS public origin. Never test a real charge without the payer's authorization.
+Put the actual secret in the first variable locally. Do not paste it into chat, use a `VITE_` variable, or commit it. Development may use a Paystack test secret. A production build requires a live secret for paid checkout. When running directly on localhost, leave the origin blank; hosted checkout and its return route derive it only from a loopback Host and actual loopback socket peer. Forwarded headers cannot authorize this fallback. Deployed servers require a configured HTTPS public origin. Never test a real charge without the payer's authorization.
 
 In Paystack's dashboard, configure the webhook URL as `<public origin>/api/payments/paystack/webhook`. A localhost webhook is not reachable from Paystack; during local testing use the checkout return page and its **Verify payment** button. Checkout and verification need internet access, even with `npm run dev`. `npm run preview` does not run the API.
 
@@ -15,7 +15,7 @@ Admins propose one-time market registration, commission, all three monthly plans
 
 The semester fee renews every **two calendar months**. Plans renew every calendar month. Initial activation combines registration + selected plan + two-month fee; later plan and two-month renewals have separate checkout buttons. There is no automatic debit. Existing quotes retain their prices; a successful renewal extends the current paid period. A plan change starts its new monthly period immediately, without proration or refunds.
 
-Zero prices are an explicit administrator exemption; only an entirely zero-valued checkout grants access without a provider transaction. Other prices must be at least GHS 0.10 with at most two decimal places. Paystack receives integer pesewa.
+Each fee in Admin Settings has a **No payment (GHS 0)** option, subject to the same pricing approvals. Zero prices waive that component; remaining positive fees still require Paystack. An entirely zero-valued checkout grants verified access immediately without Paystack credentials, a receiving account or a return-origin setting. Free fulfillment creates a server-authorized ledger entry and remains ownership-checked, persistent and idempotent. Other prices must be at least GHS 0.10 with at most two decimal places. Paystack receives integer pesewa.
 
 Server-created immutable quotes bind the actor, store/residence, purpose, plan, amount, currency and unpredictable reference. A browser return URL and submitted `paid`, `agreedToPay` or receipt strings grant nothing. The server verifies Paystack's success status, reference, exact amount, currency, customer email and test/live domain. Webhooks additionally require the HMAC-SHA512 signature of the exact raw request bytes. A repeated confirmation does not extend a period or count revenue twice. Wrong-account access is denied. Checkout/verification concurrency, pending checkouts, request size and attempt rates are bounded.
 

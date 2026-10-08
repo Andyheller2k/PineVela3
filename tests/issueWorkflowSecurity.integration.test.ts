@@ -1,3 +1,4 @@
+import { managerKeyHash } from '../residenceRequests.js';
 import { sessionFixtureJson } from './sessionFixtures.cjs';
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
@@ -26,6 +27,7 @@ test('S10 retirement and S12 maintenance actors, states, sign-off and replay iso
   const actor = (role: string) => ({ id: crypto.randomUUID(), role, email: `${crypto.randomUUID()}@example.test`, name: crypto.randomUUID(), token: crypto.randomUUID() });
   const admin = actor('admin'), primary = actor('user');
   const manager = { ...actor('manager'), isVerified: true, verificationStatus: 'approved' }, foreignManager = { ...actor('manager'), email: manager.email, isVerified: true, verificationStatus: 'approved' };
+  const managerSecret = crypto.randomBytes(32).toString('base64url'), foreignSecret = crypto.randomBytes(32).toString('base64url');
   const hostel = { id: crypto.randomUUID(), managerId: manager.id, managerEmail: manager.email, name: crypto.randomUUID(), isApproved: true };
   const foreignHostel = { ...hostel, id: crypto.randomUUID(), managerId: foreignManager.id, name: hostel.name };
   const resident = (hostelId: string) => ({ ...actor('student'), roomKey: crypto.randomUUID(), hostelId });
@@ -51,7 +53,7 @@ test('S10 retirement and S12 maintenance actors, states, sign-off and replay iso
   const retiredNotice = { id: crypto.randomUUID(), type: 'housing_booking', userId: manager.id, title: crypto.randomUUID() };
   const booked = { id: crypto.randomUUID(), studentName: crypto.randomUUID(), status: 'Pending' };
   await fs.mkdir(dataDir);
-  await fs.writeFile(db, sessionFixtureJson({ credentialExposureVersion: 1, accountSecurityVersion: 1,
+  await fs.writeFile(db, sessionFixtureJson({ credentialExposureVersion: 1, accountSecurityVersion: 1, managerOperationKeys: { [manager.id]: { hash: managerKeyHash(manager.id, managerSecret) }, [foreignManager.id]: { hash: managerKeyHash(foreignManager.id, foreignSecret) } },
     users: [admin, primary, manager, foreignManager, owner, other, foreignResident, assigned, colleague, foreignStaff],
     hostels: [hostel, foreignHostel], roomKeys: rooms, staff: [member, colleagueMember, foreignMember],
     issueReports: [...Object.values(issues), lifecycle, replay, direct], bookingRequests: [booked], notifications: [retiredNotice],
@@ -79,7 +81,7 @@ test('S10 retirement and S12 maintenance actors, states, sign-off and replay iso
   };
   const read = async () => JSON.parse(await fs.readFile(db, 'utf8'));
   const request = async (method: string, route: string, actor: any, body: any, status: number) => {
-    const response = await fetch(`${base}${route}`, { method, headers: { 'Content-Type': 'application/json', ...(actor ? { Authorization: `Bearer ${actor.token}` } : {}) }, ...(body ? { body: JSON.stringify(body) } : {}) });
+    const response = await fetch(`${base}${route}`, { method, headers: { 'Content-Type': 'application/json', ...(actor ? { Authorization: `Bearer ${actor.token}`, ...(actor.role === 'manager' ? { 'X-PineVela-Manager-Key': actor.id === manager.id ? managerSecret : foreignSecret } : {}) } : {}) }, ...(body ? { body: JSON.stringify(body) } : {}) });
     assert.equal(response.status, status, `${method} ${route}: expected ${status}`);
     return response.json();
   };

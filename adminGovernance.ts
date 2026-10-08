@@ -141,9 +141,10 @@ export class AdminGovernance {
       const recipients = new Set<string>();
       const messages = store.users.flatMap((entry: any) => {
         const userId = accountId(entry);
-        if (!userId || accountRole(entry) === 'admin' || recipients.has(userId)) return [];
-        recipients.add(userId);
-        return [{ id: crypto.randomUUID(), userId, title: 'PineVela announcement', message: settings.announcement, category: 'system_announcement', type: 'info', read: false, isRead: false, createdAt: date, date }];
+        const recipientKey = `${accountRole(entry)}:${userId}`;
+        if (!userId || accountRole(entry) === 'admin' || recipients.has(recipientKey)) return [];
+        recipients.add(recipientKey);
+        return [{ id: crypto.randomUUID(), targetAccountId: userId, targetRole: accountRole(entry), userId, adminMessage: true, senderRole: 'admin', title: 'PineVela announcement', message: settings.announcement, category: 'system_announcement', type: 'info', read: false, isRead: false, createdAt: date, date }];
       });
       store.notifications = [...messages, ...(store.notifications || [])];
     }
@@ -335,7 +336,7 @@ export class AdminGovernance {
   }
   private removalNotice(c: Change, recipient: string, title: string, message: string) {
     const store = this.getStore(); store.notifications ||= [];
-    store.notifications.unshift({ id: `admin-removal-${crypto.randomUUID()}`, targetAccountId: recipient, targetRole: 'admin', title, message,
+    store.notifications.unshift({ id: `admin-removal-${crypto.randomUUID()}`, targetAccountId: recipient, targetRole: 'admin', adminMessage: true, senderRole: 'admin', title, message,
       type: 'info', category: 'admin-governance', scope: 'admin', changeId: c.id, date: new Date(this.now()).toISOString(), read: false });
   }
   submitRemovalPlea(id: string, changeId: string, body: any) {

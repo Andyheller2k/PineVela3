@@ -1,3 +1,4 @@
+import { managerKeyHash } from '../residenceRequests.js';
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import crypto from 'node:crypto';
@@ -41,7 +42,10 @@ test('S28/S29: meetings and notification reads enforce account boundaries and pe
   const retired = notice('retired', { userId: user.id, type: 'general_chat' });
   const roster = { id: crypto.randomUUID(), userId: employee.id, email: employee.email, hostelId: home.id, managerId: manager.id, managerCreated: true, status: 'Active' };
   const staffNotice = notice('staff-notice', { userId: roster.id, recipientEmail: employee.email });
-  await fs.writeFile(db, sessionFixtureJson({ credentialExposureVersion: 1, accountSecurityVersion: 1,
+  const keyedManagers = [manager, other];
+  const managerSecrets = new Map(keyedManagers.map(actor => [actor.id, crypto.randomBytes(32).toString('base64url')]));
+  const managerOperationKeys = Object.fromEntries(keyedManagers.map(actor => [actor.id, { hash: managerKeyHash(actor.id, managerSecrets.get(actor.id)!) }]));
+  await fs.writeFile(db, sessionFixtureJson({ credentialExposureVersion: 1, accountSecurityVersion: 1, managerOperationKeys,
     users: [manager, other, user, buyer, admin, admin2, employee, seller], hostels: [home, foreign],
     staff: [roster],
     digitalMarketStores: [market], digitalMarketApplications: [{ id: crypto.randomUUID(), studentEmail: seller.email, status: 'approved' }],
@@ -59,7 +63,7 @@ test('S28/S29: meetings and notification reads enforce account boundaries and pe
     assert.fail('Isolated server did not start');
   };
   const request = async (method: string, route: string, token: string | undefined, body: any, expected: number | number[]) => {
-    const response = await fetch(base + route, { method, headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) }, ...(body === undefined ? {} : { body: JSON.stringify(body) }) });
+    const response = await fetch(base + route, { method, headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}`, ...(keyedManagers.some(actor => actor.token === token) ? { 'X-PineVela-Manager-Key': managerSecrets.get(keyedManagers.find(actor => actor.token === token)!.id)! } : {}) } : {}) }, ...(body === undefined ? {} : { body: JSON.stringify(body) }) });
     const result = await response.json(); assert([expected].flat().includes(response.status), `${method} ${route}: expected ${expected}, got ${response.status}; ${result.error || ''}`); return result;
   };
   const read = async () => JSON.parse(await fs.readFile(db, 'utf8'));

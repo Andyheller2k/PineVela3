@@ -1,3 +1,4 @@
+import { managerKeyHash } from '../residenceRequests.js';
 import { sessionFixtureJson } from './sessionFixtures.cjs';
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
@@ -27,6 +28,7 @@ test('S02: real authenticated PUTs enforce issue ownership and persist only allo
   const staff = account('staff', owner.email);
   const merchant = account('merchant', owner.email);
   const admin = account('admin');
+  const managerSecret = crypto.randomBytes(32).toString('base64url'), foreignSecret = crypto.randomBytes(32).toString('base64url');
   const hostel = { id: crypto.randomUUID(), name: crypto.randomUUID(), managerId: manager.id, managerEmail: manager.email };
   const issue = {
     id: crypto.randomUUID(), userId: owner.id, parentUserId: primary.id,
@@ -42,6 +44,7 @@ test('S02: real authenticated PUTs enforce issue ownership and persist only allo
   await fs.mkdir(dataDir);
   await fs.writeFile(db, sessionFixtureJson({
     credentialExposureVersion: 1, accountSecurityVersion: 1,
+    managerOperationKeys: { [manager.id]: { hash: managerKeyHash(manager.id, managerSecret) }, [foreignManager.id]: { hash: managerKeyHash(foreignManager.id, foreignSecret) } },
     users: [owner, other, primary, manager, foreignManager, staff, merchant, admin],
     staff: [{ id: crypto.randomUUID(), userId: staff.id, hostelId: hostel.id, managerId: manager.id, managerCreated: true, status: "Active" }],
     hostels: [hostel], issueReports: [issue, primaryIssue],
@@ -77,7 +80,7 @@ test('S02: real authenticated PUTs enforce issue ownership and persist only allo
   const readIssue = async (id = issue.id) => JSON.parse(await fs.readFile(db, 'utf8')).issueReports.find((entry: any) => entry.id === id);
   const put = async (actor: typeof owner | undefined, body: any, expected: number, id = issue.id) => {
     const response = await fetch(`${base}/api/issue-reports/${id}`, {
-      method: 'PUT', headers: { 'Content-Type': 'application/json', ...(actor ? { Authorization: `Bearer ${actor.token}` } : {}) }, body: JSON.stringify(body)
+      method: 'PUT', headers: { 'Content-Type': 'application/json', ...(actor ? { Authorization: `Bearer ${actor.token}`, ...(actor.role === 'manager' ? { 'X-PineVela-Manager-Key': actor.id === manager.id ? managerSecret : foreignSecret } : {}) } : {}) }, body: JSON.stringify(body)
     });
     const result = await response.json();
     assert.equal(response.status, expected, JSON.stringify(result));

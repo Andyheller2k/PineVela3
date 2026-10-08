@@ -269,3 +269,28 @@ tests/hostelSecurity.test.ts tests/hostelSecurity.integration.test.ts`. After bu
 `node tests/hostelOnboarding.browser.cjs` verifies the complete four-step submission,
 country search, number validation, restored drafts and responsive layouts against an
 isolated database and the actual APIs.
+
+
+Residence changes use the manager’s Direct Line to Admin. Only name, cover/interior
+photographs, manager name/contact and block names/count are editable through requests.
+Submission requires the manager secret key and is limited to one every 30 days per manager,
+including rejected submissions. Administrators must open the before/after review and supply
+their private approval key to approve or reject. Rejection requires a reason. Approval applies
+only if the current property still matches the reviewed baseline and manager assignment.
+Public/user property cards omit internal IDs and bed counts. Public API payloads also redact
+capacity fields; stable opaque IDs remain for routing. Managers retain their own residence
+capacity, and administrators retain all residence capacity.
+New blocks have zero configured rooms; blocks containing floors, rooms, beds or assigned
+staff cannot be removed. Existing allocation, capacity and ownership are preserved.
+
+Every authenticated manager data-changing operation requires the saved secret key. The
+first residence’s onboarding/upload and credential bootstrap/recovery are necessary lifecycle
+exceptions; popup delivery acknowledgement is also exempt. Read-only requests need no key.
+The secret is shown once after the first residence exists, including for existing managers.
+Lost keys require a petition; an admin may reset a manager’s key with their separate settings
+key. Reset immediately invalidates the previous key and prompts issuance in that manager
+account. No key is saved in browser storage. Administrator messages remain in Notifications
+and have a server-acknowledged first-time popup for their exact recipient account.
+
+Verification: `npm run test:residence-requests` and, after building,
+`node tests/residenceRequests.browser.cjs`. Tests use isolated databases and actual APIs.

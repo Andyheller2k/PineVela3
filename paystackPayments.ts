@@ -13,10 +13,16 @@ export function paystackConfig() {
   if (mode === 'test' && process.env.NODE_ENV === 'production') throw new PaymentError('Paystack test payments cannot activate production accounts.', 503);
   return { key, mode };
 }
-export function paymentOrigin() {
-  const origin = process.env.PINEVELA_PUBLIC_ORIGIN || (process.env.NODE_ENV !== 'production' ? `http://localhost:${process.env.PORT || 3000}` : '');
+export function paymentOrigin(req?: any) {
+  const configured = process.env.PINEVELA_PUBLIC_ORIGIN?.trim();
+  const peerIsLocal = ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(req?.socket?.remoteAddress || '');
+  const host = req?.get('host');
+  // Production bundles also run locally. Never derive remote callbacks from forwarded headers.
+  const origin = configured || (req && peerIsLocal && host ? `http://${host}` : !req && process.env.NODE_ENV !== 'production' ? `http://localhost:${process.env.PORT || 3000}` : '');
   let url: URL; try { url = new URL(origin); } catch { throw new PaymentError('Set PINEVELA_PUBLIC_ORIGIN before accepting payments.', 503); }
-  if (url.username || url.password || url.search || url.hash || url.pathname !== '/' || !(url.protocol === 'https:' || process.env.NODE_ENV !== 'production' && url.protocol === 'http:' && ['localhost', '127.0.0.1'].includes(url.hostname))) throw new PaymentError('Configure a valid, trusted payment return origin.', 503);
+  const localHttp = url.protocol === 'http:' && ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname) &&
+    (process.env.NODE_ENV !== 'production' || peerIsLocal && typeof host === 'string' && url.host === host.toLowerCase());
+  if (url.username || url.password || url.search || url.hash || url.pathname !== '/' || !(url.protocol === 'https:' || localHttp)) throw new PaymentError('Configure a valid, trusted payment return origin.', 503);
   return url.origin;
 }
 export function validPaystackSignature(raw: Buffer, signature: unknown, key: string) {
@@ -111,7 +117,7 @@ export class PaystackPayments {
     application.setupCompleted = seller.setupCompleted;
     this.save(); return { success: true, store: publicPaidStore(seller, this.store()), paymentRequired: !marketAccessPaid(this.store(), seller, this.now()) };
   }
-  async initialize(actor: any, body: any) {
+  async initialize(actor: any, body: any, req?: any) {
     const mobileMoney = body?.mobileMoney;
     if (mobileMoney !== undefined && (!mobileMoney || typeof mobileMoney !== 'object' || Array.isArray(mobileMoney) || Object.keys(mobileMoney).some(key => !['phone', 'provider'].includes(key)) || typeof mobileMoney.phone !== 'string' || !/^(?:0|\+233)[235]\d{8}$/.test(mobileMoney.phone) || !['mtn', 'vod', 'atl'].includes(mobileMoney.provider))) throw new PaymentError('Enter a valid Ghana mobile-money number and network.');
     this.limit(`checkout:${actor.id}`);
@@ -138,10 +144,10 @@ export class PaystackPayments {
     const mode = amount ? paystackConfig().mode : 'free';
     const settlement = current.platformSettings?.paystackSettlement;
     if (amount && settlement?.code && (settlement.mode !== mode || !/^ACCT_[A-Za-z0-9]{1,80}$/.test(settlement.code))) throw new PaymentError('The payment receiving account requires administrator configuration for this environment.', 503);
-    const origin = paymentOrigin();
+    const origin = amount ? paymentOrigin(req) : undefined;
     const ledger = current.paymentTransactions ||= [];
     const pending = ledger.filter((t: any) => t.actorId === actor.id && t.status === 'pending' && Date.parse(t.createdAt) > this.now() - 86_400_000);
-    if (pending.length >= 5) throw new PaymentError('You have unfinished checkouts. Finish or verify an existing checkout before starting another.', 429);
+    if (amount && pending.length >= 5) throw new PaymentError('You have unfinished checkouts. Finish or verify an existing checkout before starting another.', 429);
     const transaction = { id: crypto.randomUUID(), reference: `PV-${crypto.randomBytes(24).toString('hex')}`, actorId: actor.id, email: normalizeEmail(actor.email), storeId: seller?.id, applicationId: application?.id, hostelId: hostel?.id, purpose, plan, amount, currency: 'GHS', lines, mode, status: 'pending', createdAt: new Date(this.now()).toISOString(), ...(settlement?.code && amount ? { settlementCode: settlement.code } : {}) };
     ledger.push(transaction); this.save();
     if (!amount) return this.fulfill(transaction, { reference: transaction.reference, status: 'success', amount: 0, currency: 'GHS', customer: { email: transaction.email }, domain: 'free' });
@@ -168,6 +174,7 @@ export class PaystackPayments {
     if (actor) this.limit(`verify:${actor.id}`);
     if (process.env.NODE_ENV === 'production' && t.mode === 'test') throw new PaymentError('Test payments cannot activate production accounts.', 403);
     if (t.status === 'fulfilled') return this.result(t);
+    if (t.mode === 'free' && t.amount === 0) return this.fulfill(t, { reference: t.reference, status: 'success', amount: 0, currency: 'GHS', customer: { email: t.email }, domain: 'free' });
     if (paystackConfig().mode !== t.mode) throw new PaymentError('The payment environment changed. Contact support.', 409);
     if (this.flights.has(reference)) return this.flights.get(reference);
     if (this.flights.size >= 16) throw new PaymentError('Payment verification is busy. Try again shortly.', 429);
@@ -176,7 +183,7 @@ export class PaystackPayments {
   }
   private result(t: any) {
     const seller = (this.store().digitalMarketStores || []).find((s: any) => s.id === t.storeId);
-    return { success: true, paid: true, reference: t.reference, purpose: t.purpose, mode: t.mode, amount: t.amount / 100, store: publicPaidStore(seller, this.store()) };
+    return { success: true, paid: true, paymentRequired: false, reference: t.reference, purpose: t.purpose, mode: t.mode, amount: t.amount / 100, store: publicPaidStore(seller, this.store()) };
   }
   private fulfill(t: any, evidence: any) {
     const current = this.store();
@@ -247,13 +254,13 @@ export function installPaystackPayments(app: any, auth: any, payments: PaystackP
     return payments.setSettlement(req.user, req.body?.code, () => authorizeSettings(req.user.id, req.body?.settingsKey));
   }));
   for (const route of ['store-setup', 'create-store']) app.post(`/api/digital-market/${route}`, auth(['merchant']), action((req: any) => payments.draft(req.user, req.body)));
-  app.post('/api/digital-market/subscription', auth(['merchant']), action((req: any) => payments.initialize(req.user, { purpose: 'subscription', plan: req.body.plan })));
-  app.post('/api/payments/paystack/initialize', auth(['merchant', 'manager']), action((req: any) => payments.initialize(req.user, req.body)));
-  app.post('/api/hostel-verifications/pay-onboarding-fee', auth(['manager']), action((req: any) => payments.initialize(req.user, { purpose: 'housing', hostelId: req.body.hostelId })));
+  app.post('/api/digital-market/subscription', auth(['merchant']), action((req: any) => payments.initialize(req.user, { purpose: 'subscription', plan: req.body.plan }, req)));
+  app.post('/api/payments/paystack/initialize', auth(['merchant', 'manager']), action((req: any) => payments.initialize(req.user, req.body, req)));
+  app.post('/api/hostel-verifications/pay-onboarding-fee', auth(['manager']), action((req: any) => payments.initialize(req.user, { purpose: 'housing', hostelId: req.body.hostelId }, req)));
   app.post('/api/payments/paystack/verify', auth(['merchant', 'manager']), action((req: any) => payments.verify(req.user, req.body.reference)));
   app.get('/api/payments/paystack/callback', (req: any, res: any) => {
     if (typeof req.query.reference !== 'string' || !/^PV-[a-f0-9]{48}$/.test(req.query.reference)) return res.status(400).send('Invalid payment reference.');
-    try { res.set('Cache-Control', 'no-store').redirect(`${paymentOrigin()}/#/payments/return?reference=${encodeURIComponent(req.query.reference)}`); }
+    try { res.set('Cache-Control', 'no-store').redirect(`${paymentOrigin(req)}/#/payments/return?reference=${encodeURIComponent(req.query.reference)}`); }
     catch (error) { res.status(503).send('Payment return is not configured. Return to PineVela to verify your payment.'); }
   });
   app.post('/api/payments/paystack/webhook', async (req: any, res: any) => {
