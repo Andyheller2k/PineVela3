@@ -1,6 +1,7 @@
 import { accountData, accountId, accountRole, canManageHostel, normalizeEmail } from './accountSecurity.js';
 import { activeManagedStaff } from './staffManagement.js';
 import { isMarketMessageNotification, marketNotificationVisible, sellerStore } from './marketMessaging.js';
+import { accountSubmissionNotification } from './accountSubmissionNotifications.js';
 
 const identityFields = ['recipientId', 'userId', 'studentId', 'managerId', 'staffId'];
 const emailFields = ['recipientEmail', 'userEmail', 'targetEmail', 'parentUserEmail', 'managerEmail', 'staffEmail', 'email'];
@@ -51,6 +52,7 @@ export function meetingVisible(actor: any, meeting: any, store: any): boolean {
 export function notificationVisible(actor: any, notice: any, store: any): boolean {
   if (!actor?.id || !notice) return false;
   if (isMarketMessageNotification(notice)) return marketNotificationVisible(actor, notice, store);
+  notice = accountSubmissionNotification(notice, store);
   if (notice.targetAccountId) return notice.targetAccountId === actor.id && (!notice.targetRole || notice.targetRole === actor.role);
   if (notice.targetRole && notice.targetRole !== 'all' && notice.targetRole !== actor.role) return false;
   if (notice.sellerStoreId) return actor.role === 'merchant' && sellerStore(actor, store)?.id === notice.sellerStoreId;

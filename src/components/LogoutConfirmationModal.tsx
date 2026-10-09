@@ -1,3 +1,4 @@
+import DashboardOverlay from './DashboardOverlay';
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { LogOut, X } from 'lucide-react';
@@ -21,7 +22,7 @@ export default function LogoutConfirmationModal({
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-blue-950/30 backdrop-blur-xl">
+      <DashboardOverlay aria-label="Confirm Sign Out" onClose={onClose} className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-blue-950/30 backdrop-blur-xl">
         <motion.div
           initial={{ opacity: 0, scale: 0.95, y: 10 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -34,7 +35,7 @@ export default function LogoutConfirmationModal({
             <div className="w-14 h-14 rounded-2xl bg-amber-50 border border-amber-200/60 flex items-center justify-center shadow-xs">
               <PineLogo size={32} hideText={true} />
             </div>
-            <button
+            <button aria-label="Close dialog"
               onClick={onClose}
               className="w-8 h-8 rounded-full bg-slate-900/5 hover:bg-slate-900/10 text-slate-600 hover:text-slate-900 flex items-center justify-center transition-colors cursor-pointer"
             >
@@ -72,7 +73,7 @@ export default function LogoutConfirmationModal({
             </button>
           </div>
         </motion.div>
-      </div>
+      </DashboardOverlay>
     </AnimatePresence>
   );
 }

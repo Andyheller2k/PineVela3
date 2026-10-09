@@ -1,5 +1,27 @@
 # PineVela Authentication and Authorization
 
+## Migration status (2026-10-09)
+
+The running `server.ts` still uses transitional local credentials and sessions.
+The separate `supabase-server.ts` backend implements Supabase password/Google login,
+confirmed signup, HttpOnly access/refresh cookies, session refresh/revocation and
+subject-bound account selection. It is not yet the default backend. Resident,
+manager and seller accounts retain verified student/work identities linked to the
+primary owner through authorized enrollment. Resident and seller may share the same
+student identity with one Supabase password and distinct portal access PINs; managers
+use their separate verified work email. The replacement enrollment API and room claim
+transactions exist; enrollment forms and complete authenticated flows remain to be verified.
+Primary-user sign-in must never select a child's account without that account's own
+verified Auth session. The legacy-provider description below documents the running
+transition implementation, not the final target. See [migration status](migrations/supabase-implementation-status.md).
+
+In the replacement backend, an active administrator enrolls a separate settings key
+within five minutes of an actual Google or verified-email sign-in. A refresh token does
+not create a fresh enrollment window, and no local password is required for Google-only
+accounts. The key is displayed once and its salted, context-bound hash stays private.
+Public signup never grants administrator membership. Lost-key governance recovery and
+an actual fresh administrator enrollment remain migration acceptance gates.
+
 Manager password changes and self-deletion require that manager's authenticated account.
 Primary accounts may view their linked registration status but cannot reset or delete the
 manager identity through the registered-account endpoints. Self-deletion rejects ambiguous
@@ -111,6 +133,25 @@ The server must verify the manager's hostel assignment.
 
 The request body must not be the authority for manager identity or hostel authorization.
 
+In the Supabase replacement, staff enrollment starts from the assigned manager portal
+and requires the current manager operation key and approved residence setup. The manager
+receives a private invitation link; only its SHA-256 digest is stored. Links expire after
+24 hours and can be renewed or cancelled by the initiating assigned manager. Renewing
+revokes the previous link. No staff credentials or verified flags come from the manager.
+
+Staff choose their own password through the invitation page. The Auth signup trigger
+accepts only the saved invitation nonce, mailbox and still-authorized manager relationship.
+The account stays pending until a live provider-verified session proves the invited subject
+and confirmed work email. Confirmation does not switch the manager's cookie; staff sign
+in separately. Email confirmation must remain enabled. See [Supabase signup behavior](https://supabase.com/docs/reference/javascript/auth-signup).
+
+Existing registered addresses cannot be adopted through email equality. Rehiring an
+existing closed staff identity and verified email changes remain explicit migration gates.
+Self-profile edits currently allow display name and phone only. Suspension, removal and
+resignation revoke staff portal bindings. Ended employment is retained with maintenance
+history; restoration after suspension requires a fresh verified sign-in.
+
+
 ---
 
 ## Session Security
@@ -159,3 +200,30 @@ frontend managerId
 ```
 
 as authoritative security information.
+
+Public catalog handoff: guest room activation and market orders carry an allowlisted
+`next` selection through password login, verified signup, and the server-held Google
+PKCE flow. Only `/user/dashboard` with a single residence, market item or store selection
+is accepted; external redirects, secondary roles, and identity fields are rejected.
+The authenticated dashboard reloads the actual catalog and opens the existing form.
+Selecting a residence never claims a room: room-key authorization remains server-side.
+Ordinary login keeps the existing default destination for the authenticated role.
+
+Staff retention submission/final choices use the actual active staff portal. Manager
+responses require its saved proposal recipient, current residence grant and operation
+key. A final resignation closes employment and invalidates staff portal bindings; the
+frontend signs out. Resident staff reviews require the resident portal’s current room
+allocation, regardless of shared primary email or identity in another portal.
+
+Meeting appointments belong to the saved assigned manager and exact internal housing
+participant. Manager writes require a current residence grant and operation key;
+participants may request for themselves or cancel their own appointment. Primary
+portals, shared-email portals and uninvited staff gain no access. External contact
+emails never create or select a portal identity. Suspended staff and released residents
+lose access to their old appointment history through the housing portal.
+
+Seller application submission uses a completed email-verification enrollment owned by
+the primary session. Name and student email come from its confirmed Auth subject.
+The application API rejects submitted passwords, owner IDs and identity aliases. Admin
+review activates only the saved seller portal; store setup and verified payment remain
+separate. Same-email resident/seller identities retain their separate portal PINs.

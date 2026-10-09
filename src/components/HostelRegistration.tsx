@@ -2,6 +2,7 @@ import InternationalPhoneInput from './InternationalPhoneInput';
 import { internationalPhone, phoneDraft } from '../../internationalPhone';
 import { activeHostelFields } from '../../hostelRegistrationFields';
 import OnboardingProgress from './OnboardingProgress';
+import { usesSupabasePersistence } from '../lib/persistence';
 import { sessionFetch as fetch } from '../lib/session';
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -107,6 +108,7 @@ export default function HostelRegistration({
   currentUserId
 }: HostelRegistrationProps) {
   const { user } = useAuth();
+  const [residenceId,setResidenceId] = useState<string | null>(null);
   
   // Four-step residence registration draft
   const initialDraftState: HostelRegistrationDraft = {
@@ -117,7 +119,7 @@ export default function HostelRegistration({
     customHostelType: '',
     genderCategory: 'Mixed',
     status: 'Open',
-    yearEstablished: new Date().getFullYear(),
+    yearEstablished: usesSupabasePersistence ? 0 : new Date().getFullYear(),
     contactEmail: '',
     contactPhone: '',
     contactPhoneCountry: 'GH',
@@ -136,14 +138,14 @@ export default function HostelRegistration({
     postalCode: '',
     digitalAddress: '',
     landmark: '',
-    campusProximity: '5-10 Mins Walk',
-    campusProximityDetails: 'Shuttle & walking routes',
+    campusProximity: usesSupabasePersistence ? '' : '5-10 Mins Walk',
+    campusProximityDetails: usesSupabasePersistence ? '' : 'Shuttle & walking routes',
 
     // Step 2: Map Location
-    latitude: 6.6745,
-    longitude: -1.5716,
-    formattedAddress: 'KNUST Campus, Ayeduase, Kumasi',
-    isLocationConfirmed: true,
+    latitude: usesSupabasePersistence ? undefined : 6.6745,
+    longitude: usesSupabasePersistence ? undefined : -1.5716,
+    formattedAddress: usesSupabasePersistence ? '' : 'KNUST Campus, Ayeduase, Kumasi',
+    isLocationConfirmed: !usesSupabasePersistence,
 
     // Step 3: Image
     imageFile: null,
@@ -154,12 +156,12 @@ export default function HostelRegistration({
     gallery: [],
 
     // Step 4: Capacity
-    totalBlocks: 2,
-    totalFloors: 4,
-    totalRooms: 40,
-    totalBeds: 120,
-    maximumCapacity: 120,
-    blocksList: [
+    totalBlocks: usesSupabasePersistence ? 0 : 2,
+    totalFloors: usesSupabasePersistence ? 0 : 4,
+    totalRooms: usesSupabasePersistence ? 0 : 40,
+    totalBeds: usesSupabasePersistence ? 0 : 120,
+    maximumCapacity: usesSupabasePersistence ? 0 : 120,
+    blocksList: usesSupabasePersistence ? [] : [
       { id: 'block-1', name: 'Block A (Alpha)', floors: 4, totalRooms: 20, roomPrefix: 'A', startNum: 101, bedsPerRoom: 3 },
       { id: 'block-2', name: 'Block B (Beta)', floors: 4, totalRooms: 20, roomPrefix: 'B', startNum: 201, bedsPerRoom: 3 }
     ],
@@ -203,6 +205,35 @@ export default function HostelRegistration({
 
   // 1. Load draft from localStorage on mount
   useEffect(() => {
+    if (usesSupabasePersistence) {
+      let current = true;
+      setHasLoadedDraft(false);
+      setCurrentStep(1);
+      setRegisteredResult(null);
+      setValidationErrors({});
+      setSubmitError(null);
+      setResidenceId(null);
+      setFormData(initialDraftState);
+      fetch('/api/manager/residence-registration').then(async response => {
+        const result = await safeJson(response);
+        if (!response.ok) throw new Error(result.error || 'Unable to load your verified residence.');
+        if (!current) return;
+        const draft = result.draft;
+        const blocksList = (draft.blocksList || []).map((b:any,index:number) => ({...b,id:b.id || `registration-block-${index}`,
+          roomTypes:(b.roomTypes || []).map((r:any,layout:number) => ({...r,id:r.id || `registration-layout-${index}-${layout}`}))}));
+        const totalRooms = blocksList.reduce((n:number,b:any) => n + b.roomTypes.reduce((t:number,r:any) => t + r.totalRooms,0),0);
+        const totalBeds = blocksList.reduce((n:number,b:any) => n + b.roomTypes.reduce((t:number,r:any) => t + r.totalRooms*r.bedsPerRoom,0),0);
+        setResidenceId(result.residenceId);
+        setFormData({...initialDraftState,...draft,...phoneDraft(draft.contactPhone,draft.contactPhoneCountry),
+          hostelType:draft.propertyType || initialDraftState.hostelType,
+          wing:draft.wing || initialDraftState.wing,
+          imagePreviewUrl:draft.imageUrl || '',isLocationConfirmed:true,
+          totalRooms,totalBeds,maximumCapacity:totalBeds,totalBlocks:blocksList.length,
+          totalFloors:blocksList.reduce((n:number,b:any) => n + b.floors,0),blocksList});
+        setHasLoadedDraft(true);
+      }).catch(error => {if (current) setSubmitError(error.message);});
+      return () => {current = false;};
+    }
     try {
       const saved = localStorage.getItem(DRAFT_STORAGE_KEY);
       if (saved) {
@@ -224,10 +255,11 @@ export default function HostelRegistration({
       // ignore
     }
     setHasLoadedDraft(true);
-  }, []);
+  }, [user?.id]);
 
   // 2. Auto-save draft into localStorage as user types
   const saveDraftToStorage = (data: HostelRegistrationDraft) => {
+    if (usesSupabasePersistence) return;
     try {
       const draftWithTime = { ...data, lastDraftSavedAt: new Date().toLocaleTimeString() };
       localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draftWithTime));
@@ -253,8 +285,10 @@ export default function HostelRegistration({
   };
 
   const clearDraft = () => {
-    localStorage.removeItem(DRAFT_STORAGE_KEY);
-    setFormData(initialDraftState);
+    if (!usesSupabasePersistence) localStorage.removeItem(DRAFT_STORAGE_KEY);
+    setFormData(prev => usesSupabasePersistence ? {...initialDraftState,name:prev.name,addressLine1:prev.addressLine1,
+      digitalAddress:prev.digitalAddress,latitude:prev.latitude,longitude:prev.longitude,isLocationConfirmed:prev.isLocationConfirmed,
+      contactEmail:prev.contactEmail,contactPhone:prev.contactPhone,contactPhoneCountry:prev.contactPhoneCountry} : initialDraftState);
     setDraftBannerVisible(false);
     setCurrentStep(1);
     setValidationErrors({});
@@ -266,6 +300,9 @@ export default function HostelRegistration({
 
     if (step === 1) {
       if (!formData.name.trim()) errors.name = 'Hostel name is required';
+      if (usesSupabasePersistence && (!Number.isInteger(formData.yearEstablished) || formData.yearEstablished < 1000 || formData.yearEstablished > new Date().getFullYear())) {
+        errors.yearEstablished = 'Enter the actual establishment year.';
+      }
       if (!formData.contactEmail.trim() || !formData.contactEmail.includes('@')) {
         errors.contactEmail = 'Valid contact email is required';
       }
@@ -285,6 +322,7 @@ export default function HostelRegistration({
       if (!formData.maximumCapacity || formData.maximumCapacity <= 0) {
         errors.maximumCapacity = 'Total capacity must be greater than 0. Please configure room types with bedspaces.';
       }
+      if (usesSupabasePersistence && (!formData.agreeTerms || !formData.accuracyCertified)) errors.confirmation = 'Confirm the terms and accuracy of your registration.';
     }
 
     setValidationErrors(errors);
@@ -328,7 +366,7 @@ export default function HostelRegistration({
     let grandTotalBeds = 0;
 
     const updatedBlocks = blocks.map((b) => {
-      const roomTypes = b.roomTypes && b.roomTypes.length > 0 ? b.roomTypes : [
+      const roomTypes = b.roomTypes && b.roomTypes.length > 0 ? b.roomTypes : usesSupabasePersistence ? [] : [
         {
           id: `rt-default-${b.id}`,
           typeName: `${b.bedsPerRoom || 2} in 1 Room`,
@@ -355,6 +393,7 @@ export default function HostelRegistration({
     updateFormData({
       blocksList: updatedBlocks,
       totalBlocks: updatedBlocks.length,
+      totalFloors: updatedBlocks.reduce((n,b) => n + b.floors,0),
       totalRooms: grandTotalRooms,
       totalBeds: grandTotalBeds,
       maximumCapacity: grandTotalBeds
@@ -367,14 +406,14 @@ export default function HostelRegistration({
     const blockLetter = String.fromCharCode(64 + nextIdx);
     const newBlock: HostelBlockConfig = {
       id: `block-${Date.now()}`,
-      name: `Block ${blockLetter}`,
+      name: usesSupabasePersistence ? '' : `Block ${blockLetter}`,
       gender: 'Mixed',
-      floors: 3,
-      totalRooms: 15,
-      roomPrefix: blockLetter,
-      startNum: nextIdx * 100 + 1,
+      floors: usesSupabasePersistence ? 0 : 3,
+      totalRooms: usesSupabasePersistence ? 0 : 15,
+      roomPrefix: usesSupabasePersistence ? '' : blockLetter,
+      startNum: usesSupabasePersistence ? 0 : nextIdx * 100 + 1,
       bedsPerRoom: 2,
-      roomTypes: [
+      roomTypes: usesSupabasePersistence ? [] : [
         { id: `rt-${Date.now()}-1`, typeName: '2 in 1 Room', bedsPerRoom: 2, totalRooms: 10 },
         { id: `rt-${Date.now()}-2`, typeName: '1 in 1 Room', bedsPerRoom: 1, totalRooms: 5 }
       ]
@@ -409,7 +448,7 @@ export default function HostelRegistration({
           id: `rt-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
           typeName: `${nextBeds} in 1 Room`,
           bedsPerRoom: nextBeds,
-          totalRooms: 5,
+          totalRooms: usesSupabasePersistence ? 0 : 5,
         };
         return { ...b, roomTypes: [...currentTypes, newRt] };
       }
@@ -455,6 +494,7 @@ export default function HostelRegistration({
 
   // Final Atomic Submission
   const handleFinalSubmit = async () => {
+    if (usesSupabasePersistence && (!hasLoadedDraft || !residenceId)) {setSubmitError('Load your verified residence before submitting.');return;}
     for (let step = 1; step <= STEPS.length; step++) {
       if (!validateStep(step)) { setCurrentStep(step); return; }
     }
@@ -491,6 +531,23 @@ export default function HostelRegistration({
         }
         finalImageUrl = uploadResult.imageUrl;
         finalImagePath = uploadResult.imagePath;
+        if (usesSupabasePersistence) setFormData(prev => ({...prev,imageUrl:finalImageUrl,imagePreviewUrl:finalImageUrl,imagePath:finalImagePath}));
+      }
+
+      let gallery = formData.gallery || [];
+      if (usesSupabasePersistence) {
+        const uploaded:string[] = [];
+        for (const photo of gallery) {
+          if (!photo.startsWith('data:')) {uploaded.push(photo);continue;}
+          setSubmissionProgress('Uploading residence gallery photographs...');
+          const response = await fetch('/api/storage/upload-hostel-image',{method:'POST',headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({fileName:'residence-gallery',fileType:photo.match(/^data:([^;]+);base64,/)?.[1],fileData:photo})});
+          const result = await safeJson(response);
+          if (!response.ok || !result.imageUrl) throw new Error(result.error || 'The gallery photograph could not be uploaded.');
+          uploaded.push(result.imageUrl);
+        }
+        gallery = uploaded;
+        setFormData(prev => ({...prev,imageUrl:finalImageUrl,imagePreviewUrl:finalImageUrl,imagePath:finalImagePath,gallery}));
       }
 
       // 2. Atomic Database Insertion into persistent store
@@ -498,10 +555,10 @@ export default function HostelRegistration({
 
       const payload = {
         name: formData.name.trim(),
-        description: formData.description.trim() || 'Modern student accommodation community.',
+        description: formData.description.trim() || (usesSupabasePersistence ? '' : 'Modern student accommodation community.'),
         wing: formData.wing,
         status: formData.status,
-        hostelType: formData.hostelType,
+        hostelType: formData.hostelType === 'Other' ? formData.customHostelType : formData.hostelType,
         genderCategory: formData.genderCategory,
         yearEstablished: formData.yearEstablished,
         contactEmail: formData.contactEmail,
@@ -518,15 +575,16 @@ export default function HostelRegistration({
         postalCode: formData.postalCode,
         digitalAddress: formData.digitalAddress,
         landmark: formData.landmark,
-        campusProximity: formData.campusProximity || '5-10 Mins Walk',
-        campusProximityDetails: formData.campusProximityDetails || 'Shuttle & walking routes',
+        campusProximity: formData.campusProximity || (usesSupabasePersistence ? '' : '5-10 Mins Walk'),
+        campusProximityDetails: formData.campusProximityDetails || (usesSupabasePersistence ? '' : 'Shuttle & walking routes'),
         latitude: formData.latitude,
         longitude: formData.longitude,
         imageUrl: finalImageUrl,
         image: finalImageUrl,
         exteriorPhotoUrl: finalImageUrl,
         imagePath: finalImagePath,
-        gallery: formData.gallery || [finalImageUrl],
+        gallery: usesSupabasePersistence ? gallery : formData.gallery || [finalImageUrl],
+        ...(usesSupabasePersistence ? {residenceId,paymentFrequency:formData.paymentFrequency,agreeTerms:formData.agreeTerms,accuracyCertified:formData.accuracyCertified} : {}),
         hostelName: formData.name.trim(),
         totalCapacity: formData.maximumCapacity,
         capacity: formData.maximumCapacity,
@@ -535,12 +593,14 @@ export default function HostelRegistration({
         totalFloors: formData.totalFloors,
         totalRooms: formData.totalRooms,
         blocksList: formData.blocksList,
+        ...(!usesSupabasePersistence ? {
         managerId: currentUserId || user?.id || `MGR-${Date.now()}`,
         managerName: user?.name || formData.managerName || 'Anthony Davis',
         managerEmail: user?.email || formData.managerEmail || 'manager@pinevela.com',
         managerPhone: user?.phone || formData.managerPhone || formData.contactPhone || '+233 24 123 4567',
         managerPhoto: user?.photo || user?.avatar || (user as any)?.photoUrl || (user as any)?.avatarUrl || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80',
         assignedManagerId: currentUserId || user?.id || ''
+        } : {})
       };
 
       const res = await fetch('/api/hostels/register', {
@@ -563,7 +623,7 @@ export default function HostelRegistration({
       setSubmissionProgress('Finalizing setup and cleaning up temporary drafts...');
 
       // 3. Clear draft in localStorage
-      localStorage.removeItem(DRAFT_STORAGE_KEY);
+      if (!usesSupabasePersistence) localStorage.removeItem(DRAFT_STORAGE_KEY);
 
       // 4. Trigger celebration confetti
       try {
@@ -604,7 +664,7 @@ export default function HostelRegistration({
             Registration Complete
           </span>
           <h2 className="text-3xl font-black text-slate-900 tracking-tight">
-            {registeredResult.name} is Live!
+            {registeredResult.name}{usesSupabasePersistence ? ' submitted for review' : ' is Live!'}
           </h2>
           <p className="text-sm text-slate-600 max-w-lg mx-auto">
             The hostel record has been created in the database with all {formData.blocksList.length} blocks,
@@ -659,12 +719,13 @@ export default function HostelRegistration({
           </button>
           <button
             onClick={() => {
+              if (usesSupabasePersistence) {onCancel();return;}
               setRegisteredResult(null);
               clearDraft();
             }}
             className="w-full sm:w-auto px-6 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all"
           >
-            Register Another Property
+            {usesSupabasePersistence ? 'Return to Dashboard' : 'Register Another Property'}
           </button>
         </div>
       </div>
@@ -707,6 +768,8 @@ export default function HostelRegistration({
         </div>
       )}
 
+      {submitError && <p role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">{submitError}</p>}
+      {usesSupabasePersistence && !hasLoadedDraft && !submitError && <p role="status" className="text-sm text-slate-600">Loading your verified residence…</p>}
       {/* Header Bar with Step Progress */}
       <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs text-left space-y-5">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
@@ -718,7 +781,7 @@ export default function HostelRegistration({
               Residence Registration
             </h2>
             <p className="text-xs text-slate-500 mt-0.5">
-              Complete all 6 registration steps. Submission commits atomically to the persistent database on the final step.
+              Complete all {STEPS.length} registration steps. Submit your property details and room configuration for review.
             </p>
           </div>
 
@@ -747,7 +810,7 @@ export default function HostelRegistration({
       </div>
 
       {/* Main Step Form Body */}
-      <div className="onboarding-fields bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 shadow-sm text-left">
+      <div inert={usesSupabasePersistence && !hasLoadedDraft} className="onboarding-fields bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 shadow-sm text-left">
         <AnimatePresence mode="wait">
           <motion.div
             key={currentStep}
@@ -766,9 +829,25 @@ export default function HostelRegistration({
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {usesSupabasePersistence && <>
+                    <label className="space-y-1.5 text-xs font-bold text-slate-700">
+                      Establishment year
+                      <input type="number" min="1000" max={new Date().getFullYear()} value={renderNumberInputValue(formData.yearEstablished)}
+                        onChange={e => updateFormData({yearEstablished:parseCleanNumberInput(e.target.value)})}
+                        className="block w-full rounded-xl border border-slate-200 p-3" />
+                      {validationErrors.yearEstablished && <span className="block text-rose-600">{validationErrors.yearEstablished}</span>}
+                    </label>
+                    <label className="space-y-1.5 text-xs font-bold text-slate-700">
+                      Residence gender category
+                      <select value={formData.genderCategory} onChange={e => updateFormData({genderCategory:e.target.value as 'Male'|'Female'|'Mixed'})}
+                        className="block w-full rounded-xl border border-slate-200 p-3">
+                        <option value="Mixed">Mixed</option><option value="Male">Male</option><option value="Female">Female</option>
+                      </select>
+                    </label>
+                  </>}
                   <div className="space-y-1.5">
                     <label className="text-xs font-bold text-slate-700">Resident Property Type <span className="text-rose-500">*</span></label>
-                    <select
+                    <select aria-label="Resident Property Type"
                       value={formData.wing}
                       onChange={(e: any) => {
                         const val = e.target.value;
@@ -812,7 +891,7 @@ export default function HostelRegistration({
                        formData.wing === 'Inn' ? 'Inn / Guesthouse Official Name' :
                        formData.wing === 'Hotel' ? 'Hotel Official Name' : 'Estate / Apartment Name'} <span className="text-rose-500">*</span>
                     </label>
-                    <input
+                    <input aria-label="Residence name"
                       type="text"
                       placeholder={formData.wing === 'Hostel' ? 'e.g. Pine Crest Residency, Emerald Heights' :
                                    formData.wing === 'Inn' ? 'e.g. The Travelers Inn, Cozy Guesthouse' :
@@ -833,7 +912,7 @@ export default function HostelRegistration({
                     <label className="text-xs font-bold text-slate-700">
                       Public Contact Email <span className="text-rose-500">*</span>
                     </label>
-                    <input
+                    <input aria-label="Public Contact Email"
                       type="email"
                       placeholder="info@hostelname.com"
                       value={formData.contactEmail}
@@ -852,7 +931,7 @@ export default function HostelRegistration({
 
                   <div className="space-y-1.5">
                     <label className="text-xs font-bold text-slate-700">Alternative Phone (Optional)</label>
-                    <input
+                    <input aria-label="Alternative Phone (Optional)"
                       type="tel"
                       placeholder="+233 50 000 0000"
                       value={formData.alternativePhone}
@@ -1034,7 +1113,7 @@ export default function HostelRegistration({
                               <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">
                                 Block / Section Name
                               </label>
-                              <input
+                              <input aria-label="Block / Section Name"
                                 type="text"
                                 value={block.name}
                                 onChange={(e) => handleBlockChange(block.id, 'name', e.target.value)}
@@ -1048,7 +1127,7 @@ export default function HostelRegistration({
                               <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider flex items-center gap-1">
                                 Block Gender Designation <span className="text-rose-500">*</span>
                               </label>
-                              <select
+                              <select aria-label="Block Gender Designation"
                                 value={block.gender || 'Mixed'}
                                 onChange={(e) => handleBlockChange(block.id, 'gender', e.target.value)}
                                 className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-900"
@@ -1064,7 +1143,7 @@ export default function HostelRegistration({
                               <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">
                                 Floors
                               </label>
-                              <input
+                              <input aria-label="Floors"
                                 type="text"
                                 inputMode="numeric"
                                 value={renderNumberInputValue(block.floors)}
@@ -1075,11 +1154,18 @@ export default function HostelRegistration({
                             </div>
 
                             {/* Room Prefix */}
+                            {usesSupabasePersistence && <div className="sm:col-span-2 space-y-1">
+                              <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">Starting room number
+                                <input type="number" min="1" max="999999" value={renderNumberInputValue(block.startNum)}
+                                  onChange={e => handleBlockChange(block.id,'startNum',parseCleanNumberInput(e.target.value))}
+                                  className="mt-1 block w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-800" />
+                              </label>
+                            </div>}
                             <div className="sm:col-span-2 space-y-1">
                               <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">
                                 Room Prefix
                               </label>
-                              <input
+                              <input aria-label="Room Prefix"
                                 type="text"
                                 value={block.roomPrefix}
                                 onChange={(e) => handleBlockChange(block.id, 'roomPrefix', e.target.value)}
@@ -1118,7 +1204,7 @@ export default function HostelRegistration({
                                     <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">
                                       Room Type / Bedspace #{rtIdx + 1}
                                     </label>
-                                    <select
+                                    <select aria-label="Room Type / Bedspace #"
                                       value={rt.typeName.startsWith('1 in 1') ? '1 in 1 Room' :
                                              rt.typeName.startsWith('2 in 1') ? '2 in 1 Room' :
                                              rt.typeName.startsWith('3 in 1') ? '3 in 1 Room' :
@@ -1140,7 +1226,7 @@ export default function HostelRegistration({
                                     <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">
                                       No. of Rooms
                                     </label>
-                                    <input
+                                    <input aria-label="No. of Rooms"
                                       type="text"
                                       inputMode="numeric"
                                       value={renderNumberInputValue(rt.totalRooms)}
@@ -1193,6 +1279,15 @@ export default function HostelRegistration({
               </div>
             )}
 
+        {usesSupabasePersistence && currentStep === STEPS.length && <div className="space-y-3 border-t border-slate-100 pt-4 text-sm">
+          <label className="flex items-start gap-3"><input type="checkbox" checked={formData.accuracyCertified}
+            onChange={e => updateFormData({accuracyCertified:e.target.checked})} className="mt-1 h-5 w-5" />
+            <span>I confirm these property details, photographs and room counts are accurate.</span></label>
+          <label className="flex items-start gap-3"><input type="checkbox" checked={formData.agreeTerms}
+            onChange={e => updateFormData({agreeTerms:e.target.checked})} className="mt-1 h-5 w-5" />
+            <span>I agree to submit this registration for PineVela verification and administrator review.</span></label>
+          {validationErrors.confirmation && <p role="alert" className="text-rose-600">{validationErrors.confirmation}</p>}
+        </div>}
         {/* Bottom Navigation Buttons */}
         <div className="border-t border-slate-100 pt-6 mt-6 flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="flex items-center gap-2 w-full sm:w-auto">
@@ -1218,7 +1313,7 @@ export default function HostelRegistration({
               className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold text-blue-600 bg-blue-50 border border-blue-200 hover:bg-blue-100 transition-colors"
             >
               <Save size={15} />
-              <span>Save & Exit</span>
+              <span>{usesSupabasePersistence ? 'Close' : 'Save & Exit'}</span>
             </button>
           </div>
 
@@ -1236,7 +1331,7 @@ export default function HostelRegistration({
               <button
                 type="button"
                 onClick={handleFinalSubmit}
-                disabled={isSubmitting}
+                disabled={isSubmitting || (usesSupabasePersistence && !hasLoadedDraft)}
                 className={`w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-3 rounded-xl text-xs font-extrabold transition-all ${
                   isSubmitting
                     ? 'bg-slate-200 text-slate-400 border border-slate-300 cursor-not-allowed shadow-none'

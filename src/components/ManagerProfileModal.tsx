@@ -1,3 +1,5 @@
+import DashboardOverlay from './DashboardOverlay';
+import { renderAvatarGraphic } from './UserAvatarSelector';
 import React, { useState } from 'react';
 import { User, Phone, Mail, Camera, Building, Briefcase, Check, X, Sparkles, Upload, Lock } from 'lucide-react';
 
@@ -27,7 +29,6 @@ export default function ManagerProfileModal({
   onSaveProfile,
   onSave
 }: ManagerProfileModalProps) {
-  if (!isOpen) return null;
 
   const isVerified = Boolean(
     currentUser?.isVerified === true || 
@@ -40,7 +41,7 @@ export default function ManagerProfileModal({
   const [phone, setPhone] = useState(currentUser?.phone || '');
   const [organization, setOrganization] = useState(currentUser?.organization || '');
   const [roleTitle, setRoleTitle] = useState(currentUser?.roleTitle || '');
-  const [photo, setPhoto] = useState(currentUser?.photo || currentUser?.avatar || currentUser?.photoUrl || PRESET_AVATARS[0]);
+  const [photo, setPhoto] = useState(currentUser?.photo || currentUser?.avatar || currentUser?.photoUrl || currentUser?.avatarUrl || currentUser?.profilePicture || '');
   const [isSaving, setIsSaving] = useState(false);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -58,6 +59,7 @@ export default function ManagerProfileModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSaving) return;
     setIsSaving(true);
     try {
       const payload = {
@@ -83,8 +85,10 @@ export default function ManagerProfileModal({
     }
   };
 
+  if (!isOpen) return null;
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-fadeIn">
+    <DashboardOverlay aria-label="Manager Profile Settings" onClose={isSaving ? null : onClose} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-fadeIn">
       <div className="bg-white border border-blue-200/80 rounded-3xl max-w-lg w-full shadow-2xl overflow-hidden flex flex-col">
         {/* Modal Header */}
         <div className="p-6 bg-gradient-to-r from-sky-400/25 via-blue-500/20 to-indigo-400/25 backdrop-blur-xl border-b border-sky-200/80 text-slate-900 flex items-center justify-between">
@@ -98,6 +102,7 @@ export default function ManagerProfileModal({
           </div>
           <button 
             onClick={onClose}
+            disabled={isSaving}
             aria-label="Close profile settings"
             className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center transition-colors cursor-pointer"
           >
@@ -112,24 +117,26 @@ export default function ManagerProfileModal({
             <label className="block text-xs font-bold text-slate-700">Profile Photo</label>
             <div className="flex items-center gap-4">
               <div className="relative">
-                <img 
+                {photo.startsWith('preset:') ? renderAvatarGraphic(photo, "w-20 h-20 text-2xl") : photo ? <img
                   src={photo} 
                   alt="Profile" 
                   className="w-20 h-20 rounded-2xl object-cover border-2 border-blue-500 shadow-md"
-                />
-                <label className="absolute -bottom-2 -right-2 w-7 h-7 bg-blue-600 hover:bg-blue-700 text-white rounded-xl flex items-center justify-center shadow-md cursor-pointer transition-transform hover:scale-110">
+                /> : <div aria-label="No profile photograph" className="w-20 h-20 rounded-2xl bg-blue-50 border-2 border-blue-500 flex items-center justify-center"><User size={32} aria-hidden="true" /></div>}
+                <label className="absolute -bottom-2 -right-2 w-11 h-11 bg-blue-600 hover:bg-blue-700 text-white rounded-xl flex items-center justify-center shadow-md cursor-pointer transition-transform hover:scale-110">
                   <Upload className="w-3.5 h-3.5" />
-                  <input type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
+                  <input aria-label="Upload profile photograph" type="file" accept="image/*" onChange={handleFileUpload} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
                 </label>
               </div>
 
               <div className="flex-1 space-y-2">
                 <p className="text-[11px] text-slate-500 font-medium">Choose from presets or paste image link:</p>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   {PRESET_AVATARS.map((av, idx) => (
                     <button
                       type="button"
                       key={idx}
+                      aria-label={`Choose profile photograph ${idx + 1}`}
+                      aria-pressed={photo === av}
                       onClick={() => setPhoto(av)}
                       className={`w-8 h-8 rounded-xl overflow-hidden border-2 transition-all cursor-pointer ${
                         photo === av ? 'border-blue-600 ring-2 ring-blue-400/40 scale-105' : 'border-slate-200 opacity-70 hover:opacity-100'
@@ -143,7 +150,7 @@ export default function ManagerProfileModal({
             </div>
 
             <div>
-              <input 
+              <input aria-label="Or paste image URL (https://...)"
                 type="text" 
                 value={photo} 
                 onChange={(e) => setPhoto(e.target.value)}
@@ -157,7 +164,7 @@ export default function ManagerProfileModal({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1">Full Name</label>
-              <input 
+              <input aria-label="Full Name"
                 type="text" 
                 required
                 value={name} 
@@ -169,7 +176,7 @@ export default function ManagerProfileModal({
 
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1">Official Phone Number</label>
-              <input 
+              <input aria-label="Official Phone Number"
                 type="text" 
                 required
                 value={phone} 
@@ -184,7 +191,7 @@ export default function ManagerProfileModal({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1">Organization / Entity</label>
-              <input 
+              <input aria-label="Organization / Entity"
                 type="text" 
                 disabled={isVerified}
                 value={organization} 
@@ -200,7 +207,7 @@ export default function ManagerProfileModal({
 
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1">Manager Role Title</label>
-              <input 
+              <input aria-label="Manager Role Title"
                 type="text" 
                 disabled={isVerified}
                 value={roleTitle} 
@@ -218,10 +225,10 @@ export default function ManagerProfileModal({
           {/* Email Info (read-only for account integrity) */}
           <div>
             <label className="block text-xs font-bold text-slate-700 mb-1">Account Email (Verified Login)</label>
-            <input 
+            <input aria-label="Account Email (Verified Login)"
               type="email" 
               disabled
-              value={currentUser?.email || 'manager@pinevela.com'} 
+              value={currentUser?.email || ''}
               className="w-full px-3.5 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-xs font-medium text-slate-500 cursor-not-allowed"
             />
           </div>
@@ -229,10 +236,11 @@ export default function ManagerProfileModal({
           {currentUser?.role === 'manager' && onManageAccount && <button type="button" onClick={onManageAccount} className="flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-xs font-bold text-blue-800"><Lock className="h-4 w-4" />Manager Account Security</button>}
 
           {/* Actions */}
-          <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+          <div className="ux-action-group pt-3 border-t border-slate-100">
             <button
               type="button"
               onClick={onClose}
+              disabled={isSaving}
               className="px-4 py-2 text-xs font-bold text-slate-500 hover:text-slate-800 transition-colors"
             >
               Cancel
@@ -240,6 +248,7 @@ export default function ManagerProfileModal({
             <button
               type="submit"
               disabled={isSaving}
+              aria-busy={isSaving}
               className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-lg shadow-blue-600/30 transition-all cursor-pointer flex items-center gap-2"
             >
               <Check className="w-4 h-4" />
@@ -248,6 +257,6 @@ export default function ManagerProfileModal({
           </div>
         </form>
       </div>
-    </div>
+    </DashboardOverlay>
   );
 }

@@ -1,13 +1,16 @@
 import { useActionFeedback } from '../lib/useActionFeedback';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
 import { usePlatformSettings } from '../context/PlatformSettingsContext';
 import { useAdminGovernance } from './AdminGovernancePanel';
 import { queryClient } from '../lib/queryClient';
 import type { PricingSettings } from '../../platformSettings';
+import { EMPTY_CONTACT_DETAILS, type ContactDetails } from '../../platformSettings';
 
 const input = 'w-full min-w-0 rounded-xl border border-blue-200 bg-white/80 px-4 py-3 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500';
 const button = 'rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white disabled:opacity-40';
+const supabaseMode = import.meta.env.VITE_PERSISTENCE === 'supabase';
 const priceRows: { label: string; value: (prices: PricingSettings) => number; unit: string }[] = [
   { label: 'Registration fee', value: p => p.registrationFee, unit: 'GHS' }, { label: 'Commission', value: p => p.commission, unit: '%' },
   { label: 'Semester fee (two months)', value: p => p.semesterFee, unit: 'GHS' },
@@ -18,8 +21,24 @@ function FeeInput({ label, value, onChange }: { label: string; value: string; on
   return <fieldset className="min-w-0 space-y-2"><legend className="text-sm font-semibold">{label}</legend><input aria-label={label} type="number" required={!free} disabled={free} min="0" max="1000000" step="0.01" value={value} onChange={event => onChange(event.target.value)} className={input} /><label className="flex items-center gap-2 text-xs font-medium text-slate-600"><input type="checkbox" checked={free} onChange={event => onChange(event.target.checked ? '0' : '')} />No payment (GHS 0)</label></fieldset>;
 }
 export default function AdminSettingsPanel() {
+  const { user } = useAuth();
+  return <AdministratorSettingsContent key={`${user?.id || 'signed-out'}:${user?.role || ''}`} />;
+}
+function AdministratorSettingsContent() {
   const feedback = useActionFeedback();
-  const { apiFetch, user, updateUser } = useAuth(), { settings } = usePlatformSettings(), { data: governance } = useAdminGovernance();
+  const { apiFetch: fetchAccount, user, updateUser } = useAuth(), { settings } = usePlatformSettings();
+  const mounted = useRef(true);
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
+  async function apiFetch(path: string, options?: RequestInit) {
+    const result = await fetchAccount(path, options);
+    if (!mounted.current) throw new Error('The administrator account has changed.');
+    return result;
+  }
+  const { data: legacyGovernance } = useAdminGovernance(!supabaseMode);
+  const { data: settingsStatus, error: statusError } = useQuery<any>({ queryKey: ['adminSettingsStatus', user?.id],
+    enabled: supabaseMode && user?.role === 'admin', refetchInterval: 8000,
+    queryFn: async () => { const result = await fetchAccount('/api/admin/settings/pricing'); if (!Array.isArray(result?.members) || !Array.isArray(result?.pricingProposals)) throw new Error('Administrator settings status could not load.'); return result; } });
+  const governance = supabaseMode ? settingsStatus : legacyGovernance;
   const self = governance?.members.find((member: any) => member.id === user?.id);
   const [fee, setFee] = useState(''), [commission, setCommission] = useState(''), [announcement, setAnnouncement] = useState(''), [maintenance, setMaintenance] = useState(false);
   const [semesterFee, setSemesterFee] = useState(''), [planPrices, setPlanPrices] = useState({ default: '', star: '', pro: '' });
@@ -29,6 +48,9 @@ export default function AdminSettingsPanel() {
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [receiving, setReceiving] = useState<any>(null), [receivingCode, setReceivingCode] = useState('');
   const [pricingReason, setPricingReason] = useState(''), [portalDirty, setPortalDirty] = useState(false);
+  const [contacts, setContacts] = useState<ContactDetails>({ ...EMPTY_CONTACT_DETAILS });
+  const [contactsDirty, setContactsDirty] = useState(false);
+  useEffect(() => { if (settings && !contactsDirty) setContacts({ ...(settings.contactDetails || EMPTY_CONTACT_DETAILS) }); }, [settings, contactsDirty]);
   const activeAdmins = governance?.members.filter((member: any) => member.active) || [];
   const pricingReady = activeAdmins.length >= 3 && activeAdmins.length <= 5 && activeAdmins.filter((member: any) => member.settingsKeyEnrolled).length >= 3 && activeAdmins.some((member: any) => member.id === governance?.mainId && member.settingsKeyEnrolled);
   const main = user?.id === governance?.mainId;
@@ -38,8 +60,8 @@ export default function AdminSettingsPanel() {
     if (busy) return;
     const origin = feedback.begin();
     setBusy(true); setError(''); setNotice('');
-    try { await action(); } catch (err: any) { setError(err.message || 'This change could not be saved.'); feedback.fail(err.message || 'This change could not be saved.', origin); }
-    finally { setBusy(false); setPassword(''); setKey(''); }
+    try { await action(); } catch (err: any) { if (mounted.current) { setError(err.message || 'This change could not be saved.'); feedback.fail(err.message || 'This change could not be saved.', origin); } }
+    finally { if (mounted.current) { setBusy(false); setPassword(''); setKey(''); } }
   }
   async function post(path: string, body: any) {
     const result = await apiFetch(path, { method: 'POST', body: JSON.stringify(body) });
@@ -58,13 +80,14 @@ export default function AdminSettingsPanel() {
   return <section onClickCapture={feedback.capture} onSubmitCapture={feedback.capture} className="space-y-6 text-slate-900" aria-label="Administrator settings">
     <header className="rounded-3xl border border-blue-200 bg-white/65 p-6"><h3 className="text-xl font-bold">PineVela Admin Settings</h3><p className="mt-2 text-xs text-slate-600">Configure marketplace registration and subscription fees in GHS, commission accounting, system announcements, and platform maintenance.</p></header>
     {notice && <p role="status" className="rounded-xl bg-blue-50 p-4 text-sm text-blue-900">{notice}</p>}
-    {!self ? <p role="status">Loading administrator key status…</p> : !self.settingsKeyEnrolled && <form className="space-y-4 rounded-3xl border border-blue-200 bg-white/65 p-6" onSubmit={event => { event.preventDefault(); void act(async () => { const result = await post('/api/admin/governance/keys/settings/enroll', { password }); setNewKey(result.settingsKey); setNotice(result.message); await queryClient.invalidateQueries({ queryKey: ['adminGovernance'] }); }); }}>
-      <h4 className="font-bold">Enroll your separate settings key</h4><p className="text-sm text-slate-600">Verify your own login password to receive a private settings key. Wipe approval keys cannot change these settings.</p>
-      <label className="block text-sm">Current login password<input type="password" autoComplete="current-password" required value={password} onChange={event => setPassword(event.target.value)} className={input} /></label><button className={button} disabled={busy}>Generate my settings key</button>
+    {supabaseMode && <p role="status" className="rounded-xl bg-blue-50 p-4 text-sm text-blue-900">Settings keys, shared pricing approvals and Paystack receiving accounts are available in the Supabase migration backend. Contact details, announcements, maintenance controls and profile changes are awaiting migration.</p>}
+    {!self ? <p role="status">{statusError ? statusError.message : 'Loading administrator key status…'}</p> : !self.settingsKeyEnrolled && <form className="space-y-4 rounded-3xl border border-blue-200 bg-white/65 p-6" onSubmit={event => { event.preventDefault(); void act(async () => { const result = await post('/api/admin/governance/keys/settings/enroll', supabaseMode ? {} : { password }); setNewKey(result.settingsKey); setNotice(result.message); await queryClient.invalidateQueries({ queryKey: [supabaseMode ? 'adminSettingsStatus' : 'adminGovernance'] }); }); }}>
+      <h4 className="font-bold">Enroll your separate settings key</h4><p className="text-sm text-slate-600">{supabaseMode ? 'Sign in with Google or your verified email within the last five minutes to receive your settings key. If this window has ended, sign out and sign in again.' : 'Verify your own login password to receive a private settings key.'} Wipe approval keys cannot change these settings.</p>
+      {!supabaseMode && <label className="block text-sm">Current login password<input type="password" autoComplete="current-password" required value={password} onChange={event => setPassword(event.target.value)} className={input} /></label>}<button className={button} disabled={busy || supabaseMode && !governance?.freshSignIn}>Generate my settings key</button>
     </form>}
     {newKey && <div className="space-y-3 rounded-2xl border border-amber-300 bg-amber-50 p-5"><p className="text-sm font-semibold">Save this settings key privately. This is its only display.</p><code className="block select-all break-all text-sm">{newKey}</code><button type="button" className={button} onClick={() => setNewKey('')}>I saved my settings key</button></div>}
-    <div className="rounded-2xl border border-blue-200 bg-white/65 p-5"><label className="block text-sm font-semibold">Your private settings key<input type="password" autoComplete="off" value={key} maxLength={128} onChange={event => setKey(event.target.value)} className={input} /></label><p className="mt-2 text-xs text-slate-600">Required for every settings or profile change. Lost keys can be reset under Admin Approvals by two other administrators.</p></div>
-    <form aria-label="Propose marketplace pricing" className="space-y-6 rounded-3xl border border-blue-200 bg-white/65 p-6" onSubmit={event => { event.preventDefault(); void act(async () => { const result = await post('/api/admin/governance/pricing', { prices: { registrationFee: Number(fee), semesterFee: Number(semesterFee), subscriptionPrices: Object.fromEntries(Object.entries(planPrices).map(([plan, value]) => [plan, Number(value)])), commission: Number(commission) }, reason: pricingReason, settingsKey: key }); if (!result.success) throw new Error('Pricing proposal could not be saved.'); setDirty(false); setPricingReason(''); setNotice(result.message); await queryClient.invalidateQueries({ queryKey: ['adminGovernance'] }); }); }}>
+    <div className="rounded-2xl border border-blue-200 bg-white/65 p-5"><label className="block text-sm font-semibold">Your private settings key<input type="password" autoComplete="off" value={key} maxLength={128} onChange={event => setKey(event.target.value)} className={input} /></label><p className="mt-2 text-xs text-slate-600">Required for every settings or profile change. {supabaseMode ? 'Lost-key recovery requires two other administrators; this approval workflow is awaiting migration.' : 'Lost keys can be reset under Admin Approvals by two other administrators.'}</p></div>
+    <form aria-label="Propose marketplace pricing" className="space-y-6 rounded-3xl border border-blue-200 bg-white/65 p-6" onSubmit={event => { event.preventDefault(); void act(async () => { const result = await post('/api/admin/governance/pricing', { prices: { registrationFee: Number(fee), semesterFee: Number(semesterFee), subscriptionPrices: Object.fromEntries(Object.entries(planPrices).map(([plan, value]) => [plan, Number(value)])), commission: Number(commission) }, reason: pricingReason, settingsKey: key }); if (!result.success) throw new Error('Pricing proposal could not be saved.'); setDirty(false); setPricingReason(''); setNotice(result.message); await queryClient.invalidateQueries({ queryKey: [supabaseMode ? 'adminSettingsStatus' : 'adminGovernance'] }); }); }}>
       <h4 className="font-bold">Propose marketplace pricing</h4><p className="text-sm text-slate-600">At least three distinct administrators must approve. Up to five may vote. Only administrator #1 can make the final push; submitting or voting never changes live prices.</p>
       {!pricingReady && <p role="status" className="rounded-xl bg-amber-50 p-3 text-sm text-amber-900">Pricing needs at least three active administrators with enrolled settings keys, including administrator #1. Invite/enroll the required administrators through Admin Approvals.</p>}
       <div className="grid gap-4 sm:grid-cols-2"><FeeInput label="New marketplace registration fee (GHS)" value={fee} onChange={value => { setDirty(true); setFee(value); }} /><label className="text-sm font-semibold">Marketplace commission (%)<input type="number" required min="0" max="100" step="0.01" value={commission} onChange={event => { setDirty(true); setCommission(event.target.value); }} className={input} /></label></div>
@@ -74,7 +97,7 @@ export default function AdminSettingsPanel() {
     </form>
     <section aria-label="Marketplace pricing approvals" className="space-y-4">
       <h4 className="text-lg font-bold">Shared pricing proposals</h4>
-      {!governance?.pricingProposals?.length && <p className="text-sm text-slate-600">No pricing proposals have been submitted.</p>}
+      {governance && Array.isArray(governance.pricingProposals) && !governance.pricingProposals.length && <p className="text-sm text-slate-600">No pricing proposals have been submitted.</p>}
       {governance?.pricingProposals?.slice().reverse().map((proposal: any) => {
         const approvals = proposal.votes.filter((vote: any) => vote.decision === 'approved').length;
         const open = ['pending', 'approved'].includes(proposal.status), voted = proposal.votes.some((vote: any) => vote.id === user?.id);
@@ -84,19 +107,30 @@ export default function AdminSettingsPanel() {
           <div className="overflow-x-auto"><table className="w-full text-left text-xs"><thead><tr><th className="py-2">Setting</th><th className="px-2">Current at proposal</th><th className="px-2">Proposed</th></tr></thead><tbody>{priceRows.map(row => <tr key={row.label} className="border-t border-blue-100"><th className="py-2 font-medium">{row.label}</th><td className="px-2">{row.value(proposal.before).toFixed(2)} {row.unit}</td><td className="px-2 font-semibold">{row.value(proposal.prices).toFixed(2)} {row.unit}</td></tr>)}</tbody></table></div>
           <ul className="space-y-1 text-xs">{proposal.roster.map((member: any) => { const vote = proposal.votes.find((entry: any) => entry.id === member.id); return <li key={member.id} className="break-words">#{member.slot} · {member.name} · {vote ? `${vote.decision} · ${new Date(vote.at).toLocaleString()}` : 'Awaiting vote'}</li>; })}</ul>
           <p className="text-xs text-slate-600">Expires {new Date(proposal.expiresAt).toLocaleString()}</p>
-          {open && !voted && proposal.roster.some((member: any) => member.id === user?.id) && <div className="flex flex-wrap gap-2">{(['approved', 'rejected'] as const).map(decision => <button key={decision} type="button" className={button} disabled={busy || !key || !self?.settingsKeyEnrolled} onClick={() => void act(async () => { const result = await post(`/api/admin/governance/pricing/${proposal.id}/vote`, { decision, settingsKey: key }); setNotice(result.message); await queryClient.invalidateQueries({ queryKey: ['adminGovernance'] }); })}>{decision === 'approved' ? 'Approve pricing' : 'Reject pricing'}</button>)}</div>}
-          {open && main && <button type="button" className={button} disabled={busy || !key || !self?.settingsKeyEnrolled || proposal.status !== 'approved' || approvals < 3} onClick={() => void act(async () => { const result = await post(`/api/admin/governance/pricing/${proposal.id}/apply`, { settingsKey: key }); if (!result.success) throw new Error('Pricing could not be applied.'); setDirty(false); queryClient.setQueryData(['settings'], result.settings); setNotice(result.message); await queryClient.invalidateQueries({ queryKey: ['adminGovernance'] }); await queryClient.invalidateQueries({ queryKey: ['settings'] }); })}>Final push — apply approved pricing</button>}
+          {open && !voted && proposal.roster.some((member: any) => member.id === user?.id) && <div className="flex flex-wrap gap-2">{(['approved', 'rejected'] as const).map(decision => <button key={decision} type="button" className={button} disabled={busy || !key || !self?.settingsKeyEnrolled} onClick={() => void act(async () => { const result = await post(`/api/admin/governance/pricing/${proposal.id}/vote`, { decision, settingsKey: key }); setNotice(result.message); await queryClient.invalidateQueries({ queryKey: [supabaseMode ? 'adminSettingsStatus' : 'adminGovernance'] }); })}>{decision === 'approved' ? 'Approve pricing' : 'Reject pricing'}</button>)}</div>}
+          {open && main && <button type="button" className={button} disabled={busy || !key || !self?.settingsKeyEnrolled || proposal.status !== 'approved' || approvals < 3} onClick={() => void act(async () => { const result = await post(`/api/admin/governance/pricing/${proposal.id}/apply`, { settingsKey: key }); if (!result.success) throw new Error('Pricing could not be applied.'); setDirty(false); queryClient.setQueryData(['settings'], result.settings); setNotice(result.message); await queryClient.invalidateQueries({ queryKey: [supabaseMode ? 'adminSettingsStatus' : 'adminGovernance'] }); await queryClient.invalidateQueries({ queryKey: ['settings'] }); })}>Final push — apply approved pricing</button>}
           {open && !main && <p className="text-xs text-blue-800">Administrator #1 makes the final push after at least three approvals.</p>}
           {proposal.status === 'applied' && <p className="break-all text-xs text-blue-800">Applied by administrator #1 · {proposal.appliedBy} · {new Date(proposal.appliedAt).toLocaleString()}</p>}
         </article>;
       })}
     </section>
+    <form aria-label="Public contact details" className="space-y-5 rounded-3xl border border-blue-200 bg-white/65 p-6" onSubmit={event => { event.preventDefault(); void act(async () => { const result = await post('/api/settings', { contactDetails: contacts, settingsKey: key }); if (!result.success) throw new Error('Contact details could not be saved.'); setContactsDirty(false); queryClient.setQueryData(['settings'], result.settings); await queryClient.invalidateQueries({ queryKey: ['settings'] }); setNotice('Public contact details saved. The landing Contact Us card will receive the update.'); }); }}>
+      <h4 className="font-bold">Landing page contact details</h4>
+      <p className="text-sm text-slate-600">Set verified social profile URLs and a WhatsApp number with its country code. Leave a field empty to keep that channel unlinked. Saving requires your private settings key above.</p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {([
+          ['linkedinUrl', 'LinkedIn profile URL'], ['whatsappNumber', 'WhatsApp number with country code'],
+          ['facebookUrl', 'Facebook profile URL'], ['tiktokUrl', 'TikTok profile URL'],
+        ] as const).map(([field, label]) => <label key={field} className="block text-sm font-semibold">{label}<input type={field === 'whatsappNumber' ? 'tel' : 'url'} maxLength={500} value={contacts[field]} onChange={event => { setContactsDirty(true); setContacts(previous => ({ ...previous, [field]: event.target.value })); }} className={input} /></label>)}
+      </div>
+      <button className={button} disabled={busy || !key || !self?.settingsKeyEnrolled || !settings || supabaseMode}>Save contact details</button>
+    </form>
     <form aria-label="Portal settings" className="space-y-6 rounded-3xl border border-blue-200 bg-white/65 p-6" onSubmit={event => { event.preventDefault(); void act(async () => { const result = await post('/api/settings', { announcement, maintenanceMode: maintenance, settingsKey: key, ...(settings?.maintenanceMode && !maintenance ? { maintenanceRecoveryMessage: recoveryMessage } : {}) }); if (!result.success) throw new Error('Settings could not be saved.'); setPortalDirty(false); setRecoveryMessage(''); queryClient.setQueryData(['settings'], result.settings); setNotice('Platform settings saved. All portals will receive the update.'); }); }}>
       <h4 className="font-bold">Announcements and maintenance</h4>
       <label className="block text-sm font-semibold">Global System Announcement<textarea rows={3} maxLength={2000} value={announcement} onChange={event => { setPortalDirty(true); setAnnouncement(event.target.value); }} className={input} /><span className="text-xs font-normal text-slate-600">Sent to non-admin accounts’ notifications. Clear the text to stop publishing an announcement.</span></label>
       <label className="flex items-center justify-between gap-4 rounded-2xl border border-blue-200 bg-blue-50/60 p-4"><span><strong className="block text-sm">Platform Maintenance Mode</strong><span className="text-xs text-slate-600">Temporary restrict non admin accounts during database updates</span></span><input aria-label="Platform Maintenance Mode" type="checkbox" checked={maintenance} onChange={event => { setPortalDirty(true); setMaintenance(event.target.checked); }} className="h-5 w-5 accent-blue-600" /></label>
       {settings?.maintenanceMode && !maintenance && <label className="block text-sm font-semibold">Message for returning users<textarea required rows={4} maxLength={2000} value={recoveryMessage} onChange={event => setRecoveryMessage(event.target.value)} className={input} /><span className="text-xs font-normal text-slate-600">Existing non-admin accounts can see and dismiss this popup for 24 hours after maintenance ends. Accounts created afterward will not receive it.</span></label>}
-      <button className={button} disabled={busy || !key || !self?.settingsKeyEnrolled || !settings}>Save Admin Settings</button>
+      <button className={button} disabled={busy || !key || !self?.settingsKeyEnrolled || !settings || supabaseMode}>Save Admin Settings</button>
     </form>
     <section className="space-y-4 rounded-3xl border border-blue-200 bg-white/65 p-6" aria-label="Payment receiving account">
       <h4 className="font-bold">Payment receiving account</h4>
@@ -112,7 +146,7 @@ export default function AdminSettingsPanel() {
     </section>
     <form className="space-y-4 rounded-3xl border border-blue-200 bg-white/65 p-6" onSubmit={event => { event.preventDefault(); void act(savePhoto); }}>
       <h4 className="font-bold">Your administrator profile photograph</h4><div className="flex items-center gap-4">{user?.photo || user?.avatar ? <img src={user.photo || user.avatar} alt="Your administrator profile" className="h-20 w-20 rounded-full object-cover" /> : <span className="flex h-20 w-20 items-center justify-center rounded-full bg-blue-100 text-2xl font-bold text-blue-900">{user?.name?.slice(0, 1)}</span>}<p className="text-xs text-slate-600">JPEG, PNG or WebP up to 5 MB. Photographs are decoded, checked and re-encoded with a maximum dimension of 800 pixels.</p></div>
-      <label className="block text-sm">Choose profile photograph<input type="file" accept="image/jpeg,image/png,image/webp" onChange={event => setPhotoFile(event.target.files?.[0] || null)} className={input} /></label><button className={button} disabled={busy || !photoFile || !key || !self?.settingsKeyEnrolled}>Save profile photograph</button>
+      <label className="block text-sm">Choose profile photograph<input type="file" accept="image/jpeg,image/png,image/webp" onChange={event => setPhotoFile(event.target.files?.[0] || null)} className={input} /></label><button className={button} disabled={busy || !photoFile || !key || !self?.settingsKeyEnrolled || supabaseMode}>Save profile photograph</button>
     </form>
   </section>;
 }

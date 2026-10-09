@@ -1,6 +1,8 @@
 node_modules/
 build/
 dist/
+dist-supabase/
+dist-supabase-backend/
 coverage/
 .DS_Store
 *.log

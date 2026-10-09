@@ -1,0 +1,2568 @@
+{
+  "note": "Generated from literal root Express routes. Mounted routers and frontend endpoint usage also need review. Implemented does not imply complete workflow validation.",
+  "endpoints": [
+    {
+      "endpoint": "DELETE /api/digital-market/products/:id",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "DELETE",
+          "path": "/api/digital-market/products/:id",
+          "source": "server.ts",
+          "line": 5009,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "DELETE /api/hostels/:id",
+      "status": "retired_do_not_port",
+      "sources": [
+        {
+          "method": "DELETE",
+          "path": "/api/hostels/:id",
+          "source": "server.ts",
+          "line": 7597,
+          "retired": true
+        }
+      ]
+    },
+    {
+      "endpoint": "DELETE /api/meetings/:id",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "DELETE",
+          "path": "/api/meetings/:id",
+          "source": "server.ts",
+          "line": 10409,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "DELETE /api/staff/:id",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "DELETE",
+          "path": "/api/staff/:id",
+          "source": "staffManagement.ts",
+          "line": 92,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/activities",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/activities",
+          "source": "server.ts",
+          "line": 10593,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/admin-messages/pending",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/admin-messages/pending",
+          "source": "residenceRequests.ts",
+          "line": 208,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/admin/all-users",
+      "status": "pending_review_and_port",
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/admin/all-users",
+          "source": "server.ts",
+          "line": 10167,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/admin/digital-market/applications",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/admin/digital-market/applications",
+          "source": "server.ts",
+          "line": 5032,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/admin/digital-market/stores",
+      "status": "pending_review_and_port",
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/admin/digital-market/stores",
+          "source": "server.ts",
+          "line": 5289,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/admin/manager-key-petitions",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/admin/manager-key-petitions",
+          "source": "residenceRequests.ts",
+          "line": 201,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/admin/manager-request-keys",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/admin/manager-request-keys",
+          "source": "residenceRequests.ts",
+          "line": 200,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/admin/manager-restrictions",
+      "status": "pending_review_and_port",
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/admin/manager-restrictions",
+          "source": "server.ts",
+          "line": 4267,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/admin/messages/accounts",
+      "status": "pending_review_and_port",
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/admin/messages/accounts",
+          "source": "adminGovernanceRoutes.ts",
+          "line": 22,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/admin/payments",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/admin/payments",
+          "source": "paystackPayments.ts",
+          "line": 235,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/admin/payments/receiving-account",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/admin/payments/receiving-account",
+          "source": "paystackPayments.ts",
+          "line": 211,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/admin/verification-inspections",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/admin/verification-inspections",
+          "source": "server.ts",
+          "line": 6450,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/auth/account-access",
+      "status": "pending_review_and_port",
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/auth/account-access",
+          "source": "server.ts",
+          "line": 2376,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/auth/appearance",
+      "status": "pending_review_and_port",
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/auth/appearance",
+          "source": "themePreferences.ts",
+          "line": 18,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/auth/check-username",
+      "status": "pending_review_and_port",
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/auth/check-username",
+          "source": "server.ts",
+          "line": 10199,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/auth/google/callback",
+      "status": "pending_review_and_port",
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/auth/google/callback",
+          "source": "googleAuth.ts",
+          "line": 99,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/auth/maintenance-notice",
+      "status": "pending_review_and_port",
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/auth/maintenance-notice",
+          "source": "maintenanceNotice.ts",
+          "line": 28,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/auth/me",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/auth/me",
+          "source": "server.ts",
+          "line": 2363,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/board-requests",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/board-requests",
+          "source": "residenceRequests.ts",
+          "line": 203,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/board-requests/:id/review",
+      "status": "pending_review_and_port",
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/board-requests/:id/review",
+          "source": "residenceRequests.ts",
+          "line": 205,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/database/status",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/database/status",
+          "source": "server.ts",
+          "line": 1158,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/digital-market/messages",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/digital-market/messages",
+          "source": "marketMessaging.ts",
+          "line": 55,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/digital-market/my-orders",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/digital-market/my-orders",
+          "source": "server.ts",
+          "line": 5430,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/digital-market/products",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/digital-market/products",
+          "source": "server.ts",
+          "line": 4739,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/digital-market/ratings",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/digital-market/ratings",
+          "source": "marketRatingSecurity.ts",
+          "line": 119,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/digital-market/services/:id/reviews",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/digital-market/services/:id/reviews",
+          "source": "marketRatingSecurity.ts",
+          "line": 120,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/digital-market/status",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/digital-market/status",
+          "source": "server.ts",
+          "line": 4557,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/digital-market/stores/:storeId",
+      "status": "pending_review_and_port",
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/digital-market/stores/:storeId",
+          "source": "server.ts",
+          "line": 4732,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/health",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/health",
+          "source": "server.ts",
+          "line": 1063,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/hostel-managers",
+      "status": "pending_review_and_port",
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/hostel-managers",
+          "source": "server.ts",
+          "line": 6809,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/hostel-verifications",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/hostel-verifications",
+          "source": "server.ts",
+          "line": 6938,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/hostels",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/hostels",
+          "source": "server.ts",
+          "line": 7215,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/issue-reports",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/issue-reports",
+          "source": "server.ts",
+          "line": 7735,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/manager-requests",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/manager-requests",
+          "source": "server.ts",
+          "line": 2611,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/manager-verifications",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/manager-verifications",
+          "source": "server.ts",
+          "line": 3559,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/manager/account-settings",
+      "status": "pending_review_and_port",
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/manager/account-settings",
+          "source": "server.ts",
+          "line": 10222,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/manager/my-hostel",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/manager/my-hostel",
+          "source": "server.ts",
+          "line": 7272,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/manager/residence-requests",
+      "status": "pending_review_and_port",
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/manager/residence-requests",
+          "source": "residenceRequests.ts",
+          "line": 199,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/manager/secret-key",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/manager/secret-key",
+          "source": "residenceRequests.ts",
+          "line": 196,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/managers",
+      "status": "pending_review_and_port",
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/managers",
+          "source": "server.ts",
+          "line": 6819,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/meetings",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/meetings",
+          "source": "server.ts",
+          "line": 10260,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/notifications",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/notifications",
+          "source": "server.ts",
+          "line": 10436,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/payments/paystack/callback",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/payments/paystack/callback",
+          "source": "paystackPayments.ts",
+          "line": 222,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/public/registered-residents",
+      "status": "pending_review_and_port",
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/public/registered-residents",
+          "source": "server.ts",
+          "line": 10154,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/ratings",
+      "status": "pending_review_and_port",
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/ratings",
+          "source": "server.ts",
+          "line": 10557,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/registered-residents",
+      "status": "pending_review_and_port",
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/registered-residents",
+          "source": "server.ts",
+          "line": 10154,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/room-keys",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/room-keys",
+          "source": "server.ts",
+          "line": 8918,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/settings",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/settings",
+          "source": "server.ts",
+          "line": 1191,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/staff",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/staff",
+          "source": "staffManagement.ts",
+          "line": 24,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/staff-bargains",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/staff-bargains",
+          "source": "server.ts",
+          "line": 9725,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/staff-reviews",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/staff-reviews",
+          "source": "staffManagement.ts",
+          "line": 102,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/student/my-profile",
+      "status": "pending_review_and_port",
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/student/my-profile",
+          "source": "server.ts",
+          "line": 9017,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/student/my-rooms",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/student/my-rooms",
+          "source": "server.ts",
+          "line": 9150,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/sync/events",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/sync/events",
+          "source": "server.ts",
+          "line": 1070,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/user/registered-accounts",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/user/registered-accounts",
+          "source": "server.ts",
+          "line": 3583,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/users/manager-restriction",
+      "status": "pending_review_and_port",
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/users/manager-restriction",
+          "source": "server.ts",
+          "line": 4240,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/users/my-registered-accounts",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/users/my-registered-accounts",
+          "source": "server.ts",
+          "line": 3583,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/verification-inspections",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/verification-inspections",
+          "source": "server.ts",
+          "line": 6450,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/verification-team/me",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/verification-team/me",
+          "source": "server.ts",
+          "line": 6340,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/verification-team/my-inspections",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/verification-team/my-inspections",
+          "source": "server.ts",
+          "line": 6461,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/verification-teams",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/verification-teams",
+          "source": "server.ts",
+          "line": 6130,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/verification/audit-logs",
+      "status": "pending_review_and_port",
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/verification/audit-logs",
+          "source": "server.ts",
+          "line": 7205,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/verification/test-cards",
+      "status": "pending_review_and_port",
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/verification/test-cards",
+          "source": "server.ts",
+          "line": 3248,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/verification/test-cards/random",
+      "status": "pending_review_and_port",
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/verification/test-cards/random",
+          "source": "server.ts",
+          "line": 3259,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/admin-messages/:id/ack",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/admin-messages/:id/ack",
+          "source": "residenceRequests.ts",
+          "line": 215,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/admin/clear-all-registered-accounts",
+      "status": "retired_do_not_port",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/clear-all-registered-accounts",
+          "source": "adminGovernanceRoutes.ts",
+          "line": 55,
+          "retired": true
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/admin/digital-market/approve-application",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/digital-market/approve-application",
+          "source": "server.ts",
+          "line": 5044,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/admin/digital-market/reject-application",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/digital-market/reject-application",
+          "source": "server.ts",
+          "line": 5232,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/admin/digital-market/toggle-ban-store",
+      "status": "retired_do_not_port",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/digital-market/toggle-ban-store",
+          "source": "server.ts",
+          "line": 5301,
+          "retired": true
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/admin/dispatch-verification-team",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/dispatch-verification-team",
+          "source": "server.ts",
+          "line": 6475,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/admin/manager-restrictions/:id/approve",
+      "status": "pending_review_and_port",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/manager-restrictions/:id/approve",
+          "source": "server.ts",
+          "line": 4279,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/admin/manager-restrictions/:id/reject",
+      "status": "pending_review_and_port",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/manager-restrictions/:id/reject",
+          "source": "server.ts",
+          "line": 4328,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/admin/managers/:id/reset-request-key",
+      "status": "pending_review_and_port",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/managers/:id/reset-request-key",
+          "source": "residenceRequests.ts",
+          "line": 202,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/admin/messages",
+      "status": "pending_review_and_port",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/messages",
+          "source": "adminGovernanceRoutes.ts",
+          "line": 24,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/admin/messages/preview",
+      "status": "pending_review_and_port",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/messages/preview",
+          "source": "adminGovernanceRoutes.ts",
+          "line": 23,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/admin/payments/receiving-account",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/payments/receiving-account",
+          "source": "paystackPayments.ts",
+          "line": 212,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/admin/reset-user-password",
+      "status": "pending_review_and_port",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/reset-user-password",
+          "source": "server.ts",
+          "line": 2596,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/auth/admin-invitation/accept",
+      "status": "pending_review_and_port",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/auth/admin-invitation/accept",
+          "source": "adminGovernanceRoutes.ts",
+          "line": 43,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/auth/change-password",
+      "status": "pending_review_and_port",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/auth/change-password",
+          "source": "server.ts",
+          "line": 10245,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/auth/google/start",
+      "status": "pending_review_and_port",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/auth/google/start",
+          "source": "googleAuth.ts",
+          "line": 78,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/auth/login",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/auth/login",
+          "source": "server.ts",
+          "line": 1196,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/auth/logout",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/auth/logout",
+          "source": "server.ts",
+          "line": 2351,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/auth/maintenance-notice/dismiss",
+      "status": "pending_review_and_port",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/auth/maintenance-notice/dismiss",
+          "source": "maintenanceNotice.ts",
+          "line": 32,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/auth/profile",
+      "status": "pending_review_and_port",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/auth/profile",
+          "source": "server.ts",
+          "line": 2588,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/auth/quick-manager-login",
+      "status": "pending_review_and_port",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/auth/quick-manager-login",
+          "source": "server.ts",
+          "line": 1664,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/auth/quick-merchant-login",
+      "status": "pending_review_and_port",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/auth/quick-merchant-login",
+          "source": "server.ts",
+          "line": 1660,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/auth/quick-resident-login",
+      "status": "pending_review_and_port",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/auth/quick-resident-login",
+          "source": "server.ts",
+          "line": 1656,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/auth/quick-staff-login",
+      "status": "pending_review_and_port",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/auth/quick-staff-login",
+          "source": "server.ts",
+          "line": 1668,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/auth/register-manager",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/auth/register-manager",
+          "source": "server.ts",
+          "line": 1719,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/auth/register-manager-account",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/auth/register-manager-account",
+          "source": "server.ts",
+          "line": 1815,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/auth/register-unified",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/auth/register-unified",
+          "source": "server.ts",
+          "line": 1777,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/auth/verification-team-login",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/auth/verification-team-login",
+          "source": "server.ts",
+          "line": 6270,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/auth/verify-unified",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/auth/verify-unified",
+          "source": "server.ts",
+          "line": 1779,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/board-requests",
+      "status": "pending_review_and_port",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/board-requests",
+          "source": "residenceRequests.ts",
+          "line": 204,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/board-requests/:id/decision",
+      "status": "pending_review_and_port",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/board-requests/:id/decision",
+          "source": "residenceRequests.ts",
+          "line": 206,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/digital-market/login",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/digital-market/login",
+          "source": "server.ts",
+          "line": 4610,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/digital-market/messages",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/digital-market/messages",
+          "source": "marketMessaging.ts",
+          "line": 67,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/digital-market/orders",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/digital-market/orders",
+          "source": "server.ts",
+          "line": 5304,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/digital-market/orders/:id/renew-pin",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/digital-market/orders/:id/renew-pin",
+          "source": "server.ts",
+          "line": 5460,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/digital-market/orders/:id/update-status",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/digital-market/orders/:id/update-status",
+          "source": "server.ts",
+          "line": 5484,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/digital-market/products",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/digital-market/products",
+          "source": "server.ts",
+          "line": 4833,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/digital-market/ratings",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/digital-market/ratings",
+          "source": "marketRatingSecurity.ts",
+          "line": 105,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/digital-market/register",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/digital-market/register",
+          "source": "server.ts",
+          "line": 4447,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/digital-market/services/:id/reviews",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/digital-market/services/:id/reviews",
+          "source": "marketRatingSecurity.ts",
+          "line": 106,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/digital-market/subscription",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/digital-market/subscription",
+          "source": "paystackPayments.ts",
+          "line": 218,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/hostel-managers/assign",
+      "status": "retired_do_not_port",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/hostel-managers/assign",
+          "source": "server.ts",
+          "line": 6829,
+          "retired": true
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/hostel-verifications/pay-onboarding-fee",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/hostel-verifications/pay-onboarding-fee",
+          "source": "paystackPayments.ts",
+          "line": 220,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/hostel-verifications/submit",
+      "status": "pending_review_and_port",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/hostel-verifications/submit",
+          "source": "server.ts",
+          "line": 6912,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/hostel-verifications/validate",
+      "status": "pending_review_and_port",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/hostel-verifications/validate",
+          "source": "server.ts",
+          "line": 6832,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/hostels",
+      "status": "retired_do_not_port",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/hostels",
+          "source": "server.ts",
+          "line": 7731,
+          "retired": true
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/hostels/:id/generate-room-keys",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/hostels/:id/generate-room-keys",
+          "source": "server.ts",
+          "line": 9589,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/hostels/:id/reshuffle-room-keys",
+      "status": "pending_review_and_port",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/hostels/:id/reshuffle-room-keys",
+          "source": "server.ts",
+          "line": 8893,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/hostels/cleanup-placeholders",
+      "status": "pending_review_and_port",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/hostels/cleanup-placeholders",
+          "source": "server.ts",
+          "line": 7722,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/hostels/register",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/hostels/register",
+          "source": "server.ts",
+          "line": 7347,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/issue-reports",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/issue-reports",
+          "source": "server.ts",
+          "line": 7857,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/issue-reports/:id/accept-assignment",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/issue-reports/:id/accept-assignment",
+          "source": "server.ts",
+          "line": 8174,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/issue-reports/:id/approve-reschedule",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/issue-reports/:id/approve-reschedule",
+          "source": "server.ts",
+          "line": 8387,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/issue-reports/:id/assign",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/issue-reports/:id/assign",
+          "source": "server.ts",
+          "line": 8044,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/issue-reports/:id/decline-reschedule",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/issue-reports/:id/decline-reschedule",
+          "source": "server.ts",
+          "line": 8489,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/issue-reports/:id/manager-close",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/issue-reports/:id/manager-close",
+          "source": "server.ts",
+          "line": 8761,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/issue-reports/:id/staff-complete",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/issue-reports/:id/staff-complete",
+          "source": "server.ts",
+          "line": 8549,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/issue-reports/:id/staff-decline",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/issue-reports/:id/staff-decline",
+          "source": "server.ts",
+          "line": 8255,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/issue-reports/:id/staff-reschedule",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/issue-reports/:id/staff-reschedule",
+          "source": "server.ts",
+          "line": 8318,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/issue-reports/:id/student-confirm",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/issue-reports/:id/student-confirm",
+          "source": "server.ts",
+          "line": 8636,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/manager-requests",
+      "status": "pending_review_and_port",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/manager-requests",
+          "source": "server.ts",
+          "line": 2681,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/manager-verifications/submit",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/manager-verifications/submit",
+          "source": "server.ts",
+          "line": 3294,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/manager/secret-key/issue",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/manager/secret-key/issue",
+          "source": "residenceRequests.ts",
+          "line": 197,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/manager/secret-key/petition",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/manager/secret-key/petition",
+          "source": "residenceRequests.ts",
+          "line": 198,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/meetings",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/meetings",
+          "source": "server.ts",
+          "line": 10270,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/payments/paystack/initialize",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/payments/paystack/initialize",
+          "source": "paystackPayments.ts",
+          "line": 219,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/payments/paystack/verify",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/payments/paystack/verify",
+          "source": "paystackPayments.ts",
+          "line": 221,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/payments/paystack/webhook",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/payments/paystack/webhook",
+          "source": "paystackPayments.ts",
+          "line": 227,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/ratings",
+      "status": "pending_review_and_port",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/ratings",
+          "source": "server.ts",
+          "line": 10562,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/residents/onboard",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/residents/onboard",
+          "source": "server.ts",
+          "line": 9236,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/room-keys/:id/release",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/room-keys/:id/release",
+          "source": "server.ts",
+          "line": 8879,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/room-keys/claim",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/room-keys/claim",
+          "source": "server.ts",
+          "line": 9236,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/room-keys/send-digital",
+      "status": "pending_review_and_port",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/room-keys/send-digital",
+          "source": "server.ts",
+          "line": 8943,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/room-keys/verify",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/room-keys/verify",
+          "source": "server.ts",
+          "line": 9191,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/settings",
+      "status": "pending_review_and_port",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/settings",
+          "source": "adminGovernanceRoutes.ts",
+          "line": 27,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/staff",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/staff",
+          "source": "staffManagement.ts",
+          "line": 31,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/staff-bargains",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/staff-bargains",
+          "source": "server.ts",
+          "line": 9768,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/staff-bargains/:id/manager-response",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/staff-bargains/:id/manager-response",
+          "source": "server.ts",
+          "line": 9953,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/staff-bargains/:id/staff-decision",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/staff-bargains/:id/staff-decision",
+          "source": "server.ts",
+          "line": 10036,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/staff-reviews",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/staff-reviews",
+          "source": "staffManagement.ts",
+          "line": 109,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/staff/quit",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/staff/quit",
+          "source": "server.ts",
+          "line": 9714,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/staff/resign",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/staff/resign",
+          "source": "server.ts",
+          "line": 9609,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/storage/upload-hostel-image",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/storage/upload-hostel-image",
+          "source": "server.ts",
+          "line": 7707,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/student/add-room",
+      "status": "pending_review_and_port",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/student/add-room",
+          "source": "server.ts",
+          "line": 9210,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/student/delete-room",
+      "status": "pending_review_and_port",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/student/delete-room",
+          "source": "server.ts",
+          "line": 9215,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/users/delete-registered-account",
+      "status": "pending_review_and_port",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/users/delete-registered-account",
+          "source": "server.ts",
+          "line": 3846,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/users/register",
+      "status": "pending_review_and_port",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/users/register",
+          "source": "server.ts",
+          "line": 1720,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/users/reset-registered-account-password",
+      "status": "pending_review_and_port",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/users/reset-registered-account-password",
+          "source": "server.ts",
+          "line": 3824,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/verification-team/inspections/:id/submit-report",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/verification-team/inspections/:id/submit-report",
+          "source": "server.ts",
+          "line": 6602,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/verification-teams",
+      "status": "pending_review_and_port",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/verification-teams",
+          "source": "server.ts",
+          "line": 6139,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/verification-teams/login",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/verification-teams/login",
+          "source": "server.ts",
+          "line": 6270,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/verification/verify-identity",
+      "status": "pending_review_and_port",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/verification/verify-identity",
+          "source": "server.ts",
+          "line": 3269,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "PUT /api/admin/managers/:id/block",
+      "status": "retired_do_not_port",
+      "sources": [
+        {
+          "method": "PUT",
+          "path": "/api/admin/managers/:id/block",
+          "source": "server.ts",
+          "line": 3174,
+          "retired": true
+        }
+      ]
+    },
+    {
+      "endpoint": "PUT /api/admin/managers/:id/unblock",
+      "status": "retired_do_not_port",
+      "sources": [
+        {
+          "method": "PUT",
+          "path": "/api/admin/managers/:id/unblock",
+          "source": "server.ts",
+          "line": 3177,
+          "retired": true
+        }
+      ]
+    },
+    {
+      "endpoint": "PUT /api/auth/appearance",
+      "status": "pending_review_and_port",
+      "sources": [
+        {
+          "method": "PUT",
+          "path": "/api/auth/appearance",
+          "source": "themePreferences.ts",
+          "line": 23,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "PUT /api/auth/profile",
+      "status": "pending_review_and_port",
+      "sources": [
+        {
+          "method": "PUT",
+          "path": "/api/auth/profile",
+          "source": "server.ts",
+          "line": 2587,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "PUT /api/board-requests/:id",
+      "status": "retired_do_not_port",
+      "sources": [
+        {
+          "method": "PUT",
+          "path": "/api/board-requests/:id",
+          "source": "residenceRequests.ts",
+          "line": 207,
+          "retired": true
+        }
+      ]
+    },
+    {
+      "endpoint": "PUT /api/digital-market/products/:id",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "PUT",
+          "path": "/api/digital-market/products/:id",
+          "source": "server.ts",
+          "line": 4932,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "PUT /api/digital-market/store",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "PUT",
+          "path": "/api/digital-market/store",
+          "source": "server.ts",
+          "line": 4719,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "PUT /api/hostel-verifications/:id/approve",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "PUT",
+          "path": "/api/hostel-verifications/:id/approve",
+          "source": "server.ts",
+          "line": 6949,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "PUT /api/hostel-verifications/:id/flag-investigation",
+      "status": "pending_review_and_port",
+      "sources": [
+        {
+          "method": "PUT",
+          "path": "/api/hostel-verifications/:id/flag-investigation",
+          "source": "server.ts",
+          "line": 7117,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "PUT /api/hostel-verifications/:id/reject",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "PUT",
+          "path": "/api/hostel-verifications/:id/reject",
+          "source": "server.ts",
+          "line": 7023,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "PUT /api/hostel-verifications/:id/request-info",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "PUT",
+          "path": "/api/hostel-verifications/:id/request-info",
+          "source": "server.ts",
+          "line": 7077,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "PUT /api/hostel-verifications/:id/suspend",
+      "status": "pending_review_and_port",
+      "sources": [
+        {
+          "method": "PUT",
+          "path": "/api/hostel-verifications/:id/suspend",
+          "source": "server.ts",
+          "line": 7158,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "PUT /api/hostels/:id",
+      "status": "pending_review_and_port",
+      "sources": [
+        {
+          "method": "PUT",
+          "path": "/api/hostels/:id",
+          "source": "server.ts",
+          "line": 7732,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "PUT /api/hostels/:id/reject-verification",
+      "status": "pending_review_and_port",
+      "sources": [
+        {
+          "method": "PUT",
+          "path": "/api/hostels/:id/reject-verification",
+          "source": "server.ts",
+          "line": 7602,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "PUT /api/hostels/:id/verify",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "PUT",
+          "path": "/api/hostels/:id/verify",
+          "source": "server.ts",
+          "line": 7491,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "PUT /api/issue-reports/:id",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "PUT",
+          "path": "/api/issue-reports/:id",
+          "source": "server.ts",
+          "line": 8841,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "PUT /api/manager-requests/:id/approve",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "PUT",
+          "path": "/api/manager-requests/:id/approve",
+          "source": "server.ts",
+          "line": 2781,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "PUT /api/manager-requests/:id/block",
+      "status": "retired_do_not_port",
+      "sources": [
+        {
+          "method": "PUT",
+          "path": "/api/manager-requests/:id/block",
+          "source": "server.ts",
+          "line": 3174,
+          "retired": true
+        }
+      ]
+    },
+    {
+      "endpoint": "PUT /api/manager-requests/:id/reject",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "PUT",
+          "path": "/api/manager-requests/:id/reject",
+          "source": "server.ts",
+          "line": 2986,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "PUT /api/manager-requests/:id/unblock",
+      "status": "retired_do_not_port",
+      "sources": [
+        {
+          "method": "PUT",
+          "path": "/api/manager-requests/:id/unblock",
+          "source": "server.ts",
+          "line": 3177,
+          "retired": true
+        }
+      ]
+    },
+    {
+      "endpoint": "PUT /api/manager-requests/:id/verify-doc",
+      "status": "pending_review_and_port",
+      "sources": [
+        {
+          "method": "PUT",
+          "path": "/api/manager-requests/:id/verify-doc",
+          "source": "server.ts",
+          "line": 3180,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "PUT /api/manager-verifications/:id/approve",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "PUT",
+          "path": "/api/manager-verifications/:id/approve",
+          "source": "server.ts",
+          "line": 2781,
+          "retired": false
+        },
+        {
+          "method": "PUT",
+          "path": "/api/manager-verifications/:id/approve",
+          "source": "server.ts",
+          "line": 5642,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "PUT /api/manager-verifications/:id/block",
+      "status": "retired_do_not_port",
+      "sources": [
+        {
+          "method": "PUT",
+          "path": "/api/manager-verifications/:id/block",
+          "source": "server.ts",
+          "line": 3174,
+          "retired": true
+        }
+      ]
+    },
+    {
+      "endpoint": "PUT /api/manager-verifications/:id/reject",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "PUT",
+          "path": "/api/manager-verifications/:id/reject",
+          "source": "server.ts",
+          "line": 2986,
+          "retired": false
+        },
+        {
+          "method": "PUT",
+          "path": "/api/manager-verifications/:id/reject",
+          "source": "server.ts",
+          "line": 5914,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "PUT /api/manager-verifications/:id/request-info",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "PUT",
+          "path": "/api/manager-verifications/:id/request-info",
+          "source": "server.ts",
+          "line": 6086,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "PUT /api/manager-verifications/:id/suspend",
+      "status": "retired_do_not_port",
+      "sources": [
+        {
+          "method": "PUT",
+          "path": "/api/manager-verifications/:id/suspend",
+          "source": "server.ts",
+          "line": 3174,
+          "retired": true
+        },
+        {
+          "method": "PUT",
+          "path": "/api/manager-verifications/:id/suspend",
+          "source": "server.ts",
+          "line": 6686,
+          "retired": true
+        }
+      ]
+    },
+    {
+      "endpoint": "PUT /api/manager-verifications/:id/unblock",
+      "status": "retired_do_not_port",
+      "sources": [
+        {
+          "method": "PUT",
+          "path": "/api/manager-verifications/:id/unblock",
+          "source": "server.ts",
+          "line": 3177,
+          "retired": true
+        }
+      ]
+    },
+    {
+      "endpoint": "PUT /api/manager-verifications/:id/verify-doc",
+      "status": "pending_review_and_port",
+      "sources": [
+        {
+          "method": "PUT",
+          "path": "/api/manager-verifications/:id/verify-doc",
+          "source": "server.ts",
+          "line": 3180,
+          "retired": false
+        },
+        {
+          "method": "PUT",
+          "path": "/api/manager-verifications/:id/verify-doc",
+          "source": "server.ts",
+          "line": 5862,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "PUT /api/manager/account-settings",
+      "status": "pending_review_and_port",
+      "sources": [
+        {
+          "method": "PUT",
+          "path": "/api/manager/account-settings",
+          "source": "server.ts",
+          "line": 10233,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "PUT /api/meetings/:id",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "PUT",
+          "path": "/api/meetings/:id",
+          "source": "server.ts",
+          "line": 10345,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "PUT /api/notifications/:id/read",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "PUT",
+          "path": "/api/notifications/:id/read",
+          "source": "server.ts",
+          "line": 10544,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "PUT /api/notifications/read-all",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "PUT",
+          "path": "/api/notifications/read-all",
+          "source": "server.ts",
+          "line": 10531,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "PUT /api/staff/:id",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "PUT",
+          "path": "/api/staff/:id",
+          "source": "staffManagement.ts",
+          "line": 76,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "PUT /api/staff/profile",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "PUT",
+          "path": "/api/staff/profile",
+          "source": "staffManagement.ts",
+          "line": 58,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "PUT /api/verification-teams/:id/status",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "PUT",
+          "path": "/api/verification-teams/:id/status",
+          "source": "server.ts",
+          "line": 6237,
+          "retired": false
+        }
+      ]
+    }
+  ]
+}

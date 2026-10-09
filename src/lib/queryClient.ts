@@ -68,6 +68,7 @@ export function setupRealtimeQuerySync() {
           if (!event.data || event.data === 'connected') return;
           const data = JSON.parse(event.data);
           const entity = data.entity;
+          window.dispatchEvent(new Event('pinevela-data-change'));
 
           if (entity) {
             queryClient.invalidateQueries({ queryKey: [entity] });

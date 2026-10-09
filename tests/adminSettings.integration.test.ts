@@ -46,6 +46,17 @@ test('Admin settings, all-role maintenance restrictions, verified profile photog
   const keys = [];
   for (let i = 0; i < admins.length; i++) keys.push((await request('POST', '/api/admin/governance/keys/settings/enroll', admins[i], { password: `Isolated-settings-login-${i}!`, adminId: admins[(i+1)%admins.length].id })).settingsKey);
   const body = { ...settings, settingsKey: keys[0] };
+  const contactDetails = { linkedinUrl: 'https://www.linkedin.com/company/pinevela-test/', facebookUrl: 'https://www.facebook.com/pinevela-test', tiktokUrl: 'https://www.tiktok.com/@pinevela-test', whatsappNumber: '233241234567' };
+  const contactSave = { contactDetails, settingsKey: keys[0] };
+  await request('POST', '/api/settings', null, contactSave, 401);
+  await request('POST', '/api/settings', others[0], contactSave, 403);
+  await request('POST', '/api/settings', admins[1], contactSave, 403);
+  await request('POST', '/api/settings', admins[0], { ...contactSave, settingsKey: wipeKey }, 403);
+  for (const linkedinUrl of ['javascript:alert(1)', 'https://linkedin.com.evil.test/a', 'https://evil.test/', 'http://www.linkedin.com/company/test', 'https://user:secret@linkedin.com/']) {
+    await request('POST', '/api/settings', admins[0], { ...contactSave, contactDetails: { ...contactDetails, linkedinUrl } }, 400);
+  }
+  await request('POST', '/api/settings', admins[0], contactSave);
+  assert.deepEqual((await request('GET', '/api/settings', null, undefined)).contactDetails, contactDetails);
   await request('POST', '/api/settings', admins[0], { ...body, settingsKey: wipeKey }, 403);
   await request('POST', '/api/settings', admins[0], { ...body, settingsKey: keys[1] }, 403);
   await request('POST', '/api/settings', admins[0], { ...body, maintenanceMode: 'false' }, 400);
@@ -58,6 +69,16 @@ test('Admin settings, all-role maintenance restrictions, verified profile photog
   await request('POST', root, null, pricingBody, 401); await request('POST', root, others[0], pricingBody, 403);
   await request('POST', root, admins[1], { ...pricingBody, settingsKey: keys[0] }, 403);
   const proposal = await request('POST', root, admins[1], pricingBody);
+  const activity = async (actor: any) => (await request('GET', '/api/notifications', actor, undefined)).filter((n: any) => ['admin_governance','admin_settings'].includes(n.module));
+  const submissions = await Promise.all(admins.map(async a => (await activity(a)).find((n: any) => n.activityId === `pricingProposals:${proposal.id}`)));
+  assert(submissions.every(n => n && !n.read && n.status === 'pending' && n.targetRole === 'admin'));
+  assert.equal(new Set(submissions.map(n => n.id)).size,3,'Each admin has an independent persisted notification');
+  assert.deepEqual(await activity(others[0]),[],'Primary users cannot see admin activity');
+  await request('PUT', `/api/notifications/${submissions[0].id}/read`, admins[1], undefined, 403);
+  await request('PUT', `/api/notifications/${submissions[0].id}/read`, admins[0], undefined);
+  assert((await activity(admins[1])).some((n: any) => n.id === submissions[1].id && !n.read));
+  assert(!JSON.stringify(submissions).includes(keys[0]));assert(!JSON.stringify(submissions).includes(wipeKey));
+
   assert.equal((await request('GET', '/api/settings', null, undefined)).registrationFee, 50);
   await request('POST', `${root}/${proposal.id}/vote`, null, { decision: 'approved', settingsKey: keys[2] }, 401);
   await request('POST', `${root}/${proposal.id}/vote`, others[0], { decision: 'approved', settingsKey: keys[2] }, 403);
@@ -71,10 +92,14 @@ test('Admin settings, all-role maintenance restrictions, verified profile photog
   await request('POST', `${root}/${proposal.id}/apply`, admins[1], { settingsKey: keys[1] }, 403);
   await request('POST', `${root}/${proposal.id}/apply`, admins[0], { settingsKey: keys[0], prices: { ...prices, registrationFee: 1 } }, 400);
   await stop(); await start();
+  assert.deepEqual((await request('GET', '/api/settings', null, undefined)).contactDetails, contactDetails, 'Public contacts survive later settings saves and restart');
+  assert((await activity(admins[0])).some((n: any) => n.id === submissions[0].id && n.read),'Read status survives restart');
   const shared = (await request('GET', '/api/admin/governance', admins[2], undefined)).pricingProposals[0]; assert.equal(shared.status, 'approved'); assert.equal(shared.votes.length, 3);
   await request('POST', `${root}/${proposal.id}/apply`, admins[0], { settingsKey: keys[0] });
   await request('POST', `${root}/${proposal.id}/apply`, admins[0], { settingsKey: keys[0] }, 409);
   await request('POST', '/api/settings', admins[0], body);
+  assert((await activity(admins[2])).some((n: any) => n.activityId === `pricingProposals:${proposal.id}` && n.status === 'applied'));
+  assert((await activity(admins[2])).some((n: any) => n.activityId === 'platform-settings' && n.title === 'Admin Settings updated'));
   const announcements = (await request('GET', '/api/notifications', others[0], undefined)).filter((n: any) => n.category === 'system_announcement');
   assert.equal(announcements.length, 1); assert.equal(announcements[0].message, 'Configured notice &lt;script&gt;not executable&lt;/script&gt;'); assert.equal(announcements[0].userId, others[0].id);
   await request('POST', '/api/settings', admins[0], body);

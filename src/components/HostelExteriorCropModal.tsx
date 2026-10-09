@@ -1,3 +1,4 @@
+import DashboardOverlay from './DashboardOverlay';
 import React, { useState, useCallback } from 'react';
 import Cropper, { Point, Area } from 'react-easy-crop';
 import { 
@@ -179,7 +180,7 @@ export default function HostelExteriorCropModal({
   if (!isOpen || !imageSrc) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-5 overflow-y-auto animate-fadeIn">
+    <DashboardOverlay aria-label="Crop & Frame Exterior Photo" onClose={onClose} className="fixed inset-0 z-[100] bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-5 overflow-y-auto animate-fadeIn">
       <div className="bg-white border border-slate-200 rounded-3xl max-w-4xl w-full shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
         
         {/* Header */}
@@ -201,7 +202,7 @@ export default function HostelExteriorCropModal({
             </div>
           </div>
 
-          <button
+          <button aria-label="Close dialog"
             type="button"
             onClick={onClose}
             className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 rounded-xl transition-all cursor-pointer"
@@ -341,7 +342,7 @@ export default function HostelExteriorCropModal({
                     >
                       <ZoomOut className="w-3.5 h-3.5" />
                     </button>
-                    <input
+                    <input aria-label="Photograph zoom"
                       type="range"
                       min={0.1}
                       max={4}
@@ -483,6 +484,6 @@ export default function HostelExteriorCropModal({
         </div>
 
       </div>
-    </div>
+    </DashboardOverlay>
   );
 }

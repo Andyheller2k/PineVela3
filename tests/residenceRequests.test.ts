@@ -82,3 +82,21 @@ test('Name and block requests preserve legacy room structure and stable room key
   assert.equal(new Set(hostel.blocksList.map(b => b.id)).size, 2); assert.equal(store.roomKeys[0].roomKey, originalRoom.roomKey); assert.equal(store.roomKeys[0].assignedStudentId, originalRoom.assignedStudentId);
   assert.equal(store.roomKeys[0].blockName, 'Renamed block 2');
 });
+
+test('Only the exact personal appearance PUT bypasses the manager operation key', () => {
+  const { service, manager, hostel } = setup();
+  const { key } = service.issue(manager);
+  const request = (method: string, path: string, suppliedKey = '') => ({ user: manager, method, path, get: () => suppliedKey });
+  assert.doesNotThrow(() => service.gate(request('PUT', '/api/auth/appearance')));
+  for (const [method, path] of [
+    ['POST', '/api/auth/appearance'], ['DELETE', '/api/auth/appearance'],
+    ['PUT', '/api/auth/appearance/other'], ['PUT', '/api/auth/profile'],
+    ['POST', `/api/hostels/${hostel.id}/generate-room-keys`], ['PUT', '/api/issue-reports/issue']
+  ]) {
+    assert.throws(() => service.gate(request(method, path)), status(403));
+  }
+  assert.throws(() => service.gate(request('PUT', '/api/auth/profile', 'incorrect-key')), status(403));
+  const authorized: any = request('PUT', '/api/auth/profile', key);
+  assert.doesNotThrow(() => service.gate(authorized));
+  assert.equal(authorized.managerKeyVerified, manager.id);
+});

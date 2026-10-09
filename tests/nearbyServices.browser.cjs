@@ -14,7 +14,7 @@ async function port() { const server = net.createServer(); server.listen(0, '127
 async function main() {
   const temp = await fs.mkdtemp(path.join(os.tmpdir(), 'pinevela-nearby-services-browser-'));
   const dataDir = path.join(temp, 'data'); await fs.mkdir(dataDir);
-  const imageUrl = '/assets/' + (await fs.readdir(path.join(project, 'dist/assets'))).find(name => /^pinevela-day-.*\.webp$/.test(name));
+  const imageUrl = '/assets/' + (await fs.readdir(path.join(project, 'dist/assets'))).find(name => /^login-market-.*\.png$/.test(name));
   const buyer = { id: crypto.randomUUID(), role: 'user', name: 'Isolated buyer', email: 'buyer@example.test', token: crypto.randomUUID(), isVerified: true, appearanceTheme: 'dark' };
   const sellers = ['default','star','pro'].map(plan=>({ id:crypto.randomUUID(), role:'merchant', email:`${plan}@example.test`, name:`Isolated ${plan} seller`, token:crypto.randomUUID(), isVerified:true, isDigitalMarketOnly:true, isApprovedMerchant:true, merchantSetupCompleted:true, appearanceTheme:'dark' }));
   const future = new Date(Date.now()+86400000).toISOString();

@@ -1,3 +1,4 @@
+import { activateOnKeyboard } from '../lib/keyboardActivation';
 import { sessionFetch as fetch } from '../lib/session';
 import React, { useState, useRef, useEffect } from 'react';
 import { 
@@ -72,14 +73,12 @@ export const renderAvatarGraphic = (avatarStr: string | null | undefined, sizeCl
 export default function UserAvatarSelector({ onAvatarSave }: UserAvatarSelectorProps) {
   const { user, updateUser } = useAuth();
   
-  // Storage key based on user email or ID
-  const cleanEmail = (user?.email || '').toLowerCase().trim();
-  const storageKey = cleanEmail ? `pinevela_avatar_${cleanEmail}` : 'pinevela_user_avatar';
+  const accountKey = JSON.stringify([user?.role, user?.id]);
+  const activeAccountRef = useRef(accountKey);
+  activeAccountRef.current = accountKey;
   
   // Current active avatar (URL, base64 camera photo, or preset ID)
-  const [currentAvatar, setCurrentAvatar] = useState<string>(() => {
-    return user?.avatar || user?.photo || user?.photoUrl || user?.avatarUrl || user?.profilePicture || localStorage.getItem(storageKey) || localStorage.getItem('pinevela_user_avatar') || 'preset:pine-classic';
-  });
+  const currentAvatar = user?.avatar || user?.photo || user?.photoUrl || user?.avatarUrl || user?.profilePicture || 'preset:pine-classic';
 
   const [activeTab, setActiveTab] = useState<"presets" | "upload">("presets");
   const [selectedPresetId, setSelectedPresetId] = useState<string>(() => {
@@ -93,17 +92,22 @@ export default function UserAvatarSelector({ onAvatarSave }: UserAvatarSelectorP
 
   // Success alert state
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [saveError, setSaveError] = useState('');
 
   // Sync state if user prop changes
   useEffect(() => {
-    const saved = user?.avatar || user?.photo || user?.photoUrl || user?.avatarUrl || user?.profilePicture || localStorage.getItem(storageKey) || localStorage.getItem('pinevela_user_avatar');
-    if (saved) {
-      setCurrentAvatar(saved);
-      if (saved.startsWith('preset:')) {
-        setSelectedPresetId(saved.replace('preset:', ''));
-      }
-    }
-  }, [user?.avatar, user?.photo, user?.photoUrl, user?.avatarUrl, user?.profilePicture, storageKey]);
+    const saved = user?.avatar || user?.photo || user?.photoUrl || user?.avatarUrl || user?.profilePicture || 'preset:pine-classic';
+    setSelectedPresetId(saved.startsWith('preset:') ? saved.replace('preset:', '') : 'pine-classic');
+  }, [user?.avatar, user?.photo, user?.photoUrl, user?.avatarUrl, user?.profilePicture, accountKey]);
+
+  useEffect(() => {
+    activeAccountRef.current = accountKey;
+    setUploadPreview(null);
+    setSaveSuccess(false);
+    setSaveError('');
+    if (fileInputRef.current) fileInputRef.current.value = '';
+    return () => { activeAccountRef.current = ''; };
+  }, [accountKey]);
 
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -122,7 +126,8 @@ export default function UserAvatarSelector({ onAvatarSave }: UserAvatarSelectorP
 
     try {
       // Keep the persisted avatar safely below browser-storage and API payload limits.
-      setUploadPreview(await compressImageFileToLowRes(file, 360, 0.55));
+      const preview = await compressImageFileToLowRes(file, 360, 0.55);
+      if (activeAccountRef.current === accountKey) setUploadPreview(preview);
     } catch (err) {
       console.error('Profile photo compression failed:', err);
       console.error("We could not prepare that photo. Please try a different image.");
@@ -130,23 +135,9 @@ export default function UserAvatarSelector({ onAvatarSave }: UserAvatarSelectorP
   };
 
   const applyAvatar = async (newAvatarVal: string) => {
-    setCurrentAvatar(newAvatarVal);
-    const cleanMail = (user?.email || '').toLowerCase().trim();
-    try {
-      if (cleanMail) localStorage.setItem(`pinevela_avatar_${cleanMail}`, newAvatarVal);
-      localStorage.setItem('pinevela_user_avatar', newAvatarVal);
-    } catch (err) {
-      // A storage quota must not block the authenticated server-side save.
-      console.warn('[UserAvatarSelector] Avatar could not be cached locally:', err);
-    }
-    
-    if (onAvatarSave) {
-      try {
-        onAvatarSave(newAvatarVal);
-      } catch (e) {
-        console.warn('[UserAvatarSelector] onAvatarSave error:', e);
-      }
-    }
+    if (!user) return;
+    setSaveError('');
+    setSaveSuccess(false);
 
     // Persist avatar to backend so it survives logout/login
     try {
@@ -167,15 +158,19 @@ export default function UserAvatarSelector({ onAvatarSave }: UserAvatarSelectorP
           })
         });
         if (!res.ok) {
-          console.warn('[UserAvatarSelector] Server responded with error status:', res.status);
+          throw new Error('Could not save your profile picture. Please try again.');
         }
       }
     } catch (err) {
-      console.warn('[UserAvatarSelector] Failed to persist avatar to server:', err);
+      if (activeAccountRef.current === accountKey) setSaveError('Could not save your profile picture. Please try again.');
+      return;
     }
 
+    if (activeAccountRef.current !== accountKey) return;
+    updateUser?.({ avatar: newAvatarVal, avatarUrl: newAvatarVal, photo: newAvatarVal, photoUrl: newAvatarVal, profilePicture: newAvatarVal });
+    onAvatarSave?.(newAvatarVal);
     setSaveSuccess(true);
-    setTimeout(() => setSaveSuccess(false), 3000);
+    setTimeout(() => { if (activeAccountRef.current === accountKey) setSaveSuccess(false); }, 3000);
   };
 
   // Render Preset Icon helper
@@ -216,6 +211,7 @@ export default function UserAvatarSelector({ onAvatarSave }: UserAvatarSelectorP
             <span>Profile Avatar Saved!</span>
           </div>
         )}
+        {saveError && <p role="alert" className="text-xs font-bold text-red-700">{saveError}</p>}
       </div>
 
       {/* TABS FOR SELECTING METHOD */}
@@ -300,7 +296,7 @@ export default function UserAvatarSelector({ onAvatarSave }: UserAvatarSelectorP
             Upload Image File from Device
           </div>
 
-          <div
+          <div role="button" tabIndex={0} aria-label="Upload profile photograph" onKeyDown={activateOnKeyboard}
             onClick={() => fileInputRef.current?.click()}
             className="border-2 border-dashed border-sky-300 hover:border-blue-600 bg-sky-50/30 hover:bg-sky-50/70 transition-all rounded-3xl p-8 text-center cursor-pointer space-y-3"
           >

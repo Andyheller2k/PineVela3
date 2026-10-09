@@ -1,0 +1,159 @@
+@font-face { font-family: 'Childer'; src: url('../assets/fonts/Childer.otf') format('opentype'); font-style: normal; font-weight: 400 900; font-display: swap; }
+@font-face { font-family: 'Caviar Dreams'; src: url('../assets/fonts/CaviarDreams.ttf') format('truetype'); font-style: normal; font-weight: 400; font-display: swap; }
+@font-face { font-family: 'Caviar Dreams'; src: url('../assets/fonts/CaviarDreams_Bold.ttf') format('truetype'); font-style: normal; font-weight: 600 900; font-display: swap; }
+@font-face { font-family: 'Caviar Dreams'; src: url('../assets/fonts/CaviarDreams_Italic.ttf') format('truetype'); font-style: italic; font-weight: 400; font-display: swap; }
+@font-face { font-family: 'Caviar Dreams'; src: url('../assets/fonts/CaviarDreams_BoldItalic.ttf') format('truetype'); font-style: italic; font-weight: 600 900; font-display: swap; }
+.public-typography, .unified-login { font-family: 'Caviar Dreams', sans-serif !important; }
+:is(.public-typography, .unified-login) :where(*) { font-family: inherit !important; }
+:is(.public-typography, .unified-login) :is(h1,h2,h3,h4,h5,h6,.public-title,.login-brand-heading,.pinevela-brand > span) { font-family: 'Childer', sans-serif !important; font-weight: 400; }
+.public-header-card { background: #fff !important; border-bottom: 1px solid var(--pv-blue-ice) !important; box-shadow: 0 5px 24px #0077b60d !important; border-radius: 0 0 20px 20px; }
+.public-header-card .pinevela-brand > span { color: var(--pv-heading) !important; }
+.public-header-card .pinevela-brand > span > span { color: var(--pv-blue-primary) !important; }
+.public-header-card input { background: var(--pv-field) !important; color: var(--pv-heading) !important; }
+
+/* Opaque public headers follow the selected appearance immediately. */
+html[data-theme="dark"] .public-header-card { background: var(--pv-panel) !important; border-bottom-color: var(--pv-edge) !important; box-shadow: 0 5px 24px #02061740 !important; }
+html[data-theme="dark"] .public-header-card .pinevela-brand > span { color: var(--pv-text) !important; }
+html[data-theme="dark"] .public-header-card .pinevela-brand > span > span { color: var(--pv-blue-soft) !important; }
+html[data-theme="dark"] .public-header-card input { background: var(--pv-field) !important; color: var(--pv-text) !important; border-color: var(--pv-field-edge) !important; }
+html[data-theme="dark"] .public-header-card input::placeholder { color: var(--pv-muted) !important; }
+html[data-theme="dark"] .public-header-card .public-header-secondary { background: var(--pv-field) !important; color: var(--pv-text) !important; border-color: var(--pv-edge) !important; }
+html[data-theme="dark"] .public-header-card .public-header-secondary:hover { background: var(--pv-secondary-hover) !important; }
+
+/* Full-width blue gradient, with the reference peak blending into the page. */
+.landing-peak-page { background: var(--pv-canvas); }
+.landing-peak-hero {
+  isolation: isolate;
+  min-height: 752px;
+  padding: calc(var(--pv-public-header-height, 100px) + 54px) clamp(24px, 6vw, 80px) 222px;
+  background: linear-gradient(180deg, #90e0ef 0%, #caf0f8 42%, #e6f8fb 76%, var(--pv-canvas) 100%);
+}
+.landing-peak-landscape {
+  position: absolute;
+  isolation: auto;
+  mix-blend-mode: screen;
+  inset: auto 0 32px;
+  height: 340px;
+  overflow: hidden;
+  pointer-events: none;
+  background: transparent;
+  mask-image: linear-gradient(180deg, transparent, #000 24%, #000 72%, transparent);
+}
+.landing-peak-landscape img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 25%;
+  filter: grayscale(1);
+  mix-blend-mode: screen;
+  opacity: .6;
+}
+.landing-peak-content { padding: 0 24px; }
+.landing-peak-copy :is(h1, p, strong), .landing-peak-brand .public-title { color: var(--pv-heading); }
+.landing-peak-brand [class~="text-slate-500"] { color: var(--pv-muted); }
+html[data-theme="dark"] .landing-peak-hero { background: linear-gradient(180deg, #03045e 0%, #0b2948 42%, #12334b 65%, var(--pv-canvas) 100%); }
+html[data-theme="dark"] .landing-peak-landscape img { mix-blend-mode: screen; filter: grayscale(1) brightness(.9); opacity: .25; }
+@media (min-width: 1024px) {
+  .landing-peak-landscape { height: 460px; bottom: 122px; z-index: 2; }
+}
+@media (max-width: 1023px) {
+  .landing-peak-hero { min-height: 0; padding: calc(var(--pv-public-header-height, 100px) + 36px) 24px 192px; }
+  .landing-peak-content { max-width: 680px; padding: 0; gap: 20px; }
+  .landing-peak-brand { padding-top: 4px; }
+  .landing-peak-landscape { height: 280px; }
+}
+@media (max-width: 480px) {
+  .landing-peak-hero { padding-inline: 24px; padding-bottom: 162px; }
+  .landing-peak-content { gap: 12px; }
+  .landing-peak-copy h1 { font-size: 40px; }
+  .landing-peak-copy p { font-size: 15px; line-height: 1.75; }
+  .landing-peak-brand > div { width: 210px; height: 210px; }
+  .landing-peak-landscape { height: 245px; }
+}
+
+/* Native scroll, one-time reveals: short movement and a soft fade. */
+.landing-peak-page .landing-reveal {
+  opacity: 0;
+  translate: 0 24px;
+  transition: none;
+}
+.landing-peak-page .landing-revealed {
+  opacity: 1;
+  translate: 0 0;
+  transition: opacity .7s cubic-bezier(.22, 1, .36, 1), translate .7s cubic-bezier(.22, 1, .36, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .landing-peak-page .landing-reveal { opacity: 1; translate: none; transition: none; }
+  .landing-peak-page *, .landing-peak-page *::before, .landing-peak-page *::after {
+    animation: none !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Landing catalogs: one row, up to three cards, with soft viewport edges. */
+.public-catalog-rail { min-width: 0; --rail-left-fade: 0px; --rail-right-fade: 0px; }
+.public-catalog-rail[data-can-previous="true"] { --rail-left-fade: 28px; }
+.public-catalog-rail[data-can-next="true"] { --rail-right-fade: 28px; }
+.public-catalog-track {
+  display: flex;
+  align-items: stretch;
+  gap: 14px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-behavior: smooth;
+  scrollbar-width: none;
+  padding-block: 6px 16px;
+  mask-image: linear-gradient(to right, transparent, #000 var(--rail-left-fade), #000 calc(100% - var(--rail-right-fade)), transparent);
+}
+.public-catalog-track::-webkit-scrollbar { display: none; }
+.public-catalog-track > * {
+  flex: 0 0 min(100%, max(208px, calc((100% - 28px) / 3)));
+  min-width: 0;
+}
+.public-catalog-track:focus-visible { outline: 2px solid var(--pv-blue-primary); outline-offset: 4px; border-radius: 16px; }
+.public-catalog-controls { display: flex; justify-content: flex-end; gap: 8px; padding-top: 4px; }
+.public-catalog-controls button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--pv-field);
+  border: 1px solid var(--pv-field-edge);
+  color: var(--pv-link);
+  cursor: pointer;
+  transition: transform .2s ease, opacity .2s ease;
+}
+.public-catalog-controls button:disabled { opacity: .3; cursor: default; }
+.public-catalog-controls button:not(:disabled):hover { transform: translateX(2px); }
+.public-catalog-controls button:first-child:not(:disabled):hover { transform: translateX(-2px); }
+.landing-peak-page .public-catalog-track > .landing-reveal { translate: 16px 0; }
+.landing-peak-page .public-catalog-track > .landing-revealed { translate: 0 0; }
+.public-catalog-track [data-residence-id] .grid { gap: 6px; }
+.public-catalog-track [data-residence-id] .grid button { padding-inline: 4px; font-size: 10px; }
+.public-catalog-track [data-residence-id] .grid svg { flex-shrink: 0; }
+.public-catalog-track [data-residence-id] .grid span { min-width: 0; }
+.public-catalog-track [data-residence-id] .max-w-\[150px\] { max-width: 55%; }
+@media (min-width: 1024px) {
+  .landing-peak-page .public-catalog-heading {
+    display: grid;
+    grid-template-rows: 60px 40px;
+    align-items: start;
+    justify-content: stretch;
+  }
+  .landing-peak-page .public-catalog-heading > :last-child { justify-self: start; align-self: stretch; }
+  .landing-peak-page .public-catalog-track > * { height: 350px; }
+  .landing-peak-page .public-catalog-track [data-residence-id] h4 {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+    overflow-wrap: anywhere;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .public-catalog-track { scroll-behavior: auto; }
+  .landing-peak-page .public-catalog-track > .landing-reveal { translate: none; }
+  .public-catalog-controls button { transition: none; }
+}

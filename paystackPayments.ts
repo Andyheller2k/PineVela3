@@ -1,41 +1,14 @@
+import { storeProfileFields, StoreProfileError } from './marketStoreProfile.js';
+import { marketStoreBranding } from './marketBranding.js';
 import crypto from 'node:crypto';
 import { accountData, canManageHostel, normalizeEmail } from './accountSecurity.js';
 import { publicPlatformSettings } from './platformSettings.js';
 import { effectiveMarketPlan, PLAN_LIMITS, validPlan, type MarketPlan } from './marketPlans.js';
 import { GovernanceError } from './adminGovernance.js';
 
-export class PaymentError extends Error { constructor(message: string, public status = 400) { super(message); } }
 type Purpose = 'activation' | 'subscription' | 'semester' | 'housing';
-export function paystackConfig() {
-  const key = process.env.PAYSTACK_SECRET_KEY || '';
-  if (!/^sk_(test|live)_[A-Za-z0-9]+$/.test(key)) throw new PaymentError('Paystack is not configured. Ask an administrator to configure secure checkout.', 503);
-  const mode = key.startsWith('sk_test_') ? 'test' : 'live';
-  if (mode === 'test' && process.env.NODE_ENV === 'production') throw new PaymentError('Paystack test payments cannot activate production accounts.', 503);
-  return { key, mode };
-}
-export function paymentOrigin(req?: any) {
-  const configured = process.env.PINEVELA_PUBLIC_ORIGIN?.trim();
-  const peerIsLocal = ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(req?.socket?.remoteAddress || '');
-  const host = req?.get('host');
-  // Production bundles also run locally. Never derive remote callbacks from forwarded headers.
-  const origin = configured || (req && peerIsLocal && host ? `http://${host}` : !req && process.env.NODE_ENV !== 'production' ? `http://localhost:${process.env.PORT || 3000}` : '');
-  let url: URL; try { url = new URL(origin); } catch { throw new PaymentError('Set PINEVELA_PUBLIC_ORIGIN before accepting payments.', 503); }
-  const localHttp = url.protocol === 'http:' && ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname) &&
-    (process.env.NODE_ENV !== 'production' || peerIsLocal && typeof host === 'string' && url.host === host.toLowerCase());
-  if (url.username || url.password || url.search || url.hash || url.pathname !== '/' || !(url.protocol === 'https:' || localHttp)) throw new PaymentError('Configure a valid, trusted payment return origin.', 503);
-  return url.origin;
-}
-export function validPaystackSignature(raw: Buffer, signature: unknown, key: string) {
-  if (typeof signature !== 'string' || !/^[a-f0-9]{128}$/i.test(signature)) return false;
-  const expected = crypto.createHmac('sha512', key).update(raw).digest();
-  return crypto.timingSafeEqual(expected, Buffer.from(signature, 'hex'));
-}
-export function addMonths(timestamp: number, count: number) {
-  const date = new Date(timestamp), day = date.getUTCDate();
-  date.setUTCDate(1); date.setUTCMonth(date.getUTCMonth() + count);
-  const last = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, 0)).getUTCDate();
-  date.setUTCDate(Math.min(day, last)); return date.toISOString();
-}
+import {PaymentError,paystackConfig,paymentOrigin,validPaystackSignature,addMonths,paystackRequest} from './paystackProvider.js';
+export {PaymentError,paystackConfig,paymentOrigin,validPaystackSignature,addMonths,paystackRequest} from './paystackProvider.js';
 export function hasVerifiedRegistration(store: any, seller: any) {
   return (store.paymentTransactions || []).some((t: any) => t.storeId === seller.id && t.purpose === 'activation' && t.status === 'fulfilled' && (process.env.NODE_ENV !== 'production' || t.mode !== 'test'));
 }
@@ -46,23 +19,14 @@ export function marketAccessPaid(store: any, seller: any, now = Date.now()) {
   return hasVerifiedRegistration(store, seller) && Date.parse(seller.semesterExpiresAt) > now && (!paidDefaultRequired || defaultPaid) && (process.env.NODE_ENV !== 'production' || seller.paymentMode !== 'test');
 }
 export function publicPaidStore(seller: any, database?: any) {
-  return seller ? { ...seller, ...(database ? { registrationFeePaid: hasVerifiedRegistration(database, seller), setupCompleted: Boolean(seller.setupCompleted && hasVerifiedRegistration(database, seller)) } : {}), subscriptionPlan: effectiveMarketPlan(seller, Date.now(), process.env.NODE_ENV === 'production') } : seller;
-}
-export async function paystackRequest(path: string, body?: any) {
-  const { key } = paystackConfig();
-  let response: Response;
-  try { response = await fetch(`https://api.paystack.co${path}`, { method: body ? 'POST' : 'GET', headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' }, ...(body ? { body: JSON.stringify(body) } : {}), signal: AbortSignal.timeout(15_000) }); }
-  catch { throw new PaymentError('Paystack could not be reached. Check your connection and try again. No paid access was granted.', 502); }
-  const result: any = await response.json().catch(() => null);
-  if (!response.ok || result?.status !== true || !result.data) throw new PaymentError('Paystack could not complete this request. No paid access was granted.', 502);
-  return result.data;
+  return seller ? { ...seller, ...marketStoreBranding(seller, process.env.NODE_ENV === 'production'), ...(database ? { registrationFeePaid: hasVerifiedRegistration(database, seller), setupCompleted: Boolean(seller.setupCompleted && hasVerifiedRegistration(database, seller)) } : {}), subscriptionPlan: effectiveMarketPlan(seller, Date.now(), process.env.NODE_ENV === 'production') } : seller;
 }
 
 /** Immutable server quotes, provider verification and synchronous, idempotent fulfillment. */
 export class PaystackPayments {
   private flights = new Map<string, Promise<any>>();
   private attempts = new Map<string, { count: number; until: number }>();
-  constructor(private store: () => any, private save: () => void, private provider = paystackRequest, private now = Date.now) {}
+  constructor(private store: () => any, private save: () => void, private provider = paystackRequest, private now = Date.now, private saveSettlement: () => void = save) {}
   async settlementOptions(actor: any) {
     if (actor?.role !== 'admin') throw new PaymentError('Administrator access required.', 403);
     this.limit(`settlement:${actor.id}`);
@@ -85,7 +49,7 @@ export class PaystackPayments {
     const current = this.store(); current.platformSettings ||= {};
     const previous = current.platformSettings.paystackSettlement;
     current.platformSettings.paystackSettlement = { code, mode, updatedBy: actor.id, updatedAt: new Date(this.now()).toISOString() };
-    try { this.save(); } catch (error) { if (previous === undefined) delete current.platformSettings.paystackSettlement; else current.platformSettings.paystackSettlement = previous; throw error; }
+    try { this.saveSettlement(); } catch (error) { if (previous === undefined) delete current.platformSettings.paystackSettlement; else current.platformSettings.paystackSettlement = previous; throw error; }
     return { success: true, selected: code, mode };
   }
   limit(id: string) {
@@ -105,10 +69,7 @@ export class PaystackPayments {
   }
   draft(actor: any, body: any) {
     const { seller, application } = this.seller(actor);
-    const text = (key: string, required = false) => { const value = body[key]; if (typeof value !== 'string' || value.length > (key === 'description' ? 4000 : 500) || required && !value.trim()) throw new PaymentError(`Enter a valid ${key}.`); return value.trim(); };
-    seller.storeName = text('storeName', true); seller.location = text('location', true); seller.username = text('username', true); seller.category = text('category', true);
-    seller.description = text('description'); seller.deliveryMode = text('deliveryMode', true);
-    for (const key of ['profilePicture', 'coverPicture']) if (body[key]) { const value = text(key); if (!value.startsWith('/uploads/') && !value.startsWith('https://')) throw new PaymentError('Choose a valid stored photograph.'); seller[key] = value; }
+    Object.assign(seller, storeProfileFields(body, actor, this.store(), seller, true));
     seller.setupDetailsSaved = true;
     // Draft saves never attest payment, approval or paid access.
     seller.registrationFeePaid = hasVerifiedRegistration(this.store(), seller);
@@ -246,7 +207,7 @@ export class PaystackPayments {
 }
 
 export function installPaystackPayments(app: any, auth: any, payments: PaystackPayments, getStore: () => any, authorizeSettings?: (id: string, key: unknown) => void) {
-  const action = (fn: any) => async (req: any, res: any) => { res.set('Cache-Control', 'no-store'); try { res.json(await fn(req)); } catch (error) { if (error instanceof PaymentError || error instanceof GovernanceError) return res.status(error.status).json({ error: error.message }); throw error; } };
+  const action = (fn: any) => async (req: any, res: any) => { res.set('Cache-Control', 'no-store'); try { res.json(await fn(req)); } catch (error) { if (error instanceof PaymentError || error instanceof GovernanceError || error instanceof StoreProfileError) return res.status(error.status).json({ error: error.message }); throw error; } };
   app.get('/api/admin/payments/receiving-account', auth(['admin']), action((req: any) => payments.settlementOptions(req.user)));
   app.post('/api/admin/payments/receiving-account', auth(['admin']), action((req: any) => {
     if (!authorizeSettings) throw new PaymentError('Administrator settings authorization is unavailable.', 503);

@@ -63,7 +63,7 @@ export interface AuthenticatedUser {
 interface AuthContextType {
   user: AuthenticatedUser | null;
   loading: boolean;
-  login: (usernameOrEmail: string, password: string) => Promise<AuthenticatedUser>;
+  login: (usernameOrEmail: string, password: string, portal?: { accountKind: 'resident' | 'seller'; portalPin: string }) => Promise<AuthenticatedUser>;
   setSessionUser: (user: AuthenticatedUser) => void;
   updateUser?: (updatedFields: Partial<AuthenticatedUser>) => void;
   logout: () => Promise<boolean>;
@@ -71,18 +71,6 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-// Uploaded data URLs are too large for reliable localStorage caching. The API persists them; local cache is reserved for presets and ordinary URLs.
-const cacheAvatar = (email: string | undefined, avatar?: string) => {
-  if (!avatar || avatar.startsWith("data:image/")) return;
-  try {
-    const cleanEmail = (email || "").toLowerCase().trim();
-    if (cleanEmail) localStorage.setItem("pinevela_avatar_" + cleanEmail, avatar);
-  } catch (error) {
-    console.warn("[Auth] Avatar could not be cached locally:", error);
-  }
-};
-
-
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthenticatedUser | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -137,11 +125,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               }
             }
 
-            // Restore avatar from localStorage if the server didn't return one
-            const cleanEmail = (userData.email || '').toLowerCase().trim();
-            const avatarKey = cleanEmail ? `pinevela_avatar_${cleanEmail}` : null;
-            const storedAvatar = avatarKey ? localStorage.getItem(avatarKey) : null;
-            const resolvedAvatar = userData.avatar || userData.photo || userData.photoUrl || userData.avatarUrl || userData.profilePicture || storedAvatar || undefined;
+            const resolvedAvatar = userData.avatar || userData.photo || userData.photoUrl || userData.avatarUrl || userData.profilePicture || undefined;
             setUser({
               ...userData,
               token: '',
@@ -174,18 +158,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => { channel.close(); window.removeEventListener('pinevela-session-expired', clear); };
   }, []);
 
-  const login = async (usernameOrEmail: string, password: string): Promise<AuthenticatedUser> => {
+  const login = async (usernameOrEmail: string, password: string, portal?: { accountKind: 'resident' | 'seller'; portalPin: string }): Promise<AuthenticatedUser> => {
     const res = await fetch('/api/auth/login', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ usernameOrEmail, password })
+      body: JSON.stringify({ usernameOrEmail, password, ...portal })
     });
 
     if (!res.ok) {
       const errData = await safeJson(res);
       const error: any = new Error(errData.error || 'Authentication failed');
+      error.code = errData.code;
       error.isPendingApproval = Boolean(errData.isPendingApproval);
       error.isBlocked = Boolean(errData.isBlocked);
       error.restrictionReason = errData.restrictionReason || errData.reason || errData.adminNotes;
@@ -220,11 +205,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    // Restore avatar from localStorage if the server didn't return one
-    const cleanEmail = (userData.email || '').toLowerCase().trim();
-    const avatarKey = cleanEmail ? `pinevela_avatar_${cleanEmail}` : null;
-    const storedAvatar = avatarKey ? localStorage.getItem(avatarKey) : null;
-    const resolvedAvatar = userData.avatar || userData.photo || userData.photoUrl || userData.avatarUrl || userData.profilePicture || storedAvatar || undefined;
+    const resolvedAvatar = userData.avatar || userData.photo || userData.photoUrl || userData.avatarUrl || userData.profilePicture || undefined;
 
     const finalUser = {
       ...userData,
@@ -238,14 +219,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       profilePicture: resolvedAvatar
     };
 
-    cacheAvatar(cleanEmail, resolvedAvatar);
     setUser(finalUser);
     return finalUser;
   };
 
   const setSessionUser = (newSessionUser: AuthenticatedUser) => {
-    const newPic = newSessionUser?.avatar || newSessionUser?.photo || newSessionUser?.photoUrl || newSessionUser?.avatarUrl || newSessionUser?.profilePicture;
-    cacheAvatar(newSessionUser?.email, newPic);
     clearLegacySessionStorage();
     setUser({ ...newSessionUser, token: '' });
   };
@@ -254,8 +232,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(prev => {
       if (!prev) return null;
       const updated = { ...prev, ...updatedFields };
-      const newPic = updated.avatar || updated.photo || updated.photoUrl || updated.avatarUrl || updated.profilePicture;
-      if (newPic) cacheAvatar(updated.email, newPic);
       return updated;
     });
   };

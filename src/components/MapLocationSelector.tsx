@@ -335,7 +335,7 @@ export default function MapLocationSelector({
       {/* Top Search & Actions Bar */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
         <div className="relative flex-1">
-          <input
+          <input aria-label="Search campus, district, road or Ghanaian landmark..."
             type="text"
             placeholder="Search campus, district, road or Ghanaian landmark..."
             value={searchQuery}

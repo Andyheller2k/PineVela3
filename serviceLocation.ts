@@ -1,3 +1,4 @@
+import {isMarketService,marketListingAvailable} from './marketListingAvailability.js';
 export type MapPoint = { lat: number; lng: number };
 function coordinate(value: unknown, limit: number): number | undefined {
   if (typeof value !== 'number' && (typeof value !== 'string' || !/^-?\d+(?:\.\d+)?$/.test(value))) return;
@@ -9,7 +10,7 @@ export function servicePoint(lat: unknown, lng: unknown): MapPoint | undefined {
   return latitude !== undefined && longitude !== undefined ? { lat: latitude, lng: longitude } : undefined;
 }
 export function mappedService(product: any): boolean {
-  return Boolean(product && (product.isService || product.serviceCategory || String(product.category || '').toLowerCase().includes('service')) && ['fixed', 'hybrid'].includes(product.serviceLocationMode) && product.isAvailable !== false && Number(product.stockQuantity) > 0 && product.storeId && servicePoint(product.lat, product.lng));
+  return Boolean(product && isMarketService(product) && ['fixed', 'hybrid'].includes(product.serviceLocationMode) && marketListingAvailable(product) && product.storeId && servicePoint(product.lat, product.lng));
 }
 export function distanceKm(a: MapPoint, b: MapPoint) {
   const rad = (d: number) => d * Math.PI / 180;

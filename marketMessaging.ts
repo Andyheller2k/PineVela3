@@ -1,3 +1,6 @@
+import { marketAccessPaid } from './paystackPayments.js';
+import { ownsMarketStore } from './marketOwnership.js';
+import { governedMarketBanned } from './accountModeration.js';
 import crypto from 'node:crypto';
 import { accountData, accountId, accountRole, normalizeEmail } from './accountSecurity.js';
 
@@ -75,10 +78,13 @@ export function installMarketMessaging(app: any, requireAuth: any, getStore: () 
       if (order && order.buyerId !== actor.id) return res.status(403).json({ error: 'This order belongs to another buyer.' });
       context = previous.find((m: any) => normalizeEmail(m.recipientEmail) === normalizeEmail(body.recipientEmail) || normalizeEmail(m.senderEmail) === normalizeEmail(body.recipientEmail));
       const people = context && messageParticipants(context, store);
-      const selectedId = order?.storeId || product?.storeId || people?.seller.id;
+      const selectedId = order?.storeId || product?.storeId || body.sellerStoreId || people?.seller.id;
       seller = (store.digitalMarketStores || []).find((s: any) => s.id === selectedId);
       buyer = actor;
-      if (!seller || normalizeEmail(body.recipientEmail) !== normalizeEmail(seller.studentEmail)) return res.status(403).json({ error: 'Start a buyer conversation from a seller’s item or order.' });
+      if (body.sellerStoreId && seller?.id !== body.sellerStoreId) return res.status(403).json({ error: 'The item or order belongs to a different store.' });
+      if (body.sellerStoreId && (!seller || seller.status !== 'active' || !marketAccessPaid(store, seller) || governedMarketBanned(store, seller.id))) return res.status(403).json({ error: 'This seller is unavailable.' });
+      if (seller && ownsMarketStore(actor, seller, store)) return res.status(403).json({ error: 'You cannot message your own store.' });
+      if (!seller || normalizeEmail(body.recipientEmail) !== normalizeEmail(seller.studentEmail)) return res.status(403).json({ error: 'Start a buyer conversation from a seller’s store, item or order.' });
     } else {
       seller = sellerStore(actor, store);
       if (!seller || order && order.storeId !== seller.id || product && product.storeId !== seller.id) return res.status(403).json({ error: 'This conversation belongs to another seller.' });

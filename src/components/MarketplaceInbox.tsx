@@ -4,37 +4,52 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, MessageSquare, Send, RefreshCw } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { safeJson } from '../lib/api';
+import {usesSupabasePersistence} from '../lib/persistence';
 
 interface MarketMessage {
   id: string; buyerId?: string; sellerStoreId?: string; storeId?: string;
   senderRole?: string; senderEmail: string; recipientEmail: string; senderName: string; recipientName: string;
   content: string; productTitle?: string; createdAt: string;
 }
-export default function MarketplaceInbox({ initialPeerEmail }: { initialPeerEmail?: string | null }) {
+export default function MarketplaceInbox({ initialPeerEmail, initialStore }: { initialPeerEmail?: string | null; initialStore?: { id: string; email?: string; name: string } }) {
   const { user } = useAuth();
   const { notifications, markAsRead } = useNotifications();
-  const [messages, setMessages] = useState<MarketMessage[]>([]);
+  const [savedMessages, setMessages] = useState<MarketMessage[]>([]);
+  const [messageOwner,setMessageOwner]=useState<string>();
+  const messages=messageOwner===user?.id?savedMessages:[];
+  const account=useRef(user?.id),version=useRef(0),readEpoch=useRef(0),mounted=useRef(true);
+  if(account.current!==user?.id){account.current=user?.id;version.current++;readEpoch.current++;}
+  useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;};},[]);
+  const request=useRef<{params:string;id:string}|null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
+  const selection=useRef(selected),currentDraft=useRef(draft);selection.current=selected;currentDraft.current=draft;
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState('');
   const end = useRef<HTMLDivElement>(null);
   const controller = useRef<AbortController | null>(null);
+  const inboxOwner = useRef<string | undefined>(undefined);
   const normalize = (value: string) => value?.trim().toLowerCase();
   const seller = user?.role === 'merchant';
   const load = async (signal?: AbortSignal) => {
+    const id=user?.id,generation=version.current,epoch=++readEpoch.current;
+    const current=()=>mounted.current && account.current===id && version.current===generation && readEpoch.current===epoch && !signal?.aborted;
     try {
       const response = await fetch('/api/digital-market/messages', { headers: { Authorization: `Bearer ${user?.token || ''}` }, signal });
       const data = await safeJson(response);
       if (!response.ok) throw new Error(data.error || 'Could not load your messages.');
-      if (!signal?.aborted) { setMessages(Array.isArray(data) ? data : []); setError(''); }
-    } catch (e: any) { if (e.name !== 'AbortError' && !signal?.aborted) setError(e.message || 'Could not load your messages.'); }
-    finally { if (!signal?.aborted) setLoading(false); }
+      if (current()) { setMessageOwner(id);setMessages(Array.isArray(data) ? data : []); setError(''); }
+    } catch (e: any) { if (e.name !== 'AbortError' && current()) setError(e.message || 'Could not load your messages.'); }
+    finally { if (current()) setLoading(false); }
   };
   useEffect(() => {
     const abort = new AbortController(); controller.current = abort;
-    setMessages([]); setSelected(null); setDraft(''); setLoading(true);
+    if(inboxOwner.current!==user?.id){
+      inboxOwner.current=user?.id;
+      setMessages([]);setMessageOwner(undefined);request.current=null;setError('');setSelected(null);setDraft('');setLoading(true);
+    }
+    setSending(false);
     void load(abort.signal);
     const interval = window.setInterval(() => { if (document.visibilityState === 'visible') void load(abort.signal); }, 5000);
     return () => { abort.abort(); window.clearInterval(interval); };
@@ -49,11 +64,13 @@ export default function MarketplaceInbox({ initialPeerEmail }: { initialPeerEmai
       if (!map.has(id)) map.set(id, { id, email, name: name || email, buyerId: message.buyerId, messages: [] });
       map.get(id)!.messages.push(message);
     }
-    return [...map.values()].sort((a, b) => Date.parse(b.messages.at(-1)!.createdAt) - Date.parse(a.messages.at(-1)!.createdAt));
-  }, [messages, user?.id, user?.role, user?.email]);
+    if (!seller && initialStore && !map.has(initialStore.id)) map.set(initialStore.id, { ...initialStore,email:initialStore.email || '', messages: [] });
+    return [...map.values()].sort((a, b) => Date.parse(b.messages.at(-1)?.createdAt || '1970-01-01') - Date.parse(a.messages.at(-1)?.createdAt || '1970-01-01'));
+  }, [messages, user?.id, user?.role, user?.email, initialStore?.id, initialStore?.email, initialStore?.name]);
   useEffect(() => {
-    if (initialPeerEmail) { const thread = threads.find(t => normalize(t.email) === normalize(initialPeerEmail)); if (thread) setSelected(thread.id); }
-  }, [initialPeerEmail, threads.length]);
+    if (!seller && initialStore) setSelected(initialStore.id);
+    else if (initialPeerEmail) { const thread = threads.find(t => normalize(t.email) === normalize(initialPeerEmail)); if (thread) setSelected(thread.id); }
+  }, [initialPeerEmail, initialStore?.id, threads.length, seller]);
   const active = threads.find(t => t.id === selected);
   useEffect(() => {
     if (!active) return;
@@ -66,16 +83,20 @@ export default function MarketplaceInbox({ initialPeerEmail }: { initialPeerEmai
   useEffect(() => { end.current?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'nearest' }); }, [selected, active?.messages.length]);
   const send = async (event: React.FormEvent) => {
     event.preventDefault(); if (!active || !draft.trim() || sending) return;
-    const text = draft.trim(); setSending(true); setError('');
+    const text = draft.trim(),id=user?.id,generation=version.current,signal=controller.current?.signal,threadId=active.id;
+    const current=()=>mounted.current && account.current===id && version.current===generation && !signal?.aborted;
+    readEpoch.current++;setSending(true);setError('');
     try {
-      const response = await fetch('/api/digital-market/messages', { method: 'POST', signal: controller.current?.signal,
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${user?.token || ''}` },
-        body: JSON.stringify({ recipientEmail: active.email, buyerId: seller ? active.buyerId : undefined, content: text }) });
-      const data = await safeJson(response);
+      const body={sellerStoreId:seller?undefined:active.id,buyerId:seller?active.buyerId:undefined,content:text,
+        ...(!usesSupabasePersistence?{recipientEmail:active.email}:{})};
+      if(usesSupabasePersistence){const params=JSON.stringify(body);if(request.current?.params!==params)request.current={params,id:crypto.randomUUID()};Object.assign(body,{requestId:request.current.id});}
+      const response = await fetch('/api/digital-market/messages', { method: 'POST', signal,
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${user?.token || ''}` },body:JSON.stringify(body) });
+      const data = await safeJson(response);if(!current())return;
       if (!response.ok) throw new Error(data.error || 'Your message could not be sent.');
-      setDraft(''); await load(controller.current?.signal);
-    } catch (e: any) { if (e.name !== 'AbortError') setError(e.message || 'Your message could not be sent.'); }
-    finally { setSending(false); }
+      request.current=null;if(selection.current===threadId && currentDraft.current.trim()===text)setDraft('');await load(signal);
+    } catch (e: any) { if (e.name !== 'AbortError' && current()) setError(e.message || 'Your message could not be sent.'); }
+    finally { if(current())setSending(false); }
   };
   return (
     <section aria-label={seller ? 'Buyer messages' : 'Seller messages'} className="overflow-hidden rounded-3xl border border-blue-200/70 bg-white/75 shadow-sm backdrop-blur-xl">
@@ -88,7 +109,7 @@ export default function MarketplaceInbox({ initialPeerEmail }: { initialPeerEmai
         <aside aria-label="Conversations" className={`${active ? 'hidden md:flex' : 'flex'} w-full flex-col overflow-y-auto border-r border-blue-100 md:w-72 md:shrink-0`}>
           {loading ? <p className="p-6 text-sm text-slate-500">Loading messages…</p> : threads.length === 0 ? <p className="p-6 text-sm text-slate-500">{seller ? 'Buyer inquiries will appear here.' : 'Open an item and contact its seller to start a conversation.'}</p> : threads.map(thread => (
             <button type="button" key={thread.id} onClick={() => { setSelected(thread.id); setDraft(''); }} aria-pressed={selected === thread.id} className={`border-b border-blue-50 p-4 text-left transition-colors ${selected === thread.id ? 'bg-blue-100/70' : 'hover:bg-blue-50'}`}>
-              <span className="block truncate text-sm font-bold text-blue-950">{thread.name}</span><span className="mt-1 block truncate text-xs text-slate-500">{thread.messages.at(-1)?.content}</span>
+              <span className="block truncate text-sm font-bold text-blue-950">{thread.name}</span><span className="mt-1 block truncate text-xs text-slate-500">{thread.messages.at(-1)?.content || 'Start a conversation'}</span>
             </button>
           ))}
         </aside>
@@ -98,7 +119,7 @@ export default function MarketplaceInbox({ initialPeerEmail }: { initialPeerEmai
             <div role="log" aria-label="Conversation messages" aria-live="polite" className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4 sm:p-6">
               {active.messages.map(message => { const own = message.senderRole ? message.senderRole === user?.role : normalize(message.senderEmail) === normalize(user?.email || ''); return <div key={message.id} className={`flex ${own ? 'justify-end' : 'justify-start'}`}><div className={`max-w-[85%] rounded-2xl px-4 py-3 ${own ? 'bg-blue-900 text-white' : 'border border-blue-100 bg-blue-50 text-slate-800'}`}><p className="whitespace-pre-wrap break-words text-sm [overflow-wrap:anywhere]">{message.content}</p><time dateTime={message.createdAt} className={`mt-2 block text-right text-[10px] ${own ? 'text-blue-200' : 'text-slate-500'}`}>{new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</time></div></div>; })}<div ref={end} />
             </div>
-            <form onSubmit={send} className="flex items-end gap-2 border-t border-blue-100 p-3 sm:p-4"><label className="sr-only" htmlFor="market-message">Message</label><textarea id="market-message" rows={2} maxLength={5000} value={draft} onChange={e => setDraft(e.target.value)} placeholder="Write a message" className="min-w-0 flex-1 resize-none rounded-xl border border-blue-200 bg-white p-3 text-sm focus:outline-blue-500" /><button type="submit" disabled={sending || !draft.trim()} aria-label="Send message" className="rounded-xl bg-blue-900 p-3 text-white disabled:opacity-40"><Send className="h-5 w-5" /></button></form>
+            <form onSubmit={send} className="flex items-end gap-2 border-t border-blue-100 p-3 sm:p-4"><label className="sr-only" htmlFor="market-message">Message</label><textarea aria-label="Message" id="market-message" rows={2} maxLength={5000} value={draft} onChange={e => setDraft(e.target.value)} placeholder="Write a message" className="min-w-0 flex-1 resize-none rounded-xl border border-blue-200 bg-white p-3 text-sm focus:outline-blue-500" /><button type="submit" disabled={sending || !draft.trim()} aria-label="Send message" className="rounded-xl bg-blue-900 p-3 text-white disabled:opacity-40"><Send className="h-5 w-5" /></button></form>
           </> : <div className="m-auto p-6 text-center text-sm text-slate-500">Select a conversation to reply.</div>}
         </div>
       </div>

@@ -135,6 +135,9 @@ export default function FAQAccordion() {
                   className="bg-emerald-50/20 border border-emerald-200/40 rounded-2xl shadow-xs overflow-hidden"
                 >
                   <button
+                    id={`faq-question-${globalIndex}`}
+                    aria-expanded={isOpen}
+                    aria-controls={isOpen ? `faq-answer-${globalIndex}` : undefined}
                     onClick={() => setExpandedIndex(isOpen ? null : globalIndex)}
                     className="w-full px-6 py-4.5 flex items-center justify-between text-left focus:outline-none hover:bg-emerald-50/40 transition-colors cursor-pointer group"
                   >
@@ -153,6 +156,7 @@ export default function FAQAccordion() {
                   <AnimatePresence initial={false}>
                     {isOpen && (
                       <motion.div
+                        id={`faq-answer-${globalIndex}`} role="region" aria-labelledby={`faq-question-${globalIndex}`}
                         initial={{ height: 0, opacity: 0 }}
                         animate={{ height: "auto", opacity: 1 }}
                         exit={{ height: 0, opacity: 0 }}
@@ -193,6 +197,9 @@ export default function FAQAccordion() {
                   className="bg-blue-50/20 border border-blue-200/25 rounded-2xl shadow-xs overflow-hidden"
                 >
                   <button
+                    id={`faq-question-${globalIndex}`}
+                    aria-expanded={isOpen}
+                    aria-controls={isOpen ? `faq-answer-${globalIndex}` : undefined}
                     onClick={() => setExpandedIndex(isOpen ? null : globalIndex)}
                     className="w-full px-6 py-4.5 flex items-center justify-between text-left focus:outline-none hover:bg-blue-50/45 transition-colors cursor-pointer group"
                   >
@@ -211,6 +218,7 @@ export default function FAQAccordion() {
                   <AnimatePresence initial={false}>
                     {isOpen && (
                       <motion.div
+                        id={`faq-answer-${globalIndex}`} role="region" aria-labelledby={`faq-question-${globalIndex}`}
                         initial={{ height: 0, opacity: 0 }}
                         animate={{ height: "auto", opacity: 1 }}
                         exit={{ height: 0, opacity: 0 }}
@@ -251,6 +259,9 @@ export default function FAQAccordion() {
                   className="bg-blue-50/20 border border-blue-200/25 rounded-2xl shadow-xs overflow-hidden"
                 >
                   <button
+                    id={`faq-question-${globalIndex}`}
+                    aria-expanded={isOpen}
+                    aria-controls={isOpen ? `faq-answer-${globalIndex}` : undefined}
                     onClick={() => setExpandedIndex(isOpen ? null : globalIndex)}
                     className="w-full px-6 py-4.5 flex items-center justify-between text-left focus:outline-none hover:bg-blue-50/45 transition-colors cursor-pointer group"
                   >
@@ -269,6 +280,7 @@ export default function FAQAccordion() {
                   <AnimatePresence initial={false}>
                     {isOpen && (
                       <motion.div
+                        id={`faq-answer-${globalIndex}`} role="region" aria-labelledby={`faq-question-${globalIndex}`}
                         initial={{ height: 0, opacity: 0 }}
                         animate={{ height: "auto", opacity: 1 }}
                         exit={{ height: 0, opacity: 0 }}

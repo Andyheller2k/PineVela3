@@ -365,7 +365,7 @@ export default function CampusMeetupMapPicker({
           <div className="flex flex-col sm:flex-row gap-2">
             <div className="relative flex-1">
               <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-              <input
+              <input aria-label="Search campus landmark (e.g. Balme Library, KNUST Commercial Area)..."
                 type="text"
                 placeholder="Search campus landmark (e.g. Balme Library, KNUST Commercial Area)..."
                 value={searchQuery}
@@ -470,7 +470,7 @@ export default function CampusMeetupMapPicker({
           </div>
 
           {!readOnly ? (
-            <input
+            <input aria-label="Meetup Landmark / Description"
               type="text"
               value={locationName}
               onChange={(e) => { cancelLookup(); setLocationName(e.target.value); }}

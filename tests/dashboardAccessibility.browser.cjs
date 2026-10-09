@@ -26,7 +26,7 @@ async function main() {
   const housingCheck = process.argv.includes('--housing');
   const admin = actor('admin', `${crypto.randomUUID()}@example.test`);
   const newManager = { ...actor('manager', `${crypto.randomUUID()}@example.test`), isVerified: true, verificationStatus: 'approved' };
-  const store = { id: crypto.randomUUID(), userId: owner.id, studentEmail: seller.email, storeName: 'Isolated seller', status: 'active', setupCompleted: true, registrationFeePaid: true, subscriptionPlan: 'pro' };
+  const store = { id: crypto.randomUUID(), userId: owner.id, studentEmail: seller.email, storeName: 'Isolated seller', status: 'active', setupCompleted: true, registrationFeePaid: true, subscriptionPlan: 'pro', subscriptionStatus: 'active', subscriptionExpiresAt: new Date(Date.now()+86400000).toISOString(), semesterExpiresAt: new Date(Date.now()+86400000).toISOString() };
   Object.assign(seller, { merchantStoreId: store.id, parentUserId: owner.id, merchantSetupCompleted: true, merchantRegistrationFeePaid: true });
   const application = { id: crypto.randomUUID(), userId: owner.id, studentEmail: seller.email, status: 'approved' };
   const photos = ['/images/company/about-us.jpg', '/images/company/our-vision.jpg', '/images/company/partner-with-us.jpg', '/images/company/partner-with-us-enhanced.webp'];
@@ -43,7 +43,7 @@ async function main() {
     { id: crypto.randomUUID(), userId: buyer.id, scope: 'market', title: 'Merchant application update', message: 'Your merchant platform status changed', read: false }];
   const hostel = { id: crypto.randomUUID(), managerId: manager.id, managerEmail: manager.email, name: 'Isolated approved residence', isApproved: true, approvalStatus: 'Approved', totalCapacity: 10, price: 3000, subscriptionPaid: true, amenities: [], facilities: [], blocks: [], imageUrl: photos[0] };
   if (housingCheck) Object.assign(hostel, { location: 'Kumasi KNUST Ayeduase', blocksList: [{ id: 'housing-block', name: 'Female Block', gender: 'Female', totalRooms: 3, bedsPerRoom: 2, roomTypes: [{ id: 'housing-room', typeName: '2 in 1 Room', bedsPerRoom: 2, totalRooms: 3, pricePerBed: 7777 }] }] });
-  await fs.writeFile(path.join(dataDir, 'pinevela_store.json'), sessionFixtureJson({ credentialExposureVersion: 1, accountSecurityVersion: 1, users: [buyer, owner, seller, manager, ...(housingCheck ? [admin, newManager] : [])], digitalMarketApplications: [application], digitalMarketStores: [store], digitalMarketProducts: [product, service], digitalMarketOrders: [order, receipt], digitalMarketMessages: [inquiry, reply], notifications: notices, hostels: [hostel, ...(housingCheck ? [{ ...hostel, id: crypto.randomUUID(), name: 'Isolated pending residence', isApproved: false, approvalStatus: 'Pending Approval' }] : [])], managerVerifications: [{ id: crypto.randomUUID(), managerId: manager.id, managerEmail: manager.email, status: 'approved' }, ...(housingCheck ? [{ id: crypto.randomUUID(), managerId: newManager.id, managerEmail: newManager.email, status: 'approved' }] : [])] }));
+  await fs.writeFile(path.join(dataDir, 'pinevela_store.json'), sessionFixtureJson({ credentialExposureVersion: 1, accountSecurityVersion: 1, users: [buyer, owner, seller, manager, ...(housingCheck ? [admin, newManager] : [])], digitalMarketApplications: [application], digitalMarketStores: [store], paymentTransactions: [{id:crypto.randomUUID(),storeId:store.id,purpose:'activation',status:'fulfilled',mode:'free'}], digitalMarketProducts: [product, service], digitalMarketOrders: [order, receipt], digitalMarketMessages: [inquiry, reply], notifications: notices, hostels: [hostel, ...(housingCheck ? [{ ...hostel, id: crypto.randomUUID(), name: 'Isolated pending residence', isApproved: false, approvalStatus: 'Pending Approval' }] : [])], managerVerifications: [{ id: crypto.randomUUID(), managerId: manager.id, managerEmail: manager.email, status: 'approved' }, ...(housingCheck ? [{ id: crypto.randomUUID(), managerId: newManager.id, managerEmail: newManager.email, status: 'approved' }] : [])] }));
   const port = await freePort(), debugPort = await freePort(), base = `http://127.0.0.1:${port}`;
   let server, chrome, socket, command; let serverLogs = '', chromeLogs = '';
   try {
@@ -307,18 +307,18 @@ async function main() {
     await switchAccount(seller.token, '/#/digital-market');
     await until(`${matchingButton('Messages')} !== undefined`, 'Lazy seller route');
     await switchAccount(buyer.token, '/#/market');
-    await until("document.body.innerText.includes('Digital Student Market') && document.body.innerText.includes('My Merchant Platform')", 'Lazy market alias');
+    await until(`document.body.innerText.includes('Digital Student Market') && ${inspect} !== null`, 'Lazy market alias');
     assert.deepEqual(exceptions, [], 'Unexpected browser console/runtime errors');
     assert.deepEqual(apiErrors, [], 'Unexpected API errors');
     console.log('Lazy buyer/market, manager and seller routes load; admin role restriction preserved; no console/API errors.');
     // Simulate an unavailable lazy chunk, then recover by reloading the same route.
-    await command('Fetch.enable', { patterns: [{ urlPattern: '*/assets/PageUnifiedLogin-*.js' }] });
-    await switchAccount(buyer.token, '/#/login');
+    await command('Fetch.enable', { patterns: [{ urlPattern: '*/assets/PagePublicStore-*.js' }] });
+    await switchAccount(buyer.token, `/#/pinemarket/stores/${store.id}`);
     await until("document.body.innerText.includes('This page could not load') && document.body.innerText.includes('Reload page')", 'Chunk failure has a recovery action');
     await command('Fetch.disable');
     exceptions.length = 0; apiErrors.length = 0;
     await click(button('Reload page'));
-    await until("document.querySelector('input[type=password]') !== null", 'Reload recovers lazy login route');
+    await until("document.querySelector('[data-market-storefront]') !== null", 'Reload recovers lazy store route');
     assert.deepEqual(exceptions, [], 'No errors after recovering the chunk');
     console.log('Unavailable route chunk shows an explicit reload action and successfully recovers.');
 

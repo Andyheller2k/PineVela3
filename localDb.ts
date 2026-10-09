@@ -1,4 +1,5 @@
 import crypto from "crypto";
+import { accountSubmissionNotification } from './accountSubmissionNotifications.js';
 import { ResourceLimitError } from './resourceSecurity.js';
 import { loadPersistentStore, savePersistentStore, PersistentStore } from "./persistentDb.js";
 
@@ -430,15 +431,16 @@ export async function dbGetNotifications(userId?: string | any[], ..._args: any[
   const store = getStore();
   if (!store.notifications) store.notifications = [];
   if (typeof userId === 'string') {
-    return store.notifications.filter((n: any) => n.userId === userId || !n.userId);
+    return store.notifications.map(n => accountSubmissionNotification(n, store)).filter((n: any) => n.userId === userId || !n.userId);
   }
-  return store.notifications;
+  return store.notifications.map(n => accountSubmissionNotification(n, store));
 }
 
 export async function dbCreateNotification(notifData: any, _fallback?: any[], actor?: any): Promise<any> {
   if (actor?.role === 'admin') { notifData.adminMessage = true; notifData.senderRole = 'admin'; }
   const store = getStore();
   if (!store.notifications) store.notifications = [];
+  Object.assign(notifData, accountSubmissionNotification(notifData, store));
   const newNotif = { 
     ...notifData, 
     id: notifData.id || `notif-${Date.now()}`, 

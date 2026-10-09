@@ -1,3 +1,4 @@
+import { accountSubmissionNotification } from './accountSubmissionNotifications.js';
 import crypto from 'node:crypto';
 import { assignedResidences } from './hostelSecurity.js';
 import { internationalPhone } from './internationalPhone.js';
@@ -54,6 +55,8 @@ export class ResidenceRequests {
   gate(req: any) {
     if (req.user?.role !== 'manager' || ['GET', 'HEAD', 'OPTIONS'].includes(req.method) || req.managerKeyVerified === req.user.id) return;
     const path = req.path;
+    // Personal appearance is session-owned and cannot authorize a business change.
+    if (req.method === 'PUT' && path === '/api/auth/appearance') return;
     // Credential bootstrap/recovery and server delivery receipts do not authorize business changes.
     if (['/api/manager/secret-key/issue', '/api/manager/secret-key/petition', '/api/auth/maintenance-notice/dismiss'].includes(path) || /^\/api\/admin-messages\/[^/]+\/ack$/.test(path)) return;
     if (!this.ownHostels(req.user).length && ['/api/hostels/register', '/api/storage/upload-hostel-image', '/api/hostel-verifications/submit'].includes(path)) return;
@@ -207,7 +210,7 @@ export function installResidenceRequests(app: any, auth: any, service: Residence
     return (getStore().notifications || []).filter((n: any) => {
       if (!n.adminMessage || !notificationVisible(r.user, n, getStore()) || n.popupAcknowledgedBy?.includes(notificationReaderKey(r.user)) || seen.has(n.id)) return false;
       seen.add(n.id); return true;
-    }).map((n: any) => notificationForActor(n, r.user));
+    }).map((n: any) => notificationForActor(accountSubmissionNotification(n, getStore()), r.user));
   }));
   app.post('/api/admin-messages/:id/ack', auth(), route((r: any) => {
     const n = (getStore().notifications || []).find((n: any) => n.id === r.params.id && n.adminMessage && notificationVisible(r.user, n, getStore()));

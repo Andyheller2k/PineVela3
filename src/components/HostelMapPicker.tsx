@@ -238,7 +238,7 @@ export default function HostelMapPicker({
       {/* Top Search & Action Bar */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
         <div className="relative flex-1">
-          <input
+          <input aria-label="Search address, neighborhood, campus or landmark..."
             type="text"
             placeholder="Search address, neighborhood, campus or landmark..."
             value={searchQuery}

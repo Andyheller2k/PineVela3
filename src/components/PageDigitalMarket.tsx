@@ -1,9 +1,19 @@
+import { activateOnKeyboard } from '../lib/keyboardActivation';
+import { usesSupabasePersistence } from '../lib/persistence';
+import {isMarketService} from '../../marketListingAvailability';
+import DashboardOverlay from './DashboardOverlay';
+import MobileNavigation from './MobileNavigation';
+import StoreBrandingEditor from './StoreBrandingEditor';
+import { STORE_DELIVERY_METHODS, storeDeliveryMode } from '../../storeDelivery';
+import { internationalPhone, phoneDraft, type CountryCode } from '../../internationalPhone';
+import InternationalPhoneInput from './InternationalPhoneInput';
+import StoreProfileSummary from './StoreProfileSummary';
 import ListingPlanBadge from './ListingPlanBadge';
 import { servicePoint } from '../../serviceLocation';
 import type { MarketPlan } from '../../marketPlans';
 import { routePopupFeedback } from '../lib/feedback';
 import { usePlatformSettings } from '../context/PlatformSettingsContext';
-import { openPaymentCheckout } from '../lib/payments';
+import { openPaymentCheckout,pendingPaymentReference } from '../lib/payments';
 import { effectiveMarketPlan, PLAN_LIMITS } from '../../marketPlans';
 import RouteSkeleton from './RouteSkeleton';
 import TopNavBadge from './TopNavBadge';
@@ -17,13 +27,14 @@ import { queryClient, invalidateAllQueries } from '../lib/queryClient';
 import { useAuth } from '../context/AuthContext';
 import PineLogo from './PineLogo';
 import MarketplaceInbox from './MarketplaceInbox';
-import { compressImageFileToLowRes, optimizeImageDisplayUrl } from '../lib/imageOptimizer';
+import { optimizeImageDisplayUrl } from '../lib/imageOptimizer';
 import {
   Store,
   Package,
   Plus,
   Trash2,
   CheckCircle2,
+  XCircle,
   Clock,
   MapPin,
   Search,
@@ -99,7 +110,7 @@ interface MarketProduct {
   price: number;
   currency: string;
   category: string;
-  stockQuantity: number;
+  stockQuantity: number | null;
   imageUrl: string;
   additionalImages?: string[];
   condition?: string;
@@ -160,11 +171,7 @@ interface SellerInventoryCardProps {
 
 const SellerInventoryCard: React.FC<SellerInventoryCardProps> = memo(
   ({ product, plan, onUpdateStock, onDeleteProduct }) => {
-    const isService = Boolean(
-      product.isService ||
-      product.category === 'Services' ||
-      product.category?.toLowerCase().includes('service')
-    );
+    const isService = isMarketService(product);
 
     return (
       <div
@@ -209,7 +216,7 @@ const SellerInventoryCard: React.FC<SellerInventoryCardProps> = memo(
             <div className="flex items-center justify-between">
               <div className="text-xs font-bold text-slate-500">
                 In Stock:{' '}
-                <span className={`font-black ${product.stockQuantity > 0 ? 'text-slate-950' : 'text-rose-600'}`}>
+                <span className={`font-black ${Number(product.stockQuantity) > 0 ? 'text-slate-950' : 'text-rose-600'}`}>
                   {product.stockQuantity} units
                 </span>
               </div>
@@ -218,7 +225,7 @@ const SellerInventoryCard: React.FC<SellerInventoryCardProps> = memo(
                 <button
                   type="button"
                   onClick={() => onUpdateStock(product, -1)}
-                  disabled={product.stockQuantity <= 0}
+                  disabled={Number(product.stockQuantity) <= 1}
                   className="w-7 h-7 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 font-bold text-sm flex items-center justify-center cursor-pointer disabled:opacity-40"
                   title="Decrease Stock Quantity"
                 >
@@ -248,10 +255,10 @@ const SellerInventoryCard: React.FC<SellerInventoryCardProps> = memo(
           <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-200/50">
             <span className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase ${
               !isService
-                ? (product.stockQuantity > 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800')
+                ? (Number(product.stockQuantity) > 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800')
                 : 'bg-blue-100 text-blue-800'
             }`}>
-              {!isService ? (product.stockQuantity > 0 ? 'Active in Market' : 'Out of Stock') : 'Service Listed'}
+              {!isService ? (Number(product.stockQuantity) > 0 ? 'Active in Market' : 'Out of Stock') : 'Service Listed'}
             </span>
 
             <button
@@ -286,6 +293,11 @@ SellerInventoryCard.displayName = 'SellerInventoryCard';
 export default function PageDigitalMarket() {
   const navigate = useNavigate();
   const { user, logout, apiFetch } = useAuth();
+  const currentAccount=useRef(user?.id),accountEpoch=useRef(0),accountGeneration=useRef(0),mounted=useRef(true);
+  if(currentAccount.current!==user?.id){currentAccount.current=user?.id;accountEpoch.current++;accountGeneration.current++;}
+  const [loadedAccount,setLoadedAccount]=useState<string | undefined>();
+  const accountIsCurrent=(id:string | undefined,generation?:number)=>mounted.current && currentAccount.current===id && (generation===undefined || generation===accountGeneration.current);
+  useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;};},[]);
   const initialLoadCompletedRef = useRef<boolean>(false);
 
   useEffect(() => {
@@ -296,6 +308,9 @@ export default function PageDigitalMarket() {
   // Role Protection Guard: Only merchant and student roles can access digital market platform
   useEffect(() => {
     if (user) {
+      if (usesSupabasePersistence && !['merchant','staff','manager','admin'].includes(user.role)) {
+        navigate(user.role === 'student' ? '/resident/dashboard' : '/user/dashboard', {replace:true});return;
+      }
       if (user.role === 'staff') {
         navigate('/staff/dashboard', { replace: true });
       } else if (user.role === 'manager') {
@@ -388,7 +403,7 @@ export default function PageDigitalMarket() {
   const [prodCategory, setProdCategory] = useState('Electronics');
   const [prodCondition, setProdCondition] = useState('Like New');
   const [prodStock, setProdStock] = useState('1');
-  const [prodLocation, setProdLocation] = useState('KNUST Main Library Car Park');
+  const [prodLocation, setProdLocation] = useState(usesSupabasePersistence ? '' : 'KNUST Main Library Car Park');
   const [prodImageUrl, setProdImageUrl] = useState('');
   const [prodAdditionalImages, setProdAdditionalImages] = useState<string[]>([]);
   const [mediaUploads, setMediaUploads] = useState(0);
@@ -408,7 +423,7 @@ export default function PageDigitalMarket() {
   const [servDesc, setServDesc] = useState('');
   const [servPrice, setServPrice] = useState('');
   const [servPriceCategories, setServPriceCategories] = useState<Array<{ id: string; name: string; price: number | string; imageUrl?: string }>>([]);
-  const [servLocation, setServLocation] = useState('KNUST Campus Enclave / Hostel Delivery');
+  const [servLocation, setServLocation] = useState(usesSupabasePersistence ? '' : 'KNUST Campus Enclave / Hostel Delivery');
   const [servLocationMode, setServLocationMode] = useState<'flexible' | 'fixed' | 'hybrid'>('flexible');
   const [servCallLine, setServCallLine] = useState('');
   const [servImageUrl, setServImageUrl] = useState('');
@@ -425,6 +440,8 @@ export default function PageDigitalMarket() {
   const [viewingServiceReviews, setViewingServiceReviews] = useState<any | null>(null);
   const [serviceReviewsList, setServiceReviewsList] = useState<any[]>([]);
   const [loadingReviews, setLoadingReviews] = useState(false);
+  const serviceReviewEpoch=useRef(0);
+  useEffect(()=>{serviceReviewEpoch.current++;setViewingServiceReviews(null);setServiceReviewsList([]);setLoadingReviews(false);},[user?.id]);
   const [isSubmittingService, setIsSubmittingService] = useState(false);
   const [servicesSearchQuery, setServicesSearchQuery] = useState('');
   const [servicesCategoryFilter, setServicesCategoryFilter] = useState('All');
@@ -445,10 +462,15 @@ export default function PageDigitalMarket() {
   const [pinSubmitting, setPinSubmitting] = useState(false);
   const [viewingOrderMap, setViewingOrderMap] = useState<MarketOrder | null>(null);
   const [confirmingOrderId, setConfirmingOrderId] = useState<string | null>(null);
+  const [decliningOrder, setDecliningOrder] = useState<MarketOrder | null>(null);
 
   // Profile Edit States
   const [editStoreName, setEditStoreName] = useState('');
   const [editLocation, setEditLocation] = useState('');
+  const [editPhone, setEditPhone] = useState('');
+  const [editPhoneCountry, setEditPhoneCountry] = useState<CountryCode>('GH');
+  const [profileMediaUploads, setProfileMediaUploads] = useState(0);
+  const onProfileMediaBusy = (busy: boolean) => setProfileMediaUploads(count => Math.max(0, count + (busy ? 1 : -1)));
   const [editDeliveryForm, setEditDeliveryForm] = useState('');
   const [editCategory, setEditCategory] = useState('');
   const [editCoverPicture, setEditCoverPicture] = useState('');
@@ -477,19 +499,29 @@ export default function PageDigitalMarket() {
   const [isPlanActivationLoading, setIsPlanActivationLoading] = useState(false);
   const displayedMobilePlan = selectedMobilePlan || subscriptionPlan;
   const subscriptionLimits = PLAN_LIMITS[subscriptionPlan];
+  const checkoutRequest=useRef<{params:string;id:string}|null>(null);
   const checkoutPayment = async (purpose: 'activation' | 'subscription' | 'semester', plan: 'default' | 'star' | 'pro' = subscriptionPlan) => {
+    if(isPlanActivationLoading)return;
+    const accountId=user?.id,generation=accountGeneration.current;
+    const payload={purpose,plan};
+    if(usesSupabasePersistence){const params=JSON.stringify([accountId,purpose,plan]);if(checkoutRequest.current?.params!==params)checkoutRequest.current={params,id:crypto.randomUUID()};Object.assign(payload,{requestId:checkoutRequest.current.id});}
     setPaymentError(''); setIsPlanActivationLoading(true);
-    try { const result = await apiFetch('/api/payments/paystack/initialize', { method: 'POST', body: JSON.stringify({ purpose, plan }) });
-      if (openPaymentCheckout(result)) return;
-      if (!result?.paid) throw new Error('Verified payment is required.');
+    try { const result = await apiFetch('/api/payments/paystack/initialize', { method: 'POST', body: JSON.stringify(payload) });
+      if(!accountIsCurrent(accountId,generation))return;
+      if (openPaymentCheckout(result,accountId)) return;
+      if (!result?.paid || result.accessGranted===false) throw new Error(result.message || 'Verified payment is required.');
+      checkoutRequest.current=null;
       if (result.store) setStoreData(result.store); triggerToast('Subscription updated.', 'success');
-    } catch (err: any) { setPaymentError(err.message || 'Unable to open checkout.'); }
-    finally { setIsPlanActivationLoading(false); }
+    } catch (err: any) { if(accountIsCurrent(accountId,generation))setPaymentError(err.message || 'Unable to open checkout.'); }
+    finally { if(accountIsCurrent(accountId,generation))setIsPlanActivationLoading(false); }
   };
   const selectSubscription = (plan: 'default' | 'star' | 'pro') => checkoutPayment('subscription', plan);
-  const activateMobilePlan = async () => { setIsPlanActivationLoading(true); try { await selectSubscription(displayedMobilePlan); } finally { setIsPlanActivationLoading(false); } };
+  const activateMobilePlan = () => selectSubscription(displayedMobilePlan);
+  useEffect(()=>{checkoutRequest.current=null;setIsPlanActivationLoading(false);setPaymentError('');},[user?.id]);
 
   const loadData = async (isBackground = false) => {
+    const accountId=user?.id,epoch=accountEpoch.current;
+    const current=()=>mounted.current && currentAccount.current===accountId && accountEpoch.current===epoch;
     try {
       if (!isBackground && !initialLoadCompletedRef.current) {
         setLoading(true);
@@ -501,7 +533,8 @@ export default function PageDigitalMarket() {
       const userId = user?.id || '';
 
       // 1. Fetch store status & application
-      const statusRes = await apiFetch(`/api/digital-market/status?email=${encodeURIComponent(email)}&userId=${encodeURIComponent(userId)}`).catch(() => null);
+      const statusRes = await apiFetch(usesSupabasePersistence ? '/api/digital-market/status' : `/api/digital-market/status?email=${encodeURIComponent(email)}&userId=${encodeURIComponent(userId)}`).catch(() => null);
+      if(!current())return;
       
       if (statusRes?.application) {
         setApplicationData((prev: any) => JSON.stringify(prev) === JSON.stringify(statusRes.application) ? prev : statusRes.application);
@@ -517,7 +550,8 @@ export default function PageDigitalMarket() {
         if (!initialLoadCompletedRef.current) {
           setEditStoreName(statusRes.store.storeName || '');
           setEditLocation(statusRes.store.location || '');
-          setEditDeliveryForm(statusRes.store.deliveryForm || '');
+          setEditDeliveryForm(storeDeliveryMode(statusRes.store));
+          const phone = phoneDraft(statusRes.store.phone, statusRes.store.phoneCountry); setEditPhone(phone.contactPhone); setEditPhoneCountry(phone.contactPhoneCountry);
           setEditCategory(statusRes.store.category || '');
           setEditCoverPicture(statusRes.store.coverPicture || statusRes.store.bannerUrl || '');
           setEditProfilePicture(statusRes.store.profilePicture || statusRes.store.logoUrl || '');
@@ -527,12 +561,13 @@ export default function PageDigitalMarket() {
       }
 
       // 2. Fetch products
-      const allProducts: MarketProduct[] = await apiFetch('/api/digital-market/products?includeAll=true').catch(() => []);
+      const allProducts: MarketProduct[] = await apiFetch(usesSupabasePersistence ? '/api/digital-market/inventory' : '/api/digital-market/products?includeAll=true');
+      if(!current())return;
       const currentStoreId = statusRes?.store?.id || (user as any)?.merchantStoreId;
       const currentEmail = (user?.studentEmail || user?.email || '').toLowerCase();
 
       // Filter products belonging to this merchant store
-      const myProducts = allProducts.filter((p: MarketProduct) => {
+      const myProducts = usesSupabasePersistence ? allProducts : allProducts.filter((p: MarketProduct) => {
         if (currentStoreId && p.storeId === currentStoreId) return true;
         if (currentEmail && p.sellerEmail && p.sellerEmail.toLowerCase() === currentEmail) return true;
         return false;
@@ -540,16 +575,17 @@ export default function PageDigitalMarket() {
       setProducts(prev => JSON.stringify(prev) === JSON.stringify(myProducts) ? prev : myProducts);
 
       // 3. Fetch orders
-      const ordersRes: MarketOrder[] = await apiFetch(`/api/digital-market/my-orders?email=${encodeURIComponent(email)}&storeId=${encodeURIComponent(currentStoreId || '')}`).catch(() => []);
+      const ordersRes: MarketOrder[] = await apiFetch(usesSupabasePersistence ? '/api/digital-market/my-orders' : `/api/digital-market/my-orders?email=${encodeURIComponent(email)}&storeId=${encodeURIComponent(currentStoreId || '')}`);
+      if(!current())return;
       setOrders(prev => JSON.stringify(prev) === JSON.stringify(ordersRes || []) ? prev : (ordersRes || []));
 
 
     } catch (err) {
       console.error("Error loading digital market data:", err);
     } finally {
-      initialLoadCompletedRef.current = true;
-      setLoading(false);
-      if (!isBackground) {
+      if(current()){
+        initialLoadCompletedRef.current = true;
+        setLoadedAccount(accountId);setLoading(false);
         setRefreshing(false);
       }
     }
@@ -562,12 +598,19 @@ export default function PageDigitalMarket() {
   };
 
   useEffect(() => {
+    initialLoadCompletedRef.current=false;setLoadedAccount(undefined);setLoading(true);
+    setStoreData(null);setApplicationData(null);setProducts([]);setOrders([]);setActiveTab('dashboard');
+    setShowAddModal(false);setShowServiceModal(false);setProfileMediaUploads(0);setMediaUploads(0);
+    setIsSubmittingProduct(false);setIsSubmittingService(false);setIsUpdatingProfile(false);
+    setCropRawImage(null);setIsCropModalOpen(false);setVerifyingOrder(null);setDecliningOrder(null);setPinInput('');setPinSubmitting(false);setConfirmingOrderId(null);
+    setProdImageUrl('');setProdAdditionalImages([]);setServImageUrl('');setServPriceCategories([]);
+    setProdTitle('');setProdDesc('');setProdPrice('');setServTitle('');setServDesc('');setServPrice('');setEditingServiceId(null);
     loadData(false);
     const interval = setInterval(() => {
       loadData(true);
     }, 10000);
     return () => clearInterval(interval);
-  }, [user?.email, user?.studentEmail]);
+  }, [user?.id, user?.email, user?.studentEmail]);
 
   // Handle Add Product (MANDATORY Description and Image)
   const handleCreateProduct = async (e: React.FormEvent) => {
@@ -582,6 +625,11 @@ export default function PageDigitalMarket() {
       triggerToast("Please provide a valid price.", "error");
       return;
     }
+    const stock = Number(prodStock);
+    if (!prodStock.trim() || !Number.isSafeInteger(stock) || stock < 1) {
+      triggerToast('Stock quantity must be a whole number of at least 1.', 'error');
+      return;
+    }
     if (!prodImageUrl.trim()) {
       triggerToast("It is mandatory to put up an item picture for campus listing.", "error");
       return;
@@ -592,27 +640,28 @@ export default function PageDigitalMarket() {
     }
 
     setIsSubmittingProduct(true);
+    const accountId=user?.id;accountEpoch.current++;
     try {
       const email = user?.studentEmail || user?.email || '';
-      const storeId = storeData?.id || (user as any)?.merchantStoreId || `store-${Date.now()}`;
+      const storeId = storeData?.id || (!usesSupabasePersistence ? (user as any)?.merchantStoreId || `store-${Date.now()}` : undefined);
 
       const res = await apiFetch('/api/digital-market/products', {
         method: 'POST',
         body: JSON.stringify({
-          storeId,
+          ...(!usesSupabasePersistence ? {storeId,userEmail:email} : {isService:false}),
           title: prodTitle.trim(),
           description: prodDesc.trim(),
           price: parseFloat(prodPrice),
           category: prodCategory,
-          stockQuantity: parseInt(prodStock, 10) || 1,
+          stockQuantity: stock,
           imageUrl: prodImageUrl.trim(),
           additionalImages: prodAdditionalImages,
-          userEmail: email,
           condition: prodCondition,
           meetingLocation: prodLocation
         })
       });
-
+      if(!accountIsCurrent(accountId))return;
+      accountEpoch.current++;
       if (res?.success || res?.product) {
         triggerToast(`"${prodTitle}" successfully published to the Global Market!`, "success");
         if (res.product) {
@@ -637,15 +686,18 @@ export default function PageDigitalMarket() {
         triggerToast(res?.error || "Failed to publish product.", "error");
       }
     } catch (err: any) {
-      triggerToast(err?.message || "Failed to publish product.", "error");
+      if(accountIsCurrent(accountId))triggerToast(err?.message || "Failed to publish product.", "error");
     } finally {
-      setIsSubmittingProduct(false);
+      if(accountIsCurrent(accountId))setIsSubmittingProduct(false);
     }
   };
 
   // Adjust stock inline (+ / -)
   const handleUpdateStock = useCallback(async (product: MarketProduct, delta: number) => {
-    const newStock = Math.max(0, product.stockQuantity + delta);
+    const accountId=user?.id;accountEpoch.current++;
+    if (typeof product.stockQuantity !== 'number') return;
+    const newStock = product.stockQuantity + delta;
+    if (!Number.isSafeInteger(newStock) || newStock < 1) return;
     try {
       await apiFetch(`/api/digital-market/products/${product.id}`, {
         method: 'PUT',
@@ -654,26 +706,31 @@ export default function PageDigitalMarket() {
           isAvailable: newStock > 0
         })
       });
+      if(!accountIsCurrent(accountId))return;
+      accountEpoch.current++;
       setProducts(prev => prev.map(p => p.id === product.id ? { ...p, stockQuantity: newStock, isAvailable: newStock > 0 } : p));
       triggerToast(`Successfully adjusted stock for "${product.title}" to ${newStock} units.`, "success");
     } catch (err) {
-      triggerToast("Failed to adjust stock level.", "error");
+      if(accountIsCurrent(accountId))triggerToast("Failed to adjust stock level.", "error");
     }
-  }, [apiFetch]);
+  }, [apiFetch,user?.id]);
 
   // Delete product from store
   const handleDeleteProduct = useCallback(async (product: MarketProduct) => {
     if (!window.confirm(`Are you absolutely sure you want to remove "${product.title}" from the global campus catalog?`)) return;
+    const accountId=user?.id;accountEpoch.current++;
     try {
       await apiFetch(`/api/digital-market/products/${product.id}`, {
         method: 'DELETE'
       });
+      if(!accountIsCurrent(accountId))return;
+      accountEpoch.current++;
       setProducts(prev => prev.filter(p => p.id !== product.id));
       triggerToast(`Removed "${product.title}" from global marketplace.`, "success");
     } catch (err) {
-      triggerToast("Failed to remove product.", "error");
+      if(accountIsCurrent(accountId))triggerToast("Failed to remove product.", "error");
     }
-  }, [apiFetch]);
+  }, [apiFetch,user?.id]);
 
   // Verify PIN for buyer handover
   const handleVerifyPin = async (e: React.FormEvent) => {
@@ -681,6 +738,7 @@ export default function PageDigitalMarket() {
     if (!verifyingOrder || !pinInput.trim()) return;
 
     setPinSubmitting(true);
+    const accountId=user?.id,generation=accountGeneration.current;accountEpoch.current++;
     try {
       const res = await apiFetch(`/api/digital-market/orders/${verifyingOrder.id}/update-status`, {
         method: 'POST',
@@ -690,6 +748,7 @@ export default function PageDigitalMarket() {
         })
       });
 
+      if(!accountIsCurrent(accountId,generation))return;accountEpoch.current++;
       if (res?.success || res?.order) {
         triggerToast(`Campus verification handshake successful for order #${verifyingOrder.id}!`, "success");
         setVerifyingOrder(null);
@@ -699,21 +758,23 @@ export default function PageDigitalMarket() {
         triggerToast(res?.error || "Incorrect 6-Digit Pickup PIN.", "error");
       }
     } catch (err: any) {
-      triggerToast(err?.message || "PIN verification handshake failed.", "error");
+      if(accountIsCurrent(accountId,generation))triggerToast(err?.message || "PIN verification handshake failed.", "error");
     } finally {
-      setPinSubmitting(false);
+      if(accountIsCurrent(accountId,generation))setPinSubmitting(false);
     }
   };
 
   // Agree to Proposed Campus Meetup Location
   const handleAgreeLocation = async (orderId: string) => {
     setConfirmingOrderId(orderId);
+    const accountId=user?.id,generation=accountGeneration.current;accountEpoch.current++;
     try {
       const res = await apiFetch(`/api/digital-market/orders/${orderId}/update-status`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'agree-location' })
       });
+      if(!accountIsCurrent(accountId,generation))return;accountEpoch.current++;
       if (res && res.success) {
         triggerToast("Meetup location agreed! Purchase confirmed for handover.", "success");
         await loadData();
@@ -721,32 +782,36 @@ export default function PageDigitalMarket() {
         triggerToast(res?.error || "Failed to confirm meetup location.", "error");
       }
     } catch (err: any) {
-      triggerToast(err.message || "Failed to confirm meetup location.", "error");
+      if(accountIsCurrent(accountId,generation))triggerToast(err.message || "Failed to confirm meetup location.", "error");
     } finally {
-      setConfirmingOrderId(null);
+      if(accountIsCurrent(accountId,generation))setConfirmingOrderId(null);
     }
   };
 
   // Decline Proposed Campus Meetup Location
   const handleDeclineLocation = async (orderId: string) => {
-    if (!window.confirm("Are you sure you want to decline this proposed meetup spot?")) return;
+    if (confirmingOrderId) return;
     setConfirmingOrderId(orderId);
+    const accountId=user?.id,generation=accountGeneration.current;accountEpoch.current++;
     try {
       const res = await apiFetch(`/api/digital-market/orders/${orderId}/update-status`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'reject-location' })
       });
+      if(!accountIsCurrent(accountId,generation))return;accountEpoch.current++;
       if (res && res.success) {
+        setOrders(previous => previous.map(order => order.id === orderId ? res.order : order));
+        setDecliningOrder(null);
         triggerToast("Proposed meetup spot declined.", "success");
         await loadData();
       } else {
         triggerToast(res?.error || "Failed to decline location.", "error");
       }
     } catch (err: any) {
-      triggerToast(err.message || "Failed to decline location.", "error");
+      if(accountIsCurrent(accountId,generation))triggerToast(err.message || "Failed to decline location.", "error");
     } finally {
-      setConfirmingOrderId(null);
+      if(accountIsCurrent(accountId,generation))setConfirmingOrderId(null);
     }
   };
 
@@ -759,15 +824,17 @@ export default function PageDigitalMarket() {
     }
 
     setIsUpdatingProfile(true);
+    const accountId=user?.id;accountEpoch.current++;
     try {
       const email = user?.studentEmail || user?.email || '';
       const res = await apiFetch('/api/digital-market/store', {
         method: 'PUT',
         body: JSON.stringify({
-          studentEmail: email,
+          ...(!usesSupabasePersistence ? {studentEmail: email} : {}),
           storeName: editStoreName.trim(),
           location: editLocation,
-          deliveryForm: editDeliveryForm,
+          deliveryMode: editDeliveryForm,
+          phone: internationalPhone(editPhone, editPhoneCountry).number, phoneCountry: editPhoneCountry,
           category: editCategory,
           coverPicture: editCoverPicture,
           profilePicture: editProfilePicture,
@@ -775,7 +842,8 @@ export default function PageDigitalMarket() {
           description: editDescription.trim()
         })
       });
-
+      if(!accountIsCurrent(accountId))return;
+      accountEpoch.current++;
       if (res?.success && res?.store) {
         triggerToast("Merchant store profile updated successfully!", "success");
         setStoreData(res.store);
@@ -784,24 +852,16 @@ export default function PageDigitalMarket() {
         triggerToast(res?.error || "Failed to update profile.", "error");
       }
     } catch (err: any) {
-      triggerToast(err?.message || "Failed to update profile details.", "error");
+      if(accountIsCurrent(accountId))triggerToast(err?.message || "Failed to update profile details.", "error");
     } finally {
-      setIsUpdatingProfile(false);
+      if(accountIsCurrent(accountId))setIsUpdatingProfile(false);
     }
   };
 
   // Services segmentation and filtering
-  const servicesList = products.filter(p => Boolean(
-    (p as any).isService ||
-    p.category === 'Services' ||
-    p.category?.toLowerCase().includes('service')
-  ));
+  const servicesList = products.filter(isMarketService);
 
-  const physicalProductsList = products.filter(p => !Boolean(
-    (p as any).isService ||
-    p.category === 'Services' ||
-    p.category?.toLowerCase().includes('service')
-  ));
+  const physicalProductsList = products.filter(p => !isMarketService(p));
 
   const filteredServices = servicesList
     .filter(s => {
@@ -832,7 +892,7 @@ export default function PageDigitalMarket() {
     setServDesc('');
     setServPrice('');
     setServPriceCategories([]);
-    setServLocation(storeData?.location || 'KNUST Campus Enclave / Hostel Delivery');
+    setServLocation(storeData?.location || (usesSupabasePersistence ? '' : 'KNUST Campus Enclave / Hostel Delivery'));
     setServLocationMode('flexible');
     setServCallLine(storeData?.phone || (user as any)?.phone || '');
     setServImageUrl('');
@@ -880,18 +940,21 @@ export default function PageDigitalMarket() {
   };
 
   const handleOpenServiceReviews = async (service: MarketProduct) => {
+    const accountId=user?.id,generation=accountGeneration.current,epoch=++serviceReviewEpoch.current;
+    const current=()=>accountIsCurrent(accountId,generation) && epoch===serviceReviewEpoch.current;
     setViewingServiceReviews(service);
+    setServiceReviewsList([]);
     setLoadingReviews(true);
     try {
       const res = await fetch(`/api/digital-market/ratings?serviceId=${encodeURIComponent(service.id)}`);
-      if (res.ok) {
-        const data = await res.json();
-        setServiceReviewsList(data.ratings || []);
-      }
+      const data = await res.json();
+      if(!current())return;
+      if(!res.ok)throw new Error(data.error || 'Could not load service reviews.');
+      setServiceReviewsList(data.ratings || []);
     } catch (e) {
-      console.error("Error loading service reviews:", e);
+      if(current())triggerToast(e instanceof Error?e.message:'Could not load service reviews.','error');
     } finally {
-      setLoadingReviews(false);
+      if(current())setLoadingReviews(false);
     }
   };
 
@@ -928,19 +991,20 @@ export default function PageDigitalMarket() {
     }
 
     setIsSubmittingService(true);
+    const accountId=user?.id;accountEpoch.current++;
     try {
       const email = user?.studentEmail || user?.email || '';
-      const storeId = storeData?.id || (user as any)?.merchantStoreId || `store-${Date.now()}`;
+      const storeId = storeData?.id || (!usesSupabasePersistence ? (user as any)?.merchantStoreId || `store-${Date.now()}` : undefined);
 
       if (servPriceCategories.length > 4 || servPriceCategories.some(c => !c.name.trim() || c.price === '' || !Number.isFinite(Number(c.price)) || Number(c.price) < 0)) {
         triggerToast('Add a name and valid price for every option (maximum four).', 'error'); return;
       }
       const validPriceCategories = servPriceCategories.map(c => ({
-        id: c.id, name: c.name.trim(), price: Number(c.price), ...(c.imageUrl ? { imageUrl: c.imageUrl } : {})
+        ...(!usesSupabasePersistence || /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(c.id) ? {id:c.id} : {}), name: c.name.trim(), price: Number(c.price), ...(c.imageUrl ? { imageUrl: c.imageUrl } : {})
       }));
 
       const payload = {
-        storeId,
+        ...(!usesSupabasePersistence ? {storeId,userEmail:email,stockQuantity:999} : {}),
         title: servTitle.trim(),
         description: servDesc.trim(),
         price: parseFloat(servPrice),
@@ -949,9 +1013,7 @@ export default function PageDigitalMarket() {
         priceCategories: validPriceCategories,
         isService: true,
         serviceLocationMode: servLocationMode,
-        stockQuantity: 999,
         imageUrl: servImageUrl.trim(),
-        userEmail: email,
         meetingLocation: servLocation.trim(),
         location: servLocation.trim(),
         callLine: servCallLine.trim(),
@@ -959,8 +1021,8 @@ export default function PageDigitalMarket() {
         openingTime: servOpeningTime,
         closingTime: servClosingTime,
         isOpen247: servIsOpen247,
-        lat: servLat,
-        lng: servLng,
+        lat: usesSupabasePersistence && servLocationMode==='flexible' ? null : servLat,
+        lng: usesSupabasePersistence && servLocationMode==='flexible' ? null : servLng,
         isAvailable: servIsAvailable
       };
 
@@ -977,6 +1039,8 @@ export default function PageDigitalMarket() {
         });
       }
 
+      if(!accountIsCurrent(accountId))return;
+      accountEpoch.current++;
       if (res?.success || res?.product) {
         triggerToast(
           editingServiceId 
@@ -991,36 +1055,42 @@ export default function PageDigitalMarket() {
         triggerToast(res?.error || "Failed to save service.", "error");
       }
     } catch (err: any) {
-      triggerToast(err?.message || "Failed to save service.", "error");
+      if(accountIsCurrent(accountId))triggerToast(err?.message || "Failed to save service.", "error");
     } finally {
-      setIsSubmittingService(false);
+      if(accountIsCurrent(accountId))setIsSubmittingService(false);
     }
   };
 
   const handleToggleServiceStatus = async (service: MarketProduct) => {
     const newStatus = !service.isAvailable;
+    const accountId=user?.id;accountEpoch.current++;
     try {
       await apiFetch(`/api/digital-market/products/${service.id}`, {
         method: 'PUT',
         body: JSON.stringify({ isAvailable: newStatus })
       });
+      if(!accountIsCurrent(accountId))return;
+      accountEpoch.current++;
       setProducts(prev => prev.map(p => p.id === service.id ? { ...p, isAvailable: newStatus } : p));
       triggerToast(`Service "${service.title}" is now ${newStatus ? 'Active & Open for Bookings' : 'Paused'}.`, "success");
     } catch (err: any) {
-      triggerToast("Failed to update service status.", "error");
+      if(accountIsCurrent(accountId))triggerToast(err?.message || "Failed to update service status.", "error");
     }
   };
 
   const handleDeleteService = async (serviceId: string, title: string) => {
     if (!window.confirm(`Are you sure you want to remove the service "${title}" from the Digital Market?`)) return;
+    const accountId=user?.id;accountEpoch.current++;
     try {
       await apiFetch(`/api/digital-market/products/${serviceId}`, {
         method: 'DELETE'
       });
+      if(!accountIsCurrent(accountId))return;
+      accountEpoch.current++;
       setProducts(prev => prev.filter(p => p.id !== serviceId));
       triggerToast(`Service "${title}" removed successfully.`, "success");
     } catch (err: any) {
-      triggerToast("Failed to remove service.", "error");
+      if(accountIsCurrent(accountId))triggerToast(err?.message || "Failed to remove service.", "error");
     }
   };
 
@@ -1046,11 +1116,7 @@ export default function PageDigitalMarket() {
     });
 
   // Stats calculation
-  const physicalProductsOnly = products.filter(p => !Boolean(
-    (p as any).isService ||
-    p.category === 'Services' ||
-    p.category?.toLowerCase().includes('service')
-  ));
+  const physicalProductsOnly = products.filter(p => !isMarketService(p));
   const totalStockUnits = physicalProductsOnly.reduce((acc, p) => acc + (p.stockQuantity || 0), 0);
   const pendingOrders = orders.filter(o => !['Completed & Paid', 'Cancelled', 'Location Rejected', 'Rejected by Seller'].includes(o.status));
   const completedOrders = orders.filter(o => o.status === 'Completed & Paid');
@@ -1091,7 +1157,7 @@ export default function PageDigitalMarket() {
   });
 
   // Loading Screen
-  if (loading) return <RouteSkeleton />;
+  if (loading || loadedAccount!==user?.id) return <RouteSkeleton />;
 
   if (!storeData && applicationData?.status === 'approved') return <div className="p-8 text-center"><button onClick={() => navigate('/digital-market/onboard')} className="rounded-xl bg-blue-600 p-4 text-white">Complete store details and secure checkout</button></div>;
 
@@ -1101,7 +1167,7 @@ export default function PageDigitalMarket() {
 
       {/* Toast */}
       {toastMessage && (
-        <div className={`fixed bottom-6 right-6 z-50 px-5 py-3 rounded-2xl shadow-2xl text-xs font-bold flex items-center gap-2.5 transition-all animate-bounce ${
+        <div role={toastMessage.type === 'error' ? 'alert' : 'status'} className={`ux-dashboard-toast fixed bottom-6 right-6 z-50 px-5 py-3 rounded-2xl shadow-2xl text-xs font-bold flex items-center gap-2.5 transition-all animate-bounce ${
           toastMessage.type === 'success' ? 'bg-emerald-600 text-white' : 'bg-rose-600 text-white'
         }`}>
           {toastMessage.type === 'success' ? <CheckCircle2 className="w-4 h-4" /> : <X className="w-4 h-4" />}
@@ -1403,7 +1469,7 @@ export default function PageDigitalMarket() {
                                     <MapPin className="w-3.5 h-3.5 text-blue-600" />
                                     <span>Meetup: {order.meetingLocation}</span>
                                   </span>
-                                  {order.meetingLatitude && (
+                                  {order.meetingLatitude != null && order.meetingLongitude != null && (
                                     <button
                                       type="button"
                                       onClick={() => setViewingOrderMap(order)}
@@ -1431,7 +1497,7 @@ export default function PageDigitalMarket() {
                                     <button
                                       type="button"
                                       disabled={confirmingOrderId === order.id}
-                                      onClick={() => handleDeclineLocation(order.id)}
+                                      onClick={() => setDecliningOrder(order)}
                                       className="px-2.5 py-1.5 bg-rose-100 hover:bg-rose-200 disabled:opacity-50 text-rose-800 font-bold text-[10px] rounded-lg transition-all cursor-pointer"
                                     >
                                       Decline
@@ -1455,7 +1521,7 @@ export default function PageDigitalMarket() {
                             {needsAgreement && (
                               <div className="p-2.5 bg-amber-50/80 border border-amber-200/90 rounded-xl text-[11px] text-amber-900 font-medium flex items-center justify-between gap-2">
                                 <span>Buyer requested handover at this spot. Please review coordinates and confirm agreement.</span>
-                                {order.meetingLatitude && (
+                                {order.meetingLatitude != null && order.meetingLongitude != null && (
                                   <button
                                     type="button"
                                     onClick={() => setViewingOrderMap(order)}
@@ -1526,7 +1592,7 @@ export default function PageDigitalMarket() {
               <div className="flex flex-col lg:flex-row items-center justify-between gap-4">
                 <div className="relative w-full lg:w-72" id="inv-search-container">
                   <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                  <input
+                  <input aria-label="Search store inventory..."
                     type="text"
                     placeholder="Search store inventory..."
                     value={searchQuery}
@@ -1534,7 +1600,7 @@ export default function PageDigitalMarket() {
                     className="w-full pl-10 pr-4 py-2 bg-white/35 border border-slate-300/60 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white/60"
                   />
                   {searchQuery && (
-                    <button
+                    <button aria-label="Clear search"
                       type="button"
                       onClick={() => setSearchQuery('')}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
@@ -1565,7 +1631,7 @@ export default function PageDigitalMarket() {
                   {/* Price Sorting Selector */}
                   <div className="relative inline-flex items-center">
                     <ArrowUpDown className="w-3.5 h-3.5 text-slate-500 absolute left-2.5 pointer-events-none" />
-                    <select
+                    <select aria-label="Sort store inventory"
                       value={priceSortOption}
                       onChange={(e) => setPriceSortOption(e.target.value as any)}
                       className="pl-8 pr-3 py-2 bg-slate-50 border border-slate-200 text-slate-800 text-xs font-bold rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 cursor-pointer"
@@ -1618,7 +1684,7 @@ export default function PageDigitalMarket() {
                         <span className="font-bold text-slate-700">Minimum Price:</span>
                         <span className="font-black text-blue-900 font-mono">GHS {minPriceFilter}</span>
                       </div>
-                      <input
+                      <input aria-label="Minimum price"
                         type="range"
                         min="0"
                         max={Math.min(maxPriceFilter, 5000)}
@@ -1637,7 +1703,7 @@ export default function PageDigitalMarket() {
                           GHS {maxPriceFilter >= 5000 ? '5,000+' : maxPriceFilter}
                         </span>
                       </div>
-                      <input
+                      <input aria-label="Maximum price"
                         type="range"
                         min={minPriceFilter}
                         max="5000"
@@ -1835,7 +1901,7 @@ export default function PageDigitalMarket() {
                   >
                     <div>
                       {/* Photo container with written PineVela (Service) text */}
-                      <div 
+                      <div role="button" tabIndex={0} aria-label={`View ${service.title || "service"} location`} onKeyDown={activateOnKeyboard}
                         onClick={() => setViewingServiceMap(service)}
                         className="relative h-48 bg-slate-100 overflow-hidden flex items-center justify-center p-1 border-b border-slate-100 select-none cursor-pointer"
                         title="Click to view service location on interactive map"
@@ -2218,6 +2284,10 @@ export default function PageDigitalMarket() {
                               matchedOrder.status === 'completed'
                             );
 
+                            if (matchedOrder && ['Location Rejected', 'Rejected by Seller'].includes(matchedOrder.status)) {
+                              return <span role="status" className="px-3 py-1.5 rounded-xl border border-rose-200 bg-rose-50 text-rose-800 text-xs font-black flex items-center gap-1.5"><XCircle className="w-3.5 h-3.5" aria-hidden="true" />Declined</span>;
+                            }
+
                             if (isOrderCompleted) {
                               return (
                                 <button
@@ -2319,7 +2389,7 @@ export default function PageDigitalMarket() {
               </div>
               <div key={displayedMobilePlan} className={`relative min-h-[365px] overflow-hidden rounded-3xl border p-6 shadow-xl animate-fadeIn ${displayedMobilePlan === "pro" ? "border-cyan-300/70 bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-900 text-white" : displayedMobilePlan === "star" ? "border-amber-300 bg-gradient-to-br from-amber-50 via-white to-orange-50 text-slate-900" : "border-blue-200 bg-gradient-to-br from-white via-blue-50 to-slate-50 text-slate-900"}`}>
                 <div className={`absolute inset-x-0 top-0 h-1 ${displayedMobilePlan === "pro" ? "bg-gradient-to-r from-indigo-500 via-cyan-300 to-indigo-500 animate-pulse" : displayedMobilePlan === "star" ? "bg-gradient-to-r from-amber-300 via-yellow-500 to-orange-400 animate-pulse" : "bg-gradient-to-r from-blue-300 via-blue-600 to-indigo-400"}`} />
-                <div className="relative flex h-full flex-col"><div className="flex items-start justify-between"><div className={`rounded-2xl p-3 ${displayedMobilePlan === "pro" ? "bg-cyan-300/15 text-cyan-200" : displayedMobilePlan === "star" ? "bg-gradient-to-br from-amber-400 to-orange-500 text-white" : "bg-blue-100 text-blue-700"}`}>{displayedMobilePlan === "pro" ? <TrendingUp className="h-7 w-7" /> : displayedMobilePlan === "star" ? <Star className="h-7 w-7 fill-current" /> : <Store className="h-7 w-7" />}</div><BadgeCheck className={`h-6 w-6 ${displayedMobilePlan === "pro" ? "text-cyan-300" : displayedMobilePlan === "star" ? "text-amber-600" : "text-blue-600"}`} /></div><div className="mt-6"><div className={`text-[10px] font-black uppercase tracking-[0.16em] ${displayedMobilePlan === "pro" ? "text-cyan-200" : displayedMobilePlan === "star" ? "text-amber-700" : "text-blue-700"}`}>Selected seller subscription</div><h3 className="mt-1 text-3xl font-black">Pine {displayedMobilePlan === "star" ? "Star" : displayedMobilePlan === "pro" ? "Pro" : "Default"}</h3><p className={`mt-2 text-sm font-medium ${displayedMobilePlan === "pro" ? "text-indigo-100" : "text-slate-600"}`}>{displayedMobilePlan === "pro" ? "More publishing capacity for established stores." : displayedMobilePlan === "star" ? "A brighter presence for growing stores." : "Everything needed to begin selling."}</p></div><div className={`my-6 h-px ${displayedMobilePlan === "pro" ? "bg-white/15" : "bg-slate-200"}`} /><div className="grid grid-cols-3 gap-2 text-center"><div className={`rounded-2xl p-3 ${displayedMobilePlan === "pro" ? "bg-white/10" : "bg-white/70"}`}><div className="text-lg font-black">{displayedMobilePlan === "pro" ? "200" : displayedMobilePlan === "star" ? "100" : "20"}</div><div className="text-[9px] font-bold opacity-70">items</div></div><div className={`rounded-2xl p-3 ${displayedMobilePlan === "pro" ? "bg-white/10" : "bg-white/70"}`}><div className="text-lg font-black">{displayedMobilePlan === "pro" ? "10" : displayedMobilePlan === "star" ? "5" : "1"}</div><div className="text-[9px] font-bold opacity-70">services</div></div><div className={`rounded-2xl p-3 ${displayedMobilePlan === "pro" ? "bg-white/10" : "bg-white/70"}`}><div className="text-lg font-black">{displayedMobilePlan === "pro" ? "900" : displayedMobilePlan === "star" ? "600" : "200"}</div><div className="text-[9px] font-bold opacity-70">inventory</div></div></div><div className={`mt-6 rounded-2xl p-3 text-xs font-semibold leading-relaxed ${displayedMobilePlan === "pro" ? "bg-cyan-300/10 text-cyan-100" : displayedMobilePlan === "star" ? "bg-amber-100 text-amber-950" : "bg-blue-100 text-blue-950"}`}>{displayedMobilePlan === "pro" ? "Publish up to 200 items and 10 services, with 900 inventory units. Glowing PineVela badge, golden card frames and priority in featured searches." : displayedMobilePlan === "star" ? "Publish up to 100 items and five services, with 600 inventory units. Glowing PineVela star badges on your item and service cards." : "Publish up to 20 items and one service at a time, with 200 total inventory units."}</div><div className={`mt-auto pt-5 text-lg font-black ${displayedMobilePlan === "pro" ? "text-cyan-200" : displayedMobilePlan === "star" ? "text-amber-700" : "text-blue-700"}`}>{planPrice(displayedMobilePlan)}</div></div>
+                <div className="relative flex h-full flex-col"><div className="flex items-start justify-between"><div className={`rounded-2xl p-3 ${displayedMobilePlan === "pro" ? "bg-cyan-300/15 text-cyan-200" : displayedMobilePlan === "star" ? "bg-gradient-to-br from-amber-400 to-orange-500 text-white" : "bg-blue-100 text-blue-700"}`}>{displayedMobilePlan === "pro" ? <TrendingUp className="h-7 w-7" /> : displayedMobilePlan === "star" ? <Star className="h-7 w-7 fill-current" /> : <Store className="h-7 w-7" />}</div><BadgeCheck className={`h-6 w-6 ${displayedMobilePlan === "pro" ? "text-cyan-300" : displayedMobilePlan === "star" ? "text-amber-600" : "text-blue-600"}`} /></div><div className="mt-6"><div className={`text-[10px] font-black uppercase tracking-[0.16em] ${displayedMobilePlan === "pro" ? "text-cyan-200" : displayedMobilePlan === "star" ? "text-amber-700" : "text-blue-700"}`}>Selected seller subscription</div><h3 className="mt-1 text-3xl font-black">Pine {displayedMobilePlan === "star" ? "Star" : displayedMobilePlan === "pro" ? "Pro" : "Default"}</h3><p className={`mt-2 text-sm font-medium ${displayedMobilePlan === "pro" ? "text-indigo-100" : "text-slate-600"}`}>{displayedMobilePlan === "pro" ? "More publishing capacity for established stores." : displayedMobilePlan === "star" ? "A brighter presence for growing stores." : "Everything needed to begin selling."}</p></div><div className={`my-6 h-px ${displayedMobilePlan === "pro" ? "bg-white/15" : "bg-slate-200"}`} /><div className="grid grid-cols-3 gap-2 text-center"><div className={`rounded-2xl p-3 ${displayedMobilePlan === "pro" ? "bg-white/10" : "bg-white/70"}`}><div className="text-lg font-black">{displayedMobilePlan === "pro" ? "200" : displayedMobilePlan === "star" ? "100" : "20"}</div><div className="text-[9px] font-bold opacity-70">items</div></div><div className={`rounded-2xl p-3 ${displayedMobilePlan === "pro" ? "bg-white/10" : "bg-white/70"}`}><div className="text-lg font-black">{displayedMobilePlan === "pro" ? "10" : displayedMobilePlan === "star" ? "5" : "1"}</div><div className="text-[9px] font-bold opacity-70">services</div></div><div className={`rounded-2xl p-3 ${displayedMobilePlan === "pro" ? "bg-white/10" : "bg-white/70"}`}><div className="text-lg font-black">{displayedMobilePlan === "pro" ? "900" : displayedMobilePlan === "star" ? "600" : "200"}</div><div className="text-[9px] font-bold opacity-70">inventory</div></div></div><div className={`mt-6 rounded-2xl p-3 text-xs font-semibold leading-relaxed ${displayedMobilePlan === "pro" ? "bg-cyan-300/10 text-cyan-100" : displayedMobilePlan === "star" ? "bg-amber-100 text-amber-950" : "bg-blue-100 text-blue-950"}`}>{displayedMobilePlan === "pro" ? "Publish up to 200 items and 10 services, with 900 inventory units. Glowing PineVela badge, golden card frames, custom store logo and cover uploads, and priority in featured searches." : displayedMobilePlan === "star" ? "Publish up to 100 items and five services, with 600 inventory units. Golden glowing PineVela badges on your item and service cards, plus custom store logo and cover uploads." : "Publish up to 20 items and one service at a time, with 200 total inventory units. Standard PineVela logo and four built-in cover designs."}</div><div className={`mt-auto pt-5 text-lg font-black ${displayedMobilePlan === "pro" ? "text-cyan-200" : displayedMobilePlan === "star" ? "text-amber-700" : "text-blue-700"}`}>{planPrice(displayedMobilePlan)}</div></div>
                 <button type="button" onClick={activateMobilePlan} disabled={isPlanActivationLoading || !paymentSettings} className={`mt-6 flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-3 text-xs font-black transition-all disabled:cursor-default ${displayedMobilePlan === subscriptionPlan ? "bg-emerald-500 text-white" : displayedMobilePlan === "pro" ? "bg-cyan-300 text-slate-950" : displayedMobilePlan === "star" ? "bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950" : "bg-blue-600 text-white"}`}>{isPlanActivationLoading ? <><RefreshCw className="h-4 w-4 animate-spin" />Activating...</> : displayedMobilePlan === subscriptionPlan ? <><CheckCircle2 className="h-4 w-4" />Renew plan</> : <>Upgrade to Pine {displayedMobilePlan === "star" ? "Star" : displayedMobilePlan === "pro" ? "Pro" : "Default"}<ArrowRight className="h-4 w-4" /></>}</button>
               </div>
             </div>
@@ -2329,18 +2399,20 @@ export default function PageDigitalMarket() {
               <p>Plan paid until: {storeData?.subscriptionExpiresAt ? new Date(storeData.subscriptionExpiresAt).toLocaleDateString() : 'No verified paid period'}. Two-month fee paid until: {storeData?.semesterExpiresAt ? new Date(storeData.semesterExpiresAt).toLocaleDateString() : 'Payment required'}.</p>
               {storeData?.paymentMode === 'test' && <p className="font-semibold text-amber-700">Paystack test payment — development access only.</p>}
               <button disabled={isPlanActivationLoading || !paymentSettings} onClick={() => checkoutPayment(storeData?.registrationFeePaid ? 'semester' : 'activation')} className="rounded-xl bg-blue-600 px-4 py-3 text-white disabled:opacity-50">{storeData?.registrationFeePaid ? 'Renew two-month fee' : 'Complete verified registration'}</button>
-              {sessionStorage.getItem('pinevela.pendingPayment') && <button onClick={() => navigate('/payments/return')} className="ml-3 text-blue-700">Verify unfinished payment</button>}
+              {(usesSupabasePersistence || pendingPaymentReference(user?.id)) && <button onClick={() => navigate('/payments/return')} className="ml-3 text-blue-700">View unfinished payments</button>}
             </div>
             <div className="hidden grid-cols-1 gap-5 sm:grid lg:grid-cols-3">
-              <button type="button" disabled={isPlanActivationLoading || !paymentSettings} onClick={() => selectSubscription("default")} className={`group relative overflow-hidden rounded-3xl border bg-white/70 p-6 text-left shadow-sm transition-all hover:-translate-y-1 hover:shadow-xl ${subscriptionPlan === "default" ? "border-blue-500 ring-2 ring-blue-200" : "border-slate-200"}`}><div className="flex items-start justify-between"><div className="rounded-2xl bg-blue-100 p-3 text-blue-700"><Store className="h-6 w-6" /></div>{subscriptionPlan === "default" && <BadgeCheck className="h-6 w-6 text-blue-600" />}</div><h3 className="mt-5 text-xl font-black text-slate-900">Pine Default</h3><p className="mt-1 text-sm text-slate-500">Everything needed to begin selling.</p><div className="my-5 h-px bg-slate-200" /><div className="space-y-3 text-sm font-semibold text-slate-700"><div className="flex gap-2"><CheckCircle2 className="h-4 w-4 text-blue-600" />Publish 20 items at a time</div><div className="flex gap-2"><CheckCircle2 className="h-4 w-4 text-blue-600" />1 active service</div><div className="flex gap-2"><CheckCircle2 className="h-4 w-4 text-blue-600" />200 total inventory units</div></div><div className="mt-6 text-sm font-black text-blue-700">{planPrice("default")} <ArrowRight className="ml-1 inline h-4 w-4" /></div></button>
-              <button type="button" disabled={isPlanActivationLoading || !paymentSettings} onClick={() => selectSubscription("star")} className={`group relative overflow-hidden rounded-3xl border bg-gradient-to-b from-amber-50 via-white to-orange-50 p-6 text-left shadow-md transition-all hover:-translate-y-1 hover:shadow-2xl ${subscriptionPlan === "star" ? "border-amber-400 ring-2 ring-amber-200" : "border-amber-200"}`}><div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-amber-300 via-yellow-500 to-orange-400 animate-pulse" /><div className="flex items-start justify-between"><div className="rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 p-3 text-white shadow-lg"><Star className="h-6 w-6 fill-current" /></div>{subscriptionPlan === "star" && <BadgeCheck className="h-6 w-6 text-amber-600" />}</div><h3 className="mt-5 text-xl font-black text-slate-900">Pine Star</h3><p className="mt-1 text-sm text-slate-600">A brighter presence for growing stores.</p><div className="mt-4 text-2xl font-black text-slate-900">{planPrice("star")}</div><div className="my-5 h-px bg-amber-200" /><div className="space-y-3 text-sm font-semibold text-slate-700"><div className="flex gap-2"><BadgeCheck className="h-4 w-4 text-amber-600" />100 items, 5 services, 600 inventory</div><div className="flex gap-2"><TrendingUp className="h-4 w-4 text-amber-600" />Glowing PineVela star badges on listing cards</div><div className="flex gap-2"><ImageIcon className="h-4 w-4 text-amber-600" />100 items and 5 active services</div></div><div className="mt-6 text-sm font-black text-amber-700">Choose Pine Star <ArrowRight className="ml-1 inline h-4 w-4" /></div></button>
-              <button type="button" disabled={isPlanActivationLoading || !paymentSettings} onClick={() => selectSubscription("pro")} className={`group relative overflow-hidden rounded-3xl border bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-900 p-6 text-left text-white shadow-lg transition-all hover:-translate-y-1 hover:shadow-2xl ${subscriptionPlan === "pro" ? "border-cyan-300 ring-2 ring-cyan-300/70" : "border-indigo-500/60"}`}><div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-cyan-300/20 blur-2xl animate-pulse" /><div className="relative flex items-start justify-between"><div className="rounded-2xl border border-cyan-200/40 bg-cyan-300/15 p-3 text-cyan-200"><TrendingUp className="h-6 w-6" /></div>{subscriptionPlan === "pro" && <BadgeCheck className="h-6 w-6 text-cyan-300" />}</div><div className="relative"><h3 className="mt-5 text-xl font-black">Pine Pro</h3><p className="mt-1 text-sm text-indigo-200">More publishing capacity for established stores.</p><div className="mt-4 text-2xl font-black">{planPrice("pro")}</div><div className="my-5 h-px bg-white/15" /><div className="space-y-3 text-sm font-semibold text-indigo-50"><div className="flex gap-2"><CheckCircle2 className="h-4 w-4 text-cyan-300" />200 items, 10 services, 900 inventory</div><div className="flex gap-2"><Star className="h-4 w-4 text-cyan-300" />Golden frames on item and service cards</div><div className="flex gap-2"><ImageIcon className="h-4 w-4 text-cyan-300" />Priority in featured marketplace searches</div></div><div className="mt-6 text-sm font-black text-cyan-200">Choose Pine Pro <ArrowRight className="ml-1 inline h-4 w-4" /></div></div></button>
+              <button type="button" disabled={isPlanActivationLoading || !paymentSettings} onClick={() => selectSubscription("default")} className={`group relative overflow-hidden rounded-3xl border bg-white/70 p-6 text-left shadow-sm transition-all hover:-translate-y-1 hover:shadow-xl ${subscriptionPlan === "default" ? "border-blue-500 ring-2 ring-blue-200" : "border-slate-200"}`}><div className="flex items-start justify-between"><div className="rounded-2xl bg-blue-100 p-3 text-blue-700"><Store className="h-6 w-6" /></div>{subscriptionPlan === "default" && <BadgeCheck className="h-6 w-6 text-blue-600" />}</div><h3 className="mt-5 text-xl font-black text-slate-900">Pine Default</h3><p className="mt-1 text-sm text-slate-500">Everything needed to begin selling.</p><div className="my-5 h-px bg-slate-200" /><div className="space-y-3 text-sm font-semibold text-slate-700"><div className="flex gap-2"><CheckCircle2 className="h-4 w-4 text-blue-600" />Publish 20 items at a time</div><div className="flex gap-2"><CheckCircle2 className="h-4 w-4 text-blue-600" />1 active service</div><div className="flex gap-2"><CheckCircle2 className="h-4 w-4 text-blue-600" />200 total inventory units</div><div className="flex gap-2"><ImageIcon className="h-4 w-4 text-blue-600" />Four PineVela covers and standard logo</div></div><div className="mt-6 text-sm font-black text-blue-700">{planPrice("default")} <ArrowRight className="ml-1 inline h-4 w-4" /></div></button>
+              <button type="button" disabled={isPlanActivationLoading || !paymentSettings} onClick={() => selectSubscription("star")} className={`group relative overflow-hidden rounded-3xl border bg-gradient-to-b from-amber-50 via-white to-orange-50 p-6 text-left shadow-md transition-all hover:-translate-y-1 hover:shadow-2xl ${subscriptionPlan === "star" ? "border-amber-400 ring-2 ring-amber-200" : "border-amber-200"}`}><div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-amber-300 via-yellow-500 to-orange-400 animate-pulse" /><div className="flex items-start justify-between"><div className="rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 p-3 text-white shadow-lg"><Star className="h-6 w-6 fill-current" /></div>{subscriptionPlan === "star" && <BadgeCheck className="h-6 w-6 text-amber-600" />}</div><h3 className="mt-5 text-xl font-black text-slate-900">Pine Star</h3><p className="mt-1 text-sm text-slate-600">A brighter presence for growing stores.</p><div className="mt-4 text-2xl font-black text-slate-900">{planPrice("star")}</div><div className="my-5 h-px bg-amber-200" /><div className="space-y-3 text-sm font-semibold text-slate-700"><div className="flex gap-2"><BadgeCheck className="h-4 w-4 text-amber-600" />100 items, 5 services, 600 inventory</div><div className="flex gap-2"><TrendingUp className="h-4 w-4 text-amber-600" />Glowing PineVela star badges on listing cards</div><div className="flex gap-2"><ImageIcon className="h-4 w-4 text-amber-600" />Custom store logo and cover uploads</div></div><div className="mt-6 text-sm font-black text-amber-700">Choose Pine Star <ArrowRight className="ml-1 inline h-4 w-4" /></div></button>
+              <button type="button" disabled={isPlanActivationLoading || !paymentSettings} onClick={() => selectSubscription("pro")} className={`group relative overflow-hidden rounded-3xl border bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-900 p-6 text-left text-white shadow-lg transition-all hover:-translate-y-1 hover:shadow-2xl ${subscriptionPlan === "pro" ? "border-cyan-300 ring-2 ring-cyan-300/70" : "border-indigo-500/60"}`}><div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-cyan-300/20 blur-2xl animate-pulse" /><div className="relative flex items-start justify-between"><div className="rounded-2xl border border-cyan-200/40 bg-cyan-300/15 p-3 text-cyan-200"><TrendingUp className="h-6 w-6" /></div>{subscriptionPlan === "pro" && <BadgeCheck className="h-6 w-6 text-cyan-300" />}</div><div className="relative"><h3 className="mt-5 text-xl font-black">Pine Pro</h3><p className="mt-1 text-sm text-indigo-200">More publishing capacity for established stores.</p><div className="mt-4 text-2xl font-black">{planPrice("pro")}</div><div className="my-5 h-px bg-white/15" /><div className="space-y-3 text-sm font-semibold text-indigo-50"><div className="flex gap-2"><CheckCircle2 className="h-4 w-4 text-cyan-300" />200 items, 10 services, 900 inventory</div><div className="flex gap-2"><Star className="h-4 w-4 text-cyan-300" />Golden frames on item and service cards</div><div className="flex gap-2"><ImageIcon className="h-4 w-4 text-cyan-300" />Priority search placement and custom store branding</div></div><div className="mt-6 text-sm font-black text-cyan-200">Choose Pine Pro <ArrowRight className="ml-1 inline h-4 w-4" /></div></div></button>
             </div>
           </section>
         )}
 
         {/* TAB 4: STORE PROFILE EDIT */}
         {activeTab === 'profile' && (
+          <div className="space-y-6">
+          {storeData && <StoreProfileSummary store={storeData} />}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             
             {/* ACCREDITATION DOSSIER (LEFT CARD) */}
@@ -2399,57 +2471,12 @@ export default function PageDigitalMarket() {
                 </div>
 
                 <form onSubmit={handleUpdateProfile} className="space-y-4">
-                  {/* Store Logo/Picture Uploader Widget */}
-                  <div className="p-4 bg-blue-50/50 border border-blue-100 rounded-2xl flex flex-col sm:flex-row items-center gap-4 mb-4">
-                    <div className="relative w-16 h-16 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center font-black shadow-md border border-blue-400/30 overflow-hidden shrink-0">
-                      {editProfilePicture ? (
-                        <img src={editProfilePicture} alt="Store Logo Preview" className="w-full h-full object-cover" />
-                      ) : (
-                        <Store className="w-8 h-8 text-white" />
-                      )}
-                    </div>
-                    <div className="space-y-1.5 text-center sm:text-left">
-                      <span className="block text-xs font-black text-slate-800">Store Logo / Branding Icon</span>
-                      <p className="text-[10px] text-slate-400 font-medium">This logo uniquely identifies your campus store on the global marketplace catalog.</p>
-                      <div className="flex items-center gap-2 justify-center sm:justify-start">
-                        <label htmlFor="logo-upload-input" className="cursor-pointer px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-black rounded-lg transition-all shadow-xs flex items-center gap-1">
-                          <Camera className="w-3 h-3" />
-                          <span>Upload Store Logo</span>
-                          <input
-                            id="logo-upload-input"
-                            type="file"
-                            accept="image/jpeg,image/png,image/webp"
-                            onChange={async (e) => {
-                              const file = e.target.files?.[0];
-                              if (file) {
-                                try {
-                                  const lowResBase64 = await compressImageFileToLowRes(file);
-                                  setEditProfilePicture(lowResBase64);
-                                } catch (err) {
-                                  console.error("Error compressing logo:", err);
-                                }
-                              }
-                            }}
-                            className="sr-only"
-                          />
-                        </label>
-                        {editProfilePicture && (
-                          <button
-                            type="button"
-                            onClick={() => setEditProfilePicture('')}
-                            className="px-2.5 py-1.5 bg-white hover:bg-slate-50 text-rose-600 border border-rose-200 rounded-lg text-[10px] font-bold transition-all shadow-xs"
-                          >
-                            Remove Logo
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
+                  <StoreBrandingEditor customBranding={subscriptionPlan !== 'default'} logo={editProfilePicture} cover={editCoverPicture} onLogo={setEditProfilePicture} onCover={setEditCoverPicture} onBusy={onProfileMediaBusy} />
+                  <InternationalPhoneInput label="Store Primary Contact Number" value={editPhone} country={editPhoneCountry} onChange={(value, country) => { setEditPhone(value); setEditPhoneCountry(country); }} />
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div id="prof-group-name">
                       <label className="block text-xs font-black text-slate-800 mb-1">Store / Market Name</label>
-                      <input
+                      <input aria-label="Store / Market Name"
                         type="text"
                         required
                         value={editStoreName}
@@ -2460,7 +2487,7 @@ export default function PageDigitalMarket() {
 
                     <div id="prof-group-username">
                       <label className="block text-xs font-black text-slate-800 mb-1">Merchant Username</label>
-                      <input
+                      <input aria-label="Merchant Username"
                         type="text"
                         required
                         value={editUsername}
@@ -2473,7 +2500,7 @@ export default function PageDigitalMarket() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div id="prof-group-location">
                       <label className="block text-xs font-black text-slate-800 mb-1">Campus Location</label>
-                      <input
+                      <input aria-label="Campus Location"
                         type="text"
                         required
                         value={editLocation}
@@ -2484,7 +2511,7 @@ export default function PageDigitalMarket() {
 
                     <div id="prof-group-category">
                       <label className="block text-xs font-black text-slate-800 mb-1">Primary Category</label>
-                      <input
+                      <input aria-label="Primary Category"
                         type="text"
                         required
                         value={editCategory}
@@ -2496,18 +2523,16 @@ export default function PageDigitalMarket() {
 
                   <div id="prof-group-delivery">
                     <label className="block text-xs font-black text-slate-800 mb-1">Delivery / Handover Mode</label>
-                    <input
-                      type="text"
-                      required
-                      value={editDeliveryForm}
-                      onChange={(e) => setEditDeliveryForm(e.target.value)}
-                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-hidden focus:ring-2 focus:ring-blue-600 focus:bg-white"
-                    />
+                    <select aria-label="Delivery / Handover Mode" required value={editDeliveryForm} onChange={e => setEditDeliveryForm(e.target.value)} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-blue-600">
+                      <option value="" disabled>Choose a delivery method</option>
+                      {editDeliveryForm && !(STORE_DELIVERY_METHODS as readonly string[]).includes(editDeliveryForm) && <option value={editDeliveryForm}>{editDeliveryForm} (saved method)</option>}
+                      {STORE_DELIVERY_METHODS.map(method => <option key={method} value={method}>{method}</option>)}
+                    </select>
                   </div>
 
                   <div id="prof-group-desc">
                     <label className="block text-xs font-black text-slate-800 mb-1">Store Description / About</label>
-                    <textarea
+                    <textarea aria-label="Store Description / About"
                       rows={3}
                       value={editDescription}
                       onChange={(e) => setEditDescription(e.target.value)}
@@ -2519,7 +2544,7 @@ export default function PageDigitalMarket() {
                   <div className="pt-4 border-t border-slate-100 flex justify-end">
                     <button
                       type="submit"
-                      disabled={isUpdatingProfile}
+                      disabled={isUpdatingProfile || profileMediaUploads > 0}
                       className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-505 text-white text-xs font-black shadow-lg shadow-blue-600/20 transition-all cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
                     >
                       <CheckCircle2 className="w-4 h-4" />
@@ -2530,12 +2555,13 @@ export default function PageDigitalMarket() {
               </div>
             </div>
           </div>
+          </div>
         )}
       </main>
 
       {/* MODAL 1: PUBLISH PRODUCT (MANDATORY DESCRIPTION AND IMAGE) */}
       {showAddModal && (
-        <div className="fixed inset-0 z-50 bg-slate-950/40 backdrop-blur-sm flex items-center justify-center p-4 overflow-hidden">
+        <DashboardOverlay aria-label="Publish Item to Global Market" onClose={() => setShowAddModal(false)} className="fixed inset-0 z-50 bg-slate-950/40 backdrop-blur-sm flex items-center justify-center p-4 overflow-hidden">
           <div data-popup-card className="bg-white rounded-3xl max-w-xl w-full max-h-[90vh] flex flex-col p-6 sm:p-8 shadow-2xl border border-slate-100 animate-scaleIn">
             
             {/* Header: Fixed & static */}
@@ -2550,7 +2576,7 @@ export default function PageDigitalMarket() {
                 </div>
               </div>
 
-              <button
+              <button aria-label="Close dialog"
                 type="button"
                 onClick={() => setShowAddModal(false)}
                 className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center cursor-pointer transition-all"
@@ -2563,7 +2589,7 @@ export default function PageDigitalMarket() {
             <form onSubmit={handleCreateProduct} className="flex-1 overflow-y-auto pr-1 py-4 space-y-4 scrollbar-thin">
               <div id="add-group-title">
                 <label className="block text-xs font-black text-slate-800 mb-1">Product / Item Title *</label>
-                <input
+                <input aria-label="Product / Item Title"
                   type="text"
                   required
                   placeholder="e.g. Apple MacBook Pro 14' M2 (16GB/512GB)"
@@ -2576,7 +2602,7 @@ export default function PageDigitalMarket() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div id="add-group-price">
                   <label className="block text-xs font-black text-slate-800 mb-1">Price in GHS (GH₵) *</label>
-                  <input
+                  <input aria-label="Price in GHS (GH₵)"
                     type="number"
                     step="0.01"
                     min="1"
@@ -2591,7 +2617,7 @@ export default function PageDigitalMarket() {
                 <div id="add-group-category">
                   <label className="block text-xs font-black text-slate-800 mb-1">Product Category *</label>
                   <div className="relative">
-                    <select
+                    <select aria-label="Product Category"
                       value={prodCategory}
                       onChange={(e) => setProdCategory(e.target.value)}
                       className="w-full pl-4 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-hidden focus:ring-2 focus:ring-blue-600 cursor-pointer appearance-none"
@@ -2608,7 +2634,7 @@ export default function PageDigitalMarket() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div id="add-group-condition">
                   <label className="block text-xs font-black text-slate-800 mb-1">Item Condition</label>
-                  <select
+                  <select aria-label="Item Condition"
                     value={prodCondition}
                     onChange={(e) => setProdCondition(e.target.value)}
                     className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-hidden focus:ring-2 focus:ring-blue-600 cursor-pointer"
@@ -2622,9 +2648,10 @@ export default function PageDigitalMarket() {
 
                 <div id="add-group-stock">
                   <label className="block text-xs font-black text-slate-800 mb-1">Stock Quantity</label>
-                  <input
+                  <input aria-label="Stock Quantity"
                     type="number"
                     min="1"
+                    step="1"
                     required
                     value={prodStock}
                     onChange={(e) => setProdStock(e.target.value)}
@@ -2635,7 +2662,7 @@ export default function PageDigitalMarket() {
 
               <div id="add-group-location">
                 <label className="block text-xs font-black text-slate-800 mb-1">Safe Campus Meetup Location</label>
-                <input
+                <input aria-label="Safe Campus Meetup Location"
                   type="text"
                   placeholder="e.g. KNUST Main Library Gate or Queens Hall Car Park"
                   value={prodLocation}
@@ -2667,6 +2694,7 @@ export default function PageDigitalMarket() {
                           <button
                             type="button"
                             onClick={() => {
+                              setCropTarget('product');
                               setCropRawImage(prodImageUrl);
                               setIsCropModalOpen(true);
                             }}
@@ -2678,7 +2706,7 @@ export default function PageDigitalMarket() {
 
                           <label htmlFor="file-upload-replace" className="cursor-pointer px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-xl text-xs font-bold transition-all shadow-xs">
                             <span>Change</span>
-                            <input
+                            <input aria-label="Replace item photograph"
                               id="file-upload-replace"
                               type="file"
                               accept="image/jpeg,image/png,image/webp"
@@ -2686,9 +2714,11 @@ export default function PageDigitalMarket() {
                                 const file = e.target.files?.[0];
                                 if (file) {
                                   if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 20 * 1024 * 1024) { triggerToast('Choose a JPEG, PNG or WebP photo up to 20MB.', 'error'); return; }
+                                  const uploadAccount=user?.id;
                                   const reader = new FileReader();
                                   reader.onloadend = () => {
-                                    if (reader.result) {
+                                    if (reader.result && accountIsCurrent(uploadAccount)) {
+                                      setCropTarget('product');
                                       setCropRawImage(reader.result as string);
                                       setIsCropModalOpen(true);
                                     }
@@ -2709,7 +2739,7 @@ export default function PageDigitalMarket() {
                           <label htmlFor="file-upload" className="relative cursor-pointer bg-white px-3.5 py-2 border border-blue-200 rounded-xl font-extrabold text-blue-600 hover:text-blue-500 hover:border-blue-400 transition-all shadow-xs focus-within:outline-none flex items-center gap-2">
                             <Crop className="w-4 h-4 text-blue-600" />
                             <span>Select Photo & Crop for Card</span>
-                            <input
+                            <input aria-label="Upload item photograph"
                               id="file-upload"
                               name="file-upload"
                               type="file"
@@ -2719,9 +2749,11 @@ export default function PageDigitalMarket() {
                                 const file = e.target.files?.[0];
                                 if (file) {
                                   if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 20 * 1024 * 1024) { triggerToast('Choose a JPEG, PNG or WebP photo up to 20MB.', 'error'); return; }
+                                  const uploadAccount=user?.id;
                                   const reader = new FileReader();
                                   reader.onloadend = () => {
-                                    if (reader.result) {
+                                    if (reader.result && accountIsCurrent(uploadAccount)) {
+                                      setCropTarget('product');
                                       setCropRawImage(reader.result as string);
                                       setIsCropModalOpen(true);
                                     }
@@ -2750,7 +2782,7 @@ export default function PageDigitalMarket() {
               {/* MANDATORY DESCRIPTION TEXTAREA */}
               <div id="add-group-desc">
                 <label className="block text-xs font-black text-slate-800 mb-1">Product Description * (Mandatory)</label>
-                <textarea
+                <textarea aria-label="Product Description * (Mandatory)"
                   rows={3}
                   required
                   placeholder="Provide specifications, age of item, warranty details, and conditions..."
@@ -2779,12 +2811,12 @@ export default function PageDigitalMarket() {
               </div>
             </form>
           </div>
-        </div>
+        </DashboardOverlay>
       )}
 
       {/* MODAL: OFFER / EDIT CAMPUS SERVICE */}
       {showServiceModal && (
-        <div className="fixed inset-0 z-50 bg-slate-950/40 backdrop-blur-sm flex items-center justify-center p-4 overflow-hidden">
+        <DashboardOverlay aria-label="Publish service" onClose={() => setShowServiceModal(false)} className="fixed inset-0 z-50 bg-slate-950/40 backdrop-blur-sm flex items-center justify-center p-4 overflow-hidden">
           <div data-popup-card className="bg-white rounded-3xl max-w-xl w-full max-h-[90vh] flex flex-col p-6 sm:p-8 shadow-2xl border border-slate-100 animate-scaleIn">
             {/* Header */}
             <div className="flex items-center justify-between pb-4 border-b border-slate-100 shrink-0">
@@ -2800,7 +2832,7 @@ export default function PageDigitalMarket() {
                 </div>
               </div>
 
-              <button
+              <button aria-label="Close dialog"
                 type="button"
                 onClick={() => setShowServiceModal(false)}
                 className="text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
@@ -2816,7 +2848,7 @@ export default function PageDigitalMarket() {
                 <label className="text-xs font-black text-slate-800">
                   Service Title <span className="text-red-500">*</span>
                 </label>
-                <input
+                <input aria-label="Service Title"
                   type="text"
                   required
                   placeholder="e.g. iPhone & Laptop Screen Repairs, Campus Barbering & Fades, Homemade Jollof Delivery"
@@ -2832,7 +2864,7 @@ export default function PageDigitalMarket() {
                   <label className="text-xs font-black text-slate-800">
                     Service Subcategory <span className="text-red-500">*</span>
                   </label>
-                  <select
+                  <select aria-label="Service Subcategory"
                     value={servSubCategory}
                     onChange={(e) => setServSubCategory(e.target.value)}
                     className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white cursor-pointer"
@@ -2856,7 +2888,7 @@ export default function PageDigitalMarket() {
                   </label>
                   <div className="relative">
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">GHS</span>
-                    <input
+                    <input aria-label="Starting Price / Fee (GHS)"
                       type="number"
                       step="0.5"
                       min="1"
@@ -2913,7 +2945,7 @@ export default function PageDigitalMarket() {
                           <label className="text-[10px] font-extrabold text-slate-700 block">
                             Category Name <span className="text-red-500">*</span>
                           </label>
-                          <input
+                          <input aria-label="Category Name"
                             type="text"
                             placeholder="e.g. Indomie Assorted, Jollof with Chicken"
                             value={cat.name}
@@ -2931,7 +2963,7 @@ export default function PageDigitalMarket() {
                           </label>
                           <div className="relative">
                             <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400">GH₵</span>
-                            <input
+                            <input aria-label="Price (Cedis)"
                               type="number"
                               min="0"
                               step="0.5"
@@ -3010,7 +3042,7 @@ export default function PageDigitalMarket() {
                     </button>
                   </div>
                   <div className="flex items-center gap-2">
-                    <input
+                    <input aria-label="Campus Location / Service Base"
                       type="text"
                       required
                       placeholder="Search or pick on map e.g. Unity Hall Block B, Room 14"
@@ -3038,7 +3070,7 @@ export default function PageDigitalMarket() {
                     <Phone className="w-3.5 h-3.5 text-emerald-600" />
                     <span>Direct Call Line / WhatsApp</span> <span className="text-red-500">*</span>
                   </label>
-                  <input
+                  <input aria-label="Direct Call Line / WhatsApp"
                     type="text"
                     required
                     placeholder="e.g. 024 123 4567"
@@ -3058,7 +3090,7 @@ export default function PageDigitalMarket() {
                     <span>Working Days & Opening Hours</span>
                   </span>
                   <label className="flex items-center gap-1.5 text-[11px] font-bold text-slate-700 cursor-pointer">
-                    <input
+                    <input aria-label="Open 24 hours, every day"
                       type="checkbox"
                       checked={servIsOpen247}
                       onChange={(e) => setServIsOpen247(e.target.checked)}
@@ -3072,7 +3104,7 @@ export default function PageDigitalMarket() {
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                     <div className="space-y-1">
                       <label className="text-[10px] font-bold text-slate-600">Working Days</label>
-                      <select
+                      <select aria-label="Working Days"
                         value={servWorkingDays}
                         onChange={(e) => setServWorkingDays(e.target.value)}
                         className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-800"
@@ -3087,7 +3119,7 @@ export default function PageDigitalMarket() {
 
                     <div className="space-y-1">
                       <label className="text-[10px] font-bold text-slate-600">Starting Hour</label>
-                      <input
+                      <input aria-label="Starting Hour"
                         type="text"
                         placeholder="e.g. 08:00 AM"
                         value={servOpeningTime}
@@ -3098,7 +3130,7 @@ export default function PageDigitalMarket() {
 
                     <div className="space-y-1">
                       <label className="text-[10px] font-bold text-slate-600">Closing Hour</label>
-                      <input
+                      <input aria-label="Closing Hour"
                         type="text"
                         placeholder="e.g. 06:00 PM"
                         value={servClosingTime}
@@ -3115,7 +3147,7 @@ export default function PageDigitalMarket() {
                 <label className="text-xs font-black text-slate-800">
                   Detailed Description of What You Offer <span className="text-red-500">*</span>
                 </label>
-                <textarea
+                <textarea aria-label="Detailed Description of What You Offer"
                   rows={3}
                   required
                   placeholder="Provide detailed description of what you offer (e.g. for phone repairs: models supported, authentic screen replacement, battery testing, 30-day warranty; for food: ingredients, meal portion, packaging, hot delivery; for barbering: haircuts, beard trims, tools sanitized)."
@@ -3162,7 +3194,7 @@ export default function PageDigitalMarket() {
 
                         <label htmlFor="serv-file-replace" className="cursor-pointer px-3.5 py-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-xl text-xs font-black transition-all shadow-2xs">
                           <span>Upload Different Photo</span>
-                          <input
+                          <input aria-label="Replace service photograph"
                             id="serv-file-replace"
                             type="file"
                             accept="image/jpeg,image/png,image/webp"
@@ -3170,9 +3202,10 @@ export default function PageDigitalMarket() {
                               const file = e.target.files?.[0];
                               if (file) {
                                 if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 20 * 1024 * 1024) { triggerToast('Choose a JPEG, PNG or WebP photo up to 20MB.', 'error'); return; }
+                                const uploadAccount=user?.id;
                                 const reader = new FileReader();
                                 reader.onloadend = () => {
-                                  if (reader.result) {
+                                  if (reader.result && accountIsCurrent(uploadAccount)) {
                                     setCropTarget('service');
                                     setCropRawImage(reader.result as string);
                                     setIsCropModalOpen(true);
@@ -3199,7 +3232,7 @@ export default function PageDigitalMarket() {
                       <label htmlFor="serv-file-upload" className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white rounded-xl text-xs font-black cursor-pointer shadow-md transition-all">
                         <Crop className="w-3.5 h-3.5 text-blue-200" />
                         <span>Select Photo & Crop</span>
-                        <input
+                        <input aria-label="Upload service photograph"
                           id="serv-file-upload"
                           type="file"
                           accept="image/jpeg,image/png,image/webp"
@@ -3207,9 +3240,10 @@ export default function PageDigitalMarket() {
                             const file = e.target.files?.[0];
                             if (file) {
                               if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 20 * 1024 * 1024) { triggerToast('Choose a JPEG, PNG or WebP photo up to 20MB.', 'error'); return; }
+                              const uploadAccount=user?.id;
                               const reader = new FileReader();
                               reader.onloadend = () => {
-                                if (reader.result) {
+                                if (reader.result && accountIsCurrent(uploadAccount)) {
                                   setCropTarget('service');
                                   setCropRawImage(reader.result as string);
                                   setIsCropModalOpen(true);
@@ -3228,18 +3262,18 @@ export default function PageDigitalMarket() {
               </div>
 
               {/* Availability Toggle */}
-              <div className="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-xl">
+              <label className="flex items-center justify-between gap-3 cursor-pointer p-3 bg-slate-50 border border-slate-200 rounded-xl">
                 <div>
                   <div className="text-xs font-black text-slate-800">Currently Open & Accepting Bookings</div>
                   <div className="text-[10px] text-slate-500">When enabled, students can see your service and call or book.</div>
                 </div>
-                <input
+                <input aria-label="Service available for bookings"
                   type="checkbox"
                   checked={servIsAvailable}
                   onChange={(e) => setServIsAvailable(e.target.checked)}
                   className="w-4 h-4 accent-blue-600 cursor-pointer"
                 />
-              </div>
+              </label>
 
               {/* Submit Buttons */}
               <div className="pt-2 flex items-center justify-end gap-2 shrink-0">
@@ -3261,12 +3295,26 @@ export default function PageDigitalMarket() {
               </div>
             </form>
           </div>
-        </div>
+        </DashboardOverlay>
       )}
 
       {/* MODAL 2: OTP VERIFICATION POPUP */}
+      {decliningOrder && (
+        <DashboardOverlay aria-label="Decline meetup confirmation" onClose={confirmingOrderId ? null : () => setDecliningOrder(null)} className="fixed inset-0 bg-slate-950/40 backdrop-blur-sm flex items-center justify-center p-4">
+          <section className="relative w-full max-w-md rounded-3xl border border-rose-200 bg-white p-6 shadow-2xl space-y-5">
+            <button type="button" aria-label="Close decline confirmation" disabled={!!confirmingOrderId} onClick={() => setDecliningOrder(null)} className="absolute right-3 top-3 p-2 text-slate-500 disabled:opacity-50"><X size={20} /></button>
+            <h2 className="pr-8 text-lg font-black text-slate-900">Decline this meetup?</h2>
+            <p className="text-sm text-slate-600">Decline the proposed meetup at {decliningOrder.meetingLocation} for “{decliningOrder.productTitle}”? The buyer will be notified and this order will be marked declined.</p>
+            <div className="flex justify-end gap-3">
+              <button type="button" disabled={!!confirmingOrderId} onClick={() => setDecliningOrder(null)} className="rounded-xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-700 disabled:opacity-50">Keep order</button>
+              <button type="button" disabled={!!confirmingOrderId} onClick={() => handleDeclineLocation(decliningOrder.id)} className="rounded-xl bg-rose-600 px-4 py-3 text-sm font-bold text-white disabled:opacity-50">{confirmingOrderId ? 'Declining…' : 'Confirm decline'}</button>
+            </div>
+          </section>
+        </DashboardOverlay>
+      )}
+
       {verifyingOrder && (
-        <div className="fixed inset-0 z-50 bg-slate-950/40 backdrop-blur-sm flex items-center justify-center p-4">
+        <DashboardOverlay aria-label="Verify Customer Pickup PIN" onClose={() => setVerifyingOrder(null)} className="fixed inset-0 z-50 bg-slate-950/40 backdrop-blur-sm flex items-center justify-center p-4">
           <div data-popup-card className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-slate-100 space-y-6 animate-scaleIn">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2.5">
@@ -3279,7 +3327,7 @@ export default function PageDigitalMarket() {
                 </div>
               </div>
 
-              <button
+              <button aria-label="Close dialog"
                 type="button"
                 onClick={() => setVerifyingOrder(null)}
                 className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center cursor-pointer"
@@ -3308,7 +3356,7 @@ export default function PageDigitalMarket() {
                 <label className="block text-xs font-black text-slate-800 mb-2 text-center">
                   Enter buyer's 6-Digit Pickup PIN to finalize delivery:
                 </label>
-                <input
+                <input aria-label="Enter buyer's 6-Digit Pickup PIN to finalize delivery:"
                   type="text"
                   maxLength={6}
                   required
@@ -3338,23 +3386,23 @@ export default function PageDigitalMarket() {
               </div>
             </form>
           </div>
-        </div>
+        </DashboardOverlay>
       )}
 
       {/* VIEW ORDER PINNED MEETUP SPOT MODAL */}
       {viewingOrderMap && (
-        <div className="fixed inset-0 z-[200] bg-slate-950/75 backdrop-blur-xl flex items-center justify-center p-3 sm:p-6 animate-fadeIn">
+        <DashboardOverlay aria-label="Order meetup location" onClose={() => setViewingOrderMap(null)} className="fixed inset-0 z-[200] bg-slate-950/75 backdrop-blur-xl flex items-center justify-center p-3 sm:p-6 animate-fadeIn">
           <div data-popup-card className="max-w-[calc(100vw-1rem)] sm:max-w-2xl w-full">
             <CampusMeetupMapPicker
-              latitude={viewingOrderMap.meetingLatitude || 6.6745}
-              longitude={viewingOrderMap.meetingLongitude || -1.5716}
+              latitude={viewingOrderMap.meetingLatitude ?? 6.6745}
+              longitude={viewingOrderMap.meetingLongitude ?? -1.5716}
               initialLocationName={viewingOrderMap.meetingLocation}
               readOnly={true}
               preferredUniversity={viewingOrderMap.university}
               onClose={() => setViewingOrderMap(null)}
             />
           </div>
-        </div>
+        </DashboardOverlay>
       )}
 
       {/* GLOBAL FLOATING PLUS BUTTON (MOBILE ONLY) */}
@@ -3367,121 +3415,27 @@ export default function PageDigitalMarket() {
             setShowAddModal(true);
           }
         }}
-        data-seller-add className="sm:hidden fixed bottom-20 right-6 z-40 w-14 h-14 bg-gradient-to-tr from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-full shadow-[0_8px_32px_rgba(59,130,246,0.35)] flex items-center justify-center transition-all transform active:scale-95 cursor-pointer border border-blue-400/30"
+        data-seller-add className="sm:hidden fixed bottom-20 left-6 z-40 w-14 h-14 bg-gradient-to-tr from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-full shadow-[0_8px_32px_rgba(59,130,246,0.35)] flex items-center justify-center transition-all transform active:scale-95 cursor-pointer border border-blue-400/30"
         title={activeTab === 'services' ? "Offer New Service" : "Publish New Item"}
       >
         <Plus className="w-7 h-7 text-white" />
       </button>
 
       {/* MOBILE BOTTOM NAVIGATION BAR — FIXED FROSTY LIGHT-BLUE GLASS LOOK */}
-      <div className="mobile-bottom-nav fixed bottom-0 left-0 right-0 z-50 sm:hidden bg-sky-100/95 backdrop-blur-xl border-t border-blue-200/80 px-2 py-1.5 flex items-center justify-around shadow-[0_-8px_32px_rgba(59,130,246,0.12)] pb-safe">
-        <button
-          type="button"
-          data-page-tabs aria-current={activeTab === 'dashboard' ? 'page' : undefined} onClick={() => {
-            setActiveTab('dashboard');
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-          }}
-          className={`flex flex-col items-center gap-0.5 p-1 text-[9px] font-black tracking-tight transition-all rounded-xl min-w-0 flex-1 ${
-            activeTab === 'dashboard'
-              ? 'text-blue-600 font-extrabold scale-105'
-              : 'text-slate-600 hover:text-slate-900'
-          }`}
-        >
-          <TrendingUp className="w-4.5 h-4.5 shrink-0" />
-          <span>Home</span>
-        </button>
-
-        <button
-          type="button"
-          data-page-tabs aria-current={activeTab === 'inventory' ? 'page' : undefined} onClick={() => {
-            setActiveTab('inventory');
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-          }}
-          className={`flex flex-col items-center gap-0.5 p-1 text-[9px] font-black tracking-tight transition-all rounded-xl min-w-0 flex-1 ${
-            activeTab === 'inventory'
-              ? 'text-blue-600 font-extrabold scale-105'
-              : 'text-slate-600 hover:text-slate-900'
-          }`}
-        >
-          <Package className="w-4.5 h-4.5 shrink-0" />
-          <span>Stock</span>
-        </button>
-
-        <button
-          type="button"
-          data-page-tabs aria-current={activeTab === 'services' ? 'page' : undefined} onClick={() => {
-            setActiveTab('services');
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-          }}
-          className={`flex flex-col items-center gap-0.5 p-1 text-[9px] font-black tracking-tight transition-all rounded-xl min-w-0 flex-1 ${
-            activeTab === 'services'
-              ? 'text-blue-600 font-extrabold scale-105'
-              : 'text-slate-600 hover:text-slate-900'
-          }`}
-        >
-          <Wrench className="w-4.5 h-4.5 shrink-0" />
-          <span>Services ({servicesList.length})</span>
-        </button>
-
-        <button
-          type="button"
-          data-page-tabs aria-current={activeTab === 'sales' ? 'page' : undefined} onClick={() => {
-            setActiveTab('sales');
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-          }}
-          className={`flex flex-col items-center gap-0.5 p-1 text-[9px] font-black tracking-tight transition-all rounded-xl relative min-w-0 flex-1 ${
-            activeTab === 'sales'
-              ? 'text-blue-600 font-extrabold scale-105'
-              : 'text-slate-600 hover:text-slate-900'
-          }`}
-        >
-          <Clock className="w-4.5 h-4.5 shrink-0" />
-          <span>Sales</span>
-        </button>
-
-        <button
-          type="button"
-          data-page-tabs aria-current={activeTab === 'notifications' ? 'page' : undefined} onClick={() => {
-            setActiveTab('notifications');
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-          }}
-          className={`flex flex-col items-center gap-0.5 p-1 text-[9px] font-black tracking-tight transition-all rounded-xl relative min-w-0 flex-1 ${
-            activeTab === 'notifications'
-              ? 'text-blue-600 font-extrabold scale-105'
-              : 'text-slate-600 hover:text-slate-900'
-          }`}
-        >
-          <Bell className="w-4.5 h-4.5 shrink-0" />
-          <span>Notifs</span>
-          {unreadNotifCount > 0 && (
-            <span className="absolute top-0.5 right-1 min-w-4 h-4 px-1 rounded-full bg-red-500 text-white font-extrabold text-[8px] flex items-center justify-center">
-              {unreadNotifCount}
-            </span>
-          )}
-        </button>
-
-        <button type="button" data-page-tabs aria-current={activeTab === 'messages' ? 'page' : undefined} onClick={() => setActiveTab('messages')} className={`flex flex-col items-center gap-0.5 p-1 text-[9px] font-black rounded-xl min-w-0 ${activeTab === 'messages' ? 'text-blue-600' : 'text-slate-600'}`}><span className="relative inline-flex"><MessageSquare className="w-4.5 h-4.5" /><TopNavBadge count={sellerMessageUnreadCount} /></span><span>Messages</span></button>
-
-        <button
-          type="button"
-          data-page-tabs aria-current={activeTab === 'upgrade' ? 'page' : undefined} onClick={() => {
-            setActiveTab('upgrade');
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-          }}
-          className={`flex flex-col items-center gap-0.5 p-1 text-[9px] font-black tracking-tight transition-all rounded-xl min-w-0 flex-1 ${
-            activeTab === 'upgrade'
-              ? 'text-blue-600 font-extrabold scale-105'
-              : 'text-slate-600 hover:text-slate-900'
-          }`}
-        >
-          <CreditCard className="w-4.5 h-4.5 shrink-0" />
-          <span>Upgrade</span>
-        </button>
-      </div>
+      <MobileNavigation label="Seller navigation" visibility="sm:hidden" activeTab={activeTab} onSelect={id => { setActiveTab(id as any); window.scrollTo({ top: 0, behavior: 'smooth' }); }} primaryIds={['dashboard','inventory','services','sales']} items={[
+        { id: 'dashboard', label: 'Home', icon: TrendingUp },
+        { id: 'inventory', label: 'Stock', icon: Package },
+        { id: 'services', label: 'Services', icon: Wrench },
+        { id: 'sales', label: 'Sales', icon: Clock },
+        { id: 'notifications', label: 'Alerts', icon: Bell, badge: unreadNotifCount, group: 'Activity' },
+        { id: 'messages', label: 'Messages', icon: MessageSquare, badge: sellerMessageUnreadCount, group: 'Activity' },
+        { id: 'upgrade', label: 'Upgrade', icon: CreditCard, group: 'Account' },
+        { id: 'profile', label: 'Store Profile', icon: Store, group: 'Account' }
+      ]} />
 
       {/* SELECT SERVICE LOCATION ON MAP MODAL */}
       {isMapLocationPickerOpen && (
-        <div className="fixed inset-0 z-[200] bg-slate-950/75 backdrop-blur-xl flex items-center justify-center p-3 sm:p-6 animate-fadeIn">
+        <DashboardOverlay aria-label="Choose service location" onClose={() => setIsMapLocationPickerOpen(false)} className="fixed inset-0 z-[200] bg-slate-950/75 backdrop-blur-xl flex items-center justify-center p-3 sm:p-6 animate-fadeIn">
           <div data-popup-card className="max-w-[calc(100vw-1rem)] sm:max-w-2xl w-full">
             <CampusMeetupMapPicker
               latitude={servLat}
@@ -3500,12 +3454,12 @@ export default function PageDigitalMarket() {
               onClose={() => setIsMapLocationPickerOpen(false)}
             />
           </div>
-        </div>
+        </DashboardOverlay>
       )}
 
       {/* VIEW EXACT SERVICE LOCATION PIN MODAL */}
       {viewingServiceMap && (
-        <div className="fixed inset-0 z-[200] bg-slate-950/75 backdrop-blur-xl flex items-center justify-center p-3 sm:p-6 animate-fadeIn">
+        <DashboardOverlay aria-label="Service location" onClose={() => setViewingServiceMap(null)} className="fixed inset-0 z-[200] bg-slate-950/75 backdrop-blur-xl flex items-center justify-center p-3 sm:p-6 animate-fadeIn">
           <div data-popup-card className="max-w-[calc(100vw-1rem)] sm:max-w-2xl w-full">
             <CampusMeetupMapPicker
               latitude={viewingServiceMap.lat || viewingServiceMap.latitude || 6.6745}
@@ -3516,12 +3470,12 @@ export default function PageDigitalMarket() {
               onClose={() => setViewingServiceMap(null)}
             />
           </div>
-        </div>
+        </DashboardOverlay>
       )}
 
       {/* SERVICE RATINGS & STUDENT REVIEWS MODAL */}
       {viewingServiceReviews && (
-        <div className="fixed inset-0 z-[200] bg-slate-950/75 backdrop-blur-xl flex items-center justify-center p-4 animate-fadeIn">
+        <DashboardOverlay aria-label="Service reviews" onClose={() => setViewingServiceReviews(null)} className="fixed inset-0 z-[200] bg-slate-950/75 backdrop-blur-xl flex items-center justify-center p-4 animate-fadeIn">
           <div data-popup-card className="bg-white rounded-3xl max-w-lg w-full max-h-[85vh] flex flex-col p-6 shadow-2xl border border-slate-100 animate-scaleUp">
             {/* Header */}
             <div className="flex items-center justify-between pb-4 border-b border-slate-100 shrink-0">
@@ -3543,7 +3497,7 @@ export default function PageDigitalMarket() {
                 </div>
               </div>
 
-              <button
+              <button aria-label="Close dialog"
                 type="button"
                 onClick={() => setViewingServiceReviews(null)}
                 className="text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
@@ -3611,12 +3565,12 @@ export default function PageDigitalMarket() {
               </div>
             </div>
           </div>
-        </div>
+        </DashboardOverlay>
       )}
 
       {/* SECURE SIGNOUT CONFIRMATION MODAL */}
       {showLogoutConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <DashboardOverlay aria-label="Sign out of market" onClose={() => setShowLogoutConfirm(false)} className="fixed inset-0 z-50 flex items-center justify-center p-4">
           {/* Backdrop */}
           <div 
             className="absolute inset-0 bg-slate-950/40 backdrop-blur-md transition-opacity" 
@@ -3659,7 +3613,7 @@ export default function PageDigitalMarket() {
               </button>
             </div>
           </div>
-        </div>
+        </DashboardOverlay>
       )}
 
       {/* ITEM IMAGE CROP MODAL */}
@@ -3670,16 +3624,25 @@ export default function PageDigitalMarket() {
           productTitle={cropTarget === 'service' ? (servTitle || 'Campus Service') : (prodTitle || 'Sample Item')}
           productPrice={cropTarget === 'service' ? (servPrice || '0.00') : (prodPrice || '0.00')}
           productCategory={cropTarget === 'service' ? 'Services' : prodCategory}
-          onCropSave={(croppedBase64) => {
-            if (cropTarget === 'service') {
-              setServImageUrl(croppedBase64);
-            } else {
-              setProdImageUrl(croppedBase64);
+          onCropSave={async (croppedBase64) => {
+            const accountId=user?.id,target=cropTarget;
+            if(!accountIsCurrent(accountId))return;
+            setIsCropModalOpen(false);setCropRawImage(null);
+            if(usesSupabasePersistence)mediaBusyChange(true);
+            try {
+              const url=usesSupabasePersistence
+                ? (await apiFetch('/api/storage/upload-market-image',{method:'POST',body:JSON.stringify({fileType:'image/jpeg',fileData:croppedBase64})})).imageUrl
+                : croppedBase64;
+              if(!accountIsCurrent(accountId))return;
+              if(target==='service')setServImageUrl(url);else setProdImageUrl(url);
+            } catch(err:any) {
+              if(accountIsCurrent(accountId))triggerToast(err?.message || 'Could not upload your cover photograph.','error');
+            } finally {
+              if(usesSupabasePersistence && accountIsCurrent(accountId))mediaBusyChange(false);
             }
-            setIsCropModalOpen(false);
-            setCropRawImage(null);
           }}
           onClose={() => {
+            if(!accountIsCurrent(user?.id))return;
             setIsCropModalOpen(false);
             setCropRawImage(null);
           }}

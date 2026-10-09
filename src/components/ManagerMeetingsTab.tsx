@@ -1,5 +1,6 @@
+import DashboardOverlay from './DashboardOverlay';
 import { sessionFetch as fetch } from '../lib/session';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { safeJson } from '../lib/api';
 import { 
   Calendar, 
@@ -26,6 +27,7 @@ import {
   Tag
 } from 'lucide-react';
 import { MeetingLog } from '../types';
+import { usesSupabasePersistence } from '../lib/persistence';
 
 interface ManagerMeetingsTabProps {
   currentUser: any;
@@ -40,6 +42,8 @@ export const ManagerMeetingsTab: React.FC<ManagerMeetingsTabProps> = ({
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const readGeneration = useRef(0);
+  const accountGeneration = useRef(0);
 
   // Filters & Search
   const [searchQuery, setSearchQuery] = useState('');
@@ -55,6 +59,10 @@ export const ManagerMeetingsTab: React.FC<ManagerMeetingsTabProps> = ({
   const [bookRequesterType, setBookRequesterType] = useState<'student' | 'staff' | 'external'>('student');
   const [bookRequesterEmail, setBookRequesterEmail] = useState('');
   const [bookRequesterPhone, setBookRequesterPhone] = useState('');
+  const [participants, setParticipants] = useState<{contextId:string;kind:string;name:string;email:string;phone:string;roomLabel:string}[]>([]);
+  const [bookParticipantId, setBookParticipantId] = useState('');
+  const selectedParticipant = participants.find(p => p.contextId === bookParticipantId && p.kind === (bookRequesterType === 'student' ? 'resident' : bookRequesterType));
+  const savedParticipant = usesSupabasePersistence && bookRequesterType !== 'external';
   const [bookRoomOrUnit, setBookRoomOrUnit] = useState('');
   const [bookTopic, setBookTopic] = useState('');
   const [bookCategory, setBookCategory] = useState<MeetingLog['category']>('Room / Accommodation');
@@ -73,6 +81,7 @@ export const ManagerMeetingsTab: React.FC<ManagerMeetingsTabProps> = ({
   const [meetingVenueLink, setMeetingVenueLink] = useState('');
 
   const fetchMeetings = async () => {
+    const generation = ++readGeneration.current;
     setIsLoading(true);
     setError(null);
     try {
@@ -86,47 +95,58 @@ export const ManagerMeetingsTab: React.FC<ManagerMeetingsTabProps> = ({
         throw new Error('Failed to load meeting records');
       }
       const data = await safeJson(res);
+      if (generation !== readGeneration.current) return;
       setMeetings(Array.isArray(data) ? data : []);
+      if (usesSupabasePersistence && primaryHostel?.id) {
+        const people = await fetch(`/api/meetings/participants?hostelId=${encodeURIComponent(primaryHostel.id)}`);
+        if (!people.ok) throw new Error('Could not load the residence participants.');
+        const list = await safeJson(people);
+        if (generation !== readGeneration.current) return;
+        setParticipants(Array.isArray(list) ? list : []);
+      }
     } catch (err: any) {
       console.error('Error fetching meetings:', err);
-      setError(err.message || 'Could not fetch meeting logs');
+      if (generation === readGeneration.current) setError(err.message || 'Could not fetch meeting logs');
     } finally {
-      setIsLoading(false);
+      if (generation === readGeneration.current) setIsLoading(false);
     }
   };
 
   useEffect(() => {
+    accountGeneration.current++;
+    setMeetings([]);setParticipants([]);setBookParticipantId('');setSelectedMeeting(null);setShowBookModal(false);
+    setSuccessMessage(null);setIsSubmitting(false);setResponseNotes('');setMeetingVenueLink('');
     fetchMeetings();
-  }, [currentUser]);
+    return () => {readGeneration.current++;accountGeneration.current++;};
+  }, [currentUser?.id, primaryHostel?.id]);
 
   const handleCreateMeeting = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!bookTopic.trim() || !bookRequesterName.trim() || !bookDate) {
+    if (!bookTopic.trim() || (savedParticipant ? !selectedParticipant : !bookRequesterName.trim()) || !bookDate || !primaryHostel?.id) {
       setError('Please fill in all required meeting details.');
       return;
     }
 
     setIsSubmitting(true);
     setError(null);
+    const generation = accountGeneration.current;
 
     try {
       const token = currentUser?.token || '';
+      const contactFields = savedParticipant ? {requesterContextId:bookParticipantId} : {
+        requesterName:bookRequesterName.trim(),requesterEmail:bookRequesterEmail.trim(),requesterPhone:bookRequesterPhone.trim(),roomOrUnit:bookRoomOrUnit.trim()
+      };
       const payload = {
-        requesterName: bookRequesterName.trim(),
+        ...contactFields,
         requesterType: bookRequesterType,
-        requesterEmail: bookRequesterEmail.trim() || `${bookRequesterName.toLowerCase().replace(/\s+/g, '')}@student.pinevela.com`,
-        requesterPhone: bookRequesterPhone.trim() || '+233 24 000 0000',
-        roomOrUnit: bookRoomOrUnit.trim() || 'N/A',
         topic: bookTopic.trim(),
         category: bookCategory,
         date: bookDate,
         timeSlot: bookTimeSlot,
         mode: bookMode,
         notes: bookNotes.trim(),
-        hostelId: primaryHostel?.id || 'hostel-1',
-        hostelName: primaryHostel?.name || 'Primary Managed Residence',
-        managerId: currentUser?.id || 'manager_101',
-        managerName: currentUser?.name || 'Hostel Administrator'
+        hostelId: primaryHostel.id,
+        ...(!usesSupabasePersistence ? {hostelName:primaryHostel.name,managerId:currentUser.id,managerName:currentUser.name} : {})
       };
 
       const res = await fetch('/api/meetings', {
@@ -139,10 +159,12 @@ export const ManagerMeetingsTab: React.FC<ManagerMeetingsTabProps> = ({
       });
 
       if (!res.ok) {
-        throw new Error('Failed to schedule meeting request');
+        const failure = await safeJson(res);
+        throw new Error(failure?.error || 'Failed to schedule meeting request');
       }
 
       const created = await safeJson(res);
+      if (generation !== accountGeneration.current) return;
       setMeetings(prev => [created, ...prev]);
       setShowBookModal(false);
       setSuccessMessage(`Meeting request for "${created.requesterName}" successfully logged.`);
@@ -153,15 +175,19 @@ export const ManagerMeetingsTab: React.FC<ManagerMeetingsTabProps> = ({
       setBookTopic('');
       setBookNotes('');
       setBookRoomOrUnit('');
+      setBookParticipantId('');
+      setBookRequesterEmail('');
+      setBookRequesterPhone('');
     } catch (err: any) {
       console.error('Error creating meeting:', err);
-      setError(err.message || 'Failed to submit meeting booking');
+      if (generation === accountGeneration.current) setError(err.message || 'Failed to submit meeting booking');
     } finally {
-      setIsSubmitting(false);
+      if (generation === accountGeneration.current) setIsSubmitting(false);
     }
   };
 
   const handleUpdateStatus = async (meetingId: string, newStatus: MeetingLog['status']) => {
+    const generation = accountGeneration.current;
     try {
       const token = currentUser?.token || '';
       const res = await fetch(`/api/meetings/${meetingId}`, {
@@ -178,10 +204,12 @@ export const ManagerMeetingsTab: React.FC<ManagerMeetingsTabProps> = ({
       });
 
       if (!res.ok) {
-        throw new Error(`Failed to update meeting status to ${newStatus}`);
+        const failure = await safeJson(res);
+        throw new Error(failure?.error || `Failed to update meeting status to ${newStatus}`);
       }
 
       const updated = await safeJson(res);
+      if (generation !== accountGeneration.current) return;
       setMeetings(prev => prev.map(m => m.id === meetingId ? updated : m));
       setSelectedMeeting(null);
       setResponseNotes('');
@@ -190,12 +218,13 @@ export const ManagerMeetingsTab: React.FC<ManagerMeetingsTabProps> = ({
       setTimeout(() => setSuccessMessage(null), 4000);
     } catch (err: any) {
       console.error('Update status error:', err);
-      setError(err.message || 'Could not update meeting status');
+      if (generation === accountGeneration.current) setError(err.message || 'Could not update meeting status');
     }
   };
 
   const handleDeleteMeeting = async (meetingId: string) => {
     if (!confirm('Are you sure you want to remove this meeting log?')) return;
+    const generation = accountGeneration.current;
     try {
       const token = currentUser?.token || '';
       const res = await fetch(`/api/meetings/${meetingId}`, {
@@ -205,13 +234,14 @@ export const ManagerMeetingsTab: React.FC<ManagerMeetingsTabProps> = ({
         }
       });
       if (!res.ok) throw new Error('Failed to delete meeting');
+      if (generation !== accountGeneration.current) return;
       setMeetings(prev => prev.filter(m => m.id !== meetingId));
       if (selectedMeeting?.id === meetingId) setSelectedMeeting(null);
-      setSuccessMessage('Meeting record deleted successfully.');
+      setSuccessMessage(usesSupabasePersistence ? 'Meeting removed from the log. Its history is retained.' : 'Meeting record deleted successfully.');
       setTimeout(() => setSuccessMessage(null), 4000);
     } catch (err: any) {
       console.error('Delete meeting error:', err);
-      setError(err.message || 'Could not delete meeting');
+      if (generation === accountGeneration.current) setError(err.message || 'Could not delete meeting');
     }
   };
 
@@ -312,7 +342,7 @@ export const ManagerMeetingsTab: React.FC<ManagerMeetingsTabProps> = ({
       <div className="bg-white border border-slate-200 p-4 rounded-2xl shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
         <div className="relative w-full md:w-96">
           <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-          <input
+          <input aria-label="Search by topic, student/staff name, room..."
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -340,7 +370,7 @@ export const ManagerMeetingsTab: React.FC<ManagerMeetingsTabProps> = ({
             </button>
           ))}
 
-          <select
+          <select aria-label="Filter meetings by requester"
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value as any)}
             className="px-3 py-1.5 bg-slate-100 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none cursor-pointer"
@@ -514,7 +544,7 @@ export const ManagerMeetingsTab: React.FC<ManagerMeetingsTabProps> = ({
 
       {/* MODAL: Book / Log New Meeting */}
       {showBookModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
+        <DashboardOverlay aria-label="Schedule & Log Meeting Request" onClose={() => setShowBookModal(false)} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
           <div className="bg-white rounded-3xl max-w-xl w-full p-6 md:p-8 shadow-2xl border border-slate-100 space-y-6 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-slate-100 pb-4">
               <div className="flex items-center gap-3">
@@ -523,10 +553,10 @@ export const ManagerMeetingsTab: React.FC<ManagerMeetingsTabProps> = ({
                 </div>
                 <div>
                   <h3 className="text-base font-bold text-slate-900">Schedule & Log Meeting Request</h3>
-                  <p className="text-xs text-slate-500">Record a meeting for a resident student or duty staff</p>
+                  <p className="text-xs text-slate-500">Record an appointment for a resident, staff member or external contact. Times use Ghana time.</p>
                 </div>
               </div>
-              <button
+              <button aria-label="Close dialog"
                 onClick={() => setShowBookModal(false)}
                 className="p-2 text-slate-400 hover:text-slate-600 rounded-xl"
               >
@@ -537,22 +567,27 @@ export const ManagerMeetingsTab: React.FC<ManagerMeetingsTabProps> = ({
             <form onSubmit={handleCreateMeeting} className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Requester Full Name *</label>
-                  <input
+                  <label className="block text-xs font-bold text-slate-700 mb-1">{savedParticipant ? 'Residence Participant *' : 'Requester Full Name *'}</label>
+                  {savedParticipant ? (
+                    <select aria-label="Residence Participant" required value={bookParticipantId} onChange={e => setBookParticipantId(e.target.value)} className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800">
+                      <option value="">Choose an active participant</option>
+                      {participants.filter(p => p.kind === (bookRequesterType === 'student' ? 'resident' : 'staff')).map(p => <option key={p.contextId} value={p.contextId}>{p.name} ({p.email})</option>)}
+                    </select>
+                  ) : <input aria-label="Requester Full Name"
                     type="text"
                     required
                     value={bookRequesterName}
                     onChange={(e) => setBookRequesterName(e.target.value)}
                     placeholder="e.g. Kwame Mensah / Resident Name"
                     className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:border-blue-600 focus:bg-white"
-                  />
+                  />}
                 </div>
 
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">Requester Role *</label>
-                  <select
+                  <select aria-label="Requester Role"
                     value={bookRequesterType}
-                    onChange={(e) => setBookRequesterType(e.target.value as any)}
+                    onChange={(e) => {setBookRequesterType(e.target.value as any);setBookParticipantId('');}}
                     className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800"
                   >
                     <option value="student">Resident Student</option>
@@ -565,20 +600,22 @@ export const ManagerMeetingsTab: React.FC<ManagerMeetingsTabProps> = ({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">Contact Email</label>
-                  <input
+                  <input aria-label="Contact Email"
                     type="email"
-                    value={bookRequesterEmail}
+                    value={savedParticipant ? selectedParticipant?.email || '' : bookRequesterEmail}
+                    readOnly={savedParticipant}
                     onChange={(e) => setBookRequesterEmail(e.target.value)}
-                    placeholder="student@pinevela.com"
+                    placeholder="Contact email"
                     className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:border-blue-600 focus:bg-white"
                   />
                 </div>
 
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">Room / Unit / Department</label>
-                  <input
+                  <input aria-label="Room / Unit / Department"
                     type="text"
-                    value={bookRoomOrUnit}
+                    value={savedParticipant ? selectedParticipant?.roomLabel || '' : bookRoomOrUnit}
+                    readOnly={savedParticipant}
                     onChange={(e) => setBookRoomOrUnit(e.target.value)}
                     placeholder="e.g. Room A204 / Front Desk"
                     className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:border-blue-600 focus:bg-white"
@@ -587,8 +624,13 @@ export const ManagerMeetingsTab: React.FC<ManagerMeetingsTabProps> = ({
               </div>
 
               <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Contact Phone</label>
+                <input aria-label="Contact Phone" type="tel" value={savedParticipant ? selectedParticipant?.phone || '' : bookRequesterPhone} readOnly={savedParticipant} onChange={e => setBookRequesterPhone(e.target.value)} className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800" />
+              </div>
+
+              <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">Meeting Topic / Subject *</label>
-                <input
+                <input aria-label="Meeting Topic / Subject"
                   type="text"
                   required
                   value={bookTopic}
@@ -601,7 +643,7 @@ export const ManagerMeetingsTab: React.FC<ManagerMeetingsTabProps> = ({
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">Category</label>
-                  <select
+                  <select aria-label="Category"
                     value={bookCategory}
                     onChange={(e) => setBookCategory(e.target.value as any)}
                     className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800"
@@ -617,7 +659,7 @@ export const ManagerMeetingsTab: React.FC<ManagerMeetingsTabProps> = ({
 
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">Meeting Date *</label>
-                  <input
+                  <input aria-label="Meeting Date"
                     type="date"
                     required
                     value={bookDate}
@@ -628,7 +670,7 @@ export const ManagerMeetingsTab: React.FC<ManagerMeetingsTabProps> = ({
 
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">Time Slot</label>
-                  <select
+                  <select aria-label="Time Slot"
                     value={bookTimeSlot}
                     onChange={(e) => setBookTimeSlot(e.target.value)}
                     className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800"
@@ -645,7 +687,7 @@ export const ManagerMeetingsTab: React.FC<ManagerMeetingsTabProps> = ({
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">Format / Meeting Mode</label>
-                <select
+                <select aria-label="Format / Meeting Mode"
                   value={bookMode}
                   onChange={(e) => setBookMode(e.target.value as any)}
                   className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800"
@@ -658,7 +700,7 @@ export const ManagerMeetingsTab: React.FC<ManagerMeetingsTabProps> = ({
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">Additional Notes / Agenda</label>
-                <textarea
+                <textarea aria-label="Additional Notes / Agenda"
                   rows={2}
                   value={bookNotes}
                   onChange={(e) => setBookNotes(e.target.value)}
@@ -686,19 +728,19 @@ export const ManagerMeetingsTab: React.FC<ManagerMeetingsTabProps> = ({
               </div>
             </form>
           </div>
-        </div>
+        </DashboardOverlay>
       )}
 
       {/* MODAL: Manage / Respond to Meeting */}
       {selectedMeeting && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
+        <DashboardOverlay aria-label="Manage Meeting Request" onClose={() => setSelectedMeeting(null)} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
           <div className="bg-white rounded-3xl max-w-lg w-full p-6 md:p-8 shadow-2xl border border-slate-100 space-y-6">
             <div className="flex items-center justify-between border-b border-slate-100 pb-4">
               <div>
                 <h3 className="text-base font-bold text-slate-900">Manage Meeting Request</h3>
                 <p className="text-xs text-slate-500">Update status, provide meeting link, or leave official instructions</p>
               </div>
-              <button
+              <button aria-label="Close dialog"
                 onClick={() => setSelectedMeeting(null)}
                 className="p-2 text-slate-400 hover:text-slate-600 rounded-xl"
               >
@@ -722,7 +764,7 @@ export const ManagerMeetingsTab: React.FC<ManagerMeetingsTabProps> = ({
             <div className="space-y-3">
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">Venue or Meeting Video Link</label>
-                <input
+                <input aria-label="Venue or Meeting Video Link"
                   type="text"
                   value={meetingVenueLink}
                   onChange={(e) => setMeetingVenueLink(e.target.value)}
@@ -733,7 +775,7 @@ export const ManagerMeetingsTab: React.FC<ManagerMeetingsTabProps> = ({
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">Manager Response Notes / Instructions</label>
-                <textarea
+                <textarea aria-label="Manager Response Notes / Instructions"
                   rows={3}
                   value={responseNotes}
                   onChange={(e) => setResponseNotes(e.target.value)}
@@ -779,7 +821,7 @@ export const ManagerMeetingsTab: React.FC<ManagerMeetingsTabProps> = ({
               </div>
             </div>
           </div>
-        </div>
+        </DashboardOverlay>
       )}
     </div>
   );

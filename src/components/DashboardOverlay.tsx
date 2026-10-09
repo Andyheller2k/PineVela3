@@ -49,7 +49,9 @@ export default function DashboardOverlay({ children, layer = 100, style, onClose
         // React portals bubble through their owner; only the top dialog handles keys.
         event.stopPropagation();
         onKeyDown?.(event);
-        if (event.defaultPrevented || event.key !== 'Tab') return;
+        if (event.defaultPrevented) return;
+        if (event.key === 'Escape') { event.preventDefault(); onClose?.(); return; }
+        if (event.key !== 'Tab') return;
         const element = dialog.current!;
         const controls = [...element.querySelectorAll<HTMLElement>(focusableSelector)].filter(control =>
           control.tabIndex >= 0 && !control.matches(':disabled') && !control.closest('[inert]') &&

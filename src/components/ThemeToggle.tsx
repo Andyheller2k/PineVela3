@@ -20,6 +20,7 @@ export default function ThemeToggle({ className = '' }: { className?: string }) 
 export function ThemeDock() {
   const { pathname } = useLocation();
   const [bar, setBar] = useState<HTMLElement | null>(null);
+  const [managed, setManaged] = useState(false);
   useLayoutEffect(() => {
     let measured: HTMLElement | null = null;
     const resize = new ResizeObserver(() => measure());
@@ -28,7 +29,9 @@ export function ThemeDock() {
       if (visible !== measured) { resize.disconnect(); measured = visible; if (visible) resize.observe(visible); }
       document.documentElement.dataset.mobileNavigation = String(!!visible);
       document.documentElement.style.setProperty('--pv-mobile-nav-height', `${visible?.getBoundingClientRect().height || 0}px`);
-      setBar(visible?.querySelector<HTMLElement>('[data-mobile-nav-items]') || visible);
+      const usesSharedNavigation = !!visible?.hasAttribute('data-managed-mobile-navigation');
+      setManaged(usesSharedNavigation);
+      setBar(usesSharedNavigation ? null : visible?.querySelector<HTMLElement>('[data-mobile-nav-items]') || visible);
     };
     const observer = new MutationObserver(measure);
     observer.observe(document.getElementById('root')!, { childList: true, subtree: true });
@@ -36,6 +39,7 @@ export function ThemeDock() {
     measure();
     return () => { observer.disconnect(); resize.disconnect(); window.removeEventListener('resize', measure); delete document.documentElement.dataset.mobileNavigation; };
   }, [pathname]);
+  if (managed) return <div className="theme-dock managed-mobile-theme"><ThemeToggle /></div>;
   if (bar) return createPortal(<div className="mobile-nav-theme flex shrink-0 flex-col items-center justify-center gap-1 px-2"><ThemeToggle /><span className="text-[9px] font-bold text-slate-500">Theme</span></div>, bar);
   if (pathname === '/' || pathname === '/pinemarket') return null;
   return <div className="theme-dock"><ThemeToggle /></div>;

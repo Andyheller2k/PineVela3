@@ -36,12 +36,13 @@ export interface WipePlan {
   signupState?: any; roomAttemptState?: any;
 }
 /** Resolve cascading relationships on the server. IDs never come from the proposal body. */
-export function buildWipePlan(store: any, scopes: WipeScope[], target?: { accountIds: string[]; marketIds?: string[]; officerIds?: string[] }): WipePlan {
+export function buildWipePlan(store: any, scopes: WipeScope[], target?: { accountIds: string[]; marketIds?: string[]; officerIds?: string[]; hostelIds?: string[] }): WipePlan {
   const total = scopes.includes('total'), users = store.users || [];
   const ids = new Set<string>(), homes = new Set<string>(), markets = new Set<string>(), products = new Set<string>(), orders = new Set<string>(), staff = new Set<string>();
   for (const id of target?.accountIds || []) ids.add(id);
   for (const id of target?.officerIds || []) ids.add(id);
   for (const id of target?.marketIds || []) markets.add(id);
+  for (const id of target?.hostelIds || []) homes.add(id);
   const roomAccounts = new Map<string, any[]>();
   for (const u of users) if (['student', 'resident'].includes(accountRole(u))) {
     const key = String(accountData(u).roomKey || u.roomKey || '').toUpperCase();
@@ -84,7 +85,8 @@ export function buildWipePlan(store: any, scopes: WipeScope[], target?: { accoun
   const kept: Record<string, any[]> = {}, removed: Record<string, any[]> = {}, counts: Record<string, number> = {};
   for (const key of JSON_COLLECTIONS) {
     const list = store[key] || [];
-    const shouldRemove = (v: any) => key === 'marketMedia' && users.some((user: any) => accountRole(user) === 'admin' && accountId(user) === v.accountId) ? false : key === 'users' ? accountRole(v) !== 'admin' && ids.has(accountId(v)) : total ||
+    const adminActivity = (v: any) => key === 'notifications' && v.targetRole === 'admin' && ['admin_governance', 'admin_settings'].includes(v.module) && users.some((user: any) => accountRole(user) === 'admin' && accountId(user) === v.targetAccountId);
+    const shouldRemove = (v: any) => adminActivity(v) || key === 'marketMedia' && users.some((user: any) => accountRole(user) === 'admin' && accountId(user) === v.accountId) ? false : key === 'users' ? accountRole(v) !== 'admin' && ids.has(accountId(v)) : total ||
       key === 'hostels' && homes.has(String(v?.id)) ||
       ['digitalMarketStores', 'digitalMarketApplications'].includes(key) && markets.has(String(v?.id)) ||
       key === 'digitalMarketProducts' && products.has(String(v?.id)) ||

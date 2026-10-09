@@ -1,5 +1,130 @@
 # PineVela Security
 
+## Administrator settings credentials (Supabase replacement)
+
+Active administrator membership and a live account-bound Auth session are required.
+Settings keys use salted scrypt with the administrator context and `settings` purpose;
+approval keys cannot authorize settings. Enrollment is one-time and requires an actual
+Auth session created within five minutes. Session refresh does not extend that window.
+SQL independently enforces ownership, fresh enrollment and immutable key metadata.
+Lost-key recovery remains unavailable until its separate approval workflow is migrated.
+
+Five failed settings-key attempts lock that administrator's settings access for 15 minutes.
+Denials commit before the HTTP error, so counters survive restart. Approval attempts
+remain separate. Receiving-account changes recheck the session, active membership,
+key version and lockout after the real Paystack read. Browser/backend roles cannot read
+key hashes or write private configuration. Destination changes retain other settings
+and preserve existing immutable payment quotes; audit and administrator notifications
+commit together. Paystack accounts must be active, verified, GHS and in the configured
+environment. Only the last four bank-account digits are returned.
+
+See [Supabase sessions](https://supabase.com/docs/guides/auth/sessions) and
+[Paystack subaccounts](https://paystack.com/docs/api/subaccount/). An actual fresh Google
+administrator enrollment and selecting a verified non-default provider subaccount
+remain acceptance checks; no Auth sessions or provider accounts are fabricated.
+
+## Shared pricing approvals (Supabase replacement)
+
+Pricing proposals require three distinct active administrators' settings-key approvals.
+The proposer contributes one approval; administrator #1 must make the final keyed push,
+even if other administrators supplied all three votes. The server derives every actor
+from the live account binding and rechecks the credential version and lockout inside
+the write transaction. Failed guesses commit separately before returning a denial.
+
+Immutable proposals expire after 24 hours. Membership, key and price revisions invalidate
+outstanding proposals, including changes subsequently reversed. Final execution serializes
+with other pricing/settings writes and locks the actual memberships and keys. Competing
+final pushes cannot both apply the same baseline. Audit, exact active-administrator notices
+and the saved execution commit with the prices; a vote alone never updates live pricing.
+
+Browser and ordinary backend roles cannot write private settings or invoke the privileged
+pricing function. The application pricing writer requires the approved-proposal protocol.
+Trusted PostgreSQL-owner configuration changes remain possible and invalidate outstanding
+reviews; those operator privileges are not granted to client requests. Settings-key enrollment
+and receiving-account writes acquire the same settings advisory lock before credential locks.
+Future key and membership lifecycle ports must preserve compatible transaction lock ordering.
+See PostgreSQL [transaction locks](https://www.postgresql.org/docs/18/explicit-locking.html).
+Positive provider-authenticated pricing HTTP/UI journeys remain an acceptance gate.
+
+## Verified payment boundary (Supabase replacement)
+
+Checkout prices, payer email and ownership come from the verified session and saved
+relationships. Actor-scoped request UUIDs preserve immutable quotes; store/residence
+locks serialize fulfillment. Raw-body webhooks authenticate with Paystack HMAC-SHA512
+before parsing and reverify the transaction server-side. Redirects and initialization
+responses never grant access. Verified status, reference, amount, GHS currency, live
+environment, payer and configured receiving account must match the saved quote.
+
+Access, payment audit and exact account notifications commit together. If eligibility
+changes after a genuine payment, retain its evidence for review without granting access.
+Browser roles cannot read private provider evidence or mutate payments/access intervals.
+Payment requests and provider concurrency are bounded; ambiguous checkout initialization
+retains its reference for verification rather than submitting another charge.
+
+Public callback origins must be explicitly configured HTTPS URLs; local loopback is
+allowed for local checks. No wallet PIN, card authorization or server key is exposed.
+Actual paid checkout/webhook delivery, refunds and reviewed payment resolution remain
+release gates. See [Paystack verification](https://paystack.com/docs/payments/verify-payments/)
+and [webhook authentication](https://paystack.com/docs/payments/webhooks/).
+
+## Supabase replacement boundary
+
+The independent migration backend verifies tokens with Supabase Auth, checks the live
+Auth session and trusted account binding, and assumes a non-BYPASSRLS database role for
+request transactions. Client ownership/role fields never populate this binding. Revoked
+sessions fail RLS before JWT expiry. Primary-owner links do not permit signing into a
+sub-account: its student/work identity must be verified and authenticated. Shared student
+identities also require the selected portal's access PIN; RLS checks the accepted key
+version and changing a PIN invalidates earlier proof. Failed PIN attempts are serialized
+and persist before returning a denial; five failures lock that portal for 15 minutes.
+Private enrollment, keys and founder provisioning remain server controlled. The running
+JSON backend has not yet been replaced; see [migration status](migrations/supabase-implementation-status.md).
+
+The replacement manager operation guard preserves separate secret-key authorization.
+Only salted scrypt hashes are stored; five wrong attempts lock the key for 15 minutes.
+Accepted key versions are checked again inside the mutation transaction, so reset invalidates
+earlier proof. First issuance is shown once; recovery requires an administrator-reviewed
+petition and the pending settings-key decision port. Narrow first-property bootstrap paths
+remain exempt only when the manager has no active residence assignment.
+
+Replacement photos use private Supabase Storage and an immutable portal/Auth-owned registry.
+Uploads authenticate before the 28MB parser, decode actual raster pixels, strip metadata,
+resize to 2048px and cap output at 6MB. Daily account/global quotas serialize in PostgreSQL;
+IP admission and worker limits are bounded per process. Browser writes are denied. Attachment
+triggers enforce account, purpose and inspection relationships. Image responses check current
+publication/plan or private account access and verify digest/size, with no-store and a sandbox
+CSP. Failed transfers are reconciled through Storage APIs; ready assets are never removed by
+the stale-upload cleanup command. Ordinary replacement JSON bodies are 1MB. Distributed IP
+limits, avatar media, object deletion and byte backups remain launch gates. Maintenance
+report photographs use the original resident allocation or reporting manager residence;
+repair photographs use the exact accepted staff assignment and ticket. Related readers
+are the reporter, assigned managers and exact active assigned staff. Parent portals and
+unassigned staff receive no access. All transitions recheck saved relationships under
+transaction locks; completion needs acceptance, and resident reports need original active
+allocation sign-off before closure. Generic edits cannot change ownership or workflow.
+
+Replacement order writes derive the primary buyer or exact seller from the live verified
+session and saved store relationship. Client prices, emails, owner IDs, PINs and commissions
+cannot assert order ownership or terms. Stock and request UUID checks serialize in PostgreSQL;
+browser roles cannot write raw orders, access private history or read PIN ciphertext. Only
+the exact buyer receives an active decrypted challenge. Five failed handover attempts commit
+before returning denial and lock the challenge; buyer renewal has a one-minute cooldown,
+rechecks current stock/plan eligibility, rotates the challenge and invalidates the previous PIN.
+Wrong/missing encryption keys fail closed. Completion history never stores the submitted PIN.
+The private server key is encrypted in checkpoint backups and is never a browser environment
+variable. Revocation and duplicate/completion races have been tested with committed transactions
+in an isolated real backup restore; authenticated provider/API/browser journeys remain gates.
+
+Replacement chat reads and writes require the exact primary buyer or approved seller portal.
+Client-supplied emails, names, sender identity and listing titles are rejected; store/buyer/item
+selectors are checked against saved relationships. A seller cannot initiate unsolicited chat,
+and admins and linked parent accounts have no private conversation access. Messages are
+append-only in PostgreSQL, with sender-scoped idempotency and transactional recipient notices.
+Reviews require the exact buyer's completed, handover-verified receipt. SQL rejects receipt
+reassignment; raw browser writes are denied. Public review projections expose purchase display
+names and feedback without private email, account or order IDs. Late inbox/review responses
+are discarded after account changes; unchanged message retries retain their request UUID.
+
 ## Officer and Staff Lifecycle
 
 Officer authorization requires the current active registry entry and its matching session,
@@ -311,6 +436,10 @@ and return HTTP 429 with `Retry-After` when exhausted. Private key responses mus
 
 ## Maintenance Actions
 
+New report creation resolves the resident's active room and property on the server.
+Form-supplied resident identity cannot impersonate another account; a supplied hostel ID
+must match that relationship. Managers may report only within their assigned residences.
+
 Every maintenance workflow endpoint must authorize the actor against the current issue
 and enforce its state transition before mutation, audit updates or notifications. Property
 ownership, active staff assignment and the exact reporting resident's active room relationship
@@ -409,3 +538,111 @@ key issue/recovery and server popup delivery receipts are explicit lifecycle exc
 Keys cannot be retrieved after issuance. Reset removes the old digest; only that manager
 receives the replacement. Business changes, notices and cooldown timestamps persist across
 restart. Popup acknowledgement does not delete a notice or mark it read.
+
+Approved merchants may upload account-owned branding while their store is in
+`pending_setup`. Pending applicants and other roles cannot use this exception.
+Public storefront visibility, listing publication and order acceptance continue
+to require active paid market access; draft photos never grant those capabilities.
+
+Residence setup in the replacement backend resolves ownership from the live manager
+assignment and previously approved physical dossier. Property identity/map changes,
+unowned media, active registration bans and conflicting retries are rejected. Full
+submission writes hierarchy, case, notices and audit atomically. Public shell/photo
+visibility and room activation cannot be enabled merely by manager-account approval.
+
+Residence review approval rechecks the saved active manager assignment, accepted physical
+report, actual room/bed layout and ready photo ownership. Case decisions are idempotent
+and immutable after final approval/rejection; property rejection does not revoke its manager
+identity. The private administrator residence roster is unavailable to other portal roles.
+
+## Supabase Transport Failures
+
+The replacement caps server SQL statements at 15 seconds and client reads at 30
+seconds. Client transport errors have a sanitized listener, including while checked out.
+Interrupted or timed-out transactions discard their connection and return a temporary
+error. They never automatically replay writes; a lost commit response can be ambiguous,
+so callers must refresh saved state before retrying. Certificate verification stays enabled.
+
+
+## Supabase staff invitations
+
+Staff invitation creation, renewal, cancellation and roster edits require the verified
+manager portal, current operation key and a live assignment to the target residence.
+Creation and activation also require approved residence setup. The staff signup trigger
+rejects wrong/expired nonces, revoked managers and mismatched mailboxes. Public staff
+invitation endpoints require the private invitation token in the request body, obey
+origin checks and the authentication IP budget, and grant no access before confirmed
+provider identity proof. Raw tokens appear only when issued to the authorized manager;
+passwords and token secrets are never saved in enrollment fields or notifications.
+
+Ending or suspending employment removes its saved portal bindings. Retained Auth
+identities, maintenance tickets and evidence do not grant departed staff access. Contact
+updates cannot change login email, ownership, role, residence or arbitrary avatar paths.
+Mailbox signup/delivery and positive authenticated provider/browser journeys still need
+end-to-end verification before cutover; transactional SQL checks do not prove them.
+
+## Staff retention and private review boundary
+
+Only the exact active staff employment may submit retention proposals or choose whether
+to stay/resign after rejection. The recipient is the saved creating manager with an
+active residence grant. Decisions require that manager’s verified portal and operation
+key; administrators cannot substitute for the employment manager. Original proposal
+terms, relationship IDs and completed decisions are immutable. Ending employment revokes
+portal bindings, cancels unresolved proposals and preserves review/repair evidence.
+
+Resident staff review authors and allocation IDs come from their verified activated portal.
+Staff must be active in that same residence. Body ownership fields, foreign assignments
+and non-integer/out-of-range ratings are rejected. Private views and raw-table RLS deny
+other portals/residences and departed staff or residents; assigned managers retain history.
+No public staff reviews or automatic maintenance-generated staff reviews are supported.
+
+## Meeting appointment boundary
+
+The server derives creators and recipients from verified portal relationships. Internal
+contacts come from the actual active allocation/employment in the manager's residence;
+body name/email/phone aliases cannot override them. External contacts have no account
+access. Participant views do not expose a same-residence contact directory to staff.
+Raw appointment RLS denies uninvited staff, other portals and foreign residences.
+
+Only the saved manager with an active grant and current operation key may decide or
+remove appointments. Participants can only cancel their own appointment. Approval and
+rescheduling recheck the original active allocation/employment. Final decisions,
+original identity/contact snapshots and history survive removal and cannot be reopened.
+SQL triggers protect relationships and lifecycle independently of request validation.
+
+## Seller registration review
+
+Only the primary owner of the exact verified seller enrollment may submit or resubmit
+its application. The saved enrollment and subject must still be eligible; profile,
+owner and context relationships are rechecked under locks. Application bodies cannot
+provide login credentials or override identity/ownership. Raw application writes remain
+unavailable to browser roles. A scoped status view exposes only the saved owner/seller
+or active administrator, and revoked administrators lose review access.
+
+Housing managers cannot approve sellers. An active administrator decides a pending
+application; rejection needs actual feedback. Rejection can be revised through a new
+submission version with the earlier full record retained in private audit. Final review
+cannot be silently rewritten. Registration bans are checked at submission and approval
+in both SQL and the API. Approval creates an unpaid, unpublished pending store.
+## Store profile authorization
+
+The Supabase setup/edit APIs resolve the saved approved store from the authenticated
+seller context and recheck the live session. Submitted store/owner IDs, student email,
+payment status and plan assertions are rejected. Metadata, owned-media checks, private
+audit and seller-only lifecycle notifications commit together. Browser database roles
+cannot directly modify store profiles or payment/subscription records.
+
+## Inventory authorization
+
+The private inventory endpoint and listing mutations require the live approved seller
+context and saved store relationship. Store/user/email/plan/rating assertions from a
+request never establish ownership or benefits. Public catalog reads cannot become
+private reads through query parameters. Listing IDs select a resource only after
+the store is resolved; another active paid seller still cannot edit it.
+
+Manual stock and gallery/price-option limits are checked server-side. SQL independently
+protects immutable store/type/attachment links, required owned cover photographs,
+paid publication, reserved stock and retired evidence. Retiring preserves purchase
+history rather than cascading through orders. Browser roles cannot perform raw writes.
+Seller reads, form drafts and upload results discard responses after account changes;
+cropped covers upload through private Storage before becoming listing references.

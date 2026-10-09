@@ -1,5 +1,6 @@
 import type { MarketProductItem } from '../components/MarketItemCard';
 import { compareMarketPriority } from '../../marketPlans';
+import {isMarketService as savedServiceKind} from '../../marketListingAvailability';
 
 export const matchesMarketCategory = (productCategory: string = '', selectedCat: string = '') => {
   if (!selectedCat || selectedCat === 'All') return true;
@@ -47,7 +48,7 @@ export const matchesMarketCategory = (productCategory: string = '', selectedCat:
   return false;
 };
 export function isMarketService(product: MarketProductItem) {
-  return Boolean(product.isService || product.serviceCategory || product.category?.toLowerCase().includes('service'));
+  return savedServiceKind(product);
 }
 export function filterMarketCatalog(products: MarketProductItem[], query: string, category: string, min: number, max: number, sort: string) {
   const search = query.toLowerCase().trim();

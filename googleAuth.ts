@@ -1,3 +1,4 @@
+import { validatePublicContinuation } from './publicContinuation.js';
 import crypto from 'node:crypto';
 import type { Express, Request } from 'express';
 import { accountData, accountRole, normalizeEmail } from './accountSecurity.js';
@@ -5,6 +6,7 @@ import { signupProviderConfig } from './supabaseSignup.js';
 
 type Mode = 'login' | 'signup';
 export type GoogleIdentity = { id: string; email: string; name: string; verifiedAt: string };
+export type GoogleSession = { access_token: string; refresh_token: string; expires_in?: number };
 class GoogleError extends Error { constructor(public reason: string) { super(reason); } }
 
 /** Supabase can return an exchange/configuration error after Google consent succeeds. */
@@ -69,8 +71,8 @@ async function providerRequest(config: ReturnType<typeof signupProviderConfig>, 
   return response.json();
 }
 
-export function installGoogleAuth(app: Express, complete: (identity: GoogleIdentity, mode: Mode) => Promise<string>, issueCookie: (res: any, token: string) => void) {
-  const flows = new Map<string, { verifier: string; mode: Mode; origin: string; config: ReturnType<typeof signupProviderConfig>; expires: number }>();
+export function installGoogleAuth(app: Express, complete: (identity: GoogleIdentity, mode: Mode, session: GoogleSession) => Promise<string>, issueCookie: (res: any, token: string, session?: GoogleSession) => void) {
+  const flows = new Map<string, { verifier: string; mode: Mode; origin: string; config: ReturnType<typeof signupProviderConfig>; expires: number; returnTo?: string }>();
   const cookieName = 'pv_google_flow';
   const cookieOptions = { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax' as const, path: '/api/auth/google/callback' };
   app.post('/api/auth/google/start', async (req, res) => {
@@ -83,7 +85,7 @@ export function installGoogleAuth(app: Express, complete: (identity: GoogleIdent
       for (const [state, flow] of flows) if (flow.expires <= Date.now()) flows.delete(state);
       if (flows.size >= 1000) return res.status(429).json({ error: 'Please wait before trying Google sign-in again.' });
       const state = crypto.randomBytes(32).toString('base64url'), verifier = crypto.randomBytes(48).toString('base64url');
-      flows.set(state, { verifier, mode: req.body.mode, origin, config, expires: Date.now() + 5 * 60_000 });
+      flows.set(state, { verifier, mode: req.body.mode, origin, config, returnTo: validatePublicContinuation(req.body.returnTo), expires: Date.now() + 5 * 60_000 });
       const url = new URL(`${config.url}/auth/v1/authorize`);
       url.searchParams.set('provider', 'google');
       url.searchParams.set('scopes', 'openid email profile');
@@ -114,12 +116,12 @@ export function installGoogleAuth(app: Express, complete: (identity: GoogleIdent
       const session = await providerRequest(flow.config, '/token?grant_type=pkce', { auth_code: code, code_verifier: flow.verifier });
       if (typeof session.access_token !== 'string' || !session.access_token) throw new GoogleError('failed');
       const identity = googleIdentity(await providerRequest(flow.config, '/user', undefined, session.access_token));
-      const token = await complete(identity, flow.mode);
-      issueCookie(res, token);
-      return res.redirect(303, `${flow.origin}/#/user/dashboard`);
+      const token = await complete(identity, flow.mode, session);
+      issueCookie(res, token, session);
+      return res.redirect(303, `${flow.origin}/#${flow.returnTo || '/user/dashboard'}`);
     } catch (error) {
       const reason = error instanceof GoogleError ? error.reason : 'failed';
-      return res.redirect(303, `${flow.origin}/#/login?${flow.mode === 'signup' ? 'mode=register&' : ''}google_error=${reason}`);
+      return res.redirect(303, `${flow.origin}/#/login?${flow.mode === 'signup' ? 'mode=register&' : ''}google_error=${reason}${flow.returnTo ? `&next=${encodeURIComponent(flow.returnTo)}` : ''}`);
     }
   });
 }

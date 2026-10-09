@@ -1,3 +1,4 @@
+import { normalizeEmail } from './accountSecurity.js';
 export class MarketMediaError extends Error {
   constructor(message: string, public status = 400) { super(message); }
 }
@@ -31,4 +32,12 @@ export function marketMediaFields(body: any, actor: any, store: any) {
         new Set(result.priceCategories.map((c: any) => c.name.toLowerCase())).size !== result.priceCategories.length) throw new MarketMediaError('Price option IDs and names must be unique.');
   }
   return result;
+}
+
+/** Approved merchants may upload their own listing photographs before paid activation. */
+export function canUploadMarketPhotos(actor: any, seller: any, store: any): boolean {
+  if (actor?.role !== 'merchant' || !seller || seller.isBanned || !normalizeEmail(actor.email) || normalizeEmail(seller.studentEmail) !== normalizeEmail(actor.email) || actor.merchantStoreId && actor.merchantStoreId !== seller.id) return false;
+  if (seller.status === 'active') return true;
+  return seller.status === 'pending_setup' && (store.digitalMarketApplications || []).some((application: any) =>
+    application.status === 'approved' && normalizeEmail(application.studentEmail) === normalizeEmail(actor.email) && (!application.storeId || application.storeId === seller.id));
 }

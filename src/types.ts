@@ -731,6 +731,14 @@ export interface DigitalMarketStore {
   description: string;
   logoUrl?: string;
   bannerUrl?: string;
+  profilePicture?: string;
+  coverPicture?: string;
+  deliveryMode?: string;
+  deliveryForm?: string;
+  location?: string;
+  phoneCountry?: string;
+  storeRating?: number;
+  ratingCount?: number;
   phone: string;
   isBanned: boolean;
   banReason?: string;
@@ -773,7 +781,7 @@ export interface DigitalMarketProduct {
   price: number; // GHS (Cedis)
   currency: string;
   category: string;
-  stockQuantity: number;
+  stockQuantity: number | null;
   imageUrl: string;
   isAvailable: boolean;
   isService?: boolean;

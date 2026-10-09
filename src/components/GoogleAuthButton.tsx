@@ -2,12 +2,12 @@ import { useState } from 'react';
 import { LoaderCircle } from 'lucide-react';
 import { sessionFetch } from '../lib/session';
 
-export default function GoogleAuthButton({ mode, onError }: { mode: 'login' | 'signup'; onError: (message: string) => void }) {
+export default function GoogleAuthButton({ mode, onError, returnTo }: { returnTo?: string; mode: 'login' | 'signup'; onError: (message: string) => void }) {
   const [busy, setBusy] = useState(false);
   const start = async () => {
     setBusy(true);
     try {
-      const response = await sessionFetch('/api/auth/google/start', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mode }) });
+      const response = await sessionFetch('/api/auth/google/start', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mode, returnTo }) });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Google sign-in is temporarily unavailable.');
       window.location.assign(data.url);

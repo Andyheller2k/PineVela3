@@ -9,6 +9,7 @@ import { spawn, type ChildProcess } from 'node:child_process';
 import { once } from 'node:events';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { sessionFixtureJson } from './sessionFixtures.cjs';
+import { managerKeyHash } from '../residenceRequests.ts';
 
 const project = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 test('personal appearance enforces identity, input validation and restart persistence', { timeout: 90000 }, async t => {
@@ -16,10 +17,13 @@ test('personal appearance enforces identity, input validation and restart persis
   const dataDir = path.join(temp, 'data'); await fs.mkdir(dataDir);
   const actor = (role: string) => ({ id: crypto.randomUUID(), role, name: 'Isolated appearance test', email: 'appearance@example.test', token: crypto.randomUUID(), isVerified: true, verificationStatus: 'approved' });
   const first = actor('user'), second = actor('user'), manager = { ...actor('manager'), isVerified: false, verificationStatus: 'pending' };
+  const approvedManager = actor('manager');
+  const hostel = { id: crypto.randomUUID(), managerId: approvedManager.id, managerEmail: approvedManager.email, name: 'Isolated appearance residence', isApproved: true, approvalStatus: 'Approved', blocks: [] };
+  const managerSecret = crypto.randomBytes(32).toString('base64url');
   const officer = { ...actor('verification_team'), fullName: 'Isolated officer', status: 'active' };
   const market = { id: crypto.randomUUID(), studentEmail: first.email, userId: first.id, status: 'active', token: crypto.randomUUID(), storeName: 'Isolated appearance store' };
   await fs.writeFile(path.join(dataDir, 'pinevela_store.json'), sessionFixtureJson({ credentialExposureVersion: 1, accountSecurityVersion: 1,
-    users: [first, second, manager], hostels: [], verificationTeams: [officer], digitalMarketStores: [market],
+    users: [first, second, manager, approvedManager], hostels: [hostel], managerOperationKeys: { [approvedManager.id]: { hash: managerKeyHash(approvedManager.id, managerSecret), issuedAt: Date.now() } }, verificationTeams: [officer], digitalMarketStores: [market],
     digitalMarketApplications: [{ id: crypto.randomUUID(), studentEmail: first.email, status: 'approved' }],
   }));
   const listener = net.createServer(); listener.listen(0, '127.0.0.1'); await once(listener, 'listening');
@@ -47,6 +51,11 @@ test('personal appearance enforces identity, input validation and restart persis
   assert.equal((await request(second.token)).theme, null, 'Same email does not share preference');
   await request(second.token, { theme: 'light' });
   await request(manager.token, { theme: 'light' });
+  await request(approvedManager.token, { theme: 'dark' });
+  await request(approvedManager.token, { theme: 'light', userId: first.id }, 400);
+  const businessChange = await fetch(base + `/api/hostels/${hostel.id}/generate-room-keys`, { method: 'POST', headers: { Authorization: `Bearer ${approvedManager.token}`, 'Content-Type': 'application/json' }, body: '{}' });
+  assert.equal(businessChange.status, 403);
+  assert.equal((await businessChange.json()).managerKeyRequired, true, 'Business changes still require the manager key');
   await request(officer.token, { theme: 'dark' });
   await request(market.token, { theme: 'light' });
   assert.equal((await request(first.token)).theme, 'dark', 'Seller does not change primary user');
@@ -54,5 +63,5 @@ test('personal appearance enforces identity, input validation and restart persis
   assert.equal(disk.users.find((entry: any) => entry.id === first.id).appearanceTheme, 'dark');
   assert.equal(disk.digitalMarketStores[0].appearanceTheme, 'light');
   await stop(); await start();
-  for (const [token, theme] of [[first.token, 'dark'], [second.token, 'light'], [manager.token, 'light'], [officer.token, 'dark'], [market.token, 'light']]) assert.equal((await request(token)).theme, theme);
+  for (const [token, theme] of [[first.token, 'dark'], [second.token, 'light'], [manager.token, 'light'], [approvedManager.token, 'dark'], [officer.token, 'dark'], [market.token, 'light']]) assert.equal((await request(token)).theme, theme);
 });

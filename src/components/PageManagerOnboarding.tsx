@@ -1,3 +1,7 @@
+import { activateOnKeyboard } from '../lib/keyboardActivation';
+import DashboardOverlay from './DashboardOverlay';
+import { usesSupabasePersistence } from '../lib/persistence';
+import VerifiedAccountEnrollment from './VerifiedAccountEnrollment';
 import { routePopupFeedback } from '../lib/feedback';
 import RouteSkeleton from './RouteSkeleton';
 import PasswordStrengthGauge from './PasswordStrengthGauge';
@@ -71,6 +75,7 @@ export default function PageManagerOnboarding() {
   // Existing Registered Manager Account State
   const [existingManagerRecord, setExistingManagerRecord] = useState<any>(null);
   const [checkingExisting, setCheckingExisting] = useState<boolean>(true);
+  const [verifiedSubmission,setVerifiedSubmission] = useState<Record<string,unknown> | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState<boolean>(false);
   const [delPassword, setDelPassword] = useState<string>('');
   const [isDeleting, setIsDeleting] = useState<boolean>(false);
@@ -346,6 +351,11 @@ export default function PageManagerOnboarding() {
         parentUserEmail: user?.email || null
       };
 
+      if (usesSupabasePersistence) {
+        const { password: _password,parentUserId: _parentId,parentUserEmail: _parentEmail,...property } = payload;
+        setVerifiedSubmission(property);
+        return;
+      }
       const res = await fetch('/api/manager-verifications/submit', {
         method: 'POST',
         headers: {
@@ -397,7 +407,7 @@ export default function PageManagerOnboarding() {
 
       {/* Floating Toast Notification */}
       {toastMessage && (
-        <div className={`fixed top-5 right-5 font-bold text-xs sm:text-sm px-5 py-3.5 rounded-2xl shadow-2xl z-50 flex items-center gap-2.5 border animate-bounce ${
+        <div role="status" className={`ux-dashboard-toast fixed top-5 right-5 font-bold text-xs sm:text-sm px-5 py-3.5 rounded-2xl shadow-2xl z-50 flex items-center gap-2.5 border animate-bounce ${
           toastType === 'success' ? 'bg-blue-900 text-white border-blue-800' :
           toastType === 'error' ? 'bg-rose-600 text-white border-rose-500' :
           'bg-slate-900 text-white border-slate-700'
@@ -410,7 +420,7 @@ export default function PageManagerOnboarding() {
       {/* Static Header Bar at top */}
       <header className="bg-white/90 backdrop-blur-md border-b border-slate-200/90 sticky top-0 z-50 px-6 py-3.5 shadow-sm">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
-          <div 
+          <div role="button" tabIndex={0} aria-label="Return to home" onKeyDown={activateOnKeyboard}
             onClick={handleCloseOrReturn}
             className="flex items-center gap-3 cursor-pointer"
           >
@@ -705,7 +715,7 @@ export default function PageManagerOnboarding() {
                       </label>
                       <div className="relative">
                         <User className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                        <input 
+                        <input aria-label="Manager Full Legal Name"
                           type="text"
                           required
                           value={managerName}
@@ -721,7 +731,7 @@ export default function PageManagerOnboarding() {
                       </label>
                       <div className="relative">
                         <Building className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                        <input 
+                        <input aria-label="Official Residence / Hostel Name"
                           type="text"
                           required
                           value={hostelName}
@@ -773,7 +783,7 @@ export default function PageManagerOnboarding() {
                         </div>
                         <div className="relative">
                           <MapPin className="w-4 h-4 text-blue-600 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                          <input
+                          <input aria-label="Kumasi Campus Zone"
                             type="text"
                             value="KNUST, Kumasi"
                             readOnly
@@ -787,7 +797,7 @@ export default function PageManagerOnboarding() {
                         <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">
                           Street Address or Plot Number <span className="text-rose-500">*</span>
                         </label>
-                        <input 
+                        <input aria-label="Street Address or Plot Number"
                           type="text"
                           required
                           value={location}
@@ -856,7 +866,7 @@ export default function PageManagerOnboarding() {
                       </label>
                       <div className="relative">
                         <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                        <input 
+                        <input aria-label="Official Manager Email"
                           type="email"
                           required
                           value={email}
@@ -873,7 +883,7 @@ export default function PageManagerOnboarding() {
                       </label>
                       <div className="relative">
                         <Phone className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                        <input 
+                        <input aria-label="Phone / WhatsApp Contact"
                           type="tel"
                           required
                           value={phone}
@@ -892,7 +902,7 @@ export default function PageManagerOnboarding() {
                       </label>
                       <div className="relative">
                         <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                        <input 
+                        <input aria-label="Account Password"
                           type={showPassword ? "text" : "password"}
                           required
                           value={password}
@@ -900,7 +910,7 @@ export default function PageManagerOnboarding() {
                           placeholder="••••••••"
                           className="w-full pl-10 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 focus:bg-white focus:border-blue-800 focus:ring-1 focus:ring-blue-800 focus:outline-none transition-colors"
                         />
-                        <button
+                        <button aria-label={showPassword ? 'Hide password' : 'Show password'} aria-pressed={showPassword}
                           type="button"
                           onClick={() => setShowPassword(!showPassword)}
                           className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
@@ -917,7 +927,7 @@ export default function PageManagerOnboarding() {
                       </label>
                       <div className="relative">
                         <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                        <input 
+                        <input aria-label="Confirm Password"
                           type={showPassword ? "text" : "password"}
                           required
                           value={confirmPassword}
@@ -1023,9 +1033,9 @@ export default function PageManagerOnboarding() {
 
       {/* Account Deletion Modal */}
       {showDeleteModal && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fadeIn">
+        <DashboardOverlay aria-label="Authenticate Manager Account Deletion" onClose={() => setShowDeleteModal(false)} className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fadeIn">
           <div data-popup-card className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-slate-100 space-y-6 relative">
-            <button
+            <button aria-label="Close dialog"
               type="button"
               onClick={() => setShowDeleteModal(false)}
               className="absolute top-4 right-4 w-8 h-8 rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 flex items-center justify-center cursor-pointer"
@@ -1053,7 +1063,7 @@ export default function PageManagerOnboarding() {
             <form onSubmit={handleDeleteManagerAccount} className="space-y-4">
               <div>
                 <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">Official Work Email</label>
-                <input
+                <input aria-label="Official Work Email"
                   type="email"
                   value={existingManagerRecord?.email || user?.email || ''}
                   disabled
@@ -1063,7 +1073,7 @@ export default function PageManagerOnboarding() {
 
               <div>
                 <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">Account Password</label>
-                <input
+                <input aria-label="Account Password"
                   type="password"
                   value={delPassword}
                   onChange={(e) => setDelPassword(e.target.value)}
@@ -1098,8 +1108,25 @@ export default function PageManagerOnboarding() {
               </div>
             </form>
           </div>
-        </div>
+        </DashboardOverlay>
       )}
+      {verifiedSubmission && <DashboardOverlay aria-label="Verify manager work email" onClose={() => setVerifiedSubmission(null)} className="fixed inset-0 bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-4">
+        <section className="onboarding-fields w-full max-w-lg max-h-[90dvh] overflow-y-auto rounded-3xl border border-blue-200 bg-white p-5 sm:p-7 space-y-4">
+          <div className="flex items-start justify-between gap-3">
+            <h2 className="text-lg font-bold text-slate-900">Verify your manager work email</h2>
+            <button type="button" onClick={() => setVerifiedSubmission(null)} className="min-h-11 rounded-xl border border-blue-200 px-3 text-sm">Close</button>
+          </div>
+          <VerifiedAccountEnrollment kind="manager" initialName={managerName} initialPhone={phone} initialEmail={email} initialPassword={password}
+            onVerified={async enrollmentId => {
+              const response = await fetch('/api/manager-verifications/submit',{ method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({ ...verifiedSubmission,enrollmentId }) });
+              const result = await safeJson(response);
+              if (!response.ok) throw new Error(result.error || 'The manager registration could not be submitted.');
+              setSubmittedData(result.verification);setExistingManagerRecord(result.verification);setIsSuccess(true);
+              setPassword('');setConfirmPassword('');setVerifiedSubmission(null);
+              await refreshNotifications();
+            }} />
+        </section>
+      </DashboardOverlay>}
     </div>
   );
 }

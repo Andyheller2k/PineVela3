@@ -1,5 +1,45 @@
 # PineVela Product Rules
 
+## Verified account identities
+
+The Supabase replacement uses separate verified child identities linked to a primary owner.
+Resident and seller accounts with the same student email may share one Supabase login
+password, with different portal access PINs. Managers use a separate verified work email.
+Primary ownership grants registration-status access, never child sign-in or PIN bypass.
+One room key permits one active resident per room, even when the room has multiple beds.
+These rules are implemented progressively; see [migration status](migrations/supabase-implementation-status.md).
+
+## Shared pricing changes in the Supabase replacement
+
+Registration fees, two-month fees, monthly plan prices and commission changes require
+three distinct administrator settings-key approvals and administrator #1's final keyed
+execution. The proposer counts as one approval. The founder may execute after three
+other administrators approve without casting another vote. At least three active
+administrators must have settings keys, including the founder; the roster supports
+three to five administrators. Approval keys cannot authorize pricing actions.
+
+Proposals retain the reviewed prices and roster, expire after 24 hours and allow one
+immutable vote per administrator. At most ten proposals may remain open. Changes to
+membership, enrolled keys or live prices invalidate old proposals; display-name and
+unrelated contact/receiving-account changes preserve them. Live prices change only at
+final execution. Money is stored in exact cents; existing checkout quotes keep their
+saved amounts. Pricing submission, votes and status changes notify active administrators
+under Admin Settings and contribute to the existing unread count.
+
+## Store billing in the Supabase replacement
+
+Activation charges only the one-time registration fee. Verified registration grants
+two calendar months of initial Pine Default access; the two-month fee becomes due
+after that period. Star and Pro are separate monthly upgrades. The ongoing two-month
+fee and the monthly plan have independent access periods, both required for public
+listings and new orders. Existing buyer–seller conversations remain available after expiry.
+
+Quotes use saved administrator pricing and the verified portal identity. A retry keeps
+its request UUID, original amount and reference. Zero-valued fees are genuine waivers,
+recorded separately from provider payments; repeated free renewals cannot accumulate
+future access. Test-mode payments do not activate stores in the replacement database.
+The legacy JSON backend retains its earlier billing behavior until cutover.
+
 ## Marketplace Reviews
 
 A seller's linked primary account cannot buy or review its own store's items or services.
@@ -12,13 +52,24 @@ verified purchase reviews and offer no orderless review form. Stores/items witho
 reviews appear unrated. Historical unverified reviews are preserved privately, without
 influencing public reputation.
 
+The Supabase replacement requires verified handover before review submission. A buyer can
+edit their own feedback without changing its purchase receipt or creation time; identical
+retries do not send duplicate seller notifications. Reviews remain available for completed
+purchases after their listing is unpublished.
+
+Buyer–seller conversations start with a buyer inquiry or actual order, with the server
+resolving the store and participants. Sellers reply through their separate portal. Existing
+conversations remain available after subscription expiry while the store and seller remain
+active. Administrators and the seller's linked primary account do not receive chat access.
+
 ## Marketplace Handover
 
 A primary buyer creates an order using their authenticated identity. The order reserves
 stock for 24 hours. Its seller confirms the proposed location before completing handover;
 only the buyer sees the six-digit delivery PIN and shares it after inspecting the delivery.
 PINs expire after 24 hours and lock after five failures. The buyer can obtain a new PIN and
-renew the reservation if capacity is still available. Expiry, rejection and cancellation
+renew the reservation if capacity is still available, with a one-minute renewal cooldown.
+Order retries keep their original request UUID and purchase snapshot. Expiry, rejection and cancellation
 release capacity; completed/rejected/cancelled orders cannot reopen. Seller PIN verification
 is not a payment processor operation; it records the existing physical handover/payment flow.
 
@@ -231,6 +282,19 @@ purchase workflow. Direct order APIs still require an authenticated primary buye
 
 ## Primary account registration access
 
+Manager submission, inspection dispatch and approval/rejection notices, seller application
+submission and decisions, and resident activation confirmations belong to the linked primary
+user's Notifications inbox before entry into a secondary account. Account-removal and
+manager re-registration restriction decisions also target the saved primary owner. Delivery uses stored owner
+IDs regardless of Google or password sign-in. Historical notices resolve through the saved
+registration relationship; ambiguous or orphaned records do not gain email-based access.
+Operational manager, staff, officer and seller notices retain their own account recipients.
+Live server events refresh the inbox, with polling and focus refresh as fallbacks.
+
+Profile pictures come from the authenticated account's saved profile. Shared browser avatar
+keys and email-only caches are not used for restoration. A picture save is acknowledged only
+after the authenticated profile endpoint succeeds.
+
 Primary navigation exposes Purchases & Tracking for buyer orders. Merchant registration
 and status cards open from the Home marketplace button; manager registration and status
 cards open from the Home residences button. Existing onboarding, approval and dedicated
@@ -292,5 +356,58 @@ key. Reset immediately invalidates the previous key and prompts issuance in that
 account. No key is saved in browser storage. Administrator messages remain in Notifications
 and have a server-acknowledged first-time popup for their exact recipient account.
 
+Resident mobile navigation has a camera shortcut on every dashboard tab. After capture,
+the compact complaint form shows the photograph, a required title and optional details.
+It submits through the regular maintenance workflow, including the one-active-complaint
+limit. Desktop reporting retains its full form. Report ownership and residence are derived
+from the authenticated active room; manager reports require an authorized residence.
+
+Deleting a selected hostel requires a reviewed proposal and private-key consent from at
+least two distinct active administrators. Administrator #1 (Andyheller2k) must then make
+the final keyed decision; they cannot execute with a single approval. Choosing hostel-only
+retains the manager account for sign-in. Choosing the manager account too includes its
+other owned residences and dependent operational accounts, shown in the preview. The
+primary owner receives a notification and a dismissible popup. An optional timed ban
+blocks either hostel registration by the retained manager or manager-account registration
+by the primary owner. Ban ownership comes from saved relationships, including Google
+accounts. An encrypted recovery archive precedes execution; stale or rejected proposals
+cannot execute. The old single-admin DELETE endpoint returns 410.
+
+The admin Message Gateway sends announcements to actual selected accounts or role
+groups: managers, residents, primary users, marketers/sellers and staff. Overlapping
+selections are deduplicated. Delivery requires a current recipient preview and creates
+an exact role-and-account notification plus a once-dismissible popup per recipient.
+Announcements never become buyer/seller conversations or cross into a primary inbox
+just because their title resembles a registration message.
+
+Verification: `npm run test:admin-account-actions` and, after building,
+`npm run test:admin-account-actions:browser`, using disposable persistence and actual APIs.
+
 Verification: `npm run test:residence-requests` and, after building,
 `node tests/residenceRequests.browser.cjs`. Tests use isolated databases and actual APIs.
+
+Merchant storefronts show published items and services, business contact details,
+branding and verified store ratings. Buyers can inspect, order and contact the seller
+but cannot edit the store. Store inquiries use the existing buyer-seller inbox and
+server-owned participant identities. Only the authenticated merchant can save their
+store profile, delivery method, contact number and owned uploaded branding.
+
+Default stores use the standard PineVela logo and can choose from four PineVela covers.
+Only active Star and Pro subscriptions may attach owned custom logo/cover uploads;
+the server derives eligibility from saved subscription status and expiry. Expiry or
+downgrade hides custom branding in public and merchant projections while preserving
+the original photos for a later upgrade. Listing photo uploads remain available.
+
+Admin Approvals and Admin Settings mutations deliver independent, account-scoped
+notifications to all active administrators, including proposals, votes, execution,
+roster/key enrollment, expiration and public fee/control changes. Tab counts reflect
+unread notifications. Reading one administrator's notification never reads another's.
+Admin activity history is retained during operational wipes, preventing the approval
+notifications themselves from changing the reviewed wipe fingerprint. Private keys,
+invitation tokens and private pleas are excluded from notification payloads.
+
+Manual physical-item stock entries and adjustments must be positive whole
+numbers. Completing a purchase may reduce stock to zero and mark it sold out.
+Seller meetup declines require confirmation and retain a Declined state on the
+related order notice. Public social contacts are edited in Admin Settings with
+the acting administrator's own settings key.

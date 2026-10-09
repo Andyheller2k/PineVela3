@@ -29,18 +29,9 @@ export const companySections = [
 
 export type CompanySection = typeof companySections[number];
 
-// Set these to verified profile URLs and an international WhatsApp number (digits only).
-// Empty values intentionally render contact cards without a link rather than inventing accounts.
-export const companyContactDetails = {
-  linkedinUrl: '',
-  whatsappNumber: '',
-  facebookUrl: '',
-  tiktokUrl: '',
-};
-
-export const companyContacts = [
-  { name: 'LinkedIn', label: 'PineVela', href: companyContactDetails.linkedinUrl, icon: 'linkedin.jpg' },
-  { name: 'WhatsApp', label: companyContactDetails.whatsappNumber ? `+${companyContactDetails.whatsappNumber}` : 'PineVela', href: companyContactDetails.whatsappNumber ? `https://wa.me/${companyContactDetails.whatsappNumber}` : '', icon: 'whatsapp.jpg' },
-  { name: 'Facebook', label: 'PineVela', href: companyContactDetails.facebookUrl, icon: 'facebook.jpg' },
-  { name: 'TikTok', label: 'PineVela', href: companyContactDetails.tiktokUrl, icon: 'tiktok.jpg' },
-];
+export const companyContactChannels = [
+  { name: 'LinkedIn', field: 'linkedinUrl', icon: 'linkedin.jpg' },
+  { name: 'WhatsApp', field: 'whatsappNumber', icon: 'whatsapp.jpg' },
+  { name: 'Facebook', field: 'facebookUrl', icon: 'facebook.jpg' },
+  { name: 'TikTok', field: 'tiktokUrl', icon: 'tiktok.jpg' },
+] as const;

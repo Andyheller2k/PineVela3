@@ -41,6 +41,7 @@ if (!id || !/^[a-f0-9-]{36}$/.test(id) || process.argv[3] !== '--confirm-restore
       governance.revision++; governance.invitations = [];
       for (const proposal of governance.proposals) if (['pending', 'approved'].includes(proposal.status)) proposal.status = 'invalidated';
       for (const proposal of governance.pricingProposals || []) if (['pending', 'approved'].includes(proposal.status)) proposal.status = 'invalidated';
+      for (const proposal of governance.residenceProposals || []) if (['pending', 'approved'].includes(proposal.status)) proposal.status = 'invalidated';
       for (const change of governance.changes) if (change.status === 'pending') change.status = 'invalidated';
     }
     recovery.blockExecution();

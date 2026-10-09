@@ -14,7 +14,7 @@ async function port() { const server = net.createServer(); server.listen(0, '127
 async function main() {
   const temp = await fs.mkdtemp(path.join(os.tmpdir(), 'pinevela-listing-benefits-browser-'));
   const dataDir = path.join(temp, 'data'); await fs.mkdir(dataDir);
-  const imageUrl = '/assets/' + (await fs.readdir(path.join(project, 'dist/assets'))).find(name => /^pinevela-day-.*\.webp$/.test(name));
+  const imageUrl = '/assets/' + (await fs.readdir(path.join(project, 'dist/assets'))).find(name => /^login-market-.*\.png$/.test(name));
   const buyer = { id: crypto.randomUUID(), role: 'user', name: 'Isolated buyer', email: 'buyer@example.test', token: crypto.randomUUID(), isVerified: true, appearanceTheme: 'dark' };
   const sellers = ['default','star','pro'].map(plan=>({ id:crypto.randomUUID(), role:'merchant', email:`${plan}@example.test`, name:`Isolated ${plan} seller`, token:crypto.randomUUID(), isVerified:true, isDigitalMarketOnly:true, isApprovedMerchant:true, merchantSetupCompleted:true, appearanceTheme:'dark' }));
   const future = new Date(Date.now()+86400000).toISOString();
@@ -63,8 +63,8 @@ async function main() {
     const checkCards=async()=>{
       assert.equal(await evaluate("document.querySelectorAll('[data-listing-id]').length"),6);
       assert(await evaluate("[...document.querySelectorAll('[data-market-plan=star]')].every(e=>e.querySelector('.pinevela-listing-star') && getComputedStyle(e.querySelector('.pinevela-listing-star svg')).filter.includes('drop-shadow'))"),'Star item/service badge glows');
-      assert(await evaluate("[...document.querySelectorAll('[data-market-plan=pro]')].every(e=>getComputedStyle(e).borderColor==='rgb(216, 166, 64)' && getComputedStyle(e).boxShadow.includes('inset') && e.querySelector('.pinevela-listing-star'))"),'Pro item/service frames and inherited badge');
-      assert(await evaluate("[...document.querySelectorAll('[data-market-plan=default]')].every(e=>!e.querySelector('.pinevela-listing-star') && getComputedStyle(e).borderColor!=='rgb(216, 166, 64)')"),'Default cards have no paid decoration');
+      assert(await evaluate("[...document.querySelectorAll('[data-market-plan=pro]')].every(e=>getComputedStyle(e).borderColor==='rgb(237, 189, 73)' && getComputedStyle(e).boxShadow.includes('inset') && getComputedStyle(e,'::after').animationName==='pine-gold-shine' && e.querySelector('.pinevela-listing-star'))"),'Pro item/service frames, glow and animated shine');
+      assert(await evaluate("[...document.querySelectorAll('[data-market-plan=default]')].every(e=>!e.querySelector('.pinevela-listing-star') && getComputedStyle(e).borderColor!=='rgb(237, 189, 73)')"),'Default cards have no paid decoration');
       assert(await evaluate('document.documentElement.scrollWidth<=innerWidth+1'),'No page overflow');
     };
     for(const width of [1440,375]){
@@ -85,12 +85,12 @@ async function main() {
         await evaluate("[...document.querySelectorAll('[data-page-tabs]')].find(b=>b.getClientRects().length && /^(Inventory|Stock)/.test(b.textContent.trim())).click()");await until("document.querySelector('[data-listing-id]')",'Seller inventory');
         const plan=['default','star','pro'][index];assert.equal(await evaluate("document.querySelector('[data-listing-id]').dataset.marketPlan"),plan);
         assert.equal(await evaluate("!!document.querySelector('[data-listing-id] .pinevela-listing-star')"),plan!=='default');
-        if(plan==='pro')assert.equal(await evaluate("getComputedStyle(document.querySelector('[data-listing-id]')).borderColor"),'rgb(216, 166, 64)');
+        if(plan==='pro')assert.equal(await evaluate("getComputedStyle(document.querySelector('[data-listing-id]')).borderColor"),'rgb(237, 189, 73)');
         await evaluate("[...document.querySelectorAll('[data-page-tabs]')].find(b=>b.getClientRects().length && b.textContent.trim().startsWith('Service')).click()");await until("document.querySelector('[data-listing-id]')?.textContent.includes('Shared service')",'Seller service');
         assert.equal(await evaluate("document.querySelector('[data-listing-id]').dataset.marketPlan"),plan);assert.equal(await evaluate("!!document.querySelector('[data-listing-id] .pinevela-listing-star')"),plan!=='default');
-        if(plan==='pro')assert.equal(await evaluate("getComputedStyle(document.querySelector('[data-listing-id]')).borderColor"),'rgb(216, 166, 64)');
+        if(plan==='pro')assert.equal(await evaluate("getComputedStyle(document.querySelector('[data-listing-id]')).borderColor"),'rgb(237, 189, 73)');
         await screenshot('benefits-seller-'+plan+'-'+width);
-        await toggle();assert.equal(await evaluate("!!document.querySelector('[data-listing-id] .pinevela-listing-star')"),plan!=='default');if(plan==='pro')assert.equal(await evaluate("getComputedStyle(document.querySelector('[data-listing-id]')).borderColor"),'rgb(216, 166, 64)');await screenshot('benefits-seller-light-'+plan+'-'+width);
+        await toggle();assert.equal(await evaluate("!!document.querySelector('[data-listing-id] .pinevela-listing-star')"),plan!=='default');if(plan==='pro')assert.equal(await evaluate("getComputedStyle(document.querySelector('[data-listing-id]')).borderColor"),'rgb(237, 189, 73)');await screenshot('benefits-seller-light-'+plan+'-'+width);
       }
     }
     assert.deepEqual(errors,[],'No browser runtime/console errors');console.log('Passed seller item and service benefits for Default/Star/Pro at desktop and mobile widths.');

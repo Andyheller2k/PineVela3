@@ -43,7 +43,7 @@ test('Real server: zero-priced admin policy activates all plans, enforces publis
   const freshIds = [];
   for (const [index, plan] of MARKET_PLANS.entries()) {
     const actor = actors[index], storeId = stores[index].id;
-    const details = { storeName: 'Isolated ' + plan, username: plan, description: 'Test-only fixture', category: 'Electronics', location: 'Isolated campus', deliveryMode: 'Meetup', registrationFeePaid: true };
+    const details = { storeName: 'Isolated ' + plan, username: plan, description: 'Test-only fixture', category: 'Electronics', location: 'Isolated campus', deliveryMode: 'Campus Meetup', phone: '+233241234567', phoneCountry: 'GH', registrationFeePaid: true };
     const draft = await request('POST', '/api/digital-market/store-setup', actor, details); assert.equal(draft.store.registrationFeePaid, false);
     const raster = await sharp({ create: { width: 24, height: 24, channels: 3, background: '#1259dc' } }).png().toBuffer();
     const image = await request('POST', '/api/storage/upload-market-image', actor, { fileData: 'data:image/png;base64,' + raster.toString('base64'), fileType: 'image/png', fileName: 'isolated-image.png' });

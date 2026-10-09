@@ -1,3 +1,4 @@
+import { activateOnKeyboard } from '../lib/keyboardActivation';
 import React, { useState, useRef } from 'react';
 import { 
   UploadCloud, 
@@ -239,7 +240,7 @@ export default function HostelImageUploader({
             </div>
           </div>
         ) : (
-          <div
+          <div role="button" tabIndex={0} aria-label="Choose residence exterior photograph" onKeyDown={activateOnKeyboard}
             onDragOver={(e) => { e.preventDefault(); setIsDraggingExterior(true); }}
             onDragLeave={() => setIsDraggingExterior(false)}
             onDrop={(e) => {
@@ -331,7 +332,7 @@ export default function HostelImageUploader({
           ))}
 
           {galleryUrls.length < 3 && (
-            <div
+            <div role="button" tabIndex={0} aria-label="Add residence gallery photograph" onKeyDown={activateOnKeyboard}
               onDragOver={(e) => { e.preventDefault(); setIsDraggingGallery(true); }}
               onDragLeave={() => setIsDraggingGallery(false)}
               onDrop={(e) => {

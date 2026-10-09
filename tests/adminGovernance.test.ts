@@ -103,7 +103,9 @@ test('Total wipe clears all operational collections, preserves admin credentials
   const hashes = f.store.users.filter((u: any) => u.role === 'admin').map((u: any) => u.password);
   const id = f.propose(keys, ['total']); for (let i = 1; i < 5; i++) f.vote(id, keys, i); f.execute(id, keys[0]);
   assert.deepEqual(f.store.users.map((u: any) => u.password), hashes);
-  for (const [key, value] of Object.entries(f.store)) if (Array.isArray(value) && key !== 'users') assert.equal(value.length, 0, key);
+  for (const [key, value] of Object.entries(f.store)) if (Array.isArray(value) && !['users', 'notifications'].includes(key)) assert.equal(value.length, 0, key);
+  assert(f.store.notifications.every((n: any) => n.targetRole === 'admin' && ['admin_governance','admin_settings'].includes(n.module)), 'Only protected admin activity history survives');
+  assert(f.store.notifications.some((n: any) => n.activityId === `proposals:${id}` && n.status === 'executed'), 'Execution status is delivered to admins');
   assert.equal(f.store.signupVerification.pending.length, 0); assert.deepEqual(f.store.managerAccountSettings, {}); assert.deepEqual(f.store.retiredFeatureRecords.retiredChats, []);
   assert.deepEqual(f.store.platformSettings, { commission: 0, registrationFee: 0, announcement: '', maintenanceMode: false });
   assert.equal(fs.readdirSync(f.uploads).filter(p => p.endsWith('.jpg')).length, 0);
@@ -195,4 +197,22 @@ test('After 24 hours no response permits main-only explicit removal; roster chan
   assert.equal(s.confirmRemoval(a[0].id,id,{privateKey:keys[0],confirmation:'REMOVE ADMINISTRATOR'}).status,'executed');
   denied(()=>s.confirmRemoval(a[0].id,id,{privateKey:keys[0],confirmation:'REMOVE ADMINISTRATOR'}),409);
   assert(!f.store.users.some((u:any)=>u.id===a[4].id)); assert.equal(f.store.users.filter((u:any)=>u.role==='admin').length,4);
+});
+
+
+test('Admin approvals emit proposals, votes and expiry once without leaking keys or notifying failed attempts', async t => {
+  const f = fixture(t), keys = await f.enroll(), id = f.propose(keys);
+  const notices = () => f.store.notifications.filter((n: any) => n.activityId === `proposals:${id}`);
+  assert.equal(notices().length,5); assert.equal(new Set(notices().map((n: any) => n.targetAccountId)).size,5);
+  denied(() => f.service.decide(f.admins[1].id,id,{privateKey:'invalid',decision:'approved'}),403);assert.equal(notices().length,5);
+  f.vote(id,keys,1);assert.equal(notices().length,10);assert(notices().some((n: any) => n.message.includes('2 approval')));
+  f.setNow(Date.now()+25*3600_000);f.service.view(f.admins[1].id);assert.equal(notices().filter((n: any) => n.status==='expired').length,5);
+  f.service.view(f.admins[2].id);assert.equal(notices().length,15,'Polling does not duplicate status alerts');
+  assert(keys.every(key => !JSON.stringify(notices()).includes(key)));
+  f.store.platformSettings.paystackSettlement = { code: 'ACCT_private', mode: 'test', updatedAt: new Date().toISOString() };
+  f.service.view(f.admins[0].id);
+  const receiving = f.store.notifications.filter((n: any) => n.activityId === 'settlement-settings');
+  assert.equal(receiving.length,5);assert(receiving.every((n: any) => n.module==='admin_settings'));
+  assert(!JSON.stringify(receiving).includes('ACCT_private'),'Receiving account codes stay private');
+  f.service.view(f.admins[1].id);assert.equal(f.store.notifications.filter((n: any) => n.activityId==='settlement-settings').length,5);
 });

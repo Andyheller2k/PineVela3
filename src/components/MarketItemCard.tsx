@@ -1,3 +1,4 @@
+import {isMarketService,marketListingAvailable} from '../../marketListingAvailability';
 import ListingPlanBadge from './ListingPlanBadge';
 import type { MarketPlan } from '../../marketPlans';
 import React, { memo } from 'react';
@@ -22,7 +23,7 @@ export interface MarketProductItem {
   imageUrl: string;
   additionalImages?: string[];
   storeLogoUrl?: string;
-  stockQuantity?: number;
+  stockQuantity?: number | null;
   status?: string;
   storeRating?: number;
   ratingCount?: number;
@@ -91,11 +92,7 @@ export const MarketItemCard: React.FC<MarketItemCardProps> = memo(
 
     const activation = useCardActivation(() => onInspect(product));
 
-    const isService = Boolean(
-      product.isService ||
-      product.category === 'Services' ||
-      product.category?.toLowerCase().includes('service')
-    );
+    const isService = isMarketService(product);
 
     const displayLocation = product.location || product.meetingLocation;
 
@@ -145,7 +142,8 @@ export const MarketItemCard: React.FC<MarketItemCardProps> = memo(
               onClick={handleFavoriteClick}
               className="absolute bottom-1.5 right-1.5 sm:bottom-2 sm:right-2 w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-white flex items-center justify-center text-rose-500 hover:text-rose-600 border border-slate-100 shadow-sm active:scale-90 transition-transform cursor-pointer z-30"
               title={isFavorite ? "Remove from wishlist" : "Add to wishlist"}
-              aria-label="Wishlist toggle"
+              aria-label={isFavorite ? `Remove ${product.title} from wishlist` : `Add ${product.title} to wishlist`}
+            aria-pressed={isFavorite}
             >
               <Heart
                 className="w-3 h-3 sm:w-3.5 sm:h-3.5"
@@ -170,6 +168,7 @@ export const MarketItemCard: React.FC<MarketItemCardProps> = memo(
             </div>
 
             <h3 className="text-[11px] sm:text-xs font-bold text-slate-900 line-clamp-1">{product.title}</h3>
+            {!marketListingAvailable(product) && <span className="text-[10px] font-bold text-rose-700">{isService ? 'Unavailable' : 'Sold out'}</span>}
 
             <p className="hidden sm:block text-[11px] text-slate-500 line-clamp-1 leading-relaxed">
               {product.description || 'No description provided.'}

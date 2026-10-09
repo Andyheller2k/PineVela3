@@ -40,7 +40,7 @@ test('HTTP checkout routes enforce ownership; raw signed webhooks reverify once;
   await request('/api/hostel-verifications/pay-onboarding-fee', null, { agreedToPay: true }, 401);
   await request('/api/payments/paystack/initialize', primary, { purpose: 'activation' }, 403);
   await request('/api/payments/paystack/initialize', foreign, { purpose: 'activation', storeId: seller.id, studentEmail: merchant.email }, 403);
-  const body = { storeName: 'Isolated store', location: 'Isolated location', username: 'isolated', category: 'Electronics', description: 'Test-only fixture', deliveryMode: 'Meetup', registrationFeePaid: true, paymentStatus: 'paid', transactionRef: 'forged' };
+  const body = { storeName: 'Isolated store', location: 'Isolated location', username: 'isolated', category: 'Electronics', description: 'Test-only fixture', deliveryMode: 'Campus Meetup', phone: '+233241234567', phoneCountry: 'GH', registrationFeePaid: true, paymentStatus: 'paid', transactionRef: 'forged' };
   for (const route of ['/api/digital-market/create-store', '/api/digital-market/store-setup']) { await request(route, merchant, body, 200); assert.equal(seller.registrationFeePaid, false); assert.equal(seller.setupCompleted, false); }
   const quote = await request('/api/payments/paystack/initialize', merchant, { purpose: 'activation', plan: 'pro', amount: 1, currency: 'NGN' }, 200);
   assert.equal(quote.amount, 500); assert.equal(persisted.paymentTransactions.length, 1);
@@ -70,7 +70,7 @@ test('Receiving-account HTTP routes require an active admin and that admin’s s
   const wipe = (await governance.enroll(admins[0].id, 'Isolated-settings-login-0!')).privateKey;
   let providerCalls = 0;
   const account = { subaccount_code: 'ACCT_verified', domain: 'test', currency: 'GHS', is_verified: true, active: true, business_name: 'Isolated receiver', account_number: '1234567890', settlement_bank: 'Isolated bank' };
-  const payments = new PaystackPayments(() => store, save, async route => { providerCalls++; return route.startsWith('/subaccount?') ? [account] : account; });
+  const payments = new PaystackPayments(() => store, save, async route => { providerCalls++; return route.startsWith('/subaccount?') ? [account] : account; }, undefined, () => governance.persistSettingsActivity());
   const app = express(); guardAsyncRoutes(app); app.use(express.json({ limit: '256kb' }));
   const auth = (roles: string[]) => (req: any, res: any, next: any) => { const actor = store.users.find((a: any) => req.headers.authorization === `Bearer isolated-${a.id}`); if (!actor) return res.status(401).json({ error: 'Authentication required' }); if (!roles.includes(actor.role)) return res.status(403).json({ error: 'Forbidden' }); req.user = actor; next(); };
   installPaystackPayments(app, auth, payments, () => store, (id, key) => governance.verifySettingsKey(id, key));
@@ -85,6 +85,10 @@ test('Receiving-account HTTP routes require an active admin and that admin’s s
   await request(admins[0], { code: 'ACCT_verified', settingsKey: keys[0], account_number: 'attacker' }, 400);
   await request(admins[0], { code: 'ACCT_verified', settingsKey: keys[0] }, 200); assert.equal(persisted.platformSettings.paystackSettlement.code, 'ACCT_verified');
   assert.equal(persisted.platformSettings.paystackSettlement.updatedBy, admins[0].id);
+  const notices = persisted.notifications.filter((n: any) => n.activityId === 'settlement-settings');
+  assert.equal(notices.length,2,'Receiving account changes immediately notify both administrators');
+  assert(notices.every((n: any) => n.module==='admin_settings'&&!n.read));
+  assert(!JSON.stringify(notices).includes('ACCT_verified'),'Private payment destination is excluded from alerts');
   store.adminGovernance.members.find((member: any) => member.id === admins[0].id).active = false;
   await request(admins[0], { code: '', settingsKey: keys[0] }, 403); assert.equal(store.platformSettings.paystackSettlement.code, 'ACCT_verified');
 });

@@ -1,3 +1,4 @@
+import DashboardOverlay from './DashboardOverlay';
 import React, { useState, useCallback } from 'react';
 import Cropper, { Point, Area } from 'react-easy-crop';
 import { 
@@ -164,7 +165,7 @@ export default function ItemImageCropModal({
   if (!isOpen || !imageSrc) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 overflow-y-auto animate-fadeIn">
+    <DashboardOverlay aria-label="Crop item photograph" onClose={onClose} className="fixed inset-0 z-[100] bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 overflow-y-auto animate-fadeIn">
       <div className="bg-white rounded-3xl max-w-2xl w-full flex flex-col shadow-2xl border border-slate-100 overflow-hidden my-auto max-h-[95vh]">
         
         {/* Modal Header */}
@@ -182,7 +183,7 @@ export default function ItemImageCropModal({
             </div>
           </div>
 
-          <button
+          <button aria-label="Close dialog"
             type="button"
             onClick={onClose}
             className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-slate-300 flex items-center justify-center cursor-pointer transition-all"
@@ -326,7 +327,7 @@ export default function ItemImageCropModal({
                     >
                       <ZoomOut className="w-3.5 h-3.5" />
                     </button>
-                    <input
+                    <input aria-label="Photograph zoom"
                       type="range"
                       min={0.3}
                       max={4}
@@ -364,7 +365,7 @@ export default function ItemImageCropModal({
                     >
                       <span>+90°</span>
                     </button>
-                    <input
+                    <input aria-label="Photograph rotation"
                       type="range"
                       min={0}
                       max={360}
@@ -464,6 +465,6 @@ export default function ItemImageCropModal({
         </div>
 
       </div>
-    </div>
+    </DashboardOverlay>
   );
 }

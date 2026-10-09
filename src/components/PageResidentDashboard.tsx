@@ -1,5 +1,11 @@
+import { activateOnKeyboard } from '../lib/keyboardActivation';
+import DashboardOverlay from './DashboardOverlay';
+import MobileNavigation from './MobileNavigation';
 import { routePopupFeedback } from '../lib/feedback';
 import RouteSkeleton from './RouteSkeleton';
+import { usesSupabasePersistence } from '../lib/persistence';
+import { uploadMaintenancePhoto } from '../lib/maintenanceMedia';
+import QuickMaintenanceReport from './QuickMaintenanceReport';
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -158,7 +164,7 @@ export default function PageResidentDashboard() {
   };
 
   const currentUser = useMemo(() => ({ ...user, ...studentProfile }), [user, studentProfile]);
-  const activeAvatar = user?.avatar || user?.photo || user?.photoUrl || studentProfile?.avatar || studentProfile?.photo || studentProfile?.photoUrl || studentProfile?.avatarUrl || (user?.email ? localStorage.getItem(`pinevela_avatar_${user.email.toLowerCase().trim()}`) : null) || localStorage.getItem('pinevela_user_avatar') || currentUser?.avatar || 'preset:pine-classic';
+  const activeAvatar = user?.avatar || user?.photo || user?.photoUrl || user?.avatarUrl || user?.profilePicture || 'preset:pine-classic';
 
   // Keep edit fields updated when currentUser loads
   useEffect(() => {
@@ -228,6 +234,12 @@ export default function PageResidentDashboard() {
 
     setSubmittingIssue(true);
     try {
+      const uploadedPhotos:string[] = [];
+      for (const [index,photo] of issuePhotos.entries()) {
+        const saved = await uploadMaintenancePhoto(apiFetch,photo);
+        uploadedPhotos.push(saved);
+        setIssuePhotos(previous => previous.map((value,i) => i === index && value === photo ? saved : value));
+      }
       const newIssue = await apiFetch('/api/issue-reports', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -238,7 +250,7 @@ export default function PageResidentDashboard() {
           subArea: issueSubArea,
           locationTag: issueSubArea,
           description: issueDescription.trim(),
-          photos: issuePhotos,
+          photos: uploadedPhotos,
           visitWindow: issueVisitWindow,
           contactPhone: issueContactPhone || editPhone || currentUser?.phone || '',
           contactMethod: issueContactMethod
@@ -282,7 +294,7 @@ export default function PageResidentDashboard() {
       setSelectedIssueForConfirm(null);
       setConfirmFeedback('');
       setConfirmRating(5);
-      triggerToast('Thank you! Technical fix verified and review submitted to technician profile.');
+      triggerToast('Thank you! The repair confirmation and your feedback have been saved.');
     } catch (err: any) {
       triggerToast(err.message || 'Failed to confirm resolution.');
     } finally {
@@ -295,7 +307,7 @@ export default function PageResidentDashboard() {
     !i.closedByManager && 
     !i.studentAcceptedResolved && 
     !i.studentConfirmed && 
-    i.status !== 'Resolved'
+    (usesSupabasePersistence || i.status !== 'Resolved')
   );
 
   // Filtering issues
@@ -303,9 +315,9 @@ export default function PageResidentDashboard() {
     const matchesFilter = 
       issueFilter === 'all' || 
       (issueFilter === 'pending' && issue.status === 'Pending') ||
-      (issueFilter === 'in-progress' && issue.status === 'In Progress') ||
+      (issueFilter === 'in-progress' && ['In Progress','Assigned'].includes(issue.status)) ||
       (issueFilter === 'awaiting-confirmation' && issue.status === 'Resolved' && !issue.studentAcceptedResolved) ||
-      (issueFilter === 'resolved' && issue.status === 'Resolved' && issue.studentAcceptedResolved);
+      (issueFilter === 'resolved' && ['Resolved','Closed'].includes(issue.status) && issue.studentAcceptedResolved);
 
     const matchesSearch = 
       issue.title.toLowerCase().includes(issueSearch.toLowerCase()) ||
@@ -328,12 +340,12 @@ export default function PageResidentDashboard() {
       {/* Toast Notification */}
       <AnimatePresence>
         {toastMessage && (
-          <motion.div
+          <motion.div role="status"
             initial={{ opacity: 0, y: 15, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 15, scale: 0.95 }}
             transition={{ duration: 0.15 }}
-            className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 bg-slate-950/95 text-white px-5 py-2.5 rounded-full shadow-lg border border-slate-800 flex items-center gap-2 backdrop-blur-md text-xs font-semibold"
+            className="ux-dashboard-toast fixed bottom-24 left-1/2 -translate-x-1/2 z-50 bg-slate-950/95 text-white px-5 py-2.5 rounded-full shadow-lg border border-slate-800 flex items-center gap-2 backdrop-blur-md text-xs font-semibold"
           >
             <div className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-ping" />
             <span>{toastMessage}</span>
@@ -351,7 +363,7 @@ export default function PageResidentDashboard() {
           </div>
         </div>
         <div className="flex items-center gap-2.5">
-          <button 
+          <button aria-label="Profile and settings"
             onClick={() => setActiveTab('settings')}
             className={`p-1.5 rounded-lg ${activeTab === 'settings' ? 'bg-blue-50 text-blue-600' : 'text-slate-500'}`}
           >
@@ -508,68 +520,28 @@ export default function PageResidentDashboard() {
       </aside>}
 
       {/* MOBILE BOTTOM NAVIGATION */}
-      <nav className="mobile-bottom-nav lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200/80 flex items-center justify-around py-2 shadow-lg">
-        <button 
-          aria-current={activeTab === 'room' ? 'page' : undefined} onClick={() => setActiveTab('room')}
-          className={`flex flex-col items-center p-1.5 cursor-pointer relative ${activeTab === 'room' ? 'text-blue-900' : 'text-slate-400'}`}
-        >
-          <div className="relative">
-            <Home size={18} />
-            {hasMaintenanceUpdates && (
-              <span className="absolute -top-1 -right-1 flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-red-600"></span>
-              </span>
-            )}
-          </div>
-          <span className="text-[10px] font-bold mt-0.5">My Room</span>
-        </button>
-        <button 
-          aria-current={activeTab === 'complaints' ? 'page' : undefined} onClick={() => setActiveTab('complaints')}
-          className={`flex flex-col items-center p-1.5 cursor-pointer relative ${activeTab === 'complaints' ? 'text-blue-900' : hasMaintenanceUpdates ? 'text-red-600 font-bold' : 'text-slate-400'}`}
-        >
-          <div className="relative">
-            <Wrench size={18} />
-            {hasMaintenanceUpdates && (
-              <span className="absolute -top-1 -right-1 flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-red-600"></span>
-              </span>
-            )}
-          </div>
-          <span className="text-[10px] font-bold mt-0.5">Complaints</span>
-        </button>
-        <button 
-          aria-current={activeTab === 'alerts' ? 'page' : undefined} onClick={() => setActiveTab('alerts')}
-          className={`flex flex-col items-center p-1.5 cursor-pointer ${activeTab === 'alerts' ? 'text-blue-900' : 'text-slate-400'}`}
-        >
-          <Bell size={18} />
-          <span className="text-[10px] font-bold mt-0.5">Bulletins</span>
-        </button>
-        <button 
-          aria-current={activeTab === 'settings' ? 'page' : undefined} onClick={() => setActiveTab('settings')}
-          className={`flex flex-col items-center p-1.5 cursor-pointer ${activeTab === 'settings' ? 'text-blue-900' : 'text-slate-400'}`}
-        >
-          <Settings size={18} />
-          <span className="text-[10px] font-bold mt-0.5">Settings</span>
-        </button>
-      </nav>
+      <MobileNavigation label="Resident navigation" activeTab={activeTab} onSelect={id => setActiveTab(id as any)} items={[
+        { id: 'room', label: 'My Room', icon: Home },
+        { id: 'complaints', label: 'Complaints', icon: Wrench, isRed: hasMaintenanceUpdates, hasUpdates: hasMaintenanceUpdates },
+        { id: 'alerts', label: 'Bulletins', icon: Bell },
+        { id: 'settings', label: 'Settings', icon: Settings }
+      ]} />
 
 
       {/* MAIN CONTENT WORKSPACE WITH PERSISTENT PINEVELA GIANT WATERMARK */}
-      <main className={`dashboard-centered-content flex-1 overflow-y-auto p-5 sm:p-8 pb-24 lg:pb-8 flex flex-col space-y-6 relative z-10 ${isSidebarTopNav ? 'lg:pt-24 lg:w-[calc(100vw-22rem)] lg:max-w-[calc(100vw-22rem)] lg:mx-auto' : ''}`}>
+      <main className={`dashboard-centered-content flex-1 min-h-0 overflow-y-auto p-5 sm:p-8 mb-[calc(var(--pv-mobile-nav-height,4rem)+4.75rem)] lg:mb-0 lg:pb-8 flex flex-col space-y-6 relative z-10 ${isSidebarTopNav ? 'lg:pt-24 lg:w-[calc(100vw-22rem)] lg:max-w-[calc(100vw-22rem)] lg:mx-auto' : ''}`}>
         
         {/* ROOM TAB */}
         {activeTab === 'room' && (
           <div className="space-y-6 max-w-5xl animate-fade-in">
             {/* Header with PineVela Branding */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white/70 backdrop-blur-xl border border-white/60 p-6 rounded-3xl shadow-sm">
-              <div className="flex items-center gap-4">
+              <div className="flex min-w-0 flex-col items-start gap-4 sm:flex-row sm:items-center">
                 <div className="p-2.5 bg-gradient-to-br from-blue-900 to-indigo-900 rounded-2xl shadow-md flex items-center justify-center shrink-0">
                   <PineLogo size={32} />
                 </div>
-                <div>
-                  <div className="flex items-center gap-2">
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
                     <h2 className="text-xl font-black text-slate-900 tracking-tight">Resident Room & Key Hub</h2>
                     <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-100/80 text-emerald-800 border border-emerald-200/80 flex items-center gap-1">
                       <ShieldCheck size={11} className="text-emerald-600" />
@@ -814,7 +786,7 @@ export default function PageResidentDashboard() {
                     const isInProgress = issue.status === 'In Progress' || (issue.assignedStaffId && !issue.staffCompleted);
 
                     return (
-                      <div
+                      <div role="button" tabIndex={0} aria-label={`View complaint: ${issue.title}`} onKeyDown={activateOnKeyboard}
                         key={issue.id}
                         onClick={() => {
                           setActiveTab('complaints');
@@ -923,7 +895,6 @@ export default function PageResidentDashboard() {
                 )}
               </div>
 
-              {!activeComplaint && <button onClick={() => setShowNewIssueModal(true)} className="sm:hidden fixed bottom-20 right-4 z-40 flex items-center gap-2 rounded-full border border-white bg-blue-700 px-5 py-3 text-xs font-black text-white shadow-xl shadow-blue-700/30 transition-all hover:bg-white hover:text-blue-800 active:scale-95"><Plus size={16} />Log maintenance</button>}
               {/* Active Ticket Banner Notification */}
               {activeComplaint && (
                 <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-2xl flex items-start gap-3 text-xs text-amber-900 shadow-2xs">
@@ -941,7 +912,7 @@ export default function PageResidentDashboard() {
               <div className="flex flex-col sm:flex-row gap-2">
                 <div className="relative flex-1">
                   <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                  <input
+                  <input aria-label="Search complaints..."
                     type="text"
                     value={issueSearch}
                     onChange={(e) => setIssueSearch(e.target.value)}
@@ -949,7 +920,7 @@ export default function PageResidentDashboard() {
                     className="w-full pl-9 pr-4 py-2 border border-slate-200 bg-white rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-blue-600"
                   />
                 </div>
-                <select
+                <select aria-label="Filter maintenance complaints"
                   value={issueFilter}
                   onChange={(e: any) => setIssueFilter(e.target.value)}
                   className="px-3 py-2 border border-slate-200 bg-white rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-blue-600"
@@ -1040,7 +1011,7 @@ export default function PageResidentDashboard() {
                           </div>
                           <div className="flex flex-wrap gap-2">
                             {issue.photos.map((photo: string, pIdx: number) => (
-                              <div
+                              <div role="button" tabIndex={0} aria-label="View complaint photograph" onKeyDown={activateOnKeyboard}
                                 key={pIdx}
                                 onClick={(e) => {
                                   e.stopPropagation();
@@ -1146,7 +1117,7 @@ export default function PageResidentDashboard() {
                           {issue.staffCompletionPhoto && (
                             <div className="pt-1">
                               <span className="text-[10px] font-bold text-emerald-800 uppercase block mb-1">Completion Photo Proof:</span>
-                              <div 
+                              <div role="button" tabIndex={0} aria-label="View repair completion photograph" onKeyDown={activateOnKeyboard}
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   setLightboxPhoto(issue.staffCompletionPhoto!);
@@ -1283,7 +1254,7 @@ export default function PageResidentDashboard() {
               <div className="space-y-3.5 text-xs font-semibold">
                 <div>
                   <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Full Name</label>
-                  <input
+                  <input aria-label="Full Name"
                     type="text"
                     value={editName}
                     onChange={(e) => setEditName(e.target.value)}
@@ -1295,7 +1266,7 @@ export default function PageResidentDashboard() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Email Address</label>
-                    <input
+                    <input aria-label="Email Address"
                       type="email"
                       value={editEmail}
                       onChange={(e) => setEditEmail(e.target.value)}
@@ -1305,7 +1276,7 @@ export default function PageResidentDashboard() {
                   </div>
                   <div>
                     <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Phone Number</label>
-                    <input
+                    <input aria-label="Phone Number"
                       type="text"
                       value={editPhone}
                       onChange={(e) => setEditPhone(e.target.value)}
@@ -1381,9 +1352,11 @@ export default function PageResidentDashboard() {
 
       </main>
 
+      <QuickMaintenanceReport key={`${user?.role}:${user?.id}`} activeComplaint={activeComplaint} hidden={showNewIssueModal || showSignoutConfirmModal} onSubmitted={issue => { setIssueReports(previous => [issue, ...previous]); triggerToast('Maintenance complaint submitted successfully to your manager.'); }} />
+
       {/* NEW COMPLAINT MODAL */}
       {showNewIssueModal && (
-        <div className="fixed inset-0 bg-slate-950/40 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+        <DashboardOverlay aria-label="File Maintenance Complaint" onClose={() => setShowNewIssueModal(false)} className="fixed inset-0 bg-slate-950/40 backdrop-blur-xs flex items-center justify-center z-50 p-4">
           <motion.div data-popup-card
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -1391,7 +1364,7 @@ export default function PageResidentDashboard() {
           >
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <h3 className="text-sm font-black text-slate-900">File Maintenance Complaint</h3>
-              <button 
+              <button aria-label="Close dialog"
                 onClick={() => setShowNewIssueModal(false)}
                 className="text-slate-400 hover:text-slate-700 p-1 rounded-lg hover:bg-slate-100"
               >
@@ -1402,7 +1375,7 @@ export default function PageResidentDashboard() {
             <form onSubmit={handleSubmitIssue} className="space-y-4 text-xs font-semibold">
               <div className="space-y-1">
                 <label className="block text-slate-800 font-extrabold">Complaint Title *</label>
-                <input
+                <input aria-label="Complaint Title"
                   type="text"
                   required
                   value={issueTitle}
@@ -1415,7 +1388,7 @@ export default function PageResidentDashboard() {
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="space-y-1">
                   <label className="block text-slate-800 font-extrabold">Category *</label>
-                  <select
+                  <select aria-label="Category"
                     value={issueCategory}
                     onChange={(e) => setIssueCategory(e.target.value)}
                     className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:bg-white focus:border-blue-600 font-bold"
@@ -1434,7 +1407,7 @@ export default function PageResidentDashboard() {
 
                 <div className="space-y-1">
                   <label className="block text-slate-800 font-extrabold">Urgency Level *</label>
-                  <select
+                  <select aria-label="Urgency Level"
                     value={issueUrgency}
                     onChange={(e: any) => setIssueUrgency(e.target.value)}
                     className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:bg-white focus:border-blue-600 font-bold"
@@ -1448,7 +1421,7 @@ export default function PageResidentDashboard() {
 
                 <div className="space-y-1">
                   <label className="block text-slate-800 font-extrabold">Specific Location in Room *</label>
-                  <select
+                  <select aria-label="Specific Location in Room"
                     value={issueSubArea}
                     onChange={(e) => setIssueSubArea(e.target.value)}
                     className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:bg-white focus:border-blue-600 font-bold"
@@ -1467,7 +1440,7 @@ export default function PageResidentDashboard() {
 
               <div className="space-y-1">
                 <label className="block text-slate-800 font-extrabold">Detailed Complaint Description *</label>
-                <textarea
+                <textarea aria-label="Detailed Complaint Description"
                   required
                   rows={3}
                   value={issueDescription}
@@ -1511,7 +1484,7 @@ export default function PageResidentDashboard() {
                     {issuePhotos.map((photo, pIdx) => (
                       <div key={pIdx} className="w-16 h-16 rounded-xl overflow-hidden border border-slate-300 relative group shadow-2xs">
                         <img src={photo} alt="Attached preview" className="w-full h-full object-cover" />
-                        <button
+                        <button aria-label="Remove photograph"
                           type="button"
                           onClick={() => removePhoto(pIdx)}
                           className="absolute top-1 right-1 bg-rose-600 text-white rounded-full p-0.5 shadow-md hover:bg-rose-700 cursor-pointer"
@@ -1528,7 +1501,7 @@ export default function PageResidentDashboard() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <label className="block text-slate-800 font-extrabold">Preferred Artisan Visit Window</label>
-                  <select
+                  <select aria-label="Preferred Artisan Visit Window"
                     value={issueVisitWindow}
                     onChange={(e) => setIssueVisitWindow(e.target.value)}
                     className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold focus:outline-none focus:bg-white focus:border-blue-600"
@@ -1542,7 +1515,7 @@ export default function PageResidentDashboard() {
 
                 <div className="space-y-1">
                   <label className="block text-slate-800 font-extrabold">Resident Phone Number</label>
-                  <input
+                  <input aria-label="Resident Phone Number"
                     type="text"
                     value={issueContactPhone}
                     onChange={(e) => setIssueContactPhone(e.target.value)}
@@ -1598,12 +1571,12 @@ export default function PageResidentDashboard() {
               </div>
             </form>
           </motion.div>
-        </div>
+        </DashboardOverlay>
       )}
 
       {/* VERIFY RESOLUTION & RATE STAFF MODAL */}
       {selectedIssueForConfirm && (
-        <div className="fixed inset-0 bg-slate-950/50 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+        <DashboardOverlay aria-label="Verify Technical Repair Work" onClose={() => setSelectedIssueForConfirm(null)} className="fixed inset-0 bg-slate-950/50 backdrop-blur-xs flex items-center justify-center z-50 p-4">
           <div data-popup-card className="bg-white rounded-3xl max-w-lg w-full p-6 space-y-4 shadow-2xl border border-slate-100 animate-scale-in max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2">
@@ -1612,10 +1585,10 @@ export default function PageResidentDashboard() {
                 </div>
                 <div>
                   <h3 className="text-sm font-black text-slate-900 leading-tight">Verify Technical Repair Work</h3>
-                  <p className="text-[11px] text-slate-500 font-medium">Confirm fix satisfaction and submit staff review</p>
+                  <p className="text-[11px] text-slate-500 font-medium">Confirm the repair and share your feedback</p>
                 </div>
               </div>
-              <button 
+              <button aria-label="Close dialog"
                 onClick={() => setSelectedIssueForConfirm(null)}
                 className="p-1 text-slate-400 hover:text-slate-700 rounded-lg"
               >
@@ -1704,9 +1677,9 @@ export default function PageResidentDashboard() {
               {/* Resident Feedback & Review Textarea */}
               <div className="space-y-1">
                 <label className="block text-xs font-bold text-slate-700">
-                  Write Staff Review (Will appear on Technician's Public Profile)
+                  Repair feedback (visible within your residence)
                 </label>
-                <textarea
+                <textarea aria-label="Repair feedback (visible within your residence)"
                   rows={3}
                   value={confirmFeedback}
                   onChange={(e) => setConfirmFeedback(e.target.value)}
@@ -1734,12 +1707,12 @@ export default function PageResidentDashboard() {
               </div>
             </form>
           </div>
-        </div>
+        </DashboardOverlay>
       )}
 
       {/* SIGN OUT CONFIRMATION MODAL */}
       {showSignoutConfirmModal && (
-        <div className="fixed inset-0 bg-slate-950/40 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+        <DashboardOverlay aria-label="Are you sure you want to sign out?" onClose={() => setShowSignoutConfirmModal(false)} className="fixed inset-0 bg-slate-950/40 backdrop-blur-xs flex items-center justify-center z-50 p-4">
           <div data-popup-card className="bg-white rounded-3xl max-w-sm w-full p-6 space-y-4 text-center border border-slate-100 shadow-2xl">
             <div className="flex items-center justify-center gap-2 pt-1 pb-1">
               <PineLogo size={28} />
@@ -1767,12 +1740,12 @@ export default function PageResidentDashboard() {
               </button>
             </div>
           </div>
-        </div>
+        </DashboardOverlay>
       )}
 
       {/* LIGHTBOX PHOTO MODAL */}
       {lightboxPhoto && (
-        <div 
+        <DashboardOverlay aria-label="Image preview" onClose={() => setLightboxPhoto(null)}
           className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4"
           onClick={() => setLightboxPhoto(null)}
         >
@@ -1782,7 +1755,7 @@ export default function PageResidentDashboard() {
                 <Camera size={14} className="text-blue-400" />
                 <span>High-Resolution Complaint Photo Evidence</span>
               </span>
-              <button 
+              <button aria-label="Close dialog"
                 onClick={() => setLightboxPhoto(null)} 
                 className="bg-white/10 hover:bg-white/20 text-white p-2 rounded-full cursor-pointer transition-all"
               >
@@ -1793,7 +1766,7 @@ export default function PageResidentDashboard() {
               <img src={lightboxPhoto} alt="Evidence detail" className="max-h-[80vh] w-auto max-w-full object-contain rounded-2xl" />
             </div>
           </div>
-        </div>
+        </DashboardOverlay>
       )}
 
     </div>

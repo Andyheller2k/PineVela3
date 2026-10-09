@@ -1,5 +1,5 @@
 import { Search, X, SlidersHorizontal, ArrowUpDown, DollarSign, RotateCcw } from 'lucide-react';
-import type { Dispatch, SetStateAction } from 'react';
+import { useId, type Dispatch, type SetStateAction } from 'react';
 
 export type MarketSort = 'featured' | 'price-asc' | 'price-desc' | 'newest';
 interface Props {
@@ -15,6 +15,7 @@ interface Props {
 export default function MarketplaceFilters({ catalogSearch, setCatalogSearch, catalogCategory, setCatalogCategory,
   minPriceFilter, setMinPriceFilter, maxPriceFilter, setMaxPriceFilter, priceSortOption, setPriceSortOption,
   showPriceFilterPanel, setShowPriceFilterPanel, itemCount, stickyTop = 0 }: Props) {
+  const pricePanelId = useId();
   const isPriceFiltered = minPriceFilter > 0 || maxPriceFilter < 5000;
   return <>
   {/* STICKY SEARCH & FILTER CONTROL BAR - Stays locked at top while scrolling cards */}
@@ -31,7 +32,7 @@ export default function MarketplaceFilters({ catalogSearch, setCatalogSearch, ca
         className="w-full pl-8 pr-8 py-1.5 bg-white/65 border border-blue-300/70 rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 shadow-[0_0_0_1px_rgba(59,130,246,0.18),0_0_18px_rgba(59,130,246,0.18)] focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-400 focus:shadow-[0_0_0_2px_rgba(96,165,250,0.24),0_0_28px_rgba(59,130,246,0.42)] transition-all"
       />
       {catalogSearch && (
-        <button
+        <button aria-label="Clear search"
           type="button"
           onClick={() => setCatalogSearch('')}
           className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-slate-400 hover:text-slate-600 cursor-pointer"
@@ -45,6 +46,8 @@ export default function MarketplaceFilters({ catalogSearch, setCatalogSearch, ca
       {/* Toggle Price Range Slider Button */}
       <button
         type="button"
+        aria-expanded={showPriceFilterPanel || isPriceFiltered}
+        aria-controls={showPriceFilterPanel || isPriceFiltered ? pricePanelId : undefined}
         onClick={() => setShowPriceFilterPanel(!showPriceFilterPanel)}
         className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer border ${
           showPriceFilterPanel || isPriceFiltered
@@ -83,7 +86,7 @@ export default function MarketplaceFilters({ catalogSearch, setCatalogSearch, ca
 
   {/* Expandable Price Range Slider Panel */}
   {(showPriceFilterPanel || isPriceFiltered) && (
-    <div className="p-4 bg-gradient-to-r from-blue-50/80 to-indigo-50/60 border border-blue-200/80 rounded-2xl space-y-3.5 animate-fadeIn">
+    <div id={pricePanelId} role="group" aria-label="Price filters" className="p-4 bg-gradient-to-r from-blue-50/80 to-indigo-50/60 border border-blue-200/80 rounded-2xl space-y-3.5 animate-fadeIn">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <DollarSign className="w-4 h-4 text-blue-700" />
@@ -163,6 +166,7 @@ export default function MarketplaceFilters({ catalogSearch, setCatalogSearch, ca
           return (
             <button
               key={preset.label}
+              aria-pressed={isActive}
               type="button"
               onClick={() => {
                 setMinPriceFilter(preset.min);
@@ -187,6 +191,7 @@ export default function MarketplaceFilters({ catalogSearch, setCatalogSearch, ca
     {['All', 'Services','Electronics', 'Textbooks', 'Appliances', 'Fashion', 'Furniture'].map(cat => (
       <button
         key={cat}
+        aria-pressed={catalogCategory === cat}
         onClick={() => setCatalogCategory(cat)}
         className={`px-3 py-1.5 rounded-xl text-[11px] font-bold transition-all whitespace-nowrap cursor-pointer ${
           catalogCategory === cat ? 'bg-blue-600 text-white shadow-xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'

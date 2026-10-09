@@ -1,3 +1,8 @@
+import { usesSupabasePersistence } from '../lib/persistence';
+import { uploadMaintenancePhoto } from '../lib/maintenanceMedia';
+import { activateOnKeyboard } from '../lib/keyboardActivation';
+import DashboardOverlay from './DashboardOverlay';
+import MobileNavigation from './MobileNavigation';
 import { routePopupFeedback } from '../lib/feedback';
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -118,11 +123,11 @@ export default function PageStaffDashboard() {
 
   const fetchAssignedIssues = async () => {
     try {
-      const res = await apiFetch('/api/issue-reports').catch(() => []);
+      const res = await apiFetch('/api/issue-reports');
       if (Array.isArray(res)) {
         const cleanEmail = (user?.email || '').toLowerCase().trim();
         const userId = user?.id;
-        const myIssues = res.filter((issue: any) => 
+        const myIssues = usesSupabasePersistence ? res : res.filter((issue: any) =>
           (issue.assignedStaffId && (issue.assignedStaffId === userId || issue.assignedStaffId === user?.id)) ||
           (issue.assignedStaffEmail && issue.assignedStaffEmail.toLowerCase().trim() === cleanEmail) ||
           (issue.assignedStaffName && user?.name && issue.assignedStaffName.toLowerCase().trim() === user.name.toLowerCase().trim()) ||
@@ -194,9 +199,11 @@ export default function PageStaffDashboard() {
     if (!showCompleteModal) return;
     setIsSubmittingComplete(true);
     try {
+      const uploadedPhoto = completionPhoto ? await uploadMaintenancePhoto(apiFetch,completionPhoto,showCompleteModal.id) : '';
+      setCompletionPhoto(uploadedPhoto);
       const payload = {
-        completionNotes: completionNotes.trim() || "Repairs successfully completed and inspected on site.",
-        completionPhoto: completionPhoto || undefined
+        completionNotes: usesSupabasePersistence ? completionNotes.trim() : completionNotes.trim() || "Repairs successfully completed and inspected on site.",
+        completionPhoto: uploadedPhoto || undefined
       };
       await apiFetch(`/api/issue-reports/${showCompleteModal.id}/staff-complete`, {
         method: 'POST',
@@ -237,7 +244,7 @@ export default function PageStaffDashboard() {
     shift: staffRecord.shift || '',
     assignedBlock: staffRecord.assignedBlock || '',
     status: 'Approved',
-    appliedAt: staffRecord.createdAt || new Date().toISOString()
+    appliedAt: staffRecord.createdAt
   } as any : null);
 
   // Initial data loading & periodic sync
@@ -250,10 +257,14 @@ export default function PageStaffDashboard() {
 
   useEffect(() => {
     if (!user) return;
+    let active = true;
     const interval = setInterval(() => {
       fetchAssignedIssues();
+      if (usesSupabasePersistence) apiFetch('/api/staff-bargains').then(rows => {
+        if (active && Array.isArray(rows)) setStaffBargains(rows);
+      }).catch(() => {});
     }, 8000);
-    return () => clearInterval(interval);
+    return () => { active = false; clearInterval(interval); };
   }, [user?.id, user?.email]);
 
   // Staff Bargains & Resignation State
@@ -265,6 +276,23 @@ export default function PageStaffDashboard() {
   const [bargainTerms, setBargainTerms] = useState('');
   const [bargainNotes, setBargainNotes] = useState('');
   const [submittingQuitOrBargain, setSubmittingQuitOrBargain] = useState(false);
+  const [retentionChoice, setRetentionChoice] = useState<{proposal: StaffBargain; decision: 'stay' | 'quit'} | null>(null);
+  const [savingRetentionChoice, setSavingRetentionChoice] = useState(false);
+  const handleRetentionChoice = async () => {
+    if (!retentionChoice || savingRetentionChoice) return;
+    setSavingRetentionChoice(true);
+    try {
+      const result = await apiFetch(`/api/staff-bargains/${retentionChoice.proposal.id}/staff-decision`, {
+        method:'POST',body:JSON.stringify({decision:retentionChoice.decision})
+      });
+      if (!result.success) throw new Error(result.error || 'Could not save your choice.');
+      setRetentionChoice(null);
+      if (result.quit) { await logout(); navigate('/login', {replace:true}); return; }
+      triggerToast('Your choice to stay has been sent to your manager.', 'success');
+      await loadData();
+    } catch (error:any) { triggerToast(error.message || 'Could not save your choice.', 'error'); }
+    finally { setSavingRetentionChoice(false); }
+  };
 
   // Staff voluntary quit / bargain proposal submit handler
   const handleSubmitQuitOrBargain = async (e?: React.FormEvent) => {
@@ -298,12 +326,19 @@ export default function PageStaffDashboard() {
         };
       }
 
-      const res = await apiFetch('/api/staff-bargains', {
+      const directResignation = usesSupabasePersistence && quitMode !== 'bargain';
+      const res = await apiFetch(directResignation ? '/api/staff/resign' : '/api/staff-bargains', {
         method: 'POST',
-        body: JSON.stringify(payload)
+        body: JSON.stringify(directResignation ? {reason:quitReason.trim()} : payload)
       });
 
       if (res.success) {
+        if (directResignation) {
+          setShowResignModal(false);
+          await logout();
+          navigate('/login', {replace:true});
+          return;
+        }
         if (res.directQuit) {
           triggerToast('Your resignation has been submitted to your residence manager.', 'success');
         } else {
@@ -358,10 +393,8 @@ export default function PageStaffDashboard() {
         method: 'PUT',
         body: JSON.stringify({
           name: settingsName,
-          username: settingsUsername,
-          email: settingsEmail,
           phone: settingsPhone,
-          profilePicture: settingsPhoto
+          ...(!usesSupabasePersistence ? {username:settingsUsername,email:settingsEmail,profilePicture:settingsPhoto} : {})
         })
       });
 
@@ -385,7 +418,7 @@ export default function PageStaffDashboard() {
     <div className="min-h-screen bg-transparent flex flex-col lg:flex-row relative text-slate-900" data-staff-dashboard>
       {/* Toast Notification */}
       {toastMessage && (
-        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50">
+        <div role="status" className="ux-dashboard-toast fixed bottom-24 left-1/2 -translate-x-1/2 z-50">
           <div className="bg-slate-950/95 text-white border border-slate-800/80 px-4 py-2 rounded-full shadow-lg flex items-center gap-2 text-xs font-semibold backdrop-blur-md">
             <div className={`w-1.5 h-1.5 rounded-full ${
               toastMessage.type === 'success' ? 'bg-emerald-400' : toastMessage.type === 'error' ? 'bg-rose-400' : 'bg-blue-400'
@@ -429,41 +462,13 @@ export default function PageStaffDashboard() {
       </header>
 
       {/* MOBILE BOTTOM NAV (lg:hidden) */}
-      <nav className="mobile-bottom-nav lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-sky-100/70 backdrop-blur-xl border-t border-white/70 shadow-[0_-10px_40px_rgba(0,0,0,0.08)]">
-        <div data-mobile-nav-items className="flex items-center justify-around px-2 py-2 pb-safe">
-          {[
-            { id: 'notifications', icon: Bell, label: 'Alerts', badge: notifications.length },
+      <MobileNavigation label="Staff navigation" activeTab={activeTab} onSelect={id => setActiveTab(id as any)} items={[
+            { id: 'notifications', icon: Bell, label: 'Alerts', badge: notifications.filter(n => !n.read).length },
             { id: 'settings', icon: Settings, label: 'Settings' },
             ...(employment ? [
               { id: 'maintenance', icon: Wrench, label: 'Orders', badge: assignedIssues.filter(i => i.status !== 'Resolved' && !i.staffCompleted).length }
             ] : [])
-          ].map(tab => (
-            <button
-              key={tab.id}
-              aria-current={activeTab === tab.id ? 'page' : undefined}
-              onClick={() => setActiveTab(tab.id as any)}
-              className={`flex flex-col items-center justify-center w-16 h-12 rounded-xl transition-all relative ${
-                activeTab === tab.id ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'
-              }`}
-            >
-              <div className={`p-1.5 rounded-lg ${activeTab === tab.id ? 'bg-blue-100/50' : ''}`}>
-                <tab.icon className={`w-5 h-5 ${activeTab === tab.id ? 'scale-110 transition-transform' : ''}`} />
-                {tab.badge ? (
-                  <span className="absolute top-1 right-3 w-4 h-4 bg-amber-400 text-slate-900 rounded-full text-[9px] font-black flex items-center justify-center ring-2 ring-white">
-                    {tab.badge}
-                  </span>
-                ) : null}
-                {false ? (
-                  <span className="absolute top-1 right-4 w-2 h-2 bg-emerald-500 rounded-full animate-ping" />
-                ) : null}
-              </div>
-              <span className={`text-[9px] font-bold mt-0.5 ${activeTab === tab.id ? 'text-blue-700' : 'text-slate-500'}`}>
-                {tab.label}
-              </span>
-            </button>
-          ))}
-        </div>
-      </nav>
+          ]} />
 
       {/* LEFT SIDEBAR NAVIGATION */}
 
@@ -722,6 +727,31 @@ export default function PageStaffDashboard() {
               </span>
             </div>
 
+            {usesSupabasePersistence && staffBargains.length > 0 && (
+              <section aria-label="Your retention proposals" className="space-y-4">
+                <h3 className="text-lg font-black text-slate-900">Your Retention Proposals</h3>
+                {staffBargains.map(proposal => (
+                  <article key={proposal.id} className="rounded-2xl border border-slate-200 bg-white/75 p-4 space-y-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <h4 className="font-bold text-slate-900">{proposal.bargainProposal?.title}</h4>
+                      <span className="text-xs font-semibold text-blue-800">{proposal.status.replace(/_/g, ' ')}</span>
+                    </div>
+                    <p className="text-sm text-slate-700 whitespace-pre-wrap">{proposal.bargainProposal?.proposedTerms}</p>
+                    {proposal.managerResponseNote && <p className="text-sm text-slate-600 whitespace-pre-wrap">Manager response: {proposal.managerResponseNote}</p>}
+                    {proposal.status === 'rejected' && (
+                      <div className="space-y-3">
+                        <p className="text-sm text-slate-700">Your manager declined this proposal. Choose whether to stay on current terms or resign.</p>
+                        <div className="flex flex-wrap gap-3">
+                          <button type="button" onClick={() => setRetentionChoice({proposal,decision:'stay'})} className="rounded-xl bg-blue-700 text-white font-bold px-4 py-3">Stay on current terms</button>
+                          <button type="button" onClick={() => setRetentionChoice({proposal,decision:'quit'})} className="rounded-xl border border-red-300 text-red-700 font-bold px-4 py-3">Resign</button>
+                        </div>
+                      </div>
+                    )}
+                  </article>
+                ))}
+              </section>
+            )}
+
             {notifications.length === 0 ? (
               <div className="p-12 text-center bg-sky-50/55 backdrop-blur-xl border border-white/80 rounded-3xl space-y-3">
                 <Bell className="w-10 h-10 text-slate-300 mx-auto" />
@@ -778,7 +808,7 @@ export default function PageStaffDashboard() {
             <div className="border-b pb-4">
               <h3 className="text-lg font-black text-slate-900">Staff Account Settings</h3>
               <p className="text-xs text-slate-500 font-medium">
-                Update your contact phone, email address, profile picture, and username. Any changes made here are directly synchronized with your manager's staff management directory.
+                {usesSupabasePersistence ? 'Update your display name and contact phone. Your verified work email stays tied to this staff account.' : "Update your contact phone, email address, profile picture, and username. Any changes made here are directly synchronized with your manager's staff management directory."}
               </p>
             </div>
 
@@ -797,7 +827,7 @@ export default function PageStaffDashboard() {
                       {settingsName?.[0] || 'S'}
                     </div>
                   )}
-                  <label className="absolute -bottom-1.5 -right-1.5 p-1.5 bg-blue-900 text-white rounded-xl shadow-md cursor-pointer hover:bg-blue-800 transition-all">
+                  {!usesSupabasePersistence && <label className="absolute -bottom-1.5 -right-1.5 p-1.5 bg-blue-900 text-white rounded-xl shadow-md cursor-pointer hover:bg-blue-800 transition-all">
                     <Camera className="w-3.5 h-3.5" />
                     <input 
                       type="file" 
@@ -805,18 +835,18 @@ export default function PageStaffDashboard() {
                       onChange={handleProfilePhotoUpload} 
                       className="hidden" 
                     />
-                  </label>
+                  </label>}
                 </div>
                 <div className="space-y-1">
                   <h4 className="text-xs font-bold text-slate-900">Profile Picture</h4>
-                  <p className="text-[10px] text-slate-500">Tap camera icon to upload a passport-size photo. Shows on manager roster.</p>
-                  <input
+                  <p className="text-[10px] text-slate-500">{usesSupabasePersistence ? 'Your saved photo appears on the manager roster.' : 'Tap camera icon to upload a passport-size photo. Shows on manager roster.'}</p>
+                  {!usesSupabasePersistence && <input aria-label="Or enter image URL"
                     type="text"
                     value={settingsPhoto}
                     onChange={(e) => { setProfileDirty(true); setSettingsPhoto(e.target.value); }}
                     placeholder="Or enter image URL"
                     className="w-full px-2.5 py-1 text-[11px] bg-white border border-slate-200 rounded-lg text-slate-800"
-                  />
+                  />}
                 </div>
               </div>
 
@@ -824,7 +854,7 @@ export default function PageStaffDashboard() {
                 {/* Full Name */}
                 <div>
                   <label htmlFor="staff-profile-name" className="block text-xs font-bold text-slate-700 mb-1">Full Name</label>
-                  <input
+                  <input aria-label="Full Name"
                     id="staff-profile-name"
                     type="text"
                     value={settingsName}
@@ -838,9 +868,10 @@ export default function PageStaffDashboard() {
                 {/* Username */}
                 <div>
                   <label htmlFor="staff-profile-username" className="block text-xs font-bold text-slate-700 mb-1">Username (Login ID)</label>
-                  <input
+                  <input aria-label="Username (Login ID)"
                     id="staff-profile-username"
                     type="text"
+                    readOnly={usesSupabasePersistence}
                     value={settingsUsername}
                     onChange={(e) => { setProfileDirty(true); setSettingsUsername(e.target.value); }}
                     placeholder="e.g. kwame_staff"
@@ -852,7 +883,7 @@ export default function PageStaffDashboard() {
                 {/* Contact Phone */}
                 <div>
                   <label htmlFor="staff-profile-phone" className="block text-xs font-bold text-slate-700 mb-1">Phone Number (Direct Line)</label>
-                  <input
+                  <input aria-label="Phone Number (Direct Line)"
                     id="staff-profile-phone"
                     type="text"
                     value={settingsPhone}
@@ -865,9 +896,10 @@ export default function PageStaffDashboard() {
                 {/* Email Address */}
                 <div>
                   <label htmlFor="staff-profile-email" className="block text-xs font-bold text-slate-700 mb-1">Email Address</label>
-                  <input
+                  <input aria-label="Email Address"
                     id="staff-profile-email"
                     type="email"
+                    readOnly={usesSupabasePersistence}
                     value={settingsEmail}
                     onChange={(e) => { setProfileDirty(true); setSettingsEmail(e.target.value); }}
                     placeholder="kwame@example.com"
@@ -1004,7 +1036,7 @@ export default function PageStaffDashboard() {
                         <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Student Proof Attachments ({issue.photos.length}):</span>
                         <div className="flex gap-2 flex-wrap">
                           {issue.photos.map((photo: string, index: number) => (
-                            <img 
+                            <img role="button" tabIndex={0} aria-label="View reported issue photograph" onKeyDown={activateOnKeyboard}
                               key={index}
                               src={photo}
                               alt="Student proof"
@@ -1052,7 +1084,7 @@ export default function PageStaffDashboard() {
                     {/* ACTIVE FLOW BUTTONS */}
                     <div className="pt-2 border-t border-slate-100 flex flex-wrap gap-3">
                       {/* Case A: Dispatch Not Acknowledged yet */}
-                      {!issue.staffAccepted && !issue.staffCompleted && !issue.staffDeclined && !issue.closedByManager && !issue.staffRescheduleRequested && ['Open', 'Pending', 'In Progress'].includes(issue.status) && (
+                      {!issue.staffAccepted && !issue.staffCompleted && !issue.staffDeclined && !issue.closedByManager && !issue.staffRescheduleRequested && ['Open', 'Pending', 'Assigned', 'In Progress'].includes(issue.status) && (
                         <div className="w-full flex flex-col sm:flex-row gap-3">
                           <button
                             onClick={() => handleAcceptAssignment(issue.id)}
@@ -1098,7 +1130,7 @@ export default function PageStaffDashboard() {
                           <div className="flex items-center justify-between">
                             <span className="text-xs font-black text-emerald-800 flex items-center gap-1.5">
                               <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                              <span>Repair Fix Submitted &bull; Awaiting Resident Sign-off</span>
+                              <span>{issue.closedByManager ? 'Work order closed' : issue.studentConfirmed ? 'Repair confirmed by resident' : usesSupabasePersistence && !issue.requiresResidentSignoff ? 'Repair completed · Awaiting management closure' : 'Repair submitted · Awaiting resident sign-off'}</span>
                             </span>
                             {issue.staffCompletedAt && (
                               <span className="text-[10px] text-emerald-700 font-semibold">
@@ -1114,7 +1146,7 @@ export default function PageStaffDashboard() {
                           {issue.staffCompletionPhoto && (
                             <div className="flex items-center gap-2 pt-1">
                               <span className="text-[10px] font-bold text-slate-500">Submitted Proof:</span>
-                              <img 
+                              <img role="button" tabIndex={0} aria-label="View repair completion photograph" onKeyDown={activateOnKeyboard}
                                 src={issue.staffCompletionPhoto} 
                                 alt="Resolution Proof" 
                                 onClick={() => setZoomedImage(issue.staffCompletionPhoto)}
@@ -1138,11 +1170,11 @@ export default function PageStaffDashboard() {
 
       {/* Decline Dialog Modal */}
       {showDeclineModal && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-55 animate-fadeIn">
+        <DashboardOverlay aria-label="Decline Work Order Assignment" onClose={() => setShowDeclineModal(null)} className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-55 animate-fadeIn">
           <div data-popup-card className="bg-blue-50/90 backdrop-blur-xl rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl border border-slate-200/80 space-y-5">
             <div className="flex justify-between items-center border-b pb-3 border-slate-100">
               <h3 className="text-sm font-black text-slate-900">Decline Work Order Assignment</h3>
-              <button onClick={() => setShowDeclineModal(null)} className="text-slate-400 hover:text-slate-600">
+              <button aria-label="Close dialog" onClick={() => setShowDeclineModal(null)} className="text-slate-400 hover:text-slate-600">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -1152,7 +1184,7 @@ export default function PageStaffDashboard() {
               </p>
               <div>
                 <label className="block text-[10px] font-bold text-slate-600 mb-1">REASON FOR DECLINING <span className="text-rose-500">*</span></label>
-                <textarea
+                <textarea aria-label="REASON FOR DECLINING"
                   value={declineReason}
                   onChange={(e) => setDeclineReason(e.target.value)}
                   placeholder="e.g. Schedule conflicts, missing diagnostic tools, or lack of components..."
@@ -1171,16 +1203,16 @@ export default function PageStaffDashboard() {
               </button>
             </div>
           </div>
-        </div>
+        </DashboardOverlay>
       )}
 
       {/* Reschedule/SLA Extension Modal */}
       {showRescheduleModal && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-55 animate-fadeIn">
+        <DashboardOverlay aria-label="Request SLA Timeframe Extension" onClose={() => setShowRescheduleModal(null)} className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-55 animate-fadeIn">
           <div data-popup-card className="bg-blue-50/90 backdrop-blur-xl rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl border border-slate-200/80 space-y-5">
             <div className="flex justify-between items-center border-b pb-3 border-slate-100">
               <h3 className="text-sm font-black text-slate-900">Request SLA Timeframe Extension</h3>
-              <button onClick={() => setShowRescheduleModal(null)} className="text-slate-400 hover:text-slate-600">
+              <button aria-label="Close dialog" onClick={() => setShowRescheduleModal(null)} className="text-slate-400 hover:text-slate-600">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -1191,7 +1223,7 @@ export default function PageStaffDashboard() {
               <div className="grid grid-cols-1 gap-3">
                 <div>
                   <label className="block text-[10px] font-bold text-slate-600 mb-1">REQUESTED TIME LIMIT</label>
-                  <select
+                  <select aria-label="REQUESTED TIME LIMIT"
                     value={rescheduleTimeframe}
                     onChange={(e) => setRescheduleTimeframe(e.target.value)}
                     className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-blue-600"
@@ -1206,7 +1238,7 @@ export default function PageStaffDashboard() {
                 </div>
                 <div>
                   <label className="block text-[10px] font-bold text-slate-600 mb-1">REASON FOR EXTENSION <span className="text-rose-500">*</span></label>
-                  <textarea
+                  <textarea aria-label="REASON FOR EXTENSION"
                     value={rescheduleReason}
                     onChange={(e) => setRescheduleReason(e.target.value)}
                     placeholder="Provide details about the diagnostic complexity, lack of spare parts, or class schedules..."
@@ -1226,16 +1258,16 @@ export default function PageStaffDashboard() {
               </button>
             </div>
           </div>
-        </div>
+        </DashboardOverlay>
       )}
 
       {/* Completion Signoff Modal with Image attachment upload */}
       {showCompleteModal && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-55 animate-fadeIn">
+        <DashboardOverlay aria-label="Submit Repair Resolution Details" onClose={() => setShowCompleteModal(null)} className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-55 animate-fadeIn">
           <div data-popup-card className="bg-blue-50/90 backdrop-blur-xl rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl border border-slate-200/80 space-y-5">
             <div className="flex justify-between items-center border-b pb-3 border-slate-100">
               <h3 className="text-sm font-black text-slate-900">Submit Repair Resolution Details</h3>
-              <button onClick={() => setShowCompleteModal(null)} className="text-slate-400 hover:text-slate-600">
+              <button aria-label="Close dialog" onClick={() => setShowCompleteModal(null)} className="text-slate-400 hover:text-slate-600">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -1246,7 +1278,7 @@ export default function PageStaffDashboard() {
               
               <div>
                 <label className="block text-[10px] font-bold text-slate-600 mb-1">COMPLETION REMARKS <span className="text-rose-500">*</span></label>
-                <textarea
+                <textarea aria-label="COMPLETION REMARKS"
                   value={completionNotes}
                   onChange={(e) => setCompletionNotes(e.target.value)}
                   placeholder="Describe the diagnostics and corrective actions (e.g., Replaced sink trap pipe, verified seals)..."
@@ -1272,7 +1304,7 @@ export default function PageStaffDashboard() {
                   {completionPhoto && (
                     <div className="relative">
                       <img src={completionPhoto} alt="Upload Preview" className="w-16 h-16 object-cover rounded-xl border border-slate-200" />
-                      <button 
+                      <button aria-label="Remove photograph"
                         onClick={() => setCompletionPhoto('')}
                         className="absolute -top-1.5 -right-1.5 bg-rose-600 text-white rounded-full p-0.5 shadow-md"
                       >
@@ -1312,16 +1344,13 @@ export default function PageStaffDashboard() {
               </button>
             </div>
           </div>
-        </div>
+        </DashboardOverlay>
       )}
 
       {/* ZOOMED IMAGE OVERLAY */}
       <AnimatePresence>
         {zoomedImage && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+          <DashboardOverlay aria-label="Image preview" onClose={() => setZoomedImage(null)}
             onClick={() => setZoomedImage(null)}
             className="fixed inset-0 bg-black/90 z-60 flex items-center justify-center p-4 cursor-zoom-out"
           >
@@ -1333,19 +1362,36 @@ export default function PageStaffDashboard() {
               alt="Zoomed preview"
               className="max-w-full max-h-[90vh] object-contain rounded-xl shadow-2xl"
             />
-            <button
+            <button aria-label="Close dialog"
               onClick={() => setZoomedImage(null)}
               className="absolute top-6 right-6 p-2 bg-white/10 hover:bg-white/20 text-white rounded-full transition-all"
             >
               <X className="w-6 h-6" />
             </button>
-          </motion.div>
+          </DashboardOverlay>
         )}
       </AnimatePresence>
 
+      {retentionChoice && (
+        <DashboardOverlay aria-label="Confirm retention choice" onClose={() => {if (!savingRetentionChoice) setRetentionChoice(null);}} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+          <div data-popup-card className="w-full max-w-md rounded-3xl bg-white p-6 space-y-4 shadow-xl">
+            <div className="flex items-center justify-between gap-3">
+              <h3 className="font-bold text-lg">{retentionChoice.decision === 'quit' ? 'Confirm resignation' : 'Confirm staying'}</h3>
+              <button type="button" aria-label="Close dialog" disabled={savingRetentionChoice} onClick={() => setRetentionChoice(null)} className="p-3"><X className="w-5 h-5" /></button>
+            </div>
+            <p className="text-sm text-slate-700">{retentionChoice.decision === 'quit' ? 'This ends your staff employment and signs you out. Your manager receives your previously submitted resignation reason.' : 'You will continue working on current terms. Your manager receives your choice.'}</p>
+            {retentionChoice.decision === 'quit' && <p className="text-sm text-slate-700 whitespace-pre-wrap">Reason: {retentionChoice.proposal.reasonToQuit}</p>}
+            <div className="flex flex-wrap justify-end gap-3">
+              <button type="button" disabled={savingRetentionChoice} onClick={() => setRetentionChoice(null)} className="rounded-xl border px-4 py-3">Cancel</button>
+              <button type="button" disabled={savingRetentionChoice} onClick={handleRetentionChoice} className={`rounded-xl px-4 py-3 text-white font-bold disabled:opacity-60 ${retentionChoice.decision === 'quit' ? 'bg-red-700' : 'bg-blue-700'}`}>{savingRetentionChoice ? 'Saving…' : 'Confirm'}</button>
+            </div>
+          </div>
+        </DashboardOverlay>
+      )}
+
       {/* QUIT / RESIGN FROM JOB & BARGAIN MODAL — CRYSTAL FROSTY BLUE PINEVELA THEME */}
       {showResignModal && employment && (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-md flex items-center justify-center p-4">
+        <DashboardOverlay aria-label="Hostel Job Resignation & Bargaining" onClose={() => setShowResignModal(false)} className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-md flex items-center justify-center p-4">
           <div data-popup-card className="bg-white/90 backdrop-blur-2xl rounded-3xl max-w-xl w-full p-6 sm:p-7 shadow-2xl shadow-blue-950/25 border border-blue-200/80 space-y-5 animate-in fade-in zoom-in duration-150 max-h-[90vh] overflow-y-auto">
             <div className="flex items-start justify-between gap-3.5 pb-3 border-b border-blue-100/70">
               <div className="flex items-start gap-3.5">
@@ -1364,7 +1410,7 @@ export default function PageStaffDashboard() {
                   </p>
                 </div>
               </div>
-              <button
+              <button aria-label="Close dialog"
                 type="button"
                 onClick={() => setShowResignModal(false)}
                 className="text-slate-400 hover:text-slate-700 p-1.5 rounded-xl hover:bg-blue-50 transition-colors"
@@ -1412,7 +1458,7 @@ export default function PageStaffDashboard() {
                 ))}
               </div>
 
-              <textarea
+              <textarea aria-label="Reason why you want to quit"
                 value={quitReason}
                 onChange={(e) => setQuitReason(e.target.value)}
                 placeholder="Type or select a reason why you are seeking to quit (minimum 5 characters)..."
@@ -1495,7 +1541,7 @@ export default function PageStaffDashboard() {
                   <label className="text-xs font-black text-blue-950 block">
                     2. What deal / terms are you asking for to stay? <span className="text-rose-600">*</span>
                   </label>
-                  <input
+                  <input aria-label="2. What deal / terms are you asking for to stay?"
                     type="text"
                     value={bargainTerms}
                     onChange={(e) => setBargainTerms(e.target.value)}
@@ -1511,7 +1557,7 @@ export default function PageStaffDashboard() {
 
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-blue-900 block">3. Note for Manager (Optional)</label>
-                  <input
+                  <input aria-label="3. Note for Manager (Optional)"
                     type="text"
                     value={bargainNotes}
                     onChange={(e) => setBargainNotes(e.target.value)}
@@ -1568,7 +1614,7 @@ export default function PageStaffDashboard() {
               </button>
             </div>
           </div>
-        </div>
+        </DashboardOverlay>
       )}
 
       {/* MODAL: DECLINE JOB OFFER */}

@@ -1,3 +1,7 @@
+import DashboardOverlay from './DashboardOverlay';
+import { usesSupabasePersistence } from '../lib/persistence';
+import SupabaseResidentActivation from './SupabaseResidentActivation';
+import { loginContinuation } from '../lib/publicContinuation';
 import { routePopupFeedback } from '../lib/feedback';
 import PasswordStrengthGauge from './PasswordStrengthGauge';
 import OnboardingProgress, { SIGNUP_STEPS, MANAGER_ACCOUNT_STEPS, ROOM_ACTIVATION_STEPS } from './OnboardingProgress';
@@ -36,6 +40,7 @@ export default function PageUnifiedLogin() {
   const { login, user, setSessionUser } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const continuation = loginContinuation(location.search);
 
   // Form states
   const [usernameOrEmail, setUsernameOrEmail] = useState('');
@@ -43,12 +48,17 @@ export default function PageUnifiedLogin() {
   const [showPassword, setShowPassword] = useState(false);
   const [loadingLogin, setLoadingLogin] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
+  const [needsPortalPin,setNeedsPortalPin] = useState(false);
+  const [loginPortal,setLoginPortal] = useState<'resident' | 'seller'>('resident');
+  const [loginPortalPin,setLoginPortalPin] = useState('');
   const [pendingApprovalModal, setPendingApprovalModal] = useState<{ email: string; name?: string; message: string; pass?: string } | null>(null);
   const [blockedAccountModal, setBlockedAccountModal] = useState<{ email: string; name?: string; message: string; reason: string } | null>(null);
   const [approvingFromModal, setApprovingFromModal] = useState(false);
 
   // Unified Registration & Verification states
-  const [activeTab, setActiveTab] = useState<'login' | 'register'>('login');
+  const [activeTab, setActiveTab] = useState<'login' | 'register'>(() =>
+    new URLSearchParams(location.search).get('mode') === 'register' || (location.state as { mode?: string } | null)?.mode === 'register'
+      ? 'register' : 'login');
   const [regName, setRegName] = useState('');
   const [regEmail, setRegEmail] = useState('');
   const [regPass, setRegPass] = useState('');
@@ -235,6 +245,7 @@ export default function PageUnifiedLogin() {
 
   useEffect(() => {
     // Generate initial fallback test cards so the UI is responsive immediately
+    if (usesSupabasePersistence) return;
     const initialFallbackCards = Array.from({ length: 50 }, (_, i) => {
       const idx = i + 1;
       const numPadded = String(100000000 + idx);
@@ -390,10 +401,11 @@ export default function PageUnifiedLogin() {
 
     setLoadingLogin(true);
     try {
-      const authenticatedUser = await login(usernameOrEmail, password);
+      const authenticatedUser = await login(usernameOrEmail, password,needsPortalPin ? { accountKind:loginPortal,portalPin:loginPortalPin } : undefined);
 
       // Redirect based on role and digital market merchant status
       setTimeout(() => {
+        if (authenticatedUser.role === 'user' && continuation) { navigate(continuation, { replace: true }); return; }
         // Only direct digital merchant accounts (authenticated via student credentials) go to digital market onboarding or store
         const isDigitalMerchant = authenticatedUser.role === 'merchant' || (authenticatedUser as any).isDigitalMarketOnly === true;
 
@@ -430,6 +442,10 @@ export default function PageUnifiedLogin() {
         }
       }, 800);
     } catch (err: any) {
+      if (['account_choice_required','portal_pin_required'].includes(err?.code)) {
+        setNeedsPortalPin(true);
+        setLoginPortalPin('');
+      }
       const errMsg = err?.message || '';
       if (err?.isBlocked || errMsg.toLowerCase().includes('blocked') || errMsg.toLowerCase().includes('restricted') || errMsg.toLowerCase().includes('freeze')) {
         const rawReason = err?.restrictionReason || errMsg;
@@ -531,7 +547,9 @@ export default function PageUnifiedLogin() {
       }
 
       // Automatically sign in the user
-      const authenticatedUser = await login(verificationEmail, regPass);
+      const authenticatedUser = usesSupabasePersistence ? data.user : await login(verificationEmail, regPass);
+      if (!authenticatedUser) throw new Error('Verification did not return an active account. Please sign in again.');
+      if (usesSupabasePersistence) setSessionUser(authenticatedUser);
       triggerToast(data.user?.developmentOnly ? 'Signed in to your local development account.' : 'Account verified and logged in successfully!', 'success');
 
       // Clear state
@@ -545,7 +563,7 @@ export default function PageUnifiedLogin() {
       setRegConfirmPass('');
 
       setTimeout(() => {
-        navigate('/student/dashboard', { replace: true });
+        navigate(authenticatedUser.role === 'user' && continuation ? continuation : '/student/dashboard', { replace: true });
       }, 800);
     } catch (err: any) {
       triggerToast(err.message || 'Verification failed.', 'error');
@@ -858,7 +876,7 @@ export default function PageUnifiedLogin() {
 
       {/* Floating Toast */}
       {toastMessage && (
-        <div className={`fixed top-5 right-5 font-bold text-xs px-4 py-3 rounded-xl shadow-2xl z-50 flex items-center gap-2 border animate-bounce ${
+        <div role="status" className={`ux-dashboard-toast fixed top-5 right-5 font-bold text-xs px-4 py-3 rounded-xl shadow-2xl z-50 flex items-center gap-2 border animate-bounce ${
           toastType === 'success' ? 'bg-emerald-600 text-white border-emerald-500' :
           toastType === 'error' ? 'bg-rose-600 text-white border-rose-500' :
           'bg-slate-900 text-white border-slate-700'
@@ -869,7 +887,7 @@ export default function PageUnifiedLogin() {
       )}
 
       {/* Header */}
-      <header className="login-header bg-transparent px-6 py-4 flex items-center justify-between z-10 sticky top-0">
+      <header className="login-header public-header-card bg-transparent px-6 py-4 flex items-center justify-between z-10 sticky top-0">
         <button type="button" aria-label="PineVela home" className="login-logo-link cursor-pointer" onClick={() => navigate('/')}>
           <PineLogo />
         </button>
@@ -890,12 +908,12 @@ export default function PageUnifiedLogin() {
         
         
         {/* Left side: feature image */}
-        <div className="lg:col-span-6 hidden lg:flex flex-col items-stretch justify-center w-full lg:sticky lg:top-24 select-none">
-          <div className="space-y-7 flex flex-col justify-between w-full">
+        <div className="login-showcase-pane hide-scrollbar lg:col-span-6 hidden lg:flex flex-col items-stretch justify-center w-full lg:sticky lg:top-24 select-none">
+          <div className="login-showcase-content space-y-7 flex flex-col justify-between w-full">
             <div className="login-feature-card relative aspect-[5/4] w-full rounded-3xl overflow-hidden">
               <img src={featureImage} alt="PineVela student marketplace" loading="eager" fetchPriority="high" className="absolute inset-0 w-full h-full object-contain" />
             </div>
-            <div className="space-y-4 px-1">
+            <div className="login-feature-description space-y-4 px-1">
               <h3 className="text-2xl sm:text-3xl font-black tracking-tight leading-tight"><span className="text-slate-950">Pine</span><span className="text-blue-900">Vela</span></h3>
               <p className="text-slate-650 text-sm sm:text-base leading-relaxed font-semibold">{featureDescription}</p>
             </div>
@@ -906,7 +924,7 @@ export default function PageUnifiedLogin() {
         </div>
 
         {/* Right Side: Login & Signup Box */}
-        <div className="lg:col-span-6 flex flex-col items-stretch justify-center w-full max-w-2xl mx-auto lg:max-w-none">
+        <div className="login-form-pane hide-scrollbar lg:col-span-6 flex flex-col items-stretch justify-center w-full max-w-2xl mx-auto lg:max-w-none">
           
           <div className="login-auth-card bg-blue-50/90 backdrop-blur-lg rounded-3xl border border-blue-200/70 shadow-2xl p-8 sm:p-10 space-y-6 relative overflow-hidden flex flex-col justify-between w-full">
             
@@ -1058,13 +1076,15 @@ export default function PageUnifiedLogin() {
                     <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400 pointer-events-none">
                       <Mail size={17} />
                     </span>
-                    <input
+                    <input aria-label="Username or Email Address"
                       type="text"
                       required
                       placeholder="e.g. student@pinevela.com"
                       value={usernameOrEmail}
                       onChange={(e) => {
                         setUsernameOrEmail(e.target.value);
+                        setNeedsPortalPin(false);
+                        setLoginPortalPin('');
                         if (loginError) setLoginError(null);
                       }}
                       className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-900 bg-white text-slate-800 text-xs sm:text-sm font-semibold transition-all shadow-xs"
@@ -1087,7 +1107,7 @@ export default function PageUnifiedLogin() {
                     <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400 pointer-events-none">
                       <Key size={17} />
                     </span>
-                    <input
+                    <input aria-label="Password"
                       type={showPassword ? 'text' : 'password'}
                       required
                       placeholder="••••••••"
@@ -1098,7 +1118,7 @@ export default function PageUnifiedLogin() {
                       }}
                       className="w-full pl-10 pr-10 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-900 bg-white text-slate-800 text-xs sm:text-sm font-semibold transition-all shadow-xs"
                     />
-                    <button
+                    <button aria-label={showPassword ? 'Hide password' : 'Show password'} aria-pressed={showPassword}
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
                       className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600 cursor-pointer"
@@ -1107,6 +1127,27 @@ export default function PageUnifiedLogin() {
                     </button>
                   </div>
                 </div>
+
+                {needsPortalPin && (
+                  <fieldset className="space-y-3">
+                    <legend className="text-xs font-bold text-slate-700 mb-2">Open your account portal</legend>
+                    <div className="space-y-1.5">
+                      <label htmlFor="login-portal" className="text-xs font-bold text-slate-700 block">Account</label>
+                      <select id="login-portal" value={loginPortal} onChange={e => { setLoginPortal(e.target.value as 'resident' | 'seller'); setLoginPortalPin(''); }}
+                        className="w-full px-3 py-2.5 border border-slate-200 rounded-xl bg-white text-slate-800 text-sm focus:ring-2 focus:ring-blue-900">
+                        <option value="resident">Resident</option>
+                        <option value="seller">Seller</option>
+                      </select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label htmlFor="login-portal-pin" className="text-xs font-bold text-slate-700 block">Portal access PIN</label>
+                      <input id="login-portal-pin" type="password" inputMode="numeric" autoComplete="off" pattern="[0-9]{6,12}" minLength={6} maxLength={12} required
+                        value={loginPortalPin} onChange={e => setLoginPortalPin(e.target.value)}
+                        className="w-full px-3 py-2.5 border border-slate-200 rounded-xl bg-white text-slate-800 text-sm focus:ring-2 focus:ring-blue-900" />
+                      <p className="text-xs text-slate-500">Use the PIN for this portal with your verified student email and password.</p>
+                    </div>
+                  </fieldset>
+                )}
 
                 <button
                   type="submit"
@@ -1148,7 +1189,7 @@ export default function PageUnifiedLogin() {
                     <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400 pointer-events-none">
                       <User size={16} />
                     </span>
-                    <input
+                    <input aria-label="Your Full Name"
                       type="text"
                       required
                       placeholder="e.g. Alexander Cole"
@@ -1165,7 +1206,7 @@ export default function PageUnifiedLogin() {
                     <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400 pointer-events-none">
                       <Mail size={16} />
                     </span>
-                    <input
+                    <input aria-label="Email Address"
                       type="email"
                       required
                       placeholder="e.g. alex@example.com"
@@ -1182,7 +1223,7 @@ export default function PageUnifiedLogin() {
                     <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400 pointer-events-none">
                       <Key size={16} />
                     </span>
-                    <input
+                    <input aria-label="Choose Password"
                       type={showRegPass ? 'text' : 'password'}
                       required
                       placeholder="Min. 6 characters"
@@ -1190,7 +1231,7 @@ export default function PageUnifiedLogin() {
                       onChange={(e) => setRegPass(e.target.value)}
                       className="w-full pl-10 pr-10 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-900 bg-white text-slate-800 text-xs sm:text-sm font-semibold transition-all"
                     />
-                    <button
+                    <button aria-label={showRegPass ? 'Hide password' : 'Show password'} aria-pressed={showRegPass}
                       type="button"
                       onClick={() => setShowRegPass(!showRegPass)}
                       className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 cursor-pointer"
@@ -1208,7 +1249,7 @@ export default function PageUnifiedLogin() {
                     <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400 pointer-events-none">
                       <Lock size={16} />
                     </span>
-                    <input
+                    <input aria-label="Confirm Password"
                       type={showRegConfirmPass ? 'text' : 'password'}
                       required
                       placeholder="Repeat password"
@@ -1216,7 +1257,7 @@ export default function PageUnifiedLogin() {
                       onChange={(e) => setRegConfirmPass(e.target.value)}
                       className="w-full pl-10 pr-10 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-900 bg-white text-slate-800 text-xs sm:text-sm font-semibold transition-all"
                     />
-                    <button
+                    <button aria-label={showRegConfirmPass ? 'Hide password' : 'Show password'} aria-pressed={showRegConfirmPass}
                       type="button"
                       onClick={() => setShowRegConfirmPass(!showRegConfirmPass)}
                       className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 cursor-pointer"
@@ -1245,7 +1286,7 @@ export default function PageUnifiedLogin() {
               </form>
             )}
 
-            {!verificationPending && <GoogleAuthButton mode={activeTab === 'register' ? 'signup' : 'login'} onError={setLoginError} />}
+            {!verificationPending && <GoogleAuthButton returnTo={continuation} mode={activeTab === 'register' ? 'signup' : 'login'} onError={setLoginError} />}
             {activeTab === 'register' && !verificationPending && loginError && <p role="alert" className="text-xs font-semibold text-rose-800">{loginError}</p>}
 
           </div>
@@ -1261,7 +1302,7 @@ export default function PageUnifiedLogin() {
 
       {/* HOSTEL MANAGER REGISTRATION WIZARD */}
       {showRegModal && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <DashboardOverlay aria-label="Hostel Manager Onboarding" onClose={() => setShowRegModal(false)} className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div data-popup-card className="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 border border-slate-100 shadow-2xl relative flex flex-col max-h-[90vh] overflow-y-auto animate-fade-in text-left">
             
             {/* Close Button */}
@@ -1315,7 +1356,7 @@ export default function PageUnifiedLogin() {
                     Select a synthetic card or click <strong>Random Card</strong> to auto-fill valid verification credentials without using real Ghana Card numbers.
                   </p>
                   <div className="flex items-center gap-2 pt-1">
-                    <select
+                    <select aria-label="Development document sample"
                       className="flex-1 px-2.5 py-1.5 text-xs bg-white border border-amber-300 rounded-lg text-slate-800 font-medium focus:outline-none focus:ring-1 focus:ring-amber-500 shadow-xs"
                       value={selectedSyntheticCardId}
                       onChange={(e) => {
@@ -1353,7 +1394,7 @@ export default function PageUnifiedLogin() {
                       <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 pointer-events-none">
                         <User size={15} />
                       </span>
-                      <input
+                      <input aria-label="Manager Full Legal Name"
                         type="text"
                         required
                         placeholder="e.g. Dr. Sarah Jenkins"
@@ -1372,7 +1413,7 @@ export default function PageUnifiedLogin() {
                       <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 pointer-events-none">
                         <Mail size={15} />
                       </span>
-                      <input
+                      <input aria-label="Manager Work Email"
                         type="email"
                         required
                         placeholder="e.g. sarah.jenkins@pinevela.com"
@@ -1391,7 +1432,7 @@ export default function PageUnifiedLogin() {
                       <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 pointer-events-none">
                         <Phone size={15} />
                       </span>
-                      <input
+                      <input aria-label="Direct Phone Number"
                         type="tel"
                         required
                         placeholder="024 000 0000 or +233 24 000 0000"
@@ -1407,7 +1448,7 @@ export default function PageUnifiedLogin() {
                   {/* Country of Issuance */}
                   <div className="space-y-1">
                     <label className="text-slate-700 block font-bold">Country of Identity *</label>
-                    <select
+                    <select aria-label="Country of Identity"
                       value={regCountry}
                       onChange={(e) => setRegCountry(e.target.value)}
                       className="w-full px-3 py-2.5 border border-slate-200 rounded-xl bg-slate-50 text-slate-800 text-xs font-semibold focus:ring-2 focus:ring-blue-900 focus:outline-none"
@@ -1424,7 +1465,7 @@ export default function PageUnifiedLogin() {
                   {/* Identity Document Type */}
                   <div className="space-y-1">
                     <label className="text-slate-700 block font-bold">Document Type *</label>
-                    <select
+                    <select aria-label="Document Type"
                       value={regDocumentType}
                       onChange={(e) => {
                         const newType = e.target.value;
@@ -1460,7 +1501,7 @@ export default function PageUnifiedLogin() {
                           <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 pointer-events-none">
                             <ShieldCheck size={15} />
                           </span>
-                          <input
+                          <input aria-label="Number"
                             type={cfg.numericOnly ? "tel" : "text"}
                             required
                             inputMode={cfg.numericOnly ? "numeric" : "text"}
@@ -1481,7 +1522,7 @@ export default function PageUnifiedLogin() {
                   {/* Full Name on Document */}
                   <div className="space-y-1">
                     <label className="text-slate-700 block font-bold">Full Name on ID Document *</label>
-                    <input
+                    <input aria-label="Full Name on ID Document"
                       type="text"
                       required
                       placeholder="e.g. Sarah Jenkins Mensah"
@@ -1495,7 +1536,7 @@ export default function PageUnifiedLogin() {
                   <div className="grid grid-cols-2 gap-2">
                     <div className="space-y-1">
                       <label className="text-slate-700 block font-bold">Date of Birth</label>
-                      <input
+                      <input aria-label="Date of Birth"
                         type="date"
                         value={regDob}
                         onChange={(e) => setRegDob(e.target.value)}
@@ -1504,7 +1545,7 @@ export default function PageUnifiedLogin() {
                     </div>
                     <div className="space-y-1">
                       <label className="text-slate-700 block font-bold">Expiry Date</label>
-                      <input
+                      <input aria-label="Expiry Date"
                         type="date"
                         value={regIdExpiry}
                         onChange={(e) => setRegIdExpiry(e.target.value)}
@@ -1540,7 +1581,7 @@ export default function PageUnifiedLogin() {
                       <div className="mt-3 pt-3 border-t border-slate-200 grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                         <div className="space-y-1">
                           <label className="text-[11px] font-bold text-slate-600">Claimed Owner Name *</label>
-                          <input
+                          <input aria-label="Claimed Owner Name"
                             type="text"
                             placeholder="e.g. Chief Nana Boakye"
                             value={regClaimedOwnerName}
@@ -1550,7 +1591,7 @@ export default function PageUnifiedLogin() {
                         </div>
                         <div className="space-y-1">
                           <label className="text-[11px] font-bold text-slate-600">Owner Phone *</label>
-                          <input
+                          <input aria-label="Owner Phone"
                             type="text"
                             placeholder="+233 20 111 2233"
                             value={regClaimedOwnerPhone}
@@ -1560,7 +1601,7 @@ export default function PageUnifiedLogin() {
                         </div>
                         <div className="space-y-1">
                           <label className="text-[11px] font-bold text-slate-600">Owner Email</label>
-                          <input
+                          <input aria-label="Owner Email"
                             type="email"
                             placeholder="owner@property.gh"
                             value={regClaimedOwnerEmail}
@@ -1575,7 +1616,7 @@ export default function PageUnifiedLogin() {
                   {/* Organization / Management Entity */}
                   <div className="space-y-1">
                     <label className="text-slate-700 block font-bold">Management Entity / Company *</label>
-                    <input
+                    <input aria-label="Management Entity / Company"
                       type="text"
                       required
                       placeholder="e.g. PineVela Accommodations Ltd."
@@ -1588,7 +1629,7 @@ export default function PageUnifiedLogin() {
                   {/* Company Registration Number */}
                   <div className="space-y-1">
                     <label className="text-slate-700 block font-bold">Company Reg No. (Optional)</label>
-                    <input
+                    <input aria-label="Company Reg No. (Optional)"
                       type="text"
                       placeholder="e.g. CS-90214-2021"
                       value={regOrgRegNumber}
@@ -1600,7 +1641,7 @@ export default function PageUnifiedLogin() {
                   {/* Managerial Designation */}
                   <div className="space-y-1">
                     <label className="text-slate-700 block font-bold">Designation / Role Title *</label>
-                    <select
+                    <select aria-label="Designation / Role Title"
                       value={regRoleTitle}
                       onChange={(e) => setRegRoleTitle(e.target.value)}
                       className="w-full px-3 py-2.5 border border-slate-200 rounded-xl bg-slate-50 text-slate-800 text-xs font-semibold focus:ring-2 focus:ring-blue-900 focus:outline-none"
@@ -1615,7 +1656,7 @@ export default function PageUnifiedLogin() {
                   {/* Management Experience */}
                   <div className="space-y-1">
                     <label className="text-slate-700 block font-bold">Management Experience (Years)</label>
-                    <input
+                    <input aria-label="Management Experience (Years)"
                       type="number"
                       min="1"
                       max="40"
@@ -1657,7 +1698,7 @@ export default function PageUnifiedLogin() {
                         )}
                       </div>
                     </div>
-                    <select
+                    <select aria-label="Management area"
                       value={regSelectedLocation}
                       onChange={(e) => setRegSelectedLocation(e.target.value)}
                       className="w-full px-3 py-2.5 border border-slate-200 rounded-xl bg-slate-50 text-slate-800 text-xs font-semibold focus:ring-2 focus:ring-blue-900 focus:outline-none cursor-pointer mb-2"
@@ -1675,7 +1716,7 @@ export default function PageUnifiedLogin() {
                     </select>
 
                     <label className="text-slate-700 block font-bold mt-2">Specific Office / Hostel Address in Kumasi</label>
-                    <input
+                    <input aria-label="Full residence address"
                       type="text"
                       placeholder="e.g. Plot 14 Gaza Road, Ayeduase, Kumasi"
                       value={regAddress}
@@ -1711,7 +1752,7 @@ export default function PageUnifiedLogin() {
                         Stored in Private Storage
                       </span>
                     </div>
-                    <input
+                    <input aria-label="Proof of Authority / Ownership Evidence"
                       type="text"
                       placeholder="e.g. Registered title deed and power of attorney executed with property owner."
                       value={regAuthorityEvidenceDesc}
@@ -1740,7 +1781,7 @@ export default function PageUnifiedLogin() {
                       <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 pointer-events-none">
                         <Lock size={15} />
                       </span>
-                      <input
+                      <input aria-label="Account Password"
                         type={showRegPassword ? 'text' : 'password'}
                         required
                         placeholder="••••••••"
@@ -1749,7 +1790,7 @@ export default function PageUnifiedLogin() {
                         autoComplete="new-password"
                         className="w-full pl-9 pr-10 py-2.5 border border-slate-200 rounded-xl bg-slate-50 text-slate-800 text-xs font-medium focus:ring-2 focus:ring-blue-900 focus:outline-none"
                       />
-                      <button
+                      <button aria-label={showRegPassword ? 'Hide password' : 'Show password'} aria-pressed={showRegPassword}
                         type="button"
                         onClick={() => setShowRegPassword(!showRegPassword)}
                         className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-650 cursor-pointer"
@@ -1768,7 +1809,7 @@ export default function PageUnifiedLogin() {
                       <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 pointer-events-none">
                         <Lock size={15} />
                       </span>
-                      <input
+                      <input aria-label="Confirm Password"
                         type={showRegConfirmPassword ? 'text' : 'password'}
                         required
                         placeholder="••••••••"
@@ -1777,7 +1818,7 @@ export default function PageUnifiedLogin() {
                         autoComplete="new-password"
                         className="w-full pl-9 pr-10 py-2.5 border border-slate-200 rounded-xl bg-slate-50 text-slate-800 text-xs font-medium focus:ring-2 focus:ring-blue-900 focus:outline-none"
                       />
-                      <button
+                      <button aria-label={showRegConfirmPassword ? 'Hide password' : 'Show password'} aria-pressed={showRegConfirmPassword}
                         type="button"
                         onClick={() => setShowRegConfirmPassword(!showRegConfirmPassword)}
                         className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-650 cursor-pointer"
@@ -1911,12 +1952,12 @@ export default function PageUnifiedLogin() {
             )}
 
           </div>
-        </div>
+        </DashboardOverlay>
       )}
 
       {/* MODAL: Pending Approval / Verification Notice */}
       {pendingApprovalModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-blue-950/60 backdrop-blur-md animate-fadeIn">
+        <DashboardOverlay aria-label="Submission under review" onClose={() => setPendingApprovalModal(null)} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-blue-950/60 backdrop-blur-md animate-fadeIn">
           <div data-popup-card className="bg-white rounded-3xl border-2 border-amber-200/80 shadow-2xl max-w-md w-full p-6 md:p-8 space-y-6 text-center relative overflow-hidden">
             {/* PineVela Signature Top Gradient */}
             <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-blue-900 via-amber-400 to-emerald-600" />
@@ -1967,12 +2008,12 @@ export default function PageUnifiedLogin() {
               </button>
             </div>
           </div>
-        </div>
+        </DashboardOverlay>
       )}
 
       {/* MODAL: Blocked / Restricted Manager Account Popup */}
       {blockedAccountModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md animate-fadeIn">
+        <DashboardOverlay aria-label="Manager account blocked" onClose={() => setBlockedAccountModal(null)} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md animate-fadeIn">
           <div data-popup-card className="bg-white rounded-3xl border-2 border-rose-300 shadow-2xl max-w-md w-full p-6 md:p-8 space-y-6 text-center relative overflow-hidden">
             {/* Red Accent Header */}
             <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-rose-600 via-red-500 to-amber-600" />
@@ -2024,16 +2065,20 @@ export default function PageUnifiedLogin() {
               </button>
             </div>
           </div>
-        </div>
+        </DashboardOverlay>
       )}
 
       {/* RESIDENT & STUDENT DIGITAL ROOM KEY ONBOARDING MODAL */}
-      {showStudentKeyModal && (
-        <div className="fixed inset-0 bg-slate-950/75 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-4 animate-fade-in overflow-y-auto">
+      {showStudentKeyModal && usesSupabasePersistence && <SupabaseResidentActivation name={user?.name} phone={user?.phone} onClose={() => setShowStudentKeyModal(false)} onActivated={() => undefined} />}
+      {showStudentKeyModal && !usesSupabasePersistence && (
+        <DashboardOverlay aria-label="Activate resident room" onClose={() => {
+                setShowStudentKeyModal(false);
+                setStudentKeyStep(1);
+              }} className="fixed inset-0 bg-slate-950/75 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-4 animate-fade-in overflow-y-auto">
           <div data-popup-card className="bg-white/95 backdrop-blur-2xl rounded-3xl max-w-xl w-full p-6 sm:p-8 border border-blue-200/80 shadow-2xl relative flex flex-col max-h-[92vh] overflow-y-auto text-left space-y-5">
             
             {/* Close Button */}
-            <button 
+            <button aria-label="Close dialog"
               onClick={() => {
                 setShowStudentKeyModal(false);
                 setStudentKeyStep(1);
@@ -2080,7 +2125,7 @@ export default function PageUnifiedLogin() {
 
                   <div className="relative">
                     <Key className="w-4 h-4 text-blue-600 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                    <input
+                    <input aria-label="Enter Digital Room Key"
                       type="text"
                       autoFocus
                       value={studentKeyInput}
@@ -2181,7 +2226,7 @@ export default function PageUnifiedLogin() {
                     </label>
                     <div className="relative">
                       <User className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                      <input
+                      <input aria-label="Username / Full Name"
                         type="text"
                         required
                         value={stuName}
@@ -2200,7 +2245,7 @@ export default function PageUnifiedLogin() {
                       </label>
                       <div className="relative">
                         <Phone className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                        <input
+                        <input aria-label="Phone Number"
                           type="tel"
                           required
                           value={stuPhone}
@@ -2217,7 +2262,7 @@ export default function PageUnifiedLogin() {
                       </label>
                       <div className="relative">
                         <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                        <input
+                        <input aria-label="Email Address"
                           type="email"
                           required
                           value={stuEmail}
@@ -2237,7 +2282,7 @@ export default function PageUnifiedLogin() {
                       </label>
                       <div className="relative">
                         <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                        <input
+                        <input aria-label="Password"
                           type={showStuPassword ? "text" : "password"}
                           required
                           value={stuPassword}
@@ -2245,7 +2290,7 @@ export default function PageUnifiedLogin() {
                           placeholder="Create password"
                           className="w-full pl-10 pr-10 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-blue-600"
                         />
-                        <button
+                        <button aria-label={showStuPassword ? 'Hide password' : 'Show password'} aria-pressed={showStuPassword}
                           type="button"
                           onClick={() => setShowStuPassword(!showStuPassword)}
                           className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
@@ -2262,7 +2307,7 @@ export default function PageUnifiedLogin() {
                       </label>
                       <div className="relative">
                         <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                        <input
+                        <input aria-label="Confirm Password"
                           type={showStuConfirmPassword ? "text" : "password"}
                           required
                           value={stuConfirmPassword}
@@ -2270,7 +2315,7 @@ export default function PageUnifiedLogin() {
                           placeholder="Confirm password"
                           className="w-full pl-10 pr-10 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-blue-600"
                         />
-                        <button
+                        <button aria-label={showStuConfirmPassword ? 'Hide password' : 'Show password'} aria-pressed={showStuConfirmPassword}
                           type="button"
                           onClick={() => setShowStuConfirmPassword(!showStuConfirmPassword)}
                           className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
@@ -2358,7 +2403,7 @@ export default function PageUnifiedLogin() {
             )}
 
           </div>
-        </div>
+        </DashboardOverlay>
       )}
 
     </div>

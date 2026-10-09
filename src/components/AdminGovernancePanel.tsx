@@ -8,9 +8,9 @@ import { KeyRound, Users, Trash2, AlertTriangle, Copy } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { queryClient } from '../lib/queryClient';
 
-export function useAdminGovernance() {
+export function useAdminGovernance(enabled = true) {
   const { apiFetch, user } = useAuth();
-  return useQuery<any>({ queryKey: ['adminGovernance', user?.id], enabled: user?.role === 'admin', refetchInterval: 8000,
+  return useQuery<any>({ queryKey: ['adminGovernance', user?.id], enabled: enabled && user?.role === 'admin', refetchInterval: 8000,
     queryFn: async () => { const data = await apiFetch('/api/admin/governance'); if (!Array.isArray(data?.members)) throw new Error('Administrator governance could not load. Please sign in again.'); return data; } });
 }
 const labels: Record<string, string> = { hostels: 'Hostels', markets: 'Markets', managers: 'Managers and their staff', residents: 'Resident accounts', users: 'Primary user accounts', total: 'Total wipeout (except administrators)' };

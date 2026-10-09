@@ -1,13 +1,15 @@
 import type { Express } from 'express';
 import { AdminGovernance, GovernanceError } from './adminGovernance.js';
 import { AccountModerationError } from './accountModeration.js';
+import { ResidenceDeletionError } from './residenceDeletion.js';
+import { AdminMessageError } from './adminMessages.js';
 
 export function installAdminGovernance(app: Express, requireAuth: any, governance: AdminGovernance) {
   const route = (action: (req: any) => any) => async (req: any, res: any) => {
     res.set('Cache-Control', 'no-store');
     try { return res.json(await governance.run(() => action(req))); }
     catch (error) {
-      if (error instanceof GovernanceError || error instanceof AccountModerationError) {
+      if (error instanceof GovernanceError || error instanceof AccountModerationError || error instanceof ResidenceDeletionError || error instanceof AdminMessageError) {
         if (error.status === 429) res.set('Retry-After', '900');
         return res.status(error.status).json({ error: error.message });
       }
@@ -17,6 +19,9 @@ export function installAdminGovernance(app: Express, requireAuth: any, governanc
   };
   const auth = requireAuth(['admin']), root = '/api/admin/governance';
   app.get(root, auth, route(req => governance.view(req.user.id)));
+  app.get('/api/admin/messages/accounts', auth, route(req => governance.messageAccounts(req.user.id)));
+  app.post('/api/admin/messages/preview', auth, route(req => governance.messagePreview(req.user.id, req.body)));
+  app.post('/api/admin/messages', auth, route(req => governance.sendMessage(req.user.id, req.body)));
   app.post(`${root}/keys/enroll`, auth, route(req => governance.enroll(req.user.id, req.body.password)));
   app.post(`${root}/keys/settings/enroll`, auth, route(req => governance.enrollSettingsKey(req.user.id, req.body.password)));
   app.post('/api/settings', auth, route(req => governance.updateSettings(req.user.id, req.body)));
@@ -24,6 +29,11 @@ export function installAdminGovernance(app: Express, requireAuth: any, governanc
   app.post(`${root}/pricing/:id/vote`, auth, route(req => governance.decidePricing(req.user.id, req.params.id, req.body)));
   app.post(`${root}/pricing/:id/apply`, auth, route(req => governance.applyPricing(req.user.id, req.params.id, req.body)));
   app.post(`${root}/accounts/preview`, auth, route(req => governance.moderation.preview(req.body.targetId, req.body.targetRole)));
+  app.post(`${root}/residences/preview`, auth, route(req => governance.residenceDeletion.preview(req.body)));
+  app.post(`${root}/residences`, auth, route(req => governance.residenceDeletion.propose(req.user.id, req.body)));
+  app.post(`${root}/residences/:id/vote`, auth, route(req => governance.residenceDeletion.vote(req.user.id, req.params.id, req.body)));
+  app.post(`${root}/residences/:id/execute`, auth, route(req => governance.residenceDeletion.execute(req.user.id, req.params.id, req.body)));
+  app.post(`${root}/residences/:id/final-reject`, auth, route(req => governance.residenceDeletion.rejectFinal(req.user.id, req.params.id, req.body)));
   app.post(`${root}/accounts`, auth, route(req => governance.moderation.propose(req.user.id, req.body)));
   app.post(`${root}/accounts/:id/vote`, auth, route(req => governance.moderation.vote(req.user.id, req.params.id, req.body)));
   app.post(`${root}/accounts/:id/apply`, auth, route(req => governance.moderation.apply(req.user.id, req.params.id, req.body)));

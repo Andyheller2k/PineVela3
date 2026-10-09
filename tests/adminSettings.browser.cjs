@@ -83,7 +83,7 @@ async function main() {
     const noOverflow = async label => assert(await evaluate('document.documentElement.scrollWidth <= innerWidth + 1'), `${label}: page overflow`);
     await viewport(1440); await switchAccount(admins[0].token, '/#/admin/dashboard');
     await until("document.body.innerText.includes('Shared approvals')", 'Admin dashboard');
-    await click(matchingButton('Settings'));
+    if (!await evaluate(`Boolean(${matchingButton('Settings')})`)) await click(button('More')); await click(matchingButton('Settings'));
     await until("document.body.innerText.includes('Enroll your separate settings key')", 'Settings key enrollment');
     await input('input[autocomplete="current-password"]', 'Browser-settings-login-0!');
     await click(button('Generate my settings key'));
@@ -97,6 +97,32 @@ async function main() {
       assert(await evaluate("document.querySelector('[aria-label=\"Administrator settings\"] input[type=file]') !== null"));
       assert(await evaluate("document.querySelector('[aria-label=\"Payment receiving account\"]') !== null"));
       assert(await evaluate("document.querySelector('[aria-label=\"Payment receiving account\"] a').href === 'https://dashboard.paystack.com/'"));
+    }
+    const contactValues = ['https://www.linkedin.com/company/pinevela-test/', '233241234567', 'https://www.facebook.com/pinevela-test', 'https://www.tiktok.com/@pinevela-test'];
+    for (let index=0;index<4;index++) await input(`form[aria-label="Public contact details"] label:nth-child(${index+1}) input`, contactValues[index]);
+    await input('[aria-label="Administrator settings"] input[autocomplete="off"]', settingsKeys[0]);
+    await click(button('Save contact details'));
+    await until("document.body.innerText.includes('Public contact details saved')", 'Admin contacts saved with settings key');
+    await command('Page.navigate',{url:base+'/#/'});
+    await until("document.querySelector('#btn-login')",'Landing mountain preview'); await pause(1100);
+    for(const theme of ['light','dark']) {
+      if(await evaluate('document.documentElement.dataset.theme')!==theme)await evaluate("document.querySelector('#public-header .theme-toggle').click()");
+      await pause(300);
+      const gap=await evaluate("document.querySelector('#catalogs-section').getBoundingClientRect().top-document.querySelector('#welcome-section').getBoundingClientRect().bottom");
+      assert(Math.abs(gap-16)<1,'Gradient ends with a small 16px gap above catalogs');
+      const shot=await command('Page.captureScreenshot',{format:'png'});await fs.writeFile(`/tmp/pinevela-landing-final-${theme}.png`,Buffer.from(shot.data,'base64'));
+      assert(await evaluate("document.querySelector('.landing-peak-landscape').getBoundingClientRect().top<document.querySelector('#btn-login').getBoundingClientRect().top && getComputedStyle(document.querySelector('.landing-peak-landscape')).zIndex==='2'"),'Raised desktop peak reaches Login area');
+    }
+    await until("document.querySelectorAll('#story-contact-us .company-contact-row[href]').length===4",'All configured social links on landing');
+    assert.equal(await evaluate("document.querySelectorAll('#story-contact-us .company-contact-icon img').length"),4,'Social icons restored');
+    assert.equal(await evaluate("document.querySelector('#story-contact-us a[aria-label*=WhatsApp]').getAttribute('href')"),'https://wa.me/233241234567');
+    await switchAccount(admins[0].token,'/#/admin/dashboard');await until("document.body.innerText.includes('Shared approvals')",'Admin return');if (!await evaluate(`Boolean(${matchingButton('Settings')})`)) await click(button('More')); await click(matchingButton('Settings'));
+    await until("document.querySelector('form[aria-label=\"Public contact details\"] input')?.value==='https://www.linkedin.com/company/pinevela-test/'",'Saved contacts persist in editor');
+    if (process.argv.includes('--contacts-only')) {
+      assert.deepEqual(exceptions, [], 'Contact settings browser errors');
+      assert.deepEqual(apiErrors, [], 'Contact settings API errors');
+      console.log('Passed: settings-key protected contact editor, saved social links/icons, desktop mountain in both themes and responsive admin form');
+      return;
     }
     if (freeCheckout) {
       const fields = 'form[aria-label="Propose marketplace pricing"] fieldset';
@@ -147,7 +173,7 @@ async function main() {
     assert(await evaluate(`${button('Final push — apply approved pricing')}.disabled`), 'Final push disabled without quorum');
     for (const [index, width] of [[1, 375], [2, 768]]) {
       await viewport(width); await switchAccount(admins[index].token, '/#/admin/dashboard');
-      await until("document.body.innerText.includes('Shared approvals')", 'Reviewer dashboard'); await click(matchingButton('Settings'));
+      await until("document.body.innerText.includes('Shared approvals')", 'Reviewer dashboard'); if (!await evaluate(`Boolean(${matchingButton('Settings')})`)) await click(button('More')); await click(matchingButton('Settings'));
       await until("document.querySelector('[data-pricing-proposal]') !== null", 'Shared proposal visible');
       assert(!(await evaluate(`Boolean(${button('Final push — apply approved pricing')})`)), 'Non-main cannot see final push');
       await input('[aria-label="Administrator settings"] input[autocomplete="off"]', settingsKeys[index]); await click(button('Approve pricing'));
@@ -157,7 +183,7 @@ async function main() {
     }
     assert.equal((await api('/api/settings', admins[0].token)).registrationFee, 50, 'Three approvals still require main final push');
     await viewport(1440); await switchAccount(admins[0].token, '/#/admin/dashboard');
-    await until("document.body.innerText.includes('Shared approvals')", 'Main dashboard'); await click(matchingButton('Settings'));
+    await until("document.body.innerText.includes('Shared approvals')", 'Main dashboard'); if (!await evaluate(`Boolean(${matchingButton('Settings')})`)) await click(button('More')); await click(matchingButton('Settings'));
     await until("document.body.innerText.toLowerCase().includes('ready for main admin’s final push')", 'Main sees approved proposal');
     for (const width of [375, 768, 1440]) { await viewport(width); await noOverflow('Approved pricing at ' + width); }
     await input('[aria-label="Administrator settings"] input[autocomplete="off"]', settingsKeys[0]); await click(button('Final push — apply approved pricing'));
@@ -179,7 +205,7 @@ async function main() {
     await click(button('Save profile photograph'));
     await until("document.body.innerText.includes('Your profile photograph has been saved.')", 'Profile saved');
     const avatar = await evaluate("document.querySelector('img[alt=\"Your administrator profile\"]').getAttribute('src')"); assert.match(avatar, /\/uploads\/hostels\/.*\.png$/);
-    await command('Page.reload'); await until("document.body.innerText.includes('Shared approvals')", 'Admin reload'); await click(matchingButton('Settings'));
+    await command('Page.reload'); await until("document.body.innerText.includes('Shared approvals')", 'Admin reload'); if (!await evaluate(`Boolean(${matchingButton('Settings')})`)) await click(button('More')); await click(matchingButton('Settings'));
     await until("document.querySelector('img[alt=\"Your administrator profile\"]')?.getAttribute('src') === " + JSON.stringify(avatar), 'Photograph survives reload');
     await viewport(1440); await switchAccount(merchant.token, '/#/digital-market');
     await until("document.querySelector('[aria-label=\"Upgrade your seller plan\"]') !== null", 'Seller dashboard');
@@ -203,7 +229,7 @@ async function main() {
     // protected operation or raw-record response is expected during maintenance.
     await switchAccount(admins[1].token, '/#/admin/dashboard');
     await until("document.body.innerText.includes('Shared approvals')", 'Maintenance administrator dashboard');
-    await click(matchingButton('Settings'));
+    if (!await evaluate(`Boolean(${matchingButton('Settings')})`)) await click(button('More')); await click(matchingButton('Settings'));
     await until("document.querySelector('[aria-label=\"Platform Maintenance Mode\"]')?.checked", 'Lockdown is enabled');
     await click("document.querySelector('[aria-label=\"Platform Maintenance Mode\"]')");
     await until("document.querySelector('form[aria-label=\"Portal settings\"] textarea[required]') !== null", 'Returning-user message is required');

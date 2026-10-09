@@ -9,6 +9,7 @@ test('Service coordinates reject untrusted values and preserve the equator and p
 test('Discovery only includes live Fixed and Hybrid services with valid persistent pins',()=>{
   const p={id:'contract',storeId:'store',isService:true,stockQuantity:1,isAvailable:true,serviceLocationMode:'fixed',lat:0,lng:0};
   assert(mappedService(p));assert(mappedService({...p,serviceLocationMode:'hybrid'}));
+  assert(mappedService({...p,stockQuantity:null}));
   for(const patch of [{serviceLocationMode:'flexible'},{isAvailable:false},{stockQuantity:0},{lat:null},{lng:181},{storeId:''},{isService:false}]) assert(!mappedService({...p,...patch}));
   assert.equal(distanceKm({lat:0,lng:0},{lat:0,lng:0}),0); assert(Math.abs(distanceKm({lat:0,lng:0},{lat:0,lng:1})-111.195)<.01);
 });

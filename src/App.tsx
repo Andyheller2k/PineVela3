@@ -4,17 +4,15 @@ import ApprovalKeyPrompt from './components/ApprovalKeyPrompt';
 import FormFeedback from './components/FormFeedback';
 import { PlatformSettingsProvider, PlatformAccessBoundary } from './context/PlatformSettingsContext';
 import { sessionFetch as fetch } from './lib/session';
-import React, { useState, useEffect, lazy, Suspense } from 'react';
+import React, { useState, useEffect, useLayoutEffect, lazy, Suspense } from 'react';
 import { HashRouter, Routes, Route, Navigate, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
-import { QueryClientProvider, useQuery } from '@tanstack/react-query';
+import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient, invalidateAllQueries, setupRealtimeQuerySync } from './lib/queryClient';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { NotificationProvider, useNotifications } from './context/NotificationContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import RouteSkeleton from './components/RouteSkeleton';
-import { Hostel, IssueReport } from './types';
-import { safeJson } from './lib/api';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import { ThemeProvider } from './context/ThemeContext';
 import AccountAccessNotice from './components/AccountAccessNotice';
 import ThemeEnvironment from './components/ThemeEnvironment';
@@ -22,8 +20,11 @@ import { ThemeDock } from './components/ThemeToggle';
 
 // Component imports
 import Page1Public from './components/Page1Public';
+import PagePublicResidence from './components/PagePublicResidence';
+const PagePublicStore = lazy(() => import('./components/PagePublicStore'));
 const PagePublicMarket = lazy(() => import('./components/PagePublicMarket'));
 const PagePaymentReturn = lazy(() => import('./components/PagePaymentReturn'));
+const PageStaffInvitation = lazy(() => import('./components/PageStaffInvitation'));
 const PageAdminInvitation = lazy(() => import('./components/PageAdminInvitation'));
 import PageUnifiedLogin from './components/PageUnifiedLogin';
 const PageManagerOnboarding = lazy(() => import('./components/PageManagerOnboarding'));
@@ -49,23 +50,29 @@ class RouteLoadBoundary extends React.Component<{ children: React.ReactNode }, {
   }
 }
 
-function PageWrapper({ children, noAnimation = false }: { children: React.ReactNode; noAnimation?: boolean }) {
+function PageWrapper({ children, noAnimation = false, smoothEntry = false, loadingFallback = <RouteSkeleton /> }: { children: React.ReactNode; noAnimation?: boolean; smoothEntry?: boolean; loadingFallback?: React.ReactNode }) {
+  const reducedMotion = useReducedMotion();
+  // AnimatePresence keeps the outgoing page mounted until its fade finishes.
+  // Reset public-page scrolling only when the incoming page actually mounts.
+  useLayoutEffect(() => {
+    if (smoothEntry) window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+  }, [smoothEntry]);
   if (noAnimation) {
     return (
       <div className="flex-1 flex flex-col w-full min-h-screen">
-        <RouteLoadBoundary><Suspense fallback={<RouteSkeleton />}>{children}</Suspense></RouteLoadBoundary>
+        <RouteLoadBoundary><Suspense fallback={loadingFallback}>{children}</Suspense></RouteLoadBoundary>
       </div>
     );
   }
   return (
     <motion.div
-      initial={{ opacity: 0, y: 6 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -6 }}
-      transition={{ duration: 0.12, ease: 'easeOut' }}
+      initial={smoothEntry ? (reducedMotion ? false : { opacity: 0 }) : { opacity: 0, y: 6 }}
+      animate={smoothEntry ? { opacity: 1 } : { opacity: 1, y: 0 }}
+      exit={smoothEntry ? { opacity: reducedMotion ? 1 : 0 } : { opacity: 0, y: -6 }}
+      transition={smoothEntry ? { duration: reducedMotion ? 0 : 0.3, ease: [0.22, 1, 0.36, 1] } : { duration: 0.12, ease: 'easeOut' }}
       className="flex-1 flex flex-col w-full min-h-screen"
     >
-      <RouteLoadBoundary><Suspense fallback={<RouteSkeleton />}>{children}</Suspense></RouteLoadBoundary>
+      <RouteLoadBoundary><Suspense fallback={loadingFallback}>{children}</Suspense></RouteLoadBoundary>
     </motion.div>
   );
 }
@@ -106,6 +113,7 @@ function AppContent() {
 
   // Scroll to top on route change
   useEffect(() => {
+    if (location.pathname === '/' || location.pathname === '/login') return;
     window.scrollTo({
       top: 0,
       left: 0,
@@ -118,32 +126,10 @@ function AppContent() {
     // If not authenticated and on root path, stay on root
   }, []);
 
-  // Selected public hostel drawer state
-  const [selectedPublicHostel, setSelectedPublicHostel] = useState<Hostel | null>(null);
-
   // Initialize real-time synchronization from Express API (SSE)
   useEffect(() => {
     setupRealtimeQuerySync();
   }, []);
-
-  // TanStack Query: Hostels query for public explorer
-  const { data: qHostels } = useQuery<Hostel[]>({
-    queryKey: ['hostels'],
-    queryFn: async () => {
-      const res = await fetch('/api/hostels');
-      if (res.ok) {
-        const text = await res.text();
-        try {
-          const data = JSON.parse(text);
-          if (Array.isArray(data)) return data;
-        } catch (e) {}
-      }
-      return [];
-    },
-    refetchInterval: 10000,
-  });
-
-  const hostels = qHostels || [];
 
   return (
     <AnimatePresence mode="wait">
@@ -152,29 +138,23 @@ function AppContent() {
         <Route
           path="/"
           element={
-            <PageWrapper>
-              <Page1Public
-                hostels={hostels.filter(h => {
-                  if (h.isDeleted) return false;
-                  const isApproved = h.isApproved === true || h.approvalStatus === 'Approved' || (h as any).status === 'Approved';
-                  const isExplicitPending = (h.approvalStatus === 'Pending Approval' || (h as any).status === 'Pending Approval') && h.isApproved !== true;
-                  return isApproved && !isExplicitPending;
-                })}
-                selectedHostel={selectedPublicHostel}
-                onSelectHostel={(hostel) => setSelectedPublicHostel(hostel)}
-                onCloseDrawer={() => setSelectedPublicHostel(null)}
-              />
+            <PageWrapper smoothEntry loadingFallback={<p role="status" className="p-8 text-center text-sm text-slate-500">Loading PineVela…</p>}>
+              <Page1Public />
             </PageWrapper>
           }
         />
 
-        <Route path="/pinemarket" element={<PageWrapper><PagePublicMarket /></PageWrapper>} />
+        <Route path="/pineresidence" element={<PageWrapper><PagePublicResidence /></PageWrapper>} />
+        <Route path="/pinemarket/stores/:storeId" element={<PageWrapper><PagePublicStore /></PageWrapper>} />
+        <Route path="/pinemarket" element={<PageWrapper loadingFallback={<p role="status" className="p-8 text-center text-sm text-slate-500">Loading PineMarket…</p>}><PagePublicMarket /></PageWrapper>} />
+
+        <Route path="/staff-invitation" element={<PageWrapper><PageStaffInvitation /></PageWrapper>} />
 
         {/* 2. UNIFIED LOGIN ROUTE */}
         <Route
           path="/login"
           element={
-            <PageWrapper>
+            <PageWrapper smoothEntry>
               <PageUnifiedLogin />
             </PageWrapper>
           }

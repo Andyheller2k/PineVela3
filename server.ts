@@ -1,4 +1,8 @@
+import { publicStoreProfile, storefrontProducts, storeProfileFields, StoreProfileError } from './marketStoreProfile.js';
+import { marketStoreBranding } from './marketBranding.js';
 import { residenceForViewer } from './hostelSecurity.js';
+import { primaryAccountRecipient } from './accountSubmissionNotifications.js';
+import { registrationBan } from './residenceDeletion.js';
 import { ResidenceRequests, ResidenceRequestError, installResidenceRequests } from './residenceRequests.js';
 import { installAdminApprovalSecurity } from './adminApprovalSecurity.js';
 import { installMaintenanceNotice } from './maintenanceNotice.js';
@@ -12,7 +16,7 @@ import { DatabasePersistenceError } from './jsonStoreSafety.js';
 import { realpathSync } from 'node:fs';
 import { meetingVisible, notificationVisible, notificationReaderKey, notificationForActor } from './recordAccessSecurity.js';
 import { ownsMarketStore } from './marketOwnership.js';
-import { marketMediaFields, MarketMediaError } from './marketMediaSecurity.js';
+import { marketMediaFields, MarketMediaError, canUploadMarketPhotos } from './marketMediaSecurity.js';
 import { createSessionToken, setRecordSession, clearRecordSession, sessionMatches, requestSessionToken, revokeMatchingSessions, cookieSessionRequest, setSessionCookie, clearSessionCookie, sessionOriginGuard, sessionLifetimeMs } from './sessionSecurity.js';
 import { moderationAccounts, accountDirectoryRelations, accountAccess, banResponse, accountRestriction, tokenAccount, revokedBanNotice, governedMarketBanned } from './accountModeration.js';
 import { createImageStorage, ImageUploadError } from './imageUploadSecurity.js';
@@ -87,7 +91,6 @@ import {
   dbGetVerificationAuditLogs,
   dbCreateOnboardingPayment,
   getStoreInstance,
-  dbDeleteHostel,
   dbGetRoomKeys,
   dbGetRoomKeyByCode,
   dbAssignRoomKey,
@@ -872,7 +875,7 @@ async function startServer() {
       const actor = (req as any).user;
       if (marketUpload && actor.role !== 'admin') {
         const seller = sellerStore(actor, getStoreInstance());
-        if (!seller || seller.isBanned || seller.status !== 'active') return res.status(403).json({ error: 'An active seller store is required to upload marketplace photographs.' });
+        if (!canUploadMarketPhotos(actor, seller, getStoreInstance())) return res.status(403).json({ error: 'An approved seller store is required to upload marketplace photographs.' });
       }
       return next();
     });
@@ -883,6 +886,19 @@ async function startServer() {
 
   // Credentials and their hashes are never included in API responses.
   sessionLifetimeMs(); // Validate lifetime configuration before accepting requests.
+  app.use((req: any, res, next) => {
+    if (req.method !== 'POST') return next();
+    const path = req.path.toLowerCase().replace(/\/+$/, '');
+    const managerRegistration = ['/api/auth/register-manager', '/api/auth/register-manager-account', '/api/manager-verifications/submit'].includes(path) || path === '/api/users/register' && req.body?.role !== 'user';
+    const hostelRegistration = path === '/api/hostels/register';
+    if (!managerRegistration && !hostelRegistration) return next();
+    return requireAuth()(req, res, () => {
+      const kind = hostelRegistration ? 'hostel' : 'manager_account';
+      const ban = registrationBan(getStoreInstance(), req.user, kind);
+      if (ban) return res.status(403).json({ error: `New ${hostelRegistration ? 'hostel' : 'manager-account'} registration is blocked until ${ban.until}. ${ban.reason}`, registrationBanned: true, registrationBanUntil: ban.until });
+      next();
+    });
+  });
   app.use('/api', (req, res, next) => {
     const sendJson = res.json.bind(res);
     const sessionResponse = ['/auth/login', '/auth/verify-unified', '/digital-market/login', '/room-keys/claim', '/residents/onboard', '/verification-teams/login', '/auth/verification-team-login', '/auth/register-unified', '/users/register', '/auth/register-manager'].includes(req.path);
@@ -2924,12 +2940,13 @@ async function startServer() {
       for (const emailToNotify of notifyEmails) {
         const titleText = 'Manager Account Approved!';
         const exists = notifications.some((n: any) => 
-          n.title === titleText && 
+          n.title === titleText && n.registrationId === target.id && n.submissionUpdatedAt === target.updatedAt &&
           ((n.userEmail || '').toLowerCase() === emailToNotify || (n.recipientEmail || '').toLowerCase() === emailToNotify || (n.parentUserEmail || '').toLowerCase() === emailToNotify)
         );
         if (!exists) {
           const apprNotif = {
             id: `notif-mgr-appr-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+            registrationId: target.id, submissionUpdatedAt: target.updatedAt,
             studentId: targetMgrId,
             userId: targetMgrId,
             parentUserId: parentUserId,
@@ -3112,6 +3129,7 @@ async function startServer() {
         const titleText = 'Manager Account Application Status: Rejected';
         const rejNotif = {
           id: `notif-mgr-rej-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+          registrationId: target.id, submissionUpdatedAt: target.updatedAt,
           studentId: targetMgrId,
           userId: targetMgrId,
           parentUserId: parentUserId,
@@ -4119,6 +4137,7 @@ async function startServer() {
         const finalReason = (deletionReason || '').trim();
         store.managerRestrictions.push({
           id: `restr-${Date.now()}`,
+          parentUserId: primaryAccountRecipient(req.user, store, 'manager').targetAccountId,
           userEmail: reqUserEmail || cleanEmail,
           deletedManagerEmail: purgeManagerEmail || cleanEmail,
           deletedAt: new Date().toISOString(),
@@ -4191,6 +4210,7 @@ async function startServer() {
         userId: cleanEmail,
         userEmail: cleanEmail,
         recipientEmail: cleanEmail,
+        ...primaryAccountRecipient(req.user, getStoreInstance(), role),
         title: `${role.charAt(0).toUpperCase() + role.slice(1)} Account Removed`,
         message: notifMessage,
         type: 'warning',
@@ -4281,6 +4301,7 @@ async function startServer() {
         userId: targetEmail,
         userEmail: targetEmail,
         recipientEmail: targetEmail,
+        ...primaryAccountRecipient({ parentUserId: restriction.parentUserId, parentUserEmail: restriction.userEmail }, store, 'manager'),
         title: `Manager Restriction Bypassed`,
         message: `Admin has approved your request to bypass the 30-day restriction. You can now register a new Hostel Manager account.`,
         type: 'success',
@@ -4330,6 +4351,7 @@ async function startServer() {
         userId: targetEmail,
         userEmail: targetEmail,
         recipientEmail: targetEmail,
+        ...primaryAccountRecipient({ parentUserId: restriction.parentUserId, parentUserEmail: restriction.userEmail }, store, 'manager'),
         title: `Manager Bypass Rejected`,
         message: `Admin has rejected your restriction bypass request. Reason: ${restriction.adminNotes}. You must wait out the 30-day restriction.`,
         type: 'error',
@@ -4508,6 +4530,16 @@ async function startServer() {
         type: 'info'
       }, activities);
 
+      await dbCreateNotification({
+        id: `notif-dm-sub-${crypto.randomUUID()}`,
+        targetRole: 'user', targetAccountId: req.user.id, userId: req.user.id,
+        category: 'account_submission', scope: 'market', module: 'digital_market',
+        registrationKind: 'merchant', registrationId: newApp.id,
+        title: 'Digital Market Application Submitted',
+        message: `Your Digital Market application has been received and is pending administrator verification.`,
+        type: 'verification', date: new Date().toISOString().split('T')[0], read: false
+      }, notifications, req.user);
+
       return res.status(201).json({ 
         success: true, 
         application: newApp, 
@@ -4519,7 +4551,7 @@ async function startServer() {
     }
   });
 
-  installPaystackPayments(app, requireAuth, new PaystackPayments(getStoreInstance, syncManagedStore), getStoreInstance, (id, key) => governance.verifySettingsKey(id, key));
+  installPaystackPayments(app, requireAuth, new PaystackPayments(getStoreInstance, syncManagedStore, undefined, undefined, () => governance.persistSettingsActivity()), getStoreInstance, (id, key) => governance.verifySettingsKey(id, key));
 
   // Get Digital Market status for current user
   app.get("/api/digital-market/status", requireAuth(), async (req: any, res) => {
@@ -4683,57 +4715,24 @@ async function startServer() {
     }
   });
 
-  // Update Digital Market Store Profile Details
-  app.put("/api/digital-market/store", async (req: any, res) => {
+  // Store profiles are edited only through the authenticated seller relationship.
+  app.put('/api/digital-market/store', requireAuth(['merchant']), (req: any, res) => {
+    if (req.user.role !== 'merchant') return res.status(403).json({ error: 'Sign in with your seller account.' });
     try {
-      const { studentEmail, storeName, location, deliveryForm, category, coverPicture, profilePicture, username, description } = req.body;
-      if (!studentEmail) {
-        return res.status(400).json({ error: "Student email is required to update store." });
-      }
-
-      const cleanEmail = studentEmail.toLowerCase().trim();
-      const store = getStoreInstance();
-      if (!store.digitalMarketStores) store.digitalMarketStores = [];
-
-      let existingStore = store.digitalMarketStores.find((s: any) =>
-        s.studentEmail?.toLowerCase() === cleanEmail ||
-        s.parentUserEmail?.toLowerCase() === cleanEmail ||
-        s.email?.toLowerCase() === cleanEmail ||
-        (s.id && s.id === studentEmail) ||
-        (s.userId && s.userId === studentEmail)
-      );
-
-      if (!existingStore) {
-        return res.status(404).json({ error: "No active store found for this merchant email." });
-      }
-
-      if (storeName) existingStore.storeName = storeName.trim();
-      if (location) existingStore.location = location.trim();
-      if (deliveryForm) existingStore.deliveryForm = deliveryForm.trim();
-      if (category) existingStore.category = category.trim();
-      if (coverPicture) {
-        existingStore.coverPicture = coverPicture;
-        existingStore.bannerUrl = coverPicture;
-      }
-      if (profilePicture) {
-        existingStore.profilePicture = profilePicture;
-        existingStore.logoUrl = profilePicture;
-      }
-      if (username) existingStore.username = username.trim();
-      if (description) existingStore.description = description.trim();
-
-      savePersistentStore(store);
-      syncStore();
-
-      return res.json({
-        success: true,
-        store: existingStore,
-        message: "Digital Market Store profile updated successfully!"
-      });
-    } catch (err: any) {
-      console.error("Error updating store profile:", err);
-      return res.status(500).json({ error: "Failed to update store profile." });
+      const state = getStoreInstance(), seller = sellerStore(req.user, state);
+      if (!seller) return res.status(403).json({ error: 'Your seller store was not found.' });
+      Object.assign(seller, storeProfileFields(req.body, req.user, state, seller));
+      savePersistentStore(state); syncStore();
+      return res.json({ success: true, store: { ...publicPaidStore(seller, state), ...publicStoreProfile(seller, state) }, message: 'Store profile updated successfully.' });
+    } catch (error) {
+      return res.status(error instanceof StoreProfileError ? error.status : 500).json({ error: error instanceof StoreProfileError ? error.message : 'Failed to update store profile.' });
     }
+  });
+
+  app.get('/api/digital-market/stores/:storeId', (req, res) => {
+    const state = getStoreInstance(), seller = (state.digitalMarketStores || []).find(s => s.id === req.params.storeId);
+    if (!seller || seller.status !== 'active' || seller.isBanned || governedMarketBanned(state, seller.id) || !marketAccessPaid(state, seller)) return res.status(404).json({ error: 'This store is currently unavailable.' });
+    return res.json({ store: publicStoreProfile(seller, state), products: storefrontProducts(seller, state) });
   });
 
   // Public Catalog of Digital Products
@@ -4779,7 +4778,7 @@ async function startServer() {
             storeName: s?.storeName || p.storeName,
             sellerName: s?.username || s?.storeName || p.sellerName,
             sellerPhone: s?.phone || p.sellerPhone,
-            storeLogoUrl: s?.profilePicture || s?.logoUrl || '',
+            storeLogoUrl: marketStoreBranding(s, process.env.NODE_ENV === 'production').profilePicture,
             storeRating: storeSummary.storeRating,
             ratingCount: storeSummary.ratingCount
           };
@@ -4952,6 +4951,9 @@ async function startServer() {
 
       const mediaFields = marketMediaFields(req.body, req.user, store);
       const safeImageUrl = imageUrl === undefined ? undefined : imageUrl === product.imageUrl ? imageUrl : await saveMarketCover(imageUrl, req);
+      if (!candidateService && stockQuantity !== undefined && (!Number.isSafeInteger(stockQuantity) || stockQuantity < 1)) {
+        return res.status(400).json({ error: 'Stock quantity must be a whole number of at least 1.' });
+      }
       const listingStore = store.digitalMarketStores?.find(s => s.id === product.storeId);
       if (!listingStore || !marketAccessPaid(store, listingStore)) return res.status(402).json({ error: 'Renew your market payment before editing listings.' });
       const plan = effectiveMarketPlan(listingStore, Date.now(), process.env.NODE_ENV === 'production');
@@ -5194,6 +5196,7 @@ async function startServer() {
       for (const emailToNotify of notifyApprEmails) {
         const notif = {
           id: `notif-dm-appr-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+          registrationId: appItem.id,
           studentId: appItem.studentEmail,
           userId: appItem.studentEmail,
           userEmail: emailToNotify,
@@ -5254,6 +5257,7 @@ async function startServer() {
       for (const emailToNotify of notifyEmails) {
         const rejNotif = {
           id: `notif-dm-rej-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+          registrationId: appItem.id,
           studentId: appItem.studentEmail,
           userId: appItem.studentEmail,
           userEmail: emailToNotify,
@@ -5807,12 +5811,13 @@ async function startServer() {
       for (const emailToNotify of notifyEmails) {
         const titleText = 'Manager Account Approved!';
         const exists = notifications.some((n: any) => 
-          n.title === titleText && 
+          n.title === titleText && n.registrationId === target.id && n.submissionUpdatedAt === target.updatedAt &&
           ((n.userEmail || '').toLowerCase() === emailToNotify || (n.recipientEmail || '').toLowerCase() === emailToNotify || (n.parentUserEmail || '').toLowerCase() === emailToNotify)
         );
         if (!exists) {
           const mgrApprNotif = {
             id: `notif-mgr-appr-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+            registrationId: target.id, submissionUpdatedAt: target.updatedAt,
             studentId: targetMgrId,
             userId: targetMgrId,
             parentUserId: parentUserId,
@@ -6040,12 +6045,13 @@ async function startServer() {
       for (const emailToNotify of notifyEmails) {
         const titleText = 'Manager Account Registration Update';
         const exists = notifications.some((n: any) => 
-          n.title === titleText && 
+          n.title === titleText && n.registrationId === target.id && n.submissionUpdatedAt === target.updatedAt &&
           ((n.userEmail || '').toLowerCase() === emailToNotify || (n.recipientEmail || '').toLowerCase() === emailToNotify || (n.parentUserEmail || '').toLowerCase() === emailToNotify)
         );
         if (!exists) {
           const mgrRejNotif = {
             id: `notif-mgr-rej-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+            registrationId: target.id, submissionUpdatedAt: target.updatedAt,
             studentId: target.managerId,
             userId: target.managerId,
             parentUserId: parentUserId,
@@ -7588,20 +7594,7 @@ async function startServer() {
   });
 
   // Admin Delete Residence Endpoint
-  app.delete("/api/hostels/:id", requireAuth(["admin"]), async (req: any, res) => {
-    try {
-      const { id } = req.params;
-      const idx = hostels.findIndex(h => h.id === id);
-      if (idx >= 0) {
-        hostels.splice(idx, 1);
-      }
-      await dbDeleteHostel(id);
-      syncStore();
-      return res.json({ success: true, message: "Hostel removed successfully" });
-    } catch (err: any) {
-      return res.status(500).json({ error: err.message || "Failed to delete hostel" });
-    }
-  });
+  app.delete("/api/hostels/:id", requireAuth(["admin"]), (_req, res) => res.status(410).json({ error: 'Submit a reviewed hostel deletion proposal. Two administrator approvals and the founder’s final approval-key action are required.' }));
 
   installResidenceRequests(app, requireAuth, residenceRequests, getStoreInstance, syncManagedStore);
 
@@ -7684,7 +7677,7 @@ async function startServer() {
   app.post(MARKET_UPLOAD_ROUTE, requireAuth(['merchant', 'admin']), async (req: any, res) => {
     try {
       const seller = sellerStore(req.user, getStoreInstance());
-      if (req.user.role !== 'admin' && (!seller || seller.isBanned || seller.status !== 'active')) return res.status(403).json({ error: 'An active seller store is required to upload marketplace photographs.' });
+      if (req.user.role !== 'admin' && !canUploadMarketPhotos(req.user, seller, getStoreInstance())) return res.status(403).json({ error: 'An approved seller store is required to upload marketplace photographs.' });
       return res.json(await persistMarketPhoto(req.body, req));
     } catch (err: any) {
       if (err instanceof ResourceLimitError) return resourceFailure(res, err);
@@ -7861,8 +7854,25 @@ async function startServer() {
     }
   });
 
-  app.post("/api/issue-reports", requireAuth(["user", "student", "admin", "manager"]), async (req: any, res) => {
+  app.post("/api/issue-reports", requireAuth(["user", "student", "resident", "admin", "manager"]), async (req: any, res) => {
     try {
+      const reportStore = getStoreInstance(), actor = req.user;
+      let reportRoom = activeResidentRoom(actor, reportStore);
+      if (actor.role === 'user') {
+        const rooms = (reportStore.users || []).filter((entry: any) => ['student', 'resident'].includes(accountRole(entry)) && accountData(entry).parentUserId === actor.id)
+          .map((entry: any) => activeResidentRoom({ ...accountData(entry), id: accountId(entry), role: accountRole(entry) }, reportStore)).filter(Boolean)
+          .filter((room: any) => !req.body.hostelId || room.hostelId === req.body.hostelId);
+        if (rooms.length === 1) reportRoom = rooms[0];
+      }
+      const residentReport = ['student', 'resident', 'user'].includes(actor.role);
+      const allowedHomes = (reportStore.hostels || []).filter((home: any) => actor.role === 'admin' || canManageHostel(actor, home));
+      const reportHostel = residentReport ? (reportStore.hostels || []).find((home: any) => home.id === reportRoom?.hostelId) :
+        allowedHomes.find((home: any) => req.body.hostelId ? home.id === req.body.hostelId : req.body.hostelName ? home.name === req.body.hostelName : allowedHomes.length === 1);
+      if (!reportHostel || residentReport && (!reportRoom || req.body.hostelId && req.body.hostelId !== reportHostel.id)) return res.status(403).json({ error: 'Report maintenance only for your active room or authorized residence.' });
+      if (typeof req.body.title !== 'string' || !req.body.title.trim() || req.body.title.length > 200 || req.body.description !== undefined && (typeof req.body.description !== 'string' || req.body.description.length > 10000) || req.body.photos !== undefined && (!Array.isArray(req.body.photos) || req.body.photos.length > 10 || req.body.photos.some((photo: any) => typeof photo !== 'string'))) return res.status(400).json({ error: 'Provide an issue title, optional text details, and up to ten photographs.' });
+      req.body = { ...req.body, title: req.body.title.trim(), hostelId: reportHostel.id, hostelName: reportHostel.name,
+        studentId: actor.id, studentEmail: actor.email, studentName: actor.name, studentPhone: actor.phone,
+        ...(residentReport ? { blockName: reportRoom.blockName || '', blockFloor: reportRoom.blockName || '', roomNumber: reportRoom.roomNumber || '', roomBed: reportRoom.roomNumber || '' } : {}) };
       const {
         title,
         category,
@@ -7899,10 +7909,11 @@ async function startServer() {
         !i.studentConfirmed &&
         i.status !== 'Resolved' && 
         (
-          (i.studentId && (i.studentId === userId || (sId && i.studentId === sId))) ||
+          ((i.userId || i.creatorId || i.parentUserId) ? (i.userId || i.creatorId || i.parentUserId) === userId : i.studentId ? (i.studentId === userId || (sId && i.studentId === sId)) : (
           (i.studentEmail && i.studentEmail.toLowerCase().trim() === userEmail) ||
           (i.parentUserEmail && i.parentUserEmail.toLowerCase().trim() === userEmail) ||
           (i.email && i.email.toLowerCase().trim() === userEmail)
+          ))
         )
       );
 
@@ -7914,25 +7925,14 @@ async function startServer() {
         });
       }
 
-      // Auto-resolve hostel and manager details if not provided
+      // Location and manager assignment come from the authorized room/property.
       const store = getStoreInstance();
-      const allRoomKeys = store.roomKeys || [];
-      const userKey = allRoomKeys.find((k: any) => 
-        (k.studentEmail && k.studentEmail.toLowerCase().trim() === userEmail) ||
-        (k.studentId && (k.studentId === userId || k.studentId === sId)) ||
-        (k.registeredByEmail && k.registeredByEmail.toLowerCase().trim() === userEmail)
-      );
-
-      const resolvedHostelId = hostelId || userKey?.hostelId || '';
-      const resolvedHostelName = hostelName || userKey?.hostelName || 'PineVela Residence';
-      const resolvedBlock = blockName || blockFloor || userKey?.blockName || 'Block A';
-      const resolvedRoom = roomNumber || roomBed || userKey?.roomNumber || 'Room 101';
-
-      // Find the respective manager of this hostel
-      const matchedHostel = (store.hostels || []).find((h: any) => 
-        (resolvedHostelId && h.id === resolvedHostelId) ||
-        (resolvedHostelName && h.name && h.name.toLowerCase().trim() === resolvedHostelName.toLowerCase().trim())
-      );
+      const userKey = reportRoom;
+      const resolvedHostelId = reportHostel.id;
+      const resolvedHostelName = reportHostel.name;
+      const resolvedBlock = reportRoom?.blockName ?? blockName ?? blockFloor ?? '';
+      const resolvedRoom = reportRoom?.roomNumber ?? roomNumber ?? roomBed ?? '';
+      const matchedHostel = reportHostel;
       const managerId = matchedHostel?.managerId || matchedHostel?.assignedManagerId || '';
       const managerEmail = matchedHostel?.managerEmail || '';
       const managerName = matchedHostel?.managerName || '';
@@ -8005,6 +8005,7 @@ async function startServer() {
         managerId: managerId,
         hostelId: resolvedHostelId,
         targetRole: 'manager',
+        targetAccountId: managerId,
         type: 'issue_report',
         title: `New Maintenance Ticket: ${saved.title}`,
         message: `${saved.studentName} in Room ${saved.roomNumber} (${saved.blockName}) logged a ${saved.urgency} priority issue: "${saved.title}". Please review and assign a technician.`,
@@ -8013,13 +8014,13 @@ async function startServer() {
         read: false,
         link: '/manager/dashboard'
       };
-      notifications.unshift(mgrNotif);
       await dbCreateNotification(mgrNotif, notifications, (req as any).user);
-      if (store.notifications) store.notifications.unshift(mgrNotif);
 
       const stuNotif = {
         id: `notif-stu-${Date.now()}`,
         userId: req.user.id,
+        targetRole: req.user.role,
+        targetAccountId: req.user.id,
         studentId: req.user.id,
         recipientEmail: req.user.email,
         type: 'issue_report',
@@ -8030,9 +8031,7 @@ async function startServer() {
         read: false,
         link: '/resident/dashboard'
       };
-      notifications.unshift(stuNotif);
       await dbCreateNotification(stuNotif, notifications, req.user);
-      if (store.notifications) store.notifications.unshift(stuNotif);
 
       res.status(201).json(saved);
     } catch (err: any) {

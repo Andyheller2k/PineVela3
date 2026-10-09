@@ -1,3 +1,13 @@
+import { activateOnKeyboard } from '../lib/keyboardActivation';
+import {marketListingAvailable,isMarketService} from '../../marketListingAvailability';
+import { usesSupabasePersistence } from '../lib/persistence';
+import SupabaseResidentActivation from './SupabaseResidentActivation';
+import SupabaseSellerRegistration from './SupabaseSellerRegistration';
+import MobileNavigation from './MobileNavigation';
+import MarketStorefront from './MarketStorefront';
+import ResidenceCard from './ResidenceCard';
+import ResidenceDetails from './ResidenceDetails';
+import { filterResidences } from '../lib/residenceCatalog';
 import { matchesMarketCategory } from '../lib/marketCatalog';
 import MarketplaceFilters from './MarketplaceFilters';
 import { servicePoint } from '../../serviceLocation';
@@ -85,6 +95,15 @@ export interface PageUserDashboardProps {
 
 export default function PageUserDashboard({ initialTab, initialMarketMode }: PageUserDashboardProps = {}) {
   const { user, logout, apiFetch, updateUser, setSessionUser } = useAuth();
+  const marketAccount=useRef(user?.id),marketEpoch=useRef(0),marketGeneration=useRef(0),marketMounted=useRef(true);
+  if(marketAccount.current!==user?.id){marketAccount.current=user?.id;marketEpoch.current++;marketGeneration.current++;}
+  useEffect(()=>{marketMounted.current=true;return()=>{marketMounted.current=false;};},[]);
+  const marketAccountCurrent=(id:string|undefined,generation?:number)=>marketMounted.current && marketAccount.current===id && (generation===undefined || generation===marketGeneration.current);
+  const orderRequest=useRef<{params:string;id:string}|null>(null);
+  const inquiryRequest=useRef<{params:string;id:string}|null>(null);
+  const inquiryBusy=useRef(false);
+  const [marketOrdersAccount,setMarketOrdersAccount]=useState<string|undefined>();
+  const [marketReadError,setMarketReadError]=useState('');
   const { notifications, unreadCount, registeredAccounts, markAsRead, pushToast, refreshNotifications } = useNotifications();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -121,7 +140,8 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
   const [showMarketChat, setShowMarketChat] = useState(false);
   const [checkingMerchant, setCheckingMerchant] = useState(false);
   const [checkingManager, setCheckingManager] = useState(false);
-  const [digitalMarketOrders, setDigitalMarketOrders] = useState<DigitalMarketOrder[]>([]);
+  const [savedMarketOrders, setDigitalMarketOrders] = useState<DigitalMarketOrder[]>([]);
+  const digitalMarketOrders=marketOrdersAccount===user?.id ? savedMarketOrders : [];
   const [digitalMarketProducts, setDigitalMarketProducts] = useState<DigitalMarketProduct[]>([]);
   const [publicCatalog, setPublicCatalog] = useState<DigitalMarketProduct[]>([]);
 
@@ -175,9 +195,9 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
   
   // Order placement & PIN verification state
   const [selectedProdForOrder, setSelectedProdForOrder] = useState<DigitalMarketProduct | null>(null);
-  const [orderMeetupLocation, setOrderMeetupLocation] = useState<string>('KNUST Main Library Car Park');
-  const [orderMeetupLat, setOrderMeetupLat] = useState<number | null>(6.6745);
-  const [orderMeetupLng, setOrderMeetupLng] = useState<number | null>(-1.5716);
+  const [orderMeetupLocation, setOrderMeetupLocation] = useState<string>(usesSupabasePersistence ? '' : 'KNUST Main Library Car Park');
+  const [orderMeetupLat, setOrderMeetupLat] = useState<number | null>(usesSupabasePersistence ? null : 6.6745);
+  const [orderMeetupLng, setOrderMeetupLng] = useState<number | null>(usesSupabasePersistence ? null : -1.5716);
   const [serviceLocationOption, setServiceLocationOption] = useState<'seller-location' | 'buyer-location'>('buyer-location');
   const [showMeetupMapModal, setShowMeetupMapModal] = useState<boolean>(false);
   const [viewingOrderMap, setViewingOrderMap] = useState<DigitalMarketOrder | null>(null);
@@ -186,10 +206,12 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
   const [buyerPhoneInput, setBuyerPhoneInput] = useState<string>('');
   const [submittingOrder, setSubmittingOrder] = useState<boolean>(false);
   const [verifyingOrderTarget, setVerifyingOrderTarget] = useState<DigitalMarketOrder | null>(null);
+  useEffect(()=>{orderRequest.current=null;inquiryRequest.current=null;inquiryBusy.current=false;setDigitalMarketOrders([]);setMarketOrdersAccount(undefined);setMarketReadError('');setSelectedProdForOrder(null);setVerifyingOrderTarget(null);setSubmittingOrder(false);setPinSubmitting(false);setShowMarketChat(false);setActiveChatEmail(null);setActiveChatStore(undefined);setRatingOrderTarget(null);setIsSubmittingRating(false);},[user?.id]);
   const [inputPinValue, setInputPinValue] = useState<string>('');
   const [renewingPinOrderId, setRenewingPinOrderId] = useState<string | null>(null);
   const [pinSubmitting, setPinSubmitting] = useState<boolean>(false);
   const [activeChatEmail, setActiveChatEmail] = useState<string | null>(null);
+  const [activeChatStore,setActiveChatStore]=useState<{id:string;name:string}|undefined>();
   
   // Categories for Student Digital Market
   const DIGITAL_MARKET_CATEGORIES = [
@@ -325,6 +347,8 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
   const [priceSortOption, setPriceSortOption] = useState<'featured' | 'price-asc' | 'price-desc' | 'newest'>('featured');
   const [showPriceFilterPanel, setShowPriceFilterPanel] = useState<boolean>(false);
   const [marketActionError, setMarketActionError] = useState('');
+  const [viewingStoreId, setViewingStoreId] = useState<string | null>(null);
+  const [storeMessageOnOpen, setStoreMessageOnOpen] = useState(false);
   const [selectedProductForBuy, setSelectedProductForBuy] = useState<DigitalMarketProduct | null>(null);
   const [showNearbyServices, setShowNearbyServices] = useState(false);
   const [nearbyDirections, setNearbyDirections] = useState('');
@@ -344,7 +368,6 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
   const [loadingData, setLoadingData] = useState<boolean>(true);
   const [availableHostels, setAvailableHostels] = useState<any[]>([]);
   const [viewingHostelModal, setViewingHostelModal] = useState<any | null>(null);
-  const [userActiveModalImage, setUserActiveModalImage] = useState<string>('');
 
   // Add Room Modal states (Up to 5 rooms)
   const [showAddRoomModal, setShowAddRoomModal] = useState<boolean>(false);
@@ -364,21 +387,21 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
   const currentUser = {
     ...(studentProfile || {}),
     ...(user || {}),
-    avatar: user?.avatar || studentProfile?.avatar || user?.photo || studentProfile?.photo || user?.photoUrl || studentProfile?.photoUrl || 'preset:pine-classic',
-    photo: user?.photo || studentProfile?.photo || user?.avatar || studentProfile?.avatar || '',
-    photoUrl: user?.photoUrl || studentProfile?.photoUrl || user?.avatar || studentProfile?.avatar || '',
-    avatarUrl: user?.avatarUrl || studentProfile?.avatarUrl || user?.avatar || studentProfile?.avatar || '',
-    profilePicture: user?.profilePicture || studentProfile?.profilePicture || user?.avatar || studentProfile?.avatar || '',
+    avatar: user?.avatar || user?.photo || user?.photoUrl || user?.avatarUrl || user?.profilePicture || 'preset:pine-classic',
+    photo: user?.photo || user?.avatar || '',
+    photoUrl: user?.photoUrl || user?.avatar || '',
+    avatarUrl: user?.avatarUrl || user?.avatar || '',
+    profilePicture: user?.profilePicture || user?.avatar || '',
     role: user?.role || studentProfile?.role || 'user',
     id: user?.id || (studentProfile?.id)
   };
 
   const handleStartChat = async (product: DigitalMarketProduct) => {
-    if (!currentUser?.email) {
+    if (!user?.id) {
       triggerToast("Please log in first to message the merchant.");
       return;
     }
-    if (currentUser.email.toLowerCase() === product.sellerEmail.toLowerCase()) {
+    if (!usesSupabasePersistence && currentUser?.email?.toLowerCase() === product.sellerEmail?.toLowerCase()) {
       setMarketActionError("This is your own product listed by your merchant account!");
       return;
     }
@@ -386,30 +409,33 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
     
     const inquiryText = `Hi ${product.storeName}! I am interested in your item "${product.title}" (GHS ${product.price}). Is it still available for meetup?`;
     
+    if(inquiryBusy.current)return;
+    inquiryBusy.current=true;
+    const accountId=user?.id,generation=marketGeneration.current;
+    const inquiry={productId:product.id,sellerStoreId:product.storeId,content:inquiryText};
+    if(usesSupabasePersistence){const params=JSON.stringify(inquiry);if(inquiryRequest.current?.params!==params)inquiryRequest.current={params,id:crypto.randomUUID()};}
     try {
       const res = await fetch('/api/digital-market/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${user?.token || ''}` },
-        body: JSON.stringify({
-          productId: product.id,
-          productTitle: product.title,
-          senderEmail: currentUser.email,
-          senderName: currentUser.name || 'Student Buyer',
-          recipientEmail: product.sellerEmail,
-          recipientName: product.storeName,
-          content: inquiryText
-        })
+        body: JSON.stringify(usesSupabasePersistence?{...inquiry,requestId:inquiryRequest.current!.id}:{
+          productId:product.id,productTitle:product.title,senderEmail:currentUser?.email,senderName:currentUser?.name,
+          recipientEmail:product.sellerEmail,recipientName:product.storeName,content:inquiryText})
       });
-      const data = await res.json();
+      const data = await res.json();if(!marketAccountCurrent(accountId,generation))return;
       if (!res.ok) throw new Error(data.error || 'Could not contact the seller.');
       if (data.success) {
+        inquiryRequest.current=null;
         setShowMarketChat(true);
-        setActiveChatEmail(product.sellerEmail);
+        setActiveChatEmail(data.message?.recipientEmail || product.sellerEmail);
+        setActiveChatStore({id:product.storeId,name:product.storeName});
         setSelectedProductForBuy(null);
         triggerToast(`Inquiry sent to ${product.storeName}! Chat is open below.`);
       }
     } catch (err) {
-      triggerToast(err instanceof Error ? err.message : "Could not contact the seller. Please try again.");
+      if(marketAccountCurrent(accountId,generation))triggerToast(err instanceof Error ? err.message : "Could not contact the seller. Please try again.");
+    } finally {
+      if(marketAccountCurrent(accountId,generation))inquiryBusy.current=false;
     }
   };
   const [showSignoutConfirmModal, setShowSignoutConfirmModal] = useState<boolean>(false);
@@ -471,14 +497,14 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
   const [deletingAccount, setDeletingAccount] = useState<boolean>(false);
 
   useEffect(() => {
-    if (user && user.id) {
+    if (user && user.id && !searchParams.has('residence') && !searchParams.has('marketItem') && !searchParams.has('marketStore')) {
       const shown = localStorage.getItem(`pinevela_welcome_shown_${user.id}`);
       if (!shown) {
         setShowWelcomePopup(true);
         localStorage.setItem(`pinevela_welcome_shown_${user.id}`, 'true');
       }
     }
-  }, [user]);
+  }, [user?.id]);
 
   useEffect(() => {
     const itemId = searchParams.get('marketItem');
@@ -495,6 +521,41 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
     next.delete('marketPrice');
     setSearchParams(next, { replace: true });
   }, [searchParams, setSearchParams, publicCatalog, user?.role, showWelcomePopup]);
+
+  const [claimHostelId, setClaimHostelId] = useState<string | undefined>();
+  const [residencesLoaded, setResidencesLoaded] = useState(false);
+  function openResidenceActivation(hostel: { id: string }) {
+    setViewingHostelModal(null);
+    setClaimHostelId(hostel.id);
+    setShowClaimModal(true);
+    setClaimStep(1);
+    setClaimRoomKeyInput('');
+    setClaimError(null);
+    setVerifiedKeyInfo(null);
+  }
+  useEffect(() => { if (!showClaimModal) setClaimHostelId(undefined); }, [showClaimModal]);
+  useEffect(() => {
+    const residenceId = searchParams.get('residence');
+    if (!residenceId || user?.role !== 'user' || !residencesLoaded) return;
+    const hostel = filterResidences(availableHostels, '').find(hostel => hostel.id === residenceId);
+    setActiveTab('home');
+    setHomeFilterType('hostels');
+    if (hostel) {
+      if (searchParams.get('residenceAction') === 'activate') openResidenceActivation(hostel);
+      else setViewingHostelModal(hostel);
+    } else triggerToast('This residence is no longer available.', 'error');
+    const next = new URLSearchParams(searchParams);
+    next.delete('residence'); next.delete('residenceAction');
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams, availableHostels, residencesLoaded, user?.role]);
+
+  useEffect(() => {
+    const id = searchParams.get('marketStore');
+    if (!id || user?.role !== 'user') return;
+    setViewingStoreId(id); setStoreMessageOnOpen(searchParams.get('storeAction') === 'message');
+    const next = new URLSearchParams(searchParams); next.delete('marketStore'); next.delete('storeAction');
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams, user?.role]);
 
   // Image zoom viewer modal
   const [zoomedImage, setZoomedImage] = useState<string | null>(null);
@@ -546,7 +607,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
     return publicCatalog
       .filter(p => {
         if (catalogCategory !== 'All') {
-          const isServ = Boolean(p.isService || p.category === 'Services' || (p as any).serviceCategory || p.category?.toLowerCase().includes('service'));
+          const isServ = isMarketService(p);
           if (catalogCategory === 'Services') {
             if (!isServ) return false;
           } else {
@@ -581,20 +642,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
       });
   }, [publicCatalog, catalogCategory, catalogSearch, homeSearchQuery, minPriceFilter, maxPriceFilter, priceSortOption]);
 
-  const filteredHostels = useMemo(() => {
-    const query = homeSearchQuery.toLowerCase().trim();
-    return availableHostels.filter((hostel: any) => {
-      if (!hostel) return false;
-      if (!query) return true;
-      return (
-        (hostel.name && hostel.name.toLowerCase().includes(query)) ||
-        (hostel.location && hostel.location.toLowerCase().includes(query)) ||
-        (hostel.managerName && hostel.managerName.toLowerCase().includes(query)) ||
-        (hostel.managerEmail && hostel.managerEmail.toLowerCase().includes(query)) ||
-        (hostel.hostelType && hostel.hostelType.toLowerCase().includes(query))
-      );
-    });
-  }, [availableHostels, homeSearchQuery]);
+  const filteredHostels = useMemo(() => filterResidences(availableHostels, homeSearchQuery), [availableHostels, homeSearchQuery]);
 
   const scrollToSection = (id: string, sectionKey: string) => {
     if (sectionKey === 'market') setHomeFilterType('market');
@@ -637,7 +685,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
         if (regRes.ok) {
           const regData = await safeJson(regRes);
           
-          if (regData.managerAccount && uEmail) {
+          if (!usesSupabasePersistence && regData.managerAccount && uEmail) {
             try {
               const localMgrs = JSON.parse(localStorage.getItem('pinevela_registered_managers') || '[]');
               let updated = false;
@@ -664,7 +712,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
           }
 
           // Check local fallbacks if server is still indexing
-          if (!regData.managerAccount && uEmail) {
+          if (!usesSupabasePersistence && !regData.managerAccount && uEmail) {
             try {
               const localMgrs = JSON.parse(localStorage.getItem('pinevela_registered_managers') || '[]');
               const matchedLocalMgr = localMgrs.find((m: any) => {
@@ -770,7 +818,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
         }
       } catch (e) {
         console.warn("Notice loading available hostels:", e);
-      }
+      } finally { setResidencesLoaded(true); }
 
       // 4. Fetch room key record and profile details
       try {
@@ -809,12 +857,15 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
   };
 
   const loadDigitalMarketData = async () => {
+    const accountId=user?.id,epoch=marketEpoch.current;
+    const current=()=>marketAccountCurrent(accountId) && marketEpoch.current===epoch;
     try {
       const targetEmail = currentUser?.email || user?.email || '';
       const targetId = currentUser?.id || user?.id || '';
       const { data: statusRes } = await merchantRegistration.refetch();
+      if(!current())return;
       if (statusRes) {
-        if (statusRes.application && !initialStoreSetupFilledRef.current) {
+        if (!usesSupabasePersistence && statusRes.application && !initialStoreSetupFilledRef.current) {
           initialStoreSetupFilledRef.current = true;
           const app = statusRes.application;
           setSetupStoreName(app.storeName || `${app.fullName || 'Student'}'s Campus Store`);
@@ -825,9 +876,10 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
         }
       }
 
-      const productsRes = await apiFetch('/api/digital-market/products?includeAll=true').catch(() => []);
+      const productsRes = await apiFetch('/api/digital-market/products?includeAll=true');
+      if(!current())return;
       if (Array.isArray(productsRes)) {
-        const availableCatalog = productsRes.filter((p: any) => p.isAvailable && p.stockQuantity > 0);
+        const availableCatalog = productsRes.filter(marketListingAvailable);
         setPublicCatalog(prev => JSON.stringify(prev) === JSON.stringify(availableCatalog) ? prev : availableCatalog);
         const currentStoreId = statusRes?.store?.id;
         if (currentStoreId || targetEmail) {
@@ -839,12 +891,14 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
         }
       }
 
-      const ordersRes = await apiFetch(`/api/digital-market/my-orders?email=${encodeURIComponent(targetEmail)}&userId=${encodeURIComponent(targetId)}`).catch(() => []);
+      const ordersRes = await apiFetch(usesSupabasePersistence ? '/api/digital-market/my-orders' : `/api/digital-market/my-orders?email=${encodeURIComponent(targetEmail)}&userId=${encodeURIComponent(targetId)}`);
+      if(!current())return;
+      setMarketOrdersAccount(accountId);setMarketReadError('');
       if (Array.isArray(ordersRes)) {
         setDigitalMarketOrders(prev => JSON.stringify(prev) === JSON.stringify(ordersRes) ? prev : ordersRes);
       }
-    } catch (e) {
-      console.warn("Notice loading Digital Market data:", e);
+    } catch (e:any) {
+      if(current())setMarketReadError(e?.message || 'Could not refresh your market orders.');
     }
   };
 
@@ -978,6 +1032,9 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
       const data = await safeJson(res);
       if (!res.ok || !data.valid) {
         setClaimError(data.error || "Invalid room key. Check with your manager.");
+        setVerifiedKeyInfo(null);
+      } else if (claimHostelId && data.hostelId !== claimHostelId) {
+        setClaimError("This key belongs to a different residence. Enter a key for the selected residence.");
         setVerifiedKeyInfo(null);
       } else {
         setVerifiedKeyInfo(data);
@@ -1250,7 +1307,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
   }, [activeTab, notifications, markAsRead]);
 
   const navItems = [
-    { id: 'home', label: 'Home Tab', sub: 'Residents & Staff Hire', icon: Home },
+    { id: 'home', label: 'Home Tab', sub: 'Marketplace & residences', icon: Home },
     { id: 'digital-market', label: 'Purchases & Tracking', sub: 'Orders, Pickup & Delivery', icon: Package },
     { 
       id: 'login-room', 
@@ -1283,7 +1340,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
     try {
       const result = await merchantRegistration.refetch();
       if (!result.data || result.isError) { triggerToast('Could not check merchant registration. Please try again.', 'error'); return; }
-      if (!result.data.application && !result.data.store) startMerchantRegistration();
+      if ((!result.data.application && !result.data.store) || (usesSupabasePersistence && result.data.application?.status === 'rejected')) startMerchantRegistration();
       else setShowMerchantCard(true);
     } finally { setCheckingMerchant(false); }
   };
@@ -1305,6 +1362,8 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
   const [storeLoginPassword, setStoreLoginPassword] = useState<string>('');
   const [storeLoginError, setStoreLoginError] = useState<string | null>(null);
   const [storeLoginLoading, setStoreLoginLoading] = useState<boolean>(false);
+  const [storeNeedsPin,setStoreNeedsPin] = useState(false);
+  const [storePortalPin,setStorePortalPin] = useState('');
 
   const handleQuickMerchantLogin = async () => {
     navigate('/login');
@@ -1321,11 +1380,13 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           studentEmail: storeLoginEmail.trim(),
-          password: storeLoginPassword
+          password: storeLoginPassword,
+          ...(storeNeedsPin ? { portalPin:storePortalPin } : {})
         })
       });
       const data = await safeJson(res);
       if (!res.ok) {
+        if (data.code === 'portal_pin_required') { setStoreNeedsPin(true);setStorePortalPin(''); }
         setStoreLoginError(data?.error || "Invalid student email or store password. Please check your credentials.");
         return;
       }
@@ -1519,29 +1580,32 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
     setMarketActionError('');
     setSubmittingOrder(true);
 
+    const accountId=user?.id,generation=marketGeneration.current;marketEpoch.current++;
     try {
       const payload = {
         productId: selectedProdForOrder.id,
         quantity: orderQtyInput,
         priceCategoryId: selectedPriceCategory?.id || undefined,
         priceCategoryName: selectedPriceCategory?.name || undefined,
-        buyerName: currentUser?.name || user?.name || 'Student Buyer',
-        buyerEmail: currentUser?.email || user?.email || '',
+        ...(!usesSupabasePersistence ? {buyerName:currentUser?.name || user?.name || 'Student Buyer',buyerEmail:currentUser?.email || user?.email || '',buyerId:currentUser?.id || user?.id || ''} : {}),
         buyerPhone: buyerPhoneInput || currentUser?.phone || '',
         meetingLocation: orderMeetupLocation,
         meetingLatitude: orderMeetupLat,
         meetingLongitude: orderMeetupLng,
-        buyerId: currentUser?.id || user?.id || '',
         serviceLocationOption
       };
 
+      if(usesSupabasePersistence){const params=JSON.stringify(payload);if(orderRequest.current?.params!==params)orderRequest.current={params,id:crypto.randomUUID()};Object.assign(payload,{requestId:orderRequest.current.id});}
       const res = await apiFetch('/api/digital-market/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
 
+      if(!marketAccountCurrent(accountId,generation))return;
+      marketEpoch.current++;
       if (res && res.success) {
+        orderRequest.current=null;
         setSelectedProdForOrder(null);
         handleNavClick('digital-market');
         triggerToast("Campus Meetup Coordinates Transmitted to Seller! 📍🛍️");
@@ -1550,21 +1614,24 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
         setMarketActionError(res?.error || "Failed to place order.");
       }
     } catch (err: any) {
-      setMarketActionError(err.message || "Failed to place order.");
+      if(marketAccountCurrent(accountId,generation))setMarketActionError(err.message || "Failed to place order.");
     } finally {
-      setSubmittingOrder(false);
+      if(marketAccountCurrent(accountId,generation))setSubmittingOrder(false);
     }
   };
 
   // Seller Agrees to Proposed Meetup Location & Confirms Order
   const handleAgreeToMeetupLocation = async (orderId: string) => {
     setConfirmingLocationId(orderId);
+    const accountId=user?.id,generation=marketGeneration.current;marketEpoch.current++;
     try {
       const res = await apiFetch(`/api/digital-market/orders/${orderId}/update-status`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'agree-location' })
       });
+      if(!marketAccountCurrent(accountId,generation))return;
+      marketEpoch.current++;
       if (res && res.success) {
         triggerToast("Meetup location agreed! Purchase confirmed for handover. 🤝");
         await loadDigitalMarketData();
@@ -1572,9 +1639,9 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
         triggerToast(res?.error || "Failed to confirm location.");
       }
     } catch (err: any) {
-      triggerToast(err.message || "Failed to confirm location.");
+      if(marketAccountCurrent(accountId,generation))triggerToast(err.message || "Failed to confirm location.");
     } finally {
-      setConfirmingLocationId(null);
+      if(marketAccountCurrent(accountId,generation))setConfirmingLocationId(null);
     }
   };
 
@@ -1582,12 +1649,15 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
   const handleDeclineMeetupLocation = async (orderId: string) => {
     if (!window.confirm("Are you sure you want to decline this proposed meetup spot?")) return;
     setConfirmingLocationId(orderId);
+    const accountId=user?.id,generation=marketGeneration.current;marketEpoch.current++;
     try {
       const res = await apiFetch(`/api/digital-market/orders/${orderId}/update-status`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'reject-location' })
       });
+      if(!marketAccountCurrent(accountId,generation))return;
+      marketEpoch.current++;
       if (res && res.success) {
         triggerToast("Proposed meetup location declined.");
         await loadDigitalMarketData();
@@ -1595,22 +1665,24 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
         triggerToast(res?.error || "Failed to decline location.");
       }
     } catch (err: any) {
-      triggerToast(err.message || "Failed to decline location.");
+      if(marketAccountCurrent(accountId,generation))triggerToast(err.message || "Failed to decline location.");
     } finally {
-      setConfirmingLocationId(null);
+      if(marketAccountCurrent(accountId,generation))setConfirmingLocationId(null);
     }
   };
 
   const handleRenewDeliveryPin = async (orderId: string) => {
     setRenewingPinOrderId(orderId);
+    const accountId=user?.id,generation=marketGeneration.current;marketEpoch.current++;
     try {
       const result = await apiFetch(`/api/digital-market/orders/${orderId}/renew-pin`, { method: 'POST', body: JSON.stringify({}) });
+      if(!marketAccountCurrent(accountId,generation))return;marketEpoch.current++;
       setDigitalMarketOrders(prev => prev.map(order => order.id === orderId ? result.order : order));
       triggerToast('New delivery PIN issued. Your previous PIN is no longer valid.');
     } catch (error: any) {
-      triggerToast(error.message || 'Could not renew delivery PIN.');
+      if(marketAccountCurrent(accountId,generation))triggerToast(error.message || 'Could not renew delivery PIN.');
     } finally {
-      setRenewingPinOrderId(null);
+      if(marketAccountCurrent(accountId,generation))setRenewingPinOrderId(null);
     }
   };
 
@@ -1620,6 +1692,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
     if (!verifyingOrderTarget || pinSubmitting) return;
 
     setPinSubmitting(true);
+    const accountId=user?.id,generation=marketGeneration.current;marketEpoch.current++;
     try {
       const res = await apiFetch(`/api/digital-market/orders/${verifyingOrderTarget.id}/update-status`, {
         method: 'POST',
@@ -1631,6 +1704,8 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
         })
       });
 
+      if(!marketAccountCurrent(accountId,generation))return;
+      marketEpoch.current++;
       if (res && res.success) {
         setDigitalMarketOrders(prev => prev.map(o => o.id === verifyingOrderTarget.id ? { ...o, status: 'Completed & Paid' } : o));
         setVerifyingOrderTarget(null);
@@ -1641,9 +1716,9 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
         triggerToast(res?.error || "Invalid PIN. Please check PIN with buyer.");
       }
     } catch (err: any) {
-      triggerToast(err.message || "PIN verification failed.");
+      if(marketAccountCurrent(accountId,generation))triggerToast(err.message || "PIN verification failed.");
     } finally {
-      setPinSubmitting(false);
+      if(marketAccountCurrent(accountId,generation))setPinSubmitting(false);
     }
   };
 
@@ -1657,6 +1732,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
   const handleSubmitStoreRating = async () => {
     if (!ratingOrderTarget) return;
     setIsSubmittingRating(true);
+    const accountId=user?.id,generation=marketGeneration.current;marketEpoch.current++;
     try {
       const res = await apiFetch('/api/digital-market/ratings', {
         method: 'POST',
@@ -1668,6 +1744,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
         })
       });
 
+      if(!marketAccountCurrent(accountId,generation))return;marketEpoch.current++;
       if (res?.success) {
         triggerToast(`Thank you! Rated ${ratingStars} stars for ${ratingOrderTarget.storeName} ⭐`, 'success');
         setRatingOrderTarget(null);
@@ -1676,9 +1753,9 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
         triggerToast(res?.error || 'Failed to submit rating.', 'error');
       }
     } catch (err: any) {
-      triggerToast(err.message || 'Error submitting store rating.', 'error');
+      if(marketAccountCurrent(accountId,generation))triggerToast(err.message || 'Error submitting store rating.', 'error');
     } finally {
-      setIsSubmittingRating(false);
+      if(marketAccountCurrent(accountId,generation))setIsSubmittingRating(false);
     }
   };
 
@@ -1690,12 +1767,12 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
          {/* Toast Notification */}
          <AnimatePresence>
            {toastMessage && (
-             <motion.div
+             <motion.div role="status"
                initial={{ opacity: 0, y: 15, scale: 0.95 }}
                animate={{ opacity: 1, y: 0, scale: 1 }}
                exit={{ opacity: 0, y: 15, scale: 0.95 }}
                transition={{ duration: 0.15 }}
-               className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 bg-slate-950/95 text-white px-4 py-2 rounded-full shadow-lg border border-slate-800 flex items-center gap-2 backdrop-blur-md text-xs font-semibold"
+               className="ux-dashboard-toast fixed bottom-24 left-1/2 -translate-x-1/2 z-50 bg-slate-950/95 text-white px-4 py-2 rounded-full shadow-lg border border-slate-800 flex items-center gap-2 backdrop-blur-md text-xs font-semibold"
              >
                <div className="w-1.5 h-1.5 rounded-full bg-blue-400" />
                <span>{toastMessage}</span>
@@ -1869,7 +1946,8 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
          </main>
 
          {/* MODALS */}
-         {showClaimModal && (
+         {showClaimModal && usesSupabasePersistence && <SupabaseResidentActivation name={user?.name} phone={user?.phone} residenceId={claimHostelId} onClose={() => setShowClaimModal(false)} onActivated={() => { void queryClient.invalidateQueries({ queryKey:['userData'] }); }} />}
+         {showClaimModal && !usesSupabasePersistence && (
            <DashboardOverlay aria-label="Activate Digital Room Key" onClose={() => setShowClaimModal(false)} className="fixed inset-0 bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-4">
              <div className="onboarding-fields bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-2xl border border-blue-200 space-y-5">
                <div className="flex items-start justify-between gap-3 pb-3 border-b border-blue-100">
@@ -1897,7 +1975,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                  <div className="space-y-1">
                    <label className="text-xs font-black text-slate-800 block">Enter Key (Format: MAZE-A-123456)</label>
                    <div className="flex gap-2">
-                     <input
+                     <input aria-label="Enter Key (Format: MAZE-A-123456)"
                        type="text"
                        value={claimRoomKeyInput}
                        onChange={(e) => setClaimRoomKeyInput(e.target.value.toUpperCase())}
@@ -1996,12 +2074,12 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
       {/* Toast Notification */}
       <AnimatePresence>
         {toastMessage && (
-          <motion.div
+          <motion.div role="status"
             initial={{ opacity: 0, y: 15, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 15, scale: 0.95 }}
             transition={{ duration: 0.15 }}
-            className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 bg-slate-950/95 text-white px-4 py-2 rounded-full shadow-lg border border-slate-800 flex items-center gap-2 backdrop-blur-md text-xs font-semibold"
+            className="ux-dashboard-toast fixed bottom-24 left-1/2 -translate-x-1/2 z-50 bg-slate-950/95 text-white px-4 py-2 rounded-full shadow-lg border border-slate-800 flex items-center gap-2 backdrop-blur-md text-xs font-semibold"
           >
             <div className="w-1.5 h-1.5 rounded-full bg-blue-400" />
             <span>{toastMessage}</span>
@@ -2011,7 +2089,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
 
       {/* MOBILE HEADER (lg:hidden) */}
       <header className="lg:hidden flex items-center justify-between px-5 py-3 bg-white/90 backdrop-blur-xl border-b border-sky-200/50 sticky top-0 z-40 shadow-xs">
-        <div className="flex items-center gap-2 cursor-pointer" onClick={() => { setActiveTab('home'); navigate('/student/dashboard'); }}>
+        <div role="button" tabIndex={0} aria-label="Go to home" onKeyDown={activateOnKeyboard} className="flex items-center gap-2 cursor-pointer" onClick={() => { setActiveTab('home'); navigate('/student/dashboard'); }}>
           <PineLogo size={24} />
           <div>
             <h1 className="text-xs font-black tracking-tight text-blue-950 leading-tight">PineVela Portal</h1>
@@ -2038,33 +2116,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
       </header>
 
       {/* MOBILE BOTTOM NAV (lg:hidden) */}
-      <nav className="mobile-bottom-nav lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/70 backdrop-blur-md border-t border-slate-200/60 shadow-[0_-10px_35px_rgba(0,0,0,0.06)]">
-        <div data-mobile-nav-items className="flex items-center justify-around px-2 py-2 pb-safe">
-          {navItems.map(tab => (
-            <button
-              key={tab.id}
-              aria-current={activeTab === tab.id ? 'page' : undefined}
-              onClick={() => handleNavClick(tab.id)}
-              className={`snap-center shrink-0 flex flex-col items-center justify-center w-[64px] h-12 rounded-xl transition-all relative ${
-                activeTab === tab.id ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'
-              }`}
-            >
-              <div className={`p-1.5 rounded-lg relative ${activeTab === tab.id ? 'bg-blue-100/50' : ''}`}>
-                <tab.icon className={`w-5 h-5 ${activeTab === tab.id ? 'scale-110 transition-transform' : ''}`} />
-                <TopNavBadge inset color="blue" count={tabUnreadCount(tab.id)} />
-              </div>
-              <span className={`text-[9px] font-bold mt-0.5 ${activeTab === tab.id ? 'text-blue-700' : 'text-slate-500'}`}>
-                {tab.id === 'home' ? 'Home' :
-                 tab.id === 'digital-market' ? 'Purchases' :
-                 tab.id === 'login-room' ? 'Room' :
-                 tab.id === 'notifications' ? 'Alerts' :
-                 tab.id === 'options' ? 'Options' :
-                 tab.label.split(' ')[0]}
-              </span>
-            </button>
-          ))}
-        </div>
-      </nav>
+      <MobileNavigation label="User navigation" activeTab={activeTab} onSelect={handleNavClick} items={navItems.map(tab => ({ ...tab, badge: tabUnreadCount(tab.id), label: tab.id === 'home' ? 'Home' : tab.id === 'digital-market' ? 'Purchases' : tab.id === 'login-room' ? 'Room' : tab.id === 'notifications' ? 'Alerts' : 'Options' }))} />
 
       {/* Compact desktop equivalent of the mobile navigation. It stays above the scrolling content. */}
       {isSidebarHidden && (
@@ -2117,7 +2169,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
         <div className="space-y-6">
           {/* Logo & Header */}
           <div className="flex items-center justify-between px-2">
-            <div className="flex items-center space-x-3 cursor-pointer" onClick={() => { setActiveTab('home'); navigate('/student/dashboard'); }}>
+            <div role="button" tabIndex={0} aria-label="Go to home" onKeyDown={activateOnKeyboard} className="flex items-center space-x-3 cursor-pointer" onClick={() => { setActiveTab('home'); navigate('/student/dashboard'); }}>
               <PineLogo size={36} />
               <div>
                 <h1 className="text-sm font-extrabold tracking-tight bg-gradient-to-r from-blue-900 to-cyan-800 bg-clip-text text-transparent">PineVela Resident</h1>
@@ -2208,7 +2260,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                   <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
                     <Search className="w-4 h-4 text-slate-400" />
                   </span>
-                  <input
+                  <input aria-label="Search hostels, marketplace items, or managers..."
                     type="text"
                     value={homeSearchQuery}
                     onChange={(e) => setHomeSearchQuery(e.target.value)}
@@ -2361,78 +2413,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                     </div>
                   ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                      {filteredHostels.map((hostel: any, idx: number) => {
-                        const coverImg = hostel?.image || hostel?.imageUrl || hostel?.exteriorPhotoUrl || hostel?.images?.[0] || 'https://images.unsplash.com/photo-1555854877-bab0e564b8d5?auto=format&fit=crop&w=800&q=80';
-                        const managerName = hostel.managerName || hostel.managerEmail || 'Verified Manager';
-
-                        return (
-                          <div key={hostel.id || idx} className="bg-slate-50/80 border border-slate-200/80 rounded-2xl overflow-hidden shadow-xs hover:shadow-md transition-all flex flex-col justify-between">
-                            <div>
-                              <div className="relative h-36 w-full bg-slate-200 overflow-hidden">
-                                <img
-                                  src={coverImg}
-                                  alt={hostel.name || 'Hostel'}
-                                  referrerPolicy="no-referrer"
-                                  onError={(e) => {
-                                    (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1555854877-bab0e564b8d5?auto=format&fit=crop&w=800&q=80';
-                                  }}
-                                  className="w-full h-full object-cover"
-                                />
-                                <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5">
-                                  {hostel.hostelType && (
-                                    <span className="px-2.5 py-0.5 bg-white/90 backdrop-blur-sm text-slate-800 text-[10px] font-black rounded-full shadow-xs">
-                                      {hostel.hostelType}
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-
-                              <div className="p-4 space-y-2.5">
-                                <div>
-                                  <h4 className="font-extrabold text-slate-900 text-sm tracking-tight">{hostel.name || 'PineVela Hostel'}</h4>
-                                  <div className="flex items-center gap-1 text-slate-500 text-xs mt-0.5">
-                                    <MapPin size={12} className="shrink-0 text-slate-400" />
-                                    <span className="truncate">{hostel.location || 'PineVela Campus Zone'}</span>
-                                  </div>
-                                </div>
-
-                                <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between text-xs text-slate-600">
-                                  <span className="text-slate-400 font-medium">Manager:</span>
-                                  <span className="font-bold text-slate-800 truncate max-w-[150px]">{managerName}</span>
-                                </div>
-                              </div>
-                            </div>
-
-                            <div className="p-4 pt-0 grid grid-cols-2 gap-2">
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setUserActiveModalImage('');
-                                  setViewingHostelModal(hostel);
-                                }}
-                                className="py-2 px-2.5 bg-white border border-slate-200 hover:bg-slate-100 text-slate-800 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1 cursor-pointer shadow-xs"
-                              >
-                                <Eye size={13} className="text-slate-600" />
-                                <span>View Details</span>
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setShowClaimModal(true);
-                                  setClaimStep(1);
-                                  setClaimRoomKeyInput('');
-                                  setClaimError(null);
-                                  setVerifiedKeyInfo(null);
-                                }}
-                                className="py-2 px-2.5 bg-blue-900 hover:bg-blue-800 text-white text-xs font-extrabold rounded-xl transition-all flex items-center justify-center gap-1 cursor-pointer shadow-xs"
-                              >
-                                <Key size={13} className="text-amber-300" />
-                                <span>Activate Key</span>
-                              </button>
-                            </div>
-                          </div>
-                        );
-                      })}
+                      {filteredHostels.map(hostel => <ResidenceCard key={hostel.id} hostel={hostel} onInspect={setViewingHostelModal} onActivate={openResidenceActivation} />)}
                     </div>
                   )}
                 </div>
@@ -2727,6 +2708,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                   </div>
 
                   {/* Order History Cards List */}
+                  {marketReadError && <p role="status" className="mb-3 text-sm text-red-700">{marketReadError}</p>}
                   {digitalMarketOrders.length > 0 ? (
                     <div className="space-y-6">
                       {digitalMarketOrders.map(order => {
@@ -2774,7 +2756,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                                       <MapPin className="w-3.5 h-3.5 text-blue-600" />
                                       <span>Meetup Point: {order.meetingLocation}</span>
                                     </span>
-                                    {order.meetingLatitude && order.meetingLongitude && (
+                                    {order.meetingLatitude != null && order.meetingLongitude != null && (
                                       <button
                                         type="button"
                                         onClick={() => setViewingOrderMap(order)}
@@ -2871,7 +2853,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                                   </div>
                                 </div>
                                 <div className="flex flex-wrap items-center gap-2 pt-1">
-                                  {order.meetingLatitude && (
+                                  {order.meetingLatitude != null && order.meetingLongitude != null && (
                                     <button
                                       type="button"
                                       onClick={() => setViewingOrderMap(order)}
@@ -2910,7 +2892,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                                     Map coordinates sent to merchant. Awaiting seller's confirmation on the meetup location before handover.
                                   </p>
                                 </div>
-                                {order.meetingLatitude && (
+                                {order.meetingLatitude != null && order.meetingLongitude != null && (
                                   <button
                                     type="button"
                                     onClick={() => setViewingOrderMap(order)}
@@ -2928,7 +2910,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                                   <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
                                   <span>Meetup location agreed by seller. Purchase is locked in! 📍</span>
                                 </div>
-                                {order.meetingLatitude && (
+                                {order.meetingLatitude != null && order.meetingLongitude != null && (
                                   <button
                                     type="button"
                                     onClick={() => setViewingOrderMap(order)}
@@ -2988,7 +2970,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
             <ManagerRegistrationCard managerAccount={managerAccount} onRegister={() => void openManagerRegistration()} onLogin={() => navigate('/login')} />}
         </AccountStatusDialog>}
         {showMarketChat && <AccountStatusDialog title="Buyer–Seller Messages" onClose={() => setShowMarketChat(false)}>
-          <MarketplaceInbox initialPeerEmail={activeChatEmail} />
+          <MarketplaceInbox initialPeerEmail={activeChatEmail} initialStore={usesSupabasePersistence?activeChatStore:undefined} />
         </AccountStatusDialog>}
 
         {showStoreSetupModal && <DashboardOverlay onClose={() => setShowStoreSetupModal(false)} aria-label="Seller checkout" className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4"><section className="w-full max-w-md space-y-4 rounded-3xl bg-white p-6"><h2 className="text-xl font-bold">Activate your seller account</h2><p>Sign in with your seller password to save store details and pay the current registration, monthly plan and two-month fees through Paystack.</p><button onClick={() => navigate('/login')} className="rounded-xl bg-blue-600 px-5 py-3 text-white">Sign in as seller</button><button onClick={() => setShowStoreSetupModal(false)} className="ml-3 text-slate-600">Close</button></section></DashboardOverlay>}
@@ -3023,7 +3005,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                   <span>Institutional Credential Check</span>
                 </div>
                 <p className="text-slate-600 leading-relaxed">
-                  Enter your registered student email and digital store password. Primary resident account credentials cannot access the digital market platform.
+                  {usesSupabasePersistence ? 'Enter your verified student email and password. If this email also opens your resident account, use the seller portal PIN when prompted.' : 'Enter your registered student email and digital store password. Primary resident account credentials cannot access the digital market platform.'}
                 </p>
               </div>
 
@@ -3039,12 +3021,12 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                   <label className="block text-xs font-black text-slate-800 mb-1">
                     Student Email (Registered during Store Creation)
                   </label>
-                  <input
+                  <input aria-label="Student Email (Registered during Store Creation)"
                     type="email"
                     required
                     placeholder="e.g. alex@st.knust.edu.gh"
                     value={storeLoginEmail}
-                    onChange={(e) => setStoreLoginEmail(e.target.value)}
+                    onChange={(e) => { setStoreLoginEmail(e.target.value);setStoreNeedsPin(false);setStorePortalPin(''); }}
                     className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-hidden focus:ring-2 focus:ring-blue-600 focus:bg-white"
                   />
                 </div>
@@ -3053,7 +3035,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                   <label className="block text-xs font-black text-slate-800 mb-1">
                     Digital Store Password
                   </label>
-                  <input
+                  <input aria-label="Digital Store Password"
                     type="password"
                     required
                     placeholder="Enter store password"
@@ -3063,6 +3045,12 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                   />
                 </div>
 
+                {storeNeedsPin && <div>
+                  <label htmlFor="seller-portal-pin" className="block text-xs font-bold text-slate-800 mb-1">Seller portal access PIN</label>
+                  <input id="seller-portal-pin" type="password" inputMode="numeric" autoComplete="off" pattern="[0-9]{6,12}" minLength={6} maxLength={12} required
+                    value={storePortalPin} onChange={e => setStorePortalPin(e.target.value)}
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-600" />
+                </div>}
                 <div className="pt-2 flex items-center justify-end gap-3 border-t border-slate-100">
                   <button
                     type="button"
@@ -3105,7 +3093,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
               <form onSubmit={handleAddProduct} className="space-y-3 text-xs">
                 <div>
                   <label className="block font-bold text-slate-700 mb-1">Product Title</label>
-                  <input
+                  <input aria-label="Product Title"
                     type="text"
                     required
                     placeholder="e.g. Pharmacy Textbook / HP Laptop"
@@ -3118,7 +3106,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block font-bold text-slate-700 mb-1">Price (GHS)</label>
-                    <input
+                    <input aria-label="Price (GHS)"
                       type="number"
                       required
                       placeholder="150"
@@ -3130,7 +3118,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
 
                   <div>
                     <label className="block font-bold text-slate-700 mb-1">Stock Quantity</label>
-                    <input
+                    <input aria-label="Stock Quantity"
                       type="number"
                       required
                       placeholder="5"
@@ -3143,7 +3131,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
 
                 <div>
                   <label className="block font-bold text-slate-700 mb-1">Category</label>
-                  <select
+                  <select aria-label="Category"
                     value={prodCategory}
                     onChange={e => setProdCategory(e.target.value)}
                     className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-semibold"
@@ -3156,7 +3144,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
 
                 <div>
                   <label className="block font-bold text-slate-700 mb-1">Item Description</label>
-                  <textarea
+                  <textarea aria-label="Item Description"
                     rows={2}
                     placeholder="Condition, specs, or details..."
                     value={prodDesc}
@@ -3193,13 +3181,10 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
         }} />}
 
         {/* BUY / INSPECT / SERVICE PRODUCT MODAL */}
+        {viewingStoreId && <DashboardOverlay aria-label="Merchant storefront" onClose={() => setViewingStoreId(null)} className="fixed inset-0 bg-slate-950/65 backdrop-blur-xl flex items-center justify-center p-2 sm:p-5"><section className="relative w-full max-w-6xl max-h-[94dvh] overflow-y-auto rounded-3xl border border-blue-200 bg-white/75 backdrop-blur-2xl p-4 sm:p-7"><div className="flex justify-end mb-3"><button type="button" aria-label="Close storefront" onClick={() => setViewingStoreId(null)} className="p-2 text-slate-600"><X size={20} /></button></div><MarketStorefront key={viewingStoreId} storeId={viewingStoreId} initialMessage={storeMessageOnOpen} onInspect={product => { setSelectedProductForBuy(product as DigitalMarketProduct); setSelectedPriceCategory(product.priceCategories?.[0] as any || null); }} /></section></DashboardOverlay>}
+
         {selectedProductForBuy && (() => {
-          const isSelectedService = Boolean(
-            (selectedProductForBuy as any).isService ||
-            selectedProductForBuy.category === 'Services' ||
-            (selectedProductForBuy as any).serviceCategory ||
-            selectedProductForBuy.category?.toLowerCase().includes('service')
-          );
+          const isSelectedService = isMarketService(selectedProductForBuy);
           const serviceActionLabel = isSelectedService ? getServiceActionLabel(selectedProductForBuy as any) : 'Request to Buy';
           const displayLoc = (selectedProductForBuy as any).location || (selectedProductForBuy as any).meetingLocation;
           const serviceCallLine = (selectedProductForBuy as any).callLine || selectedProductForBuy.sellerPhone;
@@ -3330,6 +3315,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                     </div>
                   )}
 
+                  {selectedProductForBuy.storeId && <button type="button" onClick={() => { setStoreMessageOnOpen(false); setViewingStoreId(selectedProductForBuy.storeId); setSelectedProductForBuy(null); }} className="w-full rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-xs font-black text-blue-800">View Store</button>}
                   <p className="text-[11px] sm:text-xs text-slate-600 leading-relaxed whitespace-pre-wrap break-words font-medium">
                     {selectedProductForBuy.description || 'No description provided.'}
                   </p>
@@ -3401,13 +3387,13 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                       <MessageSquare className="w-3.5 h-3.5 text-slate-500" />
                       <span>Chat</span>
                     </button>
-                    <button
+                    <button disabled={!marketListingAvailable(selectedProductForBuy)}
                       type="button"
                       onClick={() => {
                         setSelectedProdForOrder(selectedProductForBuy);
                         setOrderQtyInput(1);
                         setBuyerPhoneInput(currentUser?.phone || '');
-                        const isService = Boolean((selectedProductForBuy as any).isService || selectedProductForBuy.category === 'Services' || (selectedProductForBuy as any).serviceCategory);
+                        const isService = isMarketService(selectedProductForBuy);
                         const serviceMode = (selectedProductForBuy as any).serviceLocationMode || 'flexible';
                         const useSellerLocation = isService && (serviceMode === 'fixed' || serviceMode === 'hybrid');
                         setServiceLocationOption(useSellerLocation ? 'seller-location' : 'buyer-location');
@@ -3425,7 +3411,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                       }}
                       className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-md cursor-pointer flex items-center gap-1.5"
                     >
-                      <span>{serviceActionLabel}</span>
+                      <span>{!marketListingAvailable(selectedProductForBuy) ? isSelectedService ? 'Unavailable' : 'Sold out' : serviceActionLabel}</span>
                       <ChevronRight className="w-3.5 h-3.5" />
                     </button>
                   </div>
@@ -3437,12 +3423,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
 
         {/* ORDER / MEETUP / SERVICE REQUEST MODAL */}
         {selectedProdForOrder && (() => {
-          const isOrderService = Boolean(
-            (selectedProdForOrder as any).isService ||
-            selectedProdForOrder.category === 'Services' ||
-            (selectedProdForOrder as any).serviceCategory ||
-            selectedProdForOrder.category?.toLowerCase().includes('service')
-          );
+          const isOrderService = isMarketService(selectedProdForOrder);
           const orderActionVerb = isOrderService ? getServiceActionLabel(selectedProdForOrder as any) : 'Initiate Buy Request';
           const activeOrderUnitPrice = (selectedPriceCategory && selectedPriceCategory.price !== undefined)
             ? Number(selectedPriceCategory.price)
@@ -3526,7 +3507,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                       <label className="text-xs font-bold text-slate-700">
                         {isOrderService ? 'Quantity / Portions / Sessions' : 'Quantity'}
                       </label>
-                      <input
+                      <input aria-label="Order quantity"
                         type="number"
                         min={1}
                         max={isOrderService ? 50 : (selectedProdForOrder.stockQuantity || 1)}
@@ -3572,7 +3553,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                       </button>
                     </div>
 
-                    <input
+                    <input aria-label="Delivery or handover location"
                       type="text"
                       required={buyerChoosesLocation}
                       readOnly={!buyerChoosesLocation}
@@ -3582,7 +3563,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                       className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                     />
 
-                    {orderMeetupLat && orderMeetupLng ? (
+                    {orderMeetupLat!==null && orderMeetupLng!==null ? (
                       <div className="flex items-center justify-between px-3 py-2 bg-emerald-50 border border-emerald-200 rounded-xl text-[11px] text-emerald-800">
                         <div className="flex items-center gap-1.5 font-bold">
                           <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
@@ -3603,7 +3584,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
 
                   <div className="space-y-1.5">
                     <label className="text-xs font-bold text-slate-700">Your Contact Phone Number</label>
-                    <input
+                    <input aria-label="Your Contact Phone Number"
                       type="tel"
                       required
                       value={buyerPhoneInput}
@@ -3691,7 +3672,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                   </div>
                 </div>
 
-                <button
+                <button aria-label="Close dialog"
                   type="button"
                   onClick={() => setVerifyingOrderTarget(null)}
                   className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center cursor-pointer transition-colors"
@@ -3731,7 +3712,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                   <p className="text-[11px] text-slate-500">
                     The student buyer sees this six-digit code in their order history. Enter it to confirm physical handover and release payment.
                   </p>
-                  <input
+                  <input aria-label="Ask Buyer for 6-Digit Delivery PIN:"
                     type="text"
                     maxLength={6}
                     required
@@ -4065,7 +4046,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                 <label className="text-xs font-black text-slate-800 block">
                   Issue Title <span className="text-rose-600">*</span>
                 </label>
-                <input
+                <input aria-label="Issue Title"
                   type="text"
                   required
                   value={issueTitle}
@@ -4079,7 +4060,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <label className="text-xs font-black text-slate-800 block">Category</label>
-                  <select
+                  <select aria-label="Category"
                     value={issueCategory}
                     onChange={(e) => setIssueCategory(e.target.value)}
                     className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-blue-600"
@@ -4120,7 +4101,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                 <label className="text-xs font-black text-slate-800 block">
                   Detailed Description <span className="text-rose-600">*</span>
                 </label>
-                <textarea
+                <textarea aria-label="Detailed Description"
                   required
                   rows={3}
                   value={issueDescription}
@@ -4162,7 +4143,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                     {issuePhotos.map((photo, pIdx) => (
                       <div key={pIdx} className="w-16 h-16 rounded-xl overflow-hidden border border-slate-200 relative group">
                         <img src={photo} alt="Preview" className="w-full h-full object-cover" />
-                        <button
+                        <button aria-label="Remove photograph"
                           type="button"
                           onClick={() => removePhoto(pIdx)}
                           className="absolute top-1 right-1 bg-rose-600 text-white rounded-full p-0.5 opacity-90 hover:opacity-100"
@@ -4266,7 +4247,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
               </p>
               {selectedIssueForConfirm.staffCompletionPhoto && (
                 <div className="pt-1">
-                  <img
+                  <img role="button" tabIndex={0} aria-label="View repair completion photograph" onKeyDown={activateOnKeyboard}
                     src={selectedIssueForConfirm.staffCompletionPhoto}
                     alt="Proof"
                     onClick={() => setZoomedImage(selectedIssueForConfirm.staffCompletionPhoto!)}
@@ -4280,7 +4261,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
               <label className="text-xs font-black text-slate-800 block">
                 Resident Feedback / Notes (Optional)
               </label>
-              <textarea
+              <textarea aria-label="Resident Feedback / Notes (Optional)"
                 rows={2}
                 value={confirmFeedback}
                 onChange={(e) => setConfirmFeedback(e.target.value)}
@@ -4365,7 +4346,8 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
       {/* ========================================================================= */}
       {/* MODAL 3: LINK / CLAIM DIGITAL ROOM KEY */}
       {/* ========================================================================= */}
-      {showClaimModal && (
+      {showClaimModal && usesSupabasePersistence && <SupabaseResidentActivation name={user?.name} phone={user?.phone} residenceId={claimHostelId} onClose={() => setShowClaimModal(false)} onActivated={() => { void queryClient.invalidateQueries({ queryKey:['userData'] }); }} />}
+      {showClaimModal && !usesSupabasePersistence && (
         <DashboardOverlay aria-label="Resident Room Registration" onClose={() => setShowClaimModal(false)} className="fixed inset-0 bg-slate-950/70 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
           <div className="onboarding-fields bg-white/95 backdrop-blur-2xl rounded-3xl max-w-lg w-full p-5 sm:p-7 shadow-2xl border border-blue-200 space-y-5 animate-in fade-in zoom-in-95 duration-150">
             
@@ -4381,7 +4363,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                     <span className="text-[9px] uppercase font-black px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-800 tracking-wider">PineVela Key</span>
                   </h3>
                   <p className="text-[11px] text-slate-500 font-semibold leading-tight">
-                    {claimStep === 1 && 'Enter your digital room key provided by your hostel manager'}
+                    {claimStep === 1 && (availableHostels.find(hostel => hostel.id === claimHostelId)?.name ? `Enter the digital room key for ${availableHostels.find(hostel => hostel.id === claimHostelId).name}` : 'Enter your digital room key provided by your hostel manager')}
                     {claimStep === 2 && 'Enter your resident account details and password'}
                     {claimStep === 3 && 'Room verified! Your resident account is ready'}
                   </p>
@@ -4415,7 +4397,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
 
                   <div className="relative">
                     <Key className="w-4 h-4 text-blue-600 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                    <input
+                    <input aria-label="Digital Room Key"
                       type="text"
                       autoFocus
                       value={claimRoomKeyInput}
@@ -4518,7 +4500,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                     </label>
                     <div className="relative">
                       <User className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                      <input
+                      <input aria-label="Username / Full Name"
                         type="text"
                         required
                         value={claimStudentName}
@@ -4536,7 +4518,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                     </label>
                     <div className="relative">
                       <Phone className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                      <input
+                      <input aria-label="Phone Number"
                         type="tel"
                         required
                         value={claimStudentPhone}
@@ -4566,7 +4548,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
 
                     <div className="relative pt-1">
                       <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                      <input
+                      <input aria-label="KNUST Student Email"
                         type="email"
                         required
                         value={claimEmail}
@@ -4585,7 +4567,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                       </label>
                       <div className="relative">
                         <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                        <input
+                        <input aria-label="Password"
                           type={showClaimPassword ? "text" : "password"}
                           required
                           value={claimPassword}
@@ -4593,7 +4575,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                           placeholder="Min 6 chars"
                           className="w-full pl-9 pr-8 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-blue-600"
                         />
-                        <button
+                        <button aria-label={showClaimPassword ? 'Hide password' : 'Show password'} aria-pressed={showClaimPassword}
                           type="button"
                           onClick={() => setShowClaimPassword(!showClaimPassword)}
                           className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
@@ -4610,7 +4592,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                       </label>
                       <div className="relative">
                         <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                        <input
+                        <input aria-label="Confirm Password"
                           type={showClaimConfirmPassword ? "text" : "password"}
                           required
                           value={claimConfirmPassword}
@@ -4618,7 +4600,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                           placeholder="Repeat password"
                           className="w-full pl-9 pr-8 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-blue-600"
                         />
-                        <button
+                        <button aria-label={showClaimConfirmPassword ? 'Hide password' : 'Show password'} aria-pressed={showClaimConfirmPassword}
                           type="button"
                           onClick={() => setShowClaimConfirmPassword(!showClaimConfirmPassword)}
                           className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
@@ -4775,7 +4757,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
               {resetTargetRole === 'resident' && (
                 <div className="space-y-1">
                   <label className="text-xs font-black text-slate-800 block">Old / Current Resident Password *</label>
-                  <input
+                  <input aria-label="Old / Current Resident Password"
                     type="password"
                     value={currentPasswordInput}
                     onChange={(e) => setCurrentPasswordInput(e.target.value)}
@@ -4788,7 +4770,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
 
               <div className="space-y-1">
                 <label className="text-xs font-black text-slate-800 block">New Password</label>
-                <input
+                <input aria-label="New Password"
                   type="password"
                   value={newPasswordInput}
                   onChange={(e) => setNewPasswordInput(e.target.value)}
@@ -4801,7 +4783,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
 
               <div className="space-y-1">
                 <label className="text-xs font-black text-slate-800 block">Confirm New Password</label>
-                <input
+                <input aria-label="Confirm New Password"
                   type="password"
                   value={confirmPasswordInput}
                   onChange={(e) => setConfirmPasswordInput(e.target.value)}
@@ -4880,7 +4862,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                 <label className="text-xs font-black text-slate-800 block">
                   Resident Account Email
                 </label>
-                <input
+                <input aria-label="Resident Account Email"
                   type="email"
                   value={deleteTargetEmail}
                   onChange={(e) => setDeleteTargetEmail(e.target.value)}
@@ -4894,7 +4876,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                 <label className="text-xs font-black text-slate-800 block">
                   Resident Account Password *
                 </label>
-                <input
+                <input aria-label="Resident Account Password"
                   type="password"
                   value={deletePasswordInput}
                   onChange={(e) => setDeletePasswordInput(e.target.value)}
@@ -4995,124 +4977,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
       {/* ========================================================================= */}
       {/* MODAL 6: HOSTEL ACCOMMODATION DETAILS MODAL */}
       {/* ========================================================================= */}
-      {viewingHostelModal && (
-        <DashboardOverlay aria-label="Hostel Accommodation Details" onClose={() => setViewingHostelModal(null)} className="fixed inset-0 bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-xl w-full max-h-[90vh] overflow-y-auto border border-slate-100 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
-            
-            {/* Gallery header */}
-            {(() => {
-              const galleryList: string[] = [];
-              const mainImg = viewingHostelModal?.image || viewingHostelModal?.imageUrl || viewingHostelModal?.exteriorPhotoUrl || viewingHostelModal?.images?.[0];
-              if (mainImg) galleryList.push(mainImg);
-              if (Array.isArray(viewingHostelModal?.gallery)) {
-                viewingHostelModal.gallery.forEach((g: string) => {
-                  if (g && !galleryList.includes(g)) galleryList.push(g);
-                });
-              } else if (Array.isArray(viewingHostelModal?.images)) {
-                viewingHostelModal.images.forEach((g: string) => {
-                  if (g && !galleryList.includes(g)) galleryList.push(g);
-                });
-              }
-              const displayImg = userActiveModalImage || galleryList[0] || 'https://images.unsplash.com/photo-1555854877-bab0e564b8d5?auto=format&fit=crop&w=800&q=80';
-
-              return (
-                <div className="space-y-2 p-4 bg-slate-900 rounded-t-3xl">
-                  <div className="relative h-56 w-full rounded-2xl overflow-hidden bg-slate-800 border border-slate-700">
-                    <img
-                      src={displayImg}
-                      alt={viewingHostelModal?.name}
-                      referrerPolicy="no-referrer"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1555854877-bab0e564b8d5?auto=format&fit=crop&w=800&q=80';
-                      }}
-                      className="w-full h-full object-cover transition-all"
-                    />
-                    <button aria-label="Close dialog"
-                      onClick={() => setViewingHostelModal(null)}
-                      className="absolute top-3 right-3 bg-black/70 hover:bg-black text-white p-2 rounded-full cursor-pointer transition-all border border-white/20"
-                    >
-                      <X className="w-5 h-5" />
-                    </button>
-                  </div>
-
-                  {galleryList.length > 1 && (
-                    <div className="flex items-center gap-2 overflow-x-auto pb-1 pt-1">
-                      {galleryList.map((gUrl, gIdx) => (
-                        <button
-                          key={gIdx}
-                          onClick={() => setUserActiveModalImage(gUrl)}
-                          className={`relative w-16 h-12 rounded-xl overflow-hidden border-2 shrink-0 cursor-pointer transition-all ${
-                            displayImg === gUrl ? 'border-amber-400 ring-2 ring-amber-400/30 scale-105' : 'border-slate-700 opacity-60 hover:opacity-100'
-                          }`}
-                        >
-                          <img src={gUrl} alt={`Gallery ${gIdx + 1}`} className="w-full h-full object-cover" />
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              );
-            })()}
-
-            <div className="p-6 space-y-4">
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-black uppercase tracking-wider text-blue-800 bg-blue-50 px-2.5 py-0.5 rounded-md border border-blue-200">
-                    {viewingHostelModal?.hostelType || viewingHostelModal?.wing || 'Student Residence'}
-                  </span>
-                </div>
-                <h3 className="text-xl font-black text-slate-900 mt-1">{viewingHostelModal?.name}</h3>
-                <p className="text-xs text-slate-500 font-medium flex items-center gap-1 mt-1">
-                  <MapPin className="w-3.5 h-3.5 text-rose-500 shrink-0" />
-                  <span>{viewingHostelModal?.digitalAddress ? `${viewingHostelModal.digitalAddress} • ` : ''}{viewingHostelModal?.location || viewingHostelModal?.addressLine1 || 'PineVela Campus Zone'}</span>
-                </p>
-              </div>
-
-              {viewingHostelModal?.description && (
-                <p className="text-xs text-slate-600 leading-relaxed font-medium bg-slate-50 p-3.5 rounded-2xl border border-slate-200/80">
-                  {viewingHostelModal.description}
-                </p>
-              )}
-
-              {/* Manager Details */}
-              <div className="p-3.5 bg-blue-50/60 rounded-2xl border border-blue-200/60 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-blue-900 text-white font-black flex items-center justify-center shrink-0 border border-blue-300">
-                  {viewingHostelModal?.managerName ? viewingHostelModal.managerName.substring(0, 2).toUpperCase() : 'MG'}
-                </div>
-                <div className="text-xs">
-                  <span className="text-[10px] font-bold uppercase text-slate-400 block">Property Residence Manager</span>
-                  <p className="font-black text-slate-900">{viewingHostelModal?.managerName || 'Assigned Residence Manager'}</p>
-                  <p className="text-[11px] text-slate-600 font-semibold">{viewingHostelModal?.managerPhone || '+233 24 123 4567'} • {viewingHostelModal?.managerEmail || 'manager@pinevela.com'}</p>
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex items-center gap-3 pt-2">
-                <button
-                  onClick={() => setViewingHostelModal(null)}
-                  className="px-4 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-2xl transition-all cursor-pointer"
-                >
-                  Close
-                </button>
-                <button
-                  onClick={() => {
-                    setViewingHostelModal(null);
-                    setShowClaimModal(true);
-                    setClaimStep(1);
-                    setClaimRoomKeyInput('');
-                    setClaimError(null);
-                    setVerifiedKeyInfo(null);
-                  }}
-                  className="flex-1 py-3 px-4 bg-blue-900 hover:bg-blue-800 text-white font-black text-xs rounded-2xl shadow-md transition-all cursor-pointer flex items-center justify-center gap-2"
-                >
-                  <Key className="w-4 h-4 text-amber-300" />
-                  <span>Activate Digital Key</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        </DashboardOverlay>
-      )}
+      {viewingHostelModal && <ResidenceDetails key={viewingHostelModal.id} hostel={viewingHostelModal} onClose={() => setViewingHostelModal(null)} onActivate={openResidenceActivation} />}
 
       {/* ADD ADDITIONAL ROOM MODAL */}
       {showAddRoomModal && (
@@ -5173,7 +5038,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                   Digital Room Key Code
                 </label>
                 <div className="flex items-center gap-2">
-                  <input
+                  <input aria-label="Digital Room Key Code"
                     type="text"
                     value={addRoomKeyInput}
                     onChange={(e) => {
@@ -5310,7 +5175,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                   <label className="text-[11px] font-black uppercase text-slate-700 block mb-1">
                     Resident Account Email
                   </label>
-                  <input
+                  <input aria-label="Resident Account Email"
                     type="email"
                     value={delRoomEmailInput}
                     onChange={(e) => {
@@ -5327,7 +5192,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                   <label className="text-[11px] font-black uppercase text-slate-700 block mb-1">
                     Resident Account Password
                   </label>
-                  <input
+                  <input aria-label="Resident Account Password"
                     type="password"
                     value={delRoomPasswordInput}
                     onChange={(e) => {
@@ -5411,7 +5276,8 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
       )}
 
       {/* PINEVELA FULL-SCREEN STUDENT MERCHANT ONBOARDING WIZARD (WHITE FROSTY THEME & ROOT Z-INDEX) */}
-      {showDMRegModal && (
+      {showDMRegModal && usesSupabasePersistence && <SupabaseSellerRegistration key={user?.id} name={user?.name} phone={user?.phone} categories={DIGITAL_MARKET_CATEGORIES} onClose={() => setShowDMRegModal(false)} onSubmitted={() => {void loadDigitalMarketData();void queryClient.invalidateQueries({queryKey:['userData']});triggerToast('Seller application submitted for review.');}} />}
+      {showDMRegModal && !usesSupabasePersistence && (
         <DashboardOverlay aria-label="Digital Market Registration" onClose={() => { setShowDMRegModal(false); setDmWizardPhase(1); }} layer={99999} className="fixed inset-0 h-full w-full bg-slate-50/95 backdrop-blur-md flex flex-col items-center justify-start p-3 sm:p-6 overflow-hidden font-sans text-slate-800 animate-fadeIn">
           
           {/* Ambient background blur shapes */}
@@ -5476,7 +5342,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                     <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider">
                       Full Legal Name <span className="text-rose-500">*</span>
                     </label>
-                    <input
+                    <input aria-label="Full Legal Name"
                       type="text"
                       required
                       placeholder="e.g. Samuel Mensah"
@@ -5491,7 +5357,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                     <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider">
                       Accredited Ghanaian University <span className="text-rose-500">*</span>
                     </label>
-                    <select
+                    <select aria-label="Accredited Ghanaian University"
                       value={dmUniversity}
                       onChange={e => setDmUniversity(e.target.value)}
                       className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-xs sm:text-sm text-slate-800 font-semibold focus:outline-none focus:ring-2 focus:ring-blue-800 focus:border-blue-800 transition-all"
@@ -5532,7 +5398,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                       )}
                     </div>
 
-                    <input
+                    <input aria-label="Student ID or School-issued ID"
                       type="text"
                       required
                       maxLength={32}
@@ -5580,7 +5446,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                         ) : null
                       )}
                     </div>
-                    <input
+                    <input aria-label="Student Email Address"
                       type="email"
                       required
                       placeholder="Enter your student email address"
@@ -5595,7 +5461,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                       <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider">
                         Student Merchant Password <span className="text-rose-500">*</span>
                       </label>
-                      <button
+                      <button aria-label={showDmPassword ? 'Hide password' : 'Show password'} aria-pressed={showDmPassword}
                         type="button"
                         onClick={() => setShowDmPassword(!showDmPassword)}
                         className="text-xs font-bold text-blue-800 hover:text-blue-950 transition-colors cursor-pointer flex items-center gap-1"
@@ -5604,7 +5470,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                         <span>{showDmPassword ? 'Hide' : 'Show'}</span>
                       </button>
                     </div>
-                    <input
+                    <input aria-label="Student Merchant Password"
                       type={showDmPassword ? "text" : "password"}
                       required
                       placeholder="Create a secure 6+ character password"
@@ -5633,7 +5499,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                         )
                       )}
                     </div>
-                    <input
+                    <input aria-label="Confirm Merchant Password"
                       type={showDmPassword ? "text" : "password"}
                       required
                       placeholder="Re-enter your merchant password"
@@ -5663,7 +5529,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                     <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider">
                       Primary Selling Category <span className="text-rose-500">*</span>
                     </label>
-                    <select
+                    <select aria-label="Primary Selling Category"
                       value={dmCategory}
                       onChange={e => setDmCategory(e.target.value)}
                       className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-xs sm:text-sm text-slate-800 font-semibold focus:outline-none focus:ring-2 focus:ring-blue-800 transition-all"
@@ -5678,7 +5544,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                     <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider">
                       Proposed Campus Store Name <span className="text-slate-400 font-normal">(Optional)</span>
                     </label>
-                    <input
+                    <input aria-label="Proposed Campus Store Name (Optional)"
                       type="text"
                       placeholder={`e.g. ${dmFullName ? dmFullName.trim() + "'s Campus Market" : "Campus Tech Depot"}`}
                       value={dmProposedStoreName}
@@ -5803,7 +5669,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
               </h3>
               <p className="text-[11px] text-slate-500 font-bold">{ratingOrderTarget.storeName}</p>
             </div>
-            <button
+            <button aria-label="Close dialog"
               type="button"
               onClick={() => setRatingOrderTarget(null)}
               className="p-1 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
@@ -5863,7 +5729,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
             {/* Optional Review Input */}
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-slate-700">Optional Written Feedback</label>
-              <textarea
+              <textarea aria-label="Optional Written Feedback"
                 maxLength={4000}
                 rows={3}
                 placeholder="Describe your experience with this seller (e.g. quick delivery, good item condition, polite)..."

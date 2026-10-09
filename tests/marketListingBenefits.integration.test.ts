@@ -42,6 +42,14 @@ test('Catalog benefits follow active store plans, prioritize Pro and reject list
   await request('PUT','/api/digital-market/products/0-item',actors[2],spoof,403);
   await request('PUT','/api/digital-market/products/0-item',actors[0],spoof);
   assert.equal((await request('GET','/api/digital-market/products?storeId=store-default'))[0].subscriptionPlan,'default');
+  for (const stockQuantity of [-1, 0, 1.5, '2', null, 1e100]) {
+    await request('PUT','/api/digital-market/products/0-item',actors[0],{stockQuantity},400);
+    await request('POST','/api/digital-market/products',actors[0],{storeId:stores[0].id,stockQuantity,category:'Electronics'},400);
+  }
+  await request('PUT','/api/digital-market/products/0-item',actors[2],{stockQuantity:2},403);
+  await request('PUT','/api/digital-market/products/0-item',undefined,{stockQuantity:2},401);
+  await request('PUT','/api/digital-market/products/0-item',actors[0],{stockQuantity:2});
+  assert.equal((await request('GET','/api/digital-market/products?storeId=store-default')).find((p:any)=>p.id==='0-item').stockQuantity,2);
   const upgrade=await request('POST','/api/payments/paystack/initialize',actors[1],{purpose:'subscription',plan:'pro'});assert(upgrade.paid);
   assert((await request('GET','/api/digital-market/products?storeId=store-star')).every((p:any)=>p.hasGoldFrame&&p.hasPriorityPlacement),'Upgrade decorates existing items/services');
   await stop();await start();assert((await request('GET','/api/digital-market/products?storeId=store-star')).every((p:any)=>p.hasGoldFrame),'Upgrade survives restart');

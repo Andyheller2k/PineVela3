@@ -1,0 +1,43 @@
+/* Shared interpretation of the five UX laws supplied in UI laws.jpeg. */
+:root { --pv-focus: var(--pv-blue-primary); --pv-touch-target: 44px; }
+html[data-theme="dark"] { --pv-focus: var(--pv-blue-soft); }
+:is(button, a[href], input, select, textarea, [role="button"], [tabindex]):focus-visible {
+  outline: 2px solid var(--pv-focus) !important;
+  outline-offset: 3px !important;
+}
+button, [role="button"] { min-width: 24px; min-height: 24px; touch-action: manipulation; }
+label:has(input[type="file"]):focus-within { outline: 2px solid var(--pv-focus); outline-offset: 3px; }
+button:disabled { cursor: not-allowed; }
+button[aria-busy="true"] { cursor: progress; }
+input, select, textarea { scroll-margin-block: 100px 24px; }
+.ux-action-group { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 12px; }
+.ux-mobile-destination { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; position: relative; min-height: 52px; border-radius: 12px; font-weight: 600; }
+.ux-mobile-destination:disabled { opacity: .5; }
+.ux-mobile-destination > span:last-child { font-size: 11px !important; }
+.ux-mobile-navigation .ux-mobile-destination { min-width: 44px !important; }
+.ux-mobile-destination > span:first-child { overflow: visible !important; display: inline-flex !important; }
+.ux-nav-update-dot { position: absolute; top: -4px; right: -6px; width: 8px; height: 8px; background: #dc2626; border-radius: 50%; }
+.ux-nav-badge { position: absolute; top: -8px; right: -12px; min-width: 18px; padding: 1px 4px; border-radius: 999px; background: #dc2626; color: white; font-size: 10px; line-height: 16px; font-weight: 700; }
+.ux-nav-urgent { color: #b91c1c; }
+html[data-theme="dark"] .ux-nav-urgent { color: #fca5a5; }
+html[data-theme="dark"] .ux-more-panel { background: var(--pv-panel); border-color: var(--pv-edge); color: var(--pv-text); }
+@media (max-width: 1023px), (any-pointer: coarse) {
+  button, [role="button"], nav a[href], a[role="button"] { min-width: var(--pv-touch-target); min-height: var(--pv-touch-target); transition-property: color, background-color, border-color, box-shadow, opacity, transform; }
+  :is(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"]), select) { min-height: var(--pv-touch-target); }
+  .relative:has(> button[aria-label="Clear search"]) > input { padding-right: 64px; }
+  #public-header form:has(> button[aria-label="Clear search"]) > input { padding-right: 128px; }
+  input[type="range"] { background: transparent; }
+  input[type="checkbox"], input[type="radio"] { width: 20px; height: 20px; flex-shrink: 0; }
+  label:has(> input[type="checkbox"], > input[type="radio"]) { display: flex; min-width: var(--pv-touch-target); min-height: var(--pv-touch-target); }
+  label:has(input[type="file"]) { min-width: var(--pv-touch-target); min-height: var(--pv-touch-target); display: inline-flex; align-items: center; }
+  .public-header-compact .company-theme-toggle { transform: none; }
+  .leaflet-control-zoom a, .leaflet-control-layers-toggle { min-width: 44px; min-height: 44px; line-height: 44px; }
+  .ux-more-overlay { padding-bottom: max(12px, env(safe-area-inset-bottom)); }
+  html[data-mobile-navigation="true"] .ux-dashboard-toast { bottom: calc(var(--pv-mobile-nav-height, 72px) + 88px); left: 16px; right: 16px; width: auto; max-width: calc(100vw - 32px); transform: none !important; overflow-wrap: anywhere; animation: none; }
+  .managed-mobile-theme { right: 12px; bottom: calc(var(--pv-mobile-nav-height, 72px) + 16px); }
+  html[data-mobile-navigation="true"] .app-canvas main { padding-bottom: calc(var(--pv-mobile-nav-height, 72px) + 88px) !important; scroll-padding-bottom: calc(var(--pv-mobile-nav-height, 72px) + 88px); }
+  .ux-action-group > button { flex: 1 1 auto; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sos-glow, .sos-text-pulse, .hostel-radiant-glow:hover { animation: none !important; }
+}

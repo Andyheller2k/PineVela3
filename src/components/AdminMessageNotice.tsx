@@ -9,7 +9,7 @@ export default function AdminMessageNotice() {
   useEffect(() => {
     let stopped = false; setNotice(null); acknowledged.current.clear();
     const poll = async () => { if (!user?.id) return; try { const r = await sessionFetch('/api/admin-messages/pending'); if (r.ok) { const items = await r.json(); if (!stopped) setNotice(items.find((item: any) => !acknowledged.current.has(item.id)) || null); } } catch { /* Retry at next poll. */ } };
-    poll(); const timer = setInterval(poll, 8000); return () => { stopped = true; clearInterval(timer); };
+    poll(); const timer = setInterval(poll, 8000); window.addEventListener('pinevela-data-change', poll); return () => { stopped = true; clearInterval(timer); window.removeEventListener('pinevela-data-change', poll); };
   }, [user?.id, user?.role]);
   if (!notice) return null;
   const close = async () => { if (busy) return; setBusy(true); setError(''); try { const r = await sessionFetch(`/api/admin-messages/${encodeURIComponent(notice.id)}/ack`, { method: 'POST' }); if (!r.ok) throw new Error('Could not acknowledge this message. Try again.'); acknowledged.current.add(notice.id); setNotice((current: any) => current?.id === notice.id ? null : current); } catch (e: any) { setError(e.message); } finally { setBusy(false); } };

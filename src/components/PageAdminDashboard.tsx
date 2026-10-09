@@ -1,3 +1,6 @@
+import { activateOnKeyboard } from '../lib/keyboardActivation';
+import DashboardOverlay from './DashboardOverlay';
+import MobileNavigation from './MobileNavigation';
 import { useActionFeedback } from '../lib/useActionFeedback';
 import AdminAccountDirectory from './AdminAccountDirectory';
 import { routePopupFeedback } from '../lib/feedback';
@@ -8,6 +11,9 @@ import AdministratorLabel from './AdministratorLabel';
 import AdminGovernancePanel, { useAdminGovernance } from './AdminGovernancePanel';
 import AdminRemovalNotice from './AdminRemovalNotice';
 import AccountModerationPanel from './AccountModerationPanel';
+import ResidenceDeletionPanel from './ResidenceDeletionPanel';
+import AdminMessageGateway from './AdminMessageGateway';
+import { usesSupabasePersistence } from '../lib/persistence';
 import { sessionFetch as fetch } from '../lib/session';
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -39,7 +45,8 @@ export default function PageAdminDashboard() {
   const { notifications, unreadCount, markAsRead, refreshNotifications } = useNotifications();
   const navigate = useNavigate();
 
-  const [activeTab, setActiveTab] = useState<'overview' | 'residences' | 'managers' | 'digital_market' | 'notifications' | 'settings' | 'user_accounts' | 'governance'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'residences' | 'managers' | 'digital_market' | 'notifications' | 'settings' | 'user_accounts' | 'governance' | 'messages'>('overview');
+  const [deletingResidence, setDeletingResidence] = useState<any>(null);
   
   // All Registered User Accounts State
   const [allUsersData, setAllUsersData] = useState<{
@@ -63,6 +70,9 @@ export default function PageAdminDashboard() {
   
   // Digital Student Market Admin States
   const [digitalMarketApps, setDigitalMarketApps] = useState<any[]>([]);
+  const [rejectSellerId,setRejectSellerId] = useState<string | null>(null);
+  const [rejectSellerNotes,setRejectSellerNotes] = useState('');
+  const [rejectSellerBusy,setRejectSellerBusy] = useState(false);
   const [digitalMarketStores, setDigitalMarketStores] = useState<any[]>([]);
   const [adminMarketSubTab, setAdminMarketSubTab] = useState<'applications' | 'stores'>('applications');
   const [banReasonInput, setBanReasonInput] = useState<string>('');
@@ -90,7 +100,9 @@ export default function PageAdminDashboard() {
 
   const { data: governanceData } = useAdminGovernance();
   const adminSlot = governanceData?.members.find((m: any) => m.id === user?.id)?.slot;
-  const pendingGovernance = (governanceData?.proposals.filter((p: any) => ['pending', 'approved'].includes(p.status)).length || 0) + (governanceData?.changes.filter((c: any) => c.status === 'pending').length || 0) + (governanceData?.accountProposals?.filter((p: any) => ['pending', 'approved'].includes(p.status)).length || 0);
+  const governanceUnread = notifications.filter(n => !n.read && n.module === 'admin_governance').length;
+  const settingsUnread = notifications.filter(n => !n.read && n.module === 'admin_settings').length;
+  const pendingGovernance = (governanceData?.proposals.filter((p: any) => ['pending', 'approved'].includes(p.status)).length || 0) + (governanceData?.residenceProposals?.filter((p: any) => ['pending', 'approved'].includes(p.status)).length || 0) + (governanceData?.changes.filter((c: any) => c.status === 'pending').length || 0) + (governanceData?.accountProposals?.filter((p: any) => ['pending', 'approved'].includes(p.status)).length || 0);
 
   // Datasets
   const [residences, setResidences] = useState<any[]>([]);
@@ -202,7 +214,7 @@ export default function PageAdminDashboard() {
     queryKey: ['adminData', user?.id],
     enabled: user?.role === 'admin',
     queryFn: async () => {
-      const resHostels = await fetch('/api/hostels');
+      const resHostels = await fetch(usesSupabasePersistence ? '/api/admin/hostels' : '/api/hostels');
       let residencesData: any[] = [];
       if (resHostels.ok) {
         const data = await safeJson(resHostels);
@@ -284,19 +296,24 @@ export default function PageAdminDashboard() {
     }
   };
 
-  const handleRejectMarketApp = async (appId: string) => {
+  const handleRejectMarketApp = async (appId: string, notes?: string) => {
+    if (usesSupabasePersistence && notes === undefined) {setRejectSellerId(appId);setRejectSellerNotes('');return;}
+    setRejectSellerBusy(true);
     try {
       const res = await apiFetch('/api/admin/digital-market/reject-application', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: appId })
+        body: JSON.stringify({ id: appId, ...(notes !== undefined ? {adminNotes:notes.trim()} : {}) })
       });
       if (res && res.success) {
         triggerToast("Digital Market application rejected.");
+        setRejectSellerId(null);setRejectSellerNotes('');
         fetchAdminData();
       }
     } catch (e: any) {
       triggerToast(e.message || "Failed to reject application");
+    } finally {
+      setRejectSellerBusy(false);
     }
   };
 
@@ -610,11 +627,11 @@ export default function PageAdminDashboard() {
       {/* Toast Notification */}
       <AnimatePresence>
         {toastMessage && (
-          <motion.div
+          <motion.div role="status"
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="fixed top-6 right-6 z-50 bg-blue-600 text-white px-6 py-3 rounded-2xl shadow-2xl flex items-center space-x-3 border border-blue-400/30 backdrop-blur-md"
+            className="ux-dashboard-toast fixed top-6 right-6 z-50 bg-blue-600 text-white px-6 py-3 rounded-2xl shadow-2xl flex items-center space-x-3 border border-blue-400/30 backdrop-blur-md"
           >
             <span className="font-medium text-sm">{toastMessage}</span>
           </motion.div>
@@ -639,40 +656,15 @@ export default function PageAdminDashboard() {
       </header>
 
       {/* MOBILE BOTTOM NAV (lg:hidden) */}
-      <nav className="mobile-bottom-nav lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-xl border-t border-slate-200 shadow-[0_-10px_40px_rgba(0,0,0,0.08)]">
-        <div data-mobile-nav-items className="flex items-center justify-around px-2 py-2 pb-safe">
-          {[
+      <MobileNavigation label="Administrator navigation" activeTab={activeTab} onSelect={id => setActiveTab(id as any)} primaryIds={["overview", "residences", "managers", "notifications"]} items={[
             { id: 'overview', label: 'Overview', icon: ShieldCheck },
-            { id: 'user_accounts', label: 'Accounts', icon: Users },
+            { id: 'user_accounts', label: 'Accounts', icon: Users, group: 'Management' },
             { id: 'residences', label: 'Residences', icon: Building2, badge: pendingHostelsCount },
             { id: 'managers', label: 'Managers', icon: Users, badge: pendingManagersCount },
-            { id: 'digital_market', label: 'Market', icon: ShoppingBag, badge: digitalMarketApps.filter(a => a.status === 'pending').length || null },
+            { id: 'digital_market', label: 'Market', icon: ShoppingBag, group: 'Management', badge: digitalMarketApps.filter(a => a.status === 'pending').length || null },
             { id: 'notifications', label: 'Alerts', icon: Bell, badge: adminAlertCount },
-            { id: 'governance', label: 'Approvals', icon: ShieldCheck, badge: pendingGovernance }, { id: 'settings', label: 'Settings', icon: Edit3 }
-          ].map(tab => (
-            <button
-              key={tab.id}
-              aria-current={activeTab === tab.id ? 'page' : undefined}
-              onClick={() => setActiveTab(tab.id as any)}
-              className={`snap-center shrink-0 flex flex-col items-center justify-center w-[72px] h-12 rounded-xl transition-all relative ${
-                activeTab === tab.id ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'
-              }`}
-            >
-              <div className={`p-1.5 rounded-lg ${activeTab === tab.id ? 'bg-blue-100/50' : ''}`}>
-                <tab.icon className={`w-5 h-5 ${activeTab === tab.id ? 'scale-110 transition-transform' : ''}`} />
-                {tab.badge ? (
-                  <span className="absolute top-1 right-3 w-4 h-4 bg-amber-400 text-slate-900 rounded-full text-[9px] font-black flex items-center justify-center ring-2 ring-white">
-                    {tab.badge}
-                  </span>
-                ) : null}
-              </div>
-              <span className={`text-[9px] font-bold mt-0.5 ${activeTab === tab.id ? 'text-blue-700' : 'text-slate-500'}`}>
-                {tab.label}
-              </span>
-            </button>
-          ))}
-        </div>
-      </nav>
+            { id: 'messages', label: 'Message Gateway', icon: MessageSquare, group: 'Administration' }, { id: 'governance', label: 'Approvals', icon: ShieldCheck, group: 'Administration', badge: governanceUnread }, { id: 'settings', label: 'Settings', icon: Edit3, group: 'Account', badge: settingsUnread }
+          ]} />
 
       {/* SIDEBAR: PURELY STATIC / FIXED ICE-BLUE FROSTY BLUE WITH CURVED EDGES & BLUE GLOW */}
 
@@ -684,7 +676,7 @@ export default function PageAdminDashboard() {
         </button>
         <div className="w-px h-6 bg-slate-200/70 shrink-0" />
         {[
-        { id: 'overview', label: 'Overview', icon: ShieldCheck }, { id: 'user_accounts', label: 'Accounts', icon: Users, badge: allUsersData.totalUsers }, { id: 'residences', label: 'Residences', icon: Building2, badge: pendingHostelsCount }, { id: 'managers', label: 'Managers', icon: Users, badge: pendingManagersCount }, { id: 'digital_market', label: 'Market', icon: ShoppingBag, badge: digitalMarketApps.filter(a => a.status === 'pending').length }, { id: 'notifications', label: 'Alerts', icon: Bell, badge: adminAlertCount }, { id: 'governance', label: 'Approvals', icon: ShieldCheck, badge: pendingGovernance }, { id: 'settings', label: 'Settings', icon: Edit3 }
+        { id: 'overview', label: 'Overview', icon: ShieldCheck }, { id: 'user_accounts', label: 'Accounts', icon: Users, badge: allUsersData.totalUsers }, { id: 'residences', label: 'Residences', icon: Building2, badge: pendingHostelsCount }, { id: 'managers', label: 'Managers', icon: Users, badge: pendingManagersCount }, { id: 'digital_market', label: 'Market', icon: ShoppingBag, badge: digitalMarketApps.filter(a => a.status === 'pending').length }, { id: 'notifications', label: 'Alerts', icon: Bell, badge: adminAlertCount }, { id: 'messages', label: 'Message Gateway', icon: MessageSquare }, { id: 'governance', label: 'Approvals', icon: ShieldCheck, badge: governanceUnread }, { id: 'settings', label: 'Settings', icon: Edit3, badge: settingsUnread }
       ].map(tab => <button aria-current={activeTab === tab.id ? 'page' : undefined} key={tab.id} onClick={() => setActiveTab(tab.id as any)} aria-label={`${tab.label}${tab.badge ? ` (${tab.badge})` : ''}`} className={`flex-1 min-w-0 flex flex-col items-center gap-0.5 py-1.5 rounded-xl text-[9px] font-bold cursor-pointer ${activeTab === tab.id ? 'text-blue-700 bg-blue-100/65' : 'text-slate-500 hover:bg-white/70'}`}><span className="relative inline-flex"><tab.icon className="w-4 h-4" /><TopNavBadge count={tab.badge} /></span><span className="truncate max-w-full">{tab.label}</span></button>)}<button onClick={() => setShowLogoutConfirm(true)} title="Sign Out" className="shrink-0 flex flex-col items-center gap-0.5 px-2 py-1.5 text-[9px] font-bold text-rose-600 hover:bg-rose-50 rounded-xl cursor-pointer"><LogOutIcon className="w-4 h-4" /><span>Sign Out</span></button><button onClick={() => setIsSidebarTopNav(false)} title="Show sidebar" className="p-2 text-slate-500 hover:text-blue-700 cursor-pointer"><PanelLeftOpen className="w-4 h-4" /></button></div></nav>}
       {!isSidebarTopNav && <aside className={`hidden lg:flex ${isSidebarCollapsed ? 'w-20 p-4' : 'w-72 p-6'} my-6 ml-6 h-[calc(100vh-3rem)] bg-gradient-to-br from-sky-100/90 via-blue-100/85 to-amber-50/40 backdrop-blur-3xl border border-sky-200/80 shadow-2xl rounded-3xl flex flex-col justify-between shrink-0 overflow-y-auto transition-all duration-300 relative`}>
         <button onClick={() => setIsSidebarTopNav(true)} title="Use top navigation" className="absolute top-3 right-3 p-2 rounded-xl text-slate-500 hover:text-blue-700 hover:bg-white/70 cursor-pointer"><PanelLeftClose className="w-4 h-4" /></button>
@@ -715,7 +707,7 @@ export default function PageAdminDashboard() {
               { id: 'managers', label: 'Managers & Staffs', icon: Users, badge: pendingManagersCount || null, sub: 'Approvals, contact & history' },
               { id: 'digital_market', label: 'Student Digital Market', icon: ShoppingBag, badge: digitalMarketApps.filter(a => a.status === 'pending').length || null, sub: 'Stores, products & applications' },
               { id: 'notifications', label: 'Notifications', icon: Bell, badge: adminAlertCount || null, sub: 'Manager requests & alerts' },
-              { id: 'governance', label: 'Admin Approvals', icon: ShieldCheck, sub: 'Founder roster & wipe proposals', badge: pendingGovernance }, { id: 'settings', label: 'Admin Settings', icon: Edit3, sub: 'Fees, commission & controls' }
+              { id: 'messages', label: 'Message Gateway', icon: MessageSquare, sub: 'Announcements to selected accounts' }, { id: 'governance', label: 'Admin Approvals', icon: ShieldCheck, sub: 'Founder roster & wipe proposals', badge: governanceUnread }, { id: 'settings', label: 'Admin Settings', icon: Edit3, sub: 'Fees, commission & controls', badge: settingsUnread }
             ].map(tab => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
@@ -736,6 +728,7 @@ export default function PageAdminDashboard() {
                       isActive ? 'bg-white/20 text-white' : 'bg-blue-200/70 text-blue-700 group-hover:bg-blue-300/80'
                     }`}>
                       <Icon className="w-4 h-4" />
+                      {isSidebarCollapsed && tab.badge ? <span className="absolute -top-1 -right-1 min-w-4 rounded-full bg-rose-500 px-1 text-center text-[9px] font-bold text-white">{tab.badge}</span> : null}
                       {false && (
                         <span className="absolute -top-1 -right-1 w-3 h-3 bg-rose-500 rounded-full border-2 border-white animate-ping" />
                       )}
@@ -780,7 +773,8 @@ export default function PageAdminDashboard() {
       {/* MAIN CONTENT AREA */}
       <main className={`dashboard-centered-content flex-1 p-6 lg:p-10 space-y-8 overflow-y-auto h-full relative ${isSidebarTopNav ? 'lg:pt-24 lg:w-[calc(100vw-22rem)] lg:max-w-[calc(100vw-22rem)] lg:mx-auto' : ''}`}>
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-blue-200 bg-white/65 p-4 text-sm backdrop-blur-xl"><span className="flex min-w-0 items-center gap-3 font-semibold text-blue-950">{(user?.photo || user?.avatar) && <img src={user.photo || user.avatar} alt="Administrator profile" className="h-9 w-9 shrink-0 rounded-full object-cover" />}<AdministratorLabel slot={adminSlot} name={user?.name} /></span><button onClick={() => setActiveTab('governance')} className="rounded-xl bg-blue-600 px-4 py-2 font-semibold text-white">Shared approvals{pendingGovernance ? ` (${pendingGovernance})` : ''}</button></div>
-        {activeTab === 'governance' && <><AdminGovernancePanel /><AccountModerationPanel target={null} onClose={() => {}} onApplied={fetchAdminData} /></>}
+        {activeTab === 'governance' && <><AdminGovernancePanel /><ResidenceDeletionPanel onClose={() => {}} /><AccountModerationPanel target={null} onClose={() => {}} onApplied={fetchAdminData} /></>}
+        {activeTab === 'messages' && <AdminMessageGateway />}
 
         {/* TAB 1: OVERVIEW */}
         {activeTab === 'overview' && (
@@ -911,6 +905,7 @@ export default function PageAdminDashboard() {
           </div>
         )}
 
+        <div className={activeTab === 'residences' ? '' : 'hidden'}><ResidenceDeletionPanel selectedHostel={deletingResidence} onClose={() => setDeletingResidence(null)} /></div>
         {/* TAB 2: AVAILABLE RESIDENCES */}
         {activeTab === 'residences' && (
           <div className="space-y-6 animate-fadeIn relative z-10">
@@ -923,7 +918,7 @@ export default function PageAdminDashboard() {
               <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
                 <div className="relative flex-1 md:w-64">
                   <Search className="absolute left-3.5 top-3 w-4 h-4 text-slate-400" />
-                  <input
+                  <input aria-label="Search residences..."
                     type="text"
                     placeholder="Search residences..."
                     value={searchQuery}
@@ -1166,14 +1161,8 @@ export default function PageAdminDashboard() {
                             </button>
 
                           <button
-                            onClick={async () => {
-                              if (!confirm(`Are you sure you want to delete "${residence.name}"?`)) return;
-                              try {
-                                 await apiFetch(`/api/hostels/${residence.id}`, { method: 'DELETE' });
-                                 setResidences(prev => prev.filter(r => r.id !== residence.id));
-                                 triggerToast('Residence deleted successfully.');
-                              } catch(e) {}
-                            }}
+                            aria-label={`Propose deletion of ${residence.name}`}
+                            onClick={() => setDeletingResidence(residence)}
                             className="text-rose-600 hover:text-rose-700 p-2 rounded-xl bg-rose-50 hover:bg-rose-100 transition-all cursor-pointer"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -1257,7 +1246,7 @@ export default function PageAdminDashboard() {
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white/80 p-3.5 rounded-2xl border border-sky-200/80 shadow-xs backdrop-blur-md">
                   <div className="relative flex-1">
                     <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                    <input
+                    <input aria-label="Search by manager name, email, phone, property name, or precise location..."
                       type="text"
                       placeholder="Search by manager name, email, phone, property name, or precise location..."
                       value={managerSearchQuery}
@@ -1265,7 +1254,7 @@ export default function PageAdminDashboard() {
                       className="w-full pl-10 pr-9 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                     {managerSearchQuery && (
-                      <button onClick={() => setManagerSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer">
+                      <button aria-label="Clear search" onClick={() => setManagerSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer">
                         <X className="w-3.5 h-3.5" />
                       </button>
                     )}
@@ -1743,7 +1732,7 @@ export default function PageAdminDashboard() {
                               <label className="text-[10px] font-black text-slate-800 block uppercase tracking-wider">
                                 Decision / Rejection Feedback Notes
                               </label>
-                              <input
+                              <input aria-label="Decision / Rejection Feedback Notes"
                                 type="text"
                                 value={rejectionNotes[restr.id] || ''}
                                 onChange={(e) => setRejectionNotes(prev => ({ ...prev, [restr.id]: e.target.value }))}
@@ -1813,7 +1802,7 @@ export default function PageAdminDashboard() {
 
             </div>
 
-            {notifications.length > 0 && <section className="rounded-3xl border border-blue-100 bg-white/75 p-5 shadow-sm backdrop-blur-xl"><div className="mb-3 flex items-center justify-between"><p className="flex items-center gap-2 text-sm font-extrabold text-slate-900"><Bell className="h-4 w-4 text-blue-600" />Live operational alerts {unreadCount > 0 && <span className="rounded-full bg-blue-600 px-2 py-0.5 text-[10px] text-white">{unreadCount} new</span>}</p><button onClick={() => refreshNotifications()} className="text-xs font-bold text-blue-700">Refresh</button></div><div className="space-y-2">{notifications.slice(0, 6).map((notification: any) => <button key={notification.id} onClick={() => markAsRead(notification.id)} className="block w-full rounded-2xl border border-blue-100 bg-blue-50/60 p-3 text-left"><p className="text-xs font-bold text-slate-900">{notification.title}</p><p className="mt-1 text-xs text-slate-600">{notification.message}</p></button>)}</div></section>}
+            {notifications.length > 0 && <section className="rounded-3xl border border-blue-100 bg-white/75 p-5 shadow-sm backdrop-blur-xl"><div className="mb-3 flex items-center justify-between"><p className="flex items-center gap-2 text-sm font-extrabold text-slate-900"><Bell className="h-4 w-4 text-blue-600" />Live operational alerts {unreadCount > 0 && <span className="rounded-full bg-blue-600 px-2 py-0.5 text-[10px] text-white">{unreadCount} new</span>}</p><button onClick={() => refreshNotifications()} className="text-xs font-bold text-blue-700">Refresh</button></div><div className="space-y-2">{notifications.map((notification: any) => <button key={notification.id} onClick={() => { void markAsRead(notification.id); if (notification.module === 'admin_governance') setActiveTab('governance'); if (notification.module === 'admin_settings') setActiveTab('settings'); }} className="block w-full rounded-2xl border border-blue-100 bg-blue-50/60 p-3 text-left"><p className="text-xs font-bold text-slate-900">{notification.title}{!notification.read && <span className="ml-2 text-blue-600">• New</span>}</p><p className="mt-1 text-xs text-slate-600">{notification.message}</p></button>)}</div></section>}
             {/* PENDING RESIDENCE VERIFICATION ALERTS */}
             {pendingHostelsCount > 0 && (
               <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 p-6 rounded-3xl backdrop-blur-xl shadow-lg space-y-4">
@@ -1942,7 +1931,7 @@ export default function PageAdminDashboard() {
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-slate-50 p-3 rounded-2xl border border-blue-100">
                 <div className="relative flex-1">
                   <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                  <input
+                  <input aria-label="Search residents by student name, email, room number, or hostel residence..."
                     type="text"
                     placeholder="Search residents by student name, email, room number, or hostel residence..."
                     value={residentSearchQuery}
@@ -1950,7 +1939,7 @@ export default function PageAdminDashboard() {
                     className="w-full pl-10 pr-9 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-xs"
                   />
                   {residentSearchQuery && (
-                    <button onClick={() => setResidentSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer">
+                    <button aria-label="Clear search" onClick={() => setResidentSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer">
                       <X className="w-3.5 h-3.5" />
                     </button>
                   )}
@@ -2233,14 +2222,14 @@ export default function PageAdminDashboard() {
 
         {/* BAN STORE MODAL */}
         {banningStoreTarget && (
-          <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-md flex items-center justify-center p-4">
+          <DashboardOverlay aria-label="Ban Digital Store" onClose={() => setBanningStoreTarget(null)} className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-md flex items-center justify-center p-4">
             <div data-popup-card className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4 animate-scaleIn">
               <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                 <h3 className="text-base font-black text-rose-700 flex items-center gap-2">
                   <Ban className="w-5 h-5 text-rose-600" />
                   Ban Digital Store
                 </h3>
-                <button type="button" onClick={() => setBanningStoreTarget(null)} className="text-slate-400 hover:text-slate-600">
+                <button aria-label="Close dialog" type="button" onClick={() => setBanningStoreTarget(null)} className="text-slate-400 hover:text-slate-600">
                   <X className="w-5 h-5" />
                 </button>
               </div>
@@ -2252,7 +2241,7 @@ export default function PageAdminDashboard() {
 
                 <div>
                   <label className="block font-bold text-slate-700 mb-1">Reason for Ban</label>
-                  <input
+                  <input aria-label="Reason for Ban"
                     type="text"
                     placeholder="e.g. Counterfeit item reports / Policy violation"
                     value={banReasonInput}
@@ -2279,14 +2268,14 @@ export default function PageAdminDashboard() {
                 </button>
               </div>
             </div>
-          </div>
+          </DashboardOverlay>
         )}
 
       </main>
 
       {/* Four-step residence registration wizard */}
       {showAddResidenceModal && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/70 backdrop-blur-md p-2 sm:p-4 md:p-8 flex items-start justify-center animate-fadeIn">
+        <DashboardOverlay aria-label="Residence registration" onClose={() => setShowAddResidenceModal(false)} className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/70 backdrop-blur-md p-2 sm:p-4 md:p-8 flex items-start justify-center animate-fadeIn">
           <div data-popup-card className="w-full max-w-5xl bg-white rounded-3xl shadow-2xl overflow-hidden border border-blue-200 my-auto">
             <HostelRegistration
               currentUserId={user?.id || 'admin_user'}
@@ -2304,12 +2293,12 @@ export default function PageAdminDashboard() {
               onCancel={() => setShowAddResidenceModal(false)}
             />
           </div>
-        </div>
+        </DashboardOverlay>
       )}
 
       {/* MODAL: READ-ONLY INSPECTION FOR PENDING RESIDENCE APPROVAL */}
       {inspectingResidenceModal && (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-md flex items-center justify-center p-4">
+        <DashboardOverlay aria-label="Inspect residence registration" onClose={() => setInspectingResidenceModal(null)} className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-md flex items-center justify-center p-4">
           <div data-popup-card className="bg-white border border-blue-200 rounded-3xl max-w-4xl w-full max-h-[92vh] overflow-y-auto p-6 sm:p-8 space-y-6 shadow-2xl animate-fadeIn">
             {/* Header */}
             <div className="flex items-center justify-between border-b border-slate-100 pb-4">
@@ -2329,7 +2318,7 @@ export default function PageAdminDashboard() {
                   <h3 className="text-xl font-black text-slate-900 mt-1">{inspectingResidenceModal.name}</h3>
                 </div>
               </div>
-              <button
+              <button aria-label="Close dialog"
                 onClick={() => setInspectingResidenceModal(null)}
                 className="p-2 rounded-full hover:bg-slate-100 text-slate-500 cursor-pointer"
               >
@@ -2548,19 +2537,19 @@ export default function PageAdminDashboard() {
               </div>
             </div>
           </div>
-        </div>
+        </DashboardOverlay>
       )}
 
       {/* MODAL: DETAILED REJECTION REASON FOR RESIDENCE APPLICATION */}
       {rejectingResidenceModal && (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-md flex items-center justify-center p-4">
+        <DashboardOverlay aria-label="Reject Residence Registration" onClose={() => setRejectingResidenceModal(null)} className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-md flex items-center justify-center p-4">
           <div data-popup-card className="bg-white border border-rose-200 rounded-3xl max-w-lg w-full p-6 space-y-5 shadow-2xl animate-fadeIn">
             <div className="flex items-center justify-between border-b pb-3">
               <div className="flex items-center gap-2.5 text-rose-700">
                 <AlertCircle className="w-5 h-5" />
                 <h3 className="text-base font-black text-slate-900">Reject Residence Registration</h3>
               </div>
-              <button
+              <button aria-label="Close dialog"
                 onClick={() => setRejectingResidenceModal(null)}
                 className="p-1 rounded-full hover:bg-slate-100 text-slate-400 cursor-pointer"
               >
@@ -2574,7 +2563,7 @@ export default function PageAdminDashboard() {
 
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-slate-700">Detailed Rejection Feedback <span className="text-rose-500">*</span></label>
-              <textarea
+              <textarea aria-label="Detailed Rejection Feedback"
                 rows={4}
                 value={residenceRejectionReason}
                 onChange={(e) => setResidenceRejectionReason(e.target.value)}
@@ -2629,7 +2618,7 @@ export default function PageAdminDashboard() {
               </button>
             </div>
           </div>
-        </div>
+        </DashboardOverlay>
       )}
 
       {/* MODAL: DOCUMENT PREVIEW (CV PDF & NATIONAL ID FRONT/BACK) */}
@@ -2698,7 +2687,7 @@ export default function PageAdminDashboard() {
         const liveDocStatus = activeRequest?.documentsVerified?.[docPreviewModal.docKey!] || 'pending';
 
         return (
-          <div className="fixed inset-0 z-[100] bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 md:p-6">
+          <DashboardOverlay aria-label="Review identity document" onClose={() => setDocPreviewModal(null)} className="fixed inset-0 z-[100] bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 md:p-6">
             <div data-popup-card className="bg-white border border-slate-100 rounded-3xl p-6 max-w-6xl w-full max-h-[96vh] flex flex-col space-y-4 shadow-2xl animate-in fade-in zoom-in-95 duration-150 overflow-hidden">
               
               {/* Header block */}
@@ -2713,7 +2702,7 @@ export default function PageAdminDashboard() {
                   </div>
                 </div>
 
-                <button
+                <button aria-label="Close dialog"
                   type="button"
                   onClick={() => setDocPreviewModal(null)}
                   className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors cursor-pointer"
@@ -2998,7 +2987,7 @@ export default function PageAdminDashboard() {
               </div>
 
             </div>
-          </div>
+          </DashboardOverlay>
         );
       })()}
 
@@ -3013,7 +3002,7 @@ export default function PageAdminDashboard() {
 
       {/* MODAL: DISPATCH PINEVELA VERIFICATION TEAM OFFICER */}
       {dispatchModalManager && (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-md flex items-center justify-center p-4">
+        <DashboardOverlay aria-label="Dispatch verification officer" onClose={() => setDispatchModalManager(null)} className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-md flex items-center justify-center p-4">
           <div data-popup-card className="bg-white border border-slate-200 rounded-3xl p-6 max-w-lg w-full space-y-5 shadow-2xl animate-fadeIn">
             <div className="flex items-center justify-between border-b pb-3">
               <div className="flex items-center gap-3">
@@ -3025,7 +3014,7 @@ export default function PageAdminDashboard() {
                   <p className="text-xs text-slate-500">Property: <strong>{dispatchModalManager.propertyName || dispatchModalManager.organization}</strong></p>
                 </div>
               </div>
-              <button
+              <button aria-label="Close dialog"
                 type="button"
                 onClick={() => setDispatchModalManager(null)}
                 className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100"
@@ -3045,7 +3034,7 @@ export default function PageAdminDashboard() {
                 <label className="font-black text-slate-800 uppercase tracking-wider text-[11px] block">
                   Assign PineVela Verification Officer *
                 </label>
-                <select
+                <select aria-label="Assign PineVela Verification Officer"
                   required
                   value={dispatchOfficerId}
                   onChange={(e) => setDispatchOfficerId(e.target.value)}
@@ -3069,7 +3058,7 @@ export default function PageAdminDashboard() {
                 <label className="font-black text-slate-800 uppercase tracking-wider text-[11px] block">
                   Inspection Priority Level
                 </label>
-                <select
+                <select aria-label="Inspection Priority Level"
                   value={dispatchPriority}
                   onChange={(e: any) => setDispatchPriority(e.target.value)}
                   className="w-full p-3 bg-slate-50 border border-slate-300 rounded-2xl text-xs font-semibold text-slate-900 focus:ring-2 focus:ring-blue-500 focus:outline-none"
@@ -3085,7 +3074,7 @@ export default function PageAdminDashboard() {
                 <label className="font-black text-slate-800 uppercase tracking-wider text-[11px] block">
                   Dispatch Instructions & Field Notes (Optional)
                 </label>
-                <textarea
+                <textarea aria-label="Dispatch Instructions & Field Notes (Optional)"
                   rows={2}
                   value={dispatchNotes}
                   onChange={(e) => setDispatchNotes(e.target.value)}
@@ -3113,12 +3102,12 @@ export default function PageAdminDashboard() {
               </div>
             </form>
           </div>
-        </div>
+        </DashboardOverlay>
       )}
 
       {/* MODAL: REVIEW LIVE ON-SITE INSPECTION REPORT */}
       {reviewReportInspection && (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
+        <DashboardOverlay aria-label="Review inspection report" onClose={() => setReviewReportInspection(null)} className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
           <div data-popup-card className="bg-white border border-slate-200 rounded-3xl p-6 max-w-2xl w-full space-y-6 shadow-2xl my-8 animate-fadeIn max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b pb-4">
               <div className="flex items-center gap-3">
@@ -3130,7 +3119,7 @@ export default function PageAdminDashboard() {
                   <p className="text-xs text-slate-500">Property: <strong>{reviewReportInspection.propertyName}</strong> | Auditor: <strong>{reviewReportInspection.assignedOfficerName || 'Field Officer'}</strong></p>
                 </div>
               </div>
-              <button
+              <button aria-label="Close dialog"
                 type="button"
                 onClick={() => setReviewReportInspection(null)}
                 className="p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 cursor-pointer"
@@ -3218,7 +3207,7 @@ export default function PageAdminDashboard() {
                     const photoTime = isObj && photoItem.capturedAt ? new Date(photoItem.capturedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : null;
 
                     return (
-                      <div
+                      <div role="button" tabIndex={0} aria-label={`View ${photoTitle}`} onKeyDown={activateOnKeyboard}
                         key={pIdx}
                         onClick={() => {
                           setDocPreviewModal({
@@ -3308,12 +3297,12 @@ export default function PageAdminDashboard() {
               </div>
             </div>
           </div>
-        </div>
+        </DashboardOverlay>
       )}
 
       {/* MODAL: REGISTER NEW PINEVELA VERIFICATION OFFICER */}
       {showRegisterOfficerModal && (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-md flex items-center justify-center p-4">
+        <DashboardOverlay aria-label="Register verification officer" onClose={() => setShowRegisterOfficerModal(false)} className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-md flex items-center justify-center p-4">
           <div data-popup-card className="bg-white border border-slate-200 rounded-3xl p-6 max-w-md w-full space-y-5 shadow-2xl animate-fadeIn">
             <div className="flex items-center justify-between border-b pb-3">
               <div className="flex items-center gap-3">
@@ -3325,7 +3314,7 @@ export default function PageAdminDashboard() {
                   <p className="text-xs text-slate-500">Add an accredited on-site inspection officer</p>
                 </div>
               </div>
-              <button
+              <button aria-label="Close dialog"
                 type="button"
                 onClick={() => setShowRegisterOfficerModal(false)}
                 className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 cursor-pointer"
@@ -3338,7 +3327,7 @@ export default function PageAdminDashboard() {
             <form onSubmit={handleRegisterOfficer} className="onboarding-fields space-y-4 text-xs">
               <div className="space-y-1.5">
                 <label className="font-bold text-slate-700 block">Officer Full Name *</label>
-                <input
+                <input aria-label="Officer Full Name"
                   required
                   type="text"
                   placeholder="e.g. Kwame Mensah"
@@ -3350,7 +3339,7 @@ export default function PageAdminDashboard() {
 
               <div className="space-y-1.5">
                 <label className="font-bold text-slate-700 block">Official Verification Email *</label>
-                <input
+                <input aria-label="Official Verification Email"
                   required
                   type="email"
                   placeholder="officer.mensah@pinevela.com"
@@ -3362,7 +3351,7 @@ export default function PageAdminDashboard() {
 
               <div className="space-y-1.5">
                 <label className="font-bold text-slate-700 block">Phone / WhatsApp *</label>
-                <input
+                <input aria-label="Phone / WhatsApp"
                   required
                   type="tel"
                   placeholder="+233 24 123 4567"
@@ -3374,7 +3363,7 @@ export default function PageAdminDashboard() {
 
               <div className="space-y-1.5">
                 <label className="font-bold text-slate-700 block">Assigned Geographic Zone</label>
-                <select
+                <select aria-label="Assigned Geographic Zone"
                   value={newOfficerData.assignedZone}
                   onChange={(e) => setNewOfficerData(prev => ({ ...prev, assignedZone: e.target.value }))}
                   className="w-full p-3 bg-slate-50 border border-slate-300 rounded-2xl font-semibold text-slate-900 focus:ring-2 focus:ring-blue-500 focus:outline-none"
@@ -3390,7 +3379,7 @@ export default function PageAdminDashboard() {
 
               <div className="space-y-1.5">
                 <label className="font-bold text-slate-700 block">Initial Officer Access Password *</label>
-                <input
+                <input aria-label="Initial Officer Access Password"
                   required
                   type="text"
                   placeholder="SecurePassword2026!"
@@ -3419,19 +3408,19 @@ export default function PageAdminDashboard() {
               </div>
             </form>
           </div>
-        </div>
+        </DashboardOverlay>
       )}
 
       {/* MODAL: OFFICIAL OFFICER CREDENTIALS ID CARD (FOR HANDOVER) */}
       {createdOfficerCredentials && (
-        <div className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-md flex items-center justify-center p-4">
+        <DashboardOverlay aria-label="Officer credentials" onClose={() => setCreatedOfficerCredentials(null)} className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-md flex items-center justify-center p-4">
           <div data-popup-card className="bg-white border border-slate-200 rounded-3xl p-6 max-w-md w-full space-y-5 shadow-2xl animate-fadeIn">
             <div className="flex items-center justify-between border-b pb-3">
               <div className="flex items-center gap-2">
                 <ShieldCheck className="w-5 h-5 text-blue-900" />
                 <h4 className="text-base font-black text-slate-900">Official PineVela Officer Credentials</h4>
               </div>
-              <button
+              <button aria-label="Close dialog"
                 type="button"
                 onClick={() => setCreatedOfficerCredentials(null)}
                 className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 cursor-pointer"
@@ -3510,12 +3499,12 @@ export default function PageAdminDashboard() {
               </button>
             </div>
           </div>
-        </div>
+        </DashboardOverlay>
       )}
 
       {/* MODAL: REJECT MANAGER APPLICATION WITH DETAILED REASON */}
       {rejectManagerModal && (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-md flex items-center justify-center p-4">
+        <DashboardOverlay aria-label="Reject manager registration" onClose={() => setRejectManagerModal(null)} className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-md flex items-center justify-center p-4">
           <div data-popup-card className="bg-white border border-rose-200 rounded-3xl p-6 max-w-md w-full space-y-5 shadow-2xl animate-fadeIn">
             <div className="flex items-center justify-between border-b pb-3">
               <div className="flex items-center gap-3">
@@ -3527,7 +3516,7 @@ export default function PageAdminDashboard() {
                   <p className="text-xs text-slate-500">Applicant: <strong>{rejectManagerModal.name}</strong> ({rejectManagerModal.email})</p>
                 </div>
               </div>
-              <button
+              <button aria-label="Close dialog"
                 type="button"
                 onClick={() => setRejectManagerModal(null)}
                 className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100"
@@ -3540,7 +3529,7 @@ export default function PageAdminDashboard() {
               <label className="text-xs font-bold text-slate-700 block">
                 Provide Detailed Rejection Reason <span className="text-rose-500">* (Sent to Manager for corrections)</span>
               </label>
-              <textarea
+              <textarea aria-label="Provide Detailed Rejection Reason * (Sent to Manager for corrections)"
                 required
                 rows={4}
                 value={rejectManagerReason}
@@ -3573,12 +3562,12 @@ export default function PageAdminDashboard() {
               </button>
             </div>
           </div>
-        </div>
+        </DashboardOverlay>
       )}
 
       {/* MODAL: BLOCK / RESTRICT MANAGER ACCESS WITH REQUIRED DETAILED REASON */}
       {blockManagerModal && (
-        <div className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-md flex items-center justify-center p-4">
+        <DashboardOverlay aria-label="Restrict manager account" onClose={() => setBlockManagerModal(null)} className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-md flex items-center justify-center p-4">
           <div data-popup-card className="bg-white border-2 border-rose-300 rounded-3xl p-6 max-w-md w-full space-y-5 shadow-2xl animate-fadeIn">
             <div className="flex items-center justify-between border-b pb-3">
               <div className="flex items-center gap-3">
@@ -3590,7 +3579,7 @@ export default function PageAdminDashboard() {
                   <p className="text-xs text-slate-500">Manager: <strong>{blockManagerModal.name}</strong> ({blockManagerModal.email})</p>
                 </div>
               </div>
-              <button
+              <button aria-label="Close dialog"
                 type="button"
                 onClick={() => setBlockManagerModal(null)}
                 className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100"
@@ -3610,7 +3599,7 @@ export default function PageAdminDashboard() {
               <label className="text-xs font-bold text-slate-700 block">
                 Detailed Reason for Account Restriction <span className="text-rose-600 font-extrabold">* (Required)</span>
               </label>
-              <textarea
+              <textarea aria-label="Detailed Reason for Account Restriction * (Required)"
                 required
                 rows={4}
                 value={blockManagerReason}
@@ -3643,10 +3632,17 @@ export default function PageAdminDashboard() {
               </button>
             </div>
           </div>
-        </div>
+        </DashboardOverlay>
       )}
 
       {/* LOGOUT CONFIRMATION MODAL */}
+      {rejectSellerId && <DashboardOverlay aria-label="Reject seller application" onClose={() => {if(!rejectSellerBusy)setRejectSellerId(null);}} className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-md">
+        <form onSubmit={event => {event.preventDefault();void handleRejectMarketApp(rejectSellerId,rejectSellerNotes);}} className="w-full max-w-lg space-y-4 rounded-3xl border border-blue-200 bg-white p-6 shadow-xl">
+          <div className="flex items-center justify-between gap-4"><h3 className="font-bold text-blue-950">Reject seller application</h3><button type="button" aria-label="Close seller rejection" disabled={rejectSellerBusy} onClick={() => setRejectSellerId(null)} className="rounded-xl border border-blue-200 px-3 py-2">Close</button></div>
+          <label className="block space-y-2 text-sm font-semibold"><span>Explain what the applicant needs to correct</span><textarea required maxLength={3000} value={rejectSellerNotes} onChange={event => setRejectSellerNotes(event.target.value)} rows={4} className="w-full rounded-xl border border-blue-200 p-3" /></label>
+          <button disabled={rejectSellerBusy || !rejectSellerNotes.trim()} className="w-full rounded-xl bg-rose-700 px-4 py-3 font-semibold text-white disabled:opacity-50">{rejectSellerBusy?'Saving…':'Reject and send feedback'}</button>
+        </form>
+      </DashboardOverlay>}
       <LogoutConfirmationModal
         isOpen={showLogoutConfirm}
         onClose={() => setShowLogoutConfirm(false)}

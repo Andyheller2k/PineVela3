@@ -1,3 +1,5 @@
+import { activateOnKeyboard } from '../lib/keyboardActivation';
+import MobileNavigation from './MobileNavigation';
 import { ManagerResidenceRequests } from './ResidenceChangeRequests';
 import { routePopupFeedback } from '../lib/feedback';
 import RouteSkeleton from './RouteSkeleton';
@@ -19,6 +21,7 @@ import ManagerAccountControls from './ManagerAccountControls';
 import { ManagerMeetingsTab } from './ManagerMeetingsTab';
 import LogoutConfirmationModal from './LogoutConfirmationModal';
 import ManagerDigitalKeysView from './ManagerDigitalKeysView';
+import { usesSupabasePersistence } from '../lib/persistence';
 import { } from '../utils/pdfHelper';
 import { 
   Building2, Users, MapPin, CheckCircle2, XCircle, Clock, Plus,
@@ -71,6 +74,8 @@ interface MaintenanceTicket {
   isClosed?: boolean;
   closedAt?: string;
   studentConfirmed?: boolean;
+  requiresResidentSignoff?: boolean;
+  createdAt?: string;
   photos?: string[];
 }
 
@@ -107,6 +112,9 @@ export default function PageManagerDashboard() {
   const [activities, setActivities] = useState<any[]>([]);
 
   // Staff state
+  const [staffInvitations, setStaffInvitations] = useState<any[]>([]);
+  const [staffInvitationLink, setStaffInvitationLink] = useState('');
+  const [invitationBusy, setInvitationBusy] = useState(false);
   const [staffList, setStaffList] = useState<StaffMember[]>([]);
   const [staffSubTab, setStaffSubTab] = useState<'roster' | 'bargains'>('roster');
 
@@ -296,14 +304,14 @@ export default function PageManagerDashboard() {
             )
           : resIssues;
 
-        mappedIssues = relevantIssues.map((i: any) => ({
+        mappedIssues = relevantIssues.map((i: any) => usesSupabasePersistence ? i : ({
           ...i,
           id: i.id || `issue-${Date.now()}`,
           title: i.title || i.issue || 'Maintenance Request',
           category: i.category || 'General',
           roomNumber: i.roomNumber || i.room || 'General Area',
           urgency: i.urgency || i.priority || 'Normal',
-          status: i.status === 'Resolved' ? 'Resolved' : i.status === 'In Progress' ? 'In Progress' : 'Open',
+          status: usesSupabasePersistence ? i.status : i.status === 'Resolved' ? 'Resolved' : i.status === 'In Progress' ? 'In Progress' : 'Open',
           reportedAt: i.reportedAt || i.createdAt || 'Recent',
           description: i.description || i.details || 'Maintenance requested by resident'
         }));
@@ -311,6 +319,7 @@ export default function PageManagerDashboard() {
 
       // 4. Fetch staff members
       const resStaff = await apiFetch('/api/staff');
+      const invitations = usesSupabasePersistence ? await apiFetch('/api/staff/invitations') : [];
       const resBargains = await apiFetch('/api/staff-bargains');
       const resBoard = await apiFetch('/api/board-requests');
       const resActivities = await apiFetch('/api/activities');
@@ -319,6 +328,7 @@ export default function PageManagerDashboard() {
       return {
         managerProperties,
         mappedIssues,
+        invitations,
         staffList: Array.isArray(resStaff) ? resStaff : [], staffBargains: Array.isArray(resBargains) ? resBargains : [],
         boardRequests: Array.isArray(resBoard) ? resBoard : [],
         activities: Array.isArray(resActivities) && resActivities.length > 0 ? resActivities.slice(0, 10) : [],
@@ -334,6 +344,7 @@ export default function PageManagerDashboard() {
     setProperties(managerData?.managerProperties || []);
     setMaintenanceIssues(managerData?.mappedIssues || []);
     setStaffList(managerData?.staffList || []);
+    setStaffInvitations(managerData?.invitations || []);
     setStaffBargains(managerData?.staffBargains || []);
     setActivities(managerData?.activities || []);
     setBoardRequests(managerData?.boardRequests || []);
@@ -487,7 +498,7 @@ export default function PageManagerDashboard() {
       triggerToast('Please enter the staff name, phone number and email.');
       return;
     }
-    if (!newStaffPassword.trim()) {
+    if (!usesSupabasePersistence && !newStaffPassword.trim()) {
       triggerToast('Please specify an initial account password for this staff member.');
       return;
     }
@@ -504,7 +515,7 @@ export default function PageManagerDashboard() {
           role: newStaffRole,
           phone: newStaffPhone.trim(),
           email: newStaffEmail.trim(),
-          password: newStaffPassword.trim(),
+          ...(!usesSupabasePersistence ? {password:newStaffPassword.trim()} : {}),
           shift: newStaffShift,
           assignedBlock: newStaffBlock,
           status: 'Active',
@@ -513,6 +524,14 @@ export default function PageManagerDashboard() {
         })
       });
 
+      if (usesSupabasePersistence) {
+        if (!/^[a-f0-9]{64}$/.test(createdStaff?.invitationToken || '')) throw new Error('The invitation link could not be retrieved. Renew it from pending staff invitations.');
+        setStaffInvitationLink(`${window.location.origin}${window.location.pathname}#/staff-invitation?token=${createdStaff.invitationToken}`);
+        setNewStaffName(''); setNewStaffPhone(''); setNewStaffEmail('');
+        triggerToast('Invitation created. Share the link with your staff member to verify their work email.');
+        await fetchManagerData();
+        return;
+      }
       // Deduplicate so duplicate entries are never added to local state
       setStaffList(prev => {
         if (prev.some(s => s.id === createdStaff.id)) return prev;
@@ -560,8 +579,8 @@ export default function PageManagerDashboard() {
         body: JSON.stringify({
           action: managerResponseAction,
           responseNote: managerResponseNote.trim(),
-          updatedShift: managerUpdatedShift.trim() || undefined,
-          updatedBlock: managerUpdatedBlock.trim() || undefined
+          updatedShift: managerResponseAction === 'accept' ? managerUpdatedShift.trim() || undefined : undefined,
+          updatedBlock: managerResponseAction === 'accept' ? managerUpdatedBlock.trim() || undefined : undefined
         })
       });
 
@@ -598,16 +617,16 @@ export default function PageManagerDashboard() {
         body: JSON.stringify({
           title: newIssueTitle.trim(),
           category: newIssueCategory,
-          roomNumber: newIssueRoom.trim() || 'General Facility',
+          ...(usesSupabasePersistence ? {locationTag:newIssueRoom.trim()} : {roomNumber:newIssueRoom.trim() || 'General Facility'}),
           urgency: newIssueUrgency,
-          status: 'Open',
-          reportedAt: new Date().toISOString().split('T')[0],
+          ...(!usesSupabasePersistence ? {status:'Open',reportedAt:new Date().toISOString().split('T')[0]} : {}),
           description: newIssueDescription.trim() || 'Logged via Manager Operations Center.',
-          hostelName: primaryProperty?.name,
+          ...(!usesSupabasePersistence ? {hostelName:primaryProperty?.name} : {}),
           hostelId: primaryProperty?.id
         })
       });
       
+      if (usesSupabasePersistence && !createdTicket?.id) throw new Error('The maintenance ticket could not be saved.');
       const normalizedTicket: MaintenanceTicket = {
         id: createdTicket.id || `m-${Date.now().toString().slice(-4)}`,
         title: createdTicket.title || newIssueTitle.trim(),
@@ -643,8 +662,7 @@ export default function PageManagerDashboard() {
         method: 'POST',
         body: JSON.stringify({
           staffId: targetStaff.id,
-          staffName: targetStaff.name,
-          staffRole: targetStaff.role || 'Enrolled Staff',
+          ...(!usesSupabasePersistence ? {staffName:targetStaff.name,staffRole:targetStaff.role || 'Enrolled Staff'} : {}),
           timeframe: selectedIssueTimeframe
         })
       });
@@ -743,11 +761,24 @@ export default function PageManagerDashboard() {
   const totalCapacity = properties.reduce((acc, p) => acc + (p.totalCapacity || p.capacity || 0), 0);
   const totalOccupied = properties.reduce((acc, p) => acc + (p.occupied || 0), 0);
   const availableBeds = totalCapacity > 0 ? (totalCapacity - totalOccupied) : 0;
-  const activeIssues = maintenanceIssues.filter(i => i.status !== 'Resolved').length;
+  const activeIssues = maintenanceIssues.filter(i => !i.closedByManager && i.status !== 'Closed').length;
+  const maintenanceCompletion = useMemo(() => {
+    const end = new Date();end.setUTCHours(0,0,0,0);
+    return Array.from({length:30},(_,index) => {
+      const date = new Date(end.getTime() - (29-index)*86400000);
+      const day = date.toISOString().slice(0,10);
+      const reports = maintenanceIssues.filter(issue => String(issue.createdAt || issue.reportedAt || '').slice(0,10) === day);
+      const closed = reports.filter(issue => issue.closedByManager || issue.status === 'Closed').length;
+      return {day:date.toLocaleDateString(undefined,{month:'short',day:'numeric',timeZone:'UTC'}),reports:reports.length,
+        completionRate:reports.length ? Math.round(closed/reports.length*100) : null};
+    });
+  },[maintenanceIssues]);
 
   const filteredIssues = maintenanceIssues.filter(i => {
     if (maintenanceFilter === 'all') return true;
-    return i.status === maintenanceFilter;
+    if (maintenanceFilter === 'Open') return ['Open','Pending'].includes(i.status);
+    if (maintenanceFilter === 'In Progress') return ['Assigned','In Progress'].includes(i.status);
+    return ['Resolved','Closed'].includes(i.status);
   });
 
   const isManagerBlocked = Boolean(
@@ -823,12 +854,12 @@ export default function PageManagerDashboard() {
       {/* Toast Notification */}
       <AnimatePresence>
         {toastMessage && (
-          <motion.div
+          <motion.div role="status"
             initial={{ opacity: 0, y: 15, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 15, scale: 0.95 }}
             transition={{ duration: 0.15 }}
-            className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 bg-slate-950/95 text-white px-4 py-2 rounded-full shadow-lg border border-slate-800 flex items-center gap-2 backdrop-blur-md text-xs font-semibold"
+            className="ux-dashboard-toast fixed bottom-24 left-1/2 -translate-x-1/2 z-50 bg-slate-950/95 text-white px-4 py-2 rounded-full shadow-lg border border-slate-800 flex items-center gap-2 backdrop-blur-md text-xs font-semibold"
           >
             <div className="w-1.5 h-1.5 rounded-full bg-blue-400" />
             <span>{toastMessage}</span>
@@ -857,15 +888,13 @@ export default function PageManagerDashboard() {
       </header>
 
       {/* MOBILE BOTTOM NAV (lg:hidden) */}
-      <nav className="mobile-bottom-nav lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-xl border-t border-slate-200 shadow-[0_-10px_40px_rgba(0,0,0,0.08)]">
-        <div data-mobile-nav-items className="flex items-center justify-around px-2 py-2 pb-safe">
-          {[
+      <MobileNavigation label="Manager navigation" activeTab={activeTab} onSelect={id => setActiveTab(id as any)} primaryIds={["overview", "properties", "maintenance", "notifications"]} items={[
             { id: 'overview', label: 'Overview', icon: ShieldCheck, locked: !hasApprovedProperty },
             { id: 'properties', label: 'Properties', icon: Building2, locked: !hasApprovedProperty },
-            { id: 'blocks', label: 'Blocks', icon: Layers, locked: !hasApprovedProperty },
+            { id: 'blocks', label: 'Blocks', icon: Layers, group: 'Property operations', locked: !hasApprovedProperty },
             { 
               id: 'staff', 
-              label: 'Staff', 
+              label: 'Staff', group: 'Property operations',
               icon: Users, 
               badge: (staffBargains.filter(b => (b.status || '').toLowerCase() === 'pending').length) || null,
               isRed: (staffBargains.filter(b => (b.status || '').toLowerCase() === 'pending').length) > 0,
@@ -880,7 +909,7 @@ export default function PageManagerDashboard() {
               isBeamingRed: hasUnviewedMaintenanceLogs,
               locked: !hasApprovedProperty 
             },
-            { id: 'meetings', label: 'Meetings', icon: CalendarCheck, locked: !hasApprovedProperty },
+            { id: 'meetings', label: 'Meetings', icon: CalendarCheck, group: 'Property operations', locked: !hasApprovedProperty },
             { 
               id: 'notifications', 
               label: 'Alerts', 
@@ -889,39 +918,7 @@ export default function PageManagerDashboard() {
               isRed: (systemNotifications || []).some(n => !n.read),
               locked: false 
             }
-          ].map(tab => {
-            const isBeaming = Boolean((tab as any).isBeamingRed && !tab.locked);
-            return (
-              <button
-                key={tab.id}
-                aria-current={activeTab === tab.id ? 'page' : undefined}
-                onClick={() => !tab.locked && setActiveTab(tab.id as any)}
-                disabled={tab.locked}
-                className={`snap-center shrink-0 flex flex-col items-center justify-center w-[64px] h-12 rounded-xl transition-all relative ${
-                  tab.locked ? 'opacity-40 cursor-not-allowed text-slate-400' : 
-                  isBeaming && activeTab !== tab.id ? 'text-red-600 font-black animate-pulse' :
-                  activeTab === tab.id ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'
-                }`}
-              >
-                <div className={`p-1.5 rounded-lg ${isBeaming && activeTab !== tab.id ? 'bg-red-100 text-red-600 ring-2 ring-red-400/50' : activeTab === tab.id ? 'bg-blue-100/50' : ''}`}>
-                  <tab.icon className={`w-5 h-5 ${activeTab === tab.id ? 'scale-110 transition-transform' : ''}`} />
-                  {tab.badge ? (
-                    <span className={`absolute top-1 right-2 w-4 h-4 rounded-full text-[9px] font-black flex items-center justify-center ring-2 ring-white ${
-                      isBeaming && activeTab !== tab.id ? 'bg-red-600 text-white animate-bounce shadow-md' :
-                      tab.isRed ? 'bg-red-600 text-white animate-pulse' : 'bg-amber-400 text-slate-900'
-                    }`}>
-                      {tab.badge}
-                    </span>
-                  ) : null}
-                </div>
-                <span className={`text-[9px] font-bold mt-0.5 ${isBeaming && activeTab !== tab.id ? 'text-red-600 font-extrabold' : activeTab === tab.id ? 'text-blue-700' : 'text-slate-500'}`}>
-                  {tab.label}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      </nav>
+          , { id: 'settings', label: 'Settings', icon: Settings, locked: false, group: 'Account' }]} />
 
       {/* SIDEBAR: PURELY STATIC / FIXED ICE-BLUE FROSTY BLUE WITH CURVED EDGES & BLUE GLOW */}
 
@@ -1104,7 +1101,11 @@ export default function PageManagerDashboard() {
 
       {/* MAIN CONTENT AREA */}
       <main className={`dashboard-centered-content flex-1 p-6 pb-28 lg:p-10 lg:pb-10 space-y-8 overflow-y-auto h-full relative ${isSidebarTopNav ? 'lg:pt-24 lg:w-[calc(100vw-22rem)] lg:max-w-[calc(100vw-22rem)] lg:mx-auto' : ''}`}>
-
+        {usesSupabasePersistence && primaryProperty?.registrationRequired && !showRegistration && <div className="relative z-10 flex flex-col gap-4 rounded-2xl border border-blue-200 bg-blue-50 p-5 sm:flex-row sm:items-center sm:justify-between dark:border-cyan-900 dark:bg-slate-900">
+          <div><h2 className="font-bold text-blue-950 dark:text-cyan-100">Complete residence registration</h2>
+            <p className="mt-1 text-sm text-slate-700 dark:text-slate-200">Your manager account is verified. Add the property photographs and actual room configuration for residence review.</p></div>
+          <button type="button" onClick={() => setShowRegistration(true)} className="shrink-0 rounded-xl bg-blue-700 px-5 py-3 font-bold text-white hover:bg-blue-800">Complete Registration</button>
+        </div>}
         {/* TAB CONTENT OR REGISTRATION */}
         {showRegistration ? (
           <div className="animate-fadeIn relative z-10 h-full">
@@ -1114,6 +1115,7 @@ export default function PageManagerDashboard() {
                   setProperties([h]);
                   setShowWelcomePopup(false);
                   triggerToast('Hostel Registration Submitted to Admin for Review!');
+                  if (usesSupabasePersistence) void fetchManagerData();
                   setShowRegistration(false);
                   setActiveTab('notifications');
                 }} 
@@ -1134,7 +1136,7 @@ export default function PageManagerDashboard() {
                     <div className="space-y-2 max-w-2xl">
                       <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/15 text-emerald-900 border border-emerald-300/60 rounded-full text-xs font-black uppercase tracking-wider">
                         <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                        <span>Official Accredited Residence • Live & Active</span>
+                        <span>{usesSupabasePersistence && !primaryProperty?.isApproved ? primaryProperty?.registrationRequired ? 'Residence setup required' : 'Residence review pending' : 'Official Accredited Residence • Live & Active'}</span>
                       </div>
                       <h2 className="text-2xl lg:text-3xl font-black tracking-tight text-slate-900">
                         {primaryProperty?.name || 'Premium PineVela'}
@@ -1504,6 +1506,7 @@ export default function PageManagerDashboard() {
             )}
 
             {/* TAB 4: STAFF MANAGEMENT */}
+            {activeTab === 'staff' && usesSupabasePersistence && staffInvitations.length > 0 && <section className="relative z-10 space-y-3 rounded-2xl border border-blue-200 bg-white p-5 dark:border-cyan-900 dark:bg-slate-900"><h2 className="font-bold">Pending staff invitations</h2>{staffInvitations.map(invite => <div key={invite.id} className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 pt-3"><div><p className="text-sm font-semibold">{invite.name}</p><p className="text-xs break-all">{invite.email} · {new Date(invite.expires_at).getTime() <= Date.now() ? 'Expired link' : 'Awaiting email verification'}</p></div><div className="flex gap-3"><button disabled={invitationBusy} className="min-h-11 text-sm font-bold text-blue-700 dark:text-cyan-300" onClick={async () => {setInvitationBusy(true);try {const result=await apiFetch(`/api/staff/invitations/${invite.id}/rotate`,{method:'POST',body:'{}'});setStaffInvitationLink(`${window.location.origin}${window.location.pathname}#/staff-invitation?token=${result.invitationToken}`);setShowAddStaffModal(true);await fetchManagerData();}catch(e:any){triggerToast(e.message);}finally{setInvitationBusy(false);}}}>Renew invitation link</button><button disabled={invitationBusy} className="min-h-11 text-sm text-rose-700 dark:text-rose-300" onClick={async()=>{setInvitationBusy(true);try{await apiFetch(`/api/staff/invitations/${invite.id}`,{method:'DELETE'});await fetchManagerData();triggerToast('Invitation cancelled.');}catch(e:any){triggerToast(e.message);}finally{setInvitationBusy(false);}}}>Cancel invitation</button></div></div>)}</section>}
             {activeTab === 'staff' && (
               <div className="animate-fadeIn relative z-10 space-y-6">
                 <div className="bg-white/70 border border-blue-200/50 p-6 md:p-8 rounded-3xl backdrop-blur-xl shadow-lg space-y-6">
@@ -1566,10 +1569,10 @@ export default function PageManagerDashboard() {
                     <div className="space-y-6">
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-bold text-slate-500">
-                          {staffList.length} Active Personnel Assigned to Property
+                          {staffList.filter(s => s.status === 'Active').length} Active Personnel Assigned to Property
                         </span>
                         <button 
-                          onClick={() => setShowAddStaffModal(true)}
+                          onClick={() => {setStaffInvitationLink('');setShowAddStaffModal(true);}}
                           className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-md transition-all cursor-pointer"
                         >
                           <Plus className="w-4 h-4" />
@@ -1967,25 +1970,19 @@ export default function PageManagerDashboard() {
                           Performance Analytics
                         </div>
                         <h4 className="text-lg font-black tracking-tight text-white">30-Day Maintenance Ticket Completion Rate</h4>
-                        <p className="text-xs text-slate-300">Daily resolution percentage & staff performance throughput over the last 30 days.</p>
+                        <p className="text-xs text-slate-300">Tickets filed each day that have been closed by management.</p>
                       </div>
                       <div className="text-right">
                         <div className="text-2xl font-black text-emerald-400">
-                          {Math.round((maintenanceIssues.filter(m => m.status === 'Resolved').length / Math.max(1, maintenanceIssues.length)) * 100)}%
+                          {maintenanceIssues.length ? `${Math.round(maintenanceIssues.filter(m => m.closedByManager || m.status === 'Closed').length / maintenanceIssues.length * 100)}%` : '—'}
                         </div>
-                        <div className="text-[10px] text-slate-400">Current Resolution Ratio</div>
+                        <div className="text-[10px] text-slate-400">Current Ticket Closure Ratio</div>
                       </div>
                     </div>
+                    {!maintenanceCompletion.some(day => day.reports > 0) && <p className="text-xs text-slate-300">No maintenance reports in the last 30 days.</p>}
                     <div className="h-64 w-full pt-4">
                       <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={Array.from({ length: 30 }, (_, i) => {
-                          const dayNum = 30 - i;
-                          const base = 75 + ((i * 7) % 20);
-                          return {
-                            day: `Day ${dayNum}`,
-                            completionRate: Math.min(100, Math.max(60, base))
-                          };
-                        }).reverse()}>
+                        <AreaChart data={maintenanceCompletion}>
                           <defs>
                             <linearGradient id="completionGradient" x1="0" y1="0" x2="0" y2="1">
                               <stop offset="5%" stopColor="#10b981" stopOpacity={0.8}/>
@@ -2032,7 +2029,7 @@ export default function PageManagerDashboard() {
                       filteredIssues.map(ticket => {
                         const isOverdue = ticket.deadline && new Date() > new Date(ticket.deadline) && ticket.status !== 'Resolved';
                         return (
-                          <div 
+                          <div role="button" tabIndex={0} aria-label={`View maintenance request: ${ticket.title}`} onKeyDown={activateOnKeyboard}
                             key={ticket.id} 
                             onClick={() => {
                               setSelectedIssueDetail(ticket);
@@ -2152,7 +2149,7 @@ export default function PageManagerDashboard() {
                           </div>
                           <h3 className="text-lg font-black text-slate-900">{selectedIssueDetail.title}</h3>
                         </div>
-                        <button 
+                        <button aria-label="Close dialog"
                           onClick={() => setSelectedIssueDetail(null)} 
                           className="p-1 text-slate-400 hover:text-slate-600 bg-slate-50 hover:bg-slate-100 rounded-full transition-all"
                         >
@@ -2172,7 +2169,7 @@ export default function PageManagerDashboard() {
                           <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Student Attachment Proofs ({selectedIssueDetail.photos.length}):</span>
                           <div className="flex gap-2.5 flex-wrap">
                             {selectedIssueDetail.photos.map((photo: string, index: number) => (
-                              <img 
+                              <img role="button" tabIndex={0} aria-label="View reported issue photograph" onKeyDown={activateOnKeyboard}
                                 key={index} 
                                 src={photo} 
                                 alt="Student proof" 
@@ -2228,7 +2225,7 @@ export default function PageManagerDashboard() {
                               {selectedIssueDetail.staffCompletionPhoto && (
                                 <div className="space-y-1.5 pt-1">
                                   <strong className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Technician Proof Photo:</strong>
-                                  <img 
+                                  <img role="button" tabIndex={0} aria-label="View repair completion photograph" onKeyDown={activateOnKeyboard}
                                     src={selectedIssueDetail.staffCompletionPhoto} 
                                     alt="Technician Completion" 
                                     className="w-24 h-24 object-cover rounded-xl border border-slate-200 cursor-zoom-in hover:opacity-80 transition-opacity"
@@ -2266,7 +2263,7 @@ export default function PageManagerDashboard() {
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                               <div>
                                 <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase tracking-wider">Choose Urgency SLA Timeframe</label>
-                                <select 
+                                <select aria-label="Choose Urgency SLA Timeframe"
                                   value={selectedIssueTimeframe} 
                                   onChange={(e) => setSelectedIssueTimeframe(e.target.value)}
                                   className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-blue-600 focus:bg-white"
@@ -2281,7 +2278,7 @@ export default function PageManagerDashboard() {
                               </div>
                               <div>
                                 <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase tracking-wider">Select Residence Staff</label>
-                                <select 
+                                <select aria-label="Select Residence Staff"
                                   value={selectedAssigneeId} 
                                   onChange={(e) => setSelectedAssigneeId(e.target.value)}
                                   className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-blue-600 focus:bg-white"
@@ -2336,7 +2333,7 @@ export default function PageManagerDashboard() {
                                 <div className="border-t border-rose-200/60 pt-3">
                                   <label className="block text-[10px] font-bold text-slate-600 mb-1 uppercase">Re-assign to Another Residence Staff Member:</label>
                                   <div className="flex gap-2">
-                                    <select 
+                                    <select aria-label="Re-assign to Another Residence Staff Member:"
                                       value={selectedAssigneeId} 
                                       onChange={(e) => setSelectedAssigneeId(e.target.value)}
                                       className="flex-1 px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-850 focus:outline-none focus:border-blue-600"
@@ -2391,9 +2388,9 @@ export default function PageManagerDashboard() {
                               <div className="bg-red-50 border border-red-200 p-4 rounded-2xl text-xs text-red-800 leading-relaxed space-y-1 animate-pulse">
                                 <div className="font-bold flex items-center gap-1.5">
                                   <XCircle className="w-4 h-4 text-red-600" />
-                                  <span>⚠️ SLA WORK TIMEFRAME EXCEEDED (DELAY PENALTY ACTIVE)</span>
+                                  <span>{usesSupabasePersistence ? 'Repair deadline exceeded' : '⚠️ SLA WORK TIMEFRAME EXCEEDED (DELAY PENALTY ACTIVE)'}</span>
                                 </div>
-                                <p>Technician has missed the assigned timeframe of {selectedIssueDetail.timeframe} without marking the ticket completed or receiving an authorized reschedule extension. Dynamic penalty logged.</p>
+                                <p>Technician has missed the assigned timeframe of {selectedIssueDetail.timeframe} without marking the ticket completed or receiving an authorized reschedule extension. {usesSupabasePersistence ? 'Please review the overdue work order.' : 'Dynamic penalty logged.'}</p>
                               </div>
                             )}
 
@@ -2409,7 +2406,7 @@ export default function PageManagerDashboard() {
                                   {selectedIssueDetail.staffCompletionPhoto && (
                                     <div className="space-y-1.5 pt-1.5">
                                       <strong>Completion Photo Proof:</strong>
-                                      <img 
+                                      <img role="button" tabIndex={0} aria-label="View repair completion photograph" onKeyDown={activateOnKeyboard}
                                         src={selectedIssueDetail.staffCompletionPhoto} 
                                         alt="Technician Proof" 
                                         className="w-24 h-24 object-cover rounded-xl border border-emerald-200 cursor-zoom-in hover:opacity-80 transition-opacity"
@@ -2427,7 +2424,7 @@ export default function PageManagerDashboard() {
                                   </div>
                                 ) : (
                                   <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 font-medium leading-relaxed">
-                                    🕒 Awaiting Resident Student verification from their dashboard... (Manager can override signoff below if necessary)
+                                    {usesSupabasePersistence && !selectedIssueDetail.requiresResidentSignoff ? 'Manager-filed facility repair is ready for management closure.' : 'Awaiting confirmation from the reporting resident before closure.'}
                                   </div>
                                 )}
                               </div>
@@ -2440,7 +2437,7 @@ export default function PageManagerDashboard() {
                                 <button
                                   type="button"
                                   onClick={() => handleCloseIssue(selectedIssueDetail.id, "Verified and signed off by hostel desk.")}
-                                  disabled={closingIssueState}
+                                  disabled={closingIssueState || usesSupabasePersistence && selectedIssueDetail.requiresResidentSignoff && !selectedIssueDetail.studentConfirmed}
                                   className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-600/40 disabled:cursor-not-allowed text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                                   title="Archive & Close Work Order"
                                 >
@@ -2458,11 +2455,11 @@ export default function PageManagerDashboard() {
 
                 {/* LOG MAINTENANCE MODAL */}
                 {showAddIssueModal && (
-                  <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+                  <DashboardOverlay aria-label="Log Maintenance Work Order" onClose={() => setShowAddIssueModal(false)} className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
                     <div data-popup-card className="bg-white rounded-3xl p-6 md:p-8 max-w-lg w-full shadow-2xl border border-blue-200/80 space-y-6">
                       <div className="flex justify-between items-center border-b border-slate-100 pb-4">
                         <h3 className="text-lg font-bold text-slate-900">Log Maintenance Work Order</h3>
-                        <button onClick={() => setShowAddIssueModal(false)} className="text-slate-400 hover:text-slate-600">
+                        <button aria-label="Close dialog" onClick={() => setShowAddIssueModal(false)} className="text-slate-400 hover:text-slate-600">
                           <XCircle className="w-5 h-5" />
                         </button>
                       </div>
@@ -2470,7 +2467,7 @@ export default function PageManagerDashboard() {
                       <form onSubmit={handleAddMaintenance} className="space-y-4">
                         <div>
                           <label className="block text-xs font-bold text-slate-700 mb-1">Issue Title</label>
-                          <input 
+                          <input aria-label="Issue Title"
                             type="text" 
                             value={newIssueTitle} 
                             onChange={(e) => setNewIssueTitle(e.target.value)} 
@@ -2483,7 +2480,7 @@ export default function PageManagerDashboard() {
                         <div className="grid grid-cols-2 gap-3">
                           <div>
                             <label className="block text-xs font-bold text-slate-700 mb-1">Category</label>
-                            <select 
+                            <select aria-label="Category"
                               value={newIssueCategory} 
                               onChange={(e) => setNewIssueCategory(e.target.value)}
                               className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800"
@@ -2499,7 +2496,7 @@ export default function PageManagerDashboard() {
 
                           <div>
                             <label className="block text-xs font-bold text-slate-700 mb-1">Location / Room Number</label>
-                            <input 
+                            <input aria-label="Location / Room Number"
                               type="text" 
                               value={newIssueRoom} 
                               onChange={(e) => setNewIssueRoom(e.target.value)} 
@@ -2512,7 +2509,7 @@ export default function PageManagerDashboard() {
 
                         <div>
                           <label className="block text-xs font-bold text-slate-700 mb-1">Urgency</label>
-                          <select 
+                          <select aria-label="Urgency"
                             value={newIssueUrgency} 
                             onChange={(e) => setNewIssueUrgency(e.target.value as any)}
                             className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800"
@@ -2525,7 +2522,7 @@ export default function PageManagerDashboard() {
 
                         <div>
                           <label className="block text-xs font-bold text-slate-700 mb-1">Description</label>
-                          <textarea 
+                          <textarea aria-label="Description"
                             rows={3} 
                             value={newIssueDescription} 
                             onChange={(e) => setNewIssueDescription(e.target.value)} 
@@ -2551,7 +2548,7 @@ export default function PageManagerDashboard() {
                         </div>
                       </form>
                     </div>
-                  </div>
+                  </DashboardOverlay>
                 )}
               </div>
             )}
@@ -2704,7 +2701,7 @@ export default function PageManagerDashboard() {
                       ) : (
                         <div className="space-y-2.5 max-h-[360px] overflow-y-auto pr-1">
                           {systemNotifications.slice(0, 15).map((n: any) => (
-                            <div 
+                            <div role="button" tabIndex={0} aria-label={`Open notification: ${n.title}`} onKeyDown={activateOnKeyboard}
                               key={n.id}
                               onClick={() => {
                                 if (!n.read) markAsRead(n.id);
@@ -2777,7 +2774,7 @@ export default function PageManagerDashboard() {
       {/* MODAL: MANAGER BARGAIN RESPONSE MODAL                     */}
       {/* ======================================================== */}
       {selectedBargainToReview && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
+        <DashboardOverlay aria-label="Staff Retention & Bargain Review" onClose={() => setSelectedBargainToReview(null)} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
           <div data-popup-card className="bg-white rounded-3xl max-w-xl w-full p-6 md:p-8 shadow-2xl border border-slate-200 space-y-6 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-slate-100 pb-4">
               <div className="flex items-center gap-3">
@@ -2793,7 +2790,7 @@ export default function PageManagerDashboard() {
                   </p>
                 </div>
               </div>
-              <button
+              <button aria-label="Close dialog"
                 type="button"
                 onClick={() => setSelectedBargainToReview(null)}
                 className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600 cursor-pointer"
@@ -2871,7 +2868,7 @@ export default function PageManagerDashboard() {
                     <label className="block text-[11px] font-bold text-slate-700 mb-1">
                       Updated Shift Schedule
                     </label>
-                    <select
+                    <select aria-label="Updated Shift Schedule"
                       value={managerUpdatedShift}
                       onChange={e => setManagerUpdatedShift(e.target.value)}
                       className="w-full text-xs font-medium p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-blue-500"
@@ -2887,7 +2884,7 @@ export default function PageManagerDashboard() {
                     <label className="block text-[11px] font-bold text-slate-700 mb-1">
                       Updated Assigned Block/Wing
                     </label>
-                    <select
+                    <select aria-label="Updated Assigned Block/Wing"
                       value={managerUpdatedBlock}
                       onChange={e => setManagerUpdatedBlock(e.target.value)}
                       className="w-full text-xs font-medium p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-blue-500"
@@ -2903,7 +2900,7 @@ export default function PageManagerDashboard() {
                   <label className="block text-[11px] font-bold text-slate-700 mb-1">
                     Acceptance Response Note to Staff
                   </label>
-                  <textarea
+                  <textarea aria-label="Acceptance Response Note to Staff"
                     rows={2}
                     value={managerResponseNote}
                     onChange={e => setManagerResponseNote(e.target.value)}
@@ -2921,7 +2918,7 @@ export default function PageManagerDashboard() {
                   <label className="block text-[11px] font-bold text-slate-700 mb-1">
                     Explanatory Reason to Staff (Required) *
                   </label>
-                  <textarea
+                  <textarea aria-label="Explanatory Reason to Staff (Required)"
                     rows={3}
                     value={managerResponseNote}
                     onChange={e => setManagerResponseNote(e.target.value)}
@@ -2964,7 +2961,7 @@ export default function PageManagerDashboard() {
               </button>
             </div>
           </div>
-        </div>
+        </DashboardOverlay>
       )}
 
       {showAccountControls && <ManagerAccountControls onClose={() => setShowAccountControls(false)} />}
@@ -2982,7 +2979,7 @@ export default function PageManagerDashboard() {
       {/* MODAL: DIGITAL ROOM KEY DISPATCH MODAL                    */}
       {/* ======================================================== */}
       {dispatchModalOpen && selectedKeyForDispatch && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-fadeIn">
+        <DashboardOverlay aria-label="Dispatch Digital Room Key" onClose={() => setDispatchModalOpen(false)} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-fadeIn">
           <div data-popup-card className="bg-white/95 rounded-[2rem] max-w-lg w-full p-6 sm:p-8 shadow-2xl border border-blue-100 backdrop-blur-2xl space-y-5 animate-scaleUp">
             
             {/* Modal Header */}
@@ -2996,7 +2993,7 @@ export default function PageManagerDashboard() {
                   <p className="text-xs text-slate-500">Transmitting official resident room access credentials</p>
                 </div>
               </div>
-              <button
+              <button aria-label="Close dialog"
                 type="button"
                 onClick={() => setDispatchModalOpen(false)}
                 className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600 cursor-pointer transition-colors"
@@ -3050,7 +3047,7 @@ export default function PageManagerDashboard() {
                 <label className="block text-xs font-bold text-slate-700 mb-1">
                   Recipient Name
                 </label>
-                <input
+                <input aria-label="Recipient Name"
                   type="text"
                   value={dispatchRecipientName}
                   onChange={(e) => setDispatchRecipientName(e.target.value)}
@@ -3065,7 +3062,7 @@ export default function PageManagerDashboard() {
                     <Mail className="w-3.5 h-3.5 text-blue-600" />
                     <span>Recipient Email</span>
                   </label>
-                  <input
+                  <input aria-label="Recipient Email"
                     type="email"
                     value={dispatchRecipientEmail}
                     onChange={(e) => setDispatchRecipientEmail(e.target.value)}
@@ -3079,7 +3076,7 @@ export default function PageManagerDashboard() {
                     <Phone className="w-3.5 h-3.5 text-emerald-600" />
                     <span>Phone / WhatsApp</span>
                   </label>
-                  <input
+                  <input aria-label="Phone / WhatsApp"
                     type="tel"
                     value={dispatchRecipientPhone}
                     onChange={(e) => setDispatchRecipientPhone(e.target.value)}
@@ -3093,7 +3090,7 @@ export default function PageManagerDashboard() {
                 <label className="block text-xs font-bold text-slate-700 mb-1">
                   Custom Welcome & Access Note
                 </label>
-                <textarea
+                <textarea aria-label="Custom Welcome & Access Note"
                   rows={2}
                   value={dispatchCustomNote}
                   onChange={(e) => setDispatchCustomNote(e.target.value)}
@@ -3131,39 +3128,40 @@ export default function PageManagerDashboard() {
               </div>
             </form>
           </div>
-        </div>
+        </DashboardOverlay>
       )}
 
       {/* ADD STAFF MODAL */}
       {showAddStaffModal && (
-        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-md flex items-center justify-center p-4 z-[999] overflow-y-auto">
+        <DashboardOverlay aria-label="Add Staff Member" onClose={() => setShowAddStaffModal(false)} className="fixed inset-0 bg-slate-950/60 backdrop-blur-md flex items-center justify-center p-4 z-[999] overflow-y-auto">
           <div data-popup-card className="onboarding-fields my-auto max-h-[calc(100dvh-2rem)] overflow-y-auto bg-white rounded-3xl p-6 md:p-8 max-w-lg w-full shadow-2xl border border-slate-200 space-y-6 relative z-[1000] text-slate-900">
             <div className="flex justify-between items-center border-b border-slate-100 pb-4">
               <div>
                 <h3 className="text-lg font-bold text-slate-900">Add Staff Member</h3>
                 <p className="text-xs text-slate-500 mt-0.5">Tied to {primaryProperty?.name || 'this property'}</p>
               </div>
-              <button onClick={() => setShowAddStaffModal(false)} className="text-slate-400 hover:text-slate-600 cursor-pointer">
+              <button aria-label="Close dialog" onClick={() => setShowAddStaffModal(false)} className="text-slate-400 hover:text-slate-600 cursor-pointer">
                 <XCircle className="w-5 h-5" />
               </button>
             </div>
 
-            <OnboardingProgress steps={STAFF_ACCOUNT_STEPS} step={newStaffName.trim() && newStaffPhone.trim() && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newStaffEmail) ? (newStaffPassword.trim() ? 3 : 2) : 1} label="Staff creation" />
+            <OnboardingProgress steps={STAFF_ACCOUNT_STEPS} step={newStaffName.trim() && newStaffPhone.trim() && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newStaffEmail) ? ((usesSupabasePersistence || newStaffPassword.trim()) ? 3 : 2) : 1} label="Staff creation" />
 
             <div className="p-3 bg-emerald-50/80 border border-emerald-200/90 rounded-2xl text-xs text-emerald-900 flex items-start gap-2.5">
               <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
               <div>
-                <p className="font-bold">Instant System Verification</p>
+                <p className="font-bold">{usesSupabasePersistence ? 'Verified work email required' : 'Instant System Verification'}</p>
                 <p className="text-[11px] text-emerald-800 mt-0.5 leading-relaxed">
-                  Manager-enrolled staff are automatically verified by the system and tied to {primaryProperty?.name || 'your property'}. No waiting for administrator verification required.
+                  {usesSupabasePersistence ? 'Create an invitation for this residence. Staff choose their own password and verify their work email before gaining portal access.' : <>Manager-enrolled staff are automatically verified by the system and tied to {primaryProperty?.name || 'your property'}. No waiting for administrator verification required.</>}
                 </p>
               </div>
             </div>
 
+            {staffInvitationLink && <div className="space-y-3 rounded-xl border border-blue-200 p-4"><p role="status" className="text-sm">Share this private invitation with the intended staff member. It expires after 24 hours.</p><input aria-label="Staff invitation link" readOnly value={staffInvitationLink} className="w-full rounded-lg border border-slate-300 p-2 text-xs" /><button type="button" onClick={() => { navigator.clipboard.writeText(staffInvitationLink).then(() => triggerToast('Invitation link copied.')).catch(() => triggerToast('Select the link above to copy it.')); }} className="min-h-11 text-sm font-bold text-blue-700">Copy invitation link</button></div>}
             <form onSubmit={handleAddStaff} className="space-y-4">
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">Full Name <span className="text-rose-500">*</span></label>
-                <input 
+                <input aria-label="Full Name"
                   type="text" 
                   value={newStaffName} 
                   onChange={(e) => setNewStaffName(e.target.value)} 
@@ -3176,7 +3174,7 @@ export default function PageManagerDashboard() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">Role & Department</label>
-                  <select 
+                  <select aria-label="Role & Department"
                     value={newStaffRole} 
                     onChange={(e) => setNewStaffRole(e.target.value)}
                     className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:border-blue-600"
@@ -3193,7 +3191,7 @@ export default function PageManagerDashboard() {
 
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">Phone Number <span className="text-rose-500">*</span></label>
-                  <input 
+                  <input aria-label="Phone Number"
                     type="text" 
                     value={newStaffPhone} 
                     onChange={(e) => setNewStaffPhone(e.target.value)} 
@@ -3207,7 +3205,7 @@ export default function PageManagerDashboard() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">Email / Username</label>
-                  <input 
+                  <input aria-label="Email / Username"
                     type="email" 
                     value={newStaffEmail} 
                     onChange={(e) => setNewStaffEmail(e.target.value)} 
@@ -3216,7 +3214,7 @@ export default function PageManagerDashboard() {
                   />
                 </div>
 
-                <div>
+                {!usesSupabasePersistence && <div>
                   <div className="flex items-center justify-between mb-1">
                     <label className="block text-xs font-bold text-slate-700">Account Password <span className="text-rose-500">*</span></label>
                     <button
@@ -3232,7 +3230,7 @@ export default function PageManagerDashboard() {
                     </button>
                   </div>
                   <div className="relative">
-                    <input 
+                    <input aria-label="Account Password"
                       type={showStaffPassword ? "text" : "password"} 
                       value={newStaffPassword} 
                       onChange={(e) => setNewStaffPassword(e.target.value)} 
@@ -3240,7 +3238,7 @@ export default function PageManagerDashboard() {
                       className="w-full pl-3.5 pr-9 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:border-blue-600 focus:bg-white"
                       required
                     />
-                    <button
+                    <button aria-label={showStaffPassword ? 'Hide password' : 'Show password'} aria-pressed={showStaffPassword}
                       type="button"
                       onClick={() => setShowStaffPassword(p => !p)}
                       className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
@@ -3249,16 +3247,16 @@ export default function PageManagerDashboard() {
                     </button>
                   </div>
                   <PasswordStrengthGauge password={newStaffPassword} />
-                </div>
+                </div>}
               </div>
-              <p className="text-[10px] text-slate-400">
+              {!usesSupabasePersistence && <p className="text-[10px] text-slate-400">
                 The staff member will use their email (or phone/username) and this password to log into their staff account.
-              </p>
+              </p>}
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">Work Shift</label>
-                  <select 
+                  <select aria-label="Work Shift"
                     value={newStaffShift} 
                     onChange={(e) => setNewStaffShift(e.target.value)}
                     className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:border-blue-600"
@@ -3272,7 +3270,7 @@ export default function PageManagerDashboard() {
 
                 <div>
                   <label htmlFor="staff-assigned-wing" className="block text-xs font-bold text-slate-700 mb-1">Assigned Wing</label>
-                  <select 
+                  <select aria-label="Assigned Wing"
                     id="staff-assigned-wing"
                     value={newStaffBlock} 
                     onChange={(e) => setNewStaffBlock(e.target.value)}
@@ -3303,13 +3301,13 @@ export default function PageManagerDashboard() {
                       <span>Saving Staff...</span>
                     </>
                   ) : (
-                    <span>Save & Enroll Staff</span>
+                    <span>{usesSupabasePersistence ? 'Create staff invitation' : 'Save & Enroll Staff'}</span>
                   )}
                 </button>
               </div>
             </form>
           </div>
-        </div>
+        </DashboardOverlay>
       )}
 
       {/* LOGOUT CONFIRMATION MODAL */}
@@ -3324,7 +3322,7 @@ export default function PageManagerDashboard() {
       {/* WELCOME ONBOARDING POPUP */}
       <AnimatePresence>
         {showWelcomePopup && (
-          <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-blue-950/40 backdrop-blur-xl">
+          <DashboardOverlay aria-label="Welcome to PineVela!" onClose={() => setShowWelcomePopup(false)} className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-blue-950/40 backdrop-blur-xl">
             <motion.div data-popup-card
               initial={{ opacity: 0, scale: 0.95, y: 15 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -3371,12 +3369,12 @@ export default function PageManagerDashboard() {
                 </button>
               </div>
             </motion.div>
-          </div>
+          </DashboardOverlay>
         )}
       </AnimatePresence>
 
       {roomAccessAction && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-950/70 backdrop-blur-md p-4" role="dialog" aria-modal="true" aria-labelledby="room-access-title">
+        <DashboardOverlay aria-label="Room access confirmation" onClose={roomAccessBusy ? null : () => setRoomAccessAction(null)} className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-950/70 backdrop-blur-md p-4" role="dialog" aria-modal="true" aria-labelledby="room-access-title">
           <div data-popup-card className="w-full max-w-lg rounded-3xl border border-slate-200 bg-white p-6 space-y-4 shadow-2xl">
             <h3 id="room-access-title" className="text-lg font-black text-slate-900">
               {roomAccessAction.type === 'release' ? `Remove occupant from Room ${roomAccessAction.room.roomNumber}?` : 'Reshuffle all room keys?'}
@@ -3420,7 +3418,7 @@ export default function PageManagerDashboard() {
               >{roomAccessBusy ? 'Updating...' : roomAccessAction.type === 'release' ? 'Remove Occupant' : 'Reshuffle & End Occupancy'}</button>
             </div>
           </div>
-        </div>
+        </DashboardOverlay>
       )}
 
       {/* ZOOMED IMAGE OVERLAY */}

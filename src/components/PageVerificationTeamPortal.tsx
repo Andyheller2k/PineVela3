@@ -1,4 +1,7 @@
+import { activateOnKeyboard } from '../lib/keyboardActivation';
+import DashboardOverlay from './DashboardOverlay';
 import { sessionFetch as fetch } from '../lib/session';
+import { usesSupabasePersistence } from '../lib/persistence';
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
@@ -331,12 +334,33 @@ export default function PageVerificationTeamPortal() {
     captureLiveGps();
   };
 
-  const handlePhotoCapture = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoCapture = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
     setIsCompressingPhoto(true);
     const fileList = Array.from(files);
+    if (usesSupabasePersistence) {
+      const input = e.target;
+      try {
+        if (!activeInspection || fileList.length + photos.length > 12) throw new Error('Choose an assigned inspection and at most twelve photographs.');
+        for (const file of fileList) {
+          if (!['image/jpeg','image/png','image/webp'].includes(file.type) || file.size > 20 * 1024 * 1024) throw new Error('Choose JPEG, PNG or WebP photographs up to 20MB.');
+          const data = await new Promise<string>((resolve,reject) => {
+            const reader = new FileReader();reader.onload = () => resolve(String(reader.result));
+            reader.onerror = () => reject(new Error('Could not read photograph.'));reader.readAsDataURL(file);
+          });
+          const response = await fetch('/api/storage/upload-inspection-image',{method:'POST',headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({inspectionId:activeInspection.id,fileType:file.type,fileData:data})});
+          const result = await response.json();
+          if (!response.ok) throw new Error(result.error || 'Could not upload photograph.');
+          setPhotos(prev => [...prev,{title:newPhotoTitle.trim() || selectedPhotoTag || 'On-Site Inspection Photograph',url:result.imageUrl,capturedAt:new Date().toISOString()}]);
+        }
+        setNewPhotoTitle('');
+      } catch (error:any) {setSubmitError(error.message || 'Could not upload photograph.');}
+      finally {setIsCompressingPhoto(false);input.value = '';}
+      return;
+    }
 
     const readers = fileList.map((file, i) => {
       return new Promise<{ title: string; url: string; capturedAt: string }>((resolve) => {
@@ -405,6 +429,7 @@ export default function PageVerificationTeamPortal() {
   const handleSubmitReport = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!activeInspection) return;
+    if (isCompressingPhoto) {setSubmitError('Wait for the photographs to finish uploading.');return;}
     setSubmitError(null);
     setFieldErrors({});
 
@@ -523,7 +548,7 @@ export default function PageVerificationTeamPortal() {
             </div>
 
             {/* Officer Avatar & Info */}
-            <div 
+            <div role="button" tabIndex={0} aria-label="Go to inspections" onKeyDown={activateOnKeyboard}
               className="flex items-center gap-2 cursor-pointer"
               onClick={() => setActiveTab('options')}
               title="Click to change profile picture"
@@ -596,7 +621,7 @@ export default function PageVerificationTeamPortal() {
                 </label>
                 <div className="relative">
                   <User className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                  <input
+                  <input aria-label="Official Email / Officer ID"
                     type="text"
                     required
                     value={loginEmail}
@@ -613,7 +638,7 @@ export default function PageVerificationTeamPortal() {
                 </label>
                 <div className="relative">
                   <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                  <input
+                  <input aria-label="Officer Password"
                     type={showPassword ? "text" : "password"}
                     required
                     value={loginPassword}
@@ -621,7 +646,7 @@ export default function PageVerificationTeamPortal() {
                     placeholder="••••••••"
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-10 py-2.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white transition-all font-medium"
                   />
-                  <button
+                  <button aria-label={showPassword ? 'Hide password' : 'Show password'} aria-pressed={showPassword}
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
@@ -710,7 +735,7 @@ export default function PageVerificationTeamPortal() {
                 {/* Officer Profile Badge */}
                 <div className="bg-white/90 backdrop-blur-xl border border-slate-200/80 rounded-3xl p-5 sm:p-6 shadow-md flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                   <div className="flex items-center gap-4">
-                    <div 
+                    <div role="button" tabIndex={0} aria-label="Open profile settings" onKeyDown={activateOnKeyboard}
                       className="cursor-pointer group relative"
                       onClick={() => setActiveTab('options')}
                       title="Click to change profile picture"
@@ -782,7 +807,7 @@ export default function PageVerificationTeamPortal() {
                     </p>
                   </div>
 
-                  <button
+                  <button aria-label="Close dialog"
                     onClick={() => setActiveInspection(null)}
                     className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-900 transition-colors cursor-pointer"
                   >
@@ -998,7 +1023,7 @@ export default function PageVerificationTeamPortal() {
 
                       {/* Custom Description & Action Buttons */}
                       <div className="flex flex-col sm:flex-row items-center gap-2 pt-1 border-t border-slate-100">
-                        <input
+                        <input aria-label="Photo title / caption (e.g. Main Gate, Meter Board, Manager Check)"
                           type="text"
                           placeholder="Photo title / caption (e.g. Main Gate, Meter Board, Manager Check)"
                           value={newPhotoTitle}
@@ -1095,7 +1120,7 @@ export default function PageVerificationTeamPortal() {
                       <label className="block text-xs font-bold text-slate-900 uppercase tracking-wider mb-1.5">
                         Inspector Detailed Observations & Ground Findings *
                       </label>
-                      <textarea
+                      <textarea aria-label="Inspector Detailed Observations & Ground Findings"
                         required
                         rows={3}
                         value={observations}
@@ -1111,7 +1136,7 @@ export default function PageVerificationTeamPortal() {
                         <label className="block text-xs font-bold text-slate-900 uppercase tracking-wider mb-1.5">
                           Officer Recommendation
                         </label>
-                        <select
+                        <select aria-label="Officer Recommendation"
                           value={recommendation}
                           onChange={(e: any) => setRecommendation(e.target.value)}
                           className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs text-slate-900 font-bold focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white"
@@ -1126,7 +1151,7 @@ export default function PageVerificationTeamPortal() {
                         <label className="block text-xs font-bold text-slate-900 uppercase tracking-wider mb-1.5">
                           Officer Digital Signature *
                         </label>
-                        <input
+                        <input aria-label="Officer Digital Signature"
                           type="text"
                           required
                           value={inspectorSignature}
@@ -1442,7 +1467,7 @@ export default function PageVerificationTeamPortal() {
       {/* Full Filed Audit Report & Inspection History Modal */}
       <AnimatePresence>
         {viewingSubmittedReport && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-slate-950/80 backdrop-blur-md overflow-y-auto animate-fadeIn">
+          <DashboardOverlay aria-label="Submitted inspection report" onClose={() => setViewingSubmittedReport(null)} className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-slate-950/80 backdrop-blur-md overflow-y-auto animate-fadeIn">
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 15 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -1470,7 +1495,7 @@ export default function PageVerificationTeamPortal() {
                   </div>
                 </div>
 
-                <button
+                <button aria-label="Close dialog"
                   type="button"
                   onClick={() => setViewingSubmittedReport(null)}
                   className="w-8 h-8 rounded-full bg-white/15 hover:bg-white/25 text-white flex items-center justify-center transition-colors cursor-pointer shrink-0"
@@ -1653,7 +1678,7 @@ export default function PageVerificationTeamPortal() {
 
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                       {viewingSubmittedReport.report.photos.map((photo: any, pIdx: number) => (
-                        <div
+                        <div role="button" tabIndex={0} aria-label="View inspection photograph" onKeyDown={activateOnKeyboard}
                           key={pIdx}
                           onClick={() => setEnlargedPhoto(photo)}
                           className="relative group rounded-2xl overflow-hidden border border-slate-200 bg-slate-100 aspect-video cursor-pointer hover:shadow-md transition-all"
@@ -1730,14 +1755,14 @@ export default function PageVerificationTeamPortal() {
                 </button>
               </div>
             </motion.div>
-          </div>
+          </DashboardOverlay>
         )}
       </AnimatePresence>
 
       {/* Enlarged Photo Inspection Modal */}
       <AnimatePresence>
         {enlargedPhoto && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
+          <DashboardOverlay aria-label="Image preview" onClose={() => setEnlargedPhoto(null)} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -1749,7 +1774,7 @@ export default function PageVerificationTeamPortal() {
                   <Camera className="w-4 h-4 text-blue-700" />
                   <span className="text-xs font-black text-slate-900 uppercase">{enlargedPhoto.title}</span>
                 </div>
-                <button
+                <button aria-label="Close dialog"
                   type="button"
                   onClick={() => setEnlargedPhoto(null)}
                   className="p-1.5 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-600 transition-colors cursor-pointer"
@@ -1765,14 +1790,14 @@ export default function PageVerificationTeamPortal() {
                 />
               </div>
             </motion.div>
-          </div>
+          </DashboardOverlay>
         )}
       </AnimatePresence>
 
       {/* SIGNOUT CONFIRMATION MODAL WITH PINVELA LOGO */}
       <AnimatePresence>
         {showSignoutConfirm && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
+          <DashboardOverlay aria-label="Sign out of field portal" onClose={() => setShowSignoutConfirm(false)} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 10 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -1816,7 +1841,7 @@ export default function PageVerificationTeamPortal() {
                 </button>
               </div>
             </motion.div>
-          </div>
+          </DashboardOverlay>
         )}
       </AnimatePresence>
     </div>

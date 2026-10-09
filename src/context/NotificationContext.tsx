@@ -129,42 +129,6 @@ class NotificationDeduplicatorService {
     return true;
   }
 
-  public checkManagerStatusTransition(uId: string, status: string | null | undefined, isPrimaryAccount: boolean): { changed: boolean; current: string | null } {
-    if (!isPrimaryAccount) return { changed: false, current: status || null };
-    const current = status ? String(status).toLowerCase().trim() : null;
-    const storageKey = `pinevela_last_mgr_status_${uId || 'global'}`;
-    const storedLast = localStorage.getItem(storageKey);
-
-    if (storedLast === null) {
-      if (current) localStorage.setItem(storageKey, current);
-      return { changed: false, current };
-    }
-
-    const changed = Boolean(current && current !== storedLast);
-    if (changed && current) {
-      localStorage.setItem(storageKey, current);
-    }
-    return { changed, current };
-  }
-
-  public checkMerchantStatusTransition(uId: string, status: string | null | undefined, isPrimaryAccount: boolean): { changed: boolean; current: string | null } {
-    if (!isPrimaryAccount) return { changed: false, current: status || null };
-    const current = status ? String(status).toLowerCase().trim() : null;
-    const storageKey = `pinevela_last_mkt_status_${uId || 'global'}`;
-    const storedLast = localStorage.getItem(storageKey);
-
-    if (storedLast === null) {
-      if (current) localStorage.setItem(storageKey, current);
-      return { changed: false, current };
-    }
-
-    const changed = Boolean(current && current !== storedLast);
-    if (changed && current) {
-      localStorage.setItem(storageKey, current);
-    }
-    return { changed, current };
-  }
-
   public resetSeen() {
     // Keep read IDs intact, preserve across sessions
   }
@@ -188,6 +152,11 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   // Check if current user session is strictly the Primary Account (not manager, staff, student/resident, or sub-account)
   const userRole = (user?.role || '').toLowerCase().trim();
   const notificationAccountKey = JSON.stringify([userRole, user?.id || '']);
+  const activeAccountRef = useRef(notificationAccountKey);
+  activeAccountRef.current = notificationAccountKey;
+  const generationRef = useRef(0);
+  const requestRef = useRef(0);
+  const [stateAccountKey, setStateAccountKey] = useState(notificationAccountKey);
   const isPrimaryAccount = Boolean(
     user && (userRole === 'user' || userRole === '')
   );
@@ -223,45 +192,21 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    const uEmail = (user.email || '').toLowerCase().trim();
-    const uId = user.id || '';
+    const generation = generationRef.current;
+    const request = ++requestRef.current;
+    const isCurrentAccount = () => activeAccountRef.current === notificationAccountKey && generationRef.current === generation && requestRef.current === request;
 
     // 1. Fetch Registered Manager, Resident and Seller Accounts
     try {
       const token = user?.token;
-      const regRes = await fetch(`/api/users/my-registered-accounts?email=${encodeURIComponent(uEmail)}&userId=${encodeURIComponent(uId)}`, {
+      const regRes = await fetch('/api/users/my-registered-accounts', {
         headers: token ? { 'Authorization': `Bearer ${token}` } : {}
       });
       if (regRes.ok) {
         const regData = await safeJson(regRes);
+        if (!isCurrentAccount()) return;
         const mgrAccount = regData.managerAccount || null;
         const mktAccount = regData.merchantAccount || null;
-
-        // Check for Manager Status Transition - ONLY popup in Primary Account
-        if (mgrAccount && isPrimaryAccount) {
-          const mgrCheck = notificationServiceSingleton.checkManagerStatusTransition(uId, mgrAccount.status, isPrimaryAccount);
-          if (mgrCheck.changed && !isFirstLoadRef.current) {
-            const displayStat = mgrAccount.displayStatus || mgrAccount.status;
-            if (String(mgrAccount.status).toLowerCase() === 'approved') {
-              pushToast(`🎉 Manager Account Approved!`, `Your manager registration for ${mgrAccount.name} was approved by Admin.`, 'success');
-            } else if (String(mgrAccount.status).toLowerCase() === 'rejected') {
-              pushToast(`⚠️ Manager Registration Update`, `Your manager registration status: ${displayStat}.`, 'warning');
-            }
-          }
-        }
-
-        // Check for Digital Market Merchant Status Transition - ONLY popup in Primary Account
-        if (mktAccount && isPrimaryAccount) {
-          const mktCheck = notificationServiceSingleton.checkMerchantStatusTransition(uId, mktAccount.status, isPrimaryAccount);
-          if (mktCheck.changed && !isFirstLoadRef.current) {
-            const displayStat = mktAccount.displayStatus || mktAccount.status;
-            if (String(mktAccount.status).toLowerCase() === 'approved' || String(mktAccount.status).toLowerCase() === 'active') {
-              pushToast(`🎉 Digital Market Store Approved!`, `Your campus merchant store (${mktAccount.storeName}) was approved by Admin.`, 'success');
-            } else if (String(mktAccount.status).toLowerCase() === 'rejected') {
-              pushToast(`⚠️ Digital Market Application Update`, `Your store application status: ${displayStat}.`, 'warning');
-            }
-          }
-        }
 
         setRegisteredAccounts(prev => {
           if (
@@ -284,7 +229,9 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
     // 2. Fetch Notifications list
     try {
+      if (!isCurrentAccount()) return;
       const notifs: NotificationItem[] = await apiFetch('/api/notifications').catch(() => []);
+      if (!isCurrentAccount()) return;
       if (Array.isArray(notifs)) {
         // Deduplicate notifications list
         const uniqueNotifs: NotificationItem[] = [];
@@ -304,7 +251,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
             uniqueNotifs.push(notif);
 
             // Popups strictly ONLY fire in the primary user account for brand new unread notifications
-            if (!notif.adminMessage && notif.category !== 'system_announcement' && isPrimaryAccount && !isFirstLoadRef.current && !notif.read && notificationServiceSingleton.shouldFireNotification(notif, isPrimaryAccount, notificationAccountKey)) {
+            if (!notif.adminMessage && notif.category !== 'system_announcement' && isPrimaryAccount && !notif.read && notificationServiceSingleton.shouldFireNotification(notif, isPrimaryAccount, notificationAccountKey) && !isFirstLoadRef.current) {
               pushToast(notif.title, notif.message, notif.type === 'success' ? 'success' : notif.type === 'warning' ? 'warning' : 'info');
             }
           }
@@ -320,7 +267,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     } catch (e) {
       console.warn("NotificationService: Error fetching notifications:", e);
     } finally {
-      if (isFirstLoadRef.current) {
+      if (isCurrentAccount() && isFirstLoadRef.current) {
         isFirstLoadRef.current = false;
       }
     }
@@ -329,6 +276,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   const markAsRead = useCallback(async (id: string) => {
     try {
       await apiFetch(`/api/notifications/${id}/read`, { method: 'PUT' });
+      if (activeAccountRef.current !== notificationAccountKey) return;
       notificationServiceSingleton.markNotificationRead(id, notificationAccountKey);
       setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
     } catch (e) {
@@ -339,6 +287,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   const markAllAsRead = useCallback(async () => {
     try {
       await apiFetch('/api/notifications/read-all', { method: 'PUT' });
+      if (activeAccountRef.current !== notificationAccountKey) return;
       notifications.forEach(n => {
         if (n.id) notificationServiceSingleton.markNotificationRead(n.id, notificationAccountKey);
       });
@@ -350,6 +299,11 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
   // Centralized background real-time polling loop (every 6s) & window focus refresh
   useEffect(() => {
+    generationRef.current += 1;
+    setStateAccountKey(notificationAccountKey);
+    setNotifications([]);
+    setToasts([]);
+    setRegisteredAccounts({ managerAccount: null, residentAccount: null, merchantAccount: null });
     isFirstLoadRef.current = true;
     refreshNotifications();
 
@@ -362,33 +316,39 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     };
 
     window.addEventListener('focus', handleFocus);
+    window.addEventListener('pinevela-data-change', handleFocus);
     document.addEventListener('visibilitychange', handleFocus);
 
     return () => {
+      generationRef.current += 1;
       clearInterval(interval);
       window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('pinevela-data-change', handleFocus);
       document.removeEventListener('visibilitychange', handleFocus);
     };
   }, [user?.id, user?.email, user?.role]);
 
-  const unreadCount = notifications.filter(n => !n.read).length;
+  const currentNotifications = stateAccountKey === notificationAccountKey ? notifications : [];
+  const currentToasts = stateAccountKey === notificationAccountKey ? toasts : [];
+  const currentRegisteredAccounts = stateAccountKey === notificationAccountKey ? registeredAccounts : { managerAccount: null, residentAccount: null, merchantAccount: null };
+  const unreadCount = currentNotifications.filter(n => !n.read).length;
 
   const providerValue = useMemo(() => ({
-    notifications,
+    notifications: currentNotifications,
     unreadCount,
-    registeredAccounts,
-    toasts,
+    registeredAccounts: currentRegisteredAccounts,
+    toasts: currentToasts,
     pushToast,
     dismissToast,
     markAsRead,
     markAllAsRead,
     refreshNotifications,
-  }), [notifications, unreadCount, registeredAccounts, toasts]);
+  }), [currentNotifications, unreadCount, currentRegisteredAccounts, currentToasts, pushToast, dismissToast, markAsRead, markAllAsRead, refreshNotifications]);
 
   return (
     <NotificationContext.Provider value={providerValue}>
       {children}
-      <NotificationToastContainer toasts={toasts} dismissToast={dismissToast} />
+      <NotificationToastContainer toasts={currentToasts} dismissToast={dismissToast} />
     </NotificationContext.Provider>
   );
 }
