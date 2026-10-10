@@ -16,7 +16,7 @@ import { saveNavigationLayout, usesTopNavigation } from '../lib/navigationLayout
 import TopNavBadge from './TopNavBadge';
 import PineLogo from './PineLogo';
 import HostelRegistration from './HostelRegistration';
-import ManagerProfileModal from './ManagerProfileModal';
+import ManagerProfileSettings from './ManagerProfileSettings';
 import ManagerAccountControls from './ManagerAccountControls';
 import { ManagerMeetingsTab } from './ManagerMeetingsTab';
 import LogoutConfirmationModal from './LogoutConfirmationModal';
@@ -81,13 +81,17 @@ interface MaintenanceTicket {
 
 export default function PageManagerDashboard() {
   const { user, logout, apiFetch, setSessionUser } = useAuth();
+  const profileAccountKey=JSON.stringify([user?.id,user?.role]);
+  const profileAccountRef=React.useRef(profileAccountKey);
+  profileAccountRef.current=profileAccountKey;
+  useEffect(()=>{profileAccountRef.current=profileAccountKey;return()=>{profileAccountRef.current='';};},[profileAccountKey]);
   const { notifications: systemNotifications, unreadCount: systemUnreadCount, markAsRead } = useNotifications();
   const navigate = useNavigate();
 
   // Prioritize onboarding flow/tabs immediately if manager is pending approval
   const isPendingOnboarding = user && user.role === 'manager' && user.hasApprovedHostel === false;
 
-  const [activeTab, setActiveTab] = useState<'overview' | 'properties' | 'blocks' | 'staff' | 'maintenance' | 'meetings' | 'notifications'>(
+  const [activeTab, setActiveTab] = useState<'overview' | 'properties' | 'blocks' | 'staff' | 'maintenance' | 'meetings' | 'notifications' | 'settings'>(
     isPendingOnboarding ? 'notifications' : 'overview'
   );
   // Collapsible sidebar state (Disabled minimizing to prevent glitched overlapping)
@@ -102,7 +106,6 @@ export default function PageManagerDashboard() {
   const [selectedBlock, setSelectedBlock] = useState<any | null>(null);
   const [showRegistration, setShowRegistration] = useState(false);
   const [showAccountControls, setShowAccountControls] = useState(false);
-  const [showEditProfileModal, setShowEditProfileModal] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [showWelcomePopup, setShowWelcomePopup] = useState(false);
 
@@ -475,19 +478,24 @@ export default function PageManagerDashboard() {
   }, [staffWingNames, managerUpdatedBlock]);
 
   const handleSaveProfile = async (updatedProfile: any) => {
+    const profileAccount=profileAccountRef.current;
     try {
       const res = await apiFetch('/api/auth/profile', {
         method: 'PUT',
-        body: JSON.stringify(updatedProfile)
+        headers:{'X-PineVela-Profile-Context':String(user?.id)},
+        body: JSON.stringify(usesSupabasePersistence?{name:updatedProfile.name,phone:updatedProfile.phone,photo:updatedProfile.photo}:updatedProfile)
       });
+      if(profileAccountRef.current!==profileAccount)return;
+      if(!res?.success || !res?.user)throw new Error('Your profile could not be saved. Sign in and try again.');
       if (res && res.user) {
-        setSessionUser(res.user);
+        setSessionUser(res.user,String(user?.id));
       }
       triggerToast('Manager profile updated across PineVela!');
-      setShowEditProfileModal(false);
       await fetchManagerData();
     } catch (err: any) {
+      if(profileAccountRef.current!==profileAccount)return;
       triggerToast(err.message || 'Failed to update manager profile.');
+      throw err;
     }
   };
 
@@ -877,7 +885,7 @@ export default function PageManagerDashboard() {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <button onClick={() => setShowEditProfileModal(true)} title="Manager Profile Settings" className="p-1.5 text-slate-400 hover:text-blue-600 rounded-lg">
+          <button onClick={() => setActiveTab('settings')} title="Manager Profile Settings" className="p-1.5 text-slate-400 hover:text-blue-600 rounded-lg">
             <Settings className="w-4 h-4" />
           </button>
           <button onClick={() => setShowLogoutConfirm(true)} className="flex items-center gap-1.5 px-2 py-1.5 text-[10px] font-bold text-rose-600 hover:bg-rose-50 rounded-lg" title="Sign Out">
@@ -924,7 +932,7 @@ export default function PageManagerDashboard() {
 
       {isSidebarTopNav && <nav className="hidden lg:block fixed top-3 left-1/2 -translate-x-1/2 z-50 w-[min(760px,calc(100vw-3rem))] bg-white/72 backdrop-blur-xl border border-white/80 rounded-2xl shadow-lg"><div className="flex items-center gap-1 px-2 py-1.5">
         {/* Profile avatar button — left end */}
-        <button onClick={() => setShowEditProfileModal(true)} title="Manager Profile Settings" className="shrink-0 flex flex-col items-center gap-0.5 py-1 px-1.5 rounded-xl hover:bg-white/70 cursor-pointer">
+        <button onClick={() => setActiveTab('settings')} aria-current={activeTab === 'settings' ? 'page' : undefined} title="Manager Profile Settings" className="shrink-0 flex flex-col items-center gap-0.5 py-1 px-1.5 rounded-xl hover:bg-white/70 cursor-pointer">
           <img src={user?.photo || user?.avatar || (user as any)?.photoUrl || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80'} alt="Profile" className="w-6 h-6 rounded-full object-cover ring-2 ring-white shadow-sm" />
           <span className="text-[9px] font-bold text-slate-500">Profile</span>
         </button>
@@ -970,7 +978,7 @@ export default function PageManagerDashboard() {
             {!isSidebarCollapsed && (
               <div className="flex items-center gap-1 shrink-0">
                 <button
-                  onClick={() => setShowEditProfileModal(true)}
+                  onClick={() => setActiveTab('settings')}
                   title="Manager Profile Settings"
                   className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-100/50 rounded-lg transition-colors cursor-pointer"
                 >
@@ -1023,7 +1031,8 @@ export default function PageManagerDashboard() {
                 isRed: (systemNotifications || []).some(n => !n.read),
                 sub: 'Alerts & Admin direct line', 
                 locked: false 
-              }
+              },
+              { id: 'settings', label: 'Settings', icon: Settings, sub: 'Profile & account security', locked: false }
             ].map(tab => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
@@ -1107,7 +1116,7 @@ export default function PageManagerDashboard() {
           <button type="button" onClick={() => setShowRegistration(true)} className="shrink-0 rounded-xl bg-blue-700 px-5 py-3 font-bold text-white hover:bg-blue-800">Complete Registration</button>
         </div>}
         {/* TAB CONTENT OR REGISTRATION */}
-        {showRegistration ? (
+        {showRegistration && activeTab !== 'settings' ? (
           <div className="animate-fadeIn relative z-10 h-full">
             <div className="bg-white border border-blue-200/50 rounded-3xl shadow-2xl p-0 md:p-2 overflow-y-auto h-full max-h-[calc(100vh-4rem)]">
               <HostelRegistration 
@@ -1126,6 +1135,13 @@ export default function PageManagerDashboard() {
           </div>
         ) : (
           <>
+            {activeTab === 'settings' && <ManagerProfileSettings
+              key={profileAccountKey}
+              currentUser={user}
+              onSave={handleSaveProfile}
+              onManageAccount={() => setShowAccountControls(true)}
+            />}
+
             {/* TAB 1: OVERVIEW */}
             {activeTab === 'overview' && (
               <div className="space-y-8 animate-fadeIn relative z-10">
@@ -1149,7 +1165,7 @@ export default function PageManagerDashboard() {
 
                     <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0">
                       <button
-                        onClick={() => setShowEditProfileModal(true)}
+                        onClick={() => setActiveTab('settings')}
                         className="bg-white/80 hover:bg-white backdrop-blur-md border border-sky-200/80 px-4 py-3 rounded-2xl text-xs font-bold text-blue-950 flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs hover:shadow-sm"
                       >
                         <Edit3 className="w-4 h-4 text-blue-600" />
@@ -2965,15 +2981,6 @@ export default function PageManagerDashboard() {
       )}
 
       {showAccountControls && <ManagerAccountControls onClose={() => setShowAccountControls(false)} />}
-
-      {/* MANAGER PROFILE EDIT MODAL */}
-      {showEditProfileModal && <ManagerProfileModal
-        isOpen={showEditProfileModal}
-        onClose={() => setShowEditProfileModal(false)}
-        currentUser={user}
-        onSave={handleSaveProfile}
-        onManageAccount={() => { setShowEditProfileModal(false); setShowAccountControls(true); }}
-      />}
 
       {/* ======================================================== */}
       {/* MODAL: DIGITAL ROOM KEY DISPATCH MODAL                    */}

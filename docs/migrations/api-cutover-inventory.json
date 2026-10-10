@@ -81,7 +81,7 @@
     },
     {
       "endpoint": "GET /api/admin/all-users",
-      "status": "pending_review_and_port",
+      "status": "implemented_requires_workflow_verification",
       "sources": [
         {
           "method": "GET",
@@ -159,7 +159,7 @@
     },
     {
       "endpoint": "GET /api/admin/messages/accounts",
-      "status": "pending_review_and_port",
+      "status": "implemented_requires_workflow_verification",
       "sources": [
         {
           "method": "GET",
@@ -263,7 +263,7 @@
     },
     {
       "endpoint": "GET /api/auth/maintenance-notice",
-      "status": "pending_review_and_port",
+      "status": "implemented_requires_workflow_verification",
       "sources": [
         {
           "method": "GET",
@@ -1004,7 +1004,7 @@
     },
     {
       "endpoint": "POST /api/admin/messages",
-      "status": "pending_review_and_port",
+      "status": "implemented_requires_workflow_verification",
       "sources": [
         {
           "method": "POST",
@@ -1017,7 +1017,7 @@
     },
     {
       "endpoint": "POST /api/admin/messages/preview",
-      "status": "pending_review_and_port",
+      "status": "implemented_requires_workflow_verification",
       "sources": [
         {
           "method": "POST",
@@ -1082,7 +1082,7 @@
     },
     {
       "endpoint": "POST /api/auth/google/start",
-      "status": "pending_review_and_port",
+      "status": "implemented_requires_workflow_verification",
       "sources": [
         {
           "method": "POST",
@@ -1121,7 +1121,7 @@
     },
     {
       "endpoint": "POST /api/auth/maintenance-notice/dismiss",
-      "status": "pending_review_and_port",
+      "status": "implemented_requires_workflow_verification",
       "sources": [
         {
           "method": "POST",
@@ -1134,7 +1134,7 @@
     },
     {
       "endpoint": "POST /api/auth/profile",
-      "status": "pending_review_and_port",
+      "status": "implemented_requires_workflow_verification",
       "sources": [
         {
           "method": "POST",
@@ -1849,7 +1849,7 @@
     },
     {
       "endpoint": "POST /api/settings",
-      "status": "pending_review_and_port",
+      "status": "implemented_requires_workflow_verification",
       "sources": [
         {
           "method": "POST",
@@ -2122,7 +2122,7 @@
     },
     {
       "endpoint": "PUT /api/auth/profile",
-      "status": "pending_review_and_port",
+      "status": "implemented_requires_workflow_verification",
       "sources": [
         {
           "method": "PUT",

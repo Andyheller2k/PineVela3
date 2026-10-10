@@ -184,32 +184,32 @@ export function installStaff(app:Express,auth:SupabaseAuth) {
     const result=await auth.db.authorizedSystem(req.actor,['staff'],async c=>{const s=(await c.query("select id from public.staff_assignments where staff_context_id=$1 and status='active' and ended_at is null",[req.actor.contextId])).rows[0];
       if(!s)throw new ApiError(403,'Active staff employment is required.');return editStaff(c,req.actor,s.id,req.body,'resigned');});return res.json(result);
   }));
-  app.post('/api/auth/staff-invitations/inspect',route(async(req,res)=>{const e=await auth.db.system(c=>staffInvitation(c,req.body?.invitationToken));
+  app.post('/api/auth/staff-invitations/inspect',route(async(req,res)=>{const e=await auth.db.availableSystem(c=>staffInvitation(c,req.body?.invitationToken));
     return res.json({name:e.enrollment_fields.displayName,email:e.invited_email,residenceName:e.residence_name,verificationRequired:true,signupStarted:Boolean(e.auth_user_id)});
   }));
   app.post('/api/auth/staff-invitations/signup',route(async(req,res)=>{
     const token=invitationToken(req.body?.invitationToken),password=passwordInput(req.body?.password);
     if(password.length<8)throw new ApiError(400,'Choose a password of at least eight characters.');
     requireConfirmationSettings(await auth.provider('/settings'));
-    const e=await auth.db.system(c=>staffInvitation(c,token,true));
+    const e=await auth.db.availableSystem(c=>staffInvitation(c,token,true));
     if(e.auth_user_id) return res.status(202).json({verificationRequired:true,signupStarted:true});
     const data=await auth.provider('/signup',{email:e.invited_email,password,data:{name:e.enrollment_fields.displayName,pinevela_enrollment_token:token}});
     if(data.access_token || data.session)throw new ApiError(503,'Email confirmation must be enabled.');
-    const saved=await auth.db.system(c=>staffInvitation(c,token,true));
+    const saved=await auth.db.availableSystem(c=>staffInvitation(c,token,true));
     if(!saved.auth_user_id || saved.auth_user_id!==(data.user || data).id)throw new ApiError(503,'Signup did not match this staff invitation.');
     return res.status(202).json({verificationRequired:true,signupStarted:true});
   }));
-  app.post('/api/auth/staff-invitations/resend',route(async(req,res)=>{const e=await auth.db.system(c=>staffInvitation(c,req.body?.invitationToken,true));
+  app.post('/api/auth/staff-invitations/resend',route(async(req,res)=>{const e=await auth.db.availableSystem(c=>staffInvitation(c,req.body?.invitationToken,true));
     if(!e.auth_user_id)throw new ApiError(409,'Choose your password before requesting another email.');
     await auth.provider('/resend',{type:'signup',email:e.invited_email});return res.status(202).json({success:true});
   }));
   app.post('/api/auth/staff-invitations/verify',route(async(req,res)=>{
-    const token=invitationToken(req.body?.invitationToken),e=await auth.db.system(c=>staffInvitation(c,token,true));
+    const token=invitationToken(req.body?.invitationToken),e=await auth.db.availableSystem(c=>staffInvitation(c,token,true));
     if(!e.auth_user_id)throw new ApiError(409,'Choose your password before verifying your work email.');
     const proof=typeof req.body?.code==='string' && req.body.code.trim()?signupChallenge(req.body.code,signupProviderConfig().url):null;
     const session=proof?await auth.provider('/verify','token' in proof?{email:e.invited_email,...proof}:proof):await auth.provider('/token?grant_type=password',{email:e.invited_email,password:passwordInput(req.body?.password)});
     try {const person=await auth.provider('/user',undefined,session.access_token),identity=verifiedClaims(session.access_token,person);
-      return res.json(await auth.db.system(c=>finishStaffInvitation(c,token,{...identity,email:String(person.email).toLowerCase()})));
+      return res.json(await auth.db.availableSystem(c=>finishStaffInvitation(c,token,{...identity,email:String(person.email).toLowerCase()})));
     } finally {await auth.provider('/logout?scope=local',{},session.access_token).catch(()=>undefined);}
   }));
 }

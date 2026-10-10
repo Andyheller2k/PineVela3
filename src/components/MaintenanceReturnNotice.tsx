@@ -8,12 +8,18 @@ import PineLogo from './PineLogo';
 
 export default function MaintenanceReturnNotice() {
   const { user } = useAuth();
+  return <MaintenanceReturnNoticeContent key={`${user?.role || ''}:${user?.id || 'signed-out'}`} />;
+}
+function MaintenanceReturnNoticeContent() {
+  const { user } = useAuth();
   const client = useQueryClient();
   const dialog = useRef<HTMLDialogElement>(null);
+  const mounted = useRef(true);
+  useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;};},[]);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const queryKey = ['maintenance-return-notice', user?.role, user?.id];
-  const { data } = useQuery<{ serverTime: string; notice: { id: string; message: string; expiresAt: string } | null }>({
+  const { data, dataUpdatedAt } = useQuery<{ serverTime: string; notice: { id: string; message: string; expiresAt: string } | null }>({
     queryKey, enabled: !!user && user.role !== 'admin', refetchInterval: 5000,
     queryFn: async () => {
       const response = await sessionFetch('/api/auth/maintenance-notice');
@@ -24,11 +30,11 @@ export default function MaintenanceReturnNotice() {
   const notice = user?.role !== 'admin' ? data?.notice : null;
   useEffect(() => {
     if (!notice || !data?.serverTime) return;
-    const remaining = Date.parse(notice.expiresAt) - Date.parse(data.serverTime);
+    const remaining = Date.parse(notice.expiresAt) - Date.parse(data.serverTime) - Math.max(0,Date.now()-dataUpdatedAt);
     if (!Number.isFinite(remaining) || remaining <= 0) { client.setQueryData(queryKey, { ...data, notice: null }); return; }
     const timer = window.setTimeout(() => client.setQueryData(queryKey, { ...data, notice: null }), remaining);
     return () => window.clearTimeout(timer);
-  }, [notice?.id, notice?.expiresAt, data?.serverTime, user?.id, user?.role, client]);
+  }, [notice?.id, notice?.expiresAt, data?.serverTime, dataUpdatedAt, user?.id, user?.role, client]);
   useEffect(() => {
     const element = dialog.current;
     if (notice && element && !element.open) element.showModal();
@@ -42,10 +48,11 @@ export default function MaintenanceReturnNotice() {
       const response = await sessionFetch('/api/auth/maintenance-notice/dismiss', {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ noticeId: notice.id }),
       });
+      if (!mounted.current) return;
       if (!response.ok) throw new Error('Please try closing this message again.');
       client.setQueryData(queryKey, { notice: null });
-    } catch { setError('Please try closing this message again.'); }
-    finally { setBusy(false); }
+    } catch { if (mounted.current) setError('Please try closing this message again.'); }
+    finally { if (mounted.current) setBusy(false); }
   }
   if (!notice) return null;
   return createPortal(<dialog ref={dialog} aria-labelledby="maintenance-return-title" onCancel={event => { event.preventDefault(); void dismiss(); }}

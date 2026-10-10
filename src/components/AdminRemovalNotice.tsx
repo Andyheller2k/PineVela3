@@ -6,6 +6,10 @@ import { queryClient } from '../lib/queryClient';
 import DashboardOverlay from './DashboardOverlay';
 
 export default function AdminRemovalNotice() {
+  const {user}=useAuth();
+  return <AccountRemovalNotice key={user?.id}/>;
+}
+function AccountRemovalNotice() {
   const { data } = useAdminGovernance(), { apiFetch, user } = useAuth();
   const [dismissed, setDismissed] = useState<string[]>([]), [message, setMessage] = useState(''), [error, setError] = useState(''), [busy, setBusy] = useState(false);
   const change = data?.changes?.find((c: any) => c.targetId === user?.id && (c.canSubmitPlea || c.plea?.decision && !c.plea.acknowledgedAt) && !dismissed.includes(`${c.id}:${c.status}`));

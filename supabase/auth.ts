@@ -6,6 +6,7 @@ import { signupProviderConfig, signupChallenge, requireConfirmationSettings } fr
 import { ApiError, UUID, uuid, type VerifiedActor, SupabaseDatabase } from './db.js';
 import { WorkPool } from '../resourceSecurity.js';
 import { checkPortalPin } from './portalAccess.js';
+import { maintenanceError } from './platformMaintenance.js';
 
 type Session = GoogleSession & { user?: any };
 export type AuthRequest = Request & { actor: VerifiedActor; accessToken: string };
@@ -67,6 +68,7 @@ export class SupabaseAuth {
     const user = await this.provider('/user', undefined, session.access_token);
     const identity = verifiedClaims(session.access_token, user);
     const result = await this.db.system(async client => {
+      await client.query("select pg_advisory_xact_lock_shared(hashtextextended('platform-maintenance',0))");
       const live = await client.query(`select id from auth.sessions where id = $1 and user_id = $2
         and (not_after is null or not_after > now()) for share`, [identity.sessionId, identity.authUserId]);
       if (!live.rowCount) throw new ApiError(401, 'Your session has ended. Please sign in again.');
@@ -75,14 +77,15 @@ export class SupabaseAuth {
       const contexts = await client.query(`select c.id, c.kind from public.account_contexts c
         join public.profiles p on p.id = c.auth_user_id
         where c.auth_user_id = $1 and c.status = 'active' and ($2::text is null or c.kind = $2)
-          and (c.kind <> 'admin' or exists (select 1 from public.admin_memberships m where m.context_id = c.id and m.status = 'active'))
+          and (c.kind <> 'admin' or private.administrator_session_allowed(c.id,$3::uuid) and exists (select 1 from public.admin_memberships m where m.context_id = c.id and m.status = 'active'))
           and (c.kind <> 'resident' or exists (select 1 from public.allocations a where a.resident_context_id = c.id and a.ended_at is null))
           and (c.kind <> 'staff' or exists (select 1 from public.staff_assignments s where s.staff_context_id = c.id and s.status = 'active' and s.ended_at is null))
-        order by (c.kind = 'admin') desc, (c.kind <> 'primary') desc`, [identity.authUserId, preferredKind || null]);
+        order by (c.kind = 'admin') desc, (c.kind <> 'primary') desc`, [identity.authUserId, preferredKind || null, identity.sessionId]);
       if (!contexts.rowCount) throw new ApiError(403, 'This account is not active in the new application database.');
       if (!preferredKind && contexts.rows.filter(c => ['resident','seller'].includes(c.kind)).length > 1)
         throw new ApiError(400,'Choose your resident or seller account to sign in.','account_choice_required');
       const context = contexts.rows[0];
+      if (context.kind!=='admin' && !(await client.query('select private.platform_available() as available')).rows[0].available) throw maintenanceError();
       const pin = await checkPortalPin(client,context.id,portalPin);
       if (!pin.allowed) return null;
       await client.query(`insert into private.account_sessions(session_id, auth_user_id, active_context_id,portal_pin_version)
@@ -125,7 +128,7 @@ export class SupabaseAuth {
         where s.session_id = $1 and s.auth_user_id = $2 and c.status = 'active'
           and (live.not_after is null or live.not_after > now())
           and private.portal_session_allowed(c.id,s.portal_pin_version)
-          and (c.kind <> 'admin' or exists (select 1 from public.admin_memberships m where m.context_id = c.id and m.status = 'active'))
+          and (c.kind <> 'admin' or private.administrator_session_allowed(c.id,s.session_id) and exists (select 1 from public.admin_memberships m where m.context_id = c.id and m.status = 'active'))
           and (c.kind <> 'resident' or exists (select 1 from public.allocations a where a.resident_context_id = c.id and a.ended_at is null))
           and (c.kind <> 'staff' or exists (select 1 from public.staff_assignments a where a.staff_context_id = c.id and a.status = 'active' and a.ended_at is null))`, [identity.sessionId, identity.authUserId]);
       if (!binding.rowCount) throw new ApiError(401, 'Your session has ended. Please sign in again.');
@@ -152,9 +155,10 @@ export class SupabaseAuth {
   }
   async switchContext(actor: VerifiedActor, id: string, portalPin?: unknown) {
     const result = await this.db.authorizedSystem(actor,[actor.kind],async client => {
-      const target = await client.query(`select id from public.account_contexts where id = $1
+      const target = await client.query(`select id,kind from public.account_contexts where id = $1
         and auth_user_id = $2 and status = 'active' for share`,[uuid(id),actor.authUserId]);
       if (!target.rowCount) throw new ApiError(403,'That account is not available to this identity.');
+      if (target.rows[0].kind!=='admin' && !(await client.query('select private.platform_available() as available')).rows[0].available) throw maintenanceError();
       const pin = await checkPortalPin(client,id,portalPin);
       if (!pin.allowed) return null;
       const result = await client.query(`update private.account_sessions s set active_context_id = c.id, updated_at = now()
@@ -162,7 +166,7 @@ export class SupabaseAuth {
         from public.account_contexts c, auth.sessions live where s.session_id = $1 and s.auth_user_id = $2
         and live.id = s.session_id and live.user_id = s.auth_user_id and (live.not_after is null or live.not_after > now())
         and c.id = $3 and c.auth_user_id = s.auth_user_id and c.status = 'active'
-        and (c.kind <> 'admin' or exists (select 1 from public.admin_memberships m where m.context_id = c.id and m.status = 'active'))
+        and (c.kind <> 'admin' or private.administrator_session_allowed(c.id,s.session_id) and exists (select 1 from public.admin_memberships m where m.context_id = c.id and m.status = 'active'))
         and (c.kind <> 'resident' or exists (select 1 from public.allocations a where a.resident_context_id = c.id and a.ended_at is null))
         and (c.kind <> 'staff' or exists (select 1 from public.staff_assignments a where a.staff_context_id = c.id and a.status = 'active' and a.ended_at is null))
         returning c.id, c.kind`, [actor.sessionId, actor.authUserId, uuid(id),pin.version]);
@@ -189,6 +193,7 @@ export class SupabaseAuth {
         where a.resident_context_id = $1 and a.ended_at is null`,[actor.contextId])).rows[0] : null;
       return { id: actor.contextId, profileId: actor.authUserId, name: person.display_name, email: person.email,
         phone: person.phone, photo: person.avatar_path, avatar: person.avatar_path,
+        photoUrl:person.avatar_path,avatarUrl:person.avatar_path,profilePicture:person.avatar_path,
         role: roleForKind[actor.kind], token: '', isVerified: true,...seller,
         ...(actor.kind === 'officer' ? {officerId:actor.contextId} : {}),
         ...(room ? { roomId:room.room_id,roomNumber:room.room_number,blockName:room.block_name,hostelId:room.residence_id,hostelName:room.residence_name } : {}) };
@@ -215,10 +220,17 @@ export function installSupabaseAuth(app: Express, auth: SupabaseAuth) {
   app.post('/api/digital-market/login', passwordLogin('seller'));
   app.post('/api/auth/verification-team-login', passwordLogin('officer'));
   app.post('/api/verification-teams/login', passwordLogin('officer'));
+  app.post('/api/auth/google/start',(req,_res,next)=>{
+    if (req.body?.mode!=='signup') return next();
+    auth.db.system(async c=>(await c.query('select private.platform_available() as available')).rows[0].available)
+      .then(available=>available ? next() : next(maintenanceError())).catch(next);
+  });
   installGoogleAuth(app, async (identity, _mode, session) => {
-    const actor = await auth.bind(session);
-    if (actor.authUserId !== identity.id) throw new ApiError(401, 'Google identity does not match.');
-    return session.access_token;
+    try {
+      const actor = await auth.bind(session);
+      if (actor.authUserId !== identity.id) throw new ApiError(401, 'Google identity does not match.');
+      return actor.kind==='admin'?{token:session.access_token,redirectTo:'/admin/dashboard' as const}:session.access_token;
+    } catch (error) { await auth.provider('/logout?scope=local',{},session.access_token).catch(()=>undefined); throw error; }
   }, (res, _token, session) => { sessionCookies(res, session!); });
   app.post('/api/auth/register-unified', route(async (req, res) => {
     const name = typeof req.body?.name === 'string' ? req.body.name.trim() : '';

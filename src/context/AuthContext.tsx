@@ -64,8 +64,8 @@ interface AuthContextType {
   user: AuthenticatedUser | null;
   loading: boolean;
   login: (usernameOrEmail: string, password: string, portal?: { accountKind: 'resident' | 'seller'; portalPin: string }) => Promise<AuthenticatedUser>;
-  setSessionUser: (user: AuthenticatedUser) => void;
-  updateUser?: (updatedFields: Partial<AuthenticatedUser>) => void;
+  setSessionUser: (user: AuthenticatedUser,expectedAccountId?:string) => void;
+  updateUser?: (updatedFields: Partial<AuthenticatedUser>,expectedAccountId?:string) => void;
   logout: () => Promise<boolean>;
   apiFetch: (url: string, options?: RequestInit) => Promise<any>;
 }
@@ -223,14 +223,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return finalUser;
   };
 
-  const setSessionUser = (newSessionUser: AuthenticatedUser) => {
+  const setSessionUser = (newSessionUser: AuthenticatedUser,expectedAccountId?:string) => {
     clearLegacySessionStorage();
-    setUser({ ...newSessionUser, token: '' });
+    setUser(prev=>expectedAccountId!==undefined && prev?.id!==expectedAccountId?prev:{ ...newSessionUser, token: '' });
   };
 
-  const updateUser = (updatedFields: Partial<AuthenticatedUser>) => {
+  const updateUser = (updatedFields: Partial<AuthenticatedUser>,expectedAccountId?:string) => {
     setUser(prev => {
       if (!prev) return null;
+      if(expectedAccountId!==undefined && prev.id!==expectedAccountId)return prev;
       const updated = { ...prev, ...updatedFields };
       return updated;
     });

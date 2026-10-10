@@ -6,6 +6,8 @@ import path from 'node:path';
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
 import dotenv from 'dotenv';
+import type {PoolConfig} from 'pg';
+import {withIsolatedBackup} from './lib/isolated-postgres.js';
 import { issueManagerKey,checkManagerKey,requireManagerKeyGrant,managerKeyStatus,petitionManagerKey } from '../supabase/managerKeys.js';
 import { keyRows,generateRoomKeys,releaseResidentRoom } from '../supabase/housing.js';
 import { parseResidenceStructure,createResidenceStructure,residenceStructure } from '../supabase/residenceStructure.js';
@@ -13,7 +15,8 @@ import { housingDashboardRows } from '../supabase/dashboardReads.js';
 import { ApiError,SupabaseDatabase,type VerifiedActor } from '../supabase/db.js';
 import {submitSellerApplication,decideSellerApplication} from '../supabase/sellerRegistration.js';
 dotenv.config({ quiet: true });
-const db = new SupabaseDatabase();
+async function verify(config?:PoolConfig) {
+const db = new SupabaseDatabase(config);
 const client = await db.pool.connect();
 let checks = 0;
 const check = (condition: unknown, message: string) => { assert.ok(condition, message); checks++; };
@@ -83,6 +86,11 @@ try {
   const sellerOwner:VerifiedActor={authUserId:owner1.id,sessionId:owner1.session_id,contextId:primary1,kind:'primary'};
   const admin:VerifiedActor={authUserId:owner2.id,sessionId:owner2.session_id,contextId:await context(owner2.id,'admin'),kind:'admin'};
   await client.query('insert into public.admin_memberships(context_id,slot) values($1,1)',[admin.contextId]);
+  await denied("update public.admin_memberships set status='suspended' where context_id=$1",[admin.contextId],'42501','Founder suspension is forbidden in the committed database');
+  await denied('delete from public.admin_memberships where context_id=$1',[admin.contextId],'42501','Founder removal cannot bypass governance');
+  await denied("update public.account_contexts set status='suspended' where id=$1",[admin.contextId],'42501','Generic account status cannot suspend the founder');
+  await denied('delete from public.account_contexts where id=$1',[admin.contextId],'42501','Generic context deletion cannot remove the founder');
+  await denied('update public.admin_memberships set sessions_invalidated_at=clock_timestamp() where context_id=$1',[admin.contextId],'42501','Administrator session epoch is database-controlled');
   async function bindReview(a:VerifiedActor){await client.query('insert into private.account_sessions(session_id,auth_user_id,active_context_id) values($1,$2,$3) on conflict(session_id) do update set active_context_id=excluded.active_context_id',[a.sessionId,a.authUserId,a.contextId]);await client.query("select set_config('request.jwt.claims',$1,true)",[JSON.stringify({sub:a.authUserId,session_id:a.sessionId,role:'authenticated'})]);}
   await bindReview(sellerOwner);
   const sellerApplication=await submitSellerApplication(client,sellerOwner,{enrollmentId:sellerEnrollment,university:'Boundary verification campus',categoryToSell:'General Campus Essentials',idNumber:'PV-BOUNDARY-CHECK',storeName:first.raw_user_meta_data?.full_name || first.email,certified:true});
@@ -270,3 +278,9 @@ try {
 } finally {
   await client.query('rollback').catch(() => undefined); client.release(); await db.close();
 }
+}
+const [backup,applicationCheckpoint]=process.argv.slice(2);
+if(backup){
+  if(!applicationCheckpoint)throw new Error('Pass the genuine Auth checkpoint and immutable pre-enrollment application checkpoint.');
+  await withIsolatedBackup(backup,verify,{applicationCheckpoint});
+}else await verify();

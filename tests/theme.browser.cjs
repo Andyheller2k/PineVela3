@@ -15,7 +15,7 @@ async function main() {
   const temp = await fs.mkdtemp(path.join(os.tmpdir(), 'pinevela-theme-browser-'));
   const dataDir = path.join(temp, 'data'); await fs.mkdir(dataDir);
   const imageUrl = '/assets/' + (await fs.readdir(path.join(project, 'dist/assets'))).find(name => /^login-market-.*\.png$/.test(name));
-  const actor = role => ({ id: crypto.randomUUID(), role, name: `Appearance ${role}`, email: `${role}@example.test`, token: crypto.randomUUID(), isVerified: true, verificationStatus: 'approved', appearanceTheme: 'dark' });
+  const actor = role => ({ id: crypto.randomUUID(), role, password: crypto.randomBytes(18).toString('hex'), name: `Appearance ${role}`, email: `${role}@example.test`, token: crypto.randomUUID(), isVerified: true, verificationStatus: 'approved', appearanceTheme: 'dark' });
   const admin = actor('admin'), manager = actor('manager'), staff = actor('staff'), user = actor('user'), resident = actor('student'), seller = actor('merchant'), officer = { ...actor('verification_team'), fullName: 'Appearance officer', status: 'active' };
   const hostel = { id: crypto.randomUUID(), name: 'Appearance residence', managerId: manager.id, managerEmail: manager.email, isApproved: true, approvalStatus: 'Approved', blocks: [{name:'Female Block',totalRooms:1,startNum:201,roomPrefix:'F',gender:'Female'}], location:'Accra', imageUrl, image: imageUrl };
   Object.assign(resident, { hostelId: hostel.id, hostelName: hostel.name, roomKey: 'APPEARANCE-FEM-123456', roomNumber: 'F-201', blockName: 'Female Block' });
@@ -80,6 +80,47 @@ async function main() {
       assert.equal(result.duration, '0s', 'Page surfaces do not run costly theme paint transitions');
       await pause(250);
     };
+    if (process.argv.includes('--portal-access')) {
+      const aliases = ['/verification-team', '/field-officer', '/officer/dashboard', '/verification-portal'];
+      for (const route of aliases) {
+        await command('Page.navigate', {url:base+'/#'+route});
+        await pause(600);
+        await until("location.hash === '#/login' && document.querySelector('input[aria-label=\"Username or Email Address\"]')", 'Guest uses main login for '+route);
+        assert(await evaluate("!document.body.innerText.includes('Verification Officer Sign In')"), 'Officer login removed');
+      }
+      const loginThroughMainPage = async account => {
+        for (const [label,value] of [['Username or Email Address',account.email],['Password',account.password]]) {
+          await evaluate(`(()=>{const input=document.querySelector('input[aria-label=${JSON.stringify(label)}]');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(input,${JSON.stringify(value)});input.dispatchEvent(new Event('input',{bubbles:true}));})()`);
+        }
+        await evaluate("document.querySelector('input[aria-label=\"Password\"]').form.requestSubmit()");
+      };
+      await loginThroughMainPage(admin);
+      await until("location.hash === '#/admin/dashboard' && !document.querySelector('[data-route-skeleton]')", 'Admin credentials keep admin role');
+      for (const route of aliases) {
+        await command('Page.navigate', {url:base+'/#'+route});
+        await pause(600);
+        await until("document.body.innerText.includes('Access Denied')", 'Admin denied '+route);
+        assert(await evaluate("!document.body.textContent.includes('Field Officer Portal') && !document.querySelector('input[aria-label=\"Officer Password\"]')"), 'Admin never enters officer workspace');
+        assert.equal(await evaluate("(async()=>{const r=await fetch('/api/auth/me');const d=await r.json();return (d.user||d).role})()"),'admin');
+        assert.equal(await evaluate("(async()=>{const r=await fetch('/api/verification-team/my-inspections');return r.status})()"),403);
+      }
+      await evaluate("[...document.querySelectorAll('button')].find(b=>b.textContent.includes('Sign out and change account')).click()");
+      await until("document.querySelector('dialog[aria-label=\"Confirm Sign Out\"]')?.open", 'Confirm admin logout');
+      await evaluate("[...document.querySelector('dialog[aria-label=\"Confirm Sign Out\"]').querySelectorAll('button')].find(b=>/Sign Out/i.test(b.textContent)).click()");
+      await until("location.hash === '#/login' && document.querySelector('input[aria-label=\"Password\"]')", 'Main login after admin logout');
+      await loginThroughMainPage(officer);
+      await until("location.hash === '#/field-officer' && document.body.textContent.includes('Field Officer Portal')", 'Officer credentials enter their workspace');
+      assert.equal(await evaluate("(async()=>{const r=await fetch('/api/verification-team/my-inspections');return r.status})()"),200);
+      await pause(600);
+      await evaluate("document.querySelector('button[title=\"Sign Out\"]').click()");
+      await until("document.querySelector('dialog')?.open", 'Confirm officer logout');
+      await evaluate("[...document.querySelector('dialog').querySelectorAll('button')].find(b=>b.textContent.trim()==='Sign Out').click()");
+      await until("location.hash === '#/login' && document.querySelector('input[aria-label=\"Password\"]')", 'Officer logout returns to main login');
+      assert.equal(await evaluate("(async()=>{const r=await fetch('/api/verification-team/my-inspections');return r.status})()"),401);
+      assert.deepEqual(errors,[],'No browser JavaScript errors');
+      console.log('Passed: four guest redirects, main admin/officer sign-ins, four admin denials, unchanged admin role, authorized officer access, logout and session revocation.');
+      return;
+    }
     await viewport(1440);await command('Page.navigate',{url:base+'/#/'});await until("document.querySelector('#welcome-section h1')",'Landing welcome section');
     if(await evaluate("document.documentElement.dataset.theme !== 'light'"))await toggle();
     assert.equal(await evaluate("getComputedStyle(document.querySelector('#public-header')).backgroundColor"),'rgb(255, 255, 255)','Landing header is opaque white in light mode');
@@ -123,6 +164,7 @@ async function main() {
       if(who===seller){
         await evaluate("document.querySelector('button[aria-label=\"Upgrade your seller plan\"]').click()");
         await until("(()=>{const b=document.querySelector('button[aria-label=\"Upgrade your seller plan\"]');return b.textContent.trim()==='Subscription' && b.getClientRects().length && getComputedStyle(b.querySelector('span')).position!=='absolute' && b.getAttribute('aria-current')==='page' && getComputedStyle(b).backgroundColor==='rgb(0, 119, 182)'})()",'Desktop Subscription label and selected dark highlight');
+        assert(await evaluate("!document.body.innerText.includes('Choose a plan for testing now.')"),'Subscription testing copy removed');
         await evaluate("[...document.querySelectorAll('nav button')].find(b=>b.textContent.trim()==='Dashboard / POS').click()");
       }
       await viewport(768);await check(who.role+' tablet dark');await viewport(375);await check(who.role+' mobile dark');
@@ -150,10 +192,10 @@ async function main() {
       }
       if(who===manager){
         await evaluate("[...document.querySelectorAll('button')].find(b=>b.getClientRects().length && b.textContent.includes('Edit Manager Profile')).focus();document.activeElement.click()");
-        await until("document.querySelector('dialog[aria-label=\"Manager Profile Settings\"]')?.open",'Manager profile dialog');
+        await until("document.querySelector('section[aria-label=\"Manager Profile Settings\"]')",'Manager settings page');
+        assert(await evaluate("!document.querySelector('dialog[aria-label=\"Manager Profile Settings\"]')"),'Manager profile is a page');
         await checkControls('Manager profile mobile');
-        await command('Input.dispatchKeyEvent',{type:'keyDown',key:'Escape',code:'Escape'});await pause(100);
-        assert(await evaluate("document.activeElement.textContent.includes('Edit Manager Profile')"),'Profile cancellation restores opening control');
+        await evaluate("document.querySelector('.mobile-bottom-nav [data-navigation-id=overview]').click()");
       }
       if(hasMobileBar && await evaluate("!!document.querySelector('.mobile-bottom-nav [data-navigation-id=more]')")) {
         await evaluate("document.querySelector('.mobile-bottom-nav [data-navigation-id=more]').focus();document.activeElement.click()");
@@ -179,6 +221,7 @@ async function main() {
           await evaluate(`document.querySelector('dialog.ux-more-overlay [data-navigation-id=${destination}]').click()`);
           await until("!document.querySelector('dialog.ux-more-overlay')",destination+' selected');await pause(600);
           assert(await evaluate("document.querySelector('.mobile-bottom-nav [data-navigation-id=more]').getAttribute('aria-current')==='page'"),who.role+' secondary selection is represented');
+          if(who===manager && destination==='settings') assert(await evaluate("!!document.querySelector('section[aria-label=\"Manager Profile Settings\"]') && !document.querySelector('dialog[aria-label=\"Manager Profile Settings\"]')"),'More Settings renders manager profile as a page');
           await check(who.role+' '+destination+' mobile dark');
         }
         await evaluate("document.querySelector('.mobile-bottom-nav button:not([data-navigation-id=more])').click()");await pause(200);

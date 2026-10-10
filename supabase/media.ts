@@ -7,12 +7,18 @@ import { decodeImageUpload } from '../imageUploadSecurity.js';
 import { AttemptBudgets } from '../resourceSecurity.js';
 import { maintenanceResidence,residentRoom } from './maintenance.js';
 import { SupabaseStorage,MAX_MEDIA_BYTES } from './storage.js';
-export type Purpose = 'hostel'|'market'|'inspection'|'maintenance'|'repair';
+import { checkProfileContext,profileSettingsGrant } from './profiles.js';
+import { requireSettingsGrant } from './adminSettings.js';
+export type Purpose = 'hostel'|'market'|'inspection'|'maintenance'|'repair'|'avatar';
 type HousingScope = {residenceId?:string;allocationId?:string;issueId?:string};
 const route = (work:(req:AuthRequest,res:any)=>Promise<unknown>):RequestHandler => (req,res,next) => {work(req as AuthRequest,res).catch(next);};
 export const mediaUrl = (id:string) => `/api/media/${id}`;
 export async function canUploadMedia(client:PoolClient,actor:VerifiedActor,purpose:Purpose,inspectionId?:string,housing:HousingScope = {}) {
-  if (purpose === 'hostel') {
+  if (purpose === 'avatar') {
+    if(!(await client.query('select id from public.account_contexts where id=$1 and auth_user_id=$2 and status=\'active\' and id=private.current_context_id()',[actor.contextId,actor.authUserId])).rowCount)
+      throw new ApiError(403,'An active verified account is required.');
+    return;
+  } else if (purpose === 'hostel') {
     if (!['manager','admin'].includes(actor.kind)) throw new ApiError(403,'Manager or administrator access required.');
     if (actor.kind === 'manager') {
       const banned = await client.query(`select 1 from public.registration_bans b join public.account_contexts c on c.id = b.account_context_id
@@ -112,14 +118,31 @@ export function installMedia(app:Express,auth:SupabaseAuth) {
   const upload = (purpose:Purpose) => route(async (req,res) => {
     (req as any).processingUpload = true;
     try {
+      if(purpose==='avatar') {
+        checkProfileContext(req.actor,req.headers['x-pinevela-profile-context']);
+        if(!req.body || typeof req.body!=='object' || Array.isArray(req.body) || Object.keys(req.body).some(k=>!['fileData','fileType','fileName','settingsKey'].includes(k)))
+          throw new ApiError(400,'Invalid profile picture upload.');
+        if(typeof req.body.fileData==='string') {
+          const encoded=req.body.fileData.startsWith('data:')?req.body.fileData.slice(req.body.fileData.indexOf(',')+1):req.body.fileData;
+          const padding=encoded.endsWith('==')?2:encoded.endsWith('=')?1:0;
+          if(encoded.length*3/4-padding>5*1024*1024)throw new ApiError(413,'Profile pictures must be at most 5MB.');
+        }
+      }
+      const grant=purpose==='avatar'?await profileSettingsGrant(auth,req.actor,req.body?.settingsKey):undefined;
       const inspectionId = purpose === 'inspection' ? uuid(req.body?.inspectionId) : undefined;
       const housing = {residenceId:req.body?.hostelId === undefined ? undefined : uuid(req.body.hostelId),issueId:purpose === 'repair' ? uuid(req.body?.issueId) : undefined};
       await auth.db.authorizedSystem(req.actor,[req.actor.kind],client => canUploadMedia(client,req.actor,purpose,inspectionId,housing));
-      const bytes = await decodeImageUpload(req.body,2048);
-      const asset = await auth.db.authorizedSystem(req.actor,[req.actor.kind],client => reserveMedia(client,req.actor,purpose,bytes,inspectionId,housing));
+      const bytes = await decodeImageUpload(req.body,purpose==='avatar'?512:2048);
+      const asset = await auth.db.authorizedSystem(req.actor,[req.actor.kind],async client => {
+        if(grant)await requireSettingsGrant(client,req.actor,grant);
+        return reserveMedia(client,req.actor,purpose,bytes,inspectionId,housing);
+      });
       try {
         await storage.upload(asset.object_path,bytes);
-        const result = await auth.db.authorizedSystem(req.actor,[req.actor.kind],client => finishMedia(client,req.actor,asset.id));
+        const result = await auth.db.authorizedSystem(req.actor,[req.actor.kind],async client => {
+          if(grant)await requireSettingsGrant(client,req.actor,grant);
+          return finishMedia(client,req.actor,asset.id);
+        });
         return res.status(201).json(result);
       } catch (error) {
         // Supabase cannot atomically commit object bytes and PostgreSQL rows.
@@ -140,12 +163,19 @@ export function installMedia(app:Express,auth:SupabaseAuth) {
   app.post('/api/storage/upload-inspection-image',auth.require(['officer']),admission,parse,upload('inspection'));
   app.post('/api/storage/upload-maintenance-image',auth.require(['resident','manager','admin']),admission,parse,upload('maintenance'));
   app.post('/api/storage/upload-repair-image',auth.require(['staff']),admission,parse,upload('repair'));
+  const parseAvatar=express.json({limit:'7mb',inflate:false});
+  app.post('/api/storage/upload-profile-image',auth.require(),admission,parseAvatar,upload('avatar'));
+  app.post('/api/storage/upload-admin-profile',auth.require(['admin']),admission,parseAvatar,upload('avatar'));
   // Errors before the handler (parser rejection/disconnect) release admission.
   app.use((error:any,req:any,_res:any,next:any) => {req.releaseUpload?.();next(error);});
   app.get('/api/media/:id',route(async (req,res) => {
     const id = uuid(req.params.id);
-    let asset = await auth.db.system(async client => (await client.query(`select * from public.media_assets
-      where id = $1 and private.media_asset_is_public(id)`,[id])).rows[0]);
+    let asset = await auth.db.system(async client => {
+      await client.query("select pg_advisory_xact_lock_shared(hashtextextended('platform-maintenance',0))");
+      if (!(await client.query('select private.platform_available() as available')).rows[0].available) return undefined;
+      return (await client.query(`select * from public.media_assets
+        where id = $1 and private.media_asset_is_public(id)`,[id])).rows[0];
+    });
     if (!asset) {
       // Do not reveal whether an unauthenticated private identifier exists.
       let actor:VerifiedActor;try {actor = (await auth.authenticate(req,res)).actor;} catch (error) {

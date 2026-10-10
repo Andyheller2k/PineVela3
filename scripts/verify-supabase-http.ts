@@ -22,12 +22,28 @@ try {
     assert.equal(response.headers.get('x-content-type-options'), 'nosniff');
     return response.json();
   };
-  for(const endpoint of ['/api/payments/paystack/pending','/api/admin/payments','/api/admin/settings/status','/api/admin/payments/receiving-account','/api/admin/settings/pricing'])await request(endpoint,401);
-  for(const endpoint of ['/api/payments/paystack/initialize','/api/payments/paystack/verify','/api/digital-market/subscription','/api/hostel-verifications/pay-onboarding-fee','/api/admin/governance/keys/settings/enroll','/api/admin/payments/receiving-account','/api/admin/governance/pricing','/api/admin/governance/pricing/00000000-0000-4000-8000-000000000001/vote','/api/admin/governance/pricing/00000000-0000-4000-8000-000000000001/apply']){
+  for(const endpoint of ['/api/payments/paystack/pending','/api/admin/payments','/api/admin/settings/status','/api/admin/payments/receiving-account','/api/admin/settings/pricing','/api/auth/maintenance-notice','/api/admin/governance','/api/admin/messages/accounts','/api/admin/all-users'])await request(endpoint,401);
+  for(const endpoint of ['/api/admin/messages/preview','/api/admin/messages','/api/admin-messages/00000000-0000-4000-8000-000000000001/ack',
+    '/api/admin/governance/accounts','/api/admin/governance/accounts/00000000-0000-4000-8000-000000000001/vote',
+    '/api/admin/governance/accounts/00000000-0000-4000-8000-000000000001/final-reject']) {
+    await request(endpoint,401,{method:'POST',headers:{'content-type':'application/json'},body:'{}'});
+    await request(endpoint,403,{method:'POST',headers:{'content-type':'application/json',origin:'https://cross-site.invalid'},body:'{}'});
+  }
+  for(const endpoint of ['/api/settings','/api/payments/paystack/initialize','/api/payments/paystack/verify','/api/digital-market/subscription','/api/hostel-verifications/pay-onboarding-fee','/api/admin/governance/keys/settings/enroll','/api/admin/payments/receiving-account','/api/admin/governance/pricing','/api/admin/governance/pricing/00000000-0000-4000-8000-000000000001/vote','/api/admin/governance/pricing/00000000-0000-4000-8000-000000000001/apply','/api/auth/maintenance-notice/dismiss']){
     await request(endpoint,401,{method:'POST',headers:{'content-type':'application/json'},body:'{}'});
     await request(endpoint,403,{method:'POST',headers:{'content-type':'application/json',origin:'https://cross-site.invalid'},body:'{}'});
   }
   await request('/api/payments/paystack/webhook',401,{method:'POST',headers:{'content-type':'application/json'},body:'{}'});
+  for(const endpoint of ['/api/admin/governance/keys/enroll','/api/admin/governance/members/00000000-0000-4000-8000-000000000001/changes','/api/admin/governance/changes/00000000-0000-4000-8000-000000000001/vote',
+    '/api/admin/governance/invitations','/api/admin/governance/invitations/00000000-0000-4000-8000-000000000001/cancel','/api/auth/admin-invitation/inspect','/api/auth/admin-invitation/accept',
+    '/api/admin/governance/members/00000000-0000-4000-8000-000000000001/active',
+    '/api/admin/governance/changes/00000000-0000-4000-8000-000000000001/plea',
+    '/api/admin/governance/changes/00000000-0000-4000-8000-000000000001/plea/decision',
+    '/api/admin/governance/changes/00000000-0000-4000-8000-000000000001/plea/acknowledge',
+    '/api/admin/governance/changes/00000000-0000-4000-8000-000000000001/confirm-removal']) {
+    await request(endpoint,401,{method:'POST',headers:{'content-type':'application/json'},body:'{}'});
+    await request(endpoint,403,{method:'POST',headers:{'content-type':'application/json',origin:'https://cross-site.invalid'},body:'{}'});
+  }
   await request('/api/payments/paystack/webhook',401,{method:'POST',headers:{'content-type':'application/json',origin:'https://cross-site.invalid'},body:'{}'});
   // Authenticate a non-charge event using the configured key; no successful
   // transaction, provider response or payment evidence is simulated.
@@ -44,8 +60,14 @@ try {
   const enrollmentId = '00000000-0000-0000-0000-000000000000';
   for (const endpoint of ['/api/auth/enrollments',`/api/auth/enrollments/${enrollmentId}/verify`,`/api/auth/enrollments/${enrollmentId}/resend`,`/api/auth/enrollments/${enrollmentId}/reactivate`,'/api/room-keys/claim','/api/room-keys/verify','/api/residents/onboard']) await request(endpoint,401,{method:'POST',headers:{'content-type':'application/json'},body:'{}'});
   await request(`/api/auth/enrollments/${enrollmentId}`,401,{method:'DELETE'});
-  for (const endpoint of ['/api/storage/upload-hostel-image','/api/storage/upload-market-image','/api/storage/upload-inspection-image','/api/storage/upload-maintenance-image','/api/storage/upload-repair-image'])
+  for (const endpoint of ['/api/storage/upload-hostel-image','/api/storage/upload-market-image','/api/storage/upload-inspection-image','/api/storage/upload-maintenance-image','/api/storage/upload-repair-image','/api/storage/upload-profile-image','/api/storage/upload-admin-profile'])
     await request(endpoint,401,{method:'POST',headers:{'content-type':'application/json'},body:'{'});
+  for(const method of ['PUT','POST']){
+    await request('/api/auth/profile',401,{method,headers:{'content-type':'application/json'},body:'{}'});
+    await request('/api/auth/profile',403,{method,headers:{'content-type':'application/json',origin:'https://cross-site.invalid'},body:'{}'});
+  }
+  for(const endpoint of ['/api/storage/upload-profile-image','/api/storage/upload-admin-profile'])
+    await request(endpoint,403,{method:'POST',headers:{'content-type':'application/json',origin:'https://cross-site.invalid'},body:'{}'});
   await request(`/api/media/${enrollmentId}`,404);
   await request('/api/media/invalid',400);
   await request(`/api/hostels/${enrollmentId}/structure`,401);

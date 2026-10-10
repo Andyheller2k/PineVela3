@@ -15,6 +15,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import PineLogo from './PineLogo';
 import { compressImageFileToLowRes } from '../lib/imageOptimizer';
+import { uploadProfileImage } from '../lib/profileImages';
 
 // System-provided avatar presets with custom styles (PineVela logo in varied colors)
 export interface PresetAvatar {
@@ -45,7 +46,7 @@ interface UserAvatarSelectorProps {
 
 export const renderAvatarGraphic = (avatarStr: string | null | undefined, sizeClass = "w-20 h-20 text-2xl") => {
   if (!avatarStr) avatarStr = 'preset:pine-classic';
-  if (avatarStr.startsWith('data:image/') || avatarStr.startsWith('http://') || avatarStr.startsWith('https://')) {
+  if (avatarStr.startsWith('/api/media/') || avatarStr.startsWith('data:image/') || avatarStr.startsWith('http://') || avatarStr.startsWith('https://')) {
     return (
       <img 
         src={avatarStr} 
@@ -93,6 +94,8 @@ export default function UserAvatarSelector({ onAvatarSave }: UserAvatarSelectorP
   // Success alert state
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [saveError, setSaveError] = useState('');
+  const [saving,setSaving] = useState(false);
+  const savingAccount = useRef('');
 
   // Sync state if user prop changes
   useEffect(() => {
@@ -105,6 +108,8 @@ export default function UserAvatarSelector({ onAvatarSave }: UserAvatarSelectorP
     setUploadPreview(null);
     setSaveSuccess(false);
     setSaveError('');
+    setSaving(false);
+    savingAccount.current='';
     if (fileInputRef.current) fileInputRef.current.value = '';
     return () => { activeAccountRef.current = ''; };
   }, [accountKey]);
@@ -135,18 +140,22 @@ export default function UserAvatarSelector({ onAvatarSave }: UserAvatarSelectorP
   };
 
   const applyAvatar = async (newAvatarVal: string) => {
-    if (!user) return;
+    if (!user || savingAccount.current===accountKey) return;
+    savingAccount.current=accountKey;setSaving(true);
     setSaveError('');
     setSaveSuccess(false);
 
     // Persist avatar to backend so it survives logout/login
     try {
+      newAvatarVal=await uploadProfileImage(newAvatarVal,String(user.id));
+      if(activeAccountRef.current!==accountKey)return;
       const token = user?.token;
       if (user) {
         const res = await fetch('/api/auth/profile', {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
+            'X-PineVela-Profile-Context':String(user.id),
             'Authorization': `Bearer ${token}`
           },
           body: JSON.stringify({
@@ -157,17 +166,19 @@ export default function UserAvatarSelector({ onAvatarSave }: UserAvatarSelectorP
             profilePicture: newAvatarVal
           })
         });
-        if (!res.ok) {
-          throw new Error('Could not save your profile picture. Please try again.');
-        }
+        const result=await res.json().catch(()=>null);
+        if (!res.ok) throw new Error(result?.error || 'Could not save your profile picture. Please try again.');
+        if(import.meta.env.VITE_PERSISTENCE==='supabase')newAvatarVal=result?.user?.avatar || 'preset:pine-classic';
       }
     } catch (err) {
-      if (activeAccountRef.current === accountKey) setSaveError('Could not save your profile picture. Please try again.');
+      if (activeAccountRef.current === accountKey) setSaveError(err instanceof Error?err.message:'Could not save your profile picture. Please try again.');
       return;
+    } finally {
+      if(activeAccountRef.current===accountKey){savingAccount.current='';setSaving(false);}
     }
 
     if (activeAccountRef.current !== accountKey) return;
-    updateUser?.({ avatar: newAvatarVal, avatarUrl: newAvatarVal, photo: newAvatarVal, photoUrl: newAvatarVal, profilePicture: newAvatarVal });
+    updateUser?.({ avatar: newAvatarVal, avatarUrl: newAvatarVal, photo: newAvatarVal, photoUrl: newAvatarVal, profilePicture: newAvatarVal },String(user.id));
     onAvatarSave?.(newAvatarVal);
     setSaveSuccess(true);
     setTimeout(() => { if (activeAccountRef.current === accountKey) setSaveSuccess(false); }, 3000);
@@ -260,8 +271,8 @@ export default function UserAvatarSelector({ onAvatarSave }: UserAvatarSelectorP
                 <button
                   key={preset.id}
                   type="button"
+                  disabled={saving}
                   onClick={() => {
-                    setSelectedPresetId(preset.id);
                     applyAvatar(`preset:${preset.id}`);
                   }}
                   className={`p-3 rounded-2xl border-2 transition-all cursor-pointer flex flex-col items-center text-center space-y-2 relative ${
@@ -342,11 +353,12 @@ export default function UserAvatarSelector({ onAvatarSave }: UserAvatarSelectorP
               </button>
               <button
                 type="button"
+                disabled={saving}
                 onClick={() => applyAvatar(uploadPreview)}
                 className="px-5 py-2 bg-blue-900 hover:bg-blue-800 text-white font-black text-xs rounded-xl shadow-md cursor-pointer flex items-center gap-2"
               >
                 <Check className="w-4 h-4" />
-                <span>Save Uploaded Profile Photo</span>
+                <span>{saving?'Saving profile photo…':'Save Uploaded Profile Photo'}</span>
               </button>
             </div>
           )}

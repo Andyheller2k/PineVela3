@@ -94,6 +94,16 @@ test('S21: all login paths expire/revoke hashed sessions, protect cookies and pr
   }
   const sellerLogin = (await login(seller, '/api/digital-market/login')).data;
   const officerLogin = (await login(officer, '/api/verification-teams/login')).data;
+  assert.equal(officerLogin.user.role, 'verification_team');
+  await request('/api/verification-team/my-inspections', 200, undefined, bearer(officerLogin.token));
+  await request('/api/verification-team/my-inspections', 401);
+  await request('/api/verification-team/my-inspections', 403, undefined, bearer(adminLogin.token));
+  await request('/api/verification-team/me', 401, undefined, bearer(adminLogin.token));
+  for (const route of ['/api/verification-teams/login', '/api/auth/verification-team-login']) {
+    await request(route, 401, { email: admin.email, password: admin.password });
+    assert.equal((await me(adminLogin.token)).data.role, 'admin');
+  }
+
   for (const session of [adminLogin, managerLogin, sellerLogin, officerLogin]) {
     const token = session.token || session.user?.token; assert(token); await me(token);
     await request('/api/auth/logout', 200, { token: independent.token }, bearer(token));

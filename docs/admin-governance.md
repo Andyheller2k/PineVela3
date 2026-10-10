@@ -1,7 +1,80 @@
 # Administrator approvals and wipe recovery
 
-This flow currently uses the existing single-writer JSON backend. No real accounts,
-approval keys, or wipe proposals are seeded. Administrators enroll from their own accounts.
+Default startup still uses the single-writer JSON backend. The setup and wipe sections
+below describe that transitional implementation. No accounts, keys or proposals are seeded.
+
+## Supabase replacement checkpoint
+
+Migration 37 adds account-action reviews to the actual account directory and Shared
+Approvals. Any active administrator can propose with their own approval key; all five,
+including the founder, must vote independently within 24 hours. A rejection closes
+the review. After five approvals, only the keyed founder can record a final rejection.
+Reviewed identities, features, durations, reasons and votes are immutable. Roster/key
+and account-lifecycle changes invalidate consent, even after reversal. Administrator
+portal accounts remain governed by membership controls. All review transitions notify
+the reviewed active administrator portals through the Approvals notification module.
+Applying an account policy or deletion is still disabled; approval changes no account.
+
+Migration 31 implements actual roster/history reads, fresh-sign-in approval-key enrollment
+and independent approval/settings-key recovery. Enrollment requires an active administrator
+and a genuine Google or verified-email Auth session created within five minutes, without
+a local password for Google-only accounts. The salted context-bound key is shown once;
+its version, failed-attempt window and lockout remain private.
+
+Two other active administrators with enrolled approval keys must consent to recovery.
+The proposer counts once; the target cannot vote. Consent is immutable, expires after
+24 hours and is invalidated by roster/key changes. An independent rejection closes it.
+The second approval atomically clears only the selected key, rotates its version,
+invalidates older administrator app sessions and commits history, audit and exact
+administrator notifications. The founder's key follows the same rule without removing
+founder membership. Refresh cannot bypass recovery: a new provider sign-in is needed
+before replacement enrollment. No Auth identity or session timestamp is fabricated.
+
+Migration 32 adds founder-keyed invitations reserving slots 2–5 for exactly 24 hours.
+Only a verified primary identity matching the private link and invited mailbox can
+accept; an existing mailbox is also bound to its exact Auth UUID. Existing secondary
+portals cannot be promoted through this flow. Acceptance creates membership and empty
+key records atomically, without creating a local password or issuing keys. Tokens are
+shown once, persist only as a digest and remain outside browser storage. Share links
+manually through a trusted channel. Founder cancellation releases a reservation;
+issuer key/status changes immediately invalidate grants, including later reversals.
+Creation, cancellation, expiration and acceptance notify the exact active roster.
+Migration 33 adds founder-keyed suspension and restoration. SQL protects the founder,
+membership ownership and session epochs, and blocks removal through generic context
+deletion/status changes. Both transitions invalidate older administrator Auth sessions;
+restoration requires a new provider sign-in and preserves separate keys and history.
+Pending recovery/pricing consent is invalidated. Audit, exact roster notifications and
+the affected primary account's notice commit together. The UI asks for confirmation.
+Migration 34 implements permanent administrator removal. Only the founder's current
+approval key can propose it. All four other eligible administrators, including the
+founder and excluding the target, must independently approve within 24 hours. The
+fourth vote opens a fresh 24-hour private appeal window. Only the target can submit;
+only the founder and target receive its text or decision reason. A submitted appeal
+always requires a keyed founder decision. Acceptance revokes removal authority while
+preserving immutable vote history. Rejection, or expiry without an appeal, permits
+the founder's separate final key check and exact `REMOVE ADMINISTRATOR` confirmation.
+Roster/key changes invalidate all unfinished reviews, including later reversals.
+Removal atomically closes only the admin context, marks its membership removed,
+invalidates portal access, deletes private keys and saves audit/status notifications.
+Auth and primary access remain intact; the affected primary inbox receives the final
+notice before entering any sub-account. Membership/context tombstones preserve foreign
+keys and vote history. The former slot becomes available to a different privately
+invited identity; a removed portal cannot be restored through suspension controls.
+Administrator transactions take the governance lock before actor row locks to avoid
+deadlocks with concurrent target requests. Browser roles cannot call the protocol or
+read private appeals. No production administrator has been removed by verification.
+Wipes still await their independent command port. Actual fresh enrollment and post-recovery
+provider HTTP/UI journeys remain acceptance gates. See the
+[current migration evidence](migrations/supabase-implementation-status.md).
+
+Migration 36 ports the message gateway independently of approval/settings changes.
+An active administrator can select actual active primary, manager, resident, seller
+or staff portals, review the deduplicated recipients and send a one-way announcement.
+Private sender-bound previews expire after 15 minutes and cannot authorize another
+selection. Delivery is atomic and retry-safe; completed content and recipients are
+immutable. Each exact recipient gets a notification and independently dismissible
+popup. A shared mailbox or primary-parent relationship does not merge portal inboxes.
+No live announcement was sent during migration verification.
 
 ## Setup
 

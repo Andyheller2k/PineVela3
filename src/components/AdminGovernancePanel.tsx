@@ -2,6 +2,7 @@ import { useActionFeedback } from '../lib/useActionFeedback';
 import OnboardingProgress, { ADMIN_INVITATION_STEPS } from './OnboardingProgress';
 import AdministratorLabel from './AdministratorLabel';
 import AdminRemovalActions from './AdminRemovalActions';
+import SupabaseAdminGovernancePanel from './SupabaseAdminGovernancePanel';
 import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { KeyRound, Users, Trash2, AlertTriangle, Copy } from 'lucide-react';
@@ -27,6 +28,10 @@ function Counts({ preview }: { preview: any }) {
   </div>;
 }
 export default function AdminGovernancePanel() {
+  const {user}=useAuth();
+  return import.meta.env.VITE_PERSISTENCE==='supabase' ? <SupabaseAdminGovernancePanel key={user?.id}/> : <LegacyAdminGovernancePanel/>;
+}
+function LegacyAdminGovernancePanel() {
   const feedback = useActionFeedback();
   const { apiFetch } = useAuth(), { data, error, isPending } = useAdminGovernance();
   const [privateKey, setPrivateKey] = useState(''), [password, setPassword] = useState('');

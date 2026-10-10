@@ -9,7 +9,7 @@ export default function AdminRemovalActions({ change: c, data, busy, privateKey,
   const control = 'w-full rounded-xl border border-blue-200 bg-white px-3 py-2.5 text-sm text-slate-900';
   const main = data.currentId === data.mainId;
   return <div className="space-y-3" data-admin-removal={c.id}>
-    <p className="font-semibold">{c.votes.filter((v: any) => v.decision === 'approved').length}/4 eligible approvals · The targeted administrator has no vote.</p>
+    <p className="font-semibold">{c.votes.filter((v: any) => v.decision === 'approved').length}/4 {c.status==='revoked'?'historical':'eligible'} approvals · The targeted administrator has no vote.</p>
     {c.status === 'pending' && c.targetId !== data.currentId && !c.votes.some((v: any) => v.id === data.currentId) && <div className="flex flex-wrap gap-2">
       <button className={button} disabled={busy || !privateKey} onClick={() => act(`${root}/vote`, { privateKey, decision: 'approved' })}>Approve change</button>
       <button className={danger} disabled={busy || !privateKey} onClick={() => act(`${root}/vote`, { privateKey, decision: 'rejected' })}>Reject change</button>

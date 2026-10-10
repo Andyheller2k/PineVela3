@@ -81,7 +81,7 @@ try{
   await bind(owner);const resubmitted=await submitSellerApplication(c,owner,{...payload,idNumber:'PV-20261009-R'});
   check(resubmitted.application.id===id && resubmitted.application.submissionVersion===2 && resubmitted.application.adminNotes==='','Revised submission reuses exact verified identity and increments version');
   check((await c.query("select event_data->'previous'->>'review_notes' as notes from private.audit_events where resource_id=$1 and event_type='seller_application_resubmitted'",[id])).rows[0].notes==='Correct the submitted school identification.','Audit preserves actual earlier decision and submission evidence');
-  await bind(admin);await c.query('savepoint revoked_decision');await c.query("update public.admin_memberships set status='removed' where context_id=$1",[admin.contextId]);
+  await bind(admin);await c.query('savepoint revoked_decision');await c.query('delete from auth.sessions where id=$1',[admin.sessionId]);
   await denied(()=>c.query("update public.seller_applications set status='approved',reviewed_at=now(),reviewed_by_context_id=$2 where id=$1",[id,admin.contextId]),'23514','SQL denies revoked administrator decisions even with an existing context binding');await c.query('rollback to savepoint revoked_decision');
   await bind(admin);await c.query('savepoint approval_banned');await c.query("insert into public.registration_bans(account_context_id,kind,until_at,reason,imposed_by_context_id) values($1,'seller_account',now()+interval '1 day','Registration boundary verification',$2)",[own.actor.contextId,admin.contextId]);
   await denied(()=>decideSellerApplication(c,admin,{id},true),403,'Ban imposed during review prevents approval');
@@ -98,7 +98,7 @@ try{
   check((await scoped(own.actor,()=>sellerStatus(c,own.actor))).application.id===id,'Seller sees its own application');
   check((await scoped(foreignOwner,()=>sellerStatus(c,foreignOwner))).application===null,'Foreign status lookup returns no unrelated application');
   check((await scoped(own.actor,()=>c.query('select id from public.seller_applications'))).rowCount===1,'Raw RLS allows exact seller');
-  await c.query('savepoint admin_revoked');await c.query("update public.admin_memberships set status='removed' where context_id=$1",[admin.contextId]);
+  await c.query('savepoint admin_revoked');await c.query('delete from auth.sessions where id=$1',[admin.sessionId]);
   check((await scoped(admin,()=>c.query('select id from public.seller_application_details'))).rowCount===0,'Revoked administrator loses private review view');await c.query('rollback to savepoint admin_revoked');
   check((await c.query("select r.context_id from public.notification_recipients r join public.notifications n on n.id=r.notification_id where n.category='account_submission' and r.context_id=$1",[owner.contextId])).rowCount!>0,'Primary user receives submission and decision notices before seller login');
   check((await c.query("select r.context_id from public.notification_recipients r join public.notifications n on n.id=r.notification_id where n.category='verification' and r.context_id=$1",[admin.contextId])).rowCount!>0,'Administrators receive review-state notices');

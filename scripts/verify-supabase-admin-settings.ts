@@ -7,6 +7,8 @@ import crypto from 'node:crypto';
 import assert from 'node:assert/strict';
 import dotenv from 'dotenv';
 import { withIsolatedBackup } from './lib/isolated-postgres.js';
+import { verifyPublicSettings } from './lib/verify-public-settings.js';
+import { verifyPlatformMaintenance } from './lib/verify-platform-maintenance.js';
 import { ApiError, SupabaseDatabase, type VerifiedActor } from '../supabase/db.js';
 import { SupabaseAuth } from '../supabase/auth.js';
 import { hashCredentialAsync } from '../accountSecurity.js';
@@ -69,7 +71,7 @@ try {
       check(first.mainId === founder.contextId && first.members.length === 4, 'Status derives the actual founder and roster');
       check(first.members.filter(m => m.settingsKeyEnrolled).length === 3, 'Status reflects actual separate enrollment');
       check(!JSON.stringify(first).includes(keys[0]) && !JSON.stringify(first).includes('scrypt-sha256'), 'Status exposes no credentials or hashes');
-      check(first.enrollmentMethod === 'fresh_sign_in' && first.capabilities.portalSettings === false, 'Unported portal settings are identified explicitly');
+      check(first.enrollmentMethod === 'fresh_sign_in' && first.capabilities.portalSettings === true, 'Keyed portal settings and fresh enrollment are available');
       await denied(() => status(primary), 401, 'A different active context cannot impersonate an administrator');
       const wrong = await keyCheck(founder, keys[1]); check(!wrong.allowed, 'Another administrator settings key is denied');
       check(!(await keyCheck(founder,approvalKeys[0])).allowed, 'Own approval key cannot authorize settings');
@@ -107,14 +109,14 @@ try {
       check((await db.pool.query('select count(*) from public.notification_recipients where context_id=$1',[primary.contextId])).rows[0].count === '0','Primary users receive no administrator settings notice');
       await service.setReceivingAccount(founder,{code:'',settingsKey:keys[0]});
       check((await db.pool.query('select count(*) from public.notifications')).rows[0].count === '1','No-op destination update does not repeat notices');
+      checks += await verifyPublicSettings(db, fixtures.admins, keys, approvalKeys, primary);
+      checks += await verifyPlatformMaintenance(db, fixtures.admins, keys, primary);
       await denied(() => db.authorizedSystem(other,['admin'],c => saveReceivingAccount(c,other,grant,'','live')),403,'A grant is bound to the administrator that earned it');
       await denied(() => db.authorizedSystem(founder,['admin'],c => saveReceivingAccount(c,founder,{allowed:true,version:crypto.randomUUID()},'','live')),403,'Stale key version cannot authorize configuration');
       const again = await keyCheck(other,keys[1]);
       for(let i=0;i<5;i++) await keyCheck(other,crypto.randomBytes(32).toString('hex'));
       await denied(() => db.authorizedSystem(other,['admin'],c => saveReceivingAccount(c,other,again,'','live')),403,'Lockout invalidates an in-flight provider authorization');
-      await db.system(c => c.query("update public.admin_memberships set status='suspended' where context_id=$1",[founder.contextId]));
-      await denied(() => db.authorizedSystem(founder,['admin'],c => saveReceivingAccount(c,founder,grant,'','live')),401,'Suspended membership revokes settings writes');
-      await db.system(c => c.query("update public.admin_memberships set status='active' where context_id=$1",[founder.contextId]));
+      await denied(() => db.system(c => c.query("update public.admin_memberships set status='suspended' where context_id=$1",[founder.contextId])),'42501','Founder access cannot be revoked by direct settings mutation');
       await db.system(c => c.query('delete from auth.sessions where id=$1',[founder.sessionId]));
       await denied(() => status(founder),401,'Revoked real Auth session cannot read administrator status');
       for(const role of ['anon','authenticated','pinevela_backend']) {
@@ -125,9 +127,9 @@ try {
       await denied(() => status(primary),403,'A genuine active primary session cannot use administrator settings');
       await denied(() => service.setReceivingAccount(primary,{code:'',settingsKey:keys[3]}),403,'An active non-administrator cannot change payment routing');
       check((await db.actor(primary,c => c.query('select context_id from public.admin_memberships'))).rowCount === 0,'RLS hides the administrator roster from a primary session');
-      const primaryRows = await db.actor(primary,c => c.query('select id from public.notifications'));
+      const primaryRows = await db.actor(primary,c => c.query("select id from public.notifications where category='admin_settings'"));
       check(primaryRows.rowCount === 0,'RLS hides administrator notifications from the primary portal');
-      const adminRows = await db.actor(third,c => c.query('select id from public.notifications'));
+      const adminRows = await db.actor(third,c => c.query("select id from public.notifications where title='Payment receiving account updated'"));
       check(adminRows.rowCount === 1,'RLS permits the actual administrator recipient');
       check((await db.pool.query('select count(*) from auth.users')).rows[0].count === '5','No Auth accounts were created or restored');
     } finally { await db.close(); }

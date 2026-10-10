@@ -18,10 +18,11 @@ export function bodyFields(body: any, fields: string[]) {
 export async function requireAdministrator(c: PoolClient, a: VerifiedActor) {
   if (a.kind !== 'admin' || !(await c.query(`select m.context_id from public.admin_memberships m
     join public.account_contexts x on x.id=m.context_id where m.context_id=$1 and m.status='active'
-      and x.kind='admin' and x.status='active' and x.auth_user_id=$2 for share of m,x`, [a.contextId, a.authUserId])).rowCount)
+      and x.kind='admin' and x.status='active' and x.auth_user_id=$2
+      and m.context_id=private.current_context_id() for share of m,x`, [a.contextId, a.authUserId])).rowCount)
     throw new ApiError(403, 'Active administrator access required.');
 }
-async function settingsEvent(c: PoolClient, a: VerifiedActor, type: string, title: string, message: string) {
+export async function settingsEvent(c: PoolClient, a: VerifiedActor, type: string, title: string, message: string) {
   await c.query(`insert into private.audit_events(actor_context_id,event_type,resource_type,resource_id)
     values($1,$2,'account_context',$1)`, [a.contextId, type]);
   const admins = (await c.query(`select m.context_id from public.admin_memberships m join public.account_contexts x on x.id=m.context_id
@@ -34,11 +35,11 @@ export async function administratorSettingsStatus(c: PoolClient, a: VerifiedActo
     p.display_name as name,p.email,k.approval_key_hash is not null as "keyEnrolled",
     k.settings_key_hash is not null as "settingsKeyEnrolled"
     from public.admin_memberships m join public.account_contexts x on x.id=m.context_id
-    join public.profiles p on p.id=x.auth_user_id left join private.admin_secrets k on k.context_id=m.context_id order by m.slot`)).rows;
+    join public.profiles p on p.id=x.auth_user_id left join private.admin_secrets k on k.context_id=m.context_id where m.status<>'removed' order by m.slot`)).rows;
   const fresh = (await c.query(`select created_at between clock_timestamp()-interval '5 minutes' and clock_timestamp() as fresh
     from auth.sessions where id=$1 and user_id=$2`, [a.sessionId, a.authUserId])).rows[0]?.fresh === true;
   return { currentId: a.contextId, mainId: members.find(row => row.slot === 1)?.id || null, members,
-    freshSignIn: fresh, enrollmentMethod: 'fresh_sign_in', capabilities: { receivingAccount: true, pricing: true, portalSettings: false } };
+    freshSignIn: fresh, enrollmentMethod: 'fresh_sign_in', capabilities: { receivingAccount: true, pricing: true, contacts: true, announcements: true, portalSettings: true } };
 }
 export async function enrollAdministratorSettingsKey(c: PoolClient, a: VerifiedActor, body: unknown) {
   bodyFields(body, []);

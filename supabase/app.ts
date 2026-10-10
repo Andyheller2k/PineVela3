@@ -9,6 +9,7 @@ import { SignupError } from '../supabaseSignup.js';
 import { installAccountStatus } from './accountStatus.js';
 import { installManagerKeys } from './managerKeys.js';
 import { installMedia } from './media.js';
+import { installProfiles } from './profiles.js';
 import { ImageUploadError } from '../imageUploadSecurity.js';
 import { installHousing } from './housing.js';
 import { installResidenceRegistration } from './residenceRegistration.js';
@@ -24,7 +25,13 @@ import { installMarketConversation } from './marketConversation.js';
 import {installPayments,installPaymentWebhook} from './payments.js';
 import {PaymentError} from '../paystackProvider.js';
 import { installAdministratorSettings } from './adminSettings.js';
+import { installAdminGovernance } from './adminGovernance.js';
+import { installAdminInvitations } from './adminInvitations.js';
+import { installAdminMessages } from './adminMessages.js';
+import { installAccountReviews } from './accountReviews.js';
 import { installPricing } from './pricing.js';
+import { installPublicSettings } from './publicSettings.js';
+import { maintenanceBoundary, installRecoveryNotice } from './platformMaintenance.js';
 import { installMaintenance } from './maintenance.js';
 import { installDashboardReads } from './dashboardReads.js';
 import { installInspections } from './inspections.js';
@@ -53,6 +60,7 @@ export function createSupabaseApp(db: SupabaseDatabase) {
   });
   installPaymentWebhook(app,auth);
   app.use('/api', csrfBoundary);
+  app.use('/api', maintenanceBoundary(auth));
   installMedia(app,auth);
   app.use(express.json({ limit: '1mb',inflate:false }));
   app.get('/api/health', (_req, res) => res.json({ status: 'ok', persistence: 'supabase' }));
@@ -63,6 +71,7 @@ export function createSupabaseApp(db: SupabaseDatabase) {
     }).then(settings => res.json(settings)).catch(next);
   });
   installSupabaseAuth(app, auth); installCatalog(app, db); installNotifications(app, auth);
+  installProfiles(app,auth);
   installEnrollment(app,auth);
   installAccountStatus(app,auth);
   installManagerRegistration(app,auth);
@@ -82,7 +91,13 @@ export function createSupabaseApp(db: SupabaseDatabase) {
   installMarketConversation(app,auth);
   installPayments(app,auth);
   installAdministratorSettings(app,auth);
+  installAdminGovernance(app,auth);
+  installAdminInvitations(app,auth);
+  installAdminMessages(app,auth);
+  installAccountReviews(app,auth);
   installPricing(app,auth);
+  installPublicSettings(app,auth);
+  installRecoveryNotice(app,auth);
   installManagerKeys(app,auth);
   app.locals.closeRealtime = installRealtime(app, auth);
   app.get('/api/database/status', auth.require(['admin']), (req, res, next) => {
@@ -97,7 +112,8 @@ export function createSupabaseApp(db: SupabaseDatabase) {
     const status = known ? error.status : error?.type === 'entity.too.large' ? 413 : error?.type === 'entity.parse.failed' ? 400 :
       ['encoding.unsupported','charset.unsupported'].includes(error?.type) ? 415 : 500;
     if (status === 500) console.error('[Supabase API] Request failed.');
-    res.status(status).json({ error: known ? error.message : status === 400 ? 'Invalid JSON request.' : status === 413 ? 'Request body is too large.' :
+    if (error instanceof ApiError && error.code==='platform_maintenance') res.set('Retry-After','30');
+    res.status(status).json({ ...(error instanceof ApiError && error.code==='platform_maintenance' ? {maintenanceMode:true} : {}),error: known ? error.message : status === 400 ? 'Invalid JSON request.' : status === 413 ? 'Request body is too large.' :
       status === 415 ? 'Use uncompressed UTF-8 JSON.' : 'The request could not complete.',
       ...(error instanceof ApiError && error.code ? { code:error.code } : {}),
       ...(error instanceof ApiError && error.code === 'manager_key_required' ? {managerKeyRequired:true} : {}) });

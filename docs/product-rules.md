@@ -1,5 +1,18 @@
 # PineVela Product Rules
 
+## Account approvals during Supabase migration
+
+Five distinct active administrators with enrolled approval keys must approve an
+account review, including the founder. The proposer counts once. Approval expires
+after 24 hours or becomes invalid after roster/key or account-lifecycle changes.
+Only the founder can record final rejection after all five approvals. Shared email
+addresses do not merge account contexts or establish directory relationships.
+
+The migrated review UI supports timed-ban, feature-restriction and restoration
+proposals. It explicitly disables final application and account deletion until the
+remaining enforcement and backup work is verified. Approval alone changes no access;
+users receive no claim that a proposed action has been applied.
+
 ## Verified account identities
 
 The Supabase replacement uses separate verified child identities linked to a primary owner.
@@ -8,6 +21,17 @@ password, with different portal access PINs. Managers use a separate verified wo
 Primary ownership grants registration-status access, never child sign-in or PIN bypass.
 One room key permits one active resident per room, even when the room has multiple beds.
 These rules are implemented progressively; see [migration status](migrations/supabase-implementation-status.md).
+
+## Administrator announcement recipients
+
+Managers, residents, primary users, marketers/sellers and staff are independent
+recipient groups. The gateway lists registered active portals, excluding pending,
+rejected, suspended and closed portals. “Marketers” selects existing seller contexts.
+Group plus specific-account selections deduplicate by portal, with 1–2000 recipients.
+Each recipient receives one notification and a popup dismissible once. Dismissal does
+not remove or mark the notification read. Resident and seller portals sharing one
+verified mailbox retain independent inboxes/dismissals. Gateway announcements do not
+change submission-status rules: those still notify the primary owner before portal entry.
 
 ## Shared pricing changes in the Supabase replacement
 
@@ -25,6 +49,17 @@ unrelated contact/receiving-account changes preserve them. Live prices change on
 final execution. Money is stored in exact cents; existing checkout quotes keep their
 saved amounts. Pricing submission, votes and status changes notify active administrators
 under Admin Settings and contribute to the existing unread count.
+
+Active administrators may update public contact channels and platform announcements
+with their own settings key. Other administrators receive settings status notices;
+changed nonempty announcements notify active non-admin portals. Clearing announcement
+text retains delivered history. Contact changes preserve pricing approvals and payment
+destinations. Only an active administrator with their separate settings key may enable or
+end maintenance. Ordinary account operations pause; actual administrator recovery and
+signed payment reconciliation remain available. Ending maintenance requires a message.
+Existing active non-admin portals receive an account-specific dismissible popup for
+24 hours after restoration. Later portals are excluded, dismissal persists across sign-in,
+and a later restoration has its own notice. No client-selected recipient or timestamp is accepted.
 
 ## Store billing in the Supabase replacement
 
@@ -247,6 +282,28 @@ Each has a separate private approval key. Destructive proposals use checkbox sco
 all dependent deletions, and require all five independent approvals. Any rejection cancels;
 membership/data changes invalidate approval. Administrator #1 explicitly confirms execution.
 Total wipe preserves administrators, governance and protected recovery/audit artifacts.
+In the Supabase replacement, key recovery requires two other active administrators with
+enrolled approval keys. The proposer counts once and the target cannot consent to their
+own recovery. Reviews expire after 24 hours and roster/key changes invalidate them.
+A second approval clears only the chosen approval or settings key, preserving the other
+credential and administrator membership. The target needs a new verified sign-in before
+replacement enrollment. The founder's key follows this recovery rule too.
+The founder may reserve slots 2–5 through a private, approval-key-authorized invitation.
+The invited verified primary identity accepts once within 24 hours, then enrolls its own
+keys. Existing secondary portals cannot be promoted. Cancellation or issuer authority
+changes close the grant permanently. Links are manually shared, not emailed automatically.
+Permanent administrator removal requires all four other eligible administrators'
+separate approval keys, including the founder. The fourth vote opens a fresh 24-hour
+target-only private appeal window. Submitted appeals always require a founder decision;
+acceptance revokes consent and preserves immutable voting history. Rejection or expiry
+without appeal still requires founder-keyed final confirmation. Removal closes only the
+administrator portal, preserves Auth/primary identity and history, deletes private keys,
+notifies the target's primary inbox and releases the stable slot for a different invitee.
+Roster/key changes invalidate unfinished reviews. Wipe command ports remain pending.
+The founder may suspend or restore another administrator with their separate approval
+key. The founder cannot be suspended or removed. Both transitions preserve credentials
+and history and invalidate old administrator sessions; restoration needs a new sign-in.
+The affected primary inbox and administrator roster receive status notifications.
 See [administrator governance](admin-governance.md) for onboarding and recovery.
 
 
@@ -411,3 +468,11 @@ numbers. Completing a purchase may reduce stock to zero and mark it sold out.
 Seller meetup declines require confirmation and retain a Declined state on the
 related order notice. Public social contacts are edited in Admin Settings with
 the acting administrator's own settings key.
+
+
+Personal profile pictures belong to the verified Auth identity. Portals sharing the same
+identity share that picture; linked but separately verified identities remain independent.
+Active administrator identities must use the administrator portal and settings key for
+profile changes. Personal avatars are private; only active staff directory portraits are
+shared through an authorized housing relationship. Login email, ownership and account roles
+cannot be edited through profile forms. Store branding remains a separate subscription rule.

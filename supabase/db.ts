@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import { requireManagerKeyGrant } from './managerKeys.js';
 import { Pool, type PoolClient, type PoolConfig, type QueryResultRow } from 'pg';
+import { MAINTENANCE_MESSAGE } from '../platformSettings.js';
 
 export type VerifiedActor = { authUserId: string; sessionId: string; contextId: string; kind: string; managerKeyVersion?:string };
 export class ApiError extends Error {
@@ -67,7 +68,7 @@ export class SupabaseDatabase {
           and c.kind = $4 and c.status = 'active' and c.auth_user_id = s.auth_user_id
           and (live.not_after is null or live.not_after > now())
           and private.portal_session_allowed(c.id,s.portal_pin_version)
-          and (c.kind <> 'admin' or exists (select 1 from public.admin_memberships m where m.context_id = c.id and m.status = 'active'))
+          and (c.kind <> 'admin' or private.administrator_session_allowed(c.id,s.session_id) and exists (select 1 from public.admin_memberships m where m.context_id = c.id and m.status = 'active'))
           and (c.kind <> 'resident' or exists (select 1 from public.allocations a where a.resident_context_id = c.id and a.ended_at is null))
           and (c.kind <> 'staff' or exists (select 1 from public.staff_assignments a where a.staff_context_id = c.id and a.status = 'active' and a.ended_at is null))
         for share of s, c`, [actor.sessionId, actor.authUserId, actor.contextId, actor.kind]);
@@ -77,7 +78,13 @@ export class SupabaseDatabase {
   }
   async actor<T>(actor: VerifiedActor, work: (client: PoolClient) => Promise<T>): Promise<T> {
     return this.system(async client => {
+      await client.query("select pg_advisory_xact_lock_shared(hashtextextended('platform-maintenance',0))");
+      // Removal closes another administrator context. Take the governance
+      // lock before actor/context row locks so a concurrent target request cannot
+      // hold its context while waiting for the founder's governance transaction.
+      if(actor.kind==='admin')await client.query("select pg_advisory_xact_lock(hashtextextended('platform-settings',0))");
       await this.lockActor(client, actor);
+      await this.requirePlatformAccess(client);
       await client.query('set local role pinevela_backend');
       return work(client);
     });
@@ -85,15 +92,37 @@ export class SupabaseDatabase {
   /** For narrowly scoped server-owned lifecycle writes that browser roles cannot
    * perform. Rechecks the live actor inside the write transaction; callers must
    * also authorize every target relationship before using this privileged client. */
-  async authorizedSystem<T>(actor: VerifiedActor, kinds: string[], work: (client: PoolClient) => Promise<T>): Promise<T> {
+  async authorizedSystem<T>(actor: VerifiedActor, kinds: string[], work: (client: PoolClient) => Promise<T>, maintenanceChange = false): Promise<T> {
     return this.system(async client => {
+      await client.query(maintenanceChange
+        ? "select pg_advisory_xact_lock(hashtextextended('platform-maintenance',0))"
+        : "select pg_advisory_xact_lock_shared(hashtextextended('platform-maintenance',0))");
+      if(actor.kind==='admin')await client.query("select pg_advisory_xact_lock(hashtextextended('platform-settings',0))");
       await this.lockActor(client, actor);
       if (!kinds.includes(actor.kind)) throw new ApiError(403, 'This account cannot perform that action.');
+      await this.requirePlatformAccess(client);
+      return work(client);
+    });
+  }
+  private async requirePlatformAccess(client: PoolClient) {
+    if (!(await client.query('select private.platform_access_allowed() as allowed')).rows[0].allowed)
+      throw new ApiError(503,MAINTENANCE_MESSAGE,'platform_maintenance');
+  }
+  /** Public invitation lifecycle operations use private tables without a bound
+   * portal, but still serialize with maintenance transitions. */
+  async availableSystem<T>(work:(client:PoolClient)=>Promise<T>):Promise<T> {
+    return this.system(async client=>{
+      await client.query("select pg_advisory_xact_lock_shared(hashtextextended('platform-maintenance',0))");
+      if (!(await client.query('select private.platform_available() as available')).rows[0].available)
+        throw new ApiError(503,MAINTENANCE_MESSAGE,'platform_maintenance');
       return work(client);
     });
   }
   async publicRows<T extends QueryResultRow>(sql: string, values: unknown[] = []): Promise<T[]> {
     return this.system(async client => {
+      await client.query("select pg_advisory_xact_lock_shared(hashtextextended('platform-maintenance',0))");
+      if (!(await client.query('select private.platform_available() as available')).rows[0].available)
+        throw new ApiError(503,MAINTENANCE_MESSAGE,'platform_maintenance');
       await client.query('set local role anon');
       return (await client.query<T>(sql, values)).rows;
     });

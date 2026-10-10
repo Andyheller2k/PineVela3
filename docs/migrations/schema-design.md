@@ -1,11 +1,37 @@
 # Supabase application schema design
 
+Migration 37 reuses account proposal/vote entities for five-keyed-admin reviews and
+adds immutable founder final-rejection metadata. A private monotonic lifecycle counter
+prevents changed-and-restored account relationships from reviving consent. It stores
+no account policy, credentials or synthetic user records. New helpers are invoker
+functions, browser execution is revoked, and lifecycle-trigger column permissions
+cannot be used for direct revision writes. Actual account directory links derive from
+saved context ownership and staff-manager relationships. Policy application and
+deletion are intentionally unavailable until their own verified workflows are ported.
+
 Read [current-application-audit.md](current-application-audit.md) first. This is a
 fresh-start schema for the supported product; it does not import disposable JSON
 accounts or reproduce every JSON collection. No placeholder accounts or sample rows
 belong in the migrations.
 
+## One-way administrator announcements
+
+Migration 36 uses the existing notification/recipient relations. Severity is a nullable
+notification field for gateway messages; recipient-owned read and popup dismissal remain
+independent. A private delivery review stores the sender context FK, normalized selection
+digest, immutable portal-ID snapshot/counts, deadline and single notification FK/content
+digest. The snapshot is review evidence, not ownership proof; current relationships and
+active status are resolved again on send. Invoker guards enforce the sender, immutable
+completion and exact fanout. Private RLS/ACLs and existing recipient RLS remain in place.
+No generic chat table, marketer identity type or disposable product data is introduced.
+
 ## Identity and active account context
+
+Platform maintenance adds restrictive public-table policies and a maintenance predicate
+to existing explicit projections. The internal live bound-context check remains available
+to identify actual administrator recovery access. Private recovery notice/recipient tables
+snapshot active non-admin contexts at restoration, expire exactly 24 hours later, and
+store only server-stamped recipient dismissal. No notice or account is seeded.
 
 `auth.users` owns credentials, Google identities, recovery and sessions. `profiles`
 stores person fields keyed by `auth.users.id`. The user confirmed on 2026-10-09 that
@@ -151,7 +177,26 @@ Shared pricing decisions now use immutable previews, three distinct keyed approv
 and founder final execution. Private monotonic roster/key and pricing revisions invalidate
 stale reviews; changing a value back cannot revive votes. Final prices, audit and exact
 administrator notices commit together, while existing checkout quotes remain unchanged.
-Lost-key recovery and the remaining destructive governance workflows still require ports.
+Founder-keyed suspension/restoration uses a server-stamped membership session epoch.
+Old Auth sessions remain denied after restoration; credentials and consent history
+are preserved. SQL prevents founder suspension and generic context/removal bypasses.
+Permanent removal uses four other eligible voters, a private target-only appeal and
+founder-keyed final confirmation. SQL protects the reviewed electorate, immutable votes
+and server deadlines. Private `administrator_appeals` keeps text out of public snapshots.
+Accepted appeals revoke authority while retaining vote history. Closed administrator
+contexts and removed membership tombstones preserve relationships; private keys are
+deleted and the old slot becomes available to a different privately invited identity.
+Auth/primary accounts remain intact and receive final lifecycle notices.
+
+Key recovery uses the same proposal/vote tables, two distinct other administrators'
+approval keys, immutable 24-hour consent and roster/key revisions. The selected key clear,
+new credential version, administrator session invalidation, audit and exact notices commit
+atomically. Old administrator sessions fail both server authorization and browser RLS;
+replacement enrollment needs a new genuine provider sign-in. Administrator invitations
+now bind the reviewed mailbox, existing Auth UUID and issuer key version to one reserved
+slot and a 24-hour token. Acceptance is actual-session verified, single-use and SQL guarded;
+keys are enrolled separately. Issuer authority changes close grants permanently.
+Other destructive governance workflows still require ports.
 
 ## Authorization and migration order
 
@@ -197,3 +242,15 @@ Active administrators review; rejection allows a new submission version with pri
 evidence retained in private audit. Approval creates an unpaid pending store for the
 saved seller identity and permits that portal login, without payment/setup fabrication.
 Raw writes remain private and scoped status views prevent email-based account adoption.
+
+
+### Personal avatar references (migration 35)
+
+Profiles retain one canonical `avatar_path` and optional `avatar_asset_id` foreign key.
+A picture is a supported PineVela preset or a ready identity-owned `avatar` asset, never
+inline pixels/external URLs. Shared portal identities share this person-level picture;
+linked but distinct Auth subjects remain independent. Private media reads include only
+owner identity and the existing active housing staff-directory relationship. Active admin
+identities require their own portal/settings key for profile changes. Restrictive references
+require detachment before reviewed account/object deletion. Auth and operational data are
+preserved; no test-account import, reset or default runtime cutover is performed.

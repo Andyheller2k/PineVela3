@@ -12,6 +12,7 @@ import {hashCredentialAsync} from '../accountSecurity.js';
 import {SupabasePricing,pricingProposals,proposePricing} from '../supabase/pricing.js';
 import {checkAdministratorSettingsKey,requireSettingsGrant,SupabaseAdministratorSettings} from '../supabase/adminSettings.js';
 import {publicPlatformSettings,pricingSettings} from '../platformSettings.js';
+import {SupabaseAdminGovernance} from '../supabase/adminGovernance.js';
 dotenv.config({quiet:true});const id=process.argv[2];if(!id)throw new Error('Pass the encrypted migration-27 checkpoint UUID.');
 let checks=0;function check(value:unknown,label:string){assert.ok(value,label);checks++;}
 async function denied(work:()=>Promise<unknown>,status:number|string,label:string){let e:any;try{await work();}catch(error){e=error;}
@@ -131,8 +132,8 @@ try{await withIsolatedBackup(id,async config=>{
     await db.system(c=>c.query("update private.platform_settings set value=$1 where key='platform'",[JSON.stringify(prior)]));
     check((await view(changed.id)).status==='invalidated','Changing prices away and back cannot revive old approvals');
     const rosterChange=await propose(founder,keys[0],await quote(6));
-    await db.system(c=>c.query("update public.admin_memberships set status='suspended' where context_id=$1",[fourth.contextId]));
-    await db.system(c=>c.query("update public.admin_memberships set status='active' where context_id=$1",[fourth.contextId]));
+    await new SupabaseAdminGovernance(new SupabaseAuth(db)).setActive(founder,fourth.contextId,{active:false,privateKey:approvalKeys[0]});
+    await new SupabaseAdminGovernance(new SupabaseAuth(db)).setActive(founder,fourth.contextId,{active:true,privateKey:approvalKeys[0]});
     check((await view(rosterChange.id)).status==='invalidated','Changing membership away and back invalidates the baseline');
     const guess=await propose(founder,keys[0],await quote(7));
     await denied(()=>vote(second,keys[0],guess.id),403,'A foreign settings key cannot record a vote');
@@ -145,6 +146,7 @@ try{await withIsolatedBackup(id,async config=>{
     const concurrent=await Promise.allSettled([apply(founder,keys[0],left.id),apply(founder,keys[0],right.id)]);
     check(concurrent.filter(r=>r.status==='fulfilled').length===1 && concurrent.filter(r=>r.status==='rejected' && r.reason instanceof ApiError && r.reason.status===409).length===1,'Competing final pushes serialize to one execution');
     check(['applied','invalidated'].includes((await view(left.id)).status) && (await view(left.id)).status!==(await view(right.id)).status,'The losing proposal is durably invalidated');
+    await new SupabaseAdminGovernance(new SupabaseAuth(db)).setActive(founder,fourth.contextId,{active:false,privateKey:approvalKeys[0]});
     const keyChange=await propose(second,keys[1],await quote(10));
     await db.system(c=>c.query('delete from private.admin_secrets where context_id=$1',[fourth.contextId]));
     check((await view(keyChange.id)).status==='invalidated','Removing an enrolled key invalidates existing approvals');
@@ -165,7 +167,7 @@ try{await withIsolatedBackup(id,async config=>{
     check(((await db.actor(third,c=>c.query("select id from public.admin_proposals where kind='pricing'"))).rowCount || 0)>0,'RLS permits active administrator proposal reads');
     const leaks=(await db.pool.query(`select count(*) from public.notifications where message like '%scrypt%' or message like '%settings_key_version%'`)).rows[0].count;
     check(leaks==='0','Notifications contain no private key metadata');
-    check((await db.pool.query('select count(*) from public.notification_recipients where context_id=$1',[primary.contextId])).rows[0].count==='0','Pricing notifications target administrators, not primary users');
+    check((await db.pool.query("select count(*) from public.notification_recipients r join public.notifications n on n.id=r.notification_id where r.context_id=$1 and n.category='admin_settings'",[primary.contextId])).rows[0].count==='0','Pricing notifications target administrators, not primary users');
     check((await db.pool.query("select count(*) from public.notifications where category='admin_settings' and title='Pricing proposal executed'")).rows[0].count==='3','Each successful execution emits exactly one applied notice');
     check((await db.pool.query('select count(*) from auth.users')).rows[0].count==='5','No Auth identities were created');
   }finally{await db.close();}

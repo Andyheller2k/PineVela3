@@ -8,7 +8,7 @@ import { loadOrderPins } from './supabase/orderPins.js';
 dotenv.config({ quiet: true });
 const db = new SupabaseDatabase();
 // Refuse to serve a partially applied or inaccessible schema.
-await db.pool.query("select version from private.schema_migrations where version = '20261010000000'").then(result => {
+await db.pool.query("select version from private.schema_migrations where version = '20261010221033'").then(result => {
   if (!result.rowCount) throw new Error('Apply all Supabase migrations before starting the replacement server.');
 });
 const pinKey=loadOrderPins();

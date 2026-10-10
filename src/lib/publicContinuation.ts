@@ -1,4 +1,4 @@
-import { validatePublicContinuation } from '../../publicContinuation';
+import { validatePublicContinuation,validateLoginContinuation } from '../../publicContinuation';
 export { validatePublicContinuation };
 const storageKey = 'pinevela_public_continuation';
 
@@ -15,7 +15,7 @@ export function publicLoginPath(next: string | undefined, mode: 'login' | 'regis
 
 export function loginContinuation(search: string) {
   const params = new URLSearchParams(search);
-  const direct = validatePublicContinuation(params.get('next'));
+  const direct = validateLoginContinuation(params.get('next'));
   if (direct || !params.has('google_error')) return direct;
   // An expired OAuth exchange cannot recover its server-side state. Preserve
   // only this tab's catalog selection; ordinary logins still open the default page.

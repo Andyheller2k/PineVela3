@@ -1,5 +1,37 @@
 # Account moderation
 
+## Supabase review checkpoint (migration 37)
+
+The replacement backend now reads the actual account directory and supports proposals,
+five independent votes and the founder's final rejection for timed bans, feature
+restrictions and restorations. Each command requires the caller's current separate
+approval key and verified active administrator portal. The proposer counts once;
+administrator accounts remain protected by membership governance. Shared mailboxes
+never establish account ownership or directory links.
+
+SQL guards make review evidence and votes immutable, stamp a 24-hour lifetime and
+require all five current keyed administrators, including the founder. Roster/key
+revisions and a private monotonic account-lifecycle revision invalidate old consent,
+including changes that are subsequently reversed. Lifecycle invalidation currently
+conservatively covers any context, parent-link, staff/manager-assignment or allocation
+change; it is not limited to the target's branch. Profile appearance edits do not
+increment that revision. Proposal/vote/closure/final-rejection notices appear in the
+administrator Approvals module, with audit writes in the same transaction.
+
+**Final application and deletion remain disabled.** These reviews do not impose or
+remove a ban/restriction, revoke Auth sessions, delete records or notify users that an
+account action has taken effect. The remaining policy execution must cover Auth, API,
+RLS, inherited relationships and public seller visibility before it is enabled.
+Deletion additionally requires reviewed dependencies and verified database/Storage
+backup and cleanup. Real provider-authenticated browser acceptance remains pending.
+
+Verification: `npm run db:verify-account-reviews -- <latest-backup> <migration-27-backup>`
+uses an isolated restored database with genuine Google identities and unchanged Auth
+sessions. It tests consent, negative authority cases, SQL bypasses, atomic notices,
+monotonic invalidation and reconnection persistence. No operational account is changed.
+
+## Transitional JSON implementation
+
 The admin account directory remains an application feature after database migration. It lists credential identities by role and account ID; shared emails do not merge accounts. Pending requests without an account are not directory identities.
 
 In **Accounts**, select **Manage account** to propose a timed ban, feature restrictions, access restoration, or deletion. Every action needs five active founders with enrolled private approval keys, five separate approvals, and administrator 1's final application. The proposer’s approval counts as one. Administrator 1 can instead reject the final action with a recorded reason. Keys are separate from settings keys and never stored by the browser. Founders remain protected by existing membership governance.

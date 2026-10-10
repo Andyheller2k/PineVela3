@@ -23,3 +23,13 @@ export function validatePublicContinuation(value: unknown): string | undefined {
   if (!/^\d{1,5}$/.test(price)) return undefined;
   return `/user/dashboard?${new URLSearchParams({ marketItem: id, marketPrice: String(Number(price)) })}`;
 }
+
+/** Private invitation continuations stay in the URL/server OAuth state, never storage. */
+export function validateLoginContinuation(value: unknown): string | undefined {
+  const catalog=validatePublicContinuation(value);if(catalog)return catalog;
+  if(typeof value!=='string'||value.length>160||!value.startsWith('/admin-invitation?'))return undefined;
+  const url=new URL(value,'https://pinevela.invalid'),token=url.searchParams.get('token');
+  if(url.origin!=='https://pinevela.invalid'||url.pathname!=='/admin-invitation'||url.hash
+    ||url.searchParams.size!==1||url.searchParams.getAll('token').length!==1||!token||!/^[a-zA-Z0-9_-]{43}$/.test(token))return undefined;
+  return `/admin-invitation?token=${token}`;
+}

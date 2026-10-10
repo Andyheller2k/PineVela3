@@ -1,5 +1,47 @@
 # PineVela Security
 
+## Account approval review boundary (Supabase replacement)
+
+The verified active administrator portal and its own current approval-key version
+authorize account proposals, votes and founder final rejection. Settings/other-admin
+keys, client ownership fields and stale expected-context headers confer no authority.
+Private-key failure counters commit before denial. SQL requires five current keyed
+administrators, immutable votes/evidence and current roster/lifecycle revisions.
+Reversing lifecycle or roster changes does not revive prior consent. Administrator
+targets require their separate membership protocol. Browser/backend roles cannot
+write reviews or call private review helpers. Invoker lifecycle triggers can advance
+the private revision under a guarded column grant; direct writes cannot forge it.
+
+Approval, rejection and closure notifications belong to the exact reviewed active
+admin portals and the Approvals module. Mutations, notices and audits are atomic.
+Final policy application/deletion remains disabled, including native SQL transitions
+to executed. Auth/API/RLS enforcement, inherited policies and public seller visibility
+must be verified before enabling execution; deletion also needs reviewed dependencies
+and database plus Storage-byte backup/cleanup. Real signed-in browser acceptance and
+the elapsed 24-hour expiry journey remain verification gates.
+
+## Administrator announcement gateway (Supabase replacement)
+
+Directory, preview and send require a live account-bound administrator session and
+active membership, rechecked inside the transaction. Client sender/owner aliases and
+unsupported fields are rejected. A private, sender-bound 15-minute preview stores the
+normalized group/explicit-account selection and actual active recipient portals.
+Sending re-resolves current eligibility and locks recipients; changed selections need
+a new preview. A completed token accepts only identical content and returns the saved
+receipt, including after concurrent requests or reconnects. Notification, recipients,
+completion and private audit commit together. SQL guards defend immutable delivery
+snapshots, sender identity, message bodies and final fanout. These are one-way notices,
+not general chat. Sending preserves the existing admin authority rule; it does not
+change settings or destructive approval-key requirements.
+
+Recipient RLS binds each inbox/popup acknowledgement to its exact current context.
+Parent ownership and a shared Auth identity do not expose another portal's notification
+or dismissal. The seller market filter includes received admin announcements. Popup
+dismissal leaves the notification and its read state intact. Context headers check stale
+requests only; the session remains the source of authority. Frontend account changes
+remount gateway/popup state and ignore late responses. Provider-authenticated HTTP and
+browser journeys remain acceptance checks; isolated tests send no live announcements.
+
 ## Administrator settings credentials (Supabase replacement)
 
 Active administrator membership and a live account-bound Auth session are required.
@@ -7,11 +49,41 @@ Settings keys use salted scrypt with the administrator context and `settings` pu
 approval keys cannot authorize settings. Enrollment is one-time and requires an actual
 Auth session created within five minutes. Session refresh does not extend that window.
 SQL independently enforces ownership, fresh enrollment and immutable key metadata.
-Lost-key recovery remains unavailable until its separate approval workflow is migrated.
+Reviewed recovery now uses two other active administrators' separate approval keys.
+The proposer counts once, the target cannot vote, and either key can be recovered.
+Immutable consent expires after 24 hours; monotonic roster/key revisions invalidate
+outstanding reviews. The second approval atomically clears only the selected key,
+rotates its version, invalidates older administrator sessions, and commits audit and
+exact active-administrator notices. Refresh does not produce a new Auth session.
+The target must sign in again with the actual provider and enroll a replacement key.
+The founder's key can be recovered without removing founder membership. Wipe workflows still await migration.
+
+Suspension/restoration require the active founder's current approval-key grant, with
+server-derived session/role checks repeated after the shared settings lock. SQL guards
+protect the founder, immutable membership ownership and timestamps, and reject generic
+administrator context deletion or status changes. Each transition advances a membership
+session epoch; old sessions remain denied after restoration, including direct RLS and
+account switching. Keys, identities and governance history are preserved. Notifications
+include only active administrators, the affected admin and its primary account.
+
+Permanent administrator removal requires founder-keyed proposal, exactly four distinct
+eligible approvals excluding the target, a fresh 24-hour appeal window and a separate
+founder-keyed final confirmation. Appeal text/decision reasons are in a private RLS table
+with no browser/backend grants and are projected only to the founder and target.
+Submitted appeals cannot expire into execution: the founder must accept or reject them.
+Accepted appeals revoke authority without deleting historic votes. Roster/key revisions
+invalidate unfinished reviews. SQL separately enforces proposal/vote/appeal transitions,
+immutable snapshots, server deadlines, quorum and exact confirmation. Removed contexts
+and memberships remain as immutable history; keys are deleted and portal access is
+revoked. Auth/primary identities are preserved. Slot reuse excludes removed memberships.
+All authenticated administrator transactions take the settings lock before actor row
+locks to prevent a target request deadlock during context closure. Failed execution rolls
+back keys, context, membership, audit and notifications together. Actual authenticated
+provider HTTP/UI journeys and the elapsed 24-hour no-appeal path remain acceptance gates.
 
 Five failed settings-key attempts lock that administrator's settings access for 15 minutes.
 Denials commit before the HTTP error, so counters survive restart. Approval attempts
-remain separate. Receiving-account changes recheck the session, active membership,
+remain separate and have their own five-attempt, 15-minute persisted lockout. Receiving-account changes recheck the session, active membership,
 key version and lockout after the real Paystack read. Browser/backend roles cannot read
 key hashes or write private configuration. Destination changes retain other settings
 and preserve existing immutable payment quotes; audit and administrator notifications
@@ -22,6 +94,24 @@ See [Supabase sessions](https://supabase.com/docs/guides/auth/sessions) and
 [Paystack subaccounts](https://paystack.com/docs/api/subaccount/). An actual fresh Google
 administrator enrollment and selecting a verified non-default provider subaccount
 remain acceptance checks; no Auth sessions or provider accounts are fabricated.
+
+## Verified administrator invitations (Supabase replacement)
+
+Only active administrator #1 with their current approval key may reserve or cancel an
+invitation. The private token is shown once and stored as SHA-256, with an exact 24-hour
+deadline and immutable mailbox, slot, issuer key version and existing Auth UUID binding.
+An actual Google/email-verified primary session, mailbox ownership and token are all
+required. Existing non-primary portals are excluded. Membership insertion independently
+requires the same grant in SQL; token possession or client identity fields alone cannot
+promote an account. Issuer key/status changes immediately close invitations, including
+later reversals. Acceptance creates empty private credentials and commits audit/notices
+atomically. It does not generate a password, Auth user or administrator key.
+
+Private invitation redirects allow only their exact route and a valid token, rejecting
+foreign origins, fragments and added parameters. Tokens remain in URL/OAuth state rather
+than browser storage, are removed from the route after acceptance, and are excluded from
+roster/history responses. Browser/backend roles cannot read the table or invoke its
+privileged functions. Real provider sign-in and authenticated invitation UI remain gates.
 
 ## Shared pricing approvals (Supabase replacement)
 
@@ -45,6 +135,43 @@ and receiving-account writes acquire the same settings advisory lock before cred
 Future key and membership lifecycle ports must preserve compatible transaction lock ordering.
 See PostgreSQL [transaction locks](https://www.postgresql.org/docs/18/explicit-locking.html).
 Positive provider-authenticated pricing HTTP/UI journeys remain an acceptance gate.
+
+Keyed public-setting requests accept contact details, announcement text, boolean maintenance
+state and restoration message text. They reject pricing, actor/ownership assertions and unknown fields. Social links
+must use HTTPS on supported social domains without credentials or custom ports; WhatsApp
+uses normalized country-code digits. Live membership, session and key version are
+rechecked inside the same locked write transaction. Identical retries create no repeated
+notices; changed announcements target active non-admin portals rather than administrator
+accounts. The private configuration ACLs and notification recipient RLS remain unchanged.
+
+## Platform maintenance (Supabase replacement)
+
+Only an active administrator with their separate settings key may change maintenance state.
+Ordinary actor transactions and public invitation/catalog reads hold a shared maintenance
+advisory lock before session/record locks; transitions take the exclusive lock first.
+Activation waits for those in-flight database transactions. Both privileged actor lifecycle
+writes and backend RLS transactions then reject non-admin operations with HTTP 503.
+Restrictive policies cover every current public table; existing explicit projection views
+also check maintenance access. New public tables and projections must preserve this boundary.
+Direct Storage reads continue to require the current bound context, which maintenance hides.
+
+The request guard runs before upload and JSON parsing. Health/public settings, logout and
+administrator authentication remain available. Password/Google binding verifies the actual
+selected context before saving a session; rejected provider sessions are signed out. An
+administrator cannot switch to a paused ordinary portal. Signed payment webhooks remain
+available to reconcile financial evidence; they still authenticate and reverify payments.
+Provider authentication callbacks already underway may confirm an Auth identity; application
+portal binding still refuses non-admin access. Provider signup/delivery acceptance needs real testing.
+External transfers already started cannot be rolled back with PostgreSQL. Upload failure
+cleanup and provider-result recording retain their narrowly scoped system writes.
+
+Restoration requires nonblank message text and atomically records a 24-hour notice, its
+exact existing active non-admin recipient contexts, audit and active-admin notifications.
+Private notice tables have RLS and no browser grants. The backend reads only the latest
+eligible notice and updates only its own recipient's dismissal column. SQL stamps dismissal
+and prevents resetting it, changing recipients or acknowledging expired/old notices.
+No client identity or timestamp establishes eligibility. Later contexts are excluded from
+the saved audience. Positive fresh provider login and authenticated UI remain acceptance gates.
 
 ## Verified payment boundary (Supabase replacement)
 
@@ -95,7 +222,8 @@ triggers enforce account, purpose and inspection relationships. Image responses 
 publication/plan or private account access and verify digest/size, with no-store and a sandbox
 CSP. Failed transfers are reconciled through Storage APIs; ready assets are never removed by
 the stale-upload cleanup command. Ordinary replacement JSON bodies are 1MB. Distributed IP
-limits, avatar media, object deletion and byte backups remain launch gates. Maintenance
+limits, operational object deletion and byte backups remain launch gates. Owned avatar media
+is ported in migration 35, with authenticated provider/browser acceptance still required. Maintenance
 report photographs use the original resident allocation or reporting manager residence;
 repair photographs use the exact accepted staff assignment and ticket. Related readers
 are the reporter, assigned managers and exact active assigned staff. Parent portals and
@@ -646,3 +774,24 @@ paid publication, reserved stock and retired evidence. Retiring preserves purcha
 history rather than cascading through orders. Browser roles cannot perform raw writes.
 Seller reads, form drafts and upload results discard responses after account changes;
 cropped covers upload through private Storage before becoming listing references.
+
+
+## Personal avatar boundary (migration 35)
+
+Profile saves reject client identity/ownership/role fields, changed credential email,
+conflicting picture aliases, external URLs, inline pixels and other identities' media.
+Custom pictures require an owned ready `avatar` asset and exact restrictive FK/path pairing.
+The server rechecks the live portal at reservation, finalization and profile commit. An
+optional expected-context header only rejects stale requests; it never supplies identity.
+Administrator profile/upload writes require the current settings-key version; primary
+access to the same identity cannot bypass it. Browser roles retain no direct profile/media
+write grants, and the backend role retains owner RLS without BYPASSRLS.
+
+Avatar read access is separate from catalog media and generic administrator media access.
+Private helpers return only authorization booleans, verify the actual Auth subject/current
+portal, use an empty search path and revoke public execution. Only the current portrait of
+active staff is visible through existing authorized housing directory relationships. Owner
+sharing uses exact Auth UUID equality; primary-owner links confer no personal media access.
+SQL prevents removal/state retirement while a profile references the asset. Operational
+account deletion must detach references and use Storage deletion, with separate encrypted
+byte backups once permanent objects exist. No Storage metadata is deleted directly in SQL.

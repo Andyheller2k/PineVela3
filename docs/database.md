@@ -1,5 +1,21 @@
 # PineVela Database Model
 
+## Account approval reviews (migration 37)
+
+Account review evidence/votes reuse `admin_proposals` and `admin_votes`, with five-admin
+quorum, 24-hour server-stamped lifetime and immutable founder final-rejection metadata.
+The target is a saved non-administrator context. Directory relationships use saved
+primary ownership and current staff-manager assignments; email never supplies a link.
+
+`private.account_review_state` holds only a monotonic lifecycle revision. Invoker
+triggers advance it for context, parent, assignment and allocation changes, so a
+change followed by reversal cannot revive old consent. Invalidation is conservatively
+global for these lifecycle changes. Its backend SELECT/column-UPDATE grants exist only
+for invoker lifecycle triggers; a nested-trigger guard denies direct revision writes.
+Browser roles have no grants, and new helper functions have no public execution.
+Roster/key revision and exact review snapshots are independently checked by SQL.
+Reviews create no active account policy and enable no destructive execution.
+
 ## Supabase replacement status
 
 The normalized Supabase schema and RLS have been created without importing disposable
@@ -10,6 +26,19 @@ keys and private enrollment challenges establish relationships. The primary owne
 room and bed each allow only one active allocation. See the [implementation status](migrations/supabase-implementation-status.md)
 and [schema design](migrations/schema-design.md). Preserve JSON and uploads until cutover
 verification succeeds.
+
+Migration 36 reuses `notifications` and `notification_recipients` for one-way admin
+announcements. `admin_message_type` preserves the selected severity independently of
+the recipient-scoped category. `private.admin_message_deliveries` keeps the issuing
+admin, normalized selection digest, immutable sorted portal-ID snapshot/counts,
+15-minute expiry and the single completed notification/content digest. The ID snapshot
+is review evidence, not an authorization relationship: send resolves and locks current
+account rows again. Sender/notification foreign keys preserve delivery history.
+Private preview rows have RLS and no browser/backend grants. Invoker triggers enforce
+the active sender, valid initial snapshot, one completion, exact saved recipients and
+immutable message bodies; a retry returns the original receipt without new notices.
+Unsent expired previews remain historical records; reviewed operational cleanup is
+separate from delivery. No additional chat schema or retired account type is created.
 
 `private.admin_secrets` stores independent settings-key versions, failed-attempt windows
 and lockout timestamps alongside the separate approval credential. Migration 28 adds
@@ -27,6 +56,61 @@ checks current membership, keys and baseline, applies only the reviewed price fi
 records execution and commits administrator notices and audit together. Existing checkout
 quotes retain their original prices. Public-table RLS and private configuration ACLs remain
 enforced; no accounts or operational proposal data are seeded.
+
+Public contact details and announcements share the existing private platform configuration
+row. Keyed server writes merge only those fields while holding the settings lock; audit
+and exact recipient notifications commit with the update. Announcement history remains
+in the existing `notifications` and `notification_recipients` tables. No additional public
+table, seed record or browser write policy is introduced.
+
+Maintenance state stays in the private platform row. Migration 30 adds private
+`maintenance_recovery_notices` and `maintenance_recovery_recipients`: an actual administrator
+restores service with a message, PostgreSQL records one creation time and exactly 24 hours
+of visibility, and the transaction snapshots existing active non-admin account contexts.
+The recipient composite key prevents duplicate delivery. Dismissal is server stamped,
+account scoped and permanent for that notice. Browser roles have no table grants; the
+backend can read through RLS and update only its own dismissal column. State transitions
+also commit administrator settings notifications and audit. There are no seeded notices.
+Restrictive public-table policies and existing projection predicates enforce maintenance;
+session/role/PIN checks remain in the internal bound-context lookup.
+
+Migration 31 reuses `admin_proposals` and `admin_votes` for independent key recovery.
+`private.admin_secrets` adds an approval-key version, attempt window and server-controlled
+session invalidation timestamp. `admin_proposals.recovery_roster_revision` binds each
+24-hour review to the existing monotonic roster/key revision. The proposer contributes
+one vote; another administrator's approval clears the selected key and completes the
+proposal in one transaction. The target cannot vote. Immutable history, current roster,
+credential grants and quorum are independently checked by SQL triggers. Actor binding,
+context switching and browser RLS reject older administrator Auth sessions after recovery;
+no Auth users or provider session timestamps are fabricated or altered by this migration.
+New private functions have no browser/backend execution grants. Other governance commands
+remain unavailable in the opt-in backend until ported.
+
+Migration 32 extends the existing private `admin_invitations` table with the recipient's
+reviewed name, optional exact Auth UUID, issuing approval-key version, accepted context
+and cancellation reason. Open mailbox and slot uniqueness protect reservations; SQL
+stamps the exact 24-hour deadline and immutable terminal history. Slots 2–5 require the
+actual verified invitation protocol before membership insertion. Acceptance, empty secret
+records, notices and audit commit together, while Auth accounts/passwords are unchanged.
+Issuer authority changes immediately close grants; reversal does not reopen them. Browser
+roles have no invitation table/function grants and the ordinary backend does not bypass RLS.
+
+Migration 33 adds `admin_memberships.sessions_invalidated_at`. Founder approval is
+required for active/suspended transitions; SQL stamps the epoch and change time.
+Founder suspension, membership reassignment, direct removal and administrator context
+ownership/status/deletion bypasses are denied. The private session predicate checks
+this epoch and the existing credential-recovery epoch against genuine Auth sessions.
+Status changes preserve credentials/history, invalidate stale governance consent and
+atomically audit and notify the exact roster plus the affected primary identity.
+
+Migration 34 adds removal roster revision/appeal deadlines and the private RLS table
+`administrator_appeals`. Four immutable votes from the other eligible administrators,
+a target-only appeal and founder decision/final confirmation govern removal. Appeal
+text is never added to public proposal snapshots or shared notifications. SQL stamps
+deadlines and guards every transition. Roster/key changes invalidate unfinished reviews.
+Removed memberships and closed admin contexts preserve foreign-key history; private
+keys are deleted and only live memberships occupy unique slots. Auth and primary access
+remain intact. Final notices reach the exact roster and affected primary account.
 
 ## Verified payment quotes and access periods (replacement)
 
@@ -74,7 +158,8 @@ account relationship. Browser object writes and media-registry mutations are den
 transfers are reconciled through Storage APIs, preserving ready objects. Maintenance
 report media records the original allocation and residence; repair evidence records its
 exact ticket. Ready evidence is private and accessible only to saved related accounts.
-Avatar uploads and operational object deletion are still cutover gates. PostgreSQL backups include
+Owned avatar uploads and profile foreign-key references are ported by migration 35.
+Operational account/object deletion and permanent byte-backup restoration remain cutover gates. PostgreSQL backups include
 Storage metadata; object bytes require a separate backup once any permanent objects exist.
 
 ## Marketplace Purchase Reviews During Migration
@@ -543,3 +628,29 @@ Ready owned photographs attach in order with a required cover at publication com
 Attachment identities cannot move between listings. Removal marks a listing retired
 and unpublished, preserving order references and evidence; active reservations block
 removal. Audit and exact seller notifications commit with the inventory change.
+
+
+## Owned personal profiles and avatars (migration 35)
+
+`PUT`/`POST /api/auth/profile` derive the profile from the verified Auth subject. Editable
+fields are display name, contact phone and one canonical avatar; unchanged credential email
+is accepted for the existing resident form, but email/ownership/roles cannot be changed.
+Pictures use the ten supported PineVela presets or an owned ready `avatar` media asset.
+`profiles.avatar_asset_id` is a restrictive foreign key paired with its exact API path.
+Inline data and external URLs cannot be stored as profile pictures.
+
+JPEG/PNG/WebP uploads of at most 5MB are re-encoded as PNG at up to 512px through
+`/api/storage/upload-profile-image`; administrators retain their existing
+`/api/storage/upload-admin-profile` alias. The existing private bucket, reservations,
+quota/integrity checks and interrupted-transfer cleanup apply. An active administrator's
+identity requires its admin portal and current settings key even when a primary portal
+shares the identity. SQL guards enforce this independently of frontend controls.
+
+Same-email portals using one Auth identity share that identity's picture. Separate verified
+work/student identities and their linked primary owners do not inherit each other's media.
+Private owner RLS additionally permits only the current portrait of active staff through the
+existing authorized housing directory relationship. Ending employment removes that access.
+Public catalog image rules do not publish avatars. Referenced assets cannot be retired or
+deleted; reset/deletion workflows must detach the profile first and delete bytes through the
+Storage API. Replacement pictures do not automatically delete prior ready objects; reviewed
+object cleanup and permanent object-byte backups remain cutover work.

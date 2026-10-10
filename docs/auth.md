@@ -1,6 +1,6 @@
 # PineVela Authentication and Authorization
 
-## Migration status (2026-10-09)
+## Migration status (2026-10-10)
 
 The running `server.ts` still uses transitional local credentials and sessions.
 The separate `supabase-server.ts` backend implements Supabase password/Google login,
@@ -15,12 +15,47 @@ Primary-user sign-in must never select a child's account without that account's 
 verified Auth session. The legacy-provider description below documents the running
 transition implementation, not the final target. See [migration status](migrations/supabase-implementation-status.md).
 
+Field officers sign in through the main `/login` page. All four officer workspace
+URLs require an officer role; an administrator session cannot enter that workspace.
+The former officer-only sign-in form and its general-login fallback are removed.
+Officer logout revokes the session and returns to `/login`. Existing compatibility
+login APIs still authenticate actual officer records and reject admin credentials.
+
 In the replacement backend, an active administrator enrolls a separate settings key
 within five minutes of an actual Google or verified-email sign-in. A refresh token does
 not create a fresh enrollment window, and no local password is required for Google-only
 accounts. The key is displayed once and its salted, context-bound hash stays private.
-Public signup never grants administrator membership. Lost-key governance recovery and
-an actual fresh administrator enrollment remain migration acceptance gates.
+Public signup never grants administrator membership. Approval keys use the same real
+fresh-sign-in requirement, with their own salted hash, version and persisted lockout.
+Recovery requires two other active administrators with enrolled approval keys; the
+proposer counts once and the target cannot vote. A successful recovery clears only the
+selected key and invalidates the target's older administrator app sessions, including
+browser RLS access. Refresh cannot restore access: the target needs a new provider Auth
+session and fresh enrollment. Auth accounts are preserved. Real fresh enrollment and
+post-recovery provider sign-in remain acceptance gates.
+
+Founder-keyed suspension and restoration also advance a server-controlled membership
+session epoch. SQL and every administrator binding check enforce both the membership
+epoch and the key-recovery epoch against the actual Auth session creation time.
+Restoration cannot revive an old session through refresh or the account switcher.
+The primary identity and keys are preserved; the primary inbox receives the person's
+own suspension/restoration notices. Actual restored provider sign-in remains a gate.
+
+Permanent administrator removal closes only that portal and marks its membership removed.
+Every server binding, context switch and direct RLS check denies its existing sessions.
+The shared Auth identity and primary portal remain intact; administrator keys are deleted.
+Four other eligible approval keys, private appeal review and explicit founder confirmation
+are required. Public signup and primary login cannot restore a removed administrator.
+
+Private administrator invitations now require the recipient's actual verified primary
+session, matching mailbox, one-time token and the saved Auth UUID when known at issuance.
+The founder's current approval-key version and reserved slot are rechecked in SQL.
+Acceptance creates membership, never a local password or automatic key. The recipient
+signs in as an administrator and freshly enrolls their own keys. The invitation path is
+an explicit post-login allowlist entry, preserved through Google PKCE or email verification
+in the URL; it is never placed in browser storage. Ordinary Google administrator sign-in
+returns to the administrator dashboard using the server-verified bound role. Existing secondary portals cannot be
+promoted by supplying an email or identity field.
 
 Manager password changes and self-deletion require that manager's authenticated account.
 Primary accounts may view their linked registration status but cannot reset or delete the
@@ -227,3 +262,20 @@ the primary session. Name and student email come from its confirmed Auth subject
 The application API rejects submitted passwords, owner IDs and identity aliases. Admin
 review activates only the saved seller portal; store setup and verified payment remain
 separate. Same-email resident/seller identities retain their separate portal PINs.
+
+
+## Profile edits during Supabase migration
+
+Migration 35 supports owned contact/picture edits without changing the verified credential
+email, account owner or portal kind. Picture aliases project one persisted value; no Google
+picture or previous user's cached avatar is used as another identity's fallback. The same
+Auth subject shares its picture across portals; separately verified linked identities remain
+independent. Active administrator identities must use the admin portal and settings key,
+including when a primary portal also exists for that identity.
+
+Profile editors upload custom pixels to private Storage before saving their owned reference.
+`X-PineVela-Profile-Context` rejects requests that started under a different active portal;
+it grants no authority. Editors ignore late responses after an account change or unmount. Profile updates also
+pass the expected account ID to the functional Auth state update, which checks the
+current account before applying a queued response.
+Actual provider-authenticated profile HTTP/browser acceptance remains a cutover gate.

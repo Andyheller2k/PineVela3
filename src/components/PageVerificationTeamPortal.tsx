@@ -1,5 +1,6 @@
 import { activateOnKeyboard } from '../lib/keyboardActivation';
 import DashboardOverlay from './DashboardOverlay';
+import ProtectedRoute from './ProtectedRoute';
 import { sessionFetch as fetch } from '../lib/session';
 import { usesSupabasePersistence } from '../lib/persistence';
 import React, { useState, useEffect } from 'react';
@@ -14,16 +15,12 @@ import {
   CheckCircle2,
   AlertTriangle,
   FileText,
-  User,
   Building,
   ArrowRight,
-  ArrowLeft,
   Lock,
-  Mail,
   LogOut,
   RefreshCw,
   Eye,
-  EyeOff,
   Crosshair,
   Upload,
   Check,
@@ -67,37 +64,26 @@ interface InspectionItem {
 }
 
 export default function PageVerificationTeamPortal() {
+  const { user } = useAuth();
+  return <ProtectedRoute allowedRoles={['verification_team', 'officer', 'field_officer']}>
+    <OfficerWorkspace key={user?.id} />
+  </ProtectedRoute>;
+}
+
+function OfficerWorkspace() {
   const navigate = useNavigate();
-  const { user, login: authLogin, setSessionUser, logout: authLogout } = useAuth();
-
-  // Authentication State
-  const [officerSession, setOfficerSession] = useState<any>(null);
-
-  // Automatically synchronize with AuthContext user if role is verification team or officer
-  useEffect(() => {
-    if (user && (user.role === 'verification_team' || user.role === 'officer' || user.role === 'field_officer' || user.role === 'admin')) {
-      setOfficerSession(user);
-    } else { setOfficerSession(null); }
-  }, [user]);
-
-  const [loginEmail, setLoginEmail] = useState('');
-  const [loginPassword, setLoginPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [isLoggingIn, setIsLoggingIn] = useState(false);
-  const [loginError, setLoginError] = useState<string | null>(null);
+  const { user, setSessionUser, logout: authLogout } = useAuth();
+  const officerSession = user!;
+  const mounted = React.useRef(true);
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
 
   // Active Tab: 'inspections' or 'options'
   const [activeTab, setActiveTab] = useState<'inspections' | 'options'>('inspections');
   const [showSignoutConfirm, setShowSignoutConfirm] = useState(false);
 
   const handleSaveAvatar = (newAvatarUrl: string) => {
-    const updatedSession = { ...officerSession, avatar: newAvatarUrl, photoUrl: newAvatarUrl, photo: newAvatarUrl, profilePicture: newAvatarUrl };
-    setOfficerSession(updatedSession);
-    try {
-      if (user) {
-        setSessionUser({ ...user, avatar: newAvatarUrl, photoUrl: newAvatarUrl, photo: newAvatarUrl, profilePicture: newAvatarUrl });
-      }
-    } catch (e) {}
+    if (!mounted.current) return;
+    setSessionUser({ ...officerSession, avatar: newAvatarUrl, photoUrl: newAvatarUrl, photo: newAvatarUrl, profilePicture: newAvatarUrl }, officerSession.id);
   };
 
   // Inspections State
@@ -160,12 +146,12 @@ export default function PageVerificationTeamPortal() {
       });
       if (res.ok) {
         const data = await safeJson(res);
-        setInspections(Array.isArray(data) ? data : []);
+        if (mounted.current) setInspections(Array.isArray(data) ? data : []);
       }
     } catch (err) {
       console.error("Failed to load inspections:", err);
     } finally {
-      setIsLoadingInspections(false);
+      if (mounted.current) setIsLoadingInspections(false);
     }
   };
 
@@ -175,64 +161,8 @@ export default function PageVerificationTeamPortal() {
     }
   }, [officerSession]);
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoginError(null);
-    setIsLoggingIn(true);
-
-    const cleanInput = loginEmail.trim();
-    const cleanPass = loginPassword.trim();
-
-    try {
-      // First try specialized verification-teams login endpoint
-      let loginSuccessful = false;
-      let userData: any = null;
-
-      const res = await fetch('/api/verification-teams/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: cleanInput,
-          officerId: cleanInput,
-          usernameOrEmail: cleanInput,
-          password: cleanPass
-        })
-      });
-
-      const data = await safeJson(res);
-
-      if (res.ok && data.success) {
-        loginSuccessful = true;
-        userData = data.user;
-      } else {
-        // Fallback to standard auth login
-        if (authLogin) {
-          const authRes = await authLogin(cleanInput, cleanPass);
-          if (authRes) {
-            loginSuccessful = true;
-            userData = authRes;
-          }
-        }
-      }
-
-      if (!loginSuccessful || !userData) {
-        throw new Error(data?.error || 'Invalid credentials. Please check your official email/Officer ID and password.');
-      }
-
-      setOfficerSession(userData);
-      if (setSessionUser) {
-        setSessionUser(userData);
-      }
-    } catch (err: any) {
-      setLoginError(err.message || 'Login failed. Please verify your officer credentials.');
-    } finally {
-      setIsLoggingIn(false);
-    }
-  };
-
   const handleLogout = async () => {
     if (authLogout && !await authLogout()) return;
-    setOfficerSession(null);
     localStorage.removeItem('pinevela_officer_session');
     localStorage.removeItem('pinevela_session_token');
     localStorage.removeItem('token');
@@ -241,6 +171,7 @@ export default function PageVerificationTeamPortal() {
     localStorage.removeItem('pinevela_user');
     setActiveInspection(null);
     setViewingSubmittedReport(null);
+    navigate('/login', { replace: true });
   };
 
   // Live GPS Coordinate Fetcher
@@ -509,7 +440,6 @@ export default function PageVerificationTeamPortal() {
           </div>
         </div>
 
-        {officerSession ? (
           <div className="flex items-center gap-2 sm:gap-3">
             {/* Tab Navigators */}
             <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200">
@@ -569,114 +499,11 @@ export default function PageVerificationTeamPortal() {
               <span className="hidden sm:inline">Sign Out</span>
             </button>
           </div>
-        ) : (
-          <div className="flex items-center gap-2.5">
-            
-            <button
-              type="button"
-              id="btn-verification-exit-header"
-              onClick={() => navigate('/login')}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 border border-slate-200 rounded-xl text-xs font-black transition-all shadow-xs cursor-pointer group"
-              title="Exit to PineVela Login"
-            >
-              <ArrowLeft className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform text-slate-600" />
-              <span>Exit to Login</span>
-            </button>
-          </div>
-        )}
+
       </header>
 
       {/* Content Container */}
       <div className="w-full max-w-6xl z-10">
-        {!officerSession ? (
-          /* Verification Officer Login Screen */
-          <motion.div 
-            initial={{ opacity: 0, y: 15 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="max-w-md mx-auto bg-white/90 backdrop-blur-xl border border-slate-200/80 rounded-3xl p-6 sm:p-8 shadow-xl"
-          >
-            
-
-            <div className="text-center mb-6">
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-900 to-indigo-900 text-white flex items-center justify-center mx-auto mb-3 shadow-lg shadow-blue-900/20">
-                <ShieldCheck className="w-8 h-8" />
-              </div>
-              <h2 className="text-xl font-black text-slate-900">Verification Officer Sign In</h2>
-              <p className="text-slate-500 text-xs mt-1.5 leading-relaxed">
-                Access your assigned property physical inspections and submit verified ground audit reports.
-              </p>
-            </div>
-
-            {loginError && (
-              <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2.5 mb-5 shadow-xs">
-                <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
-                <span>{loginError}</span>
-              </div>
-            )}
-
-            <form onSubmit={handleLogin} className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                  Official Email / Officer ID
-                </label>
-                <div className="relative">
-                  <User className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                  <input aria-label="Official Email / Officer ID"
-                    type="text"
-                    required
-                    value={loginEmail}
-                    onChange={(e) => setLoginEmail(e.target.value)}
-                    placeholder="e.g. inspector.mensah@pinevela.com or PV-INSP-2026-01"
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-2.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white transition-all font-medium"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                  Officer Password
-                </label>
-                <div className="relative">
-                  <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                  <input aria-label="Officer Password"
-                    type={showPassword ? "text" : "password"}
-                    required
-                    value={loginPassword}
-                    onChange={(e) => setLoginPassword(e.target.value)}
-                    placeholder="••••••••"
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-10 py-2.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white transition-all font-medium"
-                  />
-                  <button aria-label={showPassword ? 'Hide password' : 'Show password'} aria-pressed={showPassword}
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
-                  >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                disabled={isLoggingIn}
-                className="w-full py-3 rounded-xl bg-gradient-to-r from-blue-900 to-indigo-900 hover:from-blue-850 hover:to-indigo-850 text-white font-black text-xs flex items-center justify-center gap-2 shadow-lg shadow-blue-900/20 disabled:opacity-50 transition-all cursor-pointer mt-3"
-              >
-                {isLoggingIn ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    <span>Authenticating Officer...</span>
-                  </>
-                ) : (
-                  <>
-                    <span>Enter Field Dashboard</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </>
-                )}
-              </button>
-            </form>
-          </motion.div>
-        ) : (
-          /* Authenticated Verification Officer Workspace */
           <div className="space-y-6">
             {activeTab === 'options' ? (
               /* Officer Options & Profile Picture Tab */
@@ -1461,7 +1288,6 @@ export default function PageVerificationTeamPortal() {
             </>
           )}
           </div>
-        )}
       </div>
 
       {/* Full Filed Audit Report & Inspection History Modal */}

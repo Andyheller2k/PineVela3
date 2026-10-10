@@ -40,6 +40,10 @@ export default function ResidenceDeletionPanel({ selectedHostel, onClose }: { se
     finally { setBusy(false); }
   }
   const keyField = <label className="block text-sm font-semibold">Your private approval key<input aria-label="Hostel deletion approval key" type="password" autoComplete="off" maxLength={128} value={privateKey} onChange={e => setPrivateKey(e.target.value)} className={control} /></label>;
+  if (import.meta.env.VITE_PERSISTENCE === 'supabase') return <section aria-label="Hostel deletion approvals" className="rounded-2xl border border-blue-200 bg-white/70 p-5 text-slate-900">
+    <p role="status">Hostel deletion approvals are awaiting migration. Approval-key recovery is available in Admin Approvals.</p>
+    {selectedHostel && <button type="button" onClick={onClose} className={action}>Close</button>}
+  </section>;
   return <section aria-label="Hostel deletion approvals" className="space-y-4 rounded-3xl border border-blue-200 bg-white/70 p-5 text-slate-900">
     <h3 className="text-lg font-bold">Hostel deletion approvals</h3>
     <p className="text-sm">At least two distinct administrators must approve using their own keys. Administrator #1 (Andyheller2k) always makes the final keyed decision. Approvals expire after 24 hours.</p>

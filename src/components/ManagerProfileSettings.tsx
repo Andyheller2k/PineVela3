@@ -1,15 +1,12 @@
-import DashboardOverlay from './DashboardOverlay';
-import { renderAvatarGraphic } from './UserAvatarSelector';
-import React, { useState } from 'react';
-import { User, Phone, Mail, Camera, Building, Briefcase, Check, X, Sparkles, Upload, Lock } from 'lucide-react';
+import { renderAvatarGraphic,PRESET_AVATARS as SYSTEM_AVATARS } from './UserAvatarSelector';
+import { uploadProfileImage } from '../lib/profileImages';
+import React, { useState,useRef,useEffect } from 'react';
+import { User, Check, Upload, Lock } from 'lucide-react';
 
-interface ManagerProfileModalProps {
-  isOpen: boolean;
-  onClose: () => void;
+interface ManagerProfileSettingsProps {
   currentUser: any;
   onManageAccount?: () => void;
-  onSaveProfile?: (updatedProfile: any) => Promise<void> | void;
-  onSave?: (updatedProfile: any) => Promise<void> | void;
+  onSave: (updatedProfile: any) => Promise<void> | void;
 }
 
 const PRESET_AVATARS = [
@@ -21,14 +18,14 @@ const PRESET_AVATARS = [
   'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=300&q=80'
 ];
 
-export default function ManagerProfileModal({
-  isOpen,
-  onClose,
+export default function ManagerProfileSettings({
   currentUser,
   onManageAccount,
-  onSaveProfile,
   onSave
-}: ManagerProfileModalProps) {
+}: ManagerProfileSettingsProps) {
+  const supabaseMode=import.meta.env.VITE_PERSISTENCE==='supabase';
+  const mounted=useRef(true);
+  useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;};},[]);
 
   const isVerified = Boolean(
     currentUser?.isVerified === true || 
@@ -43,14 +40,17 @@ export default function ManagerProfileModal({
   const [roleTitle, setRoleTitle] = useState(currentUser?.roleTitle || '');
   const [photo, setPhoto] = useState(currentUser?.photo || currentUser?.avatar || currentUser?.photoUrl || currentUser?.avatarUrl || currentUser?.profilePicture || '');
   const [isSaving, setIsSaving] = useState(false);
+  const [saveError,setSaveError] = useState('');
+  const [saved, setSaved] = useState(false);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      if(!['image/jpeg','image/png','image/webp'].includes(file.type)||file.size>5*1024*1024){setSaveError('Choose a JPEG, PNG or WebP picture up to 5MB.');return;}
       const reader = new FileReader();
       reader.onloadend = () => {
         if (typeof reader.result === 'string') {
-          setPhoto(reader.result);
+          if(mounted.current)setPhoto(reader.result);
         }
       };
       reader.readAsDataURL(file);
@@ -61,57 +61,52 @@ export default function ManagerProfileModal({
     e.preventDefault();
     if (isSaving) return;
     setIsSaving(true);
+    setSaveError('');
+    setSaved(false);
     try {
+      const savedPhoto=await uploadProfileImage(photo,String(currentUser?.id));
+      if(!mounted.current)return;
       const payload = {
         name: name.trim(),
         phone: phone.trim(),
         organization: isVerified ? (currentUser?.organization || organization.trim()) : organization.trim(),
         roleTitle: isVerified ? (currentUser?.roleTitle || roleTitle.trim()) : roleTitle.trim(),
-        photo,
-        avatar: photo,
-        photoUrl: photo,
-        avatarUrl: photo
+        photo:savedPhoto,
+        avatar: savedPhoto,
+        photoUrl: savedPhoto,
+        avatarUrl: savedPhoto
       };
-      if (onSaveProfile) {
-        await onSaveProfile(payload);
-      } else if (onSave) {
-        await onSave(payload);
+      await onSave(payload);
+      if(mounted.current) {
+        setPhoto(current => current === photo ? savedPhoto : current);
+        setSaved(true);
       }
-      onClose();
     } catch (err) {
-      console.error("Profile save error:", err);
+      if(mounted.current)setSaveError(err instanceof Error?err.message:'Your profile could not be saved.');
     } finally {
-      setIsSaving(false);
+      if(mounted.current)setIsSaving(false);
     }
   };
 
-  if (!isOpen) return null;
-
   return (
-    <DashboardOverlay aria-label="Manager Profile Settings" onClose={isSaving ? null : onClose} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-fadeIn">
-      <div className="bg-white border border-blue-200/80 rounded-3xl max-w-lg w-full shadow-2xl overflow-hidden flex flex-col">
-        {/* Modal Header */}
+    <section aria-label="Manager Profile Settings" className="relative z-10 mx-auto w-full max-w-3xl animate-fadeIn">
+      <div className="bg-white border border-blue-200/80 rounded-3xl w-full shadow-sm overflow-hidden flex flex-col">
+        {/* Settings Header */}
         <div className="p-6 bg-gradient-to-r from-sky-400/25 via-blue-500/20 to-indigo-400/25 backdrop-blur-xl border-b border-sky-200/80 text-slate-900 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-blue-100 flex items-center justify-center border border-blue-200 shadow-xs">
               <User className="w-5 h-5 text-blue-900" />
             </div>
             <div>
-              <h3 className="text-lg font-black text-slate-900">Manager Profile Settings</h3>
+              <h2 className="text-lg font-black text-slate-900">Manager Profile Settings</h2>
             </div>
           </div>
-          <button 
-            onClick={onClose}
-            disabled={isSaving}
-            aria-label="Close profile settings"
-            className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center transition-colors cursor-pointer"
-          >
-            <X className="w-4 h-4" />
-          </button>
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-5 overflow-y-auto max-h-[75vh]">
+        <form onSubmit={handleSubmit} onChange={() => setSaved(false)} className="p-6 space-y-5">
+          {saveError && <p role="alert" className="text-sm text-red-700">{saveError}</p>}
+          {saved && <p role="status" className="text-sm text-blue-700">Your profile changes have been saved.</p>}
           {/* Photo Selector */}
           <div className="space-y-3">
             <label className="block text-xs font-bold text-slate-700">Profile Photo</label>
@@ -129,9 +124,9 @@ export default function ManagerProfileModal({
               </div>
 
               <div className="flex-1 space-y-2">
-                <p className="text-[11px] text-slate-500 font-medium">Choose from presets or paste image link:</p>
+                <p className="text-[11px] text-slate-500 font-medium">{supabaseMode?'Choose a PineVela icon or upload your own picture:':'Choose from presets or paste image link:'}</p>
                 <div className="flex flex-wrap gap-2">
-                  {PRESET_AVATARS.map((av, idx) => (
+                  {(supabaseMode?SYSTEM_AVATARS.map(p=>`preset:${p.id}`):PRESET_AVATARS).map((av, idx) => (
                     <button
                       type="button"
                       key={idx}
@@ -142,14 +137,14 @@ export default function ManagerProfileModal({
                         photo === av ? 'border-blue-600 ring-2 ring-blue-400/40 scale-105' : 'border-slate-200 opacity-70 hover:opacity-100'
                       }`}
                     >
-                      <img src={av} alt="preset" className="w-full h-full object-cover" />
+                      {supabaseMode?renderAvatarGraphic(av,'w-8 h-8'):<img src={av} alt="preset" className="w-full h-full object-cover" />}
                     </button>
                   ))}
                 </div>
               </div>
             </div>
 
-            <div>
+            {!supabaseMode && <div>
               <input aria-label="Or paste image URL (https://...)"
                 type="text" 
                 value={photo} 
@@ -157,7 +152,7 @@ export default function ManagerProfileModal({
                 placeholder="Or paste image URL (https://...)" 
                 className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:border-blue-600 focus:bg-white"
               />
-            </div>
+            </div>}
           </div>
 
           {/* Full Name & Phone */}
@@ -193,7 +188,7 @@ export default function ManagerProfileModal({
               <label className="block text-xs font-bold text-slate-700 mb-1">Organization / Entity</label>
               <input aria-label="Organization / Entity"
                 type="text" 
-                disabled={isVerified}
+                disabled={isVerified || supabaseMode}
                 value={organization} 
                 onChange={(e) => setOrganization(e.target.value)} 
                 placeholder="e.g. PineVela Prime Properties" 
@@ -209,7 +204,7 @@ export default function ManagerProfileModal({
               <label className="block text-xs font-bold text-slate-700 mb-1">Manager Role Title</label>
               <input aria-label="Manager Role Title"
                 type="text" 
-                disabled={isVerified}
+                disabled={isVerified || supabaseMode}
                 value={roleTitle} 
                 onChange={(e) => setRoleTitle(e.target.value)} 
                 placeholder="e.g. Lead Property Manager" 
@@ -238,14 +233,6 @@ export default function ManagerProfileModal({
           {/* Actions */}
           <div className="ux-action-group pt-3 border-t border-slate-100">
             <button
-              type="button"
-              onClick={onClose}
-              disabled={isSaving}
-              className="px-4 py-2 text-xs font-bold text-slate-500 hover:text-slate-800 transition-colors"
-            >
-              Cancel
-            </button>
-            <button
               type="submit"
               disabled={isSaving}
               aria-busy={isSaving}
@@ -257,6 +244,6 @@ export default function ManagerProfileModal({
           </div>
         </form>
       </div>
-    </DashboardOverlay>
+    </section>
   );
 }

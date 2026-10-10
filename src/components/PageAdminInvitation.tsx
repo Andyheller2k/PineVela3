@@ -4,8 +4,12 @@ import React, { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { sessionFetch } from '../lib/session';
 import PineLogo from './PineLogo';
+import SupabaseAdminInvitation from './SupabaseAdminInvitation';
 
 export default function PageAdminInvitation() {
+  return import.meta.env.VITE_PERSISTENCE==='supabase'?<SupabaseAdminInvitation/>:<LegacyAdminInvitation/>;
+}
+function LegacyAdminInvitation() {
   const [params] = useSearchParams(), [password, setPassword] = useState(''), [confirmation, setConfirmation] = useState('');
   const [busy, setBusy] = useState(false), [error, setError] = useState(''), [result, setResult] = useState<any>(null);
   const token = params.get('token') || '';

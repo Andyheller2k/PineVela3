@@ -42,6 +42,10 @@ import { IssueReport, HostelRoomKey } from '../types';
 
 export default function PageResidentDashboard() {
   const { user, logout, apiFetch, updateUser } = useAuth();
+  const profileAccountKey=JSON.stringify([user?.id,user?.role]);
+  const profileAccountRef=React.useRef(profileAccountKey);
+  profileAccountRef.current=profileAccountKey;
+  useEffect(()=>{profileAccountRef.current=profileAccountKey;return()=>{profileAccountRef.current='';};},[profileAccountKey]);
   const { notifications, unreadCount, registeredAccounts, markAsRead, pushToast } = useNotifications();
   const navigate = useNavigate();
 
@@ -178,9 +182,11 @@ export default function PageResidentDashboard() {
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     setSavingProfile(true);
+    const profileAccount=profileAccountRef.current;
     try {
       const res = await apiFetch('/api/auth/profile', {
         method: 'PUT',
+        headers:{'X-PineVela-Profile-Context':String(user?.id)},
         body: JSON.stringify({
           name: editName.trim(),
           email: editEmail.trim(),
@@ -192,6 +198,8 @@ export default function PageResidentDashboard() {
           profilePicture: activeAvatar
         })
       });
+      if(profileAccountRef.current!==profileAccount)return;
+      if(!res?.success || !res?.user)throw new Error('Your profile could not be saved. Sign in and try again.');
       triggerToast('Profile information updated successfully!');
       if (res && res.user) {
         setStudentProfile(res.user);
@@ -214,13 +222,14 @@ export default function PageResidentDashboard() {
           ...updatedPayload
         }));
         if (updateUser) {
-          updateUser(updatedPayload);
+          updateUser(updatedPayload,String(user?.id));
         }
       }
     } catch (err: any) {
+      if(profileAccountRef.current!==profileAccount)return;
       triggerToast('Failed to update profile: ' + (err.message || 'Error occurred'));
     } finally {
-      setSavingProfile(false);
+      if(profileAccountRef.current===profileAccount)setSavingProfile(false);
     }
   };
 
@@ -1339,7 +1348,7 @@ export default function PageResidentDashboard() {
                     photoUrl: avatarUrl,
                     avatarUrl: avatarUrl,
                     profilePicture: avatarUrl
-                  });
+                  },String(user?.id));
                 }
                 triggerToast('Profile picture updated successfully!');
               }}

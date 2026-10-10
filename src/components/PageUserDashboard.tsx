@@ -3774,15 +3774,6 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                     avatarUrl: avatarUrl,
                     profilePicture: avatarUrl
                   }));
-                  if (updateUser) {
-                    updateUser({
-                      avatar: avatarUrl,
-                      photo: avatarUrl,
-                      photoUrl: avatarUrl,
-                      avatarUrl: avatarUrl,
-                      profilePicture: avatarUrl
-                    });
-                  }
                   triggerToast('Profile avatar updated successfully!');
                 }}
               />

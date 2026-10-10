@@ -23,7 +23,8 @@ async function main() {
   const owner = actor('user', `${crypto.randomUUID()}@example.test`);
   const seller = actor('merchant', `${crypto.randomUUID()}@example.test`);
   const manager = { ...actor('manager', `${crypto.randomUUID()}@example.test`), isVerified: true, verificationStatus: 'approved' };
-  const housingCheck = process.argv.includes('--housing');
+  const managerSettingsCheck = process.argv.includes('--manager-settings');
+  const housingCheck = process.argv.includes('--housing') || managerSettingsCheck;
   const admin = actor('admin', `${crypto.randomUUID()}@example.test`);
   const newManager = { ...actor('manager', `${crypto.randomUUID()}@example.test`), isVerified: true, verificationStatus: 'approved' };
   const store = { id: crypto.randomUUID(), userId: owner.id, studentEmail: seller.email, storeName: 'Isolated seller', status: 'active', setupCompleted: true, registrationFeePaid: true, subscriptionPlan: 'pro', subscriptionStatus: 'active', subscriptionExpiresAt: new Date(Date.now()+86400000).toISOString(), semesterExpiresAt: new Date(Date.now()+86400000).toISOString() };
@@ -85,7 +86,7 @@ async function main() {
     };
     await command('Page.enable'); await command('Runtime.enable'); await command('Network.enable');
     const evaluate = async expression => { const result = await command('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true }); if (result.exceptionDetails) throw new Error(result.exceptionDetails.exception?.description || result.exceptionDetails.text); return result.result.value; };
-    const until = async (expression, label) => { for (let attempt = 0; attempt < 300; attempt++) { if (await evaluate(expression)) return; await pause(100); } throw new Error(`${label}: ${await evaluate('JSON.stringify({hash:location.hash,text:document.body.innerText.slice(-3000)})')}`); };
+    const until = async (expression, label) => { for (let attempt = 0; attempt < 300; attempt++) { if (await evaluate(`Boolean(${expression})`)) return; await pause(100); } throw new Error(`${label}: ${await evaluate('JSON.stringify({hash:location.hash,text:document.body.innerText.slice(-3000)})')}`); };
     const click = async expression => { await until(`${expression}?.getClientRects().length > 0`, 'Visible control'); await evaluate(`${expression}.click()`); };
     const button = label => `[...document.querySelectorAll('button')].find(button => button.getClientRects().length && button.innerText.trim() === ${JSON.stringify(label)})`;
     const input = async (selector, value) => { await evaluate(`(()=>{const element=document.querySelector(${JSON.stringify(selector)}); const setter=Object.getOwnPropertyDescriptor(${selector.includes('textarea') ? 'HTMLTextAreaElement' : 'HTMLInputElement'}.prototype,'value').set; setter.call(element,${JSON.stringify(value)});element.dispatchEvent(new Event('input',{bubbles:true}));})()`); };
@@ -109,31 +110,61 @@ async function main() {
       await command('DOM.setFileInputFiles', { nodeId: found.nodeId, files: [file] });
     };
     if (housingCheck) {
+      let managerKey;
       for (const [width, layout] of [[375, 'top'], [768, 'top'], [1440, 'top'], [1440, 'sidebar']]) {
         await viewport(width); await switchAccount(manager.token, '/#/manager/dashboard');
         await until("document.body.innerText.includes('Live Operations Audit')", 'Manager loaded');
+        if (!managerKey) {
+          await until("document.querySelector('textarea[aria-label=\"Your manager secret key\"]')", 'Manager key issued');
+          managerKey = await evaluate("document.querySelector('textarea[aria-label=\"Your manager secret key\"]').value");
+          await click("document.querySelector('dialog[aria-label=\"Save your manager secret key\"] input[type=checkbox]')");
+          await click("[...document.querySelector('dialog[aria-label=\"Save your manager secret key\"]').querySelectorAll('button')].find(b=>b.textContent==='Continue')");
+        }
+
         await evaluate(`localStorage.setItem('pinevela_navigation_layout', ${JSON.stringify(layout)})`);
         await command('Page.reload');
         const profile = "[...document.querySelectorAll('button[title=\"Manager Profile Settings\"]')].find(b=>b.getClientRects().length)";
-        await click(profile);
-        await until("document.body.innerText.includes('Manager Profile Settings')", 'Real profile editor');
-        assert(await evaluate("document.querySelector('input[placeholder=\"e.g. Samuel Appiah\"]') !== null && !document.body.innerText.includes('Alert Preferences')"), 'Profile editor replaces preferences');
-        await click("document.querySelector('button[aria-label=\"Close profile settings\"]')");
-        await click(profile);
-        await until("document.querySelector('button[aria-label=\"Close profile settings\"]') !== null", 'Profile reopens without hook errors');
+        if (width < 1024) {
+          await click("document.querySelector('.mobile-bottom-nav [data-navigation-id=more]')");
+          await click("document.querySelector('dialog [data-navigation-id=settings]')");
+        } else await click(profile);
+        await until("document.querySelector('section[aria-label=\"Manager Profile Settings\"]') !== null", 'Settings page');
+        assert(await evaluate("!document.querySelector('dialog[aria-label=\"Manager Profile Settings\"]') && document.querySelector('input[aria-label=\"Full Name\"]') !== null"), 'Profile is a page, not a popup');
+        await noOverflow(`${width}px manager settings ${layout}`);
+        if (managerSettingsCheck) {
+          for (const theme of ['dark', 'light']) {
+            if (await evaluate('document.documentElement.dataset.theme') !== theme) {
+              await click("[...document.querySelectorAll('[role=switch][aria-label=\"Dark mode\"]')].find(b=>b.getClientRects().length)");
+            }
+            await until(`document.documentElement.dataset.theme === ${JSON.stringify(theme)}`, 'Settings theme');
+            await noOverflow(`${width}px manager settings ${theme} ${layout}`);
+            const capture = await command('Page.captureScreenshot', {format:'png'});
+            await fs.writeFile(`/tmp/pinevela-manager-settings-${width}-${layout}-${theme}.png`, Buffer.from(capture.data,'base64'));
+          }
+        }
+
         if (width === 375) {
-          await input('input[placeholder="e.g. Samuel Appiah"]', 'Updated isolated manager');
-          await input('input[placeholder="+233 24 123 4567"]', '0241234567');
+          await input('input[aria-label="Full Name"]', 'Updated isolated manager');
+          await input('input[aria-label="Official Phone Number"]', '0241234567');
           await click(button('Save Profile Changes'));
-          await until("document.querySelector('button[aria-label=\"Close profile settings\"]') === null", 'Profile save completed');
+          await until("document.querySelector('dialog[aria-label=\"Authorize manager action\"]')?.open", 'Profile change requires manager key');
+          await input('dialog[aria-label="Authorize manager action"] input[type=password]', managerKey);
+          await click(button('Confirm change'));
+
+          await until("document.querySelector('section[aria-label=\"Manager Profile Settings\"] [role=status]') !== null", 'Profile save completed on settings page');
           const saved = await api('/api/auth/me', manager.token);
           assert.equal((saved.user || saved).name, 'Updated isolated manager');
-        } else await click("document.querySelector('button[aria-label=\"Close profile settings\"]')");
+        }
         await click(matchingButton(width < 1024 || layout === 'top' ? 'Properties' : 'My Properties'));
         await until("document.body.innerText.includes('Registered Property Dossier')", 'Property details');
         assert(await evaluate("!document.body.innerText.includes('Annual Fee') && !document.body.innerText.includes('GHS')"), 'Manager property has no room price');
         await noOverflow(`${width}px manager ${layout}`);
-        console.log(`${width}px manager ${layout}: profile opens/reopens and property prices absent.`);
+        console.log(`${width}px manager ${layout}: settings renders as a page and property prices absent.`);
+      }
+      if (managerSettingsCheck) {
+        assert.deepEqual(exceptions, [], 'No browser JavaScript errors');
+        console.log('Passed: mobile More Settings, responsive profile page, both desktop navigation layouts, dark/light themes, and key-authorized profile saving.');
+        return;
       }
       await viewport(1440); await switchAccount(admin.token, '/#/admin/dashboard');
       await click(matchingButton('Residences'));
