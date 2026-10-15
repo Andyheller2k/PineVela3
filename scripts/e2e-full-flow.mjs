@@ -197,7 +197,6 @@ async function main() {
       location: 'Ayeduase, Kumasi KNUST Area',
       city: 'Kumasi',
       wing: 'Block A',
-      digitalAddress: 'AK-123-4567',
       totalCapacity: 40,
       totalBlocks: 2,
       bedsLeft: 40,

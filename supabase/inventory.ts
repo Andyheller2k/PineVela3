@@ -24,8 +24,8 @@ async function detail(c:PoolClient,s:any,id?:string){const plan=await storePlan(
   coalesce((select sum(quantity)::integer from public.market_orders o where o.listing_id=l.id and o.status in ('awaiting_seller','pending_meetup') and o.reserved_until>now()),0) as reserved,
   coalesce((select jsonb_agg(storage_path order by sort_order) from public.listing_media where listing_id=l.id),'[]'::jsonb) as images,
   coalesce((select jsonb_agg(jsonb_build_object('id',id,'name',label,'price',price,'imageUrl',image_path) order by sort_order) from public.listing_price_options where listing_id=l.id),'[]'::jsonb) as price_options,
-  (select coalesce(round(avg(rating),1),0) from public.market_reviews_public where listing_id=l.id) as rating,
-  (select count(*) from public.market_reviews_public where listing_id=l.id) as review_count
+  (select coalesce(round(avg(rating),1),0) from private.market_reviews_public where listing_id=l.id) as rating,
+  (select count(*) from private.market_reviews_public where listing_id=l.id) as review_count
   from public.listings l where store_id=$1 and retired_at is null and ($2::uuid is null or l.id=$2) order by created_at desc`,[s.id,id || null])).rows;
   return rows.map(r=>({...marketPlanBenefits(plan),id:r.id,storeId:s.id,storeName:s.name,sellerName:s.username || s.name,sellerEmail:s.email,sellerPhone:s.primary_phone,sellerUniversity:s.campus,
     title:r.title,description:r.description,price:Number(r.price),currency:r.currency,category:r.category,isService:r.kind==='service',serviceCategory:r.service_category,

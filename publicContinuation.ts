@@ -27,9 +27,9 @@ export function validatePublicContinuation(value: unknown): string | undefined {
 /** Private invitation continuations stay in the URL/server OAuth state, never storage. */
 export function validateLoginContinuation(value: unknown): string | undefined {
   const catalog=validatePublicContinuation(value);if(catalog)return catalog;
-  if(typeof value!=='string'||value.length>160||!value.startsWith('/admin-invitation?'))return undefined;
+  if(typeof value!=='string'||value.length>160||!['/admin-invitation?','/officer-invitation?'].some(prefix=>value.startsWith(prefix)))return undefined;
   const url=new URL(value,'https://pinevela.invalid'),token=url.searchParams.get('token');
-  if(url.origin!=='https://pinevela.invalid'||url.pathname!=='/admin-invitation'||url.hash
+  if(url.origin!=='https://pinevela.invalid'||!['/admin-invitation','/officer-invitation'].includes(url.pathname)||url.hash
     ||url.searchParams.size!==1||url.searchParams.getAll('token').length!==1||!token||!/^[a-zA-Z0-9_-]{43}$/.test(token))return undefined;
-  return `/admin-invitation?token=${token}`;
+  return `${url.pathname}?token=${token}`;
 }

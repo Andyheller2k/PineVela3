@@ -25,7 +25,15 @@ try {
   for(const endpoint of ['/api/payments/paystack/pending','/api/admin/payments','/api/admin/settings/status','/api/admin/payments/receiving-account','/api/admin/settings/pricing','/api/auth/maintenance-notice','/api/admin/governance','/api/admin/messages/accounts','/api/admin/all-users'])await request(endpoint,401);
   for(const endpoint of ['/api/admin/messages/preview','/api/admin/messages','/api/admin-messages/00000000-0000-4000-8000-000000000001/ack',
     '/api/admin/governance/accounts','/api/admin/governance/accounts/00000000-0000-4000-8000-000000000001/vote',
-    '/api/admin/governance/accounts/00000000-0000-4000-8000-000000000001/final-reject']) {
+    '/api/admin/governance/accounts/00000000-0000-4000-8000-000000000001/apply',
+    '/api/admin/governance/accounts/00000000-0000-4000-8000-000000000001/final-reject',
+    '/api/admin/governance/residences/preview','/api/admin/governance/residences',
+    '/api/admin/governance/residences/00000000-0000-4000-8000-000000000001/vote',
+    '/api/admin/governance/residences/00000000-0000-4000-8000-000000000001/final-reject',
+    '/api/admin/governance/residences/00000000-0000-4000-8000-000000000001/execute',
+    '/api/admin/governance/residences/00000000-0000-4000-8000-000000000001/authorize-execution',
+    '/api/admin/governance/residences/00000000-0000-4000-8000-000000000001/prepare',
+    '/api/admin/governance/residences/00000000-0000-4000-8000-000000000001/cancel-preparation']) {
     await request(endpoint,401,{method:'POST',headers:{'content-type':'application/json'},body:'{}'});
     await request(endpoint,403,{method:'POST',headers:{'content-type':'application/json',origin:'https://cross-site.invalid'},body:'{}'});
   }
@@ -56,7 +64,7 @@ try {
   assert.equal((await request('/api/health', 200)).persistence, 'supabase');
   for (const endpoint of ['/api/hostels', '/api/digital-market/products', '/api/digital-market/products?includeAll=true']) assert.ok(Array.isArray(await request(endpoint,200)));
   await request('/api/settings', 200);
-  for (const endpoint of ['/api/auth/me','/api/auth/contexts','/api/auth/enrollments','/api/users/my-registered-accounts?userId=another-user','/api/user/registered-accounts','/api/notifications','/api/admin-messages/pending','/api/database/status','/api/sync/events']) await request(endpoint, 401);
+  for (const endpoint of ['/api/auth/me','/api/auth/account-access','/api/auth/contexts','/api/auth/enrollments','/api/users/my-registered-accounts?userId=another-user','/api/user/registered-accounts','/api/notifications','/api/admin-messages/pending','/api/database/status','/api/sync/events']) await request(endpoint, 401);
   const enrollmentId = '00000000-0000-0000-0000-000000000000';
   for (const endpoint of ['/api/auth/enrollments',`/api/auth/enrollments/${enrollmentId}/verify`,`/api/auth/enrollments/${enrollmentId}/resend`,`/api/auth/enrollments/${enrollmentId}/reactivate`,'/api/room-keys/claim','/api/room-keys/verify','/api/residents/onboard']) await request(endpoint,401,{method:'POST',headers:{'content-type':'application/json'},body:'{}'});
   await request(`/api/auth/enrollments/${enrollmentId}`,401,{method:'DELETE'});
@@ -73,6 +81,12 @@ try {
   await request(`/api/hostels/${enrollmentId}/structure`,401);
   await request(`/api/hostels/${enrollmentId}/structure`,401,{method:'POST',headers:{'content-type':'application/json'},body:'{}'});
   await request('/api/student/my-rooms',401);
+  await request('/api/student/my-profile',401);
+  await request('/api/manager/residence-requests',401);
+  await request('/api/board-requests',401,{method:'POST',headers:{'content-type':'application/json'},body:'{}'});
+  await request(`/api/board-requests/${enrollmentId}/review`,401);
+  await request(`/api/board-requests/${enrollmentId}/decision`,401,{method:'POST',headers:{'content-type':'application/json'},body:'{}'});
+  await request(`/api/admin/managers/${enrollmentId}/reset-request-key`,401,{method:'POST',headers:{'content-type':'application/json'},body:'{}'});
   await request(`/api/issue-reports/${enrollmentId}`,401,{method:'PUT',headers:{'content-type':'application/json'},body:'{}'});
   await request('/api/issue-reports',401,{method:'POST',headers:{'content-type':'application/json'},body:'{}'});
   for (const action of ['assign','accept-assignment','staff-decline','staff-reschedule','approve-reschedule','decline-reschedule','staff-complete','student-confirm','manager-close']) await request(`/api/issue-reports/${enrollmentId}/${action}`,401,{method:'POST',headers:{'content-type':'application/json'},body:'{}'});

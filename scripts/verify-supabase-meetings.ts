@@ -79,7 +79,7 @@ try {
   check((await scoped(resident,()=>meetingRows(c))).length===1,'Exact resident participant can read appointment');
   for(const a of [primary,staff,foreignManager,foreignResident,foreignStaff])check((await scoped(a,()=>meetingRows(c))).length===0,'Other portal or residence cannot see the appointment');
   check((await scoped(staff,()=>c.query('select id from public.meetings'))).rowCount===0,'Raw RLS denies uninvited staff of the same residence');
-  await c.query('set local role anon');await denied(()=>c.query('select * from public.housing_meeting_details'),'42501','No public appointment directory');await c.query('reset role');
+  await c.query('set local role anon');await denied(()=>c.query('select * from private.housing_meeting_details'),'42501','No public appointment directory');await c.query('reset role');
   await c.query('set local role pinevela_backend');await denied(()=>c.query("update public.meetings set status='accepted' where id=$1",[booked.id]),'42501','Direct client role cannot bypass appointment lifecycle');await c.query('reset role');
   await denied(()=>c.query('update public.meetings set manager_context_id=$2 where id=$1',[booked.id,foreignManager.contextId]),'23514','Database cannot reassign appointment manager');
   await denied(()=>c.query('update public.meetings set contact_email=$2 where id=$1',[booked.id,other.email]),'23514','Database preserves original contact evidence');

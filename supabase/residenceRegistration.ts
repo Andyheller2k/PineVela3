@@ -4,9 +4,10 @@ import { ApiError,uuid,type VerifiedActor } from './db.js';
 import type { SupabaseAuth,AuthRequest } from './auth.js';
 import { internationalPhone } from '../internationalPhone.js';
 import { retiredHostelFields } from '../hostelRegistrationFields.js';
-import { parseResidenceStructure,createResidenceStructure,residenceStructure } from './residenceStructure.js';
+import { parseResidenceStructure,createResidenceStructure,correctResidenceStructure,residenceStructure } from './residenceStructure.js';
 import { ownedMedia } from './media.js';
 import { notify,notifyPrimaryOwner } from './notifications.js';
+import {managerRegistrationRestricted} from './registrationRestrictions.js';
 const text = (value:unknown,max:number,required=false) => {
   if (typeof value !== 'string' || value.trim().length > max || (required && !value.trim())) throw new ApiError(400,'Check the residence fields and their lengths.');
   return value.trim();
@@ -15,8 +16,6 @@ const optional = (value:unknown,max:number) => text(value ?? '',max);
 export function parseResidenceRegistration(body:any) {
   if (!body || typeof body !== 'object' || Object.keys(body).some(k => retiredHostelFields.has(k))) throw new ApiError(400,'Use the current residence registration fields.');
   const name = text(body.name,200,true),addressLine1 = text(body.addressLine1,600,true);
-  const digitalAddress = text(body.digitalAddress,20,true).toUpperCase();
-  if (!/^[A-Z]{2}-\d{3}-\d{4}$/.test(digitalAddress)) throw new ApiError(400,'Enter a valid GhanaPost digital address.');
   const latitude = body.latitude,longitude = body.longitude;
   if (typeof latitude !== 'number' || typeof longitude !== 'number' || !Number.isFinite(latitude) || !Number.isFinite(longitude) || latitude < 6.5 || latitude > 6.85 || longitude < -1.75 || longitude > -1.4)
     throw new ApiError(400,'Use the actual verified Kumasi map location.');
@@ -42,7 +41,7 @@ export function parseResidenceRegistration(body:any) {
   return {name,description:optional(body.description,4000),propertyType:text(body.hostelType,120,true),genderCategory:body.genderCategory as string,
     wing:body.wing as string,yearEstablished:body.yearEstablished as number,contactEmail,contactPhone,contactPhoneCountry:body.contactPhoneCountry as string,
     alternativePhone,website,addressLine1,addressLine2:optional(body.addressLine2,600),city:text(body.city,120,true),region:text(body.region,120,true),
-    district:optional(body.district,120),country:text(body.country,120,true),postalCode:optional(body.postalCode,40),digitalAddress,landmark:optional(body.landmark,200),
+    district:optional(body.district,120),country:text(body.country,120,true),postalCode:optional(body.postalCode,40),landmark:optional(body.landmark,200),
     campusProximity:optional(body.campusProximity,120),campusProximityDetails:optional(body.campusProximityDetails,600),latitude,longitude,
     imageUrl:text(body.imageUrl,100,true),gallery:body.gallery.map((p:unknown) => text(p,100,true)),paymentFrequency,blocksList,agreeTerms:true,accuracyCertified:true};
 }
@@ -60,35 +59,41 @@ async function assignedResidence(client:PoolClient,actor:VerifiedActor,id?:strin
 }
 export async function residenceRegistrationDraft(client:PoolClient,actor:VerifiedActor) {
   const r = await assignedResidence(client,actor);
-  const data = (await client.query(`select id,status,submitted_data from public.verification_cases where residence_id = $1 and kind = 'residence_registration'`,[r.id])).rows[0];
-  return {residenceId:r.id,verificationId:data?.id || null,status:data?.status || 'not_submitted',draft:data?.submitted_data || {
+  const data = (await client.query(`select id,status,submitted_data,review_notes from public.verification_cases where residence_id = $1 and kind = 'residence_registration'`,[r.id])).rows[0];
+  return {residenceId:r.id,verificationId:data?.id || null,status:data?.status || 'not_submitted',reviewNotes:data?.review_notes || '',draft:data?.submitted_data || {
     name:r.name,description:r.description,contactEmail:r.contact_email || '',contactPhone:r.contact_phone || '',contactPhoneCountry:r.contact_country || 'GH',
-    addressLine1:r.location,city:r.city,region:r.region,digitalAddress:r.digital_address,landmark:r.landmark,latitude:Number(r.latitude),longitude:Number(r.longitude),
+    addressLine1:r.location,city:r.city,region:r.region,landmark:r.landmark,latitude:Number(r.latitude),longitude:Number(r.longitude),
     formattedAddress:r.location,isLocationConfirmed:r.latitude !== null && r.longitude !== null,blocksList:(await residenceStructure(client,actor,r.id)).blocksList,
     imageUrl:r.cover_path || '',gallery:r.gallery_paths}};
 }
 /** Runs inside authorizedSystem, which locks and revalidates the actual session. */
 export async function submitResidenceRegistration(client:PoolClient,actor:VerifiedActor,id:string,data:Registration) {
   const residence = await assignedResidence(client,actor,id,true);
-  const prior = (await client.query(`select id,status,submitted_data from public.verification_cases where residence_id = $1 and kind = 'residence_registration' for update`,[id])).rows[0];
+  const prior = (await client.query(`select * from public.verification_cases where residence_id = $1 and kind = 'residence_registration' for update`,[id])).rows[0];
+  const correcting = prior?.status === 'more_info_required';
   // Use PostgreSQL JSON equality: recursive comparison does not discard layout fields.
   if (prior) {
+    if (prior.applicant_context_id !== actor.contextId) throw new ApiError(403,'Only the assigned registration applicant can resubmit this setup.');
     const same = (await client.query('select $1::jsonb = $2::jsonb as same',[JSON.stringify(prior.submitted_data),JSON.stringify(data)])).rows[0].same;
-    if (!same) throw new ApiError(409,'Registration already exists. Submit changes through its reviewed change workflow.');
-    return {alreadySubmitted:true,verificationId:prior.id,hostel:await registeredResidence(client,actor,residence,prior.status)};
+    if (same && !correcting) return {alreadySubmitted:true,verificationId:prior.id,hostel:await registeredResidence(client,actor,residence,prior.status)};
+    if (!correcting) throw new ApiError(409,'Registration already exists. Corrections require an administrator request for more information.');
+    if (residence.status !== 'pending' || !residence.setup_submitted_at || prior.withdrawn_by_wipe_id)
+      throw new ApiError(409,'This residence registration is not awaiting corrections.');
+    if (same) throw new ApiError(400,'Update the residence details requested by the administrator before resubmitting.');
+  } else if (residence.status !== 'approved' || residence.setup_submitted_at) {
+    throw new ApiError(409,'Complete physical manager verification before registering this residence.');
   }
-  if (residence.status !== 'approved' || residence.setup_submitted_at) throw new ApiError(409,'Complete physical manager verification before registering this residence.');
   const physical = (await client.query(`select submitted_data from public.verification_cases where residence_id = $1 and applicant_context_id = $2
     and kind = 'manager_registration' and status = 'approved'`,[id,actor.contextId])).rows[0];
-  if (!physical || physical.submitted_data.name !== data.name || physical.submitted_data.digitalAddress !== data.digitalAddress ||
+  if (!physical || physical.submitted_data.name !== data.name ||
       Number(physical.submitted_data.latitude).toFixed(6) !== data.latitude.toFixed(6) || Number(physical.submitted_data.longitude).toFixed(6) !== data.longitude.toFixed(6))
     throw new ApiError(409,'The property identity and map pin must match the physically verified residence. Changes require verification review.');
-  const banned = await client.query(`select 1 from public.registration_bans b join public.account_contexts c on c.id = b.account_context_id
-    where coalesce(c.primary_owner_id,c.auth_user_id) = $1 and b.kind in ('residence','manager_account') and b.until_at > clock_timestamp()`,[residence.primary_owner_id]);
-  if (banned.rowCount) throw new ApiError(403,'Registration is temporarily restricted for this account.');
+  if (await managerRegistrationRestricted(client,actor.contextId))
+    throw new ApiError(403,'Registration is temporarily restricted for this account.');
   await ownedMedia(client,actor,data.imageUrl,'hostel');
   for (const photo of data.gallery) await ownedMedia(client,actor,photo,'hostel');
-  await createResidenceStructure(client,actor,id,data.blocksList);
+  if (correcting) await correctResidenceStructure(client,actor,id,prior.submitted_data.blocksList,data.blocksList);
+  else await createResidenceStructure(client,actor,id,data.blocksList);
   // Dynamic columns are constants controlled here, never client-supplied SQL.
   const fields:Record<string,unknown> = {description:data.description,property_type:data.propertyType,property_category:data.wing,gender_category:data.genderCategory,year_established:data.yearEstablished,
     contact_phone:data.contactPhone,contact_country:data.contactPhoneCountry,contact_email:data.contactEmail,alternative_phone:data.alternativePhone,website:data.website,
@@ -98,16 +103,21 @@ export async function submitResidenceRegistration(client:PoolClient,actor:Verifi
   const columns = Object.keys(fields);
   const updated = (await client.query(`update public.residences set ${columns.map((column,i) => `${column} = $${i+2}`).join(',')},
     setup_submitted_at = now(),status = 'pending',updated_at = now() where id = $1 returning *`,[id,...Object.values(fields)])).rows[0];
-  const record = (await client.query(`insert into public.verification_cases(applicant_context_id,residence_id,kind,status,submitted_data)
-    values ($1,$2,'residence_registration','under_review',$3) returning id`,[actor.contextId,id,JSON.stringify(data)])).rows[0];
-  await notifyPrimaryOwner(client,actor.contextId,{category:'verification',title:'Residence Registration Submitted',
-    message:`The registration and room configuration for "${data.name}" are awaiting administrator review.`,sender:actor.contextId});
+  const record = correcting
+    ? (await client.query(`update public.verification_cases set submitted_data=$2,status='under_review',submitted_at=now(),
+        reviewed_at=null,reviewed_by_context_id=null,review_notes=null where id=$1 returning id`,[prior.id,JSON.stringify(data)])).rows[0]
+    : (await client.query(`insert into public.verification_cases(applicant_context_id,residence_id,kind,status,submitted_data)
+        values ($1,$2,'residence_registration','under_review',$3) returning id`,[actor.contextId,id,JSON.stringify(data)])).rows[0];
+  await notifyPrimaryOwner(client,actor.contextId,{category:'verification',title:correcting?'Residence Registration Resubmitted':'Residence Registration Submitted',
+    message:`The ${correcting?'corrected ':''}registration and room configuration for "${data.name}" are awaiting administrator review.`,sender:actor.contextId});
   const admins = (await client.query(`select c.id from public.account_contexts c join public.admin_memberships m on m.context_id = c.id
     where c.kind = 'admin' and c.status = 'active' and m.status = 'active'`)).rows.map(r => r.id);
-  await notify(client,admins,{category:'verification',title:'Residence Registration Awaiting Review',message:`The registration for "${data.name}" is ready for review.`,sender:actor.contextId});
+  await notify(client,admins,{category:'verification',title:correcting?'Residence Registration Corrections Awaiting Review':'Residence Registration Awaiting Review',message:`The ${correcting?'corrected ':''}registration for "${data.name}" is ready for review.`,sender:actor.contextId});
   await client.query(`insert into private.audit_events(actor_context_id,event_type,resource_type,resource_id,event_data)
-    values ($1,'residence_registration_submitted','verification_case',$2,$3)`,[actor.contextId,record.id,JSON.stringify({residenceId:id})]);
-  return {alreadySubmitted:false,verificationId:record.id,hostel:await registeredResidence(client,actor,updated,'under_review')};
+    values ($1,$2,'verification_case',$3,$4)`,[actor.contextId,correcting?'residence_registration_resubmitted':'residence_registration_submitted',record.id,
+      JSON.stringify(correcting?{residenceId:id,previousSubmission:prior.submitted_data,submission:data,
+        previousReview:{notes:prior.review_notes,reviewedAt:prior.reviewed_at,reviewedBy:prior.reviewed_by_context_id,submittedAt:prior.submitted_at}}:{residenceId:id})]);
+  return {alreadySubmitted:false,resubmitted:correcting,verificationId:record.id,hostel:await registeredResidence(client,actor,updated,'under_review')};
 }
 async function registeredResidence(client:PoolClient,actor:VerifiedActor,r:any,status:string) {
   const manager = (await client.query(`select c.id,p.display_name,p.email,p.phone from public.verification_cases v
@@ -115,8 +125,9 @@ async function registeredResidence(client:PoolClient,actor:VerifiedActor,r:any,s
     where v.residence_id = $1 and v.kind = 'residence_registration' and c.kind = 'manager'`,[r.id])).rows[0];
   return {id:r.id,name:r.name,location:r.location,description:r.description,...await residenceStructure(client,actor,r.id),
     image:r.cover_path,imageUrl:r.cover_path,gallery:r.gallery_paths,isApproved:r.status === 'approved',approvalStatus:status,status:r.status,
-    managerId:manager?.id,managerName:manager?.display_name,managerEmail:manager?.email,managerPhone:manager?.phone,
-    contactPhone:r.contact_phone,contactEmail:r.contact_email,digitalAddress:r.digital_address,hostelType:r.property_type,wing:r.property_category,
+    registrationRequired:!r.setup_submitted_at,registrationStatus:status,
+    managerId:manager?.id,managerName:r.manager_contact_name || manager?.display_name,managerEmail:manager?.email,managerPhone:r.contact_phone || manager?.phone,
+    contactPhone:r.contact_phone,contactEmail:r.contact_email,hostelType:r.property_type,wing:r.property_category,
     latitude:r.latitude === null ? null : Number(r.latitude),longitude:r.longitude === null ? null : Number(r.longitude)};
 }
 export async function decideResidenceRegistration(client:PoolClient,actor:VerifiedActor,id:string,decision:'approved'|'rejected'|'more_info_required',notes:unknown) {
@@ -145,9 +156,8 @@ export async function decideResidenceRegistration(client:PoolClient,actor:Verifi
       where v.residence_id = $1 and v.applicant_context_id = $2 and v.kind = 'manager_registration' and v.status = 'approved'
       and i.status = 'accepted' and i.report is not null and i.submitted_at is not null`,[residence.id,manager.id]);
     if (!physical.rowCount) throw new ApiError(409,'An accepted physical inspection is required for this exact residence.');
-    const banned = await client.query(`select 1 from public.registration_bans b join public.account_contexts c on c.id = b.account_context_id
-      where coalesce(c.primary_owner_id,c.auth_user_id) = $1 and b.kind in ('residence','manager_account') and b.until_at > clock_timestamp()`,[residence.primary_owner_id]);
-    if (banned.rowCount) throw new ApiError(409,'An active registration ban prevents approval.');
+    if (await managerRegistrationRestricted(client,manager.id))
+      throw new ApiError(409,'An active registration ban prevents approval.');
     const saved = record.submitted_data;
     const structure = await residenceStructure(client,actor,residence.id);
     const normalized = (blocks:ReturnType<typeof parseResidenceStructure>) => [...blocks].sort((a,b) => a.name.localeCompare(b.name));
@@ -178,7 +188,10 @@ export async function decideResidenceRegistration(client:PoolClient,actor:Verifi
 }
 export async function adminResidenceRows(client:PoolClient,actor:VerifiedActor) {
   if (actor.kind !== 'admin') throw new ApiError(403,'Administrator access required.');
-  const rows = (await client.query(`select r.*,v.status as registration_status,c.id as manager_id,p.display_name as manager_name,p.email as manager_email,p.phone as manager_phone,
+  const rows = (await client.query(`select r.*,v.id as verification_id,v.status as registration_status,v.review_notes as registration_notes,
+    v.submitted_at as registration_submitted_at,v.reviewed_at as registration_reviewed_at,
+    v.withdrawn_by_wipe_id is not null as registration_withdrawn,
+    c.id as manager_id,c.status as manager_status,p.display_name as manager_name,p.email as manager_email,p.phone as manager_phone,
     private.residence_is_public(r.id) as published,
     (select count(*)::integer from public.blocks b where b.residence_id = r.id) as total_blocks,
     (select count(*)::integer from public.floors f join public.blocks b on b.id = f.block_id where b.residence_id = r.id) as total_floors,
@@ -198,11 +211,15 @@ export async function adminResidenceRows(client:PoolClient,actor:VerifiedActor) 
     order by r.registered_at desc limit 500`)).rows;
   return rows.map(r => ({id:r.id,name:r.name,location:r.location,description:r.description,registrationDate:r.registered_at,
     status:r.status,isApproved:r.published,approvalStatus:r.registration_status || 'not_submitted',registrationRequired:!r.setup_submitted_at,
+    verificationId:r.verification_id,registrationWithdrawn:r.registration_withdrawn,adminNotes:r.registration_notes || '',
+    submittedAt:r.registration_submitted_at,reviewedAt:r.registration_reviewed_at,
+    addressLine1:r.address_line1 || r.location,addressLine2:r.address_line2,city:r.city,region:r.region,
+    country:r.country,landmark:r.landmark,yearEstablished:r.year_established,paymentFrequency:r.payment_frequency,
     image:r.cover_path,imageUrl:r.cover_path,gallery:r.gallery_paths,hostelType:r.property_type,hostel_type:r.property_type,wing:r.property_category,
     totalBlocks:r.total_blocks,totalFloors:r.total_floors,totalRooms:r.total_rooms,
     totalBeds:r.total_beds,totalCapacity:r.total_beds,capacity:r.total_beds,blocksList:r.blocks_list,blocksConfig:r.blocks_list,
-    managerId:r.manager_id,managerName:r.manager_name,managerEmail:r.manager_email,managerPhone:r.manager_phone,
-    contactPhone:r.contact_phone,contactEmail:r.contact_email,digitalAddress:r.digital_address,
+    managerId:r.manager_id,managerStatus:r.manager_status,managerName:r.manager_contact_name || r.manager_name,managerEmail:r.manager_email,managerPhone:r.contact_phone || r.manager_phone,
+    contactPhone:r.contact_phone,contactEmail:r.contact_email,
     latitude:r.latitude === null ? null : Number(r.latitude),longitude:r.longitude === null ? null : Number(r.longitude)}));
 }
 export function installResidenceRegistration(app:Express,auth:SupabaseAuth) {
@@ -231,11 +248,11 @@ export function installResidenceRegistration(app:Express,auth:SupabaseAuth) {
     });
     return res.json({success:true,...result});
   }));
-  app.get('/api/admin/hostels',auth.require(['admin']),route(async (req,res) => res.json(await auth.db.authorizedSystem(req.actor,['admin'],c => adminResidenceRows(c,req.actor)))));
+  app.get('/api/admin/hostels',auth.require(['admin']),route(async (req,res) => res.json(await auth.db.authorizedRead(req.actor,['admin'],c => adminResidenceRows(c,req.actor)))));
   app.get('/api/hostel-verifications',auth.require(['admin','manager']),route(async (req,res) => res.json(await auth.db.actor(req.actor,async c =>
     (await c.query(`select v.id,v.residence_id as "hostelId",r.name as "hostelName",r.location,v.status,v.submitted_at as "submittedAt",
       v.reviewed_at as "reviewedAt",v.review_notes as "adminNotes",v.submitted_data as registration,
-      r.cover_path as "imageUrl",r.digital_address as "digitalAddress",
+      r.cover_path as "imageUrl",
       (select count(*)::integer from public.rooms room join public.floors floor on floor.id = room.floor_id
         join public.blocks block on block.id = floor.block_id where block.residence_id = r.id) as "totalRooms"
       from public.verification_cases v join public.residences r on r.id = v.residence_id

@@ -123,7 +123,7 @@ try{await withIsolatedBackup(id,async config=>{
     const updated=await review(f.buyer,{orderId:order.id,rating:5,review:'Updated feedback.'});
     check(updated.ratingRecord.id===r.ratingRecord.id && updated.ratingCount===1 && updated.averageRating===5 && updated.ratingRecord.createdAt.getTime()===r.ratingRecord.createdAt.getTime(),'Review edits preserve receipt and initial creation time');
     const catalog=await publicProducts(db,f.store);check(catalog[0].rating===5 && catalog[0].reviewCount===1 && catalog[0].storeRating===5,'Actual public listing and store reputation derive from completed reviews');
-    const publicRows=await db.publicRows('select * from public.market_reviews_public');
+    const publicRows=await db.publicRows('select * from private.market_reviews_public');
     check(publicRows.length===1 && !('buyer_context_id' in publicRows[0]) && !('buyerEmail' in publicRows[0]) && !('order_id' in publicRows[0]),'Public projection excludes private receipt/account fields');
     await denied(()=>db.publicRows('select * from public.market_reviews'),'42501','Guests cannot bypass safe review projection');
     await denied(()=>db.actor(f.buyer,c=>c.query('update public.market_reviews set rating=1 where id=$1',[r.ratingRecord.id])),'42501','Browser cannot write raw reviews');
@@ -143,7 +143,7 @@ try{await withIsolatedBackup(id,async config=>{
     const historical=await send(f.buyer,{requestId:crypto.randomUUID(),orderId:order.id,content:'Question about the completed purchase.'});
     check(historical.message.productTitle===order.productTitle,'Order conversation retains its actual immutable purchase context');
     await db.pool.query("update public.store_subscriptions set status='expired' where store_id=$1 and status='active'",[f.store]);
-    check((await db.publicRows('select * from public.market_reviews_public')).length===0,'Unavailable store reputation is not exposed publicly');
+    check((await db.publicRows('select * from private.market_reviews_public')).length===0,'Unavailable store reputation is not exposed publicly');
     check((await send(f.seller,{requestId:crypto.randomUUID(),buyerId:f.buyer.contextId,content:'Support for the earlier purchase.'})).success,'Existing conversations remain usable after subscription expiry');
     await db.close();db=new SupabaseDatabase(config);
     check((await rows(f.buyer)).length===4 && (await db.authorizedSystem(f.buyer,['primary'],c=>orderRows(c,f.buyer,pins))).find((o:any)=>o.id===order.id)?.userRating.rating===3,'Committed conversation and review survive backend pool restart');

@@ -12,7 +12,7 @@ const route=(work:(req:AuthRequest,res:any)=>Promise<unknown>):RequestHandler=>(
 export async function sellerStore(c:PoolClient,a:VerifiedActor,lock=false){
   if(a.kind!=='seller')throw new ApiError(403,'Sign in with your verified seller account.');
   const s=(await c.query(`select s.*,p.email from public.stores s join public.account_contexts x on x.id=s.seller_context_id
-    join public.profiles p on p.id=x.auth_user_id join public.seller_applications app on app.seller_context_id=x.id
+    join public.profiles p on p.id=x.auth_user_id join public.seller_applications app on app.seller_context_id=x.id and app.id=s.application_id and app.registration_generation=x.seller_generation
     where x.id=$1 and x.auth_user_id=$2 and x.kind='seller' and x.status='active' and app.status='approved'
       and s.status in ('pending','active') ${lock?'for update of s':''}`,[a.contextId,a.authUserId])).rows[0];
   if(!s)throw new ApiError(403,'An approved seller store is required.');return s;

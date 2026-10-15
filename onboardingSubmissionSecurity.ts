@@ -21,8 +21,6 @@ export function hostelVerificationSubmission(actor: any, body: any, store: any) 
     if (typeof value !== 'string' || value.length > maximum) throw new OnboardingSubmissionError(`Invalid ${key}.`);
     return value.trim();
   };
-  const digitalAddress = text('digitalAddress', 32).toUpperCase();
-  if (digitalAddress && !/^[A-Z]{2}-\d{3,4}-\d{4}$/.test(digitalAddress)) throw new OnboardingSubmissionError('Invalid digital address.');
   const fields = ['campusZone', 'addressLine1', 'authorityRelationship', 'ownerOperatorName', 'ownerOperatorPhone', 'ownerOperatorEmail', 'proofOfOwnershipType', 'proofOfOwnershipFileName', 'proofOfOwnershipUrl', 'paymentReference'] as const;
   const evidence = Object.fromEntries(fields.map(key => [key, text(key)])) as Record<typeof fields[number], string>;
   const dossiers = [...(store.managerVerifications || []), ...(store.managerRegistrationRequests || [])]
@@ -33,14 +31,14 @@ export function hostelVerificationSubmission(actor: any, body: any, store: any) 
   const paidTransaction = (store.paymentTransactions || []).find((t: any) => t.hostelId === hostel.id && t.purpose === 'housing' && t.status === 'fulfilled' && (process.env.NODE_ENV !== 'production' || t.mode !== 'test'));
   const now = new Date().toISOString();
   const systemValidation = {
-    missingInfo: !hostel.name || !hostel.location, digitalAddressFormatValid: true,
+    missingInfo: !hostel.name || !hostel.location,
     duplicateHostelCheck: 'clean', duplicateRegistrationCheck: 'clean', managerApproved: true,
     identityVerified, ownershipEvidencePresent: Boolean(evidence.proofOfOwnershipUrl),
     conflictingInfo: Boolean(body.hostelName && body.hostelName !== hostel.name), capacityPricingValid: capacityValid && pricingValid
   };
   return {
     ...evidence, id: crypto.randomUUID(), hostelId: hostel.id, hostelName: hostel.name,
-    location: hostel.location || '', digitalAddress, totalCapacity: hostel.totalCapacity,
+    location: hostel.location || '', totalCapacity: hostel.totalCapacity,
     totalRooms: hostel.totalRooms, totalBlocks: hostel.totalBlocks, pricePerYear: hostel.pricePerYear,
     currency: hostel.currency || 'GHS', imageUrl: hostel.imageUrl || '',
     managerId: actor.id, managerName: actor.name, managerEmail: actor.email, managerPhone: actor.phone || '',

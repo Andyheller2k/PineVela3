@@ -1,13 +1,15 @@
 import { activateOnKeyboard } from '../lib/keyboardActivation';
 import DashboardOverlay from './DashboardOverlay';
 import { usesSupabasePersistence } from '../lib/persistence';
-import VerifiedAccountEnrollment from './VerifiedAccountEnrollment';
+import VerifiedAccountEnrollment,{type ManagerEnrollmentSnapshot} from './VerifiedAccountEnrollment';
+import ManagerClosureRequest from './ManagerClosureRequest';
+import ManagerApplicationCorrections from './ManagerApplicationCorrections';
 import { routePopupFeedback } from '../lib/feedback';
 import RouteSkeleton from './RouteSkeleton';
 import PasswordStrengthGauge from './PasswordStrengthGauge';
 import OnboardingProgress from './OnboardingProgress';
 import { sessionFetch as fetch } from '../lib/session';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
@@ -74,7 +76,15 @@ export default function PageManagerOnboarding() {
 
   // Existing Registered Manager Account State
   const [existingManagerRecord, setExistingManagerRecord] = useState<any>(null);
+  const [correctingManager,setCorrectingManager]=useState(false);
+  const [googleManagerPreview,setGoogleManagerPreview]=useState(false);
+  const [managerEnrollmentSnapshot,setManagerEnrollmentSnapshot]=useState<ManagerEnrollmentSnapshot|null>(null);
+  const [managerStatusError,setManagerStatusError]=useState('');
   const [checkingExisting, setCheckingExisting] = useState<boolean>(true);
+  const activeOwner=useRef(user?.id);activeOwner.current=user?.id;
+  const managerStatusRequest=useRef(0);
+  const managerStatusController=useRef<AbortController|null>(null);
+  const [retainedManagerEmail,setRetainedManagerEmail]=useState<string|null>(null);
   const [verifiedSubmission,setVerifiedSubmission] = useState<Record<string,unknown> | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState<boolean>(false);
   const [delPassword, setDelPassword] = useState<string>('');
@@ -82,39 +92,85 @@ export default function PageManagerOnboarding() {
   const [delError, setDelError] = useState<string | null>(null);
 
   const fetchExistingManagerStatus = async () => {
+    const captured=user?.id;
+    managerStatusController.current?.abort();
+    const controller=new AbortController();managerStatusController.current=controller;
+    const request=++managerStatusRequest.current;
+    const current=()=>!controller.signal.aborted&&request===managerStatusRequest.current&&activeOwner.current===captured;
     if (!user) {
       setCheckingExisting(false);
       return;
     }
     try {
       setCheckingExisting(true);
+      setManagerStatusError('');
+      if(usesSupabasePersistence){setCheckingRestriction(true);setRestrictionOwner(`${captured}:${user.role}`);setRestrictionError(null);}
       const uEmail = (user.email || '').toLowerCase().trim();
       const uId = user.id || '';
       const token = user?.token;
       const headers: any = {};
       if (token) headers['Authorization'] = `Bearer ${token}`;
-      const res = await fetch(`/api/users/my-registered-accounts?email=${encodeURIComponent(uEmail)}&userId=${encodeURIComponent(uId)}`, { headers });
+      if(usesSupabasePersistence)headers['X-PineVela-Profile-Context']=captured;
+      const signal=AbortSignal.any([controller.signal,AbortSignal.timeout(30000)]);
+      const res=await fetch(usesSupabasePersistence?'/api/users/manager-onboarding':`/api/users/my-registered-accounts?email=${encodeURIComponent(uEmail)}&userId=${encodeURIComponent(uId)}`,{headers,signal});
+      if(usesSupabasePersistence&&!res.ok){
+        const failure=await safeJson(res);
+        throw Error([401,403].includes(res.status)?'Open manager registration from your primary user account, then retry loading its sign-in options.':failure.error||'Could not load your manager registration. Please retry.');
+      }
       if (res.ok) {
-        const data = await safeJson(res);
-        if (data.managerAccount) {
+        const payload = await safeJson(res);
+        const data=usesSupabasePersistence?payload.registrations:payload;
+        if(!current())return;
+        if(usesSupabasePersistence&&(!data||!('managerAccount'in data)))throw Error('Could not confirm your manager registration. Please retry.');
+        if(usesSupabasePersistence&&data.managerAccount?.requiresPropertyRegistration){
+          setManagerName(data.managerAccount.name||'');setPhone(data.managerAccount.phone||'');setEmail(data.managerAccount.email||'');
+        }
+        if(usesSupabasePersistence){
+          const policy=payload.policy,enrollments=payload.enrollments,access=payload.access;
+          if(!policy)throw Error('Could not check manager sign-in options.');
+          if(typeof policy.googleManagerEnrollment!=='boolean')throw Error('Could not confirm manager sign-in options. Please retry.');
+          if(!Array.isArray(enrollments))throw Error('Could not confirm your saved manager registration. Please retry.');
+          if(!access||!('restriction'in access)||!Number.isFinite(Date.parse(access.serverTime)))throw Error('Could not confirm manager registration access. Please retry.');
+          if(access.restriction!==null){
+            if(typeof access.restriction!=='object'||!Number.isFinite(Date.parse(access.restriction.expiresAt)))throw Error('Could not confirm your manager registration cooldown.');
+            restrictionDeadline.current=performance.now()+Math.max(0,Date.parse(access.restriction.expiresAt)-Date.parse(access.serverTime));
+          }else restrictionDeadline.current=0;
+          setActiveRestriction(access.restriction);setRestrictionTimeLeft('');
+          setGoogleManagerPreview(policy.googleManagerEnrollment===true);
+          setManagerEnrollmentSnapshot({ownerId:captured,records:enrollments,googleManagerEnrollment:policy.googleManagerEnrollment});
+          const retained=enrollments.find((e:any)=>e.kind==='manager'&&e.verified_at&&(e.account_status==='closed'&&['completed','cancelled','expired'].includes(e.status)||e.account_status==='pending'&&e.status==='pending_review'));
+          setRetainedManagerEmail(retained?.email||null);
+          if(retained){setEmail(retained.email);setPassword('');setConfirmPassword('');}
+        }
+        if (data.managerAccount && !(usesSupabasePersistence&&data.managerAccount.requiresPropertyRegistration)) {
           setExistingManagerRecord(data.managerAccount);
+          setCorrectingManager(usesSupabasePersistence&&Boolean(data.managerAccount.canCorrectRegistration));
         } else {
           setExistingManagerRecord(null);
         }
       }
     } catch (err) {
+      if(usesSupabasePersistence&&current())setManagerStatusError(err instanceof Error&&err.name==='TimeoutError'?'Your manager registration check took too long. Retry when your connection is ready.':err instanceof Error?err.message:'Could not load manager registration.');
       console.error("Error checking existing manager record:", err);
     } finally {
-      setCheckingExisting(false);
+      if(current()){setCheckingExisting(false);if(usesSupabasePersistence)setCheckingRestriction(false);}
     }
   };
 
   useEffect(() => {
+    setManagerStatusError('');
+    setGoogleManagerPreview(false);
+    setManagerEnrollmentSnapshot(null);
+    setCorrectingManager(false);
+    setRetainedManagerEmail(null);setExistingManagerRecord(null);setVerifiedSubmission(null);
+    setPassword('');setConfirmPassword('');setManagerName(user?.name||'');setPhone(user?.phone||'');setEmail(initialWorkEmail);
     fetchExistingManagerStatus();
-  }, [user]);
+    return()=>{managerStatusController.current?.abort();managerStatusRequest.current++;};
+  }, [user?.id,user?.role]);
 
   const handleDeleteManagerAccount = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (usesSupabasePersistence) return;
     if (!delPassword) {
       setDelError('Manager account password is required to delete registration.');
       return;
@@ -170,7 +226,6 @@ export default function PageManagerOnboarding() {
   const [longitude, setLongitude] = useState<number>(-1.5716);
   const [kumasiZone, setKumasiZone] = useState('KNUST, Kumasi');
   const [location, setLocation] = useState('');
-  const [digitalAddress, setDigitalAddress] = useState('');
   const [landmark, setLandmark] = useState('');
   const [knustAccreditedConfirmed, setKnustAccreditedConfirmed] = useState(false);
   const [showLocationTooltip, setShowLocationTooltip] = useState(false);
@@ -194,47 +249,87 @@ export default function PageManagerOnboarding() {
     }, 4000);
   };
 
-  // 30-day restriction check
-  const [activeRestriction, setActiveRestriction] = useState<any>(null);
+  // Registration cooldowns have administrator-selected durations.
+  const [activeRestriction, setActiveRestriction] = useState<{ expiresAt: string; kind?: string; reason?: string } | null>(null);
   const [restrictionTimeLeft, setRestrictionTimeLeft] = useState<string>('');
+  const [checkingRestriction, setCheckingRestriction] = useState(false);
+  const [restrictionError, setRestrictionError] = useState<string | null>(null);
+  const [restrictionOwner, setRestrictionOwner] = useState<string | null>(null);
+  const restrictionRequest = useRef(0);
+  const restrictionController = useRef<AbortController | null>(null);
+  const restrictionDeadline = useRef(0);
+  const restrictionActorKey = `${user?.id || ''}:${user?.role || ''}`;
+  const currentRestrictionActor = useRef(restrictionActorKey);
+  currentRestrictionActor.current = restrictionActorKey;
+  const shouldCheckRestriction = !!user && (!usesSupabasePersistence || user.role === 'user');
 
   const fetchRestrictionStatus = async () => {
+    if(usesSupabasePersistence)return fetchExistingManagerStatus();
+    restrictionController.current?.abort();
+    const controller = new AbortController();
+    restrictionController.current = controller;
+    const request = ++restrictionRequest.current;
+    const capturedActor = restrictionActorKey;
+    const isCurrent = () => !controller.signal.aborted && request === restrictionRequest.current && currentRestrictionActor.current === capturedActor;
+    setRestrictionOwner(capturedActor);
+    setRestrictionError(null);
+    setActiveRestriction(null);
+    setRestrictionTimeLeft('');
+    if (!shouldCheckRestriction) {
+      setCheckingRestriction(false);
+      return;
+    }
+    setCheckingRestriction(true);
     try {
       const token = (user as any)?.token;
       const headers: any = {};
       if (token) headers['Authorization'] = `Bearer ${token}`;
-      const res = await fetch('/api/users/manager-restriction', { headers });
-      if (res.ok) {
-        const data = await safeJson(res);
-        setActiveRestriction(data.restriction);
+      if (usesSupabasePersistence) headers['X-PineVela-Account-Context'] = user!.id;
+      const res = await fetch('/api/users/manager-restriction', { headers, signal: AbortSignal.any([controller.signal,AbortSignal.timeout(30000)]) });
+      const data = await safeJson(res);
+      if (!res.ok) throw new Error(data.error || 'Could not check your manager registration cooldown.');
+      if (!isCurrent()) return;
+      if (data.restriction) {
+        const expiresAt = Date.parse(data.restriction.expiresAt);
+        const serverTime = usesSupabasePersistence ? Date.parse(data.serverTime) : Date.now();
+        if (!Number.isFinite(expiresAt) || !Number.isFinite(serverTime)) throw new Error('Could not read your registration cooldown. Please retry.');
+        // Use database time and a monotonic timer rather than the device clock.
+        restrictionDeadline.current = performance.now() + Math.max(0, expiresAt - serverTime);
       }
+      setActiveRestriction(data.restriction || null);
     } catch (err) {
-      console.error("Error fetching restriction status:", err);
+      if (isCurrent()) setRestrictionError(err instanceof Error&&err.name==='TimeoutError'?'The registration access check took too long. Retry when your connection is ready.':err instanceof Error ? err.message : 'Could not check your manager registration cooldown.');
+    } finally {
+      if (isCurrent()) setCheckingRestriction(false);
     }
   };
 
   useEffect(() => {
-    fetchRestrictionStatus();
-  }, [user]);
+    if(!usesSupabasePersistence)fetchRestrictionStatus();
+    return () => { restrictionController.current?.abort(); restrictionRequest.current++; };
+  }, [user?.id, user?.role]);
 
   useEffect(() => {
-    if (!activeRestriction) return;
-    const timer = setInterval(() => {
-      const expiresTime = new Date(activeRestriction.expiresAt).getTime();
-      const diffMs = expiresTime - Date.now();
+    if (!activeRestriction || restrictionOwner !== restrictionActorKey) return;
+    const update = () => {
+      if (currentRestrictionActor.current !== restrictionActorKey) return;
+      const diffMs = restrictionDeadline.current - performance.now();
       if (diffMs <= 0) {
-        setActiveRestriction(null);
-        clearInterval(timer);
+        // Recheck all active bans before allowing registration after expiry.
+        void fetchRestrictionStatus();
       } else {
-        const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-        const diffHours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-        const diffMins = Math.floor((diffMs % (1000 * 60)) / (1000 * 60));
-        const diffSecs = Math.floor((diffMs % (1000 * 60)) / 1000);
+        const seconds = Math.ceil(diffMs / 1000);
+        const diffDays = Math.floor(seconds / 86400);
+        const diffHours = Math.floor((seconds % 86400) / 3600);
+        const diffMins = Math.floor((seconds % 3600) / 60);
+        const diffSecs = seconds % 60;
         setRestrictionTimeLeft(`${diffDays}d ${diffHours}h ${diffMins}m ${diffSecs}s`);
       }
-    }, 1000);
+    };
+    update();
+    const timer = setInterval(update, 1000);
     return () => clearInterval(timer);
-  }, [activeRestriction]);
+  }, [activeRestriction, restrictionActorKey, restrictionOwner]);
 
   // Phase Validation Handlers
   const handleNextPhase = () => {
@@ -273,10 +368,14 @@ export default function PageManagerOnboarding() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
+    if (shouldCheckRestriction && (checkingRestriction || restrictionError || activeRestriction || restrictionOwner !== restrictionActorKey)) {
+      setErrorMessage('Your registration cooldown must be checked before continuing.');
+      return;
+    }
 
     // 1. Enforce official work email
-    const emailVal = validateManagerWorkEmail(email, 'Official Manager Work Email');
-    if (!emailVal.isValid) {
+    const emailVal = googleManagerPreview?{isValid:/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()),error:'Enter the separate Google account email for your manager login.'}:validateManagerWorkEmail(email, 'Official Manager Work Email');
+    if (!retainedManagerEmail && !emailVal.isValid) {
       setErrorMessage(emailVal.error!);
       triggerToast(emailVal.error!, 'error');
       return;
@@ -305,14 +404,14 @@ export default function PageManagerOnboarding() {
       return;
     }
 
-    if (!password || password.length < 6) {
+    if (!retainedManagerEmail && !googleManagerPreview && (!password || password.length < 6)) {
       const err = "Password must be at least 6 characters long.";
       setErrorMessage(err);
       triggerToast(err, 'error');
       return;
     }
 
-    if (password !== confirmPassword) {
+    if (!retainedManagerEmail && !googleManagerPreview && password !== confirmPassword) {
       const err = "Passwords do not match. Please verify your entries.";
       setErrorMessage(err);
       triggerToast(err, 'error');
@@ -339,7 +438,6 @@ export default function PageManagerOnboarding() {
         physicalAddress: fullAddressStr,
         city: 'Kumasi',
         region: 'Ashanti Region',
-        digitalAddress: digitalAddress.trim(),
         landmark: landmark.trim(),
         knustAccreditedConfirmed: true,
         managerEmail: email.trim().toLowerCase(),
@@ -444,17 +542,32 @@ export default function PageManagerOnboarding() {
       {/* Main Content Area */}
       <main className="flex-1 max-w-4xl w-full mx-auto px-4 sm:px-6 py-8 flex flex-col justify-center">
         
-        {checkingExisting ? (
+        {checkingExisting || checkingRestriction || (shouldCheckRestriction && restrictionOwner !== restrictionActorKey) ? (
           <RouteSkeleton />
-        ) : activeRestriction ? (
+        ) : usesSupabasePersistence&&managerStatusError ? (
+          <section role="alert" className="space-y-4 rounded-3xl border border-blue-200 bg-[var(--pv-panel)] p-6 text-[var(--pv-text)]">
+            <h1 className="text-xl font-bold">Manager registration could not load</h1><p className="text-sm">{managerStatusError}</p>
+            <button type="button" onClick={()=>void fetchExistingManagerStatus()} className="min-h-11 rounded-xl bg-blue-700 px-5 text-sm font-semibold text-white">Retry registration</button>
+          </section>
+        ) : restrictionOwner === restrictionActorKey && restrictionError ? (
+          <section role="alert" className="rounded-3xl border p-6 sm:p-10 text-center space-y-5 bg-[var(--pv-panel)] border-[var(--pv-edge)] text-[var(--pv-text)]">
+            <h2 className="text-2xl font-bold">Could not check registration access</h2>
+            <p>{restrictionError}</p>
+            <div className="flex flex-wrap justify-center gap-3">
+              <button onClick={() => void fetchRestrictionStatus()} className="min-h-11 px-6 rounded-xl bg-[var(--pv-blue-primary)] text-white font-bold">Retry access check</button>
+              <button onClick={handleCloseOrReturn} className="min-h-11 px-6 rounded-xl border border-[var(--pv-edge)]">Return to Dashboard</button>
+            </div>
+          </section>
+        ) : restrictionOwner === restrictionActorKey && activeRestriction ? (
           <div className="bg-white rounded-3xl border border-slate-100 shadow-2xl p-10 text-center space-y-6">
             <div className="w-16 h-16 rounded-2xl bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center mx-auto">
               <Clock className="w-8 h-8 animate-pulse" />
             </div>
             <h2 className="text-2xl font-black text-slate-900">Account Creation Cooldown Active</h2>
             <p className="text-slate-500 text-sm max-w-md mx-auto leading-relaxed font-medium">
-              A previously registered manager account associated with your profile was deleted recently. To maintain platform integrity, new registration requires cooldown expiration.
+              A registration cooldown applies to your account. You can register a manager account after the remaining cooldown expires.
             </p>
+            {activeRestriction.reason && <p className="text-sm text-slate-600">{activeRestriction.reason}</p>}
             <div className="inline-block px-6 py-3.5 rounded-2xl bg-slate-900 text-amber-400 font-mono font-black text-lg shadow-md">
               {restrictionTimeLeft || 'Processing...'}
             </div>
@@ -467,6 +580,15 @@ export default function PageManagerOnboarding() {
               </button>
             </div>
           </div>
+        ) : usesSupabasePersistence&&googleManagerPreview&&!retainedManagerEmail&&!existingManagerRecord ? (
+          <section className="rounded-3xl border border-blue-200 bg-white p-6 text-slate-900 shadow-lg dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 sm:p-8">
+            <h1 className="mb-3 text-2xl font-bold">Create your manager login</h1>
+            <p className="mb-5 text-sm text-slate-600 dark:text-slate-300">Verify your separate Google account first. You can enter your property details afterward.</p>
+            <VerifiedAccountEnrollment key={user?.id} kind="manager" initialName={managerName} initialPhone={phone} initialEmail={email} initialSnapshot={managerEnrollmentSnapshot||undefined}
+              onVerified={async()=>{await fetchExistingManagerStatus();await refreshNotifications();}}/>
+          </section>
+        ) : usesSupabasePersistence&&correctingManager ? (
+          <ManagerApplicationCorrections key={user?.id} onClose={()=>{setCorrectingManager(false);}} onSubmitted={()=>{setCorrectingManager(false);void fetchExistingManagerStatus();void refreshNotifications();}}/>
         ) : existingManagerRecord && !isSuccess ? (
           /* Live Status Card: Replaces form card when an account is submitted */
           <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl overflow-hidden relative animate-fadeIn">
@@ -511,7 +633,7 @@ export default function PageManagerOnboarding() {
                   ) : (
                     <div className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-amber-50 text-amber-900 border border-amber-200 font-extrabold text-xs">
                       <Clock className="w-4 h-4 text-amber-600 animate-pulse" />
-                      <span>Status: Pending Admin Verification</span>
+                      <span>Status: {existingManagerRecord.status==='more_info_required'?'More Information Required':'Pending Admin Verification'}</span>
                     </div>
                   )}
                 </div>
@@ -538,12 +660,14 @@ export default function PageManagerOnboarding() {
               </div>
 
               {/* Status explanation notice */}
+              {existingManagerRecord.adminNotes&&<p className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950"><strong>Administrator feedback: </strong>{existingManagerRecord.adminNotes}</p>}
+              {usesSupabasePersistence&&existingManagerRecord.canCorrectRegistration&&<button type="button" onClick={()=>setCorrectingManager(true)} className="min-h-11 rounded-xl bg-blue-700 px-5 py-3 text-sm font-bold text-white">Review and correct application</button>}
               {!(existingManagerRecord.isApproved || existingManagerRecord.isVerified || existingManagerRecord.status?.toLowerCase() === 'approved' || existingManagerRecord.status?.toLowerCase() === 'verified') ? (
                 <div className="p-4 rounded-2xl bg-amber-50/80 border border-amber-200 flex items-start gap-3">
                   <Clock className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
                   <div className="text-xs text-amber-950 leading-relaxed font-medium">
-                    <strong className="block text-amber-900 font-bold mb-0.5">Verification in Progress — Login Locked:</strong>
-                    Your residence registration has been submitted to PineVela Administration. A certified field officer is being scheduled to physically inspect the hostel and verify property details. You cannot log into the Manager Console until your account has been verified by the admin.
+                    <strong className="block text-amber-900 font-bold mb-0.5">{existingManagerRecord.status==='more_info_required'?'Corrections Required — Login Locked:':'Verification in Progress — Login Locked:'}</strong>
+                    {existingManagerRecord.status==='more_info_required'?'Review the administrator feedback and correct your property details. Resubmission requires a fresh physical inspection before manager approval.':'Your residence registration has been submitted to PineVela Administration. A certified field officer is being scheduled to physically inspect the hostel and verify property details. You cannot log into the Manager Console until your account has been verified by the admin.'}
                   </div>
                 </div>
               ) : (
@@ -569,7 +693,7 @@ export default function PageManagerOnboarding() {
                   className="w-full sm:w-auto px-5 py-3 rounded-2xl bg-rose-50 hover:bg-rose-100 text-rose-700 font-black text-xs border border-rose-200 flex items-center justify-center gap-2 cursor-pointer transition-all shadow-xs"
                 >
                   <Trash2 className="w-4 h-4" />
-                  <span>Delete Account & Restart Registration</span>
+                  <span>{usesSupabasePersistence ? 'Request account closure' : 'Delete Account & Restart Registration'}</span>
                 </button>
                 )}
 
@@ -851,7 +975,6 @@ export default function PageManagerOnboarding() {
                     </div>
                   </div>
 
-                  {/* Landmark and GhanaPost GPS fields removed as requested */}
                 </div>
               )}
 
@@ -862,11 +985,12 @@ export default function PageManagerOnboarding() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">
-                        Official Manager Email <span className="text-rose-500">*</span>
+                        {googleManagerPreview?'Manager Google Email':'Official Manager Email'} <span className="text-rose-500">*</span>
                       </label>
                       <div className="relative">
                         <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                         <input aria-label="Official Manager Email"
+                          readOnly={Boolean(retainedManagerEmail)}
                           type="email"
                           required
                           value={email}
@@ -895,6 +1019,7 @@ export default function PageManagerOnboarding() {
                     </div>
                   </div>
 
+                  {retainedManagerEmail ? <p className="text-sm text-blue-900">Your retained manager email will be confirmed in the next step. Your existing sign-in credentials are kept.</p> : googleManagerPreview?<p className="text-sm text-blue-900">Verify a separate Google account in the next step. You do not need a work mailbox or a new password for this signup.</p>:<>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">
@@ -939,6 +1064,7 @@ export default function PageManagerOnboarding() {
                       <PasswordStrengthGauge password={confirmPassword} />
                     </div>
                   </div>
+                  </>}
 
                   {/* Mandatory KNUST Accreditation & Kumasi Location Checkbox */}
                   <div className="p-4 rounded-2xl bg-blue-50 border border-blue-200">
@@ -1032,7 +1158,7 @@ export default function PageManagerOnboarding() {
       </footer>
 
       {/* Account Deletion Modal */}
-      {showDeleteModal && (
+      {showDeleteModal && (usesSupabasePersistence ? <ManagerClosureRequest onClose={() => setShowDeleteModal(false)} /> :
         <DashboardOverlay aria-label="Authenticate Manager Account Deletion" onClose={() => setShowDeleteModal(false)} className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fadeIn">
           <div data-popup-card className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-slate-100 space-y-6 relative">
             <button aria-label="Close dialog"
@@ -1110,13 +1236,13 @@ export default function PageManagerOnboarding() {
           </div>
         </DashboardOverlay>
       )}
-      {verifiedSubmission && <DashboardOverlay aria-label="Verify manager work email" onClose={() => setVerifiedSubmission(null)} className="fixed inset-0 bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-4">
+      {verifiedSubmission && <DashboardOverlay aria-label="Verify manager email" onClose={() => setVerifiedSubmission(null)} className="fixed inset-0 bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-4">
         <section className="onboarding-fields w-full max-w-lg max-h-[90dvh] overflow-y-auto rounded-3xl border border-blue-200 bg-white p-5 sm:p-7 space-y-4">
           <div className="flex items-start justify-between gap-3">
-            <h2 className="text-lg font-bold text-slate-900">Verify your manager work email</h2>
+            <h2 className="text-lg font-bold text-slate-900">{googleManagerPreview?'Verify your manager Google account':'Verify your manager work email'}</h2>
             <button type="button" onClick={() => setVerifiedSubmission(null)} className="min-h-11 rounded-xl border border-blue-200 px-3 text-sm">Close</button>
           </div>
-          <VerifiedAccountEnrollment kind="manager" initialName={managerName} initialPhone={phone} initialEmail={email} initialPassword={password}
+          <VerifiedAccountEnrollment kind="manager" initialName={managerName} initialPhone={phone} initialEmail={email} initialPassword={password} initialSnapshot={managerEnrollmentSnapshot||undefined}
             onVerified={async enrollmentId => {
               const response = await fetch('/api/manager-verifications/submit',{ method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({ ...verifiedSubmission,enrollmentId }) });
               const result = await safeJson(response);

@@ -364,7 +364,6 @@ let hostelVerifications: any[] = [
     location: 'Legon Campus East Gate, Accra',
     campusZone: 'University of Ghana (East Gate)',
     addressLine1: 'Plot 44 University Ring Road',
-    digitalAddress: 'GA-183-9024',
     totalCapacity: 140,
     totalRooms: 40,
     totalBlocks: 3,
@@ -385,7 +384,6 @@ let hostelVerifications: any[] = [
     proofOfOwnershipUrl: 'https://docs.pinevela.com/auth/Heritage_Palace_Management_Deed.pdf',
     systemValidation: {
       missingInfo: false,
-      digitalAddressFormatValid: true,
       duplicateHostelCheck: 'clean',
       duplicateRegistrationCheck: 'clean',
       managerApproved: true,
@@ -400,7 +398,7 @@ let hostelVerifications: any[] = [
     paymentAmount: 50.00,
     paymentDate: new Date(Date.now() - 3600000 * 6).toISOString(),
     status: 'under_admin_review',
-    adminNotes: 'Onboarding fee GHS 50 paid. Digital address GA-183-9024 verified on GhanaPost GPS.',
+    adminNotes: 'Onboarding fee GHS 50 paid.',
     submittedAt: new Date(Date.now() - 3600000 * 6).toISOString(),
     createdAt: new Date(Date.now() - 3600000 * 6).toISOString()
   }
@@ -456,7 +454,6 @@ const DEFAULT_INSPECTIONS: any[] = [
     managerPhone: '+233 24 991 2234',
     hostelName: 'Heritage Luxury Residences',
     location: 'Plot 44 University Ring Road, Legon Campus East Gate, Accra',
-    digitalAddress: 'GA-183-9024',
     dispatchedAt: new Date(Date.now() - 86400000 * 1).toISOString(),
     dispatchedBy: 'Admin (System Administrator)',
     assignedOfficerId: 'vt-101',
@@ -3306,7 +3303,6 @@ async function startServer() {
         city,
         region,
         landmark,
-        digitalAddress,
         gpsCoordinates,
         managerEmail,
         email,
@@ -3321,7 +3317,6 @@ async function startServer() {
       const resolvedEmail = (managerEmail || email || '').toLowerCase().trim();
       const resolvedPhone = (managerPhone || phone || '').trim();
       const resolvedLocation = (location || physicalAddress || address || `${city || 'Kumasi'}, ${region || 'Ashanti Region'}`).trim();
-      const resolvedDigitalAddress = (digitalAddress || '').trim();
       const resolvedLandmark = (landmark || '').trim();
 
       if (!resolvedName || !resolvedEmail) {
@@ -3395,7 +3390,6 @@ async function startServer() {
         location: resolvedLocation,
         address: resolvedLocation,
         landmark: resolvedLandmark,
-        digitalAddress: resolvedDigitalAddress,
         gpsCoordinates: gpsCoordinates || null,
         authorityRelationship: 'Property Representative',
         organizationName: resolvedHostelName,
@@ -3436,7 +3430,6 @@ async function startServer() {
         residenceName: resolvedHostelName,
         address: resolvedLocation,
         location: resolvedLocation,
-        digitalAddress: resolvedDigitalAddress,
         landmark: resolvedLandmark,
         roleTitle: roleTitle || 'Hostel Manager',
         isVerified: false,
@@ -3504,7 +3497,6 @@ async function startServer() {
         details: {
           hostelName: resolvedHostelName,
           location: resolvedLocation,
-          digitalAddress: resolvedDigitalAddress
         },
         timestamp: now
       };
@@ -6428,7 +6420,6 @@ async function startServer() {
         managerPhone: v.managerPhone,
         hostelName: v.hostelName || v.residenceName || 'Hostel Property',
         location: v.location || v.address || 'Address provided by manager',
-        digitalAddress: v.digitalAddress || '',
         dispatchedAt: v.dispatchedAt || v.createdAt || new Date().toISOString(),
         dispatchedBy: v.dispatchedBy || 'Admin',
         assignedOfficerId: v.assignedOfficerId || 'vt-101',
@@ -6506,7 +6497,6 @@ async function startServer() {
         managerPhone: verif.managerPhone,
         hostelName: verif.hostelName || verif.residenceName || 'Hostel Property',
         location: verif.location || verif.address || 'Address provided by manager',
-        digitalAddress: verif.digitalAddress || '',
         dispatchedAt: now,
         dispatchedBy: req.user?.name || 'System Administrator',
         assignedOfficerId: officer.id,
@@ -6833,7 +6823,6 @@ async function startServer() {
     try {
       const {
         name,
-        digitalAddress,
         assignedManagerId,
         managerEmail,
         totalCapacity,
@@ -6886,7 +6875,6 @@ async function startServer() {
 
       const systemValidation = {
         missingInfo: errors.length > 0,
-        digitalAddressFormatValid: true,
         duplicateHostelCheck: isDuplicateHostel ? 'flagged' : 'clean',
         duplicateRegistrationCheck: 'clean',
         managerApproved: isApprovedManager || req.user?.role === 'admin',
@@ -6918,7 +6906,7 @@ async function startServer() {
         id: `val-${newRecord.id}`, action: 'HOSTEL_VERIFICATION_SUBMITTED',
         targetType: 'hostel', targetId: newRecord.hostelId, targetName: newRecord.hostelName,
         performedBy: req.user.name, performedById: req.user.id, role: 'manager',
-        details: { digitalAddress: newRecord.digitalAddress, proofType: newRecord.proofOfOwnershipType },
+        details: { proofType: newRecord.proofOfOwnershipType },
         timestamp: newRecord.createdAt
       };
       await dbCreateVerificationAuditLog(auditLog);
@@ -7418,7 +7406,6 @@ async function startServer() {
           hostelId: result.hostel.id,
           hostelName: result.hostel.name,
           location: result.hostel.location || registrationData.location || null,
-          digitalAddress: registrationData.digitalAddress || null,
           managerId: req.user.id,
           managerName: registrationData.managerName,
           managerEmail: registrationData.managerEmail,
@@ -7441,7 +7428,6 @@ async function startServer() {
           image: result.hostel.image || result.hostel.imageUrl,
           status: 'under_admin_review',
           systemValidation: {
-            digitalAddressFormatValid: null,
             ownershipEvidencePresent: Boolean(registrationData.proofOfOwnershipDocumentUrl),
             capacityConsistent: null,
             duplicateHostelCheck: 'pending'

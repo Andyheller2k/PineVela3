@@ -10,23 +10,23 @@ function fields(body:any,allowed:string[]){if(!body || typeof body!=='object' ||
 function text(v:unknown,max:number,min=1){if(typeof v!=='string' || v.length>max || v.trim().length<min)throw new ApiError(400,'Enter valid seller registration details.');return v.trim();}
 function application(r:any){return {id:r.id,accountId:r.seller_context_id,enrollmentId:r.enrollment_id,
   fullName:r.display_name,studentEmail:r.email,phone:r.phone,university:r.campus,categoryToSell:r.primary_category,
-  idNumber:r.student_id,storeName:r.proposed_store_name,status:r.status==='submitted'?'pending':r.status,
+  idNumber:r.student_id,storeName:r.proposed_store_name,status:r.withdrawn_by_wipe_id?'withdrawn':r.status==='submitted'?'pending':r.status,
   accountStatus:r.account_status,submittedAt:r.submitted_at,reviewedAt:r.reviewed_at,adminNotes:r.review_notes,
-  emailVerified:Boolean(r.verified_at),submissionVersion:r.submission_version};}
+  emailVerified:Boolean(r.verified_at),registrationGeneration:r.registration_generation,isCurrent:r.is_current,submissionVersion:r.submission_version};}
 async function administrators(c:PoolClient){return (await c.query("select c.id from public.account_contexts c join public.admin_memberships m on m.context_id=c.id where c.kind='admin' and c.status='active' and m.status='active'")).rows.map(r=>r.id);}
 async function audit(c:PoolClient,a:VerifiedActor,id:string,event:string,data:any){await c.query("insert into private.audit_events(actor_context_id,event_type,resource_type,resource_id,event_data) values ($1,$2,'seller_application',$3,$4)",[a.contextId,event,id,JSON.stringify(data)]);}
 export async function sellerStatus(c:PoolClient,a:VerifiedActor){
   if(!['primary','seller'].includes(a.kind))throw new ApiError(403,'Use your primary or seller account to view market registration.');
-  const rows=(await c.query('select * from public.seller_application_details order by submitted_at desc limit 2')).rows;
+  const rows=(await c.query("select * from private.seller_application_details where is_current and account_status<>'closed' order by submitted_at desc limit 2")).rows;
   if(rows.length>1)throw new ApiError(409,'More than one seller registration requires administrative reconciliation.');
   const app=rows[0];if(!app)return {application:null,store:null};
   const s=(await c.query(`select s.*,exists(select 1 from public.payments p where p.store_id=s.id and p.purpose='store_activation' and private.payment_grants_access(p.id)) as paid,
     (select max(ends_at) from public.store_fee_periods where store_id=s.id) as semester_expires_at,
     sub.plan as subscription_plan,sub.ends_at as subscription_expires_at,
-    (select coalesce(round(avg(r.rating),1),0) from public.market_reviews_public r where r.store_id=s.id) as rating,
-    (select count(*) from public.market_reviews_public r where r.store_id=s.id) as rating_count from public.stores s
+    (select coalesce(round(avg(r.rating),1),0) from private.market_reviews_public r where r.store_id=s.id) as rating,
+    (select count(*) from private.market_reviews_public r where r.store_id=s.id) as rating_count from public.stores s
     left join lateral(select plan,ends_at from public.store_subscriptions where store_id=s.id and status='active' and starts_at<=now() and ends_at>now() order by starts_at desc limit 1) sub on true
-    where s.seller_context_id=$1`,[app.seller_context_id])).rows[0];
+    where s.application_id=$1`,[app.id])).rows[0];
   const plan=s?.subscription_plan==='pine_pro'?'pro':s?.subscription_plan==='pine_star'?'star':'default';
   const branding={subscriptionPlan:plan,subscriptionStatus:s?.subscription_plan?'active':'inactive',subscriptionExpiresAt:s?.subscription_expires_at,semesterExpiresAt:s?.semester_expires_at,
     profilePicture:s?.logo_path || MARKET_DEFAULT_LOGO,coverPicture:s?.cover_path || MARKET_DEFAULT_COVERS[0].url};
@@ -49,7 +49,7 @@ export async function submitSellerApplication(c:PoolClient,a:VerifiedActor,body:
     throw new ApiError(409,'The verified seller identity is no longer eligible for registration.');
   if((await c.query(`select 1 from public.registration_bans b join public.account_contexts x on x.id=b.account_context_id
     where (x.auth_user_id=$1 or x.primary_owner_id=$1) and b.kind='seller_account' and b.until_at>clock_timestamp()`,[a.authUserId])).rowCount)throw new ApiError(403,'Seller registration is temporarily restricted.');
-  const old=(await c.query('select * from public.seller_applications where seller_context_id=$1 for update',[e.linked_context_id])).rows[0];
+  const old=(await c.query('select a.* from public.seller_applications a join public.account_contexts x on x.id=a.seller_context_id where a.seller_context_id=$1 and a.registration_generation=x.seller_generation for update of a',[e.linked_context_id])).rows[0];
   if(old && old.status!=='rejected'){
     if(old.campus!==campus || old.primary_category!==category || old.student_id!==studentId || old.proposed_store_name!==name)throw new ApiError(409,'This seller application already exists.');
     return {success:true,application:(await sellerStatus(c,a)).application,idempotent:true};
@@ -77,6 +77,8 @@ export async function decideSellerApplication(c:PoolClient,a:VerifiedActor,body:
   await c.query('select id from private.account_enrollments where id=$1 for update',[selected.enrollment_id]);
   await c.query('select id from public.account_contexts where id=$1 for update',[selected.seller_context_id]);
   const app=(await c.query('select * from public.seller_applications where id=$1 for update',[id])).rows[0];if(!app)throw new ApiError(404,'Seller application not found.');
+  if(app.withdrawn_by_wipe_id)throw new ApiError(409,'This seller application was withdrawn after a reviewed closure. Its evidence is retained.');
+  if(!(await c.query('select 1 from public.account_contexts where id=$1 and seller_generation=$2',[app.seller_context_id,app.registration_generation])).rowCount)throw new ApiError(409,'This application belongs to an earlier seller registration.');
   const status=approved?'approved':'rejected';
   if(app.status===status && app.review_notes===notes)return {success:true,idempotent:true};
   if(app.status!=='submitted')throw new ApiError(409,'This seller application already has a decision.');
@@ -98,7 +100,7 @@ export async function decideSellerApplication(c:PoolClient,a:VerifiedActor,body:
 export function installSellerRegistration(app:Express,auth:SupabaseAuth){
   app.get('/api/digital-market/status',auth.require(['primary','seller']),route(async(req,res)=>res.json(await auth.db.authorizedSystem(req.actor,['primary','seller'],c=>sellerStatus(c,req.actor)))));
   app.post('/api/digital-market/register',auth.require(['primary']),route(async(req,res)=>res.json(await auth.db.authorizedSystem(req.actor,['primary'],c=>submitSellerApplication(c,req.actor,req.body)))));
-  app.get('/api/admin/digital-market/applications',auth.require(['admin']),route(async(req,res)=>res.json(await auth.db.actor(req.actor,async c=>(await c.query('select * from public.seller_application_details order by submitted_at desc limit 1000')).rows.map(application)))));
+  app.get('/api/admin/digital-market/applications',auth.require(['admin']),route(async(req,res)=>res.json(await auth.db.readActor(req.actor,async c=>(await c.query('select * from private.seller_application_details where is_current order by submitted_at desc limit 1000')).rows.map(application)))));
   const decide=(approved:boolean)=>route(async(req,res)=>res.json(await auth.db.authorizedSystem(req.actor,['admin'],c=>decideSellerApplication(c,req.actor,req.body,approved))));
   app.post('/api/admin/digital-market/approve-application',auth.require(['admin']),decide(true));
   app.post('/api/admin/digital-market/reject-application',auth.require(['admin']),decide(false));

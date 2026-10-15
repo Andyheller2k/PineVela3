@@ -4,6 +4,8 @@ import SupabaseResidentActivation from './SupabaseResidentActivation';
 import { loginContinuation } from '../lib/publicContinuation';
 import { routePopupFeedback } from '../lib/feedback';
 import PasswordStrengthGauge from './PasswordStrengthGauge';
+import PrimaryEmailReentry from './PrimaryEmailReentry';
+import EmailPasswordRecovery from './EmailPasswordRecovery';
 import OnboardingProgress, { SIGNUP_STEPS, MANAGER_ACCOUNT_STEPS, ROOM_ACTIVATION_STEPS } from './OnboardingProgress';
 import { sessionFetch as fetch } from '../lib/session';
 import React, { useState, useEffect } from 'react';
@@ -48,6 +50,8 @@ export default function PageUnifiedLogin() {
   const [showPassword, setShowPassword] = useState(false);
   const [loadingLogin, setLoadingLogin] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
+  const [showPasswordRecovery, setShowPasswordRecovery] = useState(false);
+  const [showPrimaryReentry, setShowPrimaryReentry] = useState(false);
   const [needsPortalPin,setNeedsPortalPin] = useState(false);
   const [loginPortal,setLoginPortal] = useState<'resident' | 'seller'>('resident');
   const [loginPortalPin,setLoginPortalPin] = useState('');
@@ -158,7 +162,10 @@ export default function PageUnifiedLogin() {
       signup_disabled: 'Google account registration is currently unavailable. Please use email registration or try again later.',
       email_unverified: 'Please verify your Google account email before signing in.',
       failed: 'Google sign-in could not complete. Please try again.',
-      missing: 'No PineVela account is connected to this Google account. Choose Sign Up to create one.',
+      primary_closed: 'Your primary portal was closed after a reviewed wipe. Choose Sign Up with Google using the same account to reopen it. Your history remains saved.',
+      missing: usesSupabasePersistence
+        ? 'This Google account has no profile in the new PineVela database. Choose Sign Up with Google using the same account to continue.'
+        : 'No PineVela account is connected to this Google account. Choose Sign Up to create one.',
       conflict: 'This email already has a PineVela account. Sign in with your existing credentials.',
       blocked: 'This PineVela account is not permitted to sign in.',
     };
@@ -860,6 +867,8 @@ export default function PageUnifiedLogin() {
 
   return (
     <div className="unified-login min-h-screen bg-transparent flex flex-col font-sans justify-between relative overflow-hidden">
+      {usesSupabasePersistence && showPrimaryReentry && <PrimaryEmailReentry initialEmail={usernameOrEmail || regEmail} onClose={() => setShowPrimaryReentry(false)} onReopened={account => { setShowPrimaryReentry(false); setSessionUser(account); navigate(continuation || '/user/dashboard', { replace: true }); }} />}
+      {usesSupabasePersistence && showPasswordRecovery && <EmailPasswordRecovery initialEmail={usernameOrEmail} onClose={() => setShowPasswordRecovery(false)} />}
       <div className="mobile-login-backdrop" aria-hidden="true">
         <img src={featureImage} alt="" />
       </div>
@@ -1097,7 +1106,7 @@ export default function PageUnifiedLogin() {
                     <label className="text-xs font-bold text-slate-700 block">Password</label>
                     <button 
                       type="button" 
-                      onClick={() => triggerToast('Standard password reset requires system administrator approval.', 'info')} 
+                      onClick={() => usesSupabasePersistence ? setShowPasswordRecovery(true) : triggerToast('Standard password reset requires system administrator approval.', 'info')}
                       className="text-xs font-bold text-blue-900 hover:underline cursor-pointer"
                     >
                       Forgot Password?
@@ -1167,6 +1176,7 @@ export default function PageUnifiedLogin() {
                   )}
                 </button>
 
+                {(location.state as {residentReleaseCompleted?:boolean}|null)?.residentReleaseCompleted && <p role="status" className="rounded-xl border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900">Your room access has ended. Your verified identity, other portals and account history are retained. Sign in to continue.</p>}
                 {loginError && (
                   <div
                     className="flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2.5 text-xs font-semibold text-rose-800"
@@ -1286,6 +1296,7 @@ export default function PageUnifiedLogin() {
               </form>
             )}
 
+            {usesSupabasePersistence && !verificationPending && <button type="button" onClick={() => setShowPrimaryReentry(true)} className="min-h-11 px-3 py-2 text-sm font-bold text-blue-900 hover:underline">Reopen primary account with email</button>}
             {!verificationPending && <GoogleAuthButton returnTo={continuation} mode={activeTab === 'register' ? 'signup' : 'login'} onError={setLoginError} />}
             {activeTab === 'register' && !verificationPending && loginError && <p role="alert" className="text-xs font-semibold text-rose-800">{loginError}</p>}
 

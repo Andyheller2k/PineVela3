@@ -1,6 +1,6 @@
 /**
  * PineVela Centralized Form Validation & Formatting Utilities
- * Strictly enforces email, phone number, physical address, digital address,
+ * Strictly enforces email, phone number, physical address,
  * and identification document formats (Ghana Card, Voter ID, NHIS, Student ID, Passport, Driver's License).
  * 
  * When numeric-only IDs are selected, alphabets are blocked immediately.
@@ -177,26 +177,6 @@ export function validateAddress(address: string, fieldName = 'Physical address')
   return validateStreetAddress(address, fieldName);
 }
 
-/**
- * 4. Digital Address (GhanaPost GPS) Cleaner & Validator
- * Strict Format: XX-XXX-XXXX (e.g. GH-123-4567 or GA-123-4567)
- * Strictly 2 uppercase letters, hyphen, 3 digits, hyphen, 4 digits.
- */
-export function formatDigitalAddress(raw: string): string {
-  if (!raw) return '';
-  let clean = raw.toUpperCase().replace(/[^A-Z0-9-]/g, '');
-  // Auto format with hyphens if user types raw without hyphens
-  const pureLetters = clean.replace(/[^A-Z]/g, '').slice(0, 2);
-  const pureDigits = clean.replace(/[^0-9]/g, '').slice(0, 7);
-  if (pureLetters.length === 2 && pureDigits.length > 0) {
-    if (pureDigits.length <= 3) {
-      return `${pureLetters}-${pureDigits}`;
-    }
-    return `${pureLetters}-${pureDigits.slice(0, 3)}-${pureDigits.slice(3, 7)}`;
-  }
-  return clean.slice(0, 11);
-}
-
 export function validateHostelStreetAddress(street: string): ValidationResult {
   const trimmed = (street || '').trim();
   if (!trimmed) {
@@ -224,25 +204,6 @@ export function validateHostelStreetAddress(street: string): ValidationResult {
   return { isValid: true, sanitizedValue: trimmed };
 }
 
-export function validateDigitalAddress(gps: string, isRequired = true): ValidationResult {
-  const formatted = (gps || '').trim().toUpperCase();
-  if (!formatted) {
-    if (isRequired) {
-      return { isValid: false, error: 'GhanaPost GPS Digital Address is required (e.g. GA-183-9024 or GH-123-4567).' };
-    }
-    return { isValid: true, sanitizedValue: '' };
-  }
-
-  // Strictly: 2 uppercase letters, hyphen, 3 digits, hyphen, 4 digits (e.g., GA-183-9024)
-  const gpsRegex = /^[A-Z]{2}-[0-9]{3}-[0-9]{4}$/;
-  if (!gpsRegex.test(formatted)) {
-    return {
-      isValid: false,
-      error: 'Invalid Digital Address. Must strictly follow the GhanaPost GPS format: GA-183-9024 or GH-123-4567 (2 uppercase letters, 3 digits, 4 digits).'
-    };
-  }
-  return { isValid: true, sanitizedValue: formatted };
-}
 
 /**
  * 5. Identification Document Configurations

@@ -33,8 +33,8 @@ function meetingRow(r:any){const start=new Date(r.starts_at),end=new Date(r.ends
   notes:r.notes || '',managerResponseNotes:r.response_notes,createdAt:r.created_at,updatedAt:r.updated_at};}
 async function detail(c:PoolClient,id:string) {return meetingRow((await c.query(`select v.*,h.name as residence_name,p.display_name as manager_name from public.meetings v join public.residences h on h.id=v.residence_id
   join public.account_contexts x on x.id=v.manager_context_id join public.profiles p on p.id=x.auth_user_id where v.id=$1`,[id])).rows[0]);}
-export async function meetingRows(c:PoolClient){return (await c.query('select * from public.housing_meeting_details where removed_at is null order by starts_at desc limit 1000')).rows.map(meetingRow);}
-export async function meetingParticipants(c:PoolClient,id:unknown){return (await c.query('select * from public.housing_meeting_participants where residence_id=$1 order by kind,display_name',[uuid(id)])).rows.map(r=>({
+export async function meetingRows(c:PoolClient){return (await c.query('select * from private.housing_meeting_details where removed_at is null order by starts_at desc limit 1000')).rows.map(meetingRow);}
+export async function meetingParticipants(c:PoolClient,id:unknown){return (await c.query('select * from private.housing_meeting_participants where residence_id=$1 order by kind,display_name',[uuid(id)])).rows.map(r=>({
   contextId:r.context_id,kind:r.kind,name:r.display_name,email:r.email,phone:r.phone || '',roomLabel:r.room_label || ''}));}
 async function record(c:PoolClient,a:VerifiedActor,m:any,event:string) {
   await c.query("insert into private.audit_events(actor_context_id,event_type,resource_type,resource_id) values ($1,$2,'meeting',$3)",[a.contextId,event,m.id]);
@@ -144,7 +144,7 @@ export async function updateMeeting(c:PoolClient,a:VerifiedActor,id:unknown,body
   return detail(c,m.id);
 }
 export function installMeetings(app:Express,auth:SupabaseAuth) {
-  app.get('/api/meetings',auth.require(['manager','resident','staff','admin']),route(async(req,res)=>res.json(await auth.db.actor(req.actor,c=>meetingRows(c)))));
+  app.get('/api/meetings',auth.require(['manager','resident','staff','admin']),route(async(req,res)=>res.json(await auth.db.readActor(req.actor,c=>meetingRows(c)))));
   app.get('/api/meetings/participants',auth.require(['manager']),route(async(req,res)=>res.json(await auth.db.actor(req.actor,c=>meetingParticipants(c,req.query.hostelId)))));
   app.post('/api/meetings',auth.require(['manager','resident','staff']),route(async(req,res)=>res.status(201).json(await auth.db.authorizedSystem(req.actor,['manager','resident','staff'],c=>createMeeting(c,req.actor,req.body)))));
   app.put('/api/meetings/:id',auth.require(['manager','resident','staff']),route(async(req,res)=>res.json(await auth.db.authorizedSystem(req.actor,['manager','resident','staff'],c=>updateMeeting(c,req.actor,req.params.id,req.body)))));

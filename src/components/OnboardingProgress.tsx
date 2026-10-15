@@ -43,7 +43,7 @@ export const ADMIN_INVITATION_STEPS: OnboardingStep[] = [
 export const OFFICER_ACCOUNT_STEPS: OnboardingStep[] = [
   { title: 'Officer identity', icon: User, description: 'The verification officer’s name and contact details' },
   { title: 'Inspection zone', icon: MapPin, description: 'The officer’s assigned inspection area' },
-  { title: 'Secure credentials', icon: ShieldCheck, description: 'Set the officer’s unique login password' }
+  { title: 'Verified access', icon: ShieldCheck, description: 'Accept the invitation using the verified official email' }
 ];
 
 /** Shared resident-wizard styling. Only completed/current steps may be revisited. */

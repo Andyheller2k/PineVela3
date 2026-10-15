@@ -1,5 +1,103 @@
 # PineVela Product Rules
 
+## Officer access and room-key delivery
+
+Officers verify their own separate official Google/email identity and accept an
+administrator-keyed private invitation; administrators do not assign passwords.
+Suspension/restoration needs an administrator’s own approval key and fresh officer
+sign-in. Existing administrator identities cannot become officers.
+
+Assigned managers can send a current room key to one verified recipient’s primary
+PineVela notifications using their own operation key. This does not send email/SMS
+or allocate/reserve the room. Occupied keys belong only to the current resident
+owner. One key and one resident per room remain enforced. Delivery history survives
+reviewed residence removal; an obsolete receipt does not advertise a current key.
+See [details](migrations/officer-invitations-and-room-delivery.md).
+
+## Academic-year room access reset
+
+An assigned manager may reset every configured room in an approved, fully reviewed
+residence with the current manager key. Administrators require their own separate
+approval key. An exact server preview and typed `RESET ROOM ACCESS` consent precede
+the operation. Room/occupant, assignment or key-version changes invalidate that preview.
+One completed reset is recorded per residence/academic year; later years must advance.
+A retry returns the same receipt and never evicts residents who activated afterward.
+
+Reset ends current allocations, closes only resident portals, revokes resident app
+bindings and all previous room keys, and issues one fresh key per room in one atomic
+transaction. It keeps verified Auth identities, shared seller portals/PINs, primary
+accounts, allocations/history, staff, maintenance and marketplace data. Saved primary
+owners receive room-loss notices; property owners, managers and administrators receive
+the completion notice. Residents must confirm their retained identity and activate again
+with a new key. Reset grants no registration cooldown, account wipe or residence deletion.
+
+## Manager account closure during the Supabase migration
+
+An assigned manager may request closure of their own portal and assigned residences
+using their current manager key. Submission leaves the account and housing active.
+Administrators may decline with an approval key or link the request to an exact
+combined manager/residence deletion review. That independent review still requires
+two distinct approvals, founder consent, verified backups and final execution gates.
+The UI suggests 30 days of registration cooldown; administrators decide the final
+duration. A waiver request grants no waiver. Notifications reach the manager, saved
+primary owner and active administrators. Shared identities and sibling portals remain
+intact. Pending requests can be withdrawn; linked reviews retain their own lifecycle.
+An active manager without an assignment may submit an own-key portal-closure request.
+It uses the existing five-administrator account review, including the founder’s vote
+and separate final own-key confirmation. The exact pending request, current manager
+key version, ownership, registration restrictions and absence of assignments/active
+staff/live property registrations are checked again during review and execution.
+Changed dependencies or credentials invalidate consent. Pending managers cannot use
+this flow; primary users cannot close a separately verified manager portal.
+
+Portal-only closure ends manager app bindings and retains Auth, other portals,
+housing/history, keys, settings and existing restrictions. A retained residence
+cooldown on a closed manager also blocks its saved primary owner from creating a
+replacement manager until that same restriction expires. No new cooldown or waiver
+is introduced. Primary onboarding reads only its own applicable native cooldown;
+overlapping bans use the longest active expiry, and expiry keeps historical records.
+A read or countdown cannot grant a waiver. A submitted request permits no closure by itself. Active unassigned
+managers may issue/recover their own operation key through the existing key workflow.
+Existing authorized manager room release remains. A closed manager may reuse its original verified work identity after existing cooldowns
+and closure reviews permit it. The saved primary owner must confirm that work identity
+using its existing email password or an explicitly requested email code/sign-in link.
+Re-enrollment preserves the identity and history, retires the old manager key, and grants
+pending status only. A new residence must complete physical inspection and approval;
+previous approvals cannot reactivate the manager.
+
+## Resident account closure
+
+Residents may immediately end their own room access after explicit confirmation and
+their current portal PIN, or a native verified sign-in within five minutes when no
+PIN is configured. Managers need not approve self-release. Primary users cannot close
+a separate resident portal by submitting its email/password or room key. The operation
+ends the saved allocation, closes only its resident context, revokes all resident app
+bindings and creates one unclaimed replacement key. The old key is revoked.
+
+The shared verified identity, seller portal, portal PINs, maintenance/review history and
+payment/order records are retained. No new registration cooldown is imposed. Primary
+owners and assigned managers receive notices. Existing reactivation requires the
+resident's own verified credentials/PIN; retained history grants no active room access.
+Concurrent closures/sign-ins/room releases serialize through the housing lifecycle lock.
+
+## Residence changes during the Supabase migration
+
+Assigned managers may request changes to residence names, photographs, public
+manager contacts and block names/count once every 30 days across their properties.
+They must use their current manager secret key. Submission leaves live details
+unchanged. An active administrator must view the diff in their own current session
+and confirm with their separate approval key; a settings key cannot decide it.
+Changed residence details or an ended assignment block approval. Rejection needs
+a reason. Blocks with floors, rooms, beds or staff history are retained.
+
+Public manager contact changes do not alter the manager's verified login identity.
+Managers and their primary users receive submission/decision notices. Administrator
+request notices contribute to approval alerts and open the residence review section.
+Manager-key recovery separately requires the administrator's own settings key,
+invalidates previous operation grants and approves pending recovery petitions.
+Only the manager generates and sees the replacement key; the 30-day request limit
+is preserved after recovery.
+
 ## Account approvals during Supabase migration
 
 Five distinct active administrators with enrolled approval keys must approve an
@@ -9,17 +107,42 @@ Only the founder can record final rejection after all five approvals. Shared ema
 addresses do not merge account contexts or establish directory relationships.
 
 The migrated review UI supports timed-ban, feature-restriction and restoration
-proposals. It explicitly disables final application and account deletion until the
-remaining enforcement and backup work is verified. Approval alone changes no access;
-users receive no claim that a proposed action has been applied.
+proposals. Migration 39 enables final policy application with five current votes,
+the founder's own approval key and explicit confirmation. Approval alone changes no
+access. Account deletion remains disabled pending its reviewed recovery protocol.
+
+Residence deletion uses a separate two-administrator review, including an available
+keyed founder who must make the final decision. Migration 40 enables saved-dependency
+previews, keyed proposals/votes and founder rejection. Execution remains disabled
+until backup/Storage recovery and cleanup are verified. Residence-only plans to retain
+manager sign-in; combined removal expands to that manager's assigned properties.
+Relevant dependency or roster/key changes invalidate consent, even when reversed.
+Owners receive deletion notices and signup cooldowns only after actual execution.
+Residence-only cooldowns target the exact retained manager portal. Combined-removal
+manager-account cooldowns target its saved primary user and prevent a new manager
+enrollment. A predecessor's residence cooldown must not spread to a replacement
+manager with the same owner. Expired cooldowns use current database time. Recording
+a deletion proposal, pause, recovery receipt or final consent starts no cooldown.
 
 ## Verified account identities
 
 The Supabase replacement uses separate verified child identities linked to a primary owner.
 Resident and seller accounts with the same student email may share one Supabase login
-password, with different portal access PINs. Managers use a separate verified work email.
+password, with different portal access PINs. Managers use a separate verified organization
+email in the production email-enrollment flow. A server-selected, direct-loopback,
+non-production development flow temporarily permits a separate genuinely verified
+Google identity without a work mailbox. It preserves primary ownership, separate
+manager sign-in, pending status, inspection and administrator approval. It never
+adopts an existing PineVela profile. Domain/Resend setup and the final work/student/
+ordinary-signup email-token requirements are deferred until launch-auth setup after
+development persistence cutover, before public release. Supabase email confirmation
+remains enabled. See [Google development enrollment](migrations/google-manager-development-enrollment.md).
 Primary ownership grants registration-status access, never child sign-in or PIN bypass.
 One room key permits one active resident per room, even when the room has multiple beds.
+Requested manager-application corrections belong to the primary owner and reuse the
+verified manager identity, assigned inspection shell and current case. Changed property
+details require a fresh physical inspection before manager approval; previous reports
+and administrator feedback remain history. Final decisions cannot be reopened this way.
 These rules are implemented progressively; see [migration status](migrations/supabase-implementation-status.md).
 
 ## Administrator announcement recipients
@@ -136,6 +259,12 @@ Roles must be enforced server-side.
 ---
 
 ## Managers
+
+Residence registration uses its street address and map location. GhanaPost digital
+addresses are retired: no registration, inspection or residence setup requires or
+edits them. The inspected property name and map pin must still match full residence
+setup; existing geographic, assignment and physical approval rules remain enforced.
+Historical dossiers and migration/backup records remain immutable.
 
 Managers may manage only residences/hostels to which they are assigned.
 
@@ -278,8 +407,9 @@ sign-off may create only one repair review per completion.
 ## Founder administration
 
 At most five administrators hold stable numbered slots. Andyheller2k is administrator #1.
-Each has a separate private approval key. Destructive proposals use checkbox scopes, show
-all dependent deletions, and require all five independent approvals. Any rejection cancels;
+Each has a separate private approval key. System-wipe/account-deletion proposals use
+checkbox scopes, show all dependent deletions, and require all five independent approvals.
+Residence deletion uses its separate two-voter rule above. Any rejection cancels;
 membership/data changes invalidate approval. Administrator #1 explicitly confirms execution.
 Total wipe preserves administrators, governance and protected recovery/audit artifacts.
 In the Supabase replacement, key recovery requires two other active administrators with
@@ -384,6 +514,12 @@ valid national number types are accepted; the server stores canonical E.164 plus
 Number validity does not verify ownership or whether a line is currently reachable.
 Facilities/amenities and residence rules/policies are retired across registration, editing,
 public property details and manager views. Existing archived data is preserved.
+
+When an administrator requests more residence information, the assigned applicant can
+reopen the saved setup, read the feedback and resubmit corrections. The inspected name
+and map pin stay fixed. Layout changes require no existing activation keys or operational
+history; contact/photo corrections preserve room identities. Corrections return to review,
+retain earlier evidence and notify the primary owner and administrators.
 
 Residence contact and registration checks: `node --import tsx --test tests/internationalPhone.test.ts
 tests/hostelSecurity.test.ts tests/hostelSecurity.integration.test.ts`. After building,

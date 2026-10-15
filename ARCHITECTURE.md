@@ -20,6 +20,13 @@ Supabase Auth provides authentication.
 
 PostgreSQL and Row Level Security provide database-level isolation.
 
+The replacement backend uses Express for product data access. Reviewed catalog
+and account projections live in the unexposed `private` schema. Public catalog
+transactions use the non-login `pinevela_catalog` role, which can read only six
+filtered projections and invoke four publication predicates. Authenticated account
+reads use the existing session-bound `pinevela_backend` role. Browser roles have
+no projection grants. Base-table permissions and RLS remain separate boundaries.
+
 ---
 
 ## Frontend

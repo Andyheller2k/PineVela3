@@ -1,3 +1,4 @@
+import {systemWipeReviewStatus} from './systemWipeReviews.js';
 import crypto from 'node:crypto';
 import type { Express,RequestHandler } from 'express';
 import type { PoolClient } from 'pg';
@@ -8,6 +9,9 @@ import { hashCredentialAsync,verifyCredentialAsync } from '../accountSecurity.js
 import { AttemptBudgets } from '../resourceSecurity.js';
 import { notify } from './notifications.js';
 import { accountReviewStatus } from './accountReviews.js';
+import { residenceReviewStatus } from './residenceReviews.js';
+import {residenceExecutionRequestsEnabled} from './residenceExecutionRequests.js';
+import {systemWipeExecutionRequestsEnabled} from './systemWipeExecutionRequests.js';
 import {expireAdministratorRemovals,administratorRemovalStatus,proposeAdministratorRemoval,voteAdministratorRemoval,
   submitAdministratorAppeal,decideAdministratorAppeal,acknowledgeAdministratorAppeal,confirmAdministratorRemoval} from './adminRemoval.js';
 const route=(work:(req:AuthRequest,res:any)=>Promise<unknown>):RequestHandler=>(req,res,next)=>{work(req as AuthRequest,res).catch(next);};
@@ -73,13 +77,14 @@ export async function governanceStatus(c:PoolClient,a:VerifiedActor) {
   const changes=rows.map(p=>({id:p.id,targetId:p.target_context_id,action:p.preview.action,reason:p.reason,requestedBy:p.proposer_context_id,
     expiresAt:p.expires_at,status:p.status,votes:p.votes,executedAt:p.executed_at}));
   // Read actual persistence even for controls still awaiting their command ports.
-  const proposals=(await c.query("select id,status from public.admin_proposals where kind='system_wipe' order by created_at desc limit 100")).rows;
+  const proposals=await systemWipeReviewStatus(c,a);
   const invitations=a.contextId===status.mainId?(await c.query(`select id,invited_email as email,invited_name as name,reserved_slot as slot,expires_at as "expiresAt",
     case when accepted_at is not null then 'accepted' when cancelled_at is not null then cancellation_reason else 'reserved' end as status
     from private.admin_invitations order by case when accepted_at is null and cancelled_at is null then 0 else 1 end,created_at desc limit 100`)).rows:undefined;
   changes.push(...await administratorRemovalStatus(c,a,status.mainId));
   const accountProposals=await accountReviewStatus(c,a);
-  return {...status,changes,proposals,invitations,accountProposals,capabilities:{approvalKeys:true,keyRecovery:true,invitations:true,membershipChanges:true,removal:true,accountReviews:true,accountApplication:false,accountDeletion:false,wipes:false},blocked:false};
+  const residenceProposals=await residenceReviewStatus(c,a);
+  return {...status,changes,proposals,invitations,accountProposals,residenceProposals,capabilities:{approvalKeys:true,keyRecovery:true,invitations:true,membershipChanges:true,removal:true,accountReviews:true,accountApplication:true,accountDeletion:false,residenceReviews:true,residencePreparation:true,residenceExecutionRequests:residenceExecutionRequestsEnabled(),residenceDeletion:false,wipeReviews:true,wipePreparation:true,wipePause:true,wipeFinalConsent:true,wipes:systemWipeExecutionRequestsEnabled()},blocked:false};
 }
 export async function setAdministratorActive(c:PoolClient,a:VerifiedActor,grant:SettingsGrant,target:string,active:boolean) {
   await c.query("select pg_advisory_xact_lock(hashtextextended('platform-settings',0))");

@@ -45,7 +45,6 @@ export interface HostelRegistrationDraft {
   district: string;
   country: string;
   postalCode: string;
-  digitalAddress: string; // GhanaPost GPS (e.g. GA-183-9024)
   landmark: string;
   campusProximity?: string; // e.g. "5-10 Mins Walk"
   campusProximityDetails?: string; // e.g. "Shuttle & walking routes"
@@ -145,7 +144,6 @@ export interface Hostel {
   region?: string;
   country?: string;
   postal_code?: string;
-  digital_address?: string;
   landmark?: string;
   latitude?: number | null;
   longitude?: number | null;
@@ -257,6 +255,7 @@ export interface ResidentOnboardingData {
 
 export interface IssueReport {
   id: string;
+  withdrawn?: boolean;
   title: string;
   category: string;
   urgency: 'Low' | 'Medium' | 'High' | 'Emergency';
@@ -461,7 +460,6 @@ export interface HostelVerificationRecord {
   location: string;
   campusZone?: string;
   addressLine1?: string;
-  digitalAddress: string; // GhanaPost GPS (e.g. GA-183-9024)
   totalCapacity: number;
   totalRooms: number;
   totalBlocks: number;
@@ -488,7 +486,6 @@ export interface HostelVerificationRecord {
   // System validation
   systemValidation: {
     missingInfo: boolean;
-    digitalAddressFormatValid: boolean;
     duplicateHostelCheck: 'clean' | 'flagged';
     duplicateRegistrationCheck: 'clean' | 'flagged';
     managerApproved: boolean;
@@ -673,7 +670,6 @@ export interface VerificationInspection {
   managerPhone: string;
   hostelName: string;
   location: string;
-  digitalAddress?: string;
   dispatchedAt: string;
   dispatchedBy: string;
   assignedOfficerId: string;

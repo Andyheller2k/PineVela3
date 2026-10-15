@@ -46,6 +46,18 @@ function AdministratorSettingsContent() {
   const [key, setKey] = useState(''), [password, setPassword] = useState(''), [newKey, setNewKey] = useState('');
   const [busy, setBusy] = useState(false), [, setError] = useState(''), [notice, setNotice] = useState(''), [dirty, setDirty] = useState(false);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState('');
+  const [photoStage, setPhotoStage] = useState<'idle' | 'uploading' | 'saving'>('idle');
+  const [photoError, setPhotoError] = useState(''), [photoNotice, setPhotoNotice] = useState('');
+  const photoInput = useRef<HTMLInputElement>(null);
+  const uploadedPhoto = useRef<{file: File; accountId: string; url: string} | null>(null);
+  const actionRunning = useRef(false);
+  useEffect(() => {
+    if (!photoFile) { setPhotoPreview(''); return; }
+    const preview = URL.createObjectURL(photoFile);
+    setPhotoPreview(preview);
+    return () => URL.revokeObjectURL(preview);
+  }, [photoFile]);
   const [receiving, setReceiving] = useState<any>(null), [receivingCode, setReceivingCode] = useState('');
   const [pricingReason, setPricingReason] = useState(''), [portalDirty, setPortalDirty] = useState(false);
   const [contacts, setContacts] = useState<ContactDetails>({ ...EMPTY_CONTACT_DETAILS });
@@ -57,11 +69,12 @@ function AdministratorSettingsContent() {
   useEffect(() => { if (settings && !dirty) { setFee(String(settings.registrationFee)); setSemesterFee(String(settings.semesterFee)); setPlanPrices({ default: String(settings.subscriptionPrices.default), star: String(settings.subscriptionPrices.star), pro: String(settings.subscriptionPrices.pro) }); setCommission(String(settings.commission)); } }, [settings, dirty]);
   useEffect(() => { if (settings && !portalDirty) { setAnnouncement(settings.announcement); setMaintenance(settings.maintenanceMode); } }, [settings, portalDirty]);
   async function act(action: () => Promise<void>) {
-    if (busy) return;
+    if (actionRunning.current) return;
+    actionRunning.current = true;
     const origin = feedback.begin();
     setBusy(true); setError(''); setNotice('');
     try { await action(); } catch (err: any) { if (mounted.current) { setError(err.message || 'This change could not be saved.'); feedback.fail(err.message || 'This change could not be saved.', origin); } }
-    finally { if (mounted.current) { setBusy(false); setPassword(''); setKey(''); } }
+    finally { actionRunning.current = false; if (mounted.current) { setBusy(false); setPassword(''); setKey(''); } }
   }
   async function post(path: string, body: any) {
     const result = await apiFetch(path, { method: 'POST', body: JSON.stringify(body) });
@@ -69,14 +82,30 @@ function AdministratorSettingsContent() {
     return result;
   }
   async function savePhoto() {
-    if (!photoFile || !key) throw new Error('Choose a photograph and enter your settings key.');
-    if (!['image/jpeg', 'image/png', 'image/webp'].includes(photoFile.type) || photoFile.size > 5 * 1024 * 1024) throw new Error('Choose a JPEG, PNG or WebP photograph up to 5 MB.');
-    const data = await new Promise<string>((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result)); reader.onerror = () => reject(new Error('Photograph could not be read.')); reader.readAsDataURL(photoFile); });
-    const profileHeaders={'X-PineVela-Profile-Context':String(user?.id),'Content-Type':'application/json'};
-    const uploaded = await apiFetch('/api/storage/upload-admin-profile',{method:'POST',headers:profileHeaders,body:JSON.stringify({ fileData: data, fileType: photoFile.type, fileName: photoFile.name, settingsKey: key })});
-    const result = await apiFetch('/api/auth/profile',{method:'POST',headers:profileHeaders,body:JSON.stringify({ photo: uploaded.imageUrl, settingsKey: key })});
-    if (!result.success || !result.user) throw new Error('Your profile photograph could not be saved.');
-    updateUser?.({ photo: result.user.photo, avatar: result.user.photo,photoUrl:result.user.photo,avatarUrl:result.user.photo,profilePicture:result.user.photo },String(user?.id)); setPhotoFile(null); setNotice('Your profile photograph has been saved.');
+    setPhotoError(''); setPhotoNotice('');
+    try {
+      if (!photoFile || !key) throw new Error('Choose a photograph and enter your settings key.');
+      if (!['image/jpeg', 'image/png', 'image/webp'].includes(photoFile.type) || photoFile.size > 5 * 1024 * 1024) throw new Error('Choose a JPEG, PNG or WebP photograph up to 5 MB.');
+      const accountId = String(user?.id);
+      const profileHeaders={'X-PineVela-Profile-Context':accountId,'Content-Type':'application/json'};
+      if (uploadedPhoto.current?.file !== photoFile || uploadedPhoto.current.accountId !== accountId) {
+        setPhotoStage('uploading');
+        const data = await new Promise<string>((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result)); reader.onerror = () => reject(new Error('Photograph could not be read.')); reader.readAsDataURL(photoFile); });
+        const uploaded = await apiFetch('/api/storage/upload-admin-profile',{method:'POST',headers:profileHeaders,body:JSON.stringify({ fileData: data, fileType: photoFile.type, fileName: photoFile.name, settingsKey: key })});
+        if (!uploaded.success || typeof uploaded.imageUrl !== 'string') throw new Error('Your photograph upload did not complete. Sign in again if your session has ended.');
+        uploadedPhoto.current = {file: photoFile, accountId, url: uploaded.imageUrl};
+      }
+      setPhotoStage('saving');
+      const result = await apiFetch('/api/auth/profile',{method:'POST',headers:profileHeaders,body:JSON.stringify({ photo: uploadedPhoto.current.url, settingsKey: key })});
+      if (!result.success || !result.user) throw new Error('Your profile photograph could not be saved.');
+      updateUser?.({ photo: result.user.photo, avatar: result.user.photo,photoUrl:result.user.photo,avatarUrl:result.user.photo,profilePicture:result.user.photo },accountId);
+      uploadedPhoto.current = null; setPhotoFile(null);
+      if (photoInput.current) photoInput.current.value = '';
+      setPhotoNotice('Your profile photograph has been saved.');
+    } catch (error: any) {
+      if (mounted.current) setPhotoError(error.message || 'Your photograph could not be saved.');
+      throw error;
+    } finally { if (mounted.current) setPhotoStage('idle'); }
   }
   return <section onClickCapture={feedback.capture} onSubmitCapture={feedback.capture} className="space-y-6 text-slate-900" aria-label="Administrator settings">
     <header className="rounded-3xl border border-blue-200 bg-white/65 p-6"><h3 className="text-xl font-bold">PineVela Admin Settings</h3><p className="mt-2 text-xs text-slate-600">Configure marketplace registration and subscription fees in GHS, commission accounting, system announcements, and platform maintenance.</p></header>
@@ -145,9 +174,13 @@ function AdministratorSettingsContent() {
         <button className={button} disabled={busy || !key || !self?.settingsKeyEnrolled}>Save receiving account with settings key</button>
       </form>}
     </section>
-    <form className="space-y-4 rounded-3xl border border-blue-200 bg-white/65 p-6" onSubmit={event => { event.preventDefault(); void act(savePhoto); }}>
-      <h4 className="font-bold">Your administrator profile photograph</h4><div className="flex items-center gap-4">{user?.photo || user?.avatar ? <img src={user.photo || user.avatar} alt="Your administrator profile" className="h-20 w-20 rounded-full object-cover" /> : <span className="flex h-20 w-20 items-center justify-center rounded-full bg-blue-100 text-2xl font-bold text-blue-900">{user?.name?.slice(0, 1)}</span>}<p className="text-xs text-slate-600">JPEG, PNG or WebP up to 5 MB. Photographs are decoded, checked and re-encoded with a maximum dimension of {supabaseMode ? '512' : '800'} pixels.</p></div>
-      <label className="block text-sm">Choose profile photograph<input type="file" accept="image/jpeg,image/png,image/webp" onChange={event => setPhotoFile(event.target.files?.[0] || null)} className={input} /></label><button className={button} disabled={busy || !photoFile || !key || !self?.settingsKeyEnrolled}>Save profile photograph</button>
+    <form aria-label="Administrator profile photograph" aria-busy={photoStage !== 'idle'} className="space-y-4 rounded-3xl border border-blue-200 bg-white/65 p-6" onSubmit={event => { event.preventDefault(); void act(savePhoto); }}>
+      <h4 className="font-bold">Your administrator profile photograph</h4><div className="flex items-center gap-4">{photoPreview || user?.photo || user?.avatar ? <img src={photoPreview || user?.photo || user?.avatar} alt={photoPreview ? 'Selected photograph preview' : 'Your administrator profile'} className="h-20 w-20 rounded-full object-cover" /> : <span className="flex h-20 w-20 items-center justify-center rounded-full bg-blue-100 text-2xl font-bold text-blue-900">{user?.name?.slice(0, 1)}</span>}<p className="text-xs text-slate-600">JPEG, PNG or WebP up to 5 MB. Photographs are decoded, checked and re-encoded with a maximum dimension of {supabaseMode ? '512' : '800'} pixels.</p></div>
+      <label className="block text-sm">Choose profile photograph<input ref={photoInput} type="file" disabled={busy} accept="image/jpeg,image/png,image/webp" onChange={event => { uploadedPhoto.current = null; setPhotoFile(event.target.files?.[0] || null); setPhotoError(''); setPhotoNotice(''); }} className={input} /></label>
+      <button className={button} disabled={busy || !photoFile || !key || !self?.settingsKeyEnrolled}>{photoStage === 'uploading' ? 'Uploading photograph…' : photoStage === 'saving' ? 'Saving photograph…' : 'Update photograph'}</button>
+      {photoStage !== 'idle' && <p role="status" className="text-sm text-blue-800">{photoStage === 'uploading' ? 'Uploading your photograph. Please wait.' : 'Saving your profile and avatar. Please wait.'}</p>}
+      {photoError && <p role="alert" className="text-sm text-red-700">{photoError}</p>}
+      {photoNotice && <p role="status" className="text-sm text-blue-800">{photoNotice}</p>}
     </form>
   </section>;
 }

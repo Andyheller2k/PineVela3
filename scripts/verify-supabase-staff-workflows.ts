@@ -77,7 +77,7 @@ try {
   check((await scoped(primary,()=>housingDashboardRows(c,'bargains'))).length===0,'Shared subject primary portal cannot see staff proposals');
   check((await scoped(foreignManager,()=>housingDashboardRows(c,'bargains'))).length===0,'Foreign manager cannot read scoped proposal view');
   check((await scoped(foreignStaff,()=>c.query('select id from public.staff_bargains'))).rowCount===0,'Foreign staff cannot read raw bargain table');
-  await c.query('set local role anon');await denied(()=>c.query('select * from public.housing_bargain_details'),'42501','Guest cannot read employment proposals');await c.query('reset role');
+  await c.query('set local role anon');await denied(()=>c.query('select * from private.housing_bargain_details'),'42501','Guest cannot read employment proposals');await c.query('reset role');
   await c.query('set local role pinevela_backend');await denied(()=>c.query("update public.staff_bargains set status='accepted' where id=$1",[id]),'42501','Direct authenticated role cannot decide proposals');await c.query('reset role');
   await denied(()=>respondStaffBargain(c,foreignManager,id,{action:'accept'}),404,'Foreign manager cannot decide proposal');
   await denied(()=>respondStaffBargain(c,staff,id,{action:'accept'}),403,'Staff cannot approve their own proposal');
@@ -133,7 +133,7 @@ try {
   await denied(()=>c.query('update public.staff_reviews set rating=5 where id=$1',[review.id]),'23514','Review score evidence immutable');
   await denied(()=>c.query('insert into public.staff_reviews(allocation_id,staff_assignment_id,resident_context_id,rating) values ($1,$2,$3,4)',[foreign.allocation,own.assignment,foreignResident.contextId]),'23514','SQL rejects cross-residence review');
   await denied(()=>c.query('insert into public.staff_reviews(allocation_id,staff_assignment_id,resident_context_id,rating) values ($1,$2,$3,4)',[own.allocation,own.assignment,foreignResident.contextId]),'23514','SQL rejects spoofed allocation reviewer');
-  await c.query('set local role anon');await denied(()=>c.query('select * from public.housing_staff_reviews'),'42501','No public staff ratings view');await c.query('reset role');
+  await c.query('set local role anon');await denied(()=>c.query('select * from private.housing_staff_reviews'),'42501','No public staff ratings view');await c.query('reset role');
   await c.query('set local role pinevela_backend');await denied(()=>c.query('insert into public.staff_reviews(allocation_id,staff_assignment_id,resident_context_id,rating) values ($1,$2,$3,4)',[own.allocation,own.assignment,resident.contextId]),'42501','Direct browser role cannot bypass review API');await c.query('reset role');
   await c.query('savepoint allocation_ended');await c.query('update public.allocations set ended_at=now() where id=$1',[own.allocation]);
   await denied(()=>createStaffReview(c,resident,reviewInput),403,'Former allocation cannot review staff');

@@ -77,7 +77,7 @@ try {
   check(issue.status==='Pending' && issue.historyLogs.length===1,'Submission stores event and pending state atomically');
   check((await read(manager,'select id from public.media_assets where id=$1',[photo.id])).rowCount===1,'Assigned manager can view attached report evidence');
   check((await read(primary,'select id from public.media_assets where id=$1',[photo.id])).rowCount===0,'Parent portal cannot view child maintenance photographs');
-  check((await read(otherManager,'select id from public.housing_issue_details where id=$1',[issue.id])).rowCount===0,'Foreign manager cannot read maintenance dossier');
+  check((await read(otherManager,'select id from private.housing_issue_details where id=$1',[issue.id])).rowCount===0,'Foreign manager cannot read maintenance dossier');
   check((await read(otherResident,'select id from public.maintenance_events where issue_id=$1',[issue.id])).rowCount===0,'Foreign resident cannot read maintenance history');
   await denied(()=>createIssue(client,resident,{title:'Another complaint'}),409,'Resident has at most one unresolved complaint');
   await denied(()=>act(manager,issue.id,'assign',{staffId:otherStaffId}),403,'Staff assignment cannot cross residence boundaries');

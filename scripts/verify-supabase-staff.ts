@@ -94,7 +94,7 @@ try {
   check((await scoped(manager,()=>housingDashboardRows(c,'staff'))).length===1,'Assigned manager sees staff roster');
   check((await scoped(staff,()=>housingDashboardRows(c,'staff'))).length===1,'Staff sees own saved assignment');
   check((await scoped(foreignPrimary,()=>housingDashboardRows(c,'staff'))).length===0,'Unrelated primary cannot read staff directory');
-  await c.query('set local role anon');await denied(()=>c.query('select * from public.housing_staff_directory'),'42501','No public staff directory');await c.query('reset role');
+  await c.query('set local role anon');await denied(()=>c.query('select * from private.housing_staff_directory'),'42501','No public staff directory');await c.query('reset role');
   await c.query('set local role pinevela_backend');await denied(()=>c.query('select * from private.account_enrollments'),'42501','Direct backend/browser role cannot read private invitation tokens');
   await denied(()=>c.query('update public.staff_assignments set status=$2 where id=$1',[result.staffId,'removed']),'42501','Direct role cannot bypass staff lifecycle');await c.query('reset role');
   await denied(()=>editStaff(c,foreignPrimary,result.staffId,{status:'Active'}),403,'Primary cannot edit staff');

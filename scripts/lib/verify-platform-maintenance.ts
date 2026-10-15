@@ -52,7 +52,7 @@ export async function verifyPlatformMaintenance(db: SupabaseDatabase, admins: Ve
     check(await events('platform_maintenance_enabled')===1,'An identical activation retry does not repeat history');
     await denied(()=>db.actor(primary,c=>c.query('select id from public.profiles')),503,'Ordinary actor transactions pause during maintenance');
     await denied(()=>db.authorizedSystem(primary,['primary'],async()=>undefined),503,'Privileged lifecycle wrappers cannot bypass maintenance for users');
-    await denied(()=>db.publicRows('select * from public.listing_catalog'),503,'Public catalog transactions pause during maintenance');
+    await denied(()=>db.publicRows('select * from private.listing_catalog'),503,'Public catalog transactions pause during maintenance');
     await denied(()=>db.availableSystem(async()=>undefined),503,'Public invitation lifecycle transactions cannot bypass maintenance');
     const founderPrimary=(await db.pool.query("select id from public.account_contexts where auth_user_id=$1 and kind='primary'",[founder.authUserId])).rows[0].id;
     await denied(()=>auth.switchContext(founder,founderPrimary),
@@ -68,9 +68,9 @@ export async function verifyPlatformMaintenance(db: SupabaseDatabase, admins: Ve
       check((await c.query('select private.current_context_id() as id')).rows[0].id===null,'A valid ordinary binding yields no usable maintenance context');
     });
     await db.system(async c=>{
-      await c.query('set local role anon');
+      await c.query('set local role pinevela_catalog');
       for(const view of ['listing_catalog','residence_catalog','store_catalog','market_reviews_public'])
-        check((await c.query('select * from public.'+view)).rowCount===0,'Anonymous owner-executed projections are gated');
+        check((await c.query('select * from private.'+view)).rowCount===0,'Anonymous owner-executed projections are gated');
     });
     const {app}=createSupabaseApp(db);closeRealtime=app.locals.closeRealtime;
     server=app.listen(0,'127.0.0.1');

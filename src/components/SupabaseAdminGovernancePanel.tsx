@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { useActionFeedback } from '../lib/useActionFeedback';
 import AdministratorLabel from './AdministratorLabel';
 import AdminRemovalActions from './AdminRemovalActions';
+import SystemWipeReviewPanel from './SystemWipeReviewPanel';
 
 const control='w-full rounded-xl border border-blue-200 bg-white/80 px-3 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500';
 const button='rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-40';
@@ -61,7 +62,7 @@ export default function SupabaseAdminGovernancePanel() {
         <p className="text-sm">{membershipTarget.active?'Administrator access will be revoked immediately. Their account and approval history will be preserved.':'They will need to sign out and sign in again. Existing approval and settings keys will be preserved.'}</p>
         <div className="flex flex-wrap gap-3"><button type="button" className={button} disabled={busy||!key} onClick={()=>void act(`${root}/members/${membershipTarget.id}/active`,{active:!membershipTarget.active,privateKey:key})}>Confirm {membershipTarget.active?'suspension':'restoration'}</button>
           <button type="button" className={button} disabled={busy} onClick={()=>setMembershipTarget(null)}>Cancel</button></div></section>}
-      <p role="status" className="text-sm text-slate-600">Removal requires all four other administrators, a private appeal window and founder confirmation. Wipe controls are awaiting their independent approval workflow.</p>
+      <p role="status" className="text-sm text-slate-600">Removal requires all four other administrators, a private appeal window and founder confirmation. System wipe reviews require five own-key approvals and a separate founder decision.</p>
       {data.currentId===data.mainId&&data.capabilities?.removal&&<form className="space-y-3 rounded-2xl border border-red-200 bg-red-50/50 p-4" onSubmit={e=>{e.preventDefault();void act(`${root}/members/${target}/changes`,{action:'remove',reason,privateKey:key});}}>
         <h4 className="font-semibold">Propose permanent administrator removal</h4><p className="text-sm">This removes the administrator portal and its keys. The person's verified login, primary account and approval history are preserved. Your approval counts once; the three other eligible administrators must also approve.</p>
         <label className="block text-sm">Administrator<select required value={target} onChange={e=>setTarget(e.target.value)} className={control}><option value="">Select administrator</option>{data.members.filter((m:any)=>m.id!==data.mainId).map((m:any)=><option key={m.id} value={m.id}>#{m.slot} {m.name}</option>)}</select></label>
@@ -89,6 +90,7 @@ export default function SupabaseAdminGovernancePanel() {
         <label className="block text-sm">Reason<textarea required minLength={3} maxLength={500} value={reason} onChange={e=>setReason(e.target.value)} className={control}/></label>
         <button className={button} disabled={busy||!key||!target||!data.capabilities?.keyRecovery}>Submit for independent approval</button></form>
     </section>
+    {data.capabilities?.wipeReviews&&<SystemWipeReviewPanel data={data} privateKey={key} busy={busy} onBusy={setBusy} onKeyUsed={()=>setKey('')}/>}
     <section className="space-y-4"><h3 className="font-bold">Administrator proposals</h3>{data.changes.length===0&&<p className="text-sm text-slate-500">No administrator proposals have been submitted.</p>}
       {data.changes.map((p:any)=><article key={p.id} className="space-y-3 rounded-2xl border border-blue-200 bg-white/70 p-5 text-sm">
         <h4 className="font-semibold">{p.action==='remove'?'Administrator removal':p.action==='reset-key'?'Approval key':'Settings key'} · {p.targetName||data.members.find((m:any)=>m.id===p.targetId)?.name||p.targetId} · {p.status}</h4><p className="whitespace-pre-wrap break-words">{p.reason}</p>

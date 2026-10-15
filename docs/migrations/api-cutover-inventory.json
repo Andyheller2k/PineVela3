@@ -1,5 +1,5 @@
 {
-  "note": "Generated from literal root Express routes. Mounted routers and frontend endpoint usage also need review. Implemented does not imply complete workflow validation.",
+  "note": "Source-only inventory of legacy root routes against replacement API/worker import graphs, finite route loops and canonical parameter names. Frontend references include inactive code and are not proof of calls. Runtime mounts, callback configuration, role/mode reachability, method/body contracts and genuine journeys still need verification. Implemented does not imply complete workflow validation.",
   "endpoints": [
     {
       "endpoint": "DELETE /api/digital-market/products/:id",
@@ -9,8 +9,31 @@
           "method": "DELETE",
           "path": "/api/digital-market/products/:id",
           "source": "server.ts",
-          "line": 5009,
+          "line": 5001,
           "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "DELETE",
+          "path": "/api/digital-market/products/:id",
+          "source": "supabase/inventory.ts",
+          "line": 96,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/digital-market/products/:parameter",
+          "source": "src/components/PageDigitalMarket.tsx",
+          "line": 724,
+          "method": "DELETE"
+        },
+        {
+          "path": "/api/digital-market/products/:parameter",
+          "source": "src/components/PageDigitalMarket.tsx",
+          "line": 1086,
+          "method": "DELETE"
         }
       ]
     },
@@ -22,10 +45,12 @@
           "method": "DELETE",
           "path": "/api/hostels/:id",
           "source": "server.ts",
-          "line": 7597,
+          "line": 7583,
           "retired": true
         }
-      ]
+      ],
+      "replacementSources": [],
+      "frontendReferences": []
     },
     {
       "endpoint": "DELETE /api/meetings/:id",
@@ -35,8 +60,25 @@
           "method": "DELETE",
           "path": "/api/meetings/:id",
           "source": "server.ts",
-          "line": 10409,
+          "line": 10395,
           "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "DELETE",
+          "path": "/api/meetings/:id",
+          "source": "supabase/meetings.ts",
+          "line": 151,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/meetings/:parameter",
+          "source": "src/components/ManagerMeetingsTab.tsx",
+          "line": 230,
+          "method": "DELETE"
         }
       ]
     },
@@ -51,6 +93,23 @@
           "line": 92,
           "retired": false
         }
+      ],
+      "replacementSources": [
+        {
+          "method": "DELETE",
+          "path": "/api/staff/:id",
+          "source": "supabase/staff.ts",
+          "line": 182,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/staff/:parameter",
+          "source": "src/components/PageManagerDashboard.tsx",
+          "line": 555,
+          "method": "DELETE"
+        }
       ]
     },
     {
@@ -61,8 +120,37 @@
           "method": "GET",
           "path": "/api/activities",
           "source": "server.ts",
-          "line": 10593,
+          "line": 10579,
           "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "GET",
+          "path": "/api/activities",
+          "source": "supabase/dashboardReads.ts",
+          "line": 53,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/activities",
+          "source": "src/components/PageAdminDashboard.tsx",
+          "line": 338,
+          "method": "GET"
+        },
+        {
+          "path": "/api/activities",
+          "source": "src/components/PageManagerDashboard.tsx",
+          "line": 280,
+          "method": null
+        },
+        {
+          "path": "/api/activities",
+          "source": "src/components/PageManagerDashboard.tsx",
+          "line": 336,
+          "method": "GET"
         }
       ]
     },
@@ -77,6 +165,23 @@
           "line": 208,
           "retired": false
         }
+      ],
+      "replacementSources": [
+        {
+          "method": "GET",
+          "path": "/api/admin-messages/pending",
+          "source": "supabase/notifications.ts",
+          "line": 57,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/admin-messages/pending",
+          "source": "src/components/AdminMessageNotice.tsx",
+          "line": 24,
+          "method": "GET"
+        }
       ]
     },
     {
@@ -87,8 +192,25 @@
           "method": "GET",
           "path": "/api/admin/all-users",
           "source": "server.ts",
-          "line": 10167,
+          "line": 10153,
           "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "GET",
+          "path": "/api/admin/all-users",
+          "source": "supabase/accountReviews.ts",
+          "line": 214,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/admin/all-users",
+          "source": "src/components/PageAdminDashboard.tsx",
+          "line": 348,
+          "method": "GET"
         }
       ]
     },
@@ -100,21 +222,109 @@
           "method": "GET",
           "path": "/api/admin/digital-market/applications",
           "source": "server.ts",
-          "line": 5032,
+          "line": 5024,
           "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "GET",
+          "path": "/api/admin/digital-market/applications",
+          "source": "supabase/sellerRegistration.ts",
+          "line": 103,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/admin/digital-market/applications",
+          "source": "src/components/PageAdminDashboard.tsx",
+          "line": 340,
+          "method": "GET"
         }
       ]
     },
     {
       "endpoint": "GET /api/admin/digital-market/stores",
-      "status": "pending_review_and_port",
+      "status": "implemented_requires_workflow_verification",
       "sources": [
         {
           "method": "GET",
           "path": "/api/admin/digital-market/stores",
           "source": "server.ts",
-          "line": 5289,
+          "line": 5281,
           "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "GET",
+          "path": "/api/admin/digital-market/stores",
+          "source": "supabase/adminStoreOverview.ts",
+          "line": 74,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/admin/digital-market/stores",
+          "source": "src/components/PageAdminDashboard.tsx",
+          "line": 341,
+          "method": "GET"
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/admin/governance",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/admin/governance",
+          "source": "adminGovernanceRoutes.ts",
+          "line": 21,
+          "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "GET",
+          "path": "/api/admin/governance",
+          "source": "supabase/adminGovernance.ts",
+          "line": 188,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/admin/governance",
+          "source": "src/components/AccountModerationPanel.tsx",
+          "line": 9,
+          "method": null
+        },
+        {
+          "path": "/api/admin/governance",
+          "source": "src/components/AdminGovernancePanel.tsx",
+          "line": 15,
+          "method": "GET"
+        },
+        {
+          "path": "/api/admin/governance",
+          "source": "src/components/AdminGovernancePanel.tsx",
+          "line": 64,
+          "method": null
+        },
+        {
+          "path": "/api/admin/governance",
+          "source": "src/components/SupabaseAdminGovernancePanel.tsx",
+          "line": 16,
+          "method": "GET"
+        },
+        {
+          "path": "/api/admin/governance",
+          "source": "src/components/SupabaseAdminGovernancePanel.tsx",
+          "line": 38,
+          "method": null
         }
       ]
     },
@@ -129,6 +339,23 @@
           "line": 201,
           "retired": false
         }
+      ],
+      "replacementSources": [
+        {
+          "method": "GET",
+          "path": "/api/admin/manager-key-petitions",
+          "source": "supabase/managerKeys.ts",
+          "line": 107,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/admin/manager-key-petitions",
+          "source": "src/components/ResidenceChangeRequests.tsx",
+          "line": 61,
+          "method": "GET"
+        }
       ]
     },
     {
@@ -142,18 +369,52 @@
           "line": 200,
           "retired": false
         }
+      ],
+      "replacementSources": [
+        {
+          "method": "GET",
+          "path": "/api/admin/manager-request-keys",
+          "source": "supabase/managerKeys.ts",
+          "line": 111,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/admin/manager-request-keys",
+          "source": "src/components/ResidenceChangeRequests.tsx",
+          "line": 61,
+          "method": "GET"
+        }
       ]
     },
     {
       "endpoint": "GET /api/admin/manager-restrictions",
-      "status": "pending_review_and_port",
+      "status": "implemented_requires_workflow_verification",
       "sources": [
         {
           "method": "GET",
           "path": "/api/admin/manager-restrictions",
           "source": "server.ts",
-          "line": 4267,
+          "line": 4259,
           "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "GET",
+          "path": "/api/admin/manager-restrictions",
+          "source": "supabase/adminStoreOverview.ts",
+          "line": 75,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/admin/manager-restrictions",
+          "source": "src/components/PageAdminDashboard.tsx",
+          "line": 333,
+          "method": "GET"
         }
       ]
     },
@@ -168,6 +429,23 @@
           "line": 22,
           "retired": false
         }
+      ],
+      "replacementSources": [
+        {
+          "method": "GET",
+          "path": "/api/admin/messages/accounts",
+          "source": "supabase/adminMessages.ts",
+          "line": 90,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/admin/messages/accounts",
+          "source": "src/components/AdminMessageGateway.tsx",
+          "line": 26,
+          "method": null
+        }
       ]
     },
     {
@@ -180,6 +458,23 @@
           "source": "paystackPayments.ts",
           "line": 235,
           "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "GET",
+          "path": "/api/admin/payments",
+          "source": "supabase/payments.ts",
+          "line": 206,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/admin/payments",
+          "source": "src/components/PageAdminDashboard.tsx",
+          "line": 347,
+          "method": "GET"
         }
       ]
     },
@@ -194,6 +489,29 @@
           "line": 211,
           "retired": false
         }
+      ],
+      "replacementSources": [
+        {
+          "method": "GET",
+          "path": "/api/admin/payments/receiving-account",
+          "source": "supabase/adminSettings.ts",
+          "line": 158,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/admin/payments/receiving-account",
+          "source": "src/components/AdminSettingsPanel.tsx",
+          "line": 168,
+          "method": "GET"
+        },
+        {
+          "path": "/api/admin/payments/receiving-account",
+          "source": "src/components/AdminSettingsPanel.tsx",
+          "line": 169,
+          "method": null
+        }
       ]
     },
     {
@@ -204,27 +522,67 @@
           "method": "GET",
           "path": "/api/admin/verification-inspections",
           "source": "server.ts",
-          "line": 6450,
+          "line": 6441,
           "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "GET",
+          "path": "/api/admin/verification-inspections",
+          "source": "supabase/inspections.ts",
+          "line": 178,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/admin/verification-inspections",
+          "source": "src/components/PageAdminDashboard.tsx",
+          "line": 260,
+          "method": null
+        },
+        {
+          "path": "/api/admin/verification-inspections",
+          "source": "src/components/PageAdminDashboard.tsx",
+          "line": 346,
+          "method": "GET"
         }
       ]
     },
     {
       "endpoint": "GET /api/auth/account-access",
-      "status": "pending_review_and_port",
+      "status": "implemented_requires_workflow_verification",
       "sources": [
         {
           "method": "GET",
           "path": "/api/auth/account-access",
           "source": "server.ts",
-          "line": 2376,
+          "line": 2373,
           "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "GET",
+          "path": "/api/auth/account-access",
+          "source": "supabase/auth.ts",
+          "line": 256,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/auth/account-access",
+          "source": "src/components/AccountAccessNotice.tsx",
+          "line": 25,
+          "method": "GET"
         }
       ]
     },
     {
       "endpoint": "GET /api/auth/appearance",
-      "status": "pending_review_and_port",
+      "status": "implemented_requires_workflow_verification",
       "sources": [
         {
           "method": "GET",
@@ -232,6 +590,23 @@
           "source": "themePreferences.ts",
           "line": 18,
           "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "GET",
+          "path": "/api/auth/appearance",
+          "source": "supabase/appearance.ts",
+          "line": 26,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/auth/appearance",
+          "source": "src/context/ThemeContext.tsx",
+          "line": 84,
+          "method": "GET"
         }
       ]
     },
@@ -243,14 +618,16 @@
           "method": "GET",
           "path": "/api/auth/check-username",
           "source": "server.ts",
-          "line": 10199,
+          "line": 10185,
           "retired": false
         }
-      ]
+      ],
+      "replacementSources": [],
+      "frontendReferences": []
     },
     {
       "endpoint": "GET /api/auth/google/callback",
-      "status": "pending_review_and_port",
+      "status": "implemented_requires_workflow_verification",
       "sources": [
         {
           "method": "GET",
@@ -259,7 +636,24 @@
           "line": 99,
           "retired": false
         }
-      ]
+      ],
+      "replacementSources": [
+        {
+          "method": "GET",
+          "path": "/api/auth/google/callback",
+          "source": "googleAuth.ts",
+          "line": 99,
+          "retired": false
+        },
+        {
+          "method": "GET",
+          "path": "/api/auth/google/callback",
+          "source": "supabase/googleManagerEnrollment.ts",
+          "line": 93,
+          "retired": false
+        }
+      ],
+      "frontendReferences": []
     },
     {
       "endpoint": "GET /api/auth/maintenance-notice",
@@ -272,6 +666,23 @@
           "line": 28,
           "retired": false
         }
+      ],
+      "replacementSources": [
+        {
+          "method": "GET",
+          "path": "/api/auth/maintenance-notice",
+          "source": "supabase/platformMaintenance.ts",
+          "line": 52,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/auth/maintenance-notice",
+          "source": "src/components/MaintenanceReturnNotice.tsx",
+          "line": 25,
+          "method": "GET"
+        }
       ]
     },
     {
@@ -282,8 +693,25 @@
           "method": "GET",
           "path": "/api/auth/me",
           "source": "server.ts",
-          "line": 2363,
+          "line": 2360,
           "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "GET",
+          "path": "/api/auth/me",
+          "source": "supabase/auth.ts",
+          "line": 317,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/auth/me",
+          "source": "src/context/AuthContext.tsx",
+          "line": 306,
+          "method": "GET"
         }
       ]
     },
@@ -298,11 +726,52 @@
           "line": 203,
           "retired": false
         }
+      ],
+      "replacementSources": [
+        {
+          "method": "GET",
+          "path": "/api/board-requests",
+          "source": "supabase/dashboardReads.ts",
+          "line": 52,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/board-requests",
+          "source": "src/components/PageAdminDashboard.tsx",
+          "line": 337,
+          "method": "GET"
+        },
+        {
+          "path": "/api/board-requests",
+          "source": "src/components/PageManagerDashboard.tsx",
+          "line": 279,
+          "method": null
+        },
+        {
+          "path": "/api/board-requests",
+          "source": "src/components/PageManagerDashboard.tsx",
+          "line": 335,
+          "method": "GET"
+        },
+        {
+          "path": "/api/board-requests",
+          "source": "src/components/ResidenceChangeRequests.tsx",
+          "line": 29,
+          "method": "GET"
+        },
+        {
+          "path": "/api/board-requests",
+          "source": "src/components/ResidenceChangeRequests.tsx",
+          "line": 61,
+          "method": "GET"
+        }
       ]
     },
     {
       "endpoint": "GET /api/board-requests/:id/review",
-      "status": "pending_review_and_port",
+      "status": "implemented_requires_workflow_verification",
       "sources": [
         {
           "method": "GET",
@@ -310,6 +779,23 @@
           "source": "residenceRequests.ts",
           "line": 205,
           "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "GET",
+          "path": "/api/board-requests/:id/review",
+          "source": "supabase/residenceChanges.ts",
+          "line": 209,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/board-requests/:parameter/review",
+          "source": "src/components/ResidenceChangeRequests.tsx",
+          "line": 64,
+          "method": "GET"
         }
       ]
     },
@@ -321,10 +807,20 @@
           "method": "GET",
           "path": "/api/database/status",
           "source": "server.ts",
-          "line": 1158,
+          "line": 1155,
           "retired": false
         }
-      ]
+      ],
+      "replacementSources": [
+        {
+          "method": "GET",
+          "path": "/api/database/status",
+          "source": "supabase/app.ts",
+          "line": 140,
+          "retired": false
+        }
+      ],
+      "frontendReferences": []
     },
     {
       "endpoint": "GET /api/digital-market/messages",
@@ -337,6 +833,23 @@
           "line": 55,
           "retired": false
         }
+      ],
+      "replacementSources": [
+        {
+          "method": "GET",
+          "path": "/api/digital-market/messages",
+          "source": "supabase/marketConversation.ts",
+          "line": 61,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/digital-market/messages",
+          "source": "src/components/MarketplaceInbox.tsx",
+          "line": 39,
+          "method": "GET"
+        }
       ]
     },
     {
@@ -347,8 +860,49 @@
           "method": "GET",
           "path": "/api/digital-market/my-orders",
           "source": "server.ts",
-          "line": 5430,
+          "line": 5422,
           "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "GET",
+          "path": "/api/digital-market/my-orders",
+          "source": "supabase/orders.ts",
+          "line": 91,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/digital-market/my-orders",
+          "source": "src/components/PageDigitalMarket.tsx",
+          "line": 579,
+          "method": "GET"
+        },
+        {
+          "path": "/api/digital-market/my-orders",
+          "source": "src/components/PageDigitalMarket.tsx",
+          "line": 579,
+          "method": "GET"
+        },
+        {
+          "path": "/api/digital-market/my-orders",
+          "source": "src/components/PageUserDashboard.tsx",
+          "line": 715,
+          "method": null
+        },
+        {
+          "path": "/api/digital-market/my-orders",
+          "source": "src/components/PageUserDashboard.tsx",
+          "line": 951,
+          "method": "GET"
+        },
+        {
+          "path": "/api/digital-market/my-orders",
+          "source": "src/components/PageUserDashboard.tsx",
+          "line": 951,
+          "method": "GET"
         }
       ]
     },
@@ -360,8 +914,43 @@
           "method": "GET",
           "path": "/api/digital-market/products",
           "source": "server.ts",
-          "line": 4739,
+          "line": 4731,
           "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "GET",
+          "path": "/api/digital-market/products",
+          "source": "supabase/catalog.ts",
+          "line": 51,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/digital-market/products",
+          "source": "src/components/PageDigitalMarket.tsx",
+          "line": 565,
+          "method": "GET"
+        },
+        {
+          "path": "/api/digital-market/products",
+          "source": "src/components/PageUserDashboard.tsx",
+          "line": 709,
+          "method": null
+        },
+        {
+          "path": "/api/digital-market/products",
+          "source": "src/components/PageUserDashboard.tsx",
+          "line": 936,
+          "method": "GET"
+        },
+        {
+          "path": "/api/digital-market/products",
+          "source": "src/components/PublicMarketCatalog.tsx",
+          "line": 25,
+          "method": "GET"
         }
       ]
     },
@@ -376,6 +965,23 @@
           "line": 119,
           "retired": false
         }
+      ],
+      "replacementSources": [
+        {
+          "method": "GET",
+          "path": "/api/digital-market/ratings",
+          "source": "supabase/marketConversation.ts",
+          "line": 69,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/digital-market/ratings",
+          "source": "src/components/PageDigitalMarket.tsx",
+          "line": 950,
+          "method": "GET"
+        }
       ]
     },
     {
@@ -389,7 +995,17 @@
           "line": 120,
           "retired": false
         }
-      ]
+      ],
+      "replacementSources": [
+        {
+          "method": "GET",
+          "path": "/api/digital-market/services/:id/reviews",
+          "source": "supabase/marketConversation.ts",
+          "line": 69,
+          "retired": false
+        }
+      ],
+      "frontendReferences": []
     },
     {
       "endpoint": "GET /api/digital-market/status",
@@ -399,21 +1015,85 @@
           "method": "GET",
           "path": "/api/digital-market/status",
           "source": "server.ts",
-          "line": 4557,
+          "line": 4549,
           "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "GET",
+          "path": "/api/digital-market/status",
+          "source": "supabase/sellerRegistration.ts",
+          "line": 101,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/digital-market/status",
+          "source": "src/components/PageDigitalMarket.tsx",
+          "line": 537,
+          "method": "GET"
+        },
+        {
+          "path": "/api/digital-market/status",
+          "source": "src/components/PageDigitalMarket.tsx",
+          "line": 537,
+          "method": "GET"
+        },
+        {
+          "path": "/api/digital-market/status",
+          "source": "src/components/PageDigitalMarketOnboard.tsx",
+          "line": 112,
+          "method": "GET"
+        },
+        {
+          "path": "/api/digital-market/status",
+          "source": "src/components/PageDigitalMarketOnboard.tsx",
+          "line": 112,
+          "method": "GET"
+        },
+        {
+          "path": "/api/digital-market/status",
+          "source": "src/components/PageUserDashboard.tsx",
+          "line": 125,
+          "method": "GET"
+        },
+        {
+          "path": "/api/digital-market/status",
+          "source": "src/components/SupabaseSellerRegistration.tsx",
+          "line": 10,
+          "method": null
         }
       ]
     },
     {
       "endpoint": "GET /api/digital-market/stores/:storeId",
-      "status": "pending_review_and_port",
+      "status": "implemented_requires_workflow_verification",
       "sources": [
         {
           "method": "GET",
           "path": "/api/digital-market/stores/:storeId",
           "source": "server.ts",
-          "line": 4732,
+          "line": 4724,
           "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "GET",
+          "path": "/api/digital-market/stores/:id",
+          "source": "supabase/catalog.ts",
+          "line": 55,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/digital-market/stores/:parameter",
+          "source": "src/components/MarketStorefront.tsx",
+          "line": 23,
+          "method": "GET"
         }
       ]
     },
@@ -425,10 +1105,20 @@
           "method": "GET",
           "path": "/api/health",
           "source": "server.ts",
-          "line": 1063,
+          "line": 1060,
           "retired": false
         }
-      ]
+      ],
+      "replacementSources": [
+        {
+          "method": "GET",
+          "path": "/api/health",
+          "source": "supabase/app.ts",
+          "line": 88,
+          "retired": false
+        }
+      ],
+      "frontendReferences": []
     },
     {
       "endpoint": "GET /api/hostel-managers",
@@ -438,10 +1128,12 @@
           "method": "GET",
           "path": "/api/hostel-managers",
           "source": "server.ts",
-          "line": 6809,
+          "line": 6799,
           "retired": false
         }
-      ]
+      ],
+      "replacementSources": [],
+      "frontendReferences": []
     },
     {
       "endpoint": "GET /api/hostel-verifications",
@@ -451,10 +1143,20 @@
           "method": "GET",
           "path": "/api/hostel-verifications",
           "source": "server.ts",
-          "line": 6938,
+          "line": 6926,
           "retired": false
         }
-      ]
+      ],
+      "replacementSources": [
+        {
+          "method": "GET",
+          "path": "/api/hostel-verifications",
+          "source": "supabase/residenceRegistration.ts",
+          "line": 252,
+          "retired": false
+        }
+      ],
+      "frontendReferences": []
     },
     {
       "endpoint": "GET /api/hostels",
@@ -464,8 +1166,55 @@
           "method": "GET",
           "path": "/api/hostels",
           "source": "server.ts",
-          "line": 7215,
+          "line": 7203,
           "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "GET",
+          "path": "/api/hostels",
+          "source": "supabase/catalog.ts",
+          "line": 46,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/hostels",
+          "source": "src/components/PageAdminDashboard.tsx",
+          "line": 311,
+          "method": "GET"
+        },
+        {
+          "path": "/api/hostels",
+          "source": "src/components/PageManagerDashboard.tsx",
+          "line": 278,
+          "method": null
+        },
+        {
+          "path": "/api/hostels",
+          "source": "src/components/PageManagerDashboard.tsx",
+          "line": 283,
+          "method": "GET"
+        },
+        {
+          "path": "/api/hostels",
+          "source": "src/components/PageUserDashboard.tsx",
+          "line": 705,
+          "method": null
+        },
+        {
+          "path": "/api/hostels",
+          "source": "src/components/PageUserDashboard.tsx",
+          "line": 872,
+          "method": "GET"
+        },
+        {
+          "path": "/api/hostels",
+          "source": "src/components/PublicResidenceCatalog.tsx",
+          "line": 19,
+          "method": "GET"
         }
       ]
     },
@@ -477,8 +1226,49 @@
           "method": "GET",
           "path": "/api/issue-reports",
           "source": "server.ts",
-          "line": 7735,
+          "line": 7721,
           "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "GET",
+          "path": "/api/issue-reports",
+          "source": "supabase/dashboardReads.ts",
+          "line": 50,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/issue-reports",
+          "source": "src/components/PageManagerDashboard.tsx",
+          "line": 278,
+          "method": null
+        },
+        {
+          "path": "/api/issue-reports",
+          "source": "src/components/PageManagerDashboard.tsx",
+          "line": 308,
+          "method": "GET"
+        },
+        {
+          "path": "/api/issue-reports",
+          "source": "src/components/PageResidentDashboard.tsx",
+          "line": 80,
+          "method": null
+        },
+        {
+          "path": "/api/issue-reports",
+          "source": "src/components/PageStaffDashboard.tsx",
+          "line": 126,
+          "method": "GET"
+        },
+        {
+          "path": "/api/issue-reports",
+          "source": "src/components/PageUserDashboard.tsx",
+          "line": 905,
+          "method": "GET"
         }
       ]
     },
@@ -490,8 +1280,25 @@
           "method": "GET",
           "path": "/api/manager-requests",
           "source": "server.ts",
-          "line": 2611,
+          "line": 2608,
           "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "GET",
+          "path": "/api/manager-requests",
+          "source": "supabase/inspections.ts",
+          "line": 170,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/manager-requests",
+          "source": "src/components/PageAdminDashboard.tsx",
+          "line": 318,
+          "method": "GET"
         }
       ]
     },
@@ -503,8 +1310,31 @@
           "method": "GET",
           "path": "/api/manager-verifications",
           "source": "server.ts",
-          "line": 3559,
+          "line": 3551,
           "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "GET",
+          "path": "/api/manager-verifications",
+          "source": "supabase/inspections.ts",
+          "line": 170,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/manager-verifications",
+          "source": "src/components/PageAdminDashboard.tsx",
+          "line": 260,
+          "method": null
+        },
+        {
+          "path": "/api/manager-verifications",
+          "source": "src/components/PageAdminDashboard.tsx",
+          "line": 319,
+          "method": "GET"
         }
       ]
     },
@@ -516,10 +1346,12 @@
           "method": "GET",
           "path": "/api/manager/account-settings",
           "source": "server.ts",
-          "line": 10222,
+          "line": 10208,
           "retired": false
         }
-      ]
+      ],
+      "replacementSources": [],
+      "frontendReferences": []
     },
     {
       "endpoint": "GET /api/manager/my-hostel",
@@ -529,14 +1361,49 @@
           "method": "GET",
           "path": "/api/manager/my-hostel",
           "source": "server.ts",
-          "line": 7272,
+          "line": 7260,
           "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "GET",
+          "path": "/api/manager/my-hostel",
+          "source": "supabase/housing.ts",
+          "line": 155,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/manager/my-hostel",
+          "source": "src/components/PageManagerDashboard.tsx",
+          "line": 278,
+          "method": null
+        },
+        {
+          "path": "/api/manager/my-hostel",
+          "source": "src/components/PageManagerDashboard.tsx",
+          "line": 284,
+          "method": "GET"
+        },
+        {
+          "path": "/api/manager/my-hostel",
+          "source": "src/context/AuthContext.tsx",
+          "line": 168,
+          "method": "GET"
+        },
+        {
+          "path": "/api/manager/my-hostel",
+          "source": "src/context/AuthContext.tsx",
+          "line": 321,
+          "method": "GET"
         }
       ]
     },
     {
       "endpoint": "GET /api/manager/residence-requests",
-      "status": "pending_review_and_port",
+      "status": "implemented_requires_workflow_verification",
       "sources": [
         {
           "method": "GET",
@@ -544,6 +1411,23 @@
           "source": "residenceRequests.ts",
           "line": 199,
           "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "GET",
+          "path": "/api/manager/residence-requests",
+          "source": "supabase/residenceChanges.ts",
+          "line": 207,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/manager/residence-requests",
+          "source": "src/components/ResidenceChangeRequests.tsx",
+          "line": 29,
+          "method": "GET"
         }
       ]
     },
@@ -558,6 +1442,23 @@
           "line": 196,
           "retired": false
         }
+      ],
+      "replacementSources": [
+        {
+          "method": "GET",
+          "path": "/api/manager/secret-key",
+          "source": "supabase/managerKeys.ts",
+          "line": 101,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/manager/secret-key",
+          "source": "src/components/ManagerSecretKey.tsx",
+          "line": 20,
+          "method": "GET"
+        }
       ]
     },
     {
@@ -568,10 +1469,12 @@
           "method": "GET",
           "path": "/api/managers",
           "source": "server.ts",
-          "line": 6819,
+          "line": 6809,
           "retired": false
         }
-      ]
+      ],
+      "replacementSources": [],
+      "frontendReferences": []
     },
     {
       "endpoint": "GET /api/meetings",
@@ -581,8 +1484,25 @@
           "method": "GET",
           "path": "/api/meetings",
           "source": "server.ts",
-          "line": 10260,
+          "line": 10246,
           "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "GET",
+          "path": "/api/meetings",
+          "source": "supabase/meetings.ts",
+          "line": 147,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/meetings",
+          "source": "src/components/ManagerMeetingsTab.tsx",
+          "line": 89,
+          "method": "GET"
         }
       ]
     },
@@ -594,8 +1514,31 @@
           "method": "GET",
           "path": "/api/notifications",
           "source": "server.ts",
-          "line": 10436,
+          "line": 10422,
           "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "GET",
+          "path": "/api/notifications",
+          "source": "supabase/notifications.ts",
+          "line": 45,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/notifications",
+          "source": "src/components/PageStaffDashboard.tsx",
+          "line": 116,
+          "method": "GET"
+        },
+        {
+          "path": "/api/notifications",
+          "source": "src/context/NotificationContext.tsx",
+          "line": 243,
+          "method": "GET"
         }
       ]
     },
@@ -610,7 +1553,17 @@
           "line": 222,
           "retired": false
         }
-      ]
+      ],
+      "replacementSources": [
+        {
+          "method": "GET",
+          "path": "/api/payments/paystack/callback",
+          "source": "supabase/payments.ts",
+          "line": 205,
+          "retired": false
+        }
+      ],
+      "frontendReferences": []
     },
     {
       "endpoint": "GET /api/public/registered-residents",
@@ -620,10 +1573,12 @@
           "method": "GET",
           "path": "/api/public/registered-residents",
           "source": "server.ts",
-          "line": 10154,
+          "line": 10140,
           "retired": false
         }
-      ]
+      ],
+      "replacementSources": [],
+      "frontendReferences": []
     },
     {
       "endpoint": "GET /api/ratings",
@@ -633,10 +1588,12 @@
           "method": "GET",
           "path": "/api/ratings",
           "source": "server.ts",
-          "line": 10557,
+          "line": 10543,
           "retired": false
         }
-      ]
+      ],
+      "replacementSources": [],
+      "frontendReferences": []
     },
     {
       "endpoint": "GET /api/registered-residents",
@@ -646,10 +1603,12 @@
           "method": "GET",
           "path": "/api/registered-residents",
           "source": "server.ts",
-          "line": 10154,
+          "line": 10140,
           "retired": false
         }
-      ]
+      ],
+      "replacementSources": [],
+      "frontendReferences": []
     },
     {
       "endpoint": "GET /api/room-keys",
@@ -659,8 +1618,37 @@
           "method": "GET",
           "path": "/api/room-keys",
           "source": "server.ts",
-          "line": 8918,
+          "line": 8904,
           "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "GET",
+          "path": "/api/room-keys",
+          "source": "supabase/housing.ts",
+          "line": 170,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/room-keys",
+          "source": "src/components/PageManagerDashboard.tsx",
+          "line": 280,
+          "method": null
+        },
+        {
+          "path": "/api/room-keys",
+          "source": "src/components/PageManagerDashboard.tsx",
+          "line": 337,
+          "method": "GET"
+        },
+        {
+          "path": "/api/room-keys",
+          "source": "src/components/PageManagerDashboard.tsx",
+          "line": 372,
+          "method": "GET"
         }
       ]
     },
@@ -672,8 +1660,37 @@
           "method": "GET",
           "path": "/api/settings",
           "source": "server.ts",
-          "line": 1191,
+          "line": 1188,
           "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "GET",
+          "path": "/api/settings",
+          "source": "supabase/app.ts",
+          "line": 89,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/settings",
+          "source": "src/components/AdminSettingsPanel.tsx",
+          "line": 147,
+          "method": null
+        },
+        {
+          "path": "/api/settings",
+          "source": "src/components/AdminSettingsPanel.tsx",
+          "line": 158,
+          "method": null
+        },
+        {
+          "path": "/api/settings",
+          "source": "src/context/PlatformSettingsContext.tsx",
+          "line": 16,
+          "method": "GET"
         }
       ]
     },
@@ -688,6 +1705,35 @@
           "line": 24,
           "retired": false
         }
+      ],
+      "replacementSources": [
+        {
+          "method": "GET",
+          "path": "/api/staff",
+          "source": "supabase/dashboardReads.ts",
+          "line": 49,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/staff",
+          "source": "src/components/PageManagerDashboard.tsx",
+          "line": 278,
+          "method": null
+        },
+        {
+          "path": "/api/staff",
+          "source": "src/components/PageManagerDashboard.tsx",
+          "line": 332,
+          "method": "GET"
+        },
+        {
+          "path": "/api/staff",
+          "source": "src/components/PageStaffDashboard.tsx",
+          "line": 116,
+          "method": "GET"
+        }
       ]
     },
     {
@@ -698,8 +1744,43 @@
           "method": "GET",
           "path": "/api/staff-bargains",
           "source": "server.ts",
-          "line": 9725,
+          "line": 9711,
           "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "GET",
+          "path": "/api/staff-bargains",
+          "source": "supabase/dashboardReads.ts",
+          "line": 51,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/staff-bargains",
+          "source": "src/components/PageManagerDashboard.tsx",
+          "line": 279,
+          "method": null
+        },
+        {
+          "path": "/api/staff-bargains",
+          "source": "src/components/PageManagerDashboard.tsx",
+          "line": 334,
+          "method": "GET"
+        },
+        {
+          "path": "/api/staff-bargains",
+          "source": "src/components/PageStaffDashboard.tsx",
+          "line": 116,
+          "method": "GET"
+        },
+        {
+          "path": "/api/staff-bargains",
+          "source": "src/components/PageStaffDashboard.tsx",
+          "line": 263,
+          "method": "GET"
         }
       ]
     },
@@ -714,18 +1795,51 @@
           "line": 102,
           "retired": false
         }
-      ]
+      ],
+      "replacementSources": [
+        {
+          "method": "GET",
+          "path": "/api/staff-reviews",
+          "source": "supabase/staffRetention.ts",
+          "line": 118,
+          "retired": false
+        }
+      ],
+      "frontendReferences": []
     },
     {
       "endpoint": "GET /api/student/my-profile",
-      "status": "pending_review_and_port",
+      "status": "implemented_requires_workflow_verification",
       "sources": [
         {
           "method": "GET",
           "path": "/api/student/my-profile",
           "source": "server.ts",
-          "line": 9017,
+          "line": 9003,
           "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "GET",
+          "path": "/api/student/my-profile",
+          "source": "supabase/residentProfiles.ts",
+          "line": 62,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/student/my-profile",
+          "source": "src/components/PageUserDashboard.tsx",
+          "line": 701,
+          "method": null
+        },
+        {
+          "path": "/api/student/my-profile",
+          "source": "src/components/PageUserDashboard.tsx",
+          "line": 882,
+          "method": "GET"
         }
       ]
     },
@@ -737,8 +1851,25 @@
           "method": "GET",
           "path": "/api/student/my-rooms",
           "source": "server.ts",
-          "line": 9150,
+          "line": 9136,
           "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "GET",
+          "path": "/api/student/my-rooms",
+          "source": "supabase/residentProfiles.ts",
+          "line": 62,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/student/my-rooms",
+          "source": "src/components/PageResidentDashboard.tsx",
+          "line": 80,
+          "method": null
         }
       ]
     },
@@ -750,8 +1881,25 @@
           "method": "GET",
           "path": "/api/sync/events",
           "source": "server.ts",
-          "line": 1070,
+          "line": 1067,
           "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "GET",
+          "path": "/api/sync/events",
+          "source": "supabase/realtime.ts",
+          "line": 40,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/sync/events",
+          "source": "src/lib/queryClient.ts",
+          "line": 64,
+          "method": null
         }
       ]
     },
@@ -763,21 +1911,48 @@
           "method": "GET",
           "path": "/api/user/registered-accounts",
           "source": "server.ts",
-          "line": 3583,
+          "line": 3575,
           "retired": false
         }
-      ]
+      ],
+      "replacementSources": [
+        {
+          "method": "GET",
+          "path": "/api/user/registered-accounts",
+          "source": "supabase/accountStatus.ts",
+          "line": 61,
+          "retired": false
+        }
+      ],
+      "frontendReferences": []
     },
     {
       "endpoint": "GET /api/users/manager-restriction",
-      "status": "pending_review_and_port",
+      "status": "implemented_requires_workflow_verification",
       "sources": [
         {
           "method": "GET",
           "path": "/api/users/manager-restriction",
           "source": "server.ts",
-          "line": 4240,
+          "line": 4232,
           "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "GET",
+          "path": "/api/users/manager-restriction",
+          "source": "supabase/registrationRestrictions.ts",
+          "line": 76,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/users/manager-restriction",
+          "source": "src/components/PageManagerOnboarding.tsx",
+          "line": 288,
+          "method": "GET"
         }
       ]
     },
@@ -789,8 +1964,55 @@
           "method": "GET",
           "path": "/api/users/my-registered-accounts",
           "source": "server.ts",
-          "line": 3583,
+          "line": 3575,
           "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "GET",
+          "path": "/api/users/my-registered-accounts",
+          "source": "supabase/accountStatus.ts",
+          "line": 61,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/users/my-registered-accounts",
+          "source": "src/components/ManagerApplicationCorrections.tsx",
+          "line": 23,
+          "method": "GET"
+        },
+        {
+          "path": "/api/users/my-registered-accounts",
+          "source": "src/components/PageManagerOnboarding.tsx",
+          "line": 115,
+          "method": "GET"
+        },
+        {
+          "path": "/api/users/my-registered-accounts",
+          "source": "src/components/PageUserDashboard.tsx",
+          "line": 130,
+          "method": "GET"
+        },
+        {
+          "path": "/api/users/my-registered-accounts",
+          "source": "src/components/PageUserDashboard.tsx",
+          "line": 737,
+          "method": null
+        },
+        {
+          "path": "/api/users/my-registered-accounts",
+          "source": "src/components/PageUserDashboard.tsx",
+          "line": 738,
+          "method": null
+        },
+        {
+          "path": "/api/users/my-registered-accounts",
+          "source": "src/context/NotificationContext.tsx",
+          "line": 209,
+          "method": "GET"
         }
       ]
     },
@@ -802,10 +2024,20 @@
           "method": "GET",
           "path": "/api/verification-inspections",
           "source": "server.ts",
-          "line": 6450,
+          "line": 6441,
           "retired": false
         }
-      ]
+      ],
+      "replacementSources": [
+        {
+          "method": "GET",
+          "path": "/api/verification-inspections",
+          "source": "supabase/inspections.ts",
+          "line": 178,
+          "retired": false
+        }
+      ],
+      "frontendReferences": []
     },
     {
       "endpoint": "GET /api/verification-team/me",
@@ -815,10 +2047,20 @@
           "method": "GET",
           "path": "/api/verification-team/me",
           "source": "server.ts",
-          "line": 6340,
+          "line": 6332,
           "retired": false
         }
-      ]
+      ],
+      "replacementSources": [
+        {
+          "method": "GET",
+          "path": "/api/verification-team/me",
+          "source": "supabase/inspections.ts",
+          "line": 187,
+          "retired": false
+        }
+      ],
+      "frontendReferences": []
     },
     {
       "endpoint": "GET /api/verification-team/my-inspections",
@@ -828,8 +2070,25 @@
           "method": "GET",
           "path": "/api/verification-team/my-inspections",
           "source": "server.ts",
-          "line": 6461,
+          "line": 6452,
           "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "GET",
+          "path": "/api/verification-team/my-inspections",
+          "source": "supabase/inspections.ts",
+          "line": 179,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/verification-team/my-inspections",
+          "source": "src/components/PageVerificationTeamPortal.tsx",
+          "line": 147,
+          "method": "GET"
         }
       ]
     },
@@ -841,8 +2100,31 @@
           "method": "GET",
           "path": "/api/verification-teams",
           "source": "server.ts",
-          "line": 6130,
+          "line": 6122,
           "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "GET",
+          "path": "/api/verification-teams",
+          "source": "supabase/inspections.ts",
+          "line": 180,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/verification-teams",
+          "source": "src/components/PageAdminDashboard.tsx",
+          "line": 277,
+          "method": "GET"
+        },
+        {
+          "path": "/api/verification-teams",
+          "source": "src/components/PageAdminDashboard.tsx",
+          "line": 345,
+          "method": "GET"
         }
       ]
     },
@@ -854,10 +2136,12 @@
           "method": "GET",
           "path": "/api/verification/audit-logs",
           "source": "server.ts",
-          "line": 7205,
+          "line": 7193,
           "retired": false
         }
-      ]
+      ],
+      "replacementSources": [],
+      "frontendReferences": []
     },
     {
       "endpoint": "GET /api/verification/test-cards",
@@ -867,8 +2151,17 @@
           "method": "GET",
           "path": "/api/verification/test-cards",
           "source": "server.ts",
-          "line": 3248,
+          "line": 3245,
           "retired": false
+        }
+      ],
+      "replacementSources": [],
+      "frontendReferences": [
+        {
+          "path": "/api/verification/test-cards",
+          "source": "src/components/PageUnifiedLogin.tsx",
+          "line": 277,
+          "method": "GET"
         }
       ]
     },
@@ -880,8 +2173,17 @@
           "method": "GET",
           "path": "/api/verification/test-cards/random",
           "source": "server.ts",
-          "line": 3259,
+          "line": 3256,
           "retired": false
+        }
+      ],
+      "replacementSources": [],
+      "frontendReferences": [
+        {
+          "path": "/api/verification/test-cards/random",
+          "source": "src/components/PageUnifiedLogin.tsx",
+          "line": 216,
+          "method": "GET"
         }
       ]
     },
@@ -896,6 +2198,23 @@
           "line": 215,
           "retired": false
         }
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/admin-messages/:id/ack",
+          "source": "supabase/notifications.ts",
+          "line": 61,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/admin-messages/:parameter/ack",
+          "source": "src/components/AdminMessageNotice.tsx",
+          "line": 38,
+          "method": "POST"
+        }
       ]
     },
     {
@@ -909,7 +2228,17 @@
           "line": 55,
           "retired": true
         }
-      ]
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/clear-all-registered-accounts",
+          "source": "supabase/systemWipeReviews.ts",
+          "line": 158,
+          "retired": true
+        }
+      ],
+      "frontendReferences": []
     },
     {
       "endpoint": "POST /api/admin/digital-market/approve-application",
@@ -919,8 +2248,25 @@
           "method": "POST",
           "path": "/api/admin/digital-market/approve-application",
           "source": "server.ts",
-          "line": 5044,
+          "line": 5036,
           "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/digital-market/approve-application",
+          "source": "supabase/sellerRegistration.ts",
+          "line": 105,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/admin/digital-market/approve-application",
+          "source": "src/components/PageAdminDashboard.tsx",
+          "line": 392,
+          "method": "POST"
         }
       ]
     },
@@ -932,8 +2278,25 @@
           "method": "POST",
           "path": "/api/admin/digital-market/reject-application",
           "source": "server.ts",
-          "line": 5232,
+          "line": 5224,
           "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/digital-market/reject-application",
+          "source": "supabase/sellerRegistration.ts",
+          "line": 106,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/admin/digital-market/reject-application",
+          "source": "src/components/PageAdminDashboard.tsx",
+          "line": 410,
+          "method": "POST"
         }
       ]
     },
@@ -945,10 +2308,12 @@
           "method": "POST",
           "path": "/api/admin/digital-market/toggle-ban-store",
           "source": "server.ts",
-          "line": 5301,
+          "line": 5293,
           "retired": true
         }
-      ]
+      ],
+      "replacementSources": [],
+      "frontendReferences": []
     },
     {
       "endpoint": "POST /api/admin/dispatch-verification-team",
@@ -958,10 +2323,711 @@
           "method": "POST",
           "path": "/api/admin/dispatch-verification-team",
           "source": "server.ts",
-          "line": 6475,
+          "line": 6466,
           "retired": false
         }
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/dispatch-verification-team",
+          "source": "supabase/inspections.ts",
+          "line": 192,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/admin/dispatch-verification-team",
+          "source": "src/components/PageAdminDashboard.tsx",
+          "line": 494,
+          "method": "POST"
+        }
       ]
+    },
+    {
+      "endpoint": "POST /api/admin/governance/accounts",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/governance/accounts",
+          "source": "adminGovernanceRoutes.ts",
+          "line": 37,
+          "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/governance/accounts",
+          "source": "supabase/accountReviews.ts",
+          "line": 227,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/admin/governance/accounts",
+          "source": "src/components/SupabaseAccountModerationPanel.tsx",
+          "line": 23,
+          "method": "POST"
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/admin/governance/accounts/:id/apply",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/governance/accounts/:id/apply",
+          "source": "adminGovernanceRoutes.ts",
+          "line": 39,
+          "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/governance/accounts/:id/apply",
+          "source": "supabase/accountReviews.ts",
+          "line": 229,
+          "retired": false
+        }
+      ],
+      "frontendReferences": []
+    },
+    {
+      "endpoint": "POST /api/admin/governance/accounts/:id/final-reject",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/governance/accounts/:id/final-reject",
+          "source": "adminGovernanceRoutes.ts",
+          "line": 40,
+          "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/governance/accounts/:id/final-reject",
+          "source": "supabase/accountReviews.ts",
+          "line": 230,
+          "retired": false
+        }
+      ],
+      "frontendReferences": []
+    },
+    {
+      "endpoint": "POST /api/admin/governance/accounts/:id/vote",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/governance/accounts/:id/vote",
+          "source": "adminGovernanceRoutes.ts",
+          "line": 38,
+          "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/governance/accounts/:id/vote",
+          "source": "supabase/accountReviews.ts",
+          "line": 228,
+          "retired": false
+        }
+      ],
+      "frontendReferences": []
+    },
+    {
+      "endpoint": "POST /api/admin/governance/accounts/preview",
+      "status": "pending_review_and_port",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/governance/accounts/preview",
+          "source": "adminGovernanceRoutes.ts",
+          "line": 31,
+          "retired": false
+        }
+      ],
+      "replacementSources": [],
+      "frontendReferences": []
+    },
+    {
+      "endpoint": "POST /api/admin/governance/changes/:id/confirm-removal",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/governance/changes/:id/confirm-removal",
+          "source": "adminGovernanceRoutes.ts",
+          "line": 50,
+          "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/governance/changes/:id/confirm-removal",
+          "source": "supabase/adminGovernance.ts",
+          "line": 199,
+          "retired": false
+        }
+      ],
+      "frontendReferences": []
+    },
+    {
+      "endpoint": "POST /api/admin/governance/changes/:id/plea",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/governance/changes/:id/plea",
+          "source": "adminGovernanceRoutes.ts",
+          "line": 47,
+          "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/governance/changes/:id/plea",
+          "source": "supabase/adminGovernance.ts",
+          "line": 196,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/admin/governance/changes/:parameter/plea",
+          "source": "src/components/AdminRemovalNotice.tsx",
+          "line": 30,
+          "method": "POST"
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/admin/governance/changes/:id/plea/acknowledge",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/governance/changes/:id/plea/acknowledge",
+          "source": "adminGovernanceRoutes.ts",
+          "line": 49,
+          "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/governance/changes/:id/plea/acknowledge",
+          "source": "supabase/adminGovernance.ts",
+          "line": 198,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/admin/governance/changes/:parameter/plea/acknowledge",
+          "source": "src/components/AdminRemovalNotice.tsx",
+          "line": 22,
+          "method": "POST"
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/admin/governance/changes/:id/plea/decision",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/governance/changes/:id/plea/decision",
+          "source": "adminGovernanceRoutes.ts",
+          "line": 48,
+          "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/governance/changes/:id/plea/decision",
+          "source": "supabase/adminGovernance.ts",
+          "line": 197,
+          "retired": false
+        }
+      ],
+      "frontendReferences": []
+    },
+    {
+      "endpoint": "POST /api/admin/governance/changes/:id/vote",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/governance/changes/:id/vote",
+          "source": "adminGovernanceRoutes.ts",
+          "line": 46,
+          "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/governance/changes/:id/vote",
+          "source": "supabase/adminGovernance.ts",
+          "line": 195,
+          "retired": false
+        }
+      ],
+      "frontendReferences": []
+    },
+    {
+      "endpoint": "POST /api/admin/governance/invitations",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/governance/invitations",
+          "source": "adminGovernanceRoutes.ts",
+          "line": 41,
+          "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/governance/invitations",
+          "source": "supabase/adminInvitations.ts",
+          "line": 97,
+          "retired": false
+        }
+      ],
+      "frontendReferences": []
+    },
+    {
+      "endpoint": "POST /api/admin/governance/invitations/:id/cancel",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/governance/invitations/:id/cancel",
+          "source": "adminGovernanceRoutes.ts",
+          "line": 42,
+          "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/governance/invitations/:id/cancel",
+          "source": "supabase/adminInvitations.ts",
+          "line": 98,
+          "retired": false
+        }
+      ],
+      "frontendReferences": []
+    },
+    {
+      "endpoint": "POST /api/admin/governance/keys/enroll",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/governance/keys/enroll",
+          "source": "adminGovernanceRoutes.ts",
+          "line": 25,
+          "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/governance/keys/enroll",
+          "source": "supabase/adminGovernance.ts",
+          "line": 189,
+          "retired": false
+        }
+      ],
+      "frontendReferences": []
+    },
+    {
+      "endpoint": "POST /api/admin/governance/keys/settings/enroll",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/governance/keys/settings/enroll",
+          "source": "adminGovernanceRoutes.ts",
+          "line": 26,
+          "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/governance/keys/settings/enroll",
+          "source": "supabase/adminSettings.ts",
+          "line": 154,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/admin/governance/keys/settings/enroll",
+          "source": "src/components/AdminSettingsPanel.tsx",
+          "line": 114,
+          "method": null
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/admin/governance/members/:id/changes",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/governance/members/:id/changes",
+          "source": "adminGovernanceRoutes.ts",
+          "line": 45,
+          "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/governance/members/:id/changes",
+          "source": "supabase/adminGovernance.ts",
+          "line": 193,
+          "retired": false
+        }
+      ],
+      "frontendReferences": []
+    },
+    {
+      "endpoint": "POST /api/admin/governance/members/:id/status",
+      "status": "pending_review_and_port",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/governance/members/:id/status",
+          "source": "adminGovernanceRoutes.ts",
+          "line": 44,
+          "retired": false
+        }
+      ],
+      "replacementSources": [],
+      "frontendReferences": []
+    },
+    {
+      "endpoint": "POST /api/admin/governance/preview",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/governance/preview",
+          "source": "adminGovernanceRoutes.ts",
+          "line": 51,
+          "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/governance/preview",
+          "source": "supabase/systemWipeReviews.ts",
+          "line": 149,
+          "retired": false
+        }
+      ],
+      "frontendReferences": []
+    },
+    {
+      "endpoint": "POST /api/admin/governance/pricing",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/governance/pricing",
+          "source": "adminGovernanceRoutes.ts",
+          "line": 28,
+          "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/governance/pricing",
+          "source": "supabase/pricing.ts",
+          "line": 111,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/admin/governance/pricing",
+          "source": "src/components/AdminSettingsPanel.tsx",
+          "line": 120,
+          "method": null
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/admin/governance/pricing/:id/apply",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/governance/pricing/:id/apply",
+          "source": "adminGovernanceRoutes.ts",
+          "line": 30,
+          "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/governance/pricing/:id/apply",
+          "source": "supabase/pricing.ts",
+          "line": 113,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/admin/governance/pricing/:parameter/apply",
+          "source": "src/components/AdminSettingsPanel.tsx",
+          "line": 141,
+          "method": null
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/admin/governance/pricing/:id/vote",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/governance/pricing/:id/vote",
+          "source": "adminGovernanceRoutes.ts",
+          "line": 29,
+          "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/governance/pricing/:id/vote",
+          "source": "supabase/pricing.ts",
+          "line": 112,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/admin/governance/pricing/:parameter/vote",
+          "source": "src/components/AdminSettingsPanel.tsx",
+          "line": 140,
+          "method": null
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/admin/governance/proposals",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/governance/proposals",
+          "source": "adminGovernanceRoutes.ts",
+          "line": 52,
+          "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/governance/proposals",
+          "source": "supabase/systemWipeReviews.ts",
+          "line": 150,
+          "retired": false
+        }
+      ],
+      "frontendReferences": []
+    },
+    {
+      "endpoint": "POST /api/admin/governance/proposals/:id/execute",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/governance/proposals/:id/execute",
+          "source": "adminGovernanceRoutes.ts",
+          "line": 54,
+          "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/governance/proposals/:id/execute",
+          "source": "supabase/systemWipeReviews.ts",
+          "line": 157,
+          "retired": false
+        }
+      ],
+      "frontendReferences": []
+    },
+    {
+      "endpoint": "POST /api/admin/governance/proposals/:id/vote",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/governance/proposals/:id/vote",
+          "source": "adminGovernanceRoutes.ts",
+          "line": 53,
+          "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/governance/proposals/:id/vote",
+          "source": "supabase/systemWipeReviews.ts",
+          "line": 151,
+          "retired": false
+        }
+      ],
+      "frontendReferences": []
+    },
+    {
+      "endpoint": "POST /api/admin/governance/residences",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/governance/residences",
+          "source": "adminGovernanceRoutes.ts",
+          "line": 33,
+          "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/governance/residences",
+          "source": "supabase/residenceReviews.ts",
+          "line": 244,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/admin/governance/residences",
+          "source": "src/components/ResidenceDeletionPanel.tsx",
+          "line": 35,
+          "method": null
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/admin/governance/residences/:id/execute",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/governance/residences/:id/execute",
+          "source": "adminGovernanceRoutes.ts",
+          "line": 35,
+          "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/governance/residences/:id/execute",
+          "source": "supabase/residenceReviews.ts",
+          "line": 247,
+          "retired": false
+        }
+      ],
+      "frontendReferences": []
+    },
+    {
+      "endpoint": "POST /api/admin/governance/residences/:id/final-reject",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/governance/residences/:id/final-reject",
+          "source": "adminGovernanceRoutes.ts",
+          "line": 36,
+          "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/governance/residences/:id/final-reject",
+          "source": "supabase/residenceReviews.ts",
+          "line": 246,
+          "retired": false
+        }
+      ],
+      "frontendReferences": []
+    },
+    {
+      "endpoint": "POST /api/admin/governance/residences/:id/vote",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/governance/residences/:id/vote",
+          "source": "adminGovernanceRoutes.ts",
+          "line": 34,
+          "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/governance/residences/:id/vote",
+          "source": "supabase/residenceReviews.ts",
+          "line": 245,
+          "retired": false
+        }
+      ],
+      "frontendReferences": []
+    },
+    {
+      "endpoint": "POST /api/admin/governance/residences/preview",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/governance/residences/preview",
+          "source": "adminGovernanceRoutes.ts",
+          "line": 32,
+          "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/governance/residences/preview",
+          "source": "supabase/residenceReviews.ts",
+          "line": 243,
+          "retired": false
+        }
+      ],
+      "frontendReferences": []
     },
     {
       "endpoint": "POST /api/admin/manager-restrictions/:id/approve",
@@ -971,8 +3037,17 @@
           "method": "POST",
           "path": "/api/admin/manager-restrictions/:id/approve",
           "source": "server.ts",
-          "line": 4279,
+          "line": 4271,
           "retired": false
+        }
+      ],
+      "replacementSources": [],
+      "frontendReferences": [
+        {
+          "path": "/api/admin/manager-restrictions/:parameter/approve",
+          "source": "src/components/PageAdminDashboard.tsx",
+          "line": 531,
+          "method": "POST"
         }
       ]
     },
@@ -984,14 +3059,23 @@
           "method": "POST",
           "path": "/api/admin/manager-restrictions/:id/reject",
           "source": "server.ts",
-          "line": 4328,
+          "line": 4320,
           "retired": false
+        }
+      ],
+      "replacementSources": [],
+      "frontendReferences": [
+        {
+          "path": "/api/admin/manager-restrictions/:parameter/reject",
+          "source": "src/components/PageAdminDashboard.tsx",
+          "line": 544,
+          "method": "POST"
         }
       ]
     },
     {
       "endpoint": "POST /api/admin/managers/:id/reset-request-key",
-      "status": "pending_review_and_port",
+      "status": "implemented_requires_workflow_verification",
       "sources": [
         {
           "method": "POST",
@@ -999,6 +3083,23 @@
           "source": "residenceRequests.ts",
           "line": 202,
           "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/managers/:id/reset-request-key",
+          "source": "supabase/managerKeys.ts",
+          "line": 96,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/admin/managers/:parameter/reset-request-key",
+          "source": "src/components/ResidenceChangeRequests.tsx",
+          "line": 67,
+          "method": "POST"
         }
       ]
     },
@@ -1013,6 +3114,23 @@
           "line": 24,
           "retired": false
         }
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/messages",
+          "source": "supabase/adminMessages.ts",
+          "line": 92,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/admin/messages",
+          "source": "src/components/AdminMessageGateway.tsx",
+          "line": 36,
+          "method": null
+        }
       ]
     },
     {
@@ -1025,6 +3143,23 @@
           "source": "adminGovernanceRoutes.ts",
           "line": 23,
           "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/messages/preview",
+          "source": "supabase/adminMessages.ts",
+          "line": 91,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/admin/messages/preview",
+          "source": "src/components/AdminMessageGateway.tsx",
+          "line": 36,
+          "method": null
         }
       ]
     },
@@ -1039,6 +3174,23 @@
           "line": 212,
           "retired": false
         }
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/payments/receiving-account",
+          "source": "supabase/adminSettings.ts",
+          "line": 159,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/admin/payments/receiving-account",
+          "source": "src/components/AdminSettingsPanel.tsx",
+          "line": 169,
+          "method": null
+        }
       ]
     },
     {
@@ -1049,14 +3201,16 @@
           "method": "POST",
           "path": "/api/admin/reset-user-password",
           "source": "server.ts",
-          "line": 2596,
+          "line": 2593,
           "retired": false
         }
-      ]
+      ],
+      "replacementSources": [],
+      "frontendReferences": []
     },
     {
       "endpoint": "POST /api/auth/admin-invitation/accept",
-      "status": "pending_review_and_port",
+      "status": "implemented_requires_workflow_verification",
       "sources": [
         {
           "method": "POST",
@@ -1065,18 +3219,58 @@
           "line": 43,
           "retired": false
         }
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/auth/admin-invitation/accept",
+          "source": "supabase/adminInvitations.ts",
+          "line": 99,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/auth/admin-invitation/accept",
+          "source": "src/components/PageAdminInvitation.tsx",
+          "line": 21,
+          "method": "POST"
+        },
+        {
+          "path": "/api/auth/admin-invitation/accept",
+          "source": "src/components/SupabaseAdminInvitation.tsx",
+          "line": 24,
+          "method": "POST"
+        }
       ]
     },
     {
       "endpoint": "POST /api/auth/change-password",
-      "status": "pending_review_and_port",
+      "status": "implemented_requires_workflow_verification",
       "sources": [
         {
           "method": "POST",
           "path": "/api/auth/change-password",
           "source": "server.ts",
-          "line": 10245,
+          "line": 10231,
           "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/auth/change-password",
+          "source": "supabase/passwordSecurity.ts",
+          "line": 106,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/auth/change-password",
+          "source": "src/components/ManagerAccountControls.tsx",
+          "line": 44,
+          "method": "POST"
         }
       ]
     },
@@ -1091,6 +3285,30 @@
           "line": 78,
           "retired": false
         }
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/auth/google/start",
+          "source": "googleAuth.ts",
+          "line": 78,
+          "retired": false
+        },
+        {
+          "method": "POST",
+          "path": "/api/auth/google/start",
+          "source": "supabase/auth.ts",
+          "line": 276,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/auth/google/start",
+          "source": "src/components/GoogleAuthButton.tsx",
+          "line": 10,
+          "method": "POST"
+        }
       ]
     },
     {
@@ -1101,8 +3319,25 @@
           "method": "POST",
           "path": "/api/auth/login",
           "source": "server.ts",
-          "line": 1196,
+          "line": 1193,
           "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/auth/login",
+          "source": "supabase/auth.ts",
+          "line": 272,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/auth/login",
+          "source": "src/context/AuthContext.tsx",
+          "line": 141,
+          "method": "POST"
         }
       ]
     },
@@ -1114,8 +3349,25 @@
           "method": "POST",
           "path": "/api/auth/logout",
           "source": "server.ts",
-          "line": 2351,
+          "line": 2348,
           "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/auth/logout",
+          "source": "supabase/auth.ts",
+          "line": 323,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/auth/logout",
+          "source": "src/context/AuthContext.tsx",
+          "line": 231,
+          "method": "POST"
         }
       ]
     },
@@ -1130,6 +3382,23 @@
           "line": 32,
           "retired": false
         }
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/auth/maintenance-notice/dismiss",
+          "source": "supabase/platformMaintenance.ts",
+          "line": 53,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/auth/maintenance-notice/dismiss",
+          "source": "src/components/MaintenanceReturnNotice.tsx",
+          "line": 48,
+          "method": "POST"
+        }
       ]
     },
     {
@@ -1140,8 +3409,25 @@
           "method": "POST",
           "path": "/api/auth/profile",
           "source": "server.ts",
-          "line": 2588,
+          "line": 2585,
           "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/auth/profile",
+          "source": "supabase/profiles.ts",
+          "line": 72,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/auth/profile",
+          "source": "src/components/AdminSettingsPanel.tsx",
+          "line": 99,
+          "method": "POST"
         }
       ]
     },
@@ -1153,10 +3439,12 @@
           "method": "POST",
           "path": "/api/auth/quick-manager-login",
           "source": "server.ts",
-          "line": 1664,
+          "line": 1661,
           "retired": false
         }
-      ]
+      ],
+      "replacementSources": [],
+      "frontendReferences": []
     },
     {
       "endpoint": "POST /api/auth/quick-merchant-login",
@@ -1166,10 +3454,12 @@
           "method": "POST",
           "path": "/api/auth/quick-merchant-login",
           "source": "server.ts",
-          "line": 1660,
+          "line": 1657,
           "retired": false
         }
-      ]
+      ],
+      "replacementSources": [],
+      "frontendReferences": []
     },
     {
       "endpoint": "POST /api/auth/quick-resident-login",
@@ -1179,10 +3469,12 @@
           "method": "POST",
           "path": "/api/auth/quick-resident-login",
           "source": "server.ts",
-          "line": 1656,
+          "line": 1653,
           "retired": false
         }
-      ]
+      ],
+      "replacementSources": [],
+      "frontendReferences": []
     },
     {
       "endpoint": "POST /api/auth/quick-staff-login",
@@ -1192,10 +3484,12 @@
           "method": "POST",
           "path": "/api/auth/quick-staff-login",
           "source": "server.ts",
-          "line": 1668,
+          "line": 1665,
           "retired": false
         }
-      ]
+      ],
+      "replacementSources": [],
+      "frontendReferences": []
     },
     {
       "endpoint": "POST /api/auth/register-manager",
@@ -1205,10 +3499,20 @@
           "method": "POST",
           "path": "/api/auth/register-manager",
           "source": "server.ts",
-          "line": 1719,
+          "line": 1716,
           "retired": false
         }
-      ]
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/auth/register-manager",
+          "source": "supabase/managerRegistration.ts",
+          "line": 117,
+          "retired": false
+        }
+      ],
+      "frontendReferences": []
     },
     {
       "endpoint": "POST /api/auth/register-manager-account",
@@ -1218,8 +3522,25 @@
           "method": "POST",
           "path": "/api/auth/register-manager-account",
           "source": "server.ts",
-          "line": 1815,
+          "line": 1812,
           "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/auth/register-manager-account",
+          "source": "supabase/managerRegistration.ts",
+          "line": 117,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/auth/register-manager-account",
+          "source": "src/components/PageUnifiedLogin.tsx",
+          "line": 759,
+          "method": "POST"
         }
       ]
     },
@@ -1231,8 +3552,25 @@
           "method": "POST",
           "path": "/api/auth/register-unified",
           "source": "server.ts",
-          "line": 1777,
+          "line": 1774,
           "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/auth/register-unified",
+          "source": "supabase/auth.ts",
+          "line": 297,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/auth/register-unified",
+          "source": "src/components/PageUnifiedLogin.tsx",
+          "line": 503,
+          "method": "POST"
         }
       ]
     },
@@ -1244,10 +3582,20 @@
           "method": "POST",
           "path": "/api/auth/verification-team-login",
           "source": "server.ts",
-          "line": 6270,
+          "line": 6262,
           "retired": false
         }
-      ]
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/auth/verification-team-login",
+          "source": "supabase/auth.ts",
+          "line": 274,
+          "retired": false
+        }
+      ],
+      "frontendReferences": []
     },
     {
       "endpoint": "POST /api/auth/verify-unified",
@@ -1257,14 +3605,31 @@
           "method": "POST",
           "path": "/api/auth/verify-unified",
           "source": "server.ts",
-          "line": 1779,
+          "line": 1776,
           "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/auth/verify-unified",
+          "source": "supabase/auth.ts",
+          "line": 308,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/auth/verify-unified",
+          "source": "src/components/PageUnifiedLogin.tsx",
+          "line": 540,
+          "method": "POST"
         }
       ]
     },
     {
       "endpoint": "POST /api/board-requests",
-      "status": "pending_review_and_port",
+      "status": "implemented_requires_workflow_verification",
       "sources": [
         {
           "method": "POST",
@@ -1273,11 +3638,34 @@
           "line": 204,
           "retired": false
         }
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/board-requests",
+          "source": "supabase/residenceChanges.ts",
+          "line": 208,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/board-requests",
+          "source": "src/components/PageManagerDashboard.tsx",
+          "line": 279,
+          "method": null
+        },
+        {
+          "path": "/api/board-requests",
+          "source": "src/components/ResidenceChangeRequests.tsx",
+          "line": 53,
+          "method": "POST"
+        }
       ]
     },
     {
       "endpoint": "POST /api/board-requests/:id/decision",
-      "status": "pending_review_and_port",
+      "status": "implemented_requires_workflow_verification",
       "sources": [
         {
           "method": "POST",
@@ -1286,7 +3674,47 @@
           "line": 206,
           "retired": false
         }
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/board-requests/:id/decision",
+          "source": "supabase/residenceChanges.ts",
+          "line": 210,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/board-requests/:parameter/decision",
+          "source": "src/components/ResidenceChangeRequests.tsx",
+          "line": 66,
+          "method": "POST"
+        }
       ]
+    },
+    {
+      "endpoint": "POST /api/digital-market/create-store",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/digital-market/create-store",
+          "source": "paystackPayments.ts",
+          "line": 217,
+          "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/digital-market/create-store",
+          "source": "supabase/storeSetup.ts",
+          "line": 59,
+          "retired": false
+        }
+      ],
+      "frontendReferences": []
     },
     {
       "endpoint": "POST /api/digital-market/login",
@@ -1296,8 +3724,25 @@
           "method": "POST",
           "path": "/api/digital-market/login",
           "source": "server.ts",
-          "line": 4610,
+          "line": 4602,
           "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/digital-market/login",
+          "source": "supabase/auth.ts",
+          "line": 273,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/digital-market/login",
+          "source": "src/components/PageUserDashboard.tsx",
+          "line": 1442,
+          "method": "POST"
         }
       ]
     },
@@ -1312,6 +3757,29 @@
           "line": 67,
           "retired": false
         }
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/digital-market/messages",
+          "source": "supabase/marketConversation.ts",
+          "line": 62,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/digital-market/messages",
+          "source": "src/components/MarketplaceInbox.tsx",
+          "line": 93,
+          "method": "POST"
+        },
+        {
+          "path": "/api/digital-market/messages",
+          "source": "src/components/PageUserDashboard.tsx",
+          "line": 421,
+          "method": "POST"
+        }
       ]
     },
     {
@@ -1322,8 +3790,25 @@
           "method": "POST",
           "path": "/api/digital-market/orders",
           "source": "server.ts",
-          "line": 5304,
+          "line": 5296,
           "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/digital-market/orders",
+          "source": "supabase/orders.ts",
+          "line": 92,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/digital-market/orders",
+          "source": "src/components/PageUserDashboard.tsx",
+          "line": 1663,
+          "method": "POST"
         }
       ]
     },
@@ -1335,8 +3820,25 @@
           "method": "POST",
           "path": "/api/digital-market/orders/:id/renew-pin",
           "source": "server.ts",
-          "line": 5460,
+          "line": 5452,
           "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/digital-market/orders/:id/renew-pin",
+          "source": "supabase/orders.ts",
+          "line": 93,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/digital-market/orders/:parameter/renew-pin",
+          "source": "src/components/PageUserDashboard.tsx",
+          "line": 1742,
+          "method": "POST"
         }
       ]
     },
@@ -1348,8 +3850,55 @@
           "method": "POST",
           "path": "/api/digital-market/orders/:id/update-status",
           "source": "server.ts",
-          "line": 5484,
+          "line": 5476,
           "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/digital-market/orders/:id/update-status",
+          "source": "supabase/orders.ts",
+          "line": 94,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/digital-market/orders/:parameter/update-status",
+          "source": "src/components/PageDigitalMarket.tsx",
+          "line": 744,
+          "method": "POST"
+        },
+        {
+          "path": "/api/digital-market/orders/:parameter/update-status",
+          "source": "src/components/PageDigitalMarket.tsx",
+          "line": 773,
+          "method": "POST"
+        },
+        {
+          "path": "/api/digital-market/orders/:parameter/update-status",
+          "source": "src/components/PageDigitalMarket.tsx",
+          "line": 798,
+          "method": "POST"
+        },
+        {
+          "path": "/api/digital-market/orders/:parameter/update-status",
+          "source": "src/components/PageUserDashboard.tsx",
+          "line": 1692,
+          "method": "POST"
+        },
+        {
+          "path": "/api/digital-market/orders/:parameter/update-status",
+          "source": "src/components/PageUserDashboard.tsx",
+          "line": 1718,
+          "method": "POST"
+        },
+        {
+          "path": "/api/digital-market/orders/:parameter/update-status",
+          "source": "src/components/PageUserDashboard.tsx",
+          "line": 1761,
+          "method": "POST"
         }
       ]
     },
@@ -1361,8 +3910,43 @@
           "method": "POST",
           "path": "/api/digital-market/products",
           "source": "server.ts",
-          "line": 4833,
+          "line": 4825,
           "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/digital-market/products",
+          "source": "supabase/inventory.ts",
+          "line": 94,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/digital-market/products",
+          "source": "src/components/PageDigitalMarket.tsx",
+          "line": 649,
+          "method": "POST"
+        },
+        {
+          "path": "/api/digital-market/products",
+          "source": "src/components/PageDigitalMarket.tsx",
+          "line": 1037,
+          "method": "POST"
+        },
+        {
+          "path": "/api/digital-market/products",
+          "source": "src/components/PageUserDashboard.tsx",
+          "line": 709,
+          "method": null
+        },
+        {
+          "path": "/api/digital-market/products",
+          "source": "src/components/PageUserDashboard.tsx",
+          "line": 1608,
+          "method": "POST"
         }
       ]
     },
@@ -1377,6 +3961,23 @@
           "line": 105,
           "retired": false
         }
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/digital-market/ratings",
+          "source": "supabase/marketConversation.ts",
+          "line": 64,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/digital-market/ratings",
+          "source": "src/components/PageUserDashboard.tsx",
+          "line": 1801,
+          "method": "POST"
+        }
       ]
     },
     {
@@ -1387,8 +3988,31 @@
           "method": "POST",
           "path": "/api/digital-market/register",
           "source": "server.ts",
-          "line": 4447,
+          "line": 4439,
           "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/digital-market/register",
+          "source": "supabase/sellerRegistration.ts",
+          "line": 102,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/digital-market/register",
+          "source": "src/components/PageUserDashboard.tsx",
+          "line": 1560,
+          "method": "POST"
+        },
+        {
+          "path": "/api/digital-market/register",
+          "source": "src/components/SupabaseSellerRegistration.tsx",
+          "line": 15,
+          "method": null
         }
       ]
     },
@@ -1403,6 +4027,46 @@
           "line": 106,
           "retired": false
         }
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/digital-market/services/:id/reviews",
+          "source": "supabase/marketConversation.ts",
+          "line": 64,
+          "retired": false
+        }
+      ],
+      "frontendReferences": []
+    },
+    {
+      "endpoint": "POST /api/digital-market/store-setup",
+      "status": "implemented_requires_workflow_verification",
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/digital-market/store-setup",
+          "source": "paystackPayments.ts",
+          "line": 217,
+          "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/digital-market/store-setup",
+          "source": "supabase/storeSetup.ts",
+          "line": 59,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/digital-market/store-setup",
+          "source": "src/components/PageDigitalMarketOnboard.tsx",
+          "line": 160,
+          "method": "POST"
+        }
       ]
     },
     {
@@ -1416,7 +4080,17 @@
           "line": 218,
           "retired": false
         }
-      ]
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/digital-market/subscription",
+          "source": "supabase/payments.ts",
+          "line": 202,
+          "retired": false
+        }
+      ],
+      "frontendReferences": []
     },
     {
       "endpoint": "POST /api/hostel-managers/assign",
@@ -1426,10 +4100,12 @@
           "method": "POST",
           "path": "/api/hostel-managers/assign",
           "source": "server.ts",
-          "line": 6829,
+          "line": 6819,
           "retired": true
         }
-      ]
+      ],
+      "replacementSources": [],
+      "frontendReferences": []
     },
     {
       "endpoint": "POST /api/hostel-verifications/pay-onboarding-fee",
@@ -1442,7 +4118,17 @@
           "line": 220,
           "retired": false
         }
-      ]
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/hostel-verifications/pay-onboarding-fee",
+          "source": "supabase/payments.ts",
+          "line": 203,
+          "retired": false
+        }
+      ],
+      "frontendReferences": []
     },
     {
       "endpoint": "POST /api/hostel-verifications/submit",
@@ -1452,10 +4138,12 @@
           "method": "POST",
           "path": "/api/hostel-verifications/submit",
           "source": "server.ts",
-          "line": 6912,
+          "line": 6900,
           "retired": false
         }
-      ]
+      ],
+      "replacementSources": [],
+      "frontendReferences": []
     },
     {
       "endpoint": "POST /api/hostel-verifications/validate",
@@ -1465,10 +4153,12 @@
           "method": "POST",
           "path": "/api/hostel-verifications/validate",
           "source": "server.ts",
-          "line": 6832,
+          "line": 6822,
           "retired": false
         }
-      ]
+      ],
+      "replacementSources": [],
+      "frontendReferences": []
     },
     {
       "endpoint": "POST /api/hostels",
@@ -1478,8 +4168,23 @@
           "method": "POST",
           "path": "/api/hostels",
           "source": "server.ts",
-          "line": 7731,
+          "line": 7717,
           "retired": true
+        }
+      ],
+      "replacementSources": [],
+      "frontendReferences": [
+        {
+          "path": "/api/hostels",
+          "source": "src/components/PageManagerDashboard.tsx",
+          "line": 278,
+          "method": null
+        },
+        {
+          "path": "/api/hostels",
+          "source": "src/components/PageUserDashboard.tsx",
+          "line": 705,
+          "method": null
         }
       ]
     },
@@ -1491,21 +4196,54 @@
           "method": "POST",
           "path": "/api/hostels/:id/generate-room-keys",
           "source": "server.ts",
-          "line": 9589,
+          "line": 9575,
           "retired": false
         }
-      ]
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/hostels/:id/generate-room-keys",
+          "source": "supabase/housing.ts",
+          "line": 172,
+          "retired": false
+        }
+      ],
+      "frontendReferences": []
     },
     {
       "endpoint": "POST /api/hostels/:id/reshuffle-room-keys",
-      "status": "pending_review_and_port",
+      "status": "implemented_requires_workflow_verification",
       "sources": [
         {
           "method": "POST",
           "path": "/api/hostels/:id/reshuffle-room-keys",
           "source": "server.ts",
-          "line": 8893,
+          "line": 8879,
           "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/hostels/:id/reshuffle-room-keys",
+          "source": "supabase/academicRoomKeys.ts",
+          "line": 91,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/hostels/:parameter/reshuffle-room-keys",
+          "source": "src/components/AcademicYearRoomReset.tsx",
+          "line": 39,
+          "method": null
+        },
+        {
+          "path": "/api/hostels/:parameter/reshuffle-room-keys",
+          "source": "src/components/PageManagerDashboard.tsx",
+          "line": 3379,
+          "method": null
         }
       ]
     },
@@ -1517,10 +4255,12 @@
           "method": "POST",
           "path": "/api/hostels/cleanup-placeholders",
           "source": "server.ts",
-          "line": 7722,
+          "line": 7708,
           "retired": false
         }
-      ]
+      ],
+      "replacementSources": [],
+      "frontendReferences": []
     },
     {
       "endpoint": "POST /api/hostels/register",
@@ -1530,8 +4270,25 @@
           "method": "POST",
           "path": "/api/hostels/register",
           "source": "server.ts",
-          "line": 7347,
+          "line": 7335,
           "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/hostels/register",
+          "source": "supabase/residenceRegistration.ts",
+          "line": 228,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/hostels/register",
+          "source": "src/components/HostelRegistration.tsx",
+          "line": 607,
+          "method": "POST"
         }
       ]
     },
@@ -1543,8 +4300,55 @@
           "method": "POST",
           "path": "/api/issue-reports",
           "source": "server.ts",
-          "line": 7857,
+          "line": 7843,
           "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/issue-reports",
+          "source": "supabase/maintenance.ts",
+          "line": 208,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/issue-reports",
+          "source": "src/components/PageManagerDashboard.tsx",
+          "line": 278,
+          "method": null
+        },
+        {
+          "path": "/api/issue-reports",
+          "source": "src/components/PageManagerDashboard.tsx",
+          "line": 612,
+          "method": "POST"
+        },
+        {
+          "path": "/api/issue-reports",
+          "source": "src/components/PageResidentDashboard.tsx",
+          "line": 80,
+          "method": null
+        },
+        {
+          "path": "/api/issue-reports",
+          "source": "src/components/PageResidentDashboard.tsx",
+          "line": 254,
+          "method": "POST"
+        },
+        {
+          "path": "/api/issue-reports",
+          "source": "src/components/PageUserDashboard.tsx",
+          "line": 1026,
+          "method": "POST"
+        },
+        {
+          "path": "/api/issue-reports",
+          "source": "src/components/QuickMaintenanceReport.tsx",
+          "line": 36,
+          "method": "POST"
         }
       ]
     },
@@ -1556,8 +4360,25 @@
           "method": "POST",
           "path": "/api/issue-reports/:id/accept-assignment",
           "source": "server.ts",
-          "line": 8174,
+          "line": 8160,
           "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/issue-reports/:id/accept-assignment",
+          "source": "supabase/maintenance.ts",
+          "line": 210,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/issue-reports/:parameter/accept-assignment",
+          "source": "src/components/PageStaffDashboard.tsx",
+          "line": 145,
+          "method": "POST"
         }
       ]
     },
@@ -1569,8 +4390,25 @@
           "method": "POST",
           "path": "/api/issue-reports/:id/approve-reschedule",
           "source": "server.ts",
-          "line": 8387,
+          "line": 8373,
           "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/issue-reports/:id/approve-reschedule",
+          "source": "supabase/maintenance.ts",
+          "line": 210,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/issue-reports/:parameter/approve-reschedule",
+          "source": "src/components/PageManagerDashboard.tsx",
+          "line": 705,
+          "method": "POST"
         }
       ]
     },
@@ -1582,8 +4420,25 @@
           "method": "POST",
           "path": "/api/issue-reports/:id/assign",
           "source": "server.ts",
-          "line": 8044,
+          "line": 8030,
           "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/issue-reports/:id/assign",
+          "source": "supabase/maintenance.ts",
+          "line": 210,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/issue-reports/:parameter/assign",
+          "source": "src/components/PageManagerDashboard.tsx",
+          "line": 658,
+          "method": "POST"
         }
       ]
     },
@@ -1595,8 +4450,25 @@
           "method": "POST",
           "path": "/api/issue-reports/:id/decline-reschedule",
           "source": "server.ts",
-          "line": 8489,
+          "line": 8475,
           "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/issue-reports/:id/decline-reschedule",
+          "source": "supabase/maintenance.ts",
+          "line": 210,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/issue-reports/:parameter/decline-reschedule",
+          "source": "src/components/PageManagerDashboard.tsx",
+          "line": 722,
+          "method": "POST"
         }
       ]
     },
@@ -1608,8 +4480,25 @@
           "method": "POST",
           "path": "/api/issue-reports/:id/manager-close",
           "source": "server.ts",
-          "line": 8761,
+          "line": 8747,
           "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/issue-reports/:id/manager-close",
+          "source": "supabase/maintenance.ts",
+          "line": 210,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/issue-reports/:parameter/manager-close",
+          "source": "src/components/PageManagerDashboard.tsx",
+          "line": 684,
+          "method": "POST"
         }
       ]
     },
@@ -1621,8 +4510,25 @@
           "method": "POST",
           "path": "/api/issue-reports/:id/staff-complete",
           "source": "server.ts",
-          "line": 8549,
+          "line": 8535,
           "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/issue-reports/:id/staff-complete",
+          "source": "supabase/maintenance.ts",
+          "line": 210,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/issue-reports/:parameter/staff-complete",
+          "source": "src/components/PageStaffDashboard.tsx",
+          "line": 208,
+          "method": "POST"
         }
       ]
     },
@@ -1634,8 +4540,25 @@
           "method": "POST",
           "path": "/api/issue-reports/:id/staff-decline",
           "source": "server.ts",
-          "line": 8255,
+          "line": 8241,
           "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/issue-reports/:id/staff-decline",
+          "source": "supabase/maintenance.ts",
+          "line": 210,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/issue-reports/:parameter/staff-decline",
+          "source": "src/components/PageStaffDashboard.tsx",
+          "line": 162,
+          "method": "POST"
         }
       ]
     },
@@ -1647,8 +4570,25 @@
           "method": "POST",
           "path": "/api/issue-reports/:id/staff-reschedule",
           "source": "server.ts",
-          "line": 8318,
+          "line": 8304,
           "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/issue-reports/:id/staff-reschedule",
+          "source": "supabase/maintenance.ts",
+          "line": 210,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/issue-reports/:parameter/staff-reschedule",
+          "source": "src/components/PageStaffDashboard.tsx",
+          "line": 182,
+          "method": "POST"
         }
       ]
     },
@@ -1660,8 +4600,31 @@
           "method": "POST",
           "path": "/api/issue-reports/:id/student-confirm",
           "source": "server.ts",
-          "line": 8636,
+          "line": 8622,
           "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/issue-reports/:id/student-confirm",
+          "source": "supabase/maintenance.ts",
+          "line": 210,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/issue-reports/:parameter/student-confirm",
+          "source": "src/components/PageResidentDashboard.tsx",
+          "line": 293,
+          "method": "POST"
+        },
+        {
+          "path": "/api/issue-reports/:parameter/student-confirm",
+          "source": "src/components/PageUserDashboard.tsx",
+          "line": 1051,
+          "method": "POST"
         }
       ]
     },
@@ -1673,10 +4636,12 @@
           "method": "POST",
           "path": "/api/manager-requests",
           "source": "server.ts",
-          "line": 2681,
+          "line": 2678,
           "retired": false
         }
-      ]
+      ],
+      "replacementSources": [],
+      "frontendReferences": []
     },
     {
       "endpoint": "POST /api/manager-verifications/submit",
@@ -1686,8 +4651,43 @@
           "method": "POST",
           "path": "/api/manager-verifications/submit",
           "source": "server.ts",
-          "line": 3294,
+          "line": 3291,
           "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/manager-verifications/submit",
+          "source": "supabase/managerRegistration.ts",
+          "line": 117,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/manager-verifications/submit",
+          "source": "src/components/ManagerApplicationCorrections.tsx",
+          "line": 39,
+          "method": "POST"
+        },
+        {
+          "path": "/api/manager-verifications/submit",
+          "source": "src/components/PageManagerOnboarding.tsx",
+          "line": 457,
+          "method": "POST"
+        },
+        {
+          "path": "/api/manager-verifications/submit",
+          "source": "src/components/PageManagerOnboarding.tsx",
+          "line": 1247,
+          "method": "POST"
+        },
+        {
+          "path": "/api/manager-verifications/submit",
+          "source": "src/components/PageUnifiedLogin.tsx",
+          "line": 821,
+          "method": "POST"
         }
       ]
     },
@@ -1702,6 +4702,23 @@
           "line": 197,
           "retired": false
         }
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/manager/secret-key/issue",
+          "source": "supabase/managerKeys.ts",
+          "line": 102,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/manager/secret-key/issue",
+          "source": "src/components/ManagerSecretKey.tsx",
+          "line": 22,
+          "method": "POST"
+        }
       ]
     },
     {
@@ -1715,6 +4732,23 @@
           "line": 198,
           "retired": false
         }
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/manager/secret-key/petition",
+          "source": "supabase/managerKeys.ts",
+          "line": 103,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/manager/secret-key/petition",
+          "source": "src/components/ResidenceChangeRequests.tsx",
+          "line": 48,
+          "method": "POST"
+        }
       ]
     },
     {
@@ -1725,8 +4759,25 @@
           "method": "POST",
           "path": "/api/meetings",
           "source": "server.ts",
-          "line": 10270,
+          "line": 10256,
           "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/meetings",
+          "source": "supabase/meetings.ts",
+          "line": 149,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/meetings",
+          "source": "src/components/ManagerMeetingsTab.tsx",
+          "line": 152,
+          "method": "POST"
         }
       ]
     },
@@ -1741,6 +4792,29 @@
           "line": 219,
           "retired": false
         }
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/payments/paystack/initialize",
+          "source": "supabase/payments.ts",
+          "line": 201,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/payments/paystack/initialize",
+          "source": "src/components/PageDigitalMarket.tsx",
+          "line": 510,
+          "method": "POST"
+        },
+        {
+          "path": "/api/payments/paystack/initialize",
+          "source": "src/components/PageDigitalMarketOnboard.tsx",
+          "line": 179,
+          "method": "POST"
+        }
       ]
     },
     {
@@ -1753,6 +4827,23 @@
           "source": "paystackPayments.ts",
           "line": 221,
           "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/payments/paystack/verify",
+          "source": "supabase/payments.ts",
+          "line": 204,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/payments/paystack/verify",
+          "source": "src/components/PagePaymentReturn.tsx",
+          "line": 34,
+          "method": "POST"
         }
       ]
     },
@@ -1767,7 +4858,17 @@
           "line": 227,
           "retired": false
         }
-      ]
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/payments/paystack/webhook",
+          "source": "supabase/payments.ts",
+          "line": 189,
+          "retired": false
+        }
+      ],
+      "frontendReferences": []
     },
     {
       "endpoint": "POST /api/ratings",
@@ -1777,10 +4878,12 @@
           "method": "POST",
           "path": "/api/ratings",
           "source": "server.ts",
-          "line": 10562,
+          "line": 10548,
           "retired": false
         }
-      ]
+      ],
+      "replacementSources": [],
+      "frontendReferences": []
     },
     {
       "endpoint": "POST /api/residents/onboard",
@@ -1790,10 +4893,20 @@
           "method": "POST",
           "path": "/api/residents/onboard",
           "source": "server.ts",
-          "line": 9236,
+          "line": 9222,
           "retired": false
         }
-      ]
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/residents/onboard",
+          "source": "supabase/enrollment.ts",
+          "line": 311,
+          "retired": false
+        }
+      ],
+      "frontendReferences": []
     },
     {
       "endpoint": "POST /api/room-keys/:id/release",
@@ -1803,8 +4916,25 @@
           "method": "POST",
           "path": "/api/room-keys/:id/release",
           "source": "server.ts",
-          "line": 8879,
+          "line": 8865,
           "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/room-keys/:id/release",
+          "source": "supabase/housing.ts",
+          "line": 176,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/room-keys/:parameter/release",
+          "source": "src/components/PageManagerDashboard.tsx",
+          "line": 3378,
+          "method": null
         }
       ]
     },
@@ -1816,21 +4946,67 @@
           "method": "POST",
           "path": "/api/room-keys/claim",
           "source": "server.ts",
-          "line": 9236,
+          "line": 9222,
           "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/room-keys/claim",
+          "source": "supabase/enrollment.ts",
+          "line": 311,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/room-keys/claim",
+          "source": "src/components/PageUnifiedLogin.tsx",
+          "line": 655,
+          "method": "POST"
+        },
+        {
+          "path": "/api/room-keys/claim",
+          "source": "src/components/PageUserDashboard.tsx",
+          "line": 1163,
+          "method": "POST"
+        },
+        {
+          "path": "/api/room-keys/claim",
+          "source": "src/components/SupabaseResidentActivation.tsx",
+          "line": 21,
+          "method": "POST"
         }
       ]
     },
     {
       "endpoint": "POST /api/room-keys/send-digital",
-      "status": "pending_review_and_port",
+      "status": "implemented_requires_workflow_verification",
       "sources": [
         {
           "method": "POST",
           "path": "/api/room-keys/send-digital",
           "source": "server.ts",
-          "line": 8943,
+          "line": 8929,
           "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/room-keys/send-digital",
+          "source": "supabase/roomKeyDelivery.ts",
+          "line": 79,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/room-keys/send-digital",
+          "source": "src/components/PageManagerDashboard.tsx",
+          "line": 405,
+          "method": "POST"
         }
       ]
     },
@@ -1842,8 +5018,43 @@
           "method": "POST",
           "path": "/api/room-keys/verify",
           "source": "server.ts",
-          "line": 9191,
+          "line": 9177,
           "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/room-keys/verify",
+          "source": "supabase/enrollment.ts",
+          "line": 317,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/room-keys/verify",
+          "source": "src/components/PageUnifiedLogin.tsx",
+          "line": 596,
+          "method": "POST"
+        },
+        {
+          "path": "/api/room-keys/verify",
+          "source": "src/components/PageUserDashboard.tsx",
+          "line": 1085,
+          "method": "POST"
+        },
+        {
+          "path": "/api/room-keys/verify",
+          "source": "src/components/PageUserDashboard.tsx",
+          "line": 5132,
+          "method": "POST"
+        },
+        {
+          "path": "/api/room-keys/verify",
+          "source": "src/components/SupabaseResidentActivation.tsx",
+          "line": 13,
+          "method": "POST"
         }
       ]
     },
@@ -1858,6 +5069,29 @@
           "line": 27,
           "retired": false
         }
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/settings",
+          "source": "supabase/publicSettings.ts",
+          "line": 84,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/settings",
+          "source": "src/components/AdminSettingsPanel.tsx",
+          "line": 147,
+          "method": null
+        },
+        {
+          "path": "/api/settings",
+          "source": "src/components/AdminSettingsPanel.tsx",
+          "line": 158,
+          "method": null
+        }
       ]
     },
     {
@@ -1871,6 +5105,29 @@
           "line": 31,
           "retired": false
         }
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/staff",
+          "source": "supabase/staff.ts",
+          "line": 164,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/staff",
+          "source": "src/components/PageManagerDashboard.tsx",
+          "line": 278,
+          "method": null
+        },
+        {
+          "path": "/api/staff",
+          "source": "src/components/PageManagerDashboard.tsx",
+          "line": 508,
+          "method": "POST"
+        }
       ]
     },
     {
@@ -1881,8 +5138,31 @@
           "method": "POST",
           "path": "/api/staff-bargains",
           "source": "server.ts",
-          "line": 9768,
+          "line": 9754,
           "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/staff-bargains",
+          "source": "supabase/staffRetention.ts",
+          "line": 115,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/staff-bargains",
+          "source": "src/components/PageManagerDashboard.tsx",
+          "line": 279,
+          "method": null
+        },
+        {
+          "path": "/api/staff-bargains",
+          "source": "src/components/PageStaffDashboard.tsx",
+          "line": 330,
+          "method": "POST"
         }
       ]
     },
@@ -1894,8 +5174,25 @@
           "method": "POST",
           "path": "/api/staff-bargains/:id/manager-response",
           "source": "server.ts",
-          "line": 9953,
+          "line": 9939,
           "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/staff-bargains/:id/manager-response",
+          "source": "supabase/staffRetention.ts",
+          "line": 116,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/staff-bargains/:parameter/manager-response",
+          "source": "src/components/PageManagerDashboard.tsx",
+          "line": 574,
+          "method": "POST"
         }
       ]
     },
@@ -1907,8 +5204,25 @@
           "method": "POST",
           "path": "/api/staff-bargains/:id/staff-decision",
           "source": "server.ts",
-          "line": 10036,
+          "line": 10022,
           "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/staff-bargains/:id/staff-decision",
+          "source": "supabase/staffRetention.ts",
+          "line": 117,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/staff-bargains/:parameter/staff-decision",
+          "source": "src/components/PageStaffDashboard.tsx",
+          "line": 285,
+          "method": "POST"
         }
       ]
     },
@@ -1923,7 +5237,17 @@
           "line": 109,
           "retired": false
         }
-      ]
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/staff-reviews",
+          "source": "supabase/staffRetention.ts",
+          "line": 119,
+          "retired": false
+        }
+      ],
+      "frontendReferences": []
     },
     {
       "endpoint": "POST /api/staff/quit",
@@ -1933,10 +5257,20 @@
           "method": "POST",
           "path": "/api/staff/quit",
           "source": "server.ts",
-          "line": 9714,
+          "line": 9700,
           "retired": false
         }
-      ]
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/staff/quit",
+          "source": "supabase/staff.ts",
+          "line": 183,
+          "retired": false
+        }
+      ],
+      "frontendReferences": []
     },
     {
       "endpoint": "POST /api/staff/resign",
@@ -1946,8 +5280,25 @@
           "method": "POST",
           "path": "/api/staff/resign",
           "source": "server.ts",
-          "line": 9609,
+          "line": 9595,
           "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/staff/resign",
+          "source": "supabase/staff.ts",
+          "line": 183,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/staff/resign",
+          "source": "src/components/PageStaffDashboard.tsx",
+          "line": 330,
+          "method": "POST"
         }
       ]
     },
@@ -1959,8 +5310,37 @@
           "method": "POST",
           "path": "/api/storage/upload-hostel-image",
           "source": "server.ts",
-          "line": 7707,
+          "line": 7693,
           "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/storage/upload-hostel-image",
+          "source": "supabase/media.ts",
+          "line": 190,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/storage/upload-hostel-image",
+          "source": "src/components/HostelRegistration.tsx",
+          "line": 517,
+          "method": "POST"
+        },
+        {
+          "path": "/api/storage/upload-hostel-image",
+          "source": "src/components/HostelRegistration.tsx",
+          "line": 545,
+          "method": "POST"
+        },
+        {
+          "path": "/api/storage/upload-hostel-image",
+          "source": "src/components/ResidenceChangeRequests.tsx",
+          "line": 41,
+          "method": "POST"
         }
       ]
     },
@@ -1972,34 +5352,101 @@
           "method": "POST",
           "path": "/api/student/add-room",
           "source": "server.ts",
-          "line": 9210,
+          "line": 9196,
           "retired": false
+        }
+      ],
+      "replacementSources": [],
+      "frontendReferences": [
+        {
+          "path": "/api/student/add-room",
+          "source": "src/components/PageUserDashboard.tsx",
+          "line": 5083,
+          "method": "POST"
         }
       ]
     },
     {
       "endpoint": "POST /api/student/delete-room",
-      "status": "pending_review_and_port",
+      "status": "implemented_requires_workflow_verification",
       "sources": [
         {
           "method": "POST",
           "path": "/api/student/delete-room",
           "source": "server.ts",
-          "line": 9215,
+          "line": 9201,
           "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/student/delete-room",
+          "source": "supabase/residentClosure.ts",
+          "line": 25,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/student/delete-room",
+          "source": "src/components/PageUserDashboard.tsx",
+          "line": 5310,
+          "method": "POST"
+        },
+        {
+          "path": "/api/student/delete-room",
+          "source": "src/components/ResidentAccountClosure.tsx",
+          "line": 26,
+          "method": "POST"
         }
       ]
     },
     {
       "endpoint": "POST /api/users/delete-registered-account",
-      "status": "pending_review_and_port",
+      "status": "implemented_requires_workflow_verification",
       "sources": [
         {
           "method": "POST",
           "path": "/api/users/delete-registered-account",
           "source": "server.ts",
-          "line": 3846,
+          "line": 3838,
           "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/users/delete-registered-account",
+          "source": "supabase/managerClosureRequests.ts",
+          "line": 157,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/users/delete-registered-account",
+          "source": "src/components/ManagerAccountControls.tsx",
+          "line": 46,
+          "method": "POST"
+        },
+        {
+          "path": "/api/users/delete-registered-account",
+          "source": "src/components/ManagerClosureRequest.tsx",
+          "line": 39,
+          "method": null
+        },
+        {
+          "path": "/api/users/delete-registered-account",
+          "source": "src/components/PageManagerOnboarding.tsx",
+          "line": 182,
+          "method": "POST"
+        },
+        {
+          "path": "/api/users/delete-registered-account",
+          "source": "src/components/PageUserDashboard.tsx",
+          "line": 1312,
+          "method": "POST"
         }
       ]
     },
@@ -2011,21 +5458,40 @@
           "method": "POST",
           "path": "/api/users/register",
           "source": "server.ts",
-          "line": 1720,
+          "line": 1717,
           "retired": false
         }
-      ]
+      ],
+      "replacementSources": [],
+      "frontendReferences": []
     },
     {
       "endpoint": "POST /api/users/reset-registered-account-password",
-      "status": "pending_review_and_port",
+      "status": "retired_do_not_port",
       "sources": [
         {
           "method": "POST",
           "path": "/api/users/reset-registered-account-password",
           "source": "server.ts",
-          "line": 3824,
+          "line": 3816,
           "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/users/reset-registered-account-password",
+          "source": "supabase/portalSecurity.ts",
+          "line": 56,
+          "retired": true
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/users/reset-registered-account-password",
+          "source": "src/components/PageUserDashboard.tsx",
+          "line": 1261,
+          "method": "POST"
         }
       ]
     },
@@ -2037,21 +5503,61 @@
           "method": "POST",
           "path": "/api/verification-team/inspections/:id/submit-report",
           "source": "server.ts",
-          "line": 6602,
+          "line": 6592,
           "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/verification-team/inspections/:id/submit-report",
+          "source": "supabase/inspections.ts",
+          "line": 196,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/verification-team/inspections/:parameter/submit-report",
+          "source": "src/components/PageVerificationTeamPortal.tsx",
+          "line": 374,
+          "method": "POST"
         }
       ]
     },
     {
       "endpoint": "POST /api/verification-teams",
-      "status": "pending_review_and_port",
+      "status": "implemented_requires_workflow_verification",
       "sources": [
         {
           "method": "POST",
           "path": "/api/verification-teams",
           "source": "server.ts",
-          "line": 6139,
+          "line": 6131,
           "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/verification-teams",
+          "source": "supabase/officerInvitations.ts",
+          "line": 128,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/verification-teams",
+          "source": "src/components/PageAdminDashboard.tsx",
+          "line": 440,
+          "method": "POST"
+        },
+        {
+          "path": "/api/verification-teams",
+          "source": "src/components/SupabaseOfficerInvitationControls.tsx",
+          "line": 23,
+          "method": "POST"
         }
       ]
     },
@@ -2063,10 +5569,20 @@
           "method": "POST",
           "path": "/api/verification-teams/login",
           "source": "server.ts",
-          "line": 6270,
+          "line": 6262,
           "retired": false
         }
-      ]
+      ],
+      "replacementSources": [
+        {
+          "method": "POST",
+          "path": "/api/verification-teams/login",
+          "source": "supabase/auth.ts",
+          "line": 275,
+          "retired": false
+        }
+      ],
+      "frontendReferences": []
     },
     {
       "endpoint": "POST /api/verification/verify-identity",
@@ -2076,10 +5592,12 @@
           "method": "POST",
           "path": "/api/verification/verify-identity",
           "source": "server.ts",
-          "line": 3269,
+          "line": 3266,
           "retired": false
         }
-      ]
+      ],
+      "replacementSources": [],
+      "frontendReferences": []
     },
     {
       "endpoint": "PUT /api/admin/managers/:id/block",
@@ -2089,10 +5607,12 @@
           "method": "PUT",
           "path": "/api/admin/managers/:id/block",
           "source": "server.ts",
-          "line": 3174,
+          "line": 3171,
           "retired": true
         }
-      ]
+      ],
+      "replacementSources": [],
+      "frontendReferences": []
     },
     {
       "endpoint": "PUT /api/admin/managers/:id/unblock",
@@ -2102,14 +5622,16 @@
           "method": "PUT",
           "path": "/api/admin/managers/:id/unblock",
           "source": "server.ts",
-          "line": 3177,
+          "line": 3174,
           "retired": true
         }
-      ]
+      ],
+      "replacementSources": [],
+      "frontendReferences": []
     },
     {
       "endpoint": "PUT /api/auth/appearance",
-      "status": "pending_review_and_port",
+      "status": "implemented_requires_workflow_verification",
       "sources": [
         {
           "method": "PUT",
@@ -2117,6 +5639,23 @@
           "source": "themePreferences.ts",
           "line": 23,
           "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "PUT",
+          "path": "/api/auth/appearance",
+          "source": "supabase/appearance.ts",
+          "line": 30,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/auth/appearance",
+          "source": "src/context/ThemeContext.tsx",
+          "line": 50,
+          "method": "PUT"
         }
       ]
     },
@@ -2128,8 +5667,37 @@
           "method": "PUT",
           "path": "/api/auth/profile",
           "source": "server.ts",
-          "line": 2587,
+          "line": 2584,
           "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "PUT",
+          "path": "/api/auth/profile",
+          "source": "supabase/profiles.ts",
+          "line": 71,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/auth/profile",
+          "source": "src/components/PageManagerDashboard.tsx",
+          "line": 472,
+          "method": "PUT"
+        },
+        {
+          "path": "/api/auth/profile",
+          "source": "src/components/PageResidentDashboard.tsx",
+          "line": 189,
+          "method": "PUT"
+        },
+        {
+          "path": "/api/auth/profile",
+          "source": "src/components/UserAvatarSelector.tsx",
+          "line": 154,
+          "method": "PUT"
         }
       ]
     },
@@ -2144,7 +5712,17 @@
           "line": 207,
           "retired": true
         }
-      ]
+      ],
+      "replacementSources": [
+        {
+          "method": "PUT",
+          "path": "/api/board-requests/:id",
+          "source": "supabase/residenceChanges.ts",
+          "line": 214,
+          "retired": true
+        }
+      ],
+      "frontendReferences": []
     },
     {
       "endpoint": "PUT /api/digital-market/products/:id",
@@ -2154,8 +5732,37 @@
           "method": "PUT",
           "path": "/api/digital-market/products/:id",
           "source": "server.ts",
-          "line": 4932,
+          "line": 4924,
           "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "PUT",
+          "path": "/api/digital-market/products/:id",
+          "source": "supabase/inventory.ts",
+          "line": 95,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/digital-market/products/:parameter",
+          "source": "src/components/PageDigitalMarket.tsx",
+          "line": 703,
+          "method": "PUT"
+        },
+        {
+          "path": "/api/digital-market/products/:parameter",
+          "source": "src/components/PageDigitalMarket.tsx",
+          "line": 1032,
+          "method": "PUT"
+        },
+        {
+          "path": "/api/digital-market/products/:parameter",
+          "source": "src/components/PageDigitalMarket.tsx",
+          "line": 1069,
+          "method": "PUT"
         }
       ]
     },
@@ -2167,8 +5774,25 @@
           "method": "PUT",
           "path": "/api/digital-market/store",
           "source": "server.ts",
-          "line": 4719,
+          "line": 4711,
           "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "PUT",
+          "path": "/api/digital-market/store",
+          "source": "supabase/storeSetup.ts",
+          "line": 60,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/digital-market/store",
+          "source": "src/components/PageDigitalMarket.tsx",
+          "line": 831,
+          "method": "PUT"
         }
       ]
     },
@@ -2180,10 +5804,20 @@
           "method": "PUT",
           "path": "/api/hostel-verifications/:id/approve",
           "source": "server.ts",
-          "line": 6949,
+          "line": 6937,
           "retired": false
         }
-      ]
+      ],
+      "replacementSources": [
+        {
+          "method": "PUT",
+          "path": "/api/hostel-verifications/:id/approve",
+          "source": "supabase/residenceRegistration.ts",
+          "line": 237,
+          "retired": false
+        }
+      ],
+      "frontendReferences": []
     },
     {
       "endpoint": "PUT /api/hostel-verifications/:id/flag-investigation",
@@ -2193,10 +5827,12 @@
           "method": "PUT",
           "path": "/api/hostel-verifications/:id/flag-investigation",
           "source": "server.ts",
-          "line": 7117,
+          "line": 7105,
           "retired": false
         }
-      ]
+      ],
+      "replacementSources": [],
+      "frontendReferences": []
     },
     {
       "endpoint": "PUT /api/hostel-verifications/:id/reject",
@@ -2206,10 +5842,20 @@
           "method": "PUT",
           "path": "/api/hostel-verifications/:id/reject",
           "source": "server.ts",
-          "line": 7023,
+          "line": 7011,
           "retired": false
         }
-      ]
+      ],
+      "replacementSources": [
+        {
+          "method": "PUT",
+          "path": "/api/hostel-verifications/:id/reject",
+          "source": "supabase/residenceRegistration.ts",
+          "line": 238,
+          "retired": false
+        }
+      ],
+      "frontendReferences": []
     },
     {
       "endpoint": "PUT /api/hostel-verifications/:id/request-info",
@@ -2219,10 +5865,20 @@
           "method": "PUT",
           "path": "/api/hostel-verifications/:id/request-info",
           "source": "server.ts",
-          "line": 7077,
+          "line": 7065,
           "retired": false
         }
-      ]
+      ],
+      "replacementSources": [
+        {
+          "method": "PUT",
+          "path": "/api/hostel-verifications/:id/request-info",
+          "source": "supabase/residenceRegistration.ts",
+          "line": 239,
+          "retired": false
+        }
+      ],
+      "frontendReferences": []
     },
     {
       "endpoint": "PUT /api/hostel-verifications/:id/suspend",
@@ -2232,10 +5888,12 @@
           "method": "PUT",
           "path": "/api/hostel-verifications/:id/suspend",
           "source": "server.ts",
-          "line": 7158,
+          "line": 7146,
           "retired": false
         }
-      ]
+      ],
+      "replacementSources": [],
+      "frontendReferences": []
     },
     {
       "endpoint": "PUT /api/hostels/:id",
@@ -2245,10 +5903,12 @@
           "method": "PUT",
           "path": "/api/hostels/:id",
           "source": "server.ts",
-          "line": 7732,
+          "line": 7718,
           "retired": false
         }
-      ]
+      ],
+      "replacementSources": [],
+      "frontendReferences": []
     },
     {
       "endpoint": "PUT /api/hostels/:id/reject-verification",
@@ -2258,10 +5918,12 @@
           "method": "PUT",
           "path": "/api/hostels/:id/reject-verification",
           "source": "server.ts",
-          "line": 7602,
+          "line": 7588,
           "retired": false
         }
-      ]
+      ],
+      "replacementSources": [],
+      "frontendReferences": []
     },
     {
       "endpoint": "PUT /api/hostels/:id/verify",
@@ -2271,8 +5933,43 @@
           "method": "PUT",
           "path": "/api/hostels/:id/verify",
           "source": "server.ts",
-          "line": 7491,
+          "line": 7477,
           "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "PUT",
+          "path": "/api/hostels/:id/verify",
+          "source": "supabase/residenceRegistration.ts",
+          "line": 240,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/hostels/:parameter/verify",
+          "source": "src/components/PageAdminDashboard.tsx",
+          "line": 1312,
+          "method": "PUT"
+        },
+        {
+          "path": "/api/hostels/:parameter/verify",
+          "source": "src/components/PageAdminDashboard.tsx",
+          "line": 2089,
+          "method": "PUT"
+        },
+        {
+          "path": "/api/hostels/:parameter/verify",
+          "source": "src/components/PageAdminDashboard.tsx",
+          "line": 2754,
+          "method": "PUT"
+        },
+        {
+          "path": "/api/hostels/:parameter/verify",
+          "source": "src/components/PageAdminDashboard.tsx",
+          "line": 2823,
+          "method": "PUT"
         }
       ]
     },
@@ -2284,10 +5981,20 @@
           "method": "PUT",
           "path": "/api/issue-reports/:id",
           "source": "server.ts",
-          "line": 8841,
+          "line": 8827,
           "retired": false
         }
-      ]
+      ],
+      "replacementSources": [
+        {
+          "method": "PUT",
+          "path": "/api/issue-reports/:id",
+          "source": "supabase/maintenance.ts",
+          "line": 209,
+          "retired": false
+        }
+      ],
+      "frontendReferences": []
     },
     {
       "endpoint": "PUT /api/manager-requests/:id/approve",
@@ -2297,8 +6004,25 @@
           "method": "PUT",
           "path": "/api/manager-requests/:id/approve",
           "source": "server.ts",
-          "line": 2781,
+          "line": 2778,
           "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "PUT",
+          "path": "/api/manager-requests/:id/approve",
+          "source": "supabase/inspections.ts",
+          "line": 198,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/manager-requests/:parameter/approve",
+          "source": "src/components/PageAdminDashboard.tsx",
+          "line": 578,
+          "method": "PUT"
         }
       ]
     },
@@ -2310,10 +6034,12 @@
           "method": "PUT",
           "path": "/api/manager-requests/:id/block",
           "source": "server.ts",
-          "line": 3174,
+          "line": 3171,
           "retired": true
         }
-      ]
+      ],
+      "replacementSources": [],
+      "frontendReferences": []
     },
     {
       "endpoint": "PUT /api/manager-requests/:id/reject",
@@ -2323,8 +6049,25 @@
           "method": "PUT",
           "path": "/api/manager-requests/:id/reject",
           "source": "server.ts",
-          "line": 2986,
+          "line": 2983,
           "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "PUT",
+          "path": "/api/manager-requests/:id/reject",
+          "source": "supabase/inspections.ts",
+          "line": 200,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/manager-requests/:parameter/reject",
+          "source": "src/components/PageAdminDashboard.tsx",
+          "line": 729,
+          "method": "PUT"
         }
       ]
     },
@@ -2336,10 +6079,12 @@
           "method": "PUT",
           "path": "/api/manager-requests/:id/unblock",
           "source": "server.ts",
-          "line": 3177,
+          "line": 3174,
           "retired": true
         }
-      ]
+      ],
+      "replacementSources": [],
+      "frontendReferences": []
     },
     {
       "endpoint": "PUT /api/manager-requests/:id/verify-doc",
@@ -2349,8 +6094,17 @@
           "method": "PUT",
           "path": "/api/manager-requests/:id/verify-doc",
           "source": "server.ts",
-          "line": 3180,
+          "line": 3177,
           "retired": false
+        }
+      ],
+      "replacementSources": [],
+      "frontendReferences": [
+        {
+          "path": "/api/manager-requests/:parameter/verify-doc",
+          "source": "src/components/PageAdminDashboard.tsx",
+          "line": 644,
+          "method": "PUT"
         }
       ]
     },
@@ -2362,15 +6116,38 @@
           "method": "PUT",
           "path": "/api/manager-verifications/:id/approve",
           "source": "server.ts",
-          "line": 2781,
+          "line": 2778,
           "retired": false
         },
         {
           "method": "PUT",
           "path": "/api/manager-verifications/:id/approve",
           "source": "server.ts",
-          "line": 5642,
+          "line": 5634,
           "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "PUT",
+          "path": "/api/manager-verifications/:id/approve",
+          "source": "supabase/inspections.ts",
+          "line": 198,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/manager-verifications/:parameter/approve",
+          "source": "src/components/PageAdminDashboard.tsx",
+          "line": 573,
+          "method": "PUT"
+        },
+        {
+          "path": "/api/manager-verifications/:parameter/approve",
+          "source": "src/components/PageAdminDashboard.tsx",
+          "line": 616,
+          "method": "PUT"
         }
       ]
     },
@@ -2382,10 +6159,12 @@
           "method": "PUT",
           "path": "/api/manager-verifications/:id/block",
           "source": "server.ts",
-          "line": 3174,
+          "line": 3171,
           "retired": true
         }
-      ]
+      ],
+      "replacementSources": [],
+      "frontendReferences": []
     },
     {
       "endpoint": "PUT /api/manager-verifications/:id/reject",
@@ -2395,15 +6174,32 @@
           "method": "PUT",
           "path": "/api/manager-verifications/:id/reject",
           "source": "server.ts",
-          "line": 2986,
+          "line": 2983,
           "retired": false
         },
         {
           "method": "PUT",
           "path": "/api/manager-verifications/:id/reject",
           "source": "server.ts",
-          "line": 5914,
+          "line": 5906,
           "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "PUT",
+          "path": "/api/manager-verifications/:id/reject",
+          "source": "supabase/inspections.ts",
+          "line": 200,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/manager-verifications/:parameter/reject",
+          "source": "src/components/PageAdminDashboard.tsx",
+          "line": 725,
+          "method": "PUT"
         }
       ]
     },
@@ -2415,10 +6211,20 @@
           "method": "PUT",
           "path": "/api/manager-verifications/:id/request-info",
           "source": "server.ts",
-          "line": 6086,
+          "line": 6078,
           "retired": false
         }
-      ]
+      ],
+      "replacementSources": [
+        {
+          "method": "PUT",
+          "path": "/api/manager-verifications/:id/request-info",
+          "source": "supabase/inspections.ts",
+          "line": 202,
+          "retired": false
+        }
+      ],
+      "frontendReferences": []
     },
     {
       "endpoint": "PUT /api/manager-verifications/:id/suspend",
@@ -2428,17 +6234,19 @@
           "method": "PUT",
           "path": "/api/manager-verifications/:id/suspend",
           "source": "server.ts",
-          "line": 3174,
+          "line": 3171,
           "retired": true
         },
         {
           "method": "PUT",
           "path": "/api/manager-verifications/:id/suspend",
           "source": "server.ts",
-          "line": 6686,
+          "line": 6676,
           "retired": true
         }
-      ]
+      ],
+      "replacementSources": [],
+      "frontendReferences": []
     },
     {
       "endpoint": "PUT /api/manager-verifications/:id/unblock",
@@ -2448,10 +6256,12 @@
           "method": "PUT",
           "path": "/api/manager-verifications/:id/unblock",
           "source": "server.ts",
-          "line": 3177,
+          "line": 3174,
           "retired": true
         }
-      ]
+      ],
+      "replacementSources": [],
+      "frontendReferences": []
     },
     {
       "endpoint": "PUT /api/manager-verifications/:id/verify-doc",
@@ -2461,15 +6271,24 @@
           "method": "PUT",
           "path": "/api/manager-verifications/:id/verify-doc",
           "source": "server.ts",
-          "line": 3180,
+          "line": 3177,
           "retired": false
         },
         {
           "method": "PUT",
           "path": "/api/manager-verifications/:id/verify-doc",
           "source": "server.ts",
-          "line": 5862,
+          "line": 5854,
           "retired": false
+        }
+      ],
+      "replacementSources": [],
+      "frontendReferences": [
+        {
+          "path": "/api/manager-verifications/:parameter/verify-doc",
+          "source": "src/components/PageAdminDashboard.tsx",
+          "line": 640,
+          "method": "PUT"
         }
       ]
     },
@@ -2481,10 +6300,12 @@
           "method": "PUT",
           "path": "/api/manager/account-settings",
           "source": "server.ts",
-          "line": 10233,
+          "line": 10219,
           "retired": false
         }
-      ]
+      ],
+      "replacementSources": [],
+      "frontendReferences": []
     },
     {
       "endpoint": "PUT /api/meetings/:id",
@@ -2494,8 +6315,25 @@
           "method": "PUT",
           "path": "/api/meetings/:id",
           "source": "server.ts",
-          "line": 10345,
+          "line": 10331,
           "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "PUT",
+          "path": "/api/meetings/:id",
+          "source": "supabase/meetings.ts",
+          "line": 150,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/meetings/:parameter",
+          "source": "src/components/ManagerMeetingsTab.tsx",
+          "line": 193,
+          "method": "PUT"
         }
       ]
     },
@@ -2507,8 +6345,25 @@
           "method": "PUT",
           "path": "/api/notifications/:id/read",
           "source": "server.ts",
-          "line": 10544,
+          "line": 10530,
           "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "PUT",
+          "path": "/api/notifications/:id/read",
+          "source": "supabase/notifications.ts",
+          "line": 53,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/notifications/:parameter/read",
+          "source": "src/context/NotificationContext.tsx",
+          "line": 291,
+          "method": "PUT"
         }
       ]
     },
@@ -2520,8 +6375,25 @@
           "method": "PUT",
           "path": "/api/notifications/read-all",
           "source": "server.ts",
-          "line": 10531,
+          "line": 10517,
           "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "PUT",
+          "path": "/api/notifications/read-all",
+          "source": "supabase/notifications.ts",
+          "line": 49,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/notifications/read-all",
+          "source": "src/context/NotificationContext.tsx",
+          "line": 302,
+          "method": "PUT"
         }
       ]
     },
@@ -2536,7 +6408,17 @@
           "line": 76,
           "retired": false
         }
-      ]
+      ],
+      "replacementSources": [
+        {
+          "method": "PUT",
+          "path": "/api/staff/:id",
+          "source": "supabase/staff.ts",
+          "line": 181,
+          "retired": false
+        }
+      ],
+      "frontendReferences": []
     },
     {
       "endpoint": "PUT /api/staff/profile",
@@ -2549,6 +6431,23 @@
           "line": 58,
           "retired": false
         }
+      ],
+      "replacementSources": [
+        {
+          "method": "PUT",
+          "path": "/api/staff/profile",
+          "source": "supabase/staff.ts",
+          "line": 176,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/staff/profile",
+          "source": "src/components/PageStaffDashboard.tsx",
+          "line": 392,
+          "method": "PUT"
+        }
       ]
     },
     {
@@ -2559,8 +6458,25 @@
           "method": "PUT",
           "path": "/api/verification-teams/:id/status",
           "source": "server.ts",
-          "line": 6237,
+          "line": 6229,
           "retired": false
+        }
+      ],
+      "replacementSources": [
+        {
+          "method": "PUT",
+          "path": "/api/verification-teams/:id/status",
+          "source": "supabase/officerInvitations.ts",
+          "line": 131,
+          "retired": false
+        }
+      ],
+      "frontendReferences": [
+        {
+          "path": "/api/verification-teams/:parameter/status",
+          "source": "src/components/PageAdminDashboard.tsx",
+          "line": 472,
+          "method": "PUT"
         }
       ]
     }

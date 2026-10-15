@@ -21,7 +21,7 @@ export function installRealtime(app: Express, auth: SupabaseAuth) {
         if (notice.channel !== 'pinevela_notifications') return;
         for (const [res, stream] of streams) {
           if (stream.actor.contextId !== notice.payload) continue;
-          auth.db.actor(stream.actor, async () => undefined).then(() => {
+          auth.db.readActor(stream.actor, async () => undefined).then(() => {
             if (!streams.has(res)) return;
             if (res.writableLength > 65536 || !res.write(`data: ${JSON.stringify({ entity: 'notifications', timestamp: Date.now() })}\n\n`)) stream.close();
           }).catch(stream.close);
@@ -54,7 +54,7 @@ export function installRealtime(app: Express, auth: SupabaseAuth) {
       };
       const heartbeat = setInterval(() => {
         if (checking || closed) return; checking = true;
-        auth.db.actor(actor, async () => undefined).then(() => {
+        auth.db.readActor(actor, async () => undefined).then(() => {
           if (!closed && (res.writableLength > 65536 || !res.write(': ping\n\n'))) close();
         }).catch(close).finally(() => { checking = false; });
       }, 25000); heartbeat.unref();

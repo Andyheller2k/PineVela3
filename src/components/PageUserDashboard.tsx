@@ -122,12 +122,12 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
   // Registration status comes from the current authenticated account, including deletions.
   const merchantRegistration = useQuery<{ application: DigitalMarketApplication | null; store: DigitalMarketStore | null }>({
     queryKey: ['digital-market', 'registration', user?.id],
-    queryFn: async () => { const data = await apiFetch('/api/digital-market/status'); if (!data || !('application' in data) || !('store' in data)) throw new Error('Could not check merchant registration.'); return data; },
+    queryFn: async ({signal}) => { const data = await apiFetch('/api/digital-market/status',{signal:AbortSignal.any([signal,AbortSignal.timeout(30000)])}); if (!data || !('application' in data) || !('store' in data)) throw new Error('Could not check merchant registration.'); return data; },
     enabled: Boolean(user), refetchInterval: 6000, refetchOnWindowFocus: true,
   });
   const managerRegistration = useQuery<{ managerAccount: ManagerRegistration | null }>({
     queryKey: ['userData', 'registration', user?.id],
-    queryFn: async () => { const data = await apiFetch('/api/users/my-registered-accounts'); if (!data || !('managerAccount' in data)) throw new Error('Could not check manager registration.'); return data; },
+    queryFn: async ({signal}) => { const data = await apiFetch('/api/users/my-registered-accounts',{signal:AbortSignal.any([signal,AbortSignal.timeout(30000)])}); if (!data || !('managerAccount' in data)) throw new Error('Could not check manager registration.'); return data; },
     enabled: Boolean(user), refetchInterval: 6000, refetchOnWindowFocus: true,
   });
   const digitalMarketApp = merchantRegistration.data?.application || null;
@@ -366,6 +366,9 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
   const [userRooms, setUserRooms] = useState<any[]>([]);
   const [studentProfile, setStudentProfile] = useState<any>(null);
   const [loadingData, setLoadingData] = useState<boolean>(true);
+  const [dashboardLoadError,setDashboardLoadError]=useState('');
+  const [dashboardRefreshing,setDashboardRefreshing]=useState(false);
+  const dashboardRead=useRef<{accountId:string|undefined;controller:AbortController}|null>(null);
   const [availableHostels, setAvailableHostels] = useState<any[]>([]);
   const [viewingHostelModal, setViewingHostelModal] = useState<any | null>(null);
 
@@ -671,7 +674,57 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
     setTimeout(() => setToastMessage(null), 2500);
   };
 
+  const loadSupabaseDashboard=async(isSilent=false)=>{
+    const accountId=user?.id,generation=marketGeneration.current;
+    if(dashboardRead.current?.accountId===accountId)return;
+    dashboardRead.current?.controller.abort();
+    const request={accountId,controller:new AbortController()};dashboardRead.current=request;
+    const current=()=>dashboardRead.current===request&&!request.controller.signal.aborted&&marketAccountCurrent(accountId,generation);
+    const signal=AbortSignal.any([request.controller.signal,AbortSignal.timeout(30000)]);
+    setDashboardRefreshing(true);
+    if(!isSilent){setLoadingData(true);setDashboardLoadError('');}
+    const failedMessage='Some account information could not load. Your connection may be slow or temporarily unavailable. Retry to refresh it.';
+    const read=async(url:string,save:(data:any)=>void,opensDashboard=false)=>{
+      try{
+        const data=await apiFetch(url,{signal});if(!current())return false;
+        save(data);return true;
+      }catch{
+        if(current())setDashboardLoadError(failedMessage);return false;
+      }finally{
+        // Only the account profile gates the initial page. Catalog/order reads
+        // finish independently and cannot keep the whole dashboard on a skeleton.
+        if(opensDashboard&&current()&&!isSilent)setLoadingData(false);
+      }
+    };
+    try{
+      const results=await Promise.all([
+        read('/api/student/my-profile',data=>{
+          if(!data||Array.isArray(data)||!data.user||!Array.isArray(data.rooms))throw Error('Could not read your account profile.');
+          setStudentProfile(data.user);setUserRooms(data.rooms);setRoomKeyDetails(data.roomKeyDetails||null);
+        },true),
+        read('/api/hostels',data=>{
+          if(!Array.isArray(data))throw Error('Could not read residences.');
+          setAvailableHostels(data);setResidencesLoaded(true);
+        }),
+        read('/api/digital-market/products?includeAll=true',data=>{
+          if(!Array.isArray(data))throw Error('Could not read market listings.');
+          setPublicCatalog(data.filter(marketListingAvailable));
+          const storeId=merchantRegistration.data?.store?.id,email=user?.email?.toLowerCase();
+          setDigitalMarketProducts(data.filter(p=>storeId&&p.storeId===storeId||email&&p.sellerEmail?.toLowerCase()===email));
+        }),
+        read('/api/digital-market/my-orders',data=>{
+          if(!Array.isArray(data))throw Error('Could not read your orders.');
+          setDigitalMarketOrders(data);setMarketOrdersAccount(accountId);setMarketReadError('');
+        }),
+      ]);
+      if(current()&&results.every(Boolean))setDashboardLoadError('');
+    }finally{
+      if(current()){if(!isSilent)setLoadingData(false);setDashboardRefreshing(false);dashboardRead.current=null;}
+    }
+  };
+
   const loadStudentData = async (isSilent = false) => {
+    if(usesSupabasePersistence&&user?.role==='user')return loadSupabaseDashboard(isSilent);
     if (!isSilent) setLoadingData(true);
     try {
       // Fetch user registered Manager/Staff/Resident accounts
@@ -681,7 +734,9 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
         if (token) headers['Authorization'] = `Bearer ${token}`;
         const uEmail = (user?.email || '').toLowerCase().trim();
         const uId = user?.id || '';
-        const regRes = await fetch(`/api/users/my-registered-accounts?email=${encodeURIComponent(uEmail)}&userId=${encodeURIComponent(uId)}`, { headers });
+        const registrationUrl = usesSupabasePersistence ? '/api/users/my-registered-accounts'
+          : `/api/users/my-registered-accounts?email=${encodeURIComponent(uEmail)}&userId=${encodeURIComponent(uId)}`;
+        const regRes = await fetch(registrationUrl, { headers });
         if (regRes.ok) {
           const regData = await safeJson(regRes);
           
@@ -741,7 +796,9 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
             }
           }
 
-          if (regData.residentRooms && Array.isArray(regData.residentRooms) && regData.residentRooms.length > 0) {
+          // Supabase room cards come exclusively from the authorized allocation
+          // projection below; a pending registration is not an occupied room.
+          if (!usesSupabasePersistence && regData.residentRooms && Array.isArray(regData.residentRooms) && regData.residentRooms.length > 0) {
             const mappedRooms: HostelRoomKey[] = regData.residentRooms.map((rk: any) => ({
               id: rk.roomKey || rk.id,
               hostelId: rk.hostelId || '',
@@ -769,7 +826,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
             if (mappedRooms[0]) {
               setRoomKeyDetails(mappedRooms[0]);
             }
-          } else if (regData.residentAccount) {
+          } else if (!usesSupabasePersistence && regData.residentAccount) {
             const defaultRoom: HostelRoomKey = {
               id: regData.residentAccount.roomKey,
               hostelId: regData.residentAccount.hostelId || '',
@@ -795,7 +852,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
             };
             setRoomKeyDetails(defaultRoom);
             setUserRooms([defaultRoom]);
-          } else {
+          } else if (!usesSupabasePersistence) {
             setUserRooms([]);
             setRoomKeyDetails(null);
           }
@@ -903,11 +960,12 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
   };
 
   useEffect(() => {
+    if(usesSupabasePersistence){setDashboardLoadError('');setStudentProfile(null);setUserRooms([]);setRoomKeyDetails(null);setAvailableHostels([]);setPublicCatalog([]);setResidencesLoaded(false);}
     loadStudentData(false);
-    const interval = setInterval(() => {
-      loadStudentData(true);
-    }, 8000);
-    return () => clearInterval(interval);
+    const refreshVisible = () => { if (!document.hidden) void loadStudentData(true); };
+    const interval = setInterval(refreshVisible, 8000);
+    document.addEventListener('visibilitychange', refreshVisible);
+    return () => {clearInterval(interval);document.removeEventListener('visibilitychange',refreshVisible);dashboardRead.current?.controller.abort();dashboardRead.current=null;};
   }, [user?.id, user?.email]);
 
   // Handle Photo Upload (Base64)
@@ -1182,6 +1240,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
   // Submit password reset
   const handleResetRegisteredAccountPassword = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (usesSupabasePersistence) { setResetPasswordError('Use the verified resident portal to manage its credentials.'); return; }
     if (resetTargetRole === 'resident' && !currentPasswordInput) {
       setResetPasswordError("Please enter your current resident account password first.");
       return;
@@ -1231,6 +1290,10 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
 
   // Open delete account modal
   const openDeleteAccountModal = (role: 'resident', email: string) => {
+    if (usesSupabasePersistence) {
+      triggerToast('Sign in to your separately verified resident portal, then open Settings → End resident room access. Your primary account cannot close a separate portal.');
+      return;
+    }
     setDeleteTargetRole(role);
     setDeleteTargetEmail(email);
     setDeletePasswordInput('');
@@ -1241,6 +1304,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
   // Submit account deletion (unlocks registration)
   const handleDeleteRegisteredAccount = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (usesSupabasePersistence) return;
     setDeletingAccount(true);
     setDeleteAccountError(null);
     try {
@@ -1350,7 +1414,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
     try {
       const result = await managerRegistration.refetch();
       if (!result.data || result.isError) { triggerToast('Could not check manager registration. Please try again.', 'error'); return; }
-      if (managerRegistrationStatus(result.data.managerAccount) === 'unregistered') navigate('/register-manager');
+      if (managerRegistrationStatus(result.data.managerAccount) === 'unregistered' || (usesSupabasePersistence && result.data.managerAccount?.requiresPropertyRegistration)) navigate('/register-manager');
       else setShowManagerCard(true);
     } finally { setCheckingManager(false); }
   };
@@ -2249,6 +2313,11 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
       {/* MAIN CONTENT AREA WITH PERSISTENT PINEVELA GIANT WATERMARK */}
       <main ref={mainScrollRef} className={`user-dashboard-content hide-scrollbar flex-1 p-6 pb-28 lg:px-10 lg:pb-10 space-y-8 overflow-y-auto h-full relative z-10 ${isSidebarHidden ? 'lg:pt-24 lg:w-[calc(100vw-22rem)] lg:max-w-[calc(100vw-22rem)] lg:mx-auto' : 'lg:pt-10'}`}>
 
+        {usesSupabasePersistence&&dashboardLoadError&&<section role="alert" className="space-y-3 rounded-2xl border border-blue-200 bg-[var(--pv-panel)] p-5 text-[var(--pv-text)]">
+          <h2 className="text-lg font-semibold">Could not refresh your dashboard</h2><p className="text-sm">{dashboardLoadError}</p>
+          <button type="button" disabled={dashboardRefreshing} onClick={()=>void loadStudentData(false)} className="min-h-11 rounded-xl bg-blue-700 px-5 font-semibold text-white disabled:opacity-60">{dashboardRefreshing?'Refreshing…':'Retry dashboard'}</button>
+        </section>}
+
         {/* TAB 0: HOME TAB (Residents View, Staff View & Gateways) */}
         {activeTab === 'home' && (
           <div className="space-y-8 animate-fadeIn relative z-10">
@@ -2540,14 +2609,12 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {userRooms.map((roomItem: any, idx: number) => {
                   const rKey = roomItem.roomKey || roomItem.id;
-                  const hostelName = roomItem.hostelName || registeredAccounts.residentAccount?.hostelName || currentUser?.hostelName || 'PineVela Residence';
-                  const blockName = roomItem.blockName || currentUser?.blockName || 'Block A';
-                  const roomNum = roomItem.roomNumber || currentUser?.roomNumber || '101';
-                  const resName = roomItem.assignedStudentName || registeredAccounts.residentAccount?.name || currentUser?.name || 'Resident';
-                  const resId = roomItem.assignedStudentId || registeredAccounts.residentAccount?.studentId || currentUser?.studentId || 'N/A';
-                  const prog = roomItem.assignedProgram || registeredAccounts.residentAccount?.programOfStudy || currentUser?.programOfStudy || 'General Studies';
-                  const managerName = roomItem.managerName || 'Hostel Operations Manager';
-                  const managerPhone = roomItem.managerPhone || '+233 24 000 0000';
+                  const hostelName = roomItem.hostelName || registeredAccounts.residentAccount?.hostelName || 'Residence details unavailable';
+                  const blockName = roomItem.blockName || 'Block details unavailable';
+                  const roomNum = roomItem.roomNumber || 'Unavailable';
+                  const resName = roomItem.assignedStudentName || registeredAccounts.residentAccount?.name || 'Not specified';
+                  const managerName = roomItem.managerName || 'Manager details unavailable';
+                  const managerPhone = roomItem.managerPhone;
 
                   return (
                     <div
@@ -2582,19 +2649,19 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                             <span className="text-slate-400 font-medium">Digital Room Key:</span>
                             <div className="flex items-center gap-1.5">
                               <span className="font-mono font-black text-blue-900 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
-                                {rKey}
+                                {roomItem.roomKey || 'Unavailable'}
                               </span>
-                              <button
+                              {roomItem.roomKey && <button
                                 type="button"
                                 onClick={() => {
-                                  navigator.clipboard.writeText(rKey);
-                                  triggerToast(`Copied Room Key ${rKey}`, 'success');
+                                  navigator.clipboard.writeText(roomItem.roomKey);
+                                  triggerToast(`Copied Room Key ${roomItem.roomKey}`, 'success');
                                 }}
                                 className="p-1 rounded bg-slate-200 hover:bg-slate-300 text-slate-700 cursor-pointer"
                                 title="Copy Key"
                               >
                                 <Copy className="w-3 h-3" />
-                              </button>
+                              </button>}
                             </div>
                           </div>
 
@@ -2605,15 +2672,15 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                             </div>
                             <div>
                               <span className="text-slate-400 block font-medium text-[10px]">Phone Number</span>
-                              <span className="font-bold text-slate-800">{roomItem.assignedStudentPhone || roomItem.phone || currentUser?.phone || 'Not specified'}</span>
+                              <span className="font-bold text-slate-800">{roomItem.assignedStudentPhone || roomItem.phone || 'Not specified'}</span>
                             </div>
                             <div>
                               <span className="text-slate-400 block font-medium text-[10px]">Resident Email</span>
-                              <span className="font-bold text-slate-800 truncate block">{roomItem.assignedStudentEmail || roomItem.email || currentUser?.email || 'N/A'}</span>
+                              <span className="font-bold text-slate-800 truncate block">{roomItem.assignedStudentEmail || roomItem.email || 'Not specified'}</span>
                             </div>
                             <div>
                               <span className="text-slate-400 block font-medium text-[10px]">Hostel Manager</span>
-                              <span className="font-bold text-slate-800 truncate block">{managerName} ({managerPhone})</span>
+                              <span className="font-bold text-slate-800 truncate block">{managerName}{managerPhone ? ` (${managerPhone})` : ''}</span>
                             </div>
                           </div>
                         </div>
@@ -2624,6 +2691,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                         <button
                           type="button"
                           onClick={() => {
+                            if(usesSupabasePersistence){openDeleteAccountModal('resident','');return;}
                             setDeletingRoomTarget(roomItem);
                             setDelRoomEmailInput(roomItem.assignedStudentEmail || roomItem.email || registeredAccounts.residentAccount?.email || currentUser?.email || '');
                             setDelRoomPasswordInput('');
@@ -2632,7 +2700,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                           className="px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-xs rounded-xl transition-all flex items-center gap-1.5 cursor-pointer"
                         >
                           <Trash2 className="w-3.5 h-3.5 text-rose-600" />
-                          <span>Delete Room</span>
+                          <span>{usesSupabasePersistence?'Resident room access':'Delete Room'}</span>
                         </button>
 
                         <div className="flex items-center gap-2">
@@ -3840,7 +3908,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                         className="px-3.5 py-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 font-bold text-xs rounded-xl transition-all flex items-center gap-1 cursor-pointer"
                       >
                         <KeyRound className="w-3.5 h-3.5" />
-                        <span>Reset Resident Password</span>
+                        <span>{usesSupabasePersistence ? 'Resident account security' : 'Reset Resident Password'}</span>
                       </button>
                       <button
                         type="button"
@@ -3848,7 +3916,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                         className="px-3.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-xs rounded-xl transition-all flex items-center gap-1 cursor-pointer"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
-                        <span>Unlink & Delete Resident Account</span>
+                        <span>{usesSupabasePersistence?'Resident room access':'Unlink & Delete Resident Account'}</span>
                       </button>
                     </div>
                   </div>
@@ -4721,7 +4789,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
       {/* MODAL: RESET REGISTERED ACCOUNT PASSWORD */}
       {/* ========================================================================= */}
       {showResetPasswordModal && (
-        <DashboardOverlay aria-label="Reset Registered Account Password" onClose={() => setShowResetPasswordModal(false)} className="fixed inset-0 bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-4 animate-in fade-in duration-150">
+        <DashboardOverlay aria-label={usesSupabasePersistence ? 'Resident account security' : 'Reset Registered Account Password'} onClose={() => setShowResetPasswordModal(false)} className="fixed inset-0 bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-4 animate-in fade-in duration-150">
           <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-2xl border border-slate-200 space-y-5">
             <div className="flex items-start justify-between gap-3 pb-3 border-b border-slate-100">
               <div className="flex items-start gap-3">
@@ -4730,7 +4798,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                 </div>
                 <div>
                   <h3 className="text-base font-black text-slate-900">
-                    Reset Resident Password
+                    {usesSupabasePersistence ? 'Resident account security' : 'Reset Resident Password'}
                   </h3>
                   <p className="text-xs text-slate-500 font-medium truncate max-w-xs">{resetTargetEmail}</p>
                 </div>
@@ -4744,6 +4812,15 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
               </button>
             </div>
 
+            {usesSupabasePersistence ? <div className="space-y-4">
+              <p className="text-sm text-slate-600">Sign in with the verified resident email to manage its credentials. If that email also opens your seller account, its email password is shared and each portal has a separate access PIN.</p>
+              <p className="text-sm text-slate-600">The resident portal's Settings page lets you change its current PIN. Your primary account cannot change another verified identity's password.</p>
+              <button type="button" disabled={resettingPassword} className="min-h-11 rounded-xl bg-blue-700 px-5 py-3 text-sm font-semibold text-white disabled:opacity-50" onClick={async () => {
+                setResettingPassword(true);
+                if (await logout()) navigate('/login', { replace: true });
+                else setResettingPassword(false);
+              }}>Sign in to resident account</button>
+            </div> : (
             <form onSubmit={handleResetRegisteredAccountPassword} className="space-y-4">
               {resetTargetRole === 'resident' && (
                 <div className="space-y-1">
@@ -4810,6 +4887,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                 </button>
               </div>
             </form>
+            )}
           </div>
         </DashboardOverlay>
       )}
@@ -5136,7 +5214,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
       )}
 
       {/* DELETE / UNLINK ROOM CONFIRMATION MODAL */}
-      {deletingRoomTarget && (
+      {deletingRoomTarget && !usesSupabasePersistence && (
         <DashboardOverlay aria-label="Delete Resident Room" onClose={() => { setDeletingRoomTarget(null); setDelRoomError(null); setDelRoomPasswordInput(''); }} className="fixed inset-0 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
           <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl border border-slate-200 space-y-5 animate-scaleUp">
             <div className="flex items-center gap-3 border-b border-slate-100 pb-4">

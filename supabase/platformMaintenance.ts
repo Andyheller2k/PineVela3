@@ -29,7 +29,7 @@ export function maintenanceBoundary(auth: SupabaseAuth): RequestHandler {
   };
 }
 export async function recoveryNotice(auth: SupabaseAuth, actor: AuthRequest['actor']) {
-  return auth.db.actor(actor,async c=>{
+  return auth.db.readActor(actor,async c=>{
     const serverTime=(await c.query('select clock_timestamp() as time')).rows[0].time;
     const notice=(await c.query(`select n.id,n.message,n.expires_at as "expiresAt" from private.maintenance_recovery_notices n
       join private.maintenance_recovery_recipients r on r.notice_id=n.id where r.context_id=$1 and r.dismissed_at is null

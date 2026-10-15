@@ -1,4 +1,5 @@
 import { useLocation } from 'react-router-dom';
+import {useEffect,useState} from 'react';
 import PineLogo from './PineLogo';
 
 function Shape({ className = '' }: { className?: string }) {
@@ -8,6 +9,20 @@ function Shape({ className = '' }: { className?: string }) {
 /** Loading structure only: no account information or fabricated content. */
 export default function RouteSkeleton() {
   const { pathname } = useLocation();
+  const [slow,setSlow]=useState(false);
+  useEffect(()=>{
+    setSlow(false);
+    if(!['/user/dashboard','/register-manager'].includes(pathname))return;
+    const timer=window.setTimeout(()=>setSlow(true),30000);
+    return()=>window.clearTimeout(timer);
+  },[pathname]);
+  if(slow)return <main data-route-loading-retry role="alert" className="flex min-h-screen items-center justify-center bg-[var(--pv-canvas)] p-6 text-[var(--pv-text)]">
+    <section className="w-full max-w-md space-y-4 rounded-2xl border border-[var(--pv-edge)] bg-[var(--pv-panel)] p-6 text-center">
+      <h1 className="text-xl font-semibold">Loading is taking longer than usual</h1>
+      <p className="text-sm">Check your connection and reload this page to try again.</p>
+      <button type="button" onClick={()=>window.location.reload()} className="min-h-11 rounded-xl bg-blue-700 px-6 py-3 font-semibold text-white">Reload page</button>
+    </section>
+  </main>;
   const formPage = pathname === '/login' || pathname.includes('onboard') || pathname === '/register-manager';
   const panel = 'rounded-3xl border border-white/70 bg-white/40 p-6 shadow-sm backdrop-blur-xl';
 

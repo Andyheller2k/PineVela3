@@ -37,7 +37,7 @@ export async function sendMarketMessage(c:PoolClient,a:VerifiedActor,body:any){f
   const again=await retry();if(again)return again;
   const b=(await c.query(`select p.* from public.account_contexts x join public.profiles p on p.id=x.auth_user_id where x.id=$1 and x.kind='primary' and x.status='active' and p.primary_owner_id is null`,[buyerId])).rows[0];
   if(!b || b.id===s.primary_owner_id)throw new ApiError(403,'You cannot message your own store.');
-  if(s.status!=='active' || !(await c.query("select 1 from public.account_contexts x join public.seller_applications app on app.seller_context_id=x.id where x.id=$1 and x.status='active' and app.status='approved'",[s.seller_context_id])).rowCount)throw new ApiError(403,'This seller is unavailable.');
+  if(s.status!=='active' || !(await c.query("select 1 from public.account_contexts x join public.seller_applications app on app.seller_context_id=x.id and app.registration_generation=x.seller_generation where x.id=$1 and app.id=$2 and x.status='active' and app.status='approved'",[s.seller_context_id,s.application_id])).rowCount)throw new ApiError(403,'This seller is unavailable.');
   const exists=(await c.query('select 1 from public.market_messages where store_id=$1 and buyer_context_id=$2 limit 1',[s.id,buyerId])).rowCount;
   if(!exists && !o){if(a.kind!=='primary')throw new ApiError(403,'Reply to an existing buyer inquiry or order.');if(!(await c.query('select private.store_is_public($1) as eligible',[s.id])).rows[0].eligible || l && (l.retired_at || !l.is_published))throw new ApiError(409,'This store or listing is unavailable for new inquiries.');}
   const m=(await c.query(`insert into public.market_messages(buyer_context_id,store_id,order_id,listing_id,product_title,sender_context_id,body,request_id,request_fingerprint)
@@ -64,7 +64,7 @@ export function installMarketConversation(app:Express,auth:SupabaseAuth){
   app.post('/api/digital-market/ratings',auth.require(['primary']),submit(false));app.post('/api/digital-market/services/:id/reviews',auth.require(['primary']),submit(true));
   const list=(service:boolean)=>route(async(req,res)=>{if(Object.keys(req.query).some(k=>!['storeId','serviceId','productId'].includes(k)) || req.query.serviceId && req.query.productId && req.query.serviceId!==req.query.productId)throw new ApiError(400,'Invalid review filter.');
     const item=service?uuid(req.params.id):req.query.serviceId || req.query.productId?uuid(req.query.serviceId || req.query.productId):null,store=req.query.storeId?uuid(req.query.storeId):null;
-    const rows=item || store?await auth.db.publicRows('select * from public.market_reviews_public where ($1::uuid is null or listing_id=$1) and ($2::uuid is null or store_id=$2) order by created_at desc,id',[item,store]):[];
+    const rows=item || store?await auth.db.publicRows('select * from private.market_reviews_public where ($1::uuid is null or listing_id=$1) and ($2::uuid is null or store_id=$2) order by created_at desc,id',[item,store]):[];
     const count=rows.length,average=count?Math.round(rows.reduce((sum,r:any)=>sum+r.rating,0)/count*10)/10:0;res.json({averageRating:average,ratingCount:count,...(service?{serviceId:item,reviewCount:count,reviews:rows.map(ratingDto)}:{ratings:rows.map(ratingDto)})});});
   app.get('/api/digital-market/ratings',list(false));app.get('/api/digital-market/services/:id/reviews',list(true));
 }

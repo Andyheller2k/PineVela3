@@ -21,6 +21,8 @@ try {
   assert.ok(Array.isArray(await (await fetch(`${base}/api/hostels`)).json()));
   assert.equal((await fetch(`${base}/api/auth/me`)).status,401);
   for (const file of ['/supabase-server.mjs','/supabase-server.mjs.map','/%73upabase-server.mjs','/dist-supabase-backend/supabase-server.mjs',
+    '/residence-worker.mjs','/residence-worker.mjs.map','/%72esidence-worker.mjs','/dist-supabase-backend/residence-worker.mjs',
+    '/system-wipe-worker.mjs','/system-wipe-worker.mjs.map','/%73ystem-wipe-worker.mjs','/dist-supabase-backend/system-wipe-worker.mjs',
     '/.security/backup.key','/%2esecurity/backup.key','/.security%2fbackup.key','/.env','/%2eenv','/data/pinevela_store.json']) assert.equal((await fetch(`${base}${file}`)).status,404);
   console.log(JSON.stringify({ builtServerStarted: true, publicReadsPassed: true, privateArtifactsDenied: true, cloudRecordsModified: 0 }));
 } finally {

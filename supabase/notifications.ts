@@ -44,7 +44,7 @@ export function installNotifications(app: Express, auth: SupabaseAuth) {
   const db = auth.db;
   app.get('/api/notifications', auth.require(), route(async (req, res) => {
     const market = ['market','seller','merchant','ecommerce'].includes(String(req.query.scope || req.query.category || ''));
-    return res.json(await db.actor(req.actor, client => readNotifications(client, req.actor, market)));
+    return res.json(await db.readActor(req.actor, client => readNotifications(client, req.actor, market)));
   }));
   app.put('/api/notifications/read-all', auth.require(), route(async (req, res) => {
     await db.actor(req.actor, client => client.query('update public.notification_recipients set read_at = coalesce(read_at,now()) where context_id = $1', [req.actor.contextId]));
@@ -56,7 +56,7 @@ export function installNotifications(app: Express, auth: SupabaseAuth) {
   }));
   app.get('/api/admin-messages/pending', auth.require(), route(async (req, res) => {
     if (req.headers['x-pinevela-account-context'] !== undefined && req.headers['x-pinevela-account-context'] !== req.actor.contextId) throw new ApiError(409,'Your active account changed.');
-    return res.json(await db.actor(req.actor, client => pendingMessages(client, req.actor)));
+    return res.json(await db.readActor(req.actor, client => pendingMessages(client, req.actor)));
   }));
   app.post('/api/admin-messages/:id/ack', auth.require(), route(async (req, res) => {
     if (req.headers['x-pinevela-account-context'] !== undefined && req.headers['x-pinevela-account-context'] !== req.actor.contextId) throw new ApiError(409,'Your active account changed.');

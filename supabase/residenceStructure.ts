@@ -4,6 +4,9 @@ import { ApiError,uuid,type VerifiedActor } from './db.js';
 import type { SupabaseAuth,AuthRequest } from './auth.js';
 type Layout = {typeName:string;bedsPerRoom:number;totalRooms:number};
 type Block = {name:string;gender:string;floors:number;roomPrefix:string;startNum:number;roomTypes:Layout[]};
+const normalized = (items:Block[]) => items.map(b => ({name:b.name,gender:b.gender,floors:b.floors,roomPrefix:b.roomPrefix,startNum:b.startNum,
+  roomTypes:b.roomTypes.map(r => ({typeName:r.typeName,bedsPerRoom:r.bedsPerRoom,totalRooms:r.totalRooms}))})).sort((a,b) => a.name.localeCompare(b.name));
+export const sameResidenceStructure = (left:Block[],right:Block[]) => JSON.stringify(normalized(left)) === JSON.stringify(normalized(right));
 const integer = (value:unknown,minimum:number,maximum:number) => {
   if (!Number.isSafeInteger(value) || Number(value) < minimum || Number(value) > maximum) throw new ApiError(400,'Enter whole, positive floor, room and bed counts within the supported limits.');
   return Number(value);
@@ -72,11 +75,40 @@ export async function createResidenceStructure(client:PoolClient,actor:VerifiedA
   await scope(client,actor,residenceId,true);
   const existing = await residenceStructure(client,actor,residenceId);
   if (existing.blocksList.length) {
-    const normalized = (items:any[]) => items.map(b => ({name:b.name,gender:b.gender,floors:b.floors,roomPrefix:b.roomPrefix,startNum:b.startNum,
-      roomTypes:b.roomTypes.map((r:Layout) => ({typeName:r.typeName,bedsPerRoom:r.bedsPerRoom,totalRooms:r.totalRooms}))})).sort((a,b) => a.name.localeCompare(b.name));
-    if (JSON.stringify(normalized(existing.blocksList)) !== JSON.stringify(normalized(blocks))) throw new ApiError(409,'Room structure already exists. Submit a reviewed residence change request to modify it.');
+    if (!sameResidenceStructure(existing.blocksList,blocks)) throw new ApiError(409,'Room structure already exists. Submit a reviewed residence change request to modify it.');
     return {...existing,alreadyConfigured:true};
   }
+  return insertResidenceStructure(client,actor,residenceId,blocks);
+}
+/** Only the assigned applicant's requested correction of an unpublished setup.
+ * The residence row is locked before inspecting dependencies; every housing writer
+ * uses that same lock. Existing operational identities/history are never replaced. */
+export async function correctResidenceStructure(client:PoolClient,actor:VerifiedActor,residenceId:string,before:Block[],blocks:Block[]) {
+  if (actor.kind !== 'manager') throw new ApiError(403,'Use your assigned manager account.');
+  const allowed = await client.query(`select r.id from public.residences r join public.verification_cases v on v.residence_id=r.id
+    join public.manager_assignments a on a.residence_id=r.id and a.manager_context_id=v.applicant_context_id
+    where r.id=$1 and r.status='pending' and r.setup_submitted_at is not null
+      and v.kind='residence_registration' and v.status='more_info_required' and v.applicant_context_id=$2
+      and a.ended_at is null for update of r,v`,[residenceId,actor.contextId]);
+  if (!allowed.rowCount) throw new ApiError(409,'Room corrections require your residence registration to be awaiting more information.');
+  const existing = await residenceStructure(client,actor,residenceId);
+  if (!sameResidenceStructure(existing.blocksList,before)) throw new ApiError(409,'The existing room configuration differs from the saved submission. Administrator review is required.');
+  if (sameResidenceStructure(existing.blocksList,blocks)) return {...existing,alreadyConfigured:true};
+  const history = (await client.query(`with rooms as (
+      select room.id from public.rooms room join public.floors f on f.id=room.floor_id
+      join public.blocks b on b.id=f.block_id where b.residence_id=$1)
+    select exists(select 1 from public.allocations where room_id in(select id from rooms))
+      or exists(select 1 from private.room_activation_keys where room_id in(select id from rooms))
+      or exists(select 1 from private.account_enrollments where room_id in(select id from rooms))
+      or exists(select 1 from public.staff_assignments where residence_id=$1)
+      or exists(select 1 from public.maintenance_issues where residence_id=$1) as present`,[residenceId])).rows[0].present;
+  if (history) throw new ApiError(409,'Room layouts with activation keys or operational history cannot be replaced during a registration correction.');
+  // Only unused hierarchy rows are replaced. Retained room identifiers remain in
+  // the private reference ledger, and their full configuration is audited below.
+  await client.query('delete from public.blocks where residence_id=$1',[residenceId]);
+  return insertResidenceStructure(client,actor,residenceId,blocks);
+}
+async function insertResidenceStructure(client:PoolClient,actor:VerifiedActor,residenceId:string,blocks:Block[]) {
   for (const b of blocks) {
     const blockId = (await client.query(`insert into public.blocks(residence_id,name,gender,room_prefix,starting_room_number,beds_per_room)
       values ($1,$2,$3,$4,$5,$6) returning id`,[residenceId,b.name,b.gender,b.roomPrefix,b.startNum,b.roomTypes[0].bedsPerRoom])).rows[0].id;

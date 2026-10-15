@@ -1,3 +1,4 @@
+import AcademicYearRoomReset from './AcademicYearRoomReset';
 import { activateOnKeyboard } from '../lib/keyboardActivation';
 import MobileNavigation from './MobileNavigation';
 import { ManagerResidenceRequests } from './ResidenceChangeRequests';
@@ -70,6 +71,7 @@ interface MaintenanceTicket {
   staffCompleted?: boolean;
   staffCompletionNotes?: string;
   staffCompletionPhoto?: string;
+  withdrawn?: boolean;
   closedByManager?: boolean;
   isClosed?: boolean;
   closedAt?: string;
@@ -209,16 +211,17 @@ export default function PageManagerDashboard() {
   const [dispatchModalOpen, setDispatchModalOpen] = useState(false);
   const [selectedKeyForDispatch, setSelectedKeyForDispatch] = useState<any | null>(null);
   const [dispatchRecipientEmail, setDispatchRecipientEmail] = useState('');
-  const [dispatchRecipientPhone, setDispatchRecipientPhone] = useState('');
-  const [dispatchRecipientName, setDispatchRecipientName] = useState('');
   const [dispatchCustomNote, setDispatchCustomNote] = useState('');
   const [dispatchSending, setDispatchSending] = useState(false);
+  const dispatchPendingRef = React.useRef(false);
+  const dispatchRequestRef = React.useRef<{fingerprint: string; requestId: string} | null>(null);
   const [dispatchSuccessMsg, setDispatchSuccessMsg] = useState<string | null>(null);
+  const [dispatchKeyCurrent, setDispatchKeyCurrent] = useState(true);
   const [dispatchErrorMsg, setDispatchErrorMsg] = useState<string | null>(null);
 
   // Check if manager has approved properties
   const isPropertyApproved = (p: any) => 
-    Boolean(
+    usesSupabasePersistence ? p?.isApproved === true : Boolean(
       p && (
         p.isApproved === true || 
         p.isApproved === 'true' ||
@@ -270,10 +273,15 @@ export default function PageManagerDashboard() {
   // TanStack Query for manager server-state caching and automatic refetching
   const { data: managerData, isPending: managerPending, error: managerError, refetch: retryManagerData } = useQuery({
     queryKey: ['managerData', user?.id, user?.email],
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
+      const nativeData = usesSupabasePersistence ? await Promise.all([
+        '/api/hostels', '/api/manager/my-hostel', '/api/issue-reports', '/api/staff',
+        '/api/staff/invitations', '/api/staff-bargains', '/api/board-requests',
+        '/api/activities', '/api/room-keys'
+      ].map(path => apiFetch(path, { signal }))) : null;
       // 1. Fetch properties from backend
-      const resProperties = await apiFetch('/api/hostels');
-      const myHostelRes = await apiFetch('/api/manager/my-hostel');
+      const resProperties = nativeData ? nativeData[0] : await apiFetch('/api/hostels');
+      const myHostelRes = nativeData ? nativeData[1] : await apiFetch('/api/manager/my-hostel');
       
       const cleanEmail = (user?.email || '').toLowerCase().trim();
       const userId = user?.id;
@@ -297,7 +305,7 @@ export default function PageManagerDashboard() {
       }
 
       // 3. Fetch issue reports / maintenance
-      const resIssues = await apiFetch('/api/issue-reports');
+      const resIssues = nativeData ? nativeData[2] : await apiFetch('/api/issue-reports');
       let mappedIssues: any[] = [];
       if (Array.isArray(resIssues)) {
         const relevantIssues = managerProperties.length > 0
@@ -321,12 +329,12 @@ export default function PageManagerDashboard() {
       }
 
       // 4. Fetch staff members
-      const resStaff = await apiFetch('/api/staff');
-      const invitations = usesSupabasePersistence ? await apiFetch('/api/staff/invitations') : [];
-      const resBargains = await apiFetch('/api/staff-bargains');
-      const resBoard = await apiFetch('/api/board-requests');
-      const resActivities = await apiFetch('/api/activities');
-      const resRoomKeys = await apiFetch('/api/room-keys');
+      const resStaff = nativeData ? nativeData[3] : await apiFetch('/api/staff');
+      const invitations = nativeData ? nativeData[4] : [];
+      const resBargains = nativeData ? nativeData[5] : await apiFetch('/api/staff-bargains');
+      const resBoard = nativeData ? nativeData[6] : await apiFetch('/api/board-requests');
+      const resActivities = nativeData ? nativeData[7] : await apiFetch('/api/activities');
+      const resRoomKeys = nativeData ? nativeData[8] : await apiFetch('/api/room-keys');
 
       return {
         managerProperties,
@@ -374,64 +382,45 @@ export default function PageManagerDashboard() {
 
   const handleSendDigitalKey = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (!selectedKeyForDispatch) return;
-    if (!dispatchRecipientEmail && !dispatchRecipientPhone) {
-      setDispatchErrorMsg('Please provide either an email address or a phone number.');
+    if (!selectedKeyForDispatch || dispatchPendingRef.current) return;
+    if (!usesSupabasePersistence) {
+      setDispatchErrorMsg('Verified room-key delivery requires the Supabase backend.');
       return;
     }
-
+    const recipientEmail = dispatchRecipientEmail.trim().toLowerCase();
+    const customNote = dispatchCustomNote.trim();
+    if (!recipientEmail || !selectedKeyForDispatch.id) {
+      setDispatchErrorMsg('Enter the recipient’s verified PineVela or resident email.');
+      return;
+    }
+    const fingerprint = JSON.stringify([selectedKeyForDispatch.id, recipientEmail, customNote]);
+    if (dispatchRequestRef.current?.fingerprint !== fingerprint) {
+      dispatchRequestRef.current = {fingerprint, requestId: crypto.randomUUID()};
+    }
+    dispatchPendingRef.current = true;
     try {
       setDispatchSending(true);
       setDispatchErrorMsg(null);
       setDispatchSuccessMsg(null);
-
-      const payload = {
-        roomKey: selectedKeyForDispatch.roomKey,
-        roomNumber: selectedKeyForDispatch.roomNumber,
-        blockName: selectedKeyForDispatch.blockName,
-        hostelName: selectedKeyForDispatch.hostelName || primaryProperty?.name || 'Hostel',
-        recipientEmail: dispatchRecipientEmail.trim(),
-        recipientPhone: dispatchRecipientPhone.trim(),
-        recipientName: dispatchRecipientName.trim() || 'Resident / Student',
-        customNote: dispatchCustomNote.trim()
-      };
-
       const res = await apiFetch('/api/room-keys/send-digital', {
         method: 'POST',
-        body: JSON.stringify(payload)
+        body: JSON.stringify({keyId: selectedKeyForDispatch.id, recipientEmail, customNote, requestId: dispatchRequestRef.current.requestId})
       });
-
-      if (res.error) {
-        setDispatchErrorMsg(res.error);
-        return;
+      if (!res.success || res.channel !== 'pinevela_notification') {
+        throw new Error(res.error || 'Delivery was not confirmed. Retry this request to check its saved result.');
       }
-
-      setDispatchSuccessMsg(res.message || `Digital Room Key successfully sent!`);
-      setToastMessage(`Digital key for Room ${selectedKeyForDispatch.roomNumber} dispatched successfully!`);
-
-      // Update in roomKeysList locally
-      setRoomKeysList(prev => prev.map(k => {
-        if (k.roomKey === selectedKeyForDispatch.roomKey) {
-          return {
-            ...k,
-            lastDispatchedAt: new Date().toISOString(),
-            lastDispatchedTo: dispatchRecipientEmail || dispatchRecipientPhone || dispatchRecipientName
-          };
-        }
-        return k;
-      }));
-
-      setTimeout(() => {
-        setDispatchModalOpen(false);
-        setDispatchSuccessMsg(null);
-        setDispatchRecipientEmail('');
-        setDispatchRecipientPhone('');
-        setDispatchRecipientName('');
-        setDispatchCustomNote('');
-      }, 1600);
+      setDispatchSuccessMsg(res.message);
+      setDispatchKeyCurrent(Boolean(res.currentKey));
+      if (res.currentKey) {
+        setRoomKeysList(prev => prev.map(k => k.id === selectedKeyForDispatch.id ? {...k,
+          lastDispatchedAt: res.dispatch.dispatchedAt, lastDispatchedTo: res.dispatch.recipientEmail} : k));
+        setToastMessage('Room key delivered to the recipient’s PineVela notifications.');
+      }
+      await fetchManagerData();
     } catch (err: any) {
-      setDispatchErrorMsg(err.message || 'Failed to dispatch room key.');
+      setDispatchErrorMsg(err.message || 'Delivery could not be confirmed. Retry to check the saved result.');
     } finally {
+      dispatchPendingRef.current = false;
       setDispatchSending(false);
     }
   };
@@ -751,12 +740,13 @@ export default function PageManagerDashboard() {
     }
   }, [user?.id, user?.email]);
 
+  const mayShowWelcome=!usesSupabasePersistence||activeTab!=='settings'&&!showAccountControls;
   useEffect(() => {
     if (!loading && !managerError && user) {
       const hasAnyHostel = (managerData?.managerProperties.length || properties.length) > 0;
-      setShowWelcomePopup(!hasAnyHostel && !showRegistration);
+      setShowWelcomePopup(!hasAnyHostel && !showRegistration && mayShowWelcome);
     }
-  }, [loading, managerError, managerData, properties.length, showRegistration]);
+  }, [loading, managerError, managerData, properties.length, showRegistration, mayShowWelcome]);
 
   const handleLogout = () => {
     setShowLogoutConfirm(true);
@@ -769,7 +759,7 @@ export default function PageManagerDashboard() {
   const totalCapacity = properties.reduce((acc, p) => acc + (p.totalCapacity || p.capacity || 0), 0);
   const totalOccupied = properties.reduce((acc, p) => acc + (p.occupied || 0), 0);
   const availableBeds = totalCapacity > 0 ? (totalCapacity - totalOccupied) : 0;
-  const activeIssues = maintenanceIssues.filter(i => !i.closedByManager && i.status !== 'Closed').length;
+  const activeIssues = maintenanceIssues.filter(i => !i.withdrawn && !i.closedByManager && i.status !== 'Closed').length;
   const maintenanceCompletion = useMemo(() => {
     const end = new Date();end.setUTCHours(0,0,0,0);
     return Array.from({length:30},(_,index) => {
@@ -912,8 +902,8 @@ export default function PageManagerDashboard() {
               id: 'maintenance', 
               label: 'Fixes', 
               icon: Wrench, 
-              badge: maintenanceIssues.filter(i => !i.closedByManager && (i.status === 'Pending' || i.status === 'Resolved' || i.rescheduleRequested || i.staffRescheduleRequested || i.staffDeclined)).length || (activeIssues > 0 ? activeIssues : null),
-              isRed: maintenanceIssues.some(i => !i.closedByManager && (i.status === 'Pending' || i.status === 'Resolved' || i.rescheduleRequested || i.staffRescheduleRequested || i.staffDeclined)),
+              badge: maintenanceIssues.filter(i => !i.withdrawn && !i.closedByManager && (i.status === 'Pending' || i.status === 'Resolved' || i.rescheduleRequested || i.staffRescheduleRequested || i.staffDeclined)).length || (activeIssues > 0 ? activeIssues : null),
+              isRed: maintenanceIssues.some(i => !i.withdrawn && !i.closedByManager && (i.status === 'Pending' || i.status === 'Resolved' || i.rescheduleRequested || i.staffRescheduleRequested || i.staffDeclined)),
               isBeamingRed: hasUnviewedMaintenanceLogs,
               locked: !hasApprovedProperty 
             },
@@ -938,7 +928,7 @@ export default function PageManagerDashboard() {
         </button>
         <div className="w-px h-6 bg-slate-200/70 shrink-0" />
         {[
-        { id: 'overview', label: 'Overview', icon: ShieldCheck }, { id: 'properties', label: 'Properties', icon: Building2 }, { id: 'blocks', label: 'Blocks', icon: Layers }, { id: 'staff', label: 'Staff', icon: Users, badge: staffBargains.filter(b => (b.status || '').toLowerCase() === 'pending').length || staffList.length }, { id: 'maintenance', label: 'Fixes', icon: Wrench, badge: maintenanceIssues.filter(i => !i.closedByManager && (i.status === 'Pending' || i.status === 'Resolved' || i.rescheduleRequested || i.staffRescheduleRequested || i.staffDeclined)).length || activeIssues }, { id: 'meetings', label: 'Meetings', icon: CalendarCheck }, { id: 'notifications', label: 'Alerts', icon: Bell, badge: (systemNotifications || []).filter(n => !n.read).length + boardRequests.filter(r => r.status === 'Pending' || r.adminNotes).length }
+        { id: 'overview', label: 'Overview', icon: ShieldCheck }, { id: 'properties', label: 'Properties', icon: Building2 }, { id: 'blocks', label: 'Blocks', icon: Layers }, { id: 'staff', label: 'Staff', icon: Users, badge: staffBargains.filter(b => (b.status || '').toLowerCase() === 'pending').length || staffList.length }, { id: 'maintenance', label: 'Fixes', icon: Wrench, badge: maintenanceIssues.filter(i => !i.withdrawn && !i.closedByManager && (i.status === 'Pending' || i.status === 'Resolved' || i.rescheduleRequested || i.staffRescheduleRequested || i.staffDeclined)).length || activeIssues }, { id: 'meetings', label: 'Meetings', icon: CalendarCheck }, { id: 'notifications', label: 'Alerts', icon: Bell, badge: (systemNotifications || []).filter(n => !n.read).length + boardRequests.filter(r => r.status === 'Pending' || r.adminNotes).length }
       ].map(tab => <button aria-current={activeTab === tab.id ? 'page' : undefined} key={tab.id} disabled={!hasApprovedProperty && tab.id !== 'notifications'} onClick={() => setActiveTab(tab.id as any)} aria-label={`${tab.label}${tab.badge ? ` (${tab.badge})` : ''}`} className={`flex-1 min-w-0 flex flex-col items-center gap-0.5 py-1.5 rounded-xl text-[9px] font-bold ${activeTab === tab.id ? 'text-blue-700 bg-blue-100/65' : 'text-slate-500 hover:bg-white/70'} disabled:opacity-40 cursor-pointer`}><span className="relative inline-flex"><tab.icon className="w-4 h-4" /><TopNavBadge count={tab.badge} /></span><span className="truncate max-w-full">{tab.label}</span></button>)}<button onClick={() => setShowLogoutConfirm(true)} title="Sign Out" className="shrink-0 flex flex-col items-center gap-0.5 px-2 py-1.5 text-[9px] font-bold text-rose-600 hover:bg-rose-50 rounded-xl cursor-pointer"><LogOutIcon className="w-4 h-4" /><span>Sign Out</span></button><button onClick={() => setIsSidebarTopNav(false)} title="Show sidebar" className="p-2 text-slate-500 hover:text-blue-700 cursor-pointer"><PanelLeftOpen className="w-4 h-4" /></button></div></nav>}
       {!isSidebarTopNav && <aside className={`hidden lg:flex ${isSidebarCollapsed ? 'w-20 p-4' : 'w-72 p-6'} my-6 ml-6 h-[calc(100vh-3rem)] bg-gradient-to-br from-sky-100/90 via-blue-100/85 to-amber-50/40 backdrop-blur-3xl border border-sky-200/80 shadow-2xl rounded-3xl flex flex-col justify-between shrink-0 overflow-y-auto z-20 transition-all duration-300 relative`}>
         <button onClick={() => setIsSidebarTopNav(true)} title="Use top navigation" className="absolute top-3 right-3 p-2 rounded-xl text-slate-500 hover:text-blue-700 hover:bg-white/70 cursor-pointer"><PanelLeftClose className="w-4 h-4" /></button>
@@ -1012,10 +1002,10 @@ export default function PageManagerDashboard() {
                 id: 'maintenance', 
                 label: 'Maintenance Hub', 
                 icon: Wrench, 
-                badge: maintenanceIssues.filter(i => !i.closedByManager && (i.status === 'Pending' || i.status === 'Resolved' || i.rescheduleRequested || i.staffRescheduleRequested || i.staffDeclined)).length > 0
-                  ? maintenanceIssues.filter(i => !i.closedByManager && (i.status === 'Pending' || i.status === 'Resolved' || i.rescheduleRequested || i.staffRescheduleRequested || i.staffDeclined)).length
+                badge: maintenanceIssues.filter(i => !i.withdrawn && !i.closedByManager && (i.status === 'Pending' || i.status === 'Resolved' || i.rescheduleRequested || i.staffRescheduleRequested || i.staffDeclined)).length > 0
+                  ? maintenanceIssues.filter(i => !i.withdrawn && !i.closedByManager && (i.status === 'Pending' || i.status === 'Resolved' || i.rescheduleRequested || i.staffRescheduleRequested || i.staffDeclined)).length
                   : (activeIssues > 0 ? activeIssues : null),
-                isRed: maintenanceIssues.some(i => !i.closedByManager && (i.status === 'Pending' || i.status === 'Resolved' || i.rescheduleRequested || i.staffRescheduleRequested || i.staffDeclined)),
+                isRed: maintenanceIssues.some(i => !i.withdrawn && !i.closedByManager && (i.status === 'Pending' || i.status === 'Resolved' || i.rescheduleRequested || i.staffRescheduleRequested || i.staffDeclined)),
                 isBeamingRed: hasUnviewedMaintenanceLogs,
                 sub: 'Dispatch & tickets', 
                 locked: !hasApprovedProperty 
@@ -1110,10 +1100,10 @@ export default function PageManagerDashboard() {
 
       {/* MAIN CONTENT AREA */}
       <main className={`dashboard-centered-content flex-1 p-6 pb-28 lg:p-10 lg:pb-10 space-y-8 overflow-y-auto h-full relative ${isSidebarTopNav ? 'lg:pt-24 lg:w-[calc(100vw-22rem)] lg:max-w-[calc(100vw-22rem)] lg:mx-auto' : ''}`}>
-        {usesSupabasePersistence && primaryProperty?.registrationRequired && !showRegistration && <div className="relative z-10 flex flex-col gap-4 rounded-2xl border border-blue-200 bg-blue-50 p-5 sm:flex-row sm:items-center sm:justify-between dark:border-cyan-900 dark:bg-slate-900">
-          <div><h2 className="font-bold text-blue-950 dark:text-cyan-100">Complete residence registration</h2>
-            <p className="mt-1 text-sm text-slate-700 dark:text-slate-200">Your manager account is verified. Add the property photographs and actual room configuration for residence review.</p></div>
-          <button type="button" onClick={() => setShowRegistration(true)} className="shrink-0 rounded-xl bg-blue-700 px-5 py-3 font-bold text-white hover:bg-blue-800">Complete Registration</button>
+        {usesSupabasePersistence && (primaryProperty?.registrationRequired || primaryProperty?.registrationStatus === 'more_info_required') && !showRegistration && <div className="relative z-10 flex flex-col gap-4 rounded-2xl border border-blue-200 bg-blue-50 p-5 sm:flex-row sm:items-center sm:justify-between dark:border-cyan-900 dark:bg-slate-900">
+          <div><h2 className="font-bold text-blue-950 dark:text-cyan-100">{primaryProperty.registrationStatus === 'more_info_required' ? 'Residence corrections requested' : 'Complete residence registration'}</h2>
+            <p className="mt-1 text-sm text-slate-700 dark:text-slate-200">{primaryProperty.registrationStatus === 'more_info_required' ? 'An administrator requested more information. Open your saved registration, review the feedback and submit your corrections.' : 'Your manager account is verified. Add the property photographs and actual room configuration for residence review.'}</p></div>
+          <button type="button" onClick={() => setShowRegistration(true)} className="shrink-0 rounded-xl bg-blue-700 px-5 py-3 font-bold text-white hover:bg-blue-800">{primaryProperty.registrationStatus === 'more_info_required' ? 'Review & Correct Registration' : 'Complete Registration'}</button>
         </div>}
         {/* TAB CONTENT OR REGISTRATION */}
         {showRegistration && activeTab !== 'settings' ? (
@@ -1501,11 +1491,11 @@ export default function PageManagerDashboard() {
                   onOpenDispatch={(keyItem) => {
                     setSelectedKeyForDispatch({
                       ...keyItem,
-                      hostelName: primaryProperty?.name || 'PineVela Residence'
+                      hostelName: keyItem.hostelName || primaryProperty?.name
                     });
                     setDispatchRecipientEmail('');
-                    setDispatchRecipientPhone('');
-                    setDispatchRecipientName('');
+                    dispatchRequestRef.current = null;
+                    setDispatchKeyCurrent(true);
                     setDispatchCustomNote(`Welcome! Here is your official PineVela digital room key for room ${keyItem.roomNumber} (${keyItem.blockName}).`);
                     setDispatchErrorMsg(null);
                     setDispatchSuccessMsg(null);
@@ -2043,7 +2033,7 @@ export default function PageManagerDashboard() {
                       </div>
                     ) : (
                       filteredIssues.map(ticket => {
-                        const isOverdue = ticket.deadline && new Date() > new Date(ticket.deadline) && ticket.status !== 'Resolved';
+                        const isOverdue = !ticket.withdrawn && ticket.deadline && new Date() > new Date(ticket.deadline) && ticket.status !== 'Resolved';
                         return (
                           <div role="button" tabIndex={0} aria-label={`View maintenance request: ${ticket.title}`} onKeyDown={activateOnKeyboard}
                             key={ticket.id} 
@@ -2084,19 +2074,19 @@ export default function PageManagerDashboard() {
                                     <span className="w-1.5 h-1.5 rounded-full bg-sky-500" />
                                     Assigned: {ticket.assignedStaffName} ({ticket.assignedStaffRole})
                                   </span>
-                                ) : (
+                                ) : !ticket.withdrawn ? (
                                   <span className="text-[10px] bg-rose-50 text-rose-700 border border-rose-100 px-2.5 py-0.5 rounded-full font-bold flex items-center gap-1 animate-pulse">
                                     <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
                                     Unassigned Dispatch Queue
                                   </span>
-                                )}
+                                ) : null}
                                 
-                                {ticket.rescheduleRequested && (
+                                {!ticket.withdrawn && ticket.rescheduleRequested && (
                                   <span className="text-[10px] bg-amber-50 text-amber-800 border border-amber-200 px-2.5 py-0.5 rounded-full font-bold">
                                     ⚠️ Reschedule Requested
                                   </span>
                                 )}
-                                {ticket.staffDeclineRequested && (
+                                {!ticket.withdrawn && ticket.staffDeclineRequested && (
                                   <span className="text-[10px] bg-rose-50 text-rose-800 border border-rose-200 px-2.5 py-0.5 rounded-full font-bold">
                                     ❌ Assignment Declined
                                   </span>
@@ -2106,7 +2096,7 @@ export default function PageManagerDashboard() {
                                     <Check className="w-3 h-3 text-emerald-600" />
                                     Marked as Success (Archived & Closed)
                                   </span>
-                                ) : ticket.staffCompleted ? (
+                                ) : !ticket.withdrawn && ticket.staffCompleted ? (
                                   <span className="text-[10px] bg-emerald-50 text-emerald-800 border border-emerald-200 px-2.5 py-0.5 rounded-full font-bold">
                                     ✓ Completed by Staff (Awaiting Student/Manager signoff)
                                   </span>
@@ -2121,7 +2111,7 @@ export default function PageManagerDashboard() {
 
                             <div className="flex items-center gap-3 shrink-0">
                               <span className="text-xs font-bold text-blue-600 group-hover:translate-x-1 transition-transform flex items-center gap-1">
-                                <span>{(ticket.closedByManager || ticket.isClosed) ? 'View Archived Record (Success)' : 'Manage Desk'}</span>
+                                <span>{ticket.withdrawn ? 'View Withdrawn Record' : (ticket.closedByManager || ticket.isClosed) ? 'View Archived Record (Success)' : 'Manage Desk'}</span>
                                 <ArrowRight className="w-3.5 h-3.5" />
                               </span>
                             </div>
@@ -2201,7 +2191,13 @@ export default function PageManagerDashboard() {
                       <div className="border-t border-slate-100 pt-4 space-y-4">
                         
                         {/* CASE 0: ALREADY ARCHIVED & CLOSED (READ ONLY) */}
-                        {(selectedIssueDetail.closedByManager || selectedIssueDetail.isClosed) ? (
+                        {selectedIssueDetail.withdrawn ? (
+                          <div role="status" className="rounded-2xl border border-slate-200 bg-slate-50 p-5 text-sm text-slate-700">
+                            This report was withdrawn after a reviewed account or residence closure. Its recorded repair evidence is retained for reference.
+                            {selectedIssueDetail.staffCompletionNotes && <p className="mt-3">Recorded staff submission: {selectedIssueDetail.staffCompletionNotes}</p>}
+                            {selectedIssueDetail.staffCompletionPhoto && <img src={selectedIssueDetail.staffCompletionPhoto} alt="Retained staff repair evidence" className="mt-3 h-24 w-24 rounded-xl object-cover" />}
+                          </div>
+                        ) : (selectedIssueDetail.closedByManager || selectedIssueDetail.isClosed) ? (
                           <div className="space-y-4 animate-fadeIn">
                             <div className="bg-emerald-50/90 border border-emerald-300 p-5 rounded-2xl space-y-2">
                               <div className="flex items-center justify-between">
@@ -2986,7 +2982,7 @@ export default function PageManagerDashboard() {
       {/* MODAL: DIGITAL ROOM KEY DISPATCH MODAL                    */}
       {/* ======================================================== */}
       {dispatchModalOpen && selectedKeyForDispatch && (
-        <DashboardOverlay aria-label="Dispatch Digital Room Key" onClose={() => setDispatchModalOpen(false)} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-fadeIn">
+        <DashboardOverlay aria-label="Send Room Key to PineVela Notifications" onClose={() => { if (!dispatchPendingRef.current) setDispatchModalOpen(false); }} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-fadeIn">
           <div data-popup-card className="bg-white/95 rounded-[2rem] max-w-lg w-full p-6 sm:p-8 shadow-2xl border border-blue-100 backdrop-blur-2xl space-y-5 animate-scaleUp">
             
             {/* Modal Header */}
@@ -2996,13 +2992,13 @@ export default function PageManagerDashboard() {
                   <Key className="w-6 h-6" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-black text-slate-900">Dispatch Digital Room Key</h3>
-                  <p className="text-xs text-slate-500">Transmitting official resident room access credentials</p>
+                  <h3 className="text-lg font-black text-slate-900">Send Room Key</h3>
+                  <p className="text-xs text-slate-500">Deliver to the recipient’s PineVela notifications</p>
                 </div>
               </div>
               <button aria-label="Close dialog"
                 type="button"
-                onClick={() => setDispatchModalOpen(false)}
+                disabled={dispatchSending} onClick={() => setDispatchModalOpen(false)}
                 className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600 cursor-pointer transition-colors"
               >
                 <XCircle className="w-5 h-5" />
@@ -3021,15 +3017,15 @@ export default function PageManagerDashboard() {
               </div>
               
               <div className="p-3 bg-slate-900 text-cyan-300 rounded-xl font-mono text-sm font-black tracking-widest flex items-center justify-between shadow-inner">
-                <span className="select-all">{selectedKeyForDispatch.roomKey}</span>
-                <button
+                <span className="select-all">{dispatchKeyCurrent ? selectedKeyForDispatch.roomKey : 'Key replaced — refresh the room list'}</span>
+                {dispatchKeyCurrent && <button
                   type="button"
                   onClick={() => handleCopyKey(selectedKeyForDispatch.roomKey, 'modal-key')}
                   className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white rounded-lg text-xs font-sans font-bold flex items-center gap-1 transition-colors cursor-pointer"
                 >
                   <Copy className="w-3.5 h-3.5" />
                   <span>Copy</span>
-                </button>
+                </button>}
               </div>
             </div>
 
@@ -3050,47 +3046,16 @@ export default function PageManagerDashboard() {
 
             {/* Dispatch Form */}
             <form onSubmit={handleSendDigitalKey} className="space-y-4">
+              <p className="text-xs leading-relaxed text-slate-600">Enter their verified PineVela login email or verified resident email. The key appears in their user account notifications. Delivery does not reserve or activate the room.</p>
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Recipient Name
+                <label className="block text-xs font-bold text-slate-700 mb-1 flex items-center gap-1">
+                  <Mail className="w-3.5 h-3.5 text-blue-600" />
+                  <span>Recipient’s verified email</span>
                 </label>
-                <input aria-label="Recipient Name"
-                  type="text"
-                  value={dispatchRecipientName}
-                  onChange={(e) => setDispatchRecipientName(e.target.value)}
-                  placeholder="e.g. Kwame Mensah / Student Name"
-                  className="w-full text-xs font-semibold p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-blue-500 transition-all"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1 flex items-center gap-1">
-                    <Mail className="w-3.5 h-3.5 text-blue-600" />
-                    <span>Recipient Email</span>
-                  </label>
-                  <input aria-label="Recipient Email"
-                    type="email"
-                    value={dispatchRecipientEmail}
-                    onChange={(e) => setDispatchRecipientEmail(e.target.value)}
-                    placeholder="student@university.edu.gh"
-                    className="w-full text-xs font-semibold p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-blue-500 transition-all"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1 flex items-center gap-1">
-                    <Phone className="w-3.5 h-3.5 text-emerald-600" />
-                    <span>Phone / WhatsApp</span>
-                  </label>
-                  <input aria-label="Phone / WhatsApp"
-                    type="tel"
-                    value={dispatchRecipientPhone}
-                    onChange={(e) => setDispatchRecipientPhone(e.target.value)}
-                    placeholder="+233 24 000 0000"
-                    className="w-full text-xs font-semibold p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-blue-500 transition-all"
-                  />
-                </div>
+                <input aria-label="Recipient’s verified email" type="email" required maxLength={254}
+                  disabled={dispatchSending || Boolean(dispatchSuccessMsg)}
+                  value={dispatchRecipientEmail} onChange={(e) => setDispatchRecipientEmail(e.target.value)}
+                  className="w-full text-xs font-semibold p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-blue-500 transition-all" />
               </div>
 
               <div>
@@ -3098,10 +3063,10 @@ export default function PageManagerDashboard() {
                   Custom Welcome & Access Note
                 </label>
                 <textarea aria-label="Custom Welcome & Access Note"
+                  disabled={dispatchSending || Boolean(dispatchSuccessMsg)} maxLength={1000}
                   rows={2}
                   value={dispatchCustomNote}
                   onChange={(e) => setDispatchCustomNote(e.target.value)}
-                  placeholder="e.g. Welcome to PineVela! Use this key to sign into your student room console."
                   className="w-full text-xs font-medium p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-blue-500 transition-all"
                 />
               </div>
@@ -3110,25 +3075,25 @@ export default function PageManagerDashboard() {
               <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100">
                 <button
                   type="button"
-                  onClick={() => setDispatchModalOpen(false)}
+                  disabled={dispatchSending} onClick={() => setDispatchModalOpen(false)}
                   className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl cursor-pointer transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  disabled={dispatchSending || Boolean(dispatchSuccessMsg)}
+                  disabled={!usesSupabasePersistence || dispatchSending || Boolean(dispatchSuccessMsg)}
                   className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-black text-xs rounded-xl shadow-lg shadow-blue-500/20 transition-all flex items-center gap-2 cursor-pointer"
                 >
                   {dispatchSending ? (
                     <>
                       <RefreshCw className="w-4 h-4 animate-spin" />
-                      <span>Sending Digital Key...</span>
+                      <span>Delivering to notifications...</span>
                     </>
                   ) : (
                     <>
                       <Send className="w-4 h-4" />
-                      <span>Transmit Key Digitally</span>
+                      <span>Send to PineVela notifications</span>
                     </>
                   )}
                 </button>
@@ -3374,13 +3339,15 @@ export default function PageManagerDashboard() {
                   <Building2 className="w-5 h-5" />
                   <span>Register a Hostel to Start</span>
                 </button>
+                {usesSupabasePersistence&&<button type="button" onClick={()=>{setShowWelcomePopup(false);setActiveTab('settings');}} className="mt-3 min-h-11 w-full rounded-xl border border-blue-200 px-4 py-3 text-sm font-bold text-blue-800">Manager profile and account</button>}
               </div>
             </motion.div>
           </DashboardOverlay>
         )}
       </AnimatePresence>
 
-      {roomAccessAction && (
+      {roomAccessAction && (usesSupabasePersistence&&roomAccessAction.type==='reshuffle' ?
+        <AcademicYearRoomReset residenceId={primaryProperty.id} onClose={()=>setRoomAccessAction(null)} onComplete={async message=>{await fetchRoomKeys();triggerToast(message);}} /> :
         <DashboardOverlay aria-label="Room access confirmation" onClose={roomAccessBusy ? null : () => setRoomAccessAction(null)} className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-950/70 backdrop-blur-md p-4" role="dialog" aria-modal="true" aria-labelledby="room-access-title">
           <div data-popup-card className="w-full max-w-lg rounded-3xl border border-slate-200 bg-white p-6 space-y-4 shadow-2xl">
             <h3 id="room-access-title" className="text-lg font-black text-slate-900">

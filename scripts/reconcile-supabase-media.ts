@@ -9,11 +9,12 @@ const execute = process.argv[2] === '--execute',db = new SupabaseDatabase(),stor
 let removed = 0,failed = 0;
 try {
   if (!execute) {
-    const count = (await db.pool.query("select count(*) as count from public.media_assets where state <> 'ready' and updated_at < now() - interval '15 minutes'")).rows[0].count;
+    const count = (await db.pool.query("select count(*) as count from public.media_assets m where state <> 'ready' and updated_at < now() - interval '15 minutes' and not exists(select 1 from private.residence_storage_cleanup_tasks t where t.asset_id=m.id)")).rows[0].count;
     console.log(JSON.stringify({staleIncompleteUploads:Number(count),readOnly:true}));
   } else {
     const pending = await db.system(async client => (await client.query(`update public.media_assets set state = 'removing' where id in
-      (select id from public.media_assets where state <> 'ready' and updated_at < now() - interval '15 minutes'
+      (select id from public.media_assets m where state <> 'ready' and updated_at < now() - interval '15 minutes'
+        and not exists(select 1 from private.residence_storage_cleanup_tasks t where t.asset_id=m.id)
         order by updated_at limit 100 for update skip locked) returning id,object_path`)).rows);
     for (const asset of pending) {
       try {

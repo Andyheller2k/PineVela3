@@ -12,10 +12,14 @@ import AdminGovernancePanel, { useAdminGovernance } from './AdminGovernancePanel
 import AdminRemovalNotice from './AdminRemovalNotice';
 import AccountModerationPanel from './AccountModerationPanel';
 import ResidenceDeletionPanel from './ResidenceDeletionPanel';
+import { AdminManagerClosureRequests } from './ManagerClosureRequest';
 import AdminMessageGateway from './AdminMessageGateway';
 import { usesSupabasePersistence } from '../lib/persistence';
+import { recordedInspectionCoordinates } from '../lib/inspectionLocation';
+import SupabaseOfficerInvitationControls from './SupabaseOfficerInvitationControls';
+import { requestKeyedApproval } from '../lib/approvalPrompt';
 import { sessionFetch as fetch } from '../lib/session';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { queryClient, } from '../lib/queryClient';
@@ -27,6 +31,9 @@ import PineLogo from './PineLogo';
 import TopNavBadge from './TopNavBadge';
 import HostelRegistration from './HostelRegistration';
 import { AdminResidenceRequests } from './ResidenceChangeRequests';
+import AdminResidenceRegistrationReview from './AdminResidenceRegistrationReview';
+import {pendingResidenceReview,residenceReviewStatus,residenceReviewLabel} from '../lib/residenceReview';
+import {pendingManagerRegistration,currentManagerInspection} from '../lib/registrationStatus';
 import LogoutConfirmationModal from './LogoutConfirmationModal';
 import { getPdfBlobUrl, downloadPdfDocument } from '../utils/pdfHelper';
 import { 
@@ -42,6 +49,9 @@ import { motion, AnimatePresence } from 'motion/react';
 export default function PageAdminDashboard() {
   const [moderationTarget, setModerationTarget] = useState<any>(null);
   const { user, logout, apiFetch } = useAuth();
+  const reviewOwner=useRef(user?.id);reviewOwner.current=user?.id;
+  const managerReviewPending=useRef(false),managerReviewRequest=useRef<AbortController|null>(null);
+  useEffect(()=>()=>{managerReviewRequest.current?.abort();},[user?.id]);
   const { notifications, unreadCount, markAsRead, refreshNotifications } = useNotifications();
   const navigate = useNavigate();
 
@@ -108,6 +118,8 @@ export default function PageAdminDashboard() {
   const [residences, setResidences] = useState<any[]>([]);
   const [managerRequests, setManagerRequests] = useState<any[]>([]);
   const [managerRestrictions, setManagerRestrictions] = useState<any[]>([]);
+  const [managerRestrictionError, setManagerRestrictionError] = useState('');
+  const [marketStoreError, setMarketStoreError] = useState('');
   const [rejectionNotes, setRejectionNotes] = useState<{[key: string]: string}>({});
   const residents = allUsersData.users.filter((account: any) => ['student', 'resident'].includes(account.role)).map((account: any) => ({ ...account, residenceName: account.hostelName || account.residenceName || '', roomNumber: account.roomNumber || '' }));
   const [feesPaid, setFeesPaid] = useState<any[]>([]);
@@ -116,6 +128,7 @@ export default function PageAdminDashboard() {
   // Verification Teams & Physical Inspection State
   const [managerSubTab, setManagerSubTab] = useState<'inspections' | 'officers' | 'cooldowns'>('inspections');
   const [verificationTeams, setVerificationTeams] = useState<any[]>([]);
+  const [officerRosterError, setOfficerRosterError] = useState('');
   const [verificationInspections, setVerificationInspections] = useState<any[]>([]);
   const [showRegisterOfficerModal, setShowRegisterOfficerModal] = useState(false);
   const [newOfficerData, setNewOfficerData] = useState({
@@ -136,11 +149,30 @@ export default function PageAdminDashboard() {
 
   // Review Inspection Report Modal State
   const [reviewReportInspection, setReviewReportInspection] = useState<any | null>(null);
+  const reviewedInspectionGps = recordedInspectionCoordinates(reviewReportInspection?.report?.gpsCoordinates)
+    || recordedInspectionCoordinates(reviewReportInspection?.report?.liveCoordinates);
+  const reviewedInspectionRecommendation = reviewReportInspection?.report?.recommendation
+    ?? reviewReportInspection?.report?.inspectorRecommendation;
+
+  const [approveManagerModal, setApproveManagerModal] = useState<{
+    id: string; email: string; property: string; ownerId: string; recommendation?: string;
+  } | null>(null);
+  const [approveManagerNotes, setApproveManagerNotes] = useState('');
+  const [approveManagerError, setApproveManagerError] = useState('');
+  const [approvingManager, setApprovingManager] = useState(false);
+  const [approvalUncertain, setApprovalUncertain] = useState(false);
+  const approvalNeedsReason = approveManagerModal?.recommendation !== 'recommend_approval';
+  useEffect(() => {
+    setApproveManagerModal(null); setApproveManagerNotes(''); setApproveManagerError('');
+    setApprovingManager(false); setApprovalUncertain(false);
+  }, [user?.id]);
 
   // Manager Document Inspection & Rejection Modal States
   const [rejectManagerModal, setRejectManagerModal] = useState<{ id: string; name: string; email: string } | null>(null);
   const [rejectManagerReason, setRejectManagerReason] = useState<string>('');
   const [rejectingManagerLoading, setRejectingManagerLoading] = useState<boolean>(false);
+  const [managerReviewAction,setManagerReviewAction]=useState<'reject'|'request-info'>('reject');
+  useEffect(()=>{setRejectManagerModal(null);setRejectManagerReason('');setRejectingManagerLoading(false);},[user?.id]);
 
   // Manager Block & Restriction Modal States
   const [blockManagerModal, setBlockManagerModal] = useState<{ id: string; name: string; email: string } | null>(null);
@@ -184,7 +216,7 @@ export default function PageAdminDashboard() {
   }, [docPreviewModal?.data, docPreviewModal?.type, docPreviewModal?.name]);
 
   // Filter & Search states
-  const [residenceFilter, setResidenceFilter] = useState<'all' | 'Hostel' | 'Hotel' | 'Lounge'>('all');
+  const [residenceFilter, setResidenceFilter] = useState<'all' | 'Hostel' | 'Inn' | 'Hotel' | 'Estate' | 'Lounge'>('all');
   const [approvalTabFilter, setApprovalTabFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -209,7 +241,69 @@ export default function PageAdminDashboard() {
     setTimeout(() => setToastMessage(null), 3500);
   };
 
-  // TanStack Query for server-state caching and automatic refetching
+  // Review reads must not wait for the unrelated dashboard datasets. The two
+  // manager-list URLs are aliases in Supabase, so read the saved cases once.
+  const { data: managerReviewData, error: managerReviewError, isPending: managerReviewPendingRead,
+    isFetching: managerReviewFetching, refetch: retryManagerReview } = useQuery({
+    queryKey: ['adminData', user?.id, 'managerReview'],
+    enabled: usesSupabasePersistence && user?.role === 'admin',
+    queryFn: async ({ signal }) => {
+      const ownerId = user!.id;
+      const requestSignal = AbortSignal.any([signal, AbortSignal.timeout(30000)]);
+      const read = async (path: string): Promise<any[]> => {
+        const response = await fetch(path, { signal: requestSignal, headers: { 'X-PineVela-Profile-Context': ownerId } });
+        const data = await safeJson(response);
+        if (!response.ok || !Array.isArray(data)) throw Error('Could not load manager applications and inspection details. Please retry.');
+        return data;
+      };
+      const [requests, inspections] = await Promise.all([
+        read('/api/manager-verifications'), read('/api/admin/verification-inspections')
+      ]);
+      requestSignal.throwIfAborted();
+      if (reviewOwner.current !== ownerId) throw new DOMException('The administrator account changed.', 'AbortError');
+      return { ownerId, requests, inspections };
+    },
+    retry: false,
+    refetchInterval: query => query.state.error ? false : 8000,
+  });
+
+  const { data: officerRosterData, error: officerRosterReadError, isPending: officerRosterPendingRead,
+    isFetching: officerRosterFetching, refetch: retryOfficerRoster } = useQuery({
+    queryKey: ['adminData', user?.id, 'officerRoster'],
+    enabled: usesSupabasePersistence && user?.role === 'admin',
+    queryFn: async ({ signal }) => {
+      const ownerId = user!.id;
+      const requestSignal = AbortSignal.any([signal, AbortSignal.timeout(30000)]);
+      const response = await fetch('/api/verification-teams', { signal: requestSignal, headers: { 'X-PineVela-Profile-Context': ownerId } });
+      const officers = await safeJson(response);
+      if (!response.ok || !Array.isArray(officers)) throw Error('Could not load field officers. Please retry.');
+      requestSignal.throwIfAborted();
+      if (reviewOwner.current !== ownerId) throw new DOMException('The administrator account changed.', 'AbortError');
+      return { ownerId, officers };
+    },
+    retry: false,
+    refetchInterval: query => query.state.error ? false : 8000,
+  });
+
+  useEffect(() => {
+    if (!usesSupabasePersistence) return;
+    setManagerRequests([]); setVerificationInspections([]); setVerificationTeams([]); setOfficerRosterError('');
+    setDispatchModalManager(null); setReviewReportInspection(null);
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (!usesSupabasePersistence || !managerReviewData || managerReviewData.ownerId !== user?.id) return;
+    setManagerRequests(managerReviewData.requests);
+    setVerificationInspections(managerReviewData.inspections);
+  }, [managerReviewData, user?.id]);
+
+  useEffect(() => {
+    if (!usesSupabasePersistence) return;
+    setOfficerRosterError(officerRosterReadError ? 'Could not load field officers. Please retry.' : '');
+    if (officerRosterData && officerRosterData.ownerId === user?.id) setVerificationTeams(officerRosterData.officers);
+  }, [officerRosterData, officerRosterReadError, user?.id]);
+
+  // TanStack Query for the remaining dashboard datasets and legacy review.
   const { data: adminData } = useQuery({
     queryKey: ['adminData', user?.id],
     enabled: user?.role === 'admin',
@@ -221,8 +315,8 @@ export default function PageAdminDashboard() {
         residencesData = Array.isArray(data) ? data : [];
       }
 
-      const resMgrReqs = await apiFetch('/api/manager-requests').catch(() => []);
-      const resMgrVerifications = await apiFetch('/api/manager-verifications').catch(() => []);
+      const resMgrReqs = usesSupabasePersistence ? null : await apiFetch('/api/manager-requests').catch(() => []);
+      const resMgrVerifications = usesSupabasePersistence ? null : await apiFetch('/api/manager-verifications').catch(() => []);
       const mergedMgrs = Array.isArray(resMgrReqs) ? resMgrReqs.map((req: any) => {
         const matchingVerif = Array.isArray(resMgrVerifications) ? resMgrVerifications.find((v: any) => v.id === req.id || v.managerEmail === req.managerEmail) : null;
         return {
@@ -235,14 +329,21 @@ export default function PageAdminDashboard() {
         };
       }) : [];
 
-      const resRestrictions = await apiFetch('/api/admin/manager-restrictions').catch(() => []);
+      let restrictionLoadError='', storeLoadError='', officerLoadError='';
+      const resRestrictions = await apiFetch('/api/admin/manager-restrictions').then(result => {
+        if (!Array.isArray(result)) throw new Error('Could not load registration restrictions.');
+        return result;
+      }).catch((error: any) => {restrictionLoadError=error.message || 'Could not load registration restrictions.';return [];});
       const resBoard = await apiFetch('/api/board-requests').catch(() => []);
       const resActs = await apiFetch('/api/activities').catch(() => []);
 
       const marketAppsRes = await apiFetch('/api/admin/digital-market/applications').catch(() => []);
-      const marketStoresRes = await apiFetch('/api/admin/digital-market/stores').catch(() => []);
-      const vtRes = await apiFetch('/api/verification-teams').catch(() => []);
-      const inspectionsRes = await apiFetch('/api/admin/verification-inspections').catch(() => []);
+      const marketStoresRes = await apiFetch('/api/admin/digital-market/stores').then(result => {
+        if (!Array.isArray(result)) throw new Error('Could not load digital stores.');
+        return result;
+      }).catch((error: any) => {storeLoadError=error.message || 'Could not load digital stores.';return [];});
+      const vtRes = usesSupabasePersistence ? null : await apiFetch('/api/verification-teams').catch((error: any) => {officerLoadError=error.message || 'Could not load verification officers.';return [];});
+      const inspectionsRes = usesSupabasePersistence ? null : await apiFetch('/api/admin/verification-inspections').catch(() => []);
       const paymentRecords = await apiFetch('/api/admin/payments').catch(() => []);
       const allUsersRes = await apiFetch('/api/admin/all-users').catch(() => null);
 
@@ -251,6 +352,7 @@ export default function PageAdminDashboard() {
         residences: residencesData,
         managerRequests: mergedMgrs,
         managerRestrictions: Array.isArray(resRestrictions) ? resRestrictions : [],
+        managerRestrictionError: restrictionLoadError, marketStoreError: storeLoadError, officerRosterError: officerLoadError,
         boardRequests: Array.isArray(resBoard) ? resBoard : [],
         activities: Array.isArray(resActs) ? resActs : [], digitalMarketApps: Array.isArray(marketAppsRes) ? marketAppsRes : [],
         digitalMarketStores: Array.isArray(marketStoresRes) ? marketStoresRes : [],
@@ -265,14 +367,19 @@ export default function PageAdminDashboard() {
   useEffect(() => {
     if (!adminData) return;
     setResidences(adminData.residences);
-    setManagerRequests(adminData.managerRequests);
+    if (!usesSupabasePersistence) {
+      setManagerRequests(adminData.managerRequests);
+      setVerificationTeams(adminData.verificationTeams);
+      setOfficerRosterError(adminData.officerRosterError);
+      setVerificationInspections(adminData.verificationInspections);
+    }
     setManagerRestrictions(adminData.managerRestrictions);
+    setManagerRestrictionError(adminData.managerRestrictionError);
+    setMarketStoreError(adminData.marketStoreError);
     setBoardRequests(adminData.boardRequests);
     setActivities(adminData.activities);
     setDigitalMarketApps(adminData.digitalMarketApps);
     setDigitalMarketStores(adminData.digitalMarketStores);
-    setVerificationTeams(adminData.verificationTeams);
-    setVerificationInspections(adminData.verificationInspections);
     if (Array.isArray(adminData.allUsersData?.users)) setAllUsersData(adminData.allUsersData);
   }, [adminData]);
 
@@ -362,10 +469,11 @@ export default function PageAdminDashboard() {
   const handleToggleOfficerStatus = async (officerId: string, currentStatus: string) => {
     const newStatus = currentStatus === 'active' ? 'suspended' : 'active';
     try {
-      const res = await apiFetch(`/api/verification-teams/${officerId}/status`, {
+      const update = (privateKey?: string) => apiFetch(`/api/verification-teams/${officerId}/status`, {
         method: 'PUT',
-        body: JSON.stringify({ status: newStatus })
+        body: JSON.stringify({ status: newStatus, ...(privateKey ? { privateKey } : {}) })
       });
+      const res = usesSupabasePersistence ? await requestKeyedApproval(update) : await update();
       const updated = res?.officer || res;
       setVerificationTeams(prev => prev.map(o => (o.id === officerId || o.officerId === officerId) ? { ...o, ...updated } : o));
       triggerToast(`Officer status updated to ${newStatus}.`);
@@ -449,6 +557,18 @@ export default function PageAdminDashboard() {
   }, []);
 
   const handleApproveManager = async (reqId: string, managerEmail: string) => {
+    if(usesSupabasePersistence){
+      if(managerReviewPending.current||!user?.id)return;
+      const inspection=currentManagerInspection(reqId,verificationInspections);
+      if(inspection?.status!=='report_submitted'||!inspection.report){
+        triggerToast('Reload the submitted inspection report before approving this application.');return;
+      }
+      const application=managerRequests.find(item=>item.id===reqId);
+      setApproveManagerModal({id:reqId,email:managerEmail,property:application?.hostelName||inspection.hostelName||'',
+        ownerId:user.id,recommendation:inspection.report.recommendation});
+      setApproveManagerNotes('');setApproveManagerError('');setApprovalUncertain(false);
+      return;
+    }
     try {
       await apiFetch(`/api/manager-verifications/${reqId}/approve`, {
         method: 'PUT',
@@ -479,6 +599,39 @@ export default function PageAdminDashboard() {
     } catch (err: any) {
       console.error(err);
       triggerToast(err.message || 'Failed to approve manager.');
+    }
+  };
+
+  const submitManagerApproval = async (event: React.FormEvent) => {
+    event.preventDefault();
+    const target=approveManagerModal,notes=approveManagerNotes.trim();
+    if(!target||target.ownerId!==user?.id||managerReviewPending.current||approvalUncertain)return;
+    if(target.recommendation!=='recommend_approval'&&notes.length<5){
+      setApproveManagerError('Explain why you are approving despite the officer recommendation.');return;
+    }
+    managerReviewPending.current=true;setApprovingManager(true);setApproveManagerError('');
+    const captured=target.ownerId,controller=new AbortController();managerReviewRequest.current=controller;
+    let uncertain=true;
+    try{
+      const response=await fetch(`/api/manager-verifications/${target.id}/approve`,{method:'PUT',
+        headers:{'content-type':'application/json','X-PineVela-Profile-Context':captured},body:JSON.stringify({adminNotes:notes}),
+        signal:AbortSignal.any([controller.signal,AbortSignal.timeout(45000)])});
+      const result=await response.json();
+      if(!response.ok){uncertain=response.status>=500;throw Error(result.error||'Could not approve this application.');}
+      if(!result.success||result.verification?.id!==target.id||result.verification?.status!=='approved')throw Error('The saved decision could not be confirmed.');
+      if(reviewOwner.current===captured){
+        setApproveManagerModal(null);setApproveManagerNotes('');
+        triggerToast('Manager application approved. The primary owner has been notified.');
+        void fetchAdminData();void refreshNotifications();
+      }
+    }catch(error:any){
+      if(reviewOwner.current===captured){
+        setApprovalUncertain(uncertain);
+        setApproveManagerError(uncertain?'The decision could not be confirmed. Refresh the saved application before trying again.':error.message);
+      }
+    }finally{
+      managerReviewPending.current=false;managerReviewRequest.current=null;
+      if(reviewOwner.current===captured)setApprovingManager(false);
     }
   };
 
@@ -536,6 +689,7 @@ export default function PageAdminDashboard() {
   };
 
   const handleRejectManager = (reqId: string, managerName?: string, managerEmail?: string) => {
+    setManagerReviewAction('reject');
     const target = managerRequests.find(r => r.id === reqId);
     setRejectManagerModal({
       id: reqId,
@@ -546,20 +700,29 @@ export default function PageAdminDashboard() {
   };
 
   const handleConfirmRejectManager = async () => {
-    if (!rejectManagerModal) return;
+    if (!rejectManagerModal||managerReviewPending.current) return;
     if (!rejectManagerReason.trim() || rejectManagerReason.trim().length < 5) {
-      triggerToast('Please provide a detailed rejection reason (minimum 5 characters) to explain what needs adjustment.');
+      triggerToast('Provide detailed administrator feedback (minimum 5 characters).');
       return;
     }
 
-    setRejectingManagerLoading(true);
+    managerReviewPending.current=true;setRejectingManagerLoading(true);
+    const captured=user?.id,controller=new AbortController();managerReviewRequest.current=controller;
     try {
       const payload = {
         rejectionReason: rejectManagerReason.trim(),
         adminNotes: rejectManagerReason.trim()
       };
 
-      await apiFetch(`/api/manager-verifications/${rejectManagerModal.id}/reject`, {
+      if(usesSupabasePersistence){
+        const response=await fetch(`/api/manager-verifications/${rejectManagerModal.id}/${managerReviewAction}`,{
+          method:'PUT',headers:{'content-type':'application/json','X-PineVela-Profile-Context':String(captured)},
+          body:JSON.stringify(payload),signal:AbortSignal.any([controller.signal,AbortSignal.timeout(45000)])});
+        const result=await response.json();if(!response.ok)throw Error(result.error||'Could not save administrator feedback.');
+        const expected=managerReviewAction==='request-info'?'more_info_required':'rejected';
+        if(!result.success||result.verification?.id!==rejectManagerModal.id||result.verification?.status!==expected)
+          throw Error('The saved decision could not be confirmed. Refresh the application before retrying.');
+      }else await apiFetch(`/api/manager-verifications/${rejectManagerModal.id}/reject`, {
         method: 'PUT',
         body: JSON.stringify(payload)
       }).catch(async () => {
@@ -569,22 +732,24 @@ export default function PageAdminDashboard() {
         });
       });
 
+      if(reviewOwner.current!==captured)return;
       setManagerRequests(prev => prev.map(r => r.id === rejectManagerModal.id ? {
         ...r,
-        status: 'rejected',
+        status: managerReviewAction==='request-info'?'more_info_required':'rejected',
         rejectionReason: rejectManagerReason.trim(),
         adminNotes: rejectManagerReason.trim()
       } : r));
 
-      triggerToast(`Manager application rejected. Feedback has been sent to the manager.`);
+      triggerToast(managerReviewAction==='request-info'?'Corrections requested. Feedback is available in the primary user account.':'Manager application rejected. Feedback is available in the primary user account.');
       setRejectManagerModal(null);
       setRejectManagerReason('');
       refreshNotifications();
+      fetchAdminData();
     } catch (err: any) {
-      console.error(err);
-      triggerToast(err.message || 'Failed to reject manager application.');
+      if(reviewOwner.current===captured)triggerToast(err.name==='TimeoutError'?'The request timed out. Refresh the saved application before retrying.':err.message||'Failed to save manager feedback.');
     } finally {
-      setRejectingManagerLoading(false);
+      managerReviewPending.current=false;managerReviewRequest.current=null;
+      if(reviewOwner.current===captured)setRejectingManagerLoading(false);
     }
   };
 
@@ -597,9 +762,9 @@ export default function PageAdminDashboard() {
     navigate('/login', { replace: true });
   };
 
-  const pendingManagersCount = managerRequests.filter(r => r.status === 'pending' || !r.status).length;
-  const hostelCount = residences.filter(r => (r.hostel_type || '').toLowerCase().includes('hostel')).length;
-  const hotelCount = residences.filter(r => (r.hostel_type || '').toLowerCase().includes('hotel')).length;
+  const pendingManagersCount = managerRequests.filter(r => usesSupabasePersistence?pendingManagerRegistration(r):r.status === 'pending' || !r.status).length;
+  const hostelCount = residences.filter(r => (usesSupabasePersistence ? r.wing || '' : r.hostel_type || '').toLowerCase().includes('hostel')).length;
+  const hotelCount = residences.filter(r => (usesSupabasePersistence ? r.wing || '' : r.hostel_type || '').toLowerCase().includes('hotel')).length;
   const loungeCount = residences.filter(r => (r.hostel_type || '').toLowerCase().includes('lounge')).length;
   const totalManagers = 1 + managerRequests.filter(m => m.status === 'approved' || m.status === 'Approved').length;
   const totalResidents = residents.length;
@@ -608,9 +773,9 @@ export default function PageAdminDashboard() {
 
   // Revenue is counted once from server-verified live transactions. Test/free payments are excluded.
   const totalMerchantFeesCollected = (adminData?.paymentRecords || []).filter((p: any) => p.mode === 'live' && p.purpose !== 'housing').reduce((sum: number, p: any) => sum + p.amount, 0);
-  const activeMerchantCount = digitalMarketStores.filter((s: any) => s.registrationFeePaid && Date.parse(s.semesterExpiresAt) > Date.now()).length;
+  const activeMerchantCount = digitalMarketStores.filter((s: any) => usesSupabasePersistence ? s.isActive : s.registrationFeePaid && Date.parse(s.semesterExpiresAt) > Date.now()).length;
 
-  const pendingHostelsCount = residences.filter(r => (
+  const pendingHostelsCount = residences.filter(r => usesSupabasePersistence ? pendingResidenceReview(r) : (
     r.status === 'Pending Approval' || 
     r.approvalStatus === 'Pending Approval' || 
     r.isApproved === false
@@ -773,7 +938,7 @@ export default function PageAdminDashboard() {
       {/* MAIN CONTENT AREA */}
       <main className={`dashboard-centered-content flex-1 p-6 lg:p-10 space-y-8 overflow-y-auto h-full relative ${isSidebarTopNav ? 'lg:pt-24 lg:w-[calc(100vw-22rem)] lg:max-w-[calc(100vw-22rem)] lg:mx-auto' : ''}`}>
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-blue-200 bg-white/65 p-4 text-sm backdrop-blur-xl"><span className="flex min-w-0 items-center gap-3 font-semibold text-blue-950">{(user?.photo || user?.avatar) && <img src={user.photo || user.avatar} alt="Administrator profile" className="h-9 w-9 shrink-0 rounded-full object-cover" />}<AdministratorLabel slot={adminSlot} name={user?.name} /></span><button onClick={() => setActiveTab('governance')} className="rounded-xl bg-blue-600 px-4 py-2 font-semibold text-white">Shared approvals{pendingGovernance ? ` (${pendingGovernance})` : ''}</button></div>
-        {activeTab === 'governance' && <><AdminGovernancePanel /><ResidenceDeletionPanel onClose={() => {}} /><AccountModerationPanel target={null} onClose={() => {}} onApplied={fetchAdminData} /></>}
+        {activeTab === 'governance' && <><AdminGovernancePanel />{usesSupabasePersistence && <AdminManagerClosureRequests />}<ResidenceDeletionPanel onClose={() => {}} /><AccountModerationPanel target={null} onClose={() => {}} onApplied={fetchAdminData} /></>}
         {activeTab === 'messages' && <AdminMessageGateway />}
 
         {/* TAB 1: OVERVIEW */}
@@ -783,7 +948,7 @@ export default function PageAdminDashboard() {
             <div className="bg-sky-50/20 border border-sky-200/50 p-8 rounded-3xl backdrop-blur-2xl shadow-xl relative overflow-hidden">
               <div className="absolute right-0 top-0 w-96 h-96 bg-blue-400/10 rounded-full blur-3xl pointer-events-none" />
               <div className="relative z-10 max-w-2xl">
-                <h2 className="text-2xl lg:text-3xl font-bold text-3d tracking-tight">Welcome back, {user?.name}</h2>
+                <h2 className="text-3xl lg:text-4xl font-semibold text-black tracking-tight" style={{ textShadow: 'none', WebkitTextStroke: '0' }}>Welcome back, {user?.name}</h2>
               </div>
             </div>
 
@@ -910,7 +1075,7 @@ export default function PageAdminDashboard() {
         {activeTab === 'residences' && (
           <div className="space-y-6 animate-fadeIn relative z-10">
             <div className="flex flex-col md:flex-row items-center justify-between gap-4 bg-white/80 border border-blue-200/80 p-6 rounded-3xl backdrop-blur-xl shadow-xl">
-              <div>
+              <div role="region" aria-label="Residence directory">
                 <h3 className="text-xl font-bold text-slate-900">Available Residences Directory</h3>
                 <p className="text-xs text-slate-500">Manage all Hostels, Hotels, and Lounges listed on PineVela</p>
               </div>
@@ -961,11 +1126,11 @@ export default function PageAdminDashboard() {
                 >
                   <Clock className="w-3.5 h-3.5" />
                   <span>Pending Approvals</span>
-                  {residences.filter(r => (r.status === 'Pending Approval' || r.approvalStatus === 'Pending Approval' || r.isApproved === false)).length > 0 && (
+                  {pendingHostelsCount > 0 && (
                     <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${
                       approvalTabFilter === 'pending' ? 'bg-white text-amber-600' : 'bg-amber-500 text-white'
                     }`}>
-                      {residences.filter(r => (r.status === 'Pending Approval' || r.approvalStatus === 'Pending Approval' || r.isApproved === false)).length}
+                      {pendingHostelsCount}
                     </span>
                   )}
                 </button>
@@ -982,14 +1147,18 @@ export default function PageAdminDashboard() {
                   <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${
                     approvalTabFilter === 'approved' ? 'bg-white text-emerald-700' : 'bg-emerald-600 text-white'
                   }`}>
-                    {residences.filter(r => ((r.status === 'Approved' || r.approvalStatus === 'Approved' || r.isApproved === true || r.status === 'Open') && r.status !== 'Pending Approval' && r.approvalStatus !== 'Pending Approval' && r.isApproved !== false)).length}
+                    {residences.filter(r => usesSupabasePersistence ? residenceReviewStatus(r) === 'approved' : ((r.status === 'Approved' || r.approvalStatus === 'Approved' || r.isApproved === true || r.status === 'Open') && r.status !== 'Pending Approval' && r.approvalStatus !== 'Pending Approval' && r.isApproved !== false)).length}
                   </span>
                 </button>
+                {usesSupabasePersistence && <button type="button" onClick={() => setApprovalTabFilter('rejected')}
+                  className={`flex min-h-11 items-center gap-1.5 rounded-2xl px-4 py-2 text-xs font-bold ${approvalTabFilter === 'rejected' ? 'bg-rose-700 text-white' : 'border border-rose-200 bg-rose-50 text-rose-900'}`}>
+                  Rejected ({residences.filter(r => residenceReviewStatus(r) === 'rejected').length})
+                </button>}
               </div>
 
               {/* Category Filter Pills */}
-              <div className="flex items-center space-x-2">
-                {['all', 'Hostel', 'Hotel', 'Lounge'].map((cat) => (
+              <div className="flex flex-wrap items-center gap-2">
+                {(usesSupabasePersistence ? ['all', 'Hostel', 'Inn', 'Hotel', 'Estate'] : ['all', 'Hostel', 'Hotel', 'Lounge']).map((cat) => (
                   <button
                     key={cat}
                     onClick={() => setResidenceFilter(cat as any)}
@@ -1014,11 +1183,17 @@ export default function PageAdminDashboard() {
                     res.approvalStatus !== 'Pending Approval' &&
                     res.isApproved !== false;
 
-                  if (approvalTabFilter === 'pending' && isApproved) return false;
-                  if (approvalTabFilter === 'approved' && !isApproved) return false;
+                  if (usesSupabasePersistence) {
+                    if (approvalTabFilter === 'pending' && !pendingResidenceReview(res)) return false;
+                    if (approvalTabFilter === 'approved' && residenceReviewStatus(res) !== 'approved') return false;
+                    if (approvalTabFilter === 'rejected' && residenceReviewStatus(res) !== 'rejected') return false;
+                  } else {
+                    if (approvalTabFilter === 'pending' && isApproved) return false;
+                    if (approvalTabFilter === 'approved' && !isApproved) return false;
+                  }
 
                   if (residenceFilter !== 'all') {
-                    const type = res.hostel_type || 'Hostel';
+                    const type = usesSupabasePersistence ? res.wing || '' : res.hostel_type || 'Hostel';
                     if (!type.toLowerCase().includes(residenceFilter.toLowerCase())) return false;
                   }
                   if (searchQuery.trim()) {
@@ -1028,21 +1203,24 @@ export default function PageAdminDashboard() {
                   return true;
                 })
                 .map((residence) => {
-                  const type = residence.hostel_type || 'Hostel';
-                  const isApproved = residence.isApproved === true || residence.approvalStatus === 'Approved' || residence.status === 'Approved';
+                  const type = usesSupabasePersistence ? residence.wing || 'Not provided' : residence.hostel_type || 'Hostel';
+                  const cover = residence.image || residence.imageUrl || residence.exteriorPhotoUrl || residence.imagePreviewUrl || residence.images?.[0];
+                  const managerVerified = !usesSupabasePersistence || residence.managerStatus === 'active';
+                  const isApproved = usesSupabasePersistence ? residenceReviewStatus(residence) === 'approved' : residence.isApproved === true || residence.approvalStatus === 'Approved' || residence.status === 'Approved';
 
                   return (
                     <div key={residence.id} className="bg-white/90 border border-blue-200/80 rounded-3xl overflow-hidden backdrop-blur-xl shadow-xl flex flex-col justify-between">
                       <div>
                         <div className="relative h-48 w-full overflow-hidden bg-slate-100">
-                          <img
+                          {usesSupabasePersistence && !cover ? <div className="flex h-full items-center justify-center gap-2 text-sm text-slate-600"><Building2 size={24}/>No residence photos uploaded</div> : <img
                             src={residence.image || residence.imageUrl || residence.exteriorPhotoUrl || residence.imagePreviewUrl || residence.images?.[0] || 'https://images.unsplash.com/photo-1555854877-bab0e564b8d5?auto=format&fit=crop&w=800&q=80'}
                             alt={residence.name}
                             onError={(e) => {
+                              if (usesSupabasePersistence) {e.currentTarget.style.display='none';return;}
                               (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1555854877-bab0e564b8d5?auto=format&fit=crop&w=800&q=80';
                             }}
                             className="w-full h-full object-cover"
-                          />
+                          />}
                           <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-md px-3 py-1 rounded-xl text-xs font-bold text-blue-700 border border-blue-200">
                             {type}
                           </div>
@@ -1050,12 +1228,12 @@ export default function PageAdminDashboard() {
                             {isApproved ? (
                               <span className="bg-emerald-600 text-white px-3 py-1 rounded-xl text-xs font-bold shadow-lg flex items-center gap-1">
                                 <Check className="w-3.5 h-3.5 stroke-[3]" />
-                                Approved & Live
+                                {usesSupabasePersistence ? residenceReviewLabel(residence) : 'Approved & Live'}
                               </span>
                             ) : (
                               <span className="bg-amber-500 text-white px-3 py-1 rounded-xl text-xs font-bold shadow-lg flex items-center gap-1">
                                 <Clock className="w-3.5 h-3.5" />
-                                Pending Approval
+                                {usesSupabasePersistence ? residenceReviewLabel(residence) : 'Pending Approval'}
                               </span>
                             )}
                           </div>
@@ -1073,42 +1251,43 @@ export default function PageAdminDashboard() {
                           <div className="grid grid-cols-2 gap-2 pt-2 border-t border-blue-100 text-xs">
                             <div>
                               <span className="text-slate-400 block text-[10px] uppercase font-semibold">Capacity</span>
+                              {usesSupabasePersistence && <span className="font-semibold text-slate-800">{residence.totalRooms} rooms · {residence.totalBeds} beds</span>}
                             </div>
                           </div>
 
                           {/* Verified Manager Profile with Photo */}
                           <div className="p-3 bg-blue-50/70 rounded-2xl border border-blue-200/60 flex items-center gap-3">
                             <div className="relative shrink-0">
-                              <img
+                              {usesSupabasePersistence ? <span className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-sm font-bold text-blue-900" aria-label="Manager initials">{residence.managerName?.slice(0,2).toUpperCase() || '?'}</span> : <img
                                 src={residence.managerPhoto || (residence as any).managerAvatar || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80'}
                                 alt={residence.managerName || 'Manager'}
                                 className="w-10 h-10 rounded-full object-cover border-2 border-white shadow-xs"
-                              />
-                              <span className="absolute -bottom-0.5 -right-0.5 bg-emerald-500 text-white rounded-full p-0.5 shadow-xs" title="Verified Manager">
+                              />}
+                              {managerVerified && <span className="absolute -bottom-0.5 -right-0.5 bg-emerald-500 text-white rounded-full p-0.5 shadow-xs" title="Verified Manager">
                                 <Check className="w-2.5 h-2.5 stroke-[3]" />
-                              </span>
+                              </span>}
                             </div>
                             <div className="min-w-0 flex-1">
                               <div className="flex items-center gap-1.5">
                                 <span className="text-xs font-bold text-slate-900 truncate">
-                                  {residence.managerName || 'Anthony Davis'}
+                                  {residence.managerName || (usesSupabasePersistence ? 'Not provided' : 'Anthony Davis')}
                                 </span>
-                                <span className="px-1.5 py-0.2 rounded text-[9px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300 shrink-0">
+                                {managerVerified && <span className="px-1.5 py-0.2 rounded text-[9px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300 shrink-0">
                                   Verified
-                                </span>
+                                </span>}
                               </div>
                               <p className="text-[10px] text-slate-500 truncate">
-                                {residence.managerEmail || 'manager@pinevela.com'}
+                                {residence.managerEmail || (usesSupabasePersistence ? 'Email not provided' : 'manager@pinevela.com')}
                               </p>
                               <p className="text-[10px] text-slate-700 font-semibold">
-                                {residence.managerPhone || '+233 24 123 4567'}
+                                {residence.managerPhone || (usesSupabasePersistence ? 'Phone not provided' : '+233 24 123 4567')}
                               </p>
                             </div>
                           </div>
                         </div>
                       </div>
 
-                      <div className="px-6 pb-6 pt-2 flex items-center justify-between border-t border-blue-100">
+                      <div className="px-6 pb-6 pt-2 flex flex-wrap items-center justify-between gap-3 border-t border-blue-100">
                         {isApproved ? (
                           <div className="flex items-center gap-1.5 text-xs text-emerald-700 font-bold bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-200">
                             <CheckCircle2 className="w-4 h-4 text-emerald-600" />
@@ -1116,7 +1295,7 @@ export default function PageAdminDashboard() {
                           </div>
                         ) : (
                           <div className="flex items-center gap-2">
-                            <button
+                            {!usesSupabasePersistence && <button
                               onClick={() => {
                                 setRejectingResidenceModal(residence);
                                 setResidenceRejectionReason('');
@@ -1125,9 +1304,10 @@ export default function PageAdminDashboard() {
                             >
                               <X className="w-3.5 h-3.5" />
                               <span>Reject</span>
-                            </button>
+                            </button>}
                             <button
                               onClick={async () => {
+                                if (usesSupabasePersistence) {setInspectingResidenceModal(residence);return;}
                                 try {
                                   const updated = await apiFetch(`/api/hostels/${residence.id}/verify`, {
                                     method: 'PUT',
@@ -1143,12 +1323,12 @@ export default function PageAdminDashboard() {
                               className="text-xs bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 px-4 rounded-xl transition-all cursor-pointer shadow-md flex items-center gap-1.5"
                             >
                               <CheckCircle2 className="w-3.5 h-3.5" />
-                              <span>Approve Residence</span>
+                              <span>{usesSupabasePersistence ? pendingResidenceReview(residence) ? 'Review Registration' : 'View Registration' : 'Approve Residence'}</span>
                             </button>
                           </div>
                         )}
                         <div className="flex items-center gap-2">
-                            <button
+                            {(!usesSupabasePersistence || isApproved) && <button
                               onClick={() => {
                                 setInspectingResidenceModal(residence);
                                 setInspectActiveImage('');
@@ -1158,7 +1338,7 @@ export default function PageAdminDashboard() {
                             >
                               <Eye className="w-3.5 h-3.5 text-indigo-600" />
                               <span>Details</span>
-                            </button>
+                            </button>}
 
                           <button
                             aria-label={`Propose deletion of ${residence.name}`}
@@ -1234,10 +1414,22 @@ export default function PageAdminDashboard() {
                 </button>
                 <button type="button" onClick={() => setManagerSubTab("cooldowns")} className="px-3.5 py-2 rounded-xl text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-all cursor-pointer flex items-center gap-1.5">
                   <Clock className="w-3.5 h-3.5" />
-                  <span>Restrictions ({managerRestrictions.length})</span>
+                  <span>Restrictions ({managerRestrictions.filter(r => usesSupabasePersistence ? r.isActive : Date.parse(r.expiresAt)>Date.now() && !r.bypassApproved).length})</span>
                 </button>
               </div>
             </div>
+
+            {usesSupabasePersistence && (managerReviewPendingRead || managerReviewError) && (
+              <div role={managerReviewError ? 'alert' : 'status'} className="rounded-2xl border border-sky-200 bg-white/90 p-4 text-sm text-slate-800">
+                <p className="font-semibold">{managerReviewError ? 'Manager applications could not load.' : 'Loading manager applications…'}</p>
+                {managerReviewError && <>
+                  <p className="mt-1 text-xs text-slate-600">Retry to load the saved applications and inspection reports.</p>
+                  <button type="button" disabled={managerReviewFetching} onClick={() => { void retryManagerReview(); }} className="mt-3 min-h-11 rounded-xl bg-blue-900 px-4 py-2 text-xs font-bold text-white disabled:opacity-50">
+                    {managerReviewFetching ? 'Retrying manager applications…' : 'Retry manager applications'}
+                  </button>
+                </>}
+              </div>
+            )}
 
             {/* SUBTAB 1: PHYSICAL INSPECTIONS & MANAGER VERIFICATIONS */}
             {managerSubTab === 'inspections' && (
@@ -1293,11 +1485,15 @@ export default function PageAdminDashboard() {
                       );
                     })
                     .map((req, idx) => {
-                      const inspection = verificationInspections.find(i => i.managerVerificationId === req.id || i.managerEmail === req.managerEmail || (i.id && (req.inspectionId === i.id || req.id === i.id)));
-                      const hasSubmittedReport = Boolean(inspection?.report || req.inspectionReport || req.verificationReport || inspection?.status === 'report_submitted');
+                      const inspection = usesSupabasePersistence?currentManagerInspection(req.id,verificationInspections):verificationInspections.find(i => i.managerVerificationId === req.id || i.managerEmail === req.managerEmail || (i.id && (req.inspectionId === i.id || req.id === i.id)));
+                      const hasSubmittedReport = usesSupabasePersistence?inspection?.status==='report_submitted'&&Boolean(inspection.report):Boolean(inspection?.report || req.inspectionReport || req.verificationReport || inspection?.status === 'report_submitted');
                       const isBlocked = req.status === 'blocked' || req.isBlocked === true;
-                      const isApproved = !isBlocked && (req.status === 'approved' || req.inspectionStatus === 'approved' || inspection?.status === 'approved');
-                      const currentStatus = isBlocked
+                      const isApproved = !isBlocked && (usesSupabasePersistence?req.status==='approved':req.status === 'approved' || req.inspectionStatus === 'approved' || inspection?.status === 'approved');
+                      const currentStatus = usesSupabasePersistence
+                        ? (['approved','rejected','withdrawn','more_info_required','blocked','suspended'].includes(req.status)?req.status:hasSubmittedReport?'report_submitted':inspection?.status==='dispatched'?'dispatched':'pending_dispatch')
+                        : req.status === 'withdrawn' || inspection?.status === 'withdrawn'
+                        ? 'withdrawn'
+                        : isBlocked
                         ? 'blocked'
                         : isApproved 
                         ? 'approved' 
@@ -1324,7 +1520,9 @@ export default function PageAdminDashboard() {
                                     ? 'bg-rose-100 text-rose-800 border-rose-300'
                                     : 'bg-amber-100 text-amber-800 border-amber-300'
                                 }`}>
-                                  {currentStatus === 'blocked' || req.status === 'blocked'
+                                  {currentStatus === 'more_info_required'?'Corrections requested':currentStatus === 'withdrawn'
+                                    ? 'Withdrawn'
+                                    : currentStatus === 'blocked' || req.status === 'blocked'
                                     ? '🚫 Blocked / Restricted'
                                     : currentStatus === 'approved' || req.status === 'approved'
                                     ? '✓ Verified & Approved'
@@ -1338,7 +1536,7 @@ export default function PageAdminDashboard() {
                                 </span>
                               </div>
                               <p className="text-xs font-bold text-blue-900">
-                                🏢 Residence / Hostel: <span className="text-slate-900 font-extrabold">{req.propertyName || req.organization || 'Pending Property'}</span>
+                                🏢 Residence / Hostel: <span className="text-slate-900 font-extrabold">{req.hostelName || req.propertyName || req.organization || 'Not provided'}</span>
                               </p>
                             </div>
 
@@ -1358,11 +1556,11 @@ export default function PageAdminDashboard() {
                             </div>
                             <div>
                               <span className="text-[10px] uppercase font-bold text-slate-400 block">Phone / WhatsApp</span>
-                              <span className="font-semibold text-slate-900">{req.managerPhone || '+233 24 555 1234'}</span>
+                              <span className="font-semibold text-slate-900">{req.managerPhone || 'Not provided'}</span>
                             </div>
                             <div>
                               <span className="text-[10px] uppercase font-bold text-slate-400 block">Precise Property Location</span>
-                              <span className="font-bold text-slate-800">{req.preciseLocation || req.physicalAddress || req.location || 'Accra Central'}</span>
+                              <span className="font-bold text-slate-800">{req.location || req.preciseLocation || req.physicalAddress || 'Not provided'}</span>
                             </div>
                           </div>
 
@@ -1390,7 +1588,9 @@ export default function PageAdminDashboard() {
                               </div>
                               <div>
                                 <span className="font-black text-slate-900 block">
-                                  {currentStatus === 'blocked' || req.status === 'blocked'
+                                  {currentStatus === 'more_info_required'?'Awaiting applicant corrections':currentStatus === 'withdrawn'
+                                    ? 'Verification withdrawn after reviewed closure'
+                                    : currentStatus === 'blocked' || req.status === 'blocked'
                                     ? 'Manager Access Restricted & Properties Unlisted'
                                     : currentStatus === 'report_submitted'
                                     ? 'Field Verification Report Submitted & Ready for Admin Review'
@@ -1401,7 +1601,9 @@ export default function PageAdminDashboard() {
                                     : 'Awaiting PineVela On-Site Verification Dispatch'}
                                 </span>
                                 <span className="text-[11px] text-slate-600">
-                                  {currentStatus === 'blocked' || req.status === 'blocked'
+                                  {currentStatus === 'more_info_required'?'The primary owner must correct the application. A fresh inspection is required after resubmission.':currentStatus === 'withdrawn'
+                                    ? 'The original inspection evidence is retained. This registration no longer accepts verification actions.'
+                                    : currentStatus === 'blocked' || req.status === 'blocked'
                                     ? 'Login access to the Manager Console is locked and all registered hostel listings are hidden from live student searches.'
                                     : currentStatus === 'report_submitted'
                                     ? 'Live GPS coordinates, photographs, and property legitimacy checklist provided.'
@@ -1429,7 +1631,7 @@ export default function PageAdminDashboard() {
                               )}
 
                               {/* Dispatch Button */}
-                              {(currentStatus === 'pending_dispatch' || !req.inspectionStatus) && req.status !== 'approved' && req.status !== 'blocked' && !req.isBlocked && (
+                              {(usesSupabasePersistence?currentStatus==='pending_dispatch':currentStatus !== 'withdrawn' && (currentStatus === 'pending_dispatch' || !req.inspectionStatus) && req.status !== 'approved' && req.status !== 'blocked' && !req.isBlocked) && (
                                 <button
                                   type="button"
                                   onClick={() => {
@@ -1451,24 +1653,18 @@ export default function PageAdminDashboard() {
                                   type="button"
                                   onClick={() => {
                                     const actualReport = inspection?.report || req.inspectionReport || req.verificationReport;
+                                    if(!actualReport){triggerToast('The saved inspection report could not be loaded. Refresh the application.');return;}
                                     setReviewReportInspection({
                                       ...(inspection || {}),
                                       id: inspection?.id || `insp-${req.id}`,
                                       managerVerificationId: req.id,
                                       managerName: req.managerName,
                                       managerEmail: req.managerEmail,
-                                      propertyName: req.propertyName || req.organization,
-                                      preciseLocation: req.preciseLocation || req.physicalAddress,
+                                      propertyName: req.hostelName || req.propertyName || req.organization,
+                                      preciseLocation: req.location || req.preciseLocation || req.physicalAddress,
                                       assignedOfficerName: inspection?.assignedOfficerName || req.assignedOfficerName || 'Field Officer',
                                       status: 'report_submitted',
-                                      report: actualReport || {
-                                        submittedAt: new Date().toISOString(),
-                                        checklist: {},
-                                        propertyDetails: {},
-                                        photos: [],
-                                        observations: 'On-site audit submitted by field officer.',
-                                        recommendation: 'recommend_approval'
-                                      }
+                                      report: actualReport
                                     });
                                   }}
                                   className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs rounded-xl shadow-md cursor-pointer transition-all flex items-center gap-1.5"
@@ -1479,8 +1675,12 @@ export default function PageAdminDashboard() {
                               )}
 
                               {/* Direct Approve/Reject buttons */}
-                              {req.status !== 'approved' && req.status !== 'rejected' && req.status !== 'blocked' && !req.isBlocked && (
+                              {(usesSupabasePersistence?pendingManagerRegistration(req):req.status !== 'approved' && req.status !== 'rejected' && req.status !== 'blocked' && !req.isBlocked) && (
                                 <>
+                                  {usesSupabasePersistence&&req.status!=='more_info_required'&&<button type="button" onClick={()=>{
+                                    handleRejectManager(req.id,req.managerName,req.managerEmail);setManagerReviewAction('request-info');
+                                  }} className="min-h-11 rounded-xl border border-blue-300 bg-blue-50 px-3.5 py-2.5 text-xs font-bold text-blue-900">Request corrections</button>}
+                                  {(!usesSupabasePersistence||hasSubmittedReport)&&
                                   <button
                                     type="button"
                                     onClick={() => handleApproveManager(req.id, req.managerEmail)}
@@ -1488,7 +1688,7 @@ export default function PageAdminDashboard() {
                                   >
                                     <Check className="w-3.5 h-3.5" />
                                     <span>Approve</span>
-                                  </button>
+                                  </button>}
                                   <button
                                     type="button"
                                     onClick={() => handleRejectManager(req.id, req.managerName, req.managerEmail)}
@@ -1536,7 +1736,7 @@ export default function PageAdminDashboard() {
                       );
                     })}
 
-                  {managerRequests.length === 0 && (
+                  {managerRequests.length === 0 && (!usesSupabasePersistence || managerReviewData && managerReviewData.ownerId === user?.id && managerReviewData.requests.length === 0 && !managerReviewError) && (
                     <div className="text-center py-16 bg-sky-50/20 border border-sky-200/50 rounded-3xl backdrop-blur-2xl">
                       <Users className="w-12 h-12 text-slate-400 mx-auto mb-4" />
                       <h4 className="text-lg font-bold text-slate-900 mb-1 text-outline-sm">No Manager Verification Requests</h4>
@@ -1555,15 +1755,19 @@ export default function PageAdminDashboard() {
                     <h4 className="text-base font-black text-slate-900">PineVela Verification Team Roster</h4>
                     <p className="text-xs text-slate-600">Accredited field officers responsible for physical on-site inspections.</p>
                   </div>
-                  <button
+                  {!usesSupabasePersistence && <button
                     type="button"
                     onClick={() => setShowRegisterOfficerModal(true)}
                     className="px-5 py-2.5 bg-blue-900 hover:bg-blue-850 text-white font-black text-xs rounded-2xl shadow-md cursor-pointer transition-all flex items-center gap-2"
                   >
                     <Plus className="w-4 h-4 text-sky-300" />
                     <span>Register New Verification Officer</span>
-                  </button>
+                  </button>}
                 </div>
+
+                {usesSupabasePersistence && <SupabaseOfficerInvitationControls onChanged={fetchAdminData} />}
+                {usesSupabasePersistence && officerRosterPendingRead && <p role="status" className="text-sm text-slate-600">Loading field officers…</p>}
+                {officerRosterError && <p role="alert" className="rounded-xl bg-rose-50 p-3 text-sm text-rose-800">{officerRosterError}<button type="button" disabled={usesSupabasePersistence && officerRosterFetching} onClick={() => { void (usesSupabasePersistence ? retryOfficerRoster() : fetchAdminData()); }} className="ml-3 min-h-11 font-semibold underline disabled:opacity-50">Retry field officers</button></p>}
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {verificationTeams.map((officer, oIdx) => (
@@ -1592,13 +1796,13 @@ export default function PageAdminDashboard() {
 
                       <div className="space-y-1.5 text-xs text-slate-700 bg-slate-50 p-3 rounded-2xl border border-slate-100">
                         <p>📧 <span className="font-semibold text-slate-900">{officer.email}</span></p>
-                        <p>📞 <span className="font-semibold text-slate-900">{officer.phone || '+233 24 000 0000'}</span></p>
-                        <p>📍 Zone: <span className="font-bold text-blue-900">{officer.assignedZone}</span></p>
+                        <p>📞 <span className="font-semibold text-slate-900">{officer.phone || 'Not provided'}</span></p>
+                        <p>📍 Zone: <span className="font-bold text-blue-900">{officer.assignedZone || 'Not provided'}</span></p>
                         <p>🚗 Total Dispatches: <span className="font-extrabold text-slate-900">{officer.totalDispatches || 0}</span></p>
                       </div>
 
                       <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-100">
-                        <button
+                        {!usesSupabasePersistence && <button
                           type="button"
                           onClick={() => {
                             setCreatedOfficerCredentials({
@@ -1615,7 +1819,7 @@ export default function PageAdminDashboard() {
                         >
                           <CreditCard className="w-3.5 h-3.5 text-blue-700" />
                           <span>Credentials Card</span>
-                        </button>
+                        </button>}
 
                         <button
                           type="button"
@@ -1632,26 +1836,40 @@ export default function PageAdminDashboard() {
                     </div>
                   ))}
 
-                  {verificationTeams.length === 0 && (
+                  {verificationTeams.length === 0 && !officerRosterError && (!usesSupabasePersistence || officerRosterData && officerRosterData.ownerId === user?.id && officerRosterData.officers.length === 0 && !officerRosterReadError) && (
                     <div className="col-span-full text-center py-12 bg-white/70 border border-sky-200 rounded-3xl">
                       <ShieldCheck className="w-10 h-10 text-slate-400 mx-auto mb-3" />
                       <h5 className="text-sm font-bold text-slate-900">No Verification Officers Registered</h5>
-                      <p className="text-xs text-slate-500 mb-4">Register accredited officers to handle physical property inspections.</p>
-                      <button
+                      <p className="text-xs text-slate-500 mb-4">Invite accredited officers to handle physical property inspections.</p>
+                      {!usesSupabasePersistence && <button
                         type="button"
                         onClick={() => setShowRegisterOfficerModal(true)}
                         className="px-4 py-2 bg-blue-900 text-white font-bold text-xs rounded-xl shadow-sm"
                       >
                         Register Officer
-                      </button>
+                      </button>}
                     </div>
                   )}
                 </div>
               </div>
             )}
 
-            {/* SUBTAB 3: MANAGER COOLDOWNS & BYPASS REQUESTS PANEL */}
-            {managerSubTab === 'cooldowns' && (
+            {/* SUBTAB 3: REVIEWED REGISTRATION COOLDOWNS */}
+            {managerSubTab === 'cooldowns' && usesSupabasePersistence && (
+              <section aria-label="Manager registration restrictions" className="space-y-4 rounded-3xl border border-sky-200/50 bg-sky-50/20 p-6 backdrop-blur-2xl">
+                <div><h3 className="text-lg font-bold text-slate-900">Manager registration restrictions</h3><p className="mt-1 text-sm text-slate-600">Residence and manager-account cooldowns recorded by reviewed administrator decisions. Each restriction applies to the account shown and expires on its recorded date.</p></div>
+                {managerRestrictionError && <p role="alert" className="rounded-xl bg-rose-50 p-3 text-sm text-rose-800">{managerRestrictionError}<button type="button" onClick={fetchAdminData} className="ml-3 font-semibold underline">Retry</button></p>}
+                {!managerRestrictionError && managerRestrictions.map(restr => <article key={restr.id} className="space-y-3 rounded-2xl border border-slate-200 bg-white/75 p-4">
+                  <div className="flex flex-wrap items-start justify-between gap-3"><div><h4 className="font-bold text-slate-900">{restr.accountName}</h4><p className="break-all text-xs text-slate-600">{restr.accountEmail}</p></div><span className={`rounded-full px-3 py-1 text-xs font-semibold ${restr.isActive?'bg-amber-50 text-amber-900':'bg-slate-100 text-slate-600'}`}>{restr.isActive?'Active':'Expired'}</span></div>
+                  <p className="text-sm font-semibold text-blue-900">{restr.kind==='residence'?'New residence registration':'New manager-account registration'}</p>
+                  <p className="text-sm text-slate-700">{restr.reason}</p>
+                  <dl className="grid gap-3 text-xs sm:grid-cols-2"><div><dt className="font-semibold text-slate-500">Recorded</dt><dd>{new Date(restr.createdAt).toLocaleString()}</dd></div><div><dt className="font-semibold text-slate-500">Expires</dt><dd>{new Date(restr.expiresAt).toLocaleString()}</dd></div><div><dt className="font-semibold text-slate-500">Primary account</dt><dd className="break-all">{restr.userEmail}</dd></div><div><dt className="font-semibold text-slate-500">Recorded by</dt><dd>{restr.imposedByName}</dd></div></dl>
+                  {restr.proposalId && <p className="break-all text-xs text-slate-500">Review: {restr.proposalId} · {restr.proposalStatus}</p>}
+                </article>)}
+                {!managerRestrictionError && managerRestrictions.length===0 && <p className="rounded-xl bg-white/65 p-4 text-sm text-slate-500">No manager or residence registration restrictions have been recorded.</p>}
+              </section>
+            )}
+            {managerSubTab === 'cooldowns' && !usesSupabasePersistence && (
               <div className="bg-sky-50/20 border border-sky-200/50 p-6 rounded-3xl backdrop-blur-2xl shadow-xl space-y-6">
                 <div>
                   <h3 className="text-lg font-bold text-slate-900">Anti-Abuse Restrictions & Bypass Requests</h3>
@@ -1802,7 +2020,7 @@ export default function PageAdminDashboard() {
 
             </div>
 
-            {notifications.length > 0 && <section className="rounded-3xl border border-blue-100 bg-white/75 p-5 shadow-sm backdrop-blur-xl"><div className="mb-3 flex items-center justify-between"><p className="flex items-center gap-2 text-sm font-extrabold text-slate-900"><Bell className="h-4 w-4 text-blue-600" />Live operational alerts {unreadCount > 0 && <span className="rounded-full bg-blue-600 px-2 py-0.5 text-[10px] text-white">{unreadCount} new</span>}</p><button onClick={() => refreshNotifications()} className="text-xs font-bold text-blue-700">Refresh</button></div><div className="space-y-2">{notifications.map((notification: any) => <button key={notification.id} onClick={() => { void markAsRead(notification.id); if (notification.module === 'admin_governance') setActiveTab('governance'); if (notification.module === 'admin_settings') setActiveTab('settings'); }} className="block w-full rounded-2xl border border-blue-100 bg-blue-50/60 p-3 text-left"><p className="text-xs font-bold text-slate-900">{notification.title}{!notification.read && <span className="ml-2 text-blue-600">• New</span>}</p><p className="mt-1 text-xs text-slate-600">{notification.message}</p></button>)}</div></section>}
+            {notifications.length > 0 && <section className="rounded-3xl border border-blue-100 bg-white/75 p-5 shadow-sm backdrop-blur-xl"><div className="mb-3 flex items-center justify-between"><p className="flex items-center gap-2 text-sm font-extrabold text-slate-900"><Bell className="h-4 w-4 text-blue-600" />Live operational alerts {unreadCount > 0 && <span className="rounded-full bg-blue-600 px-2 py-0.5 text-[10px] text-white">{unreadCount} new</span>}</p><button onClick={() => refreshNotifications()} className="text-xs font-bold text-blue-700">Refresh</button></div><div className="space-y-2">{notifications.map((notification: any) => <button key={notification.id} onClick={() => { void markAsRead(notification.id); if (notification.link === 'verification-officers') { setActiveTab('managers'); setManagerSubTab('officers'); } else if (notification.link === 'residence_changes') setActiveTab('notifications'); else if (notification.module === 'admin_governance') setActiveTab('governance'); else if (notification.module === 'admin_settings') setActiveTab('settings'); }} className="block w-full rounded-2xl border border-blue-100 bg-blue-50/60 p-3 text-left"><p className="text-xs font-bold text-slate-900">{notification.title}{!notification.read && <span className="ml-2 text-blue-600">• New</span>}</p><p className="mt-1 text-xs text-slate-600">{notification.message}</p></button>)}</div></section>}
             {/* PENDING RESIDENCE VERIFICATION ALERTS */}
             {pendingHostelsCount > 0 && (
               <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 p-6 rounded-3xl backdrop-blur-xl shadow-lg space-y-4">
@@ -1824,17 +2042,18 @@ export default function PageAdminDashboard() {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {residences.filter(r => r.status === 'Pending Approval' || r.approvalStatus === 'Pending Approval' || r.isApproved === false).map((res, idx) => (
+                  {residences.filter(r => usesSupabasePersistence ? pendingResidenceReview(r) : r.status === 'Pending Approval' || r.approvalStatus === 'Pending Approval' || r.isApproved === false).map((res, idx) => (
                     <div key={`${res.id || 'res'}-${idx}`} className="bg-white/90 border border-amber-200/80 p-4 rounded-2xl shadow-xs flex flex-col justify-between space-y-3">
                       <div className="flex items-start gap-3">
-                        <img
+                        {usesSupabasePersistence && !(res.image || res.imageUrl || res.exteriorPhotoUrl || res.imagePreviewUrl) ? <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-slate-100" aria-label="No residence photo submitted"><Building2 size={24}/></div> : <img
                           src={res.image || res.imageUrl || res.exteriorPhotoUrl || res.imagePreviewUrl || 'https://images.unsplash.com/photo-1555854877-bab0e564b8d5?auto=format&fit=crop&w=400&q=80'}
                           alt={res.name}
                           onError={(e) => {
+                            if (usesSupabasePersistence) {e.currentTarget.style.display='none';return;}
                             (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1555854877-bab0e564b8d5?auto=format&fit=crop&w=400&q=80';
                           }}
                           className="w-16 h-16 rounded-xl object-cover border border-amber-200 shrink-0"
-                        />
+                        />}
                         <div className="min-w-0 flex-1">
                           <h5 className="text-sm font-bold text-slate-900 truncate">{res.name}</h5>
                           <p className="text-xs text-slate-500">📍 {res.location}</p>
@@ -1852,9 +2071,9 @@ export default function PageAdminDashboard() {
                             title="Inspect full details, uploaded photos & GPS location"
                           >
                             <Eye className="w-3.5 h-3.5 text-indigo-600" />
-                            <span>Details</span>
+                            <span>{usesSupabasePersistence ? 'Review Registration' : 'Details'}</span>
                           </button>
-                          <button
+                          {!usesSupabasePersistence && <button
                             onClick={() => {
                               setRejectingResidenceModal(res);
                               setResidenceRejectionReason('');
@@ -1863,8 +2082,8 @@ export default function PageAdminDashboard() {
                           >
                             <X className="w-3.5 h-3.5" />
                             <span>Reject</span>
-                          </button>
-                          <button
+                          </button>}
+                          {!usesSupabasePersistence && <button
                             onClick={async () => {
                               try {
                                 const updated = await apiFetch(`/api/hostels/${res.id}/verify`, {
@@ -1881,8 +2100,8 @@ export default function PageAdminDashboard() {
                             className="text-xs bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 px-4 rounded-xl transition-all cursor-pointer shadow-md flex items-center gap-1.5"
                           >
                             <CheckCircle2 className="w-3.5 h-3.5" />
-                            <span>Approve & Go Live</span>
-                          </button>
+                            <span>{usesSupabasePersistence ? 'Review Registration' : 'Approve & Go Live'}</span>
+                          </button>}
                         </div>
                       </div>
                     </div>
@@ -2044,7 +2263,7 @@ export default function PageAdminDashboard() {
                     }`}
                   >
                     <Store className="w-4 h-4" />
-                    <span>Active Digital Stores</span>
+                    <span>Digital Stores</span>
                     <span className="px-1.5 py-0.5 bg-slate-200 text-slate-700 text-[10px] font-bold rounded-full">
                       {digitalMarketStores.length}
                     </span>
@@ -2064,7 +2283,7 @@ export default function PageAdminDashboard() {
                 </div>
                 <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl">
                   <div className="text-[10px] font-extrabold text-emerald-800 uppercase tracking-wider">Active Stores</div>
-                  <div className="text-2xl font-black text-emerald-900 mt-1">{digitalMarketStores.filter(s => !s.isBanned).length}</div>
+                  <div className="text-2xl font-black text-emerald-900 mt-1">{digitalMarketStores.filter(s => usesSupabasePersistence ? s.isActive : !s.isBanned).length}</div>
                 </div>
                 <div className="p-4 bg-rose-50 border border-rose-200 rounded-2xl">
                   <div className="text-[10px] font-extrabold text-rose-800 uppercase tracking-wider">Banned / Disabled Stores</div>
@@ -2159,7 +2378,8 @@ export default function PageAdminDashboard() {
                   All Student Digital Stores ({digitalMarketStores.length})
                 </h4>
 
-                {digitalMarketStores.length > 0 ? (
+                {marketStoreError && <p role="alert" className="rounded-xl bg-rose-50 p-3 text-sm text-rose-800">{marketStoreError}<button type="button" onClick={fetchAdminData} className="ml-3 font-semibold underline">Retry</button></p>}
+                {!marketStoreError && digitalMarketStores.length > 0 ? (
                   <div className="overflow-x-auto">
                     <table className="w-full text-left text-xs">
                       <thead className="bg-slate-50 text-slate-600 font-bold uppercase text-[10px] tracking-wider border-b border-slate-200">
@@ -2169,7 +2389,7 @@ export default function PageAdminDashboard() {
                           <th className="p-3">University</th>
                           <th className="p-3">Category</th>
                           <th className="p-3">Status</th>
-                          <th className="p-3 text-right">Ban Controls</th>
+                          <th className="p-3 text-right">Account Access</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100 font-medium">
@@ -2181,15 +2401,23 @@ export default function PageAdminDashboard() {
                             <td className="p-3 text-slate-600">{store.category}</td>
                             <td className="p-3">
                               <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
-                                store.isBanned ? 'bg-rose-100 text-rose-800' : 'bg-emerald-100 text-emerald-800'
+                                store.isBanned ? 'bg-rose-100 text-rose-800' : usesSupabasePersistence && !store.isActive ? 'bg-slate-100 text-slate-600' : 'bg-emerald-100 text-emerald-800'
                               }`}>
-                                {store.isBanned ? 'Banned / Disabled' : 'Active'}
+                                {usesSupabasePersistence ? store.statusLabel : store.isBanned ? 'Banned / Disabled' : 'Active'}
                               </span>
                             </td>
                             <td className="p-3 text-right">
                               <button
                                 type="button"
+                                disabled={usesSupabasePersistence && (!store.isCurrent || store.accountStatus==='closed')}
                                 onClick={() => {
+                                  if (usesSupabasePersistence) {
+                                    const account=allUsersData.users.find(account => account.id===store.accountId && account.role==='merchant');
+                                    setActiveTab('user_accounts');
+                                    if (account) setModerationTarget(account);
+                                    else triggerToast('Refresh Accounts and select this seller to submit a reviewed access proposal.');
+                                    return;
+                                  }
                                   if (store.isBanned) {
                                     handleToggleBanStore(store.id);
                                   } else {
@@ -2202,7 +2430,7 @@ export default function PageAdminDashboard() {
                                     : 'bg-rose-100 hover:bg-rose-200 text-rose-800'
                                 }`}
                               >
-                                {store.isBanned ? 'Unban Store' : 'Ban / Disable Store'}
+                                {usesSupabasePersistence ? 'Review account access' : store.isBanned ? 'Unban Store' : 'Ban / Disable Store'}
                               </button>
                             </td>
                           </tr>
@@ -2210,11 +2438,11 @@ export default function PageAdminDashboard() {
                       </tbody>
                     </table>
                   </div>
-                ) : (
+                ) : !marketStoreError ? (
                   <div className="p-8 text-center text-slate-400 italic text-xs">
                     No student stores registered yet.
                   </div>
-                )}
+                ) : null}
               </div>
             )}
           </div>
@@ -2297,7 +2525,12 @@ export default function PageAdminDashboard() {
       )}
 
       {/* MODAL: READ-ONLY INSPECTION FOR PENDING RESIDENCE APPROVAL */}
-      {inspectingResidenceModal && (
+      {inspectingResidenceModal && usesSupabasePersistence && <AdminResidenceRegistrationReview
+        key={`${user?.id}:${inspectingResidenceModal.id}`} residenceId={inspectingResidenceModal.id}
+        onClose={() => setInspectingResidenceModal(null)} onReviewed={() => {
+          void queryClient.invalidateQueries({queryKey:['adminData',user?.id]});void refreshNotifications();
+        }} />}
+      {inspectingResidenceModal && !usesSupabasePersistence && (
         <DashboardOverlay aria-label="Inspect residence registration" onClose={() => setInspectingResidenceModal(null)} className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-md flex items-center justify-center p-4">
           <div data-popup-card className="bg-white border border-blue-200 rounded-3xl max-w-4xl w-full max-h-[92vh] overflow-y-auto p-6 sm:p-8 space-y-6 shadow-2xl animate-fadeIn">
             {/* Header */}
@@ -2329,7 +2562,7 @@ export default function PageAdminDashboard() {
             {/* Read-Only Banner Notice */}
             <div className="p-3.5 bg-blue-50/80 rounded-2xl border border-blue-200/70 flex items-center gap-2.5 text-xs text-blue-900 font-semibold">
               <ShieldCheck className="w-4 h-4 text-blue-700 shrink-0" />
-              <span>Read-Only Inspection Mode: Inspect the actual photos, digital address map coordinates, block gender settings, and capacity details before approving or rejecting this application.</span>
+              <span>Read-Only Inspection Mode: Inspect the actual photos, street address, map coordinates, block gender settings, and capacity details before approving or rejecting this application.</span>
             </div>
 
             {/* 1. ACTUAL UPLOADED PHOTOS GALLERY */}
@@ -2404,7 +2637,12 @@ export default function PageAdminDashboard() {
                   <span>On-Site Dispatch & GPS Verification</span>
                 </h4>
                 <a
-                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${inspectingResidenceModal.digitalAddress || ''} ${inspectingResidenceModal.addressLine1 || ''} ${inspectingResidenceModal.city || ''} Ghana`)}`}
+                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                    inspectingResidenceModal.latitude != null && inspectingResidenceModal.longitude != null &&
+                    Number.isFinite(Number(inspectingResidenceModal.latitude)) && Number.isFinite(Number(inspectingResidenceModal.longitude))
+                      ? `${inspectingResidenceModal.latitude},${inspectingResidenceModal.longitude}`
+                      : `${inspectingResidenceModal.addressLine1 || inspectingResidenceModal.location || ''} ${inspectingResidenceModal.city || ''} Ghana`
+                  )}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="px-3.5 py-2 bg-blue-900 hover:bg-blue-800 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
@@ -2414,22 +2652,18 @@ export default function PageAdminDashboard() {
                 </a>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
-                <div className="bg-white p-3 rounded-xl border border-slate-200">
-                  <span className="text-[10px] font-bold text-slate-400 block uppercase">GhanaPost Digital GPS</span>
-                  <span className="font-extrabold text-blue-900 text-sm">{inspectingResidenceModal.digitalAddress || inspectingResidenceModal.gpsAddress || 'GA-183-9022'}</span>
-                </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
                 <div className="bg-white p-3 rounded-xl border border-slate-200">
                   <span className="text-[10px] font-bold text-slate-400 block uppercase">Street Address</span>
-                  <span className="font-bold text-slate-800 truncate block">{inspectingResidenceModal.addressLine1 || inspectingResidenceModal.location || 'Campus Main Street'}</span>
+                  <span className="font-bold text-slate-800 truncate block">{inspectingResidenceModal.addressLine1 || inspectingResidenceModal.location || 'Not provided'}</span>
                 </div>
                 <div className="bg-white p-3 rounded-xl border border-slate-200">
                   <span className="text-[10px] font-bold text-slate-400 block uppercase">City & Region</span>
-                  <span className="font-bold text-slate-800 block">{inspectingResidenceModal.city || 'Accra'}, {inspectingResidenceModal.region || 'Greater Accra'}</span>
+                  <span className="font-bold text-slate-800 block">{[inspectingResidenceModal.city, inspectingResidenceModal.region].filter(Boolean).join(', ') || 'Not provided'}</span>
                 </div>
                 <div className="bg-white p-3 rounded-xl border border-slate-200">
                   <span className="text-[10px] font-bold text-slate-400 block uppercase">Campus Proximity</span>
-                  <span className="font-bold text-emerald-800 block">{inspectingResidenceModal.campusProximity || '5-10 Mins Walk'}</span>
+                  <span className="font-bold text-emerald-800 block">{inspectingResidenceModal.campusProximity || 'Not provided'}</span>
                 </div>
               </div>
             </div>
@@ -2567,7 +2801,7 @@ export default function PageAdminDashboard() {
                 rows={4}
                 value={residenceRejectionReason}
                 onChange={(e) => setResidenceRejectionReason(e.target.value)}
-                placeholder="e.g. The exterior photo provided is blurry, and the digital address (GA-183-9022) needs re-verification. Please upload clear photos and re-submit."
+                placeholder="Explain which photographs, street address or map location need correction."
                 className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-rose-500 text-slate-800"
               />
             </div>
@@ -2817,7 +3051,7 @@ export default function PageAdminDashboard() {
                             <div className="space-y-6 font-sans">
                               <div>
                                 <h6 className="text-xs font-extrabold uppercase text-blue-900 mb-2 border-b pb-1">1. PROFILE SUMMARY</h6>
-                                <p className="text-slate-700 leading-relaxed text-xs">Certified Residence & Property Manager applicant. Highly experienced in maintenance, student safety protocols, hostel registration, and compliance tracking. Detailed logs and credentials uploaded for verification.</p>
+                                <p className="text-slate-700 leading-relaxed text-xs">Review the submitted documents and inspection findings before deciding.</p>
                               </div>
 
                               <div>
@@ -3011,7 +3245,7 @@ export default function PageAdminDashboard() {
                 </div>
                 <div>
                   <h4 className="text-base font-black text-slate-900">Dispatch PineVela Verification Team</h4>
-                  <p className="text-xs text-slate-500">Property: <strong>{dispatchModalManager.propertyName || dispatchModalManager.organization}</strong></p>
+                  <p className="text-xs text-slate-500">Property: <strong>{dispatchModalManager.hostelName || dispatchModalManager.propertyName || dispatchModalManager.organization}</strong></p>
                 </div>
               </div>
               <button aria-label="Close dialog"
@@ -3026,7 +3260,7 @@ export default function PageAdminDashboard() {
             <form onSubmit={handleDispatchVerificationTeam} className="space-y-4 text-xs">
               <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 space-y-1">
                 <span className="text-[10px] uppercase font-bold text-slate-400 block">Hostel Location & Manager Contact</span>
-                <p className="font-bold text-slate-900">📍 {dispatchModalManager.preciseLocation || dispatchModalManager.physicalAddress || 'Accra Central'}</p>
+                <p className="font-bold text-slate-900">📍 {dispatchModalManager.location || dispatchModalManager.preciseLocation || dispatchModalManager.physicalAddress || 'Not provided'}</p>
                 <p className="text-slate-600">👤 {dispatchModalManager.managerName} ({dispatchModalManager.managerPhone || 'Phone unavailable'})</p>
               </div>
 
@@ -3041,13 +3275,15 @@ export default function PageAdminDashboard() {
                   className="w-full p-3 bg-slate-50 border border-slate-300 rounded-2xl text-xs font-bold text-slate-900 focus:ring-2 focus:ring-blue-500 focus:outline-none"
                 >
                   <option value="">-- Select Field Officer --</option>
-                  {verificationTeams.filter(o => o.status !== 'suspended').map((officer) => (
+                  {verificationTeams.filter(o => usesSupabasePersistence ? o.status === 'active' : o.status !== 'suspended').map((officer) => (
                     <option key={officer.officerId || officer.id} value={officer.officerId || officer.id}>
                       {officer.fullName} ({officer.officerId}) — {officer.assignedZone}
                     </option>
                   ))}
                 </select>
-                {verificationTeams.length === 0 && (
+                {usesSupabasePersistence && officerRosterPendingRead && <p role="status" className="text-xs text-slate-600">Loading field officers…</p>}
+                {officerRosterError && <p role="alert" className="text-xs text-rose-800">{officerRosterError}<button type="button" disabled={usesSupabasePersistence && officerRosterFetching} onClick={() => { void (usesSupabasePersistence ? retryOfficerRoster() : fetchAdminData()); }} className="ml-2 min-h-11 font-semibold underline disabled:opacity-50">Retry field officers</button></p>}
+                {verificationTeams.length === 0 && !officerRosterError && (!usesSupabasePersistence || officerRosterData && officerRosterData.ownerId === user?.id && officerRosterData.officers.length === 0 && !officerRosterReadError) && (
                   <p className="text-[11px] text-amber-600 font-bold">
                     No verification officers registered. Please register an officer in the "Field Officers" tab first.
                   </p>
@@ -3105,6 +3341,36 @@ export default function PageAdminDashboard() {
         </DashboardOverlay>
       )}
 
+      {usesSupabasePersistence && approveManagerModal?.ownerId === user?.id && approveManagerModal && (
+        <DashboardOverlay aria-label="Approve manager application" onClose={() => { if (!approvingManager) setApproveManagerModal(null); }} className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-md">
+          <div data-popup-card className="max-h-[90vh] w-full max-w-lg space-y-5 overflow-y-auto rounded-3xl border border-slate-200 bg-white p-5 shadow-2xl sm:p-6">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <h4 className="text-base font-black text-slate-900">Approve manager application</h4>
+                <p className="mt-1 break-words text-xs text-slate-600">{approveManagerModal.property} · {approveManagerModal.email}</p>
+              </div>
+              <button type="button" aria-label="Close dialog" disabled={approvingManager} onClick={() => setApproveManagerModal(null)} className="rounded-xl p-2 text-slate-500 hover:bg-slate-100 disabled:opacity-50"><X className="h-4 w-4" /></button>
+            </div>
+            <p className="text-xs text-slate-700">This decision activates the manager account and approves its saved property application.</p>
+            {approvalNeedsReason && <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs font-semibold text-amber-900">The officer did not recommend approval. Explain why you are approving this application.</p>}
+            <form onSubmit={submitManagerApproval} className="space-y-4">
+              <label className="block space-y-2 text-xs font-bold text-slate-800">
+                <span>{approvalNeedsReason ? 'Approval reason (required)' : 'Decision notes (optional)'}</span>
+                <textarea aria-label="Approval reason" required={approvalNeedsReason} minLength={approvalNeedsReason ? 5 : undefined} maxLength={4000} rows={4}
+                  value={approveManagerNotes} onChange={event => setApproveManagerNotes(event.target.value)} disabled={approvingManager || approvalUncertain}
+                  className="w-full rounded-xl border border-slate-300 bg-slate-50 p-3 text-sm font-normal text-slate-900 focus:border-blue-600 focus:outline-none disabled:opacity-60" />
+              </label>
+              {approveManagerError && <p role="alert" className="text-xs font-semibold text-rose-700">{approveManagerError}</p>}
+              <div className="flex flex-wrap items-center justify-end gap-3">
+                <button type="button" disabled={approvingManager} onClick={() => setApproveManagerModal(null)} className="min-h-11 rounded-xl border border-slate-200 px-4 py-2 text-xs font-bold text-slate-700 disabled:opacity-50">Cancel</button>
+                {approvalUncertain ? <button type="button" onClick={() => { setApproveManagerModal(null); void fetchAdminData(); }} className="min-h-11 rounded-xl bg-blue-900 px-4 py-2 text-xs font-bold text-white">Refresh application</button>
+                  : <button type="submit" disabled={approvingManager || (approvalNeedsReason && approveManagerNotes.trim().length < 5)} className="min-h-11 rounded-xl bg-emerald-700 px-4 py-2 text-xs font-bold text-white disabled:opacity-50">{approvingManager ? 'Approving…' : 'Approve manager'}</button>}
+              </div>
+            </form>
+          </div>
+        </DashboardOverlay>
+      )}
+
       {/* MODAL: REVIEW LIVE ON-SITE INSPECTION REPORT */}
       {reviewReportInspection && (
         <DashboardOverlay aria-label="Review inspection report" onClose={() => setReviewReportInspection(null)} className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
@@ -3131,24 +3397,20 @@ export default function PageAdminDashboard() {
             {/* Live GPS & Timestamp Banner */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4 bg-emerald-50 border border-emerald-200 rounded-2xl text-xs">
               <div>
-                <span className="text-[10px] text-emerald-700 font-black uppercase block">Live Verified Location</span>
+                <span className="text-[10px] text-emerald-700 font-black uppercase block">Reported GPS Coordinates</span>
                 <span className="font-extrabold text-slate-900">
-                  📍 {reviewReportInspection.report?.gpsCoordinates
-                    ? `${reviewReportInspection.report.gpsCoordinates.lat?.toFixed(4)}, ${reviewReportInspection.report.gpsCoordinates.lng?.toFixed(4)}`
-                    : reviewReportInspection.report?.liveCoordinates
-                    ? `${reviewReportInspection.report.liveCoordinates.lat?.toFixed(4)}, ${reviewReportInspection.report.liveCoordinates.lng?.toFixed(4)}`
-                    : 'On-Site GPS Logged'}
+                  📍 {reviewedInspectionGps ? `${reviewedInspectionGps.lat.toFixed(4)}, ${reviewedInspectionGps.lng.toFixed(4)}` : 'GPS coordinates not recorded'}
                 </span>
                 <p className="text-[10px] text-slate-600 mt-0.5">
-                  {reviewReportInspection.report?.gpsCoordinates?.capturedAddress || reviewReportInspection.report?.verifiedAddress || reviewReportInspection.preciseLocation || 'On-site coordinates verified'}
+                  {reviewReportInspection.report?.gpsCoordinates?.capturedAddress || reviewReportInspection.report?.verifiedAddress || reviewReportInspection.preciseLocation || 'Address not recorded'}
                 </p>
               </div>
               <div>
                 <span className="text-[10px] text-emerald-700 font-black uppercase block">Inspection Timestamp</span>
                 <span className="font-bold text-slate-900">
-                  {reviewReportInspection.report?.submittedAt ? new Date(reviewReportInspection.report.submittedAt).toLocaleString() : 'Audit Complete'}
+                  {reviewReportInspection.report?.submittedAt ? new Date(reviewReportInspection.report.submittedAt).toLocaleString() : 'Submission time not recorded'}
                 </span>
-                <p className="text-[10px] text-emerald-800 font-bold mt-0.5">✓ Certified Physical On-Site In-Person Audit</p>
+                <p className="text-[10px] text-slate-600 font-bold mt-0.5">Review the officer’s evidence before making a decision.</p>
               </div>
             </div>
 
@@ -3159,31 +3421,34 @@ export default function PageAdminDashboard() {
               </h5>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
                 {[
-                  { label: 'Residence Actually Exists on Ground', checked: Boolean(reviewReportInspection.report?.checklist?.residenceExists) },
-                  { label: 'Manager Genuinely Connected to Property', checked: Boolean(reviewReportInspection.report?.checklist?.managerConnected) },
-                  { label: 'Basic Property Info Accurate', checked: Boolean(reviewReportInspection.report?.checklist?.basicPropertyInfoVerified ?? reviewReportInspection.report?.checklist?.propertyInfoAccurate) },
-                  { label: "Manager's Identity / Authority Confirmed", checked: Boolean(reviewReportInspection.report?.checklist?.managerAuthorityConfirmed ?? reviewReportInspection.report?.checklist?.managerIdentityConfirmed) },
-                  { label: 'General Operation Legitimacy Verified', checked: Boolean(reviewReportInspection.report?.checklist?.generalLegitimacyConfirmed) },
-                  { label: 'Safe & Habitable Student Housing', checked: Boolean(reviewReportInspection.report?.checklist?.safetyHabitableCompliance ?? reviewReportInspection.report?.checklist?.safeAndHabitable) }
-                ].map((item, idx) => (
+                  { label: 'Residence Actually Exists on Ground', recorded: reviewReportInspection.report?.checklist?.residenceExists },
+                  { label: 'Manager Genuinely Connected to Property', recorded: reviewReportInspection.report?.checklist?.managerConnected },
+                  { label: 'Basic Property Info Accurate', recorded: reviewReportInspection.report?.checklist?.basicPropertyInfoVerified ?? reviewReportInspection.report?.checklist?.propertyInfoAccurate },
+                  { label: "Manager's Identity / Authority Confirmed", recorded: reviewReportInspection.report?.checklist?.managerAuthorityConfirmed ?? reviewReportInspection.report?.checklist?.managerIdentityConfirmed },
+                  { label: 'General Operation Legitimacy Verified', recorded: reviewReportInspection.report?.checklist?.generalLegitimacyConfirmed },
+                  { label: 'Safe & Habitable Student Housing', recorded: reviewReportInspection.report?.checklist?.safetyHabitableCompliance ?? reviewReportInspection.report?.checklist?.safeAndHabitable }
+                ].map((item, idx) => {
+                  const passed = item.recorded === true;
+                  const missing = typeof item.recorded !== 'boolean';
+                  return (
                   <div key={idx} className="flex items-center gap-2 p-2.5 bg-slate-50 border border-slate-200 rounded-xl justify-between">
                     <div className="flex items-center gap-2">
                       <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 ${
-                        item.checked ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-400'
+                        passed ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-400'
                       }`}>
-                        {item.checked ? <Check className="w-3.5 h-3.5 stroke-[3]" /> : <X className="w-3.5 h-3.5" />}
+                        {missing ? '—' : passed ? <Check className="w-3.5 h-3.5 stroke-[3]" /> : <X className="w-3.5 h-3.5" />}
                       </div>
-                      <span className={`font-bold ${item.checked ? 'text-slate-800' : 'text-slate-400'}`}>
+                      <span className={`font-bold ${passed ? 'text-slate-800' : 'text-slate-400'}`}>
                         {item.label}
                       </span>
                     </div>
                     <span className={`text-[9.5px] font-black uppercase px-2 py-0.5 rounded-full border ${
-                      item.checked ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-rose-50 text-rose-700 border-rose-200'
+                      missing ? 'bg-slate-50 text-slate-600 border-slate-200' : passed ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-rose-50 text-rose-700 border-rose-200'
                     }`}>
-                      {item.checked ? 'Passed' : 'Failed'}
+                      {missing ? 'Not recorded' : passed ? 'Passed' : 'Failed'}
                     </span>
                   </div>
-                ))}
+                ); })}
               </div>
             </div>
 
@@ -3245,18 +3510,21 @@ export default function PageAdminDashboard() {
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-black uppercase text-blue-900 tracking-wider">Officer Field Notes</span>
                 <span className={`px-2.5 py-0.5 border rounded-full font-black text-[10px] uppercase ${
-                  (reviewReportInspection.report?.recommendation === 'recommend_approval' || reviewReportInspection.report?.inspectorRecommendation === 'recommend_approval')
+                  reviewedInspectionRecommendation === 'recommend_approval'
                     ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
                     : 'bg-rose-100 text-rose-800 border-rose-300'
                 }`}>
-                  Recommendation: {(reviewReportInspection.report?.recommendation === 'recommend_approval' || reviewReportInspection.report?.inspectorRecommendation === 'recommend_approval') ? '✓ Recommend Approval' : 'Review Closely'}
+                  Recommendation: {reviewedInspectionRecommendation === 'recommend_approval' ? 'Recommend approval'
+                    : reviewedInspectionRecommendation === 'recommend_rejection' ? 'Recommend rejection'
+                    : reviewedInspectionRecommendation === 'requires_reinspection' ? 'Reinspection requested'
+                    : reviewedInspectionRecommendation === 'requires_followup' ? 'Follow-up requested' : 'Not recorded'}
                 </span>
               </div>
               <p className="text-slate-800 font-semibold italic">
-                "{reviewReportInspection.report?.observations || reviewReportInspection.report?.inspectorNotes || 'Physical audit completed by accredited officer.'}"
+                {reviewReportInspection.report?.observations || reviewReportInspection.report?.inspectorNotes || 'Observations were not recorded for this report.'}
               </p>
               <p className="text-[11px] font-mono text-slate-500 pt-1 border-t border-sky-200/60">
-                Digitally Signed: <strong>{reviewReportInspection.report?.inspectorSignature || `${reviewReportInspection.assignedOfficerName || 'Officer'} (PineVela Inspector)`}</strong>
+                Digitally Signed: <strong>{reviewReportInspection.report?.inspectorSignature || 'Signature not recorded'}</strong>
               </p>
             </div>
 
@@ -3301,7 +3569,7 @@ export default function PageAdminDashboard() {
       )}
 
       {/* MODAL: REGISTER NEW PINEVELA VERIFICATION OFFICER */}
-      {showRegisterOfficerModal && (
+      {!usesSupabasePersistence && showRegisterOfficerModal && (
         <DashboardOverlay aria-label="Register verification officer" onClose={() => setShowRegisterOfficerModal(false)} className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-md flex items-center justify-center p-4">
           <div data-popup-card className="bg-white border border-slate-200 rounded-3xl p-6 max-w-md w-full space-y-5 shadow-2xl animate-fadeIn">
             <div className="flex items-center justify-between border-b pb-3">
@@ -3412,7 +3680,7 @@ export default function PageAdminDashboard() {
       )}
 
       {/* MODAL: OFFICIAL OFFICER CREDENTIALS ID CARD (FOR HANDOVER) */}
-      {createdOfficerCredentials && (
+      {!usesSupabasePersistence && createdOfficerCredentials && (
         <DashboardOverlay aria-label="Officer credentials" onClose={() => setCreatedOfficerCredentials(null)} className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-md flex items-center justify-center p-4">
           <div data-popup-card className="bg-white border border-slate-200 rounded-3xl p-6 max-w-md w-full space-y-5 shadow-2xl animate-fadeIn">
             <div className="flex items-center justify-between border-b pb-3">
@@ -3504,20 +3772,21 @@ export default function PageAdminDashboard() {
 
       {/* MODAL: REJECT MANAGER APPLICATION WITH DETAILED REASON */}
       {rejectManagerModal && (
-        <DashboardOverlay aria-label="Reject manager registration" onClose={() => setRejectManagerModal(null)} className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-md flex items-center justify-center p-4">
-          <div data-popup-card className="bg-white border border-rose-200 rounded-3xl p-6 max-w-md w-full space-y-5 shadow-2xl animate-fadeIn">
+        <DashboardOverlay aria-label={managerReviewAction==='request-info'?'Request manager application corrections':'Reject manager registration'} onClose={rejectingManagerLoading?null:() => setRejectManagerModal(null)} className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-md flex items-center justify-center p-4">
+          <div data-popup-card className="max-h-[90dvh] overflow-y-auto bg-white border border-blue-200 rounded-3xl p-6 max-w-md w-full space-y-5 shadow-2xl animate-fadeIn dark:bg-slate-900 dark:border-slate-700">
             <div className="flex items-center justify-between border-b pb-3">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-2xl bg-rose-600 text-white flex items-center justify-center font-bold shadow-md shadow-rose-500/30">
                   <X className="w-6 h-6" />
                 </div>
                 <div>
-                  <h4 className="text-base font-black text-slate-900">Reject Manager Application</h4>
+                  <h4 className="text-base font-bold text-slate-900 dark:text-slate-100">{managerReviewAction==='request-info'?'Request application corrections':'Reject Manager Application'}</h4>
                   <p className="text-xs text-slate-500">Applicant: <strong>{rejectManagerModal.name}</strong> ({rejectManagerModal.email})</p>
                 </div>
               </div>
               <button aria-label="Close dialog"
                 type="button"
+                disabled={rejectingManagerLoading}
                 onClick={() => setRejectManagerModal(null)}
                 className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100"
               >
@@ -3526,19 +3795,20 @@ export default function PageAdminDashboard() {
             </div>
 
             <div className="space-y-3">
-              <label className="text-xs font-bold text-slate-700 block">
-                Provide Detailed Rejection Reason <span className="text-rose-500">* (Sent to Manager for corrections)</span>
+              <label htmlFor="manager-review-feedback" className="text-xs font-bold text-slate-700 dark:text-slate-200 block">
+                {managerReviewAction==='request-info'?'Requested corrections':'Detailed rejection reason'} <span className="text-rose-500">*</span>
               </label>
-              <textarea aria-label="Provide Detailed Rejection Reason * (Sent to Manager for corrections)"
+              <textarea id="manager-review-feedback"
                 required
+                disabled={rejectingManagerLoading}
+                maxLength={4000}
                 rows={4}
                 value={rejectManagerReason}
                 onChange={(e) => setRejectManagerReason(e.target.value)}
-                placeholder="e.g. Physical residence location could not be confirmed, or property is currently under major uncompleted construction. Please resolve and re-apply."
-                className="w-full p-3.5 border border-slate-300 rounded-2xl text-xs font-medium focus:ring-2 focus:ring-rose-500 focus:outline-none bg-slate-50"
+                className="w-full p-3.5 border border-slate-300 rounded-2xl text-sm font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none bg-slate-50 text-slate-900 dark:bg-slate-800 dark:text-slate-100 dark:border-slate-600"
               />
               <p className="text-[10px] text-slate-500 leading-normal">
-                This rejection reason will be immediately displayed on <strong>{rejectManagerModal.name}'s</strong> manager portal screen and delivered to their inbox.
+                {managerReviewAction==='request-info'?'The primary owner can use this feedback to correct the same application. Manager access stays locked until a fresh physical inspection and approval.':'The primary owner will receive this feedback in their registration status and notifications. Rejection is a final decision for this application.'}
               </p>
             </div>
 
@@ -3555,10 +3825,10 @@ export default function PageAdminDashboard() {
                 type="button"
                 disabled={rejectingManagerLoading}
                 onClick={handleConfirmRejectManager}
-                className="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-black rounded-xl shadow-md transition-all cursor-pointer flex items-center gap-1.5"
+                className={`min-h-11 px-5 py-2.5 ${managerReviewAction==='request-info'?'bg-blue-700 hover:bg-blue-800':'bg-rose-600 hover:bg-rose-700'} text-white text-xs font-bold rounded-xl shadow-md transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50`}
               >
                 <X className="w-4 h-4" />
-                <span>{rejectingManagerLoading ? 'Processing...' : 'Confirm Rejection & Send Feedback'}</span>
+                <span>{rejectingManagerLoading ? 'Saving feedback…' : managerReviewAction==='request-info'?'Send correction request':'Confirm Rejection & Send Feedback'}</span>
               </button>
             </div>
           </div>

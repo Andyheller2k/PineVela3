@@ -263,10 +263,12 @@ try {
     check((await client.query('select id from public.notifications')).rowCount === 0, 'Revoked JWT cannot read notifications');
   });
   await client.query('set local role anon');
-  await denied('select id from public.housing_staff_directory', [], '42501', 'Staff directory is not public');
-  await denied('select id from public.housing_issue_details', [], '42501', 'Maintenance details are not public');
-  await denied('select id from public.account_activity_feed', [], '42501', 'Activity feed cannot expose private audit records to guests');
-  check((await client.query('select id from public.residence_catalog')).rowCount === 0, 'Approved physical shells without reviewed setup are absent from the public catalog');
+  await denied('select id from private.housing_staff_directory', [], '42501', 'Staff directory is not public');
+  await denied('select id from private.housing_issue_details', [], '42501', 'Maintenance details are not public');
+  await denied('select id from private.account_activity_feed', [], '42501', 'Activity feed cannot expose private audit records to guests');
+  await denied('select id from private.residence_catalog', [], '42501', 'Anonymous browser cannot directly query catalog projections');
+  await client.query('set local role pinevela_catalog');
+  check((await client.query('select id from private.residence_catalog')).rowCount === 0, 'Approved physical shells without reviewed setup are absent from the public catalog');
   await denied('select id from public.market_orders', [], '42501', 'Guest cannot query private orders');
   await client.query('reset role');
   check((await client.query("select count(*) as count from pg_tables where schemaname = 'public' and not rowsecurity")).rows[0].count === '0', 'All base application tables have RLS');

@@ -38,7 +38,6 @@ export interface ReverseGeocodedAddress {
   country?: string;
   postalCode?: string;
   landmark?: string;
-  digitalAddress?: string;
   formattedAddress?: string;
 }
 

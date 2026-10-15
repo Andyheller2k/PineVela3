@@ -14,7 +14,7 @@ export default function SupabaseAccountModerationPanel({target,onClose,onApplied
   const [busy,setBusy]=useState(false),[failure,setFailure]=useState(''),[notice,setNotice]=useState('');
   const [privateKey,setPrivateKey]=useState(''),[action,setAction]=useState('ban'),[reason,setReason]=useState('');
   const [amount,setAmount]=useState('24'),[unit,setUnit]=useState('hours'),[features,setFeatures]=useState<string[]>([]);
-  const [finalId,setFinalId]=useState(''),[rejection,setRejection]=useState('');
+  const [finalId,setFinalId]=useState(''),[rejection,setRejection]=useState(''),[applyId,setApplyId]=useState('');
   const ready=data?.members?.length===5&&data.members.every((m:any)=>m.active&&m.keyEnrolled);
   const founder=data?.currentId===data?.mainId,protectedTarget=target?.role==='admin';
   async function act(path:string,body:any,close=false) {
@@ -26,7 +26,7 @@ export default function SupabaseAccountModerationPanel({target,onClose,onApplied
       if(!response.ok)throw new Error(result.error||'The review could not be saved.');
       if(!mounted.current)return;
       if(result.success!==true)throw new Error('Account review could not be confirmed. Refresh before retrying.');
-      setNotice(result.message);setFinalId('');setRejection('');
+      setNotice(result.message);setFinalId('');setRejection('');setApplyId('');
       await refetch();if(!mounted.current)return;onApplied();if(close)onClose();
     }catch(err:any){if(mounted.current)setFailure(err.message||'The review could not be saved.');}
     finally{running.current=false;if(mounted.current){setPrivateKey('');setBusy(false);}}
@@ -36,7 +36,7 @@ export default function SupabaseAccountModerationPanel({target,onClose,onApplied
   return <section aria-label="Account approvals" className="space-y-4 rounded-3xl border border-blue-200 bg-white/70 p-5 text-slate-900 backdrop-blur-xl">
     <h3 className="text-lg font-bold">Account proposals and approvals</h3>
     <p className="text-sm text-slate-600">Five administrators must approve, including the main administrator. Approval alone changes no account.</p>
-    <p role="status" className="rounded-xl bg-blue-50 p-3 text-sm text-blue-900">Reviews are available. Applying bans, restrictions, restorations and deletions remains disabled until the remaining migration checks pass.</p>
+    <p role="status" className="rounded-xl bg-blue-50 p-3 text-sm text-blue-900">After five approvals, the main administrator must confirm the final policy with their own approval key. Account deletion uses a separate review.</p>
     {!ready&&!isPending&&<p className="text-sm text-amber-900">Five active administrators must enroll their own approval keys before a review can proceed.</p>}
     {isPending&&<p role="status">Loading account reviews…</p>}
     {loadError&&<p role="alert" className="text-red-800">{loadError.message}</p>}
@@ -46,18 +46,27 @@ export default function SupabaseAccountModerationPanel({target,onClose,onApplied
       {!target&&proposals.some((p:any)=>p.status==='pending'||founder&&p.status==='approved')&&keyInput}
       {!isPending&&!loadError&&!proposals.length&&<p className="text-sm text-slate-600">No account reviews have been submitted.</p>}
       {proposals.map((p:any)=><article key={p.id} className="space-y-3 rounded-2xl border border-blue-100 bg-white/70 p-4">
-        <div className="flex flex-wrap items-start justify-between gap-2"><h4 className="break-words font-semibold capitalize">{p.action} · {p.targetName}</h4><span className="text-xs font-bold uppercase text-blue-700">{p.status}</span></div>
+        <div className="flex flex-wrap items-start justify-between gap-2"><h4 className="break-words font-semibold capitalize">{p.portalOnly?'Close unassigned manager portal':p.action} · {p.targetName}</h4><span className="text-xs font-bold uppercase text-blue-700">{p.status}</span></div>
         <p className="break-all text-xs text-slate-600">{p.targetRole} · Account ID: {p.targetId}</p><p className="break-words text-sm">{p.reason}</p>
         {p.duration&&<p className="text-sm">Proposed ban: {p.duration.amount} {p.duration.unit}, starting only if applied.</p>}
         {p.features.length>0&&<p className="text-sm">Proposed restrictions: {p.features.map((f:keyof typeof ACCOUNT_FEATURES)=>ACCOUNT_FEATURES[f]).join(', ')}.</p>}
+        {p.portalOnly&&<p className="text-sm">Own manager request verified. Closure retains the verified login, other portals, history and current registration restrictions.</p>}
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">{p.roster.map((m:any)=><p key={m.id} className="rounded-xl bg-blue-50 p-3 text-xs">Administrator {m.slot} · {m.name}<span className="mt-1 block font-semibold capitalize">{p.votes.find((v:any)=>v.id===m.id)?.decision||'Awaiting approval'}</span></p>)}</div>
         <p className="text-xs text-slate-600">Review expires {new Date(p.expiresAt).toLocaleString()}</p>
+        {p.appliedAt&&<p className="text-sm">Applied {new Date(p.appliedAt).toLocaleString()}.</p>}
         {p.finalRejectionReason&&<p className="break-words text-sm text-rose-800">Final rejection by the main administrator: {p.finalRejectionReason}</p>}
         {p.status==='pending'&&!p.votes.some((v:any)=>v.id===data.currentId)&&<div className="flex flex-wrap gap-3">
           <button type="button" className={button} disabled={!ready||!privateKey} onClick={()=>act('/'+p.id+'/vote',{decision:'approved'})}>Approve review</button>
           <button type="button" className={button+' !bg-rose-700'} disabled={!ready||!privateKey} onClick={()=>act('/'+p.id+'/vote',{decision:'rejected'})}>Reject review</button>
         </div>}
-        {p.status==='approved'&&founder&&<><button type="button" className={button+' !bg-rose-700'} disabled={!ready} onClick={()=>{setFinalId(p.id);setRejection('');}}>Review final rejection</button>
+        {p.status==='approved'&&founder&&<>
+          {p.applicationAvailable&&<button type="button" className={button} disabled={!ready||!privateKey} onClick={()=>{setApplyId(p.id);setFinalId('');}}>Review final application</button>}
+          {applyId===p.id&&<div role="group" aria-label="Confirm account policy" className="space-y-3 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm">
+            <p>{p.portalOnly?`Close only ${p.targetName}’s unassigned manager portal? Its manager sessions end. Verified login, other portals, history and registration restrictions remain.`:`Apply ${p.action} to ${p.targetName} and its linked accounts? Bans and restorations require affected accounts to sign in again.`}</p>
+            <div className="flex flex-wrap gap-3"><button type="button" className={button} disabled={!ready||!privateKey} onClick={()=>void act('/'+p.id+'/apply',{confirmation:'APPLY ACCOUNT POLICY'})}>Confirm application</button>
+              <button type="button" className={button+' !bg-slate-600'} onClick={()=>setApplyId('')}>Cancel</button></div>
+          </div>}
+          <button type="button" className={button+' !bg-rose-700'} disabled={!ready} onClick={()=>{setFinalId(p.id);setRejection('');setApplyId('');}}>Review final rejection</button>
           {finalId===p.id&&<form className="space-y-3" onSubmit={e=>{e.preventDefault();void act('/'+p.id+'/final-reject',{reason:rejection});}}>
             <label className="block text-sm">Final rejection reason<textarea required minLength={3} maxLength={500} value={rejection} onChange={e=>setRejection(e.target.value)} className={field}/></label>
             <button className={button+' !bg-rose-700'} disabled={!privateKey||rejection.trim().length<3}>Confirm final rejection</button>

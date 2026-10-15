@@ -1,9 +1,11 @@
+import {requireAccountAccess} from './accountAccess.js';
+import type {AccountFeature} from '../accountFeatures.js';
 import fs from 'node:fs';
 import { requireManagerKeyGrant } from './managerKeys.js';
 import { Pool, type PoolClient, type PoolConfig, type QueryResultRow } from 'pg';
 import { MAINTENANCE_MESSAGE } from '../platformSettings.js';
 
-export type VerifiedActor = { authUserId: string; sessionId: string; contextId: string; kind: string; managerKeyVersion?:string };
+export type VerifiedActor = { authUserId: string; sessionId: string; contextId: string; kind: string; managerKeyVersion?:string; requiredFeatures?:AccountFeature[] };
 export class ApiError extends Error {
   constructor(public status: number, message: string, public code?: string) { super(message); }
 }
@@ -40,10 +42,12 @@ export class SupabaseDatabase {
     this.pool.on('error', () => console.error('[Database] Idle connection failed.'));
   }
   async system<T>(work: (client: PoolClient) => Promise<T>): Promise<T> {
-    const client = await this.pool.connect();
+    let client:PoolClient;
+    try{client=await this.pool.connect();}
+    catch{throw new ApiError(503,'The database connection is temporarily unavailable. Please retry.','database_unavailable');}
     let discard = false;
     try {
-      await client.query('begin');
+      await client.query('begin isolation level read committed');
       const result = await work(client);
       await client.query('commit');
       return result;
@@ -55,6 +59,10 @@ export class SupabaseDatabase {
       // and never return a connection with an outstanding response to the pool.
       if (!discard) await client.query('rollback').catch(() => {discard = true;});
       if (discard) throw new ApiError(503,'The database connection was interrupted. Refresh your account before retrying.','database_unavailable');
+      if ((error as any)?.code==='55000'&&message==='Reviewed housing records are paused for backup preparation')
+        throw new ApiError(409,'These housing records are paused while reviewed backups are prepared. Try again after the administrator resumes them.','residence_preparation_paused');
+      if ((error as any)?.code==='55000'&&message==='Reviewed wipe records are paused for recovery verification')
+        throw new ApiError(409,'These reviewed records are paused for recovery verification. Try again after the founder cancels preparation.','system_wipe_scope_paused');
       throw error;
     } finally { client.release(discard); }
   }
@@ -73,16 +81,29 @@ export class SupabaseDatabase {
           and (c.kind <> 'staff' or exists (select 1 from public.staff_assignments a where a.staff_context_id = c.id and a.status = 'active' and a.ended_at is null))
         for share of s, c`, [actor.sessionId, actor.authUserId, actor.contextId, actor.kind]);
       if (!binding.rowCount) throw new ApiError(401, 'Your session is no longer active. Please sign in.');
+      await requireAccountAccess(client,actor.contextId,actor.requiredFeatures,actor.sessionId);
       await requireManagerKeyGrant(client,actor);
       await client.query("select set_config('request.jwt.claims', $1, true)", [JSON.stringify({ sub: actor.authUserId, session_id: actor.sessionId, role: 'authenticated' })]);
   }
   async actor<T>(actor: VerifiedActor, work: (client: PoolClient) => Promise<T>): Promise<T> {
+    return this.actorTransaction(actor,work,false);
+  }
+  /** Explicit pure reads only. Shares administrator governance exclusion with
+   * other readers; every mutation keeps actor()/authorizedSystem() exclusive. */
+  async readActor<T>(actor: VerifiedActor, work: (client: PoolClient) => Promise<T>): Promise<T> {
+    return this.actorTransaction(actor,work,true);
+  }
+  private async actorTransaction<T>(actor:VerifiedActor,work:(client:PoolClient)=>Promise<T>,read:boolean):Promise<T> {
     return this.system(async client => {
+      await client.query("select pg_advisory_xact_lock_shared(hashtextextended('residence-deletion-freeze',0))");
+      await client.query("select pg_advisory_xact_lock_shared(hashtextextended('account-policies',0))");
       await client.query("select pg_advisory_xact_lock_shared(hashtextextended('platform-maintenance',0))");
       // Removal closes another administrator context. Take the governance
       // lock before actor/context row locks so a concurrent target request cannot
       // hold its context while waiting for the founder's governance transaction.
-      if(actor.kind==='admin')await client.query("select pg_advisory_xact_lock(hashtextextended('platform-settings',0))");
+      if(actor.kind==='admin')await client.query(read
+        ? "select pg_advisory_xact_lock_shared(hashtextextended('platform-settings',0))"
+        : "select pg_advisory_xact_lock(hashtextextended('platform-settings',0))");
       await this.lockActor(client, actor);
       await this.requirePlatformAccess(client);
       await client.query('set local role pinevela_backend');
@@ -92,12 +113,30 @@ export class SupabaseDatabase {
   /** For narrowly scoped server-owned lifecycle writes that browser roles cannot
    * perform. Rechecks the live actor inside the write transaction; callers must
    * also authorize every target relationship before using this privileged client. */
-  async authorizedSystem<T>(actor: VerifiedActor, kinds: string[], work: (client: PoolClient) => Promise<T>, maintenanceChange = false): Promise<T> {
+  async authorizedSystem<T>(actor: VerifiedActor, kinds: string[], work: (client: PoolClient) => Promise<T>, maintenanceChange = false, accountPolicyChange = false,residenceFreezeChange=false): Promise<T> {
+    return this.authorizedTransaction(actor,kinds,work,maintenanceChange,accountPolicyChange,residenceFreezeChange,false);
+  }
+  /** Server-selected pure read, never selected by a browser flag or HTTP method.
+   * Status helpers which expire reviews/write receipts must stay exclusive. */
+  async authorizedRead<T>(actor:VerifiedActor,kinds:string[],work:(client:PoolClient)=>Promise<T>):Promise<T> {
+    return this.authorizedTransaction(actor,kinds,work,false,false,false,true);
+  }
+  private async authorizedTransaction<T>(actor:VerifiedActor,kinds:string[],work:(client:PoolClient)=>Promise<T>,maintenanceChange:boolean,accountPolicyChange:boolean,residenceFreezeChange:boolean,read:boolean):Promise<T> {
     return this.system(async client => {
+      // Lock before account/governance/context rows. Upgrading after taking the
+      // settings lock could deadlock with another administrator waiting on it.
+      await client.query(residenceFreezeChange
+        ? "select pg_advisory_xact_lock(hashtextextended('residence-deletion-freeze',0))"
+        : "select pg_advisory_xact_lock_shared(hashtextextended('residence-deletion-freeze',0))");
+      await client.query(accountPolicyChange
+        ? "select pg_advisory_xact_lock(hashtextextended('account-policies',0))"
+        : "select pg_advisory_xact_lock_shared(hashtextextended('account-policies',0))");
       await client.query(maintenanceChange
         ? "select pg_advisory_xact_lock(hashtextextended('platform-maintenance',0))"
         : "select pg_advisory_xact_lock_shared(hashtextextended('platform-maintenance',0))");
-      if(actor.kind==='admin')await client.query("select pg_advisory_xact_lock(hashtextextended('platform-settings',0))");
+      if(actor.kind==='admin')await client.query(read
+        ? "select pg_advisory_xact_lock_shared(hashtextextended('platform-settings',0))"
+        : "select pg_advisory_xact_lock(hashtextextended('platform-settings',0))");
       await this.lockActor(client, actor);
       if (!kinds.includes(actor.kind)) throw new ApiError(403, 'This account cannot perform that action.');
       await this.requirePlatformAccess(client);
@@ -112,6 +151,8 @@ export class SupabaseDatabase {
    * portal, but still serialize with maintenance transitions. */
   async availableSystem<T>(work:(client:PoolClient)=>Promise<T>):Promise<T> {
     return this.system(async client=>{
+      await client.query("select pg_advisory_xact_lock_shared(hashtextextended('residence-deletion-freeze',0))");
+      await client.query("select pg_advisory_xact_lock_shared(hashtextextended('account-policies',0))");
       await client.query("select pg_advisory_xact_lock_shared(hashtextextended('platform-maintenance',0))");
       if (!(await client.query('select private.platform_available() as available')).rows[0].available)
         throw new ApiError(503,MAINTENANCE_MESSAGE,'platform_maintenance');
@@ -123,7 +164,7 @@ export class SupabaseDatabase {
       await client.query("select pg_advisory_xact_lock_shared(hashtextextended('platform-maintenance',0))");
       if (!(await client.query('select private.platform_available() as available')).rows[0].available)
         throw new ApiError(503,MAINTENANCE_MESSAGE,'platform_maintenance');
-      await client.query('set local role anon');
+      await client.query('set local role pinevela_catalog');
       return (await client.query<T>(sql, values)).rows;
     });
   }

@@ -4,6 +4,8 @@ import MobileNavigation from './MobileNavigation';
 import { routePopupFeedback } from '../lib/feedback';
 import RouteSkeleton from './RouteSkeleton';
 import { usesSupabasePersistence } from '../lib/persistence';
+import PortalPinSettings from './PortalPinSettings';
+import ResidentAccountClosure from './ResidentAccountClosure';
 import { uploadMaintenancePhoto } from '../lib/maintenanceMedia';
 import QuickMaintenanceReport from './QuickMaintenanceReport';
 import React, { useState, useEffect, useMemo } from 'react';
@@ -146,12 +148,12 @@ export default function PageResidentDashboard() {
 
   // Track active maintenance updates requiring attention or recently modified
   const unconfirmedIssues = useMemo(() => {
-    return issueReports.filter(i => (i.staffCompleted || i.status === 'Resolved') && !(i.studentAcceptedResolved || i.studentConfirmed) && !i.closedByManager);
+    return issueReports.filter(i => !i.withdrawn && (i.staffCompleted || i.status === 'Resolved') && !(i.studentAcceptedResolved || i.studentConfirmed) && !i.closedByManager);
   }, [issueReports]);
 
   const activeUpdatedIssues = useMemo(() => {
     return issueReports.filter(i => {
-      if (i.closedByManager) return false;
+      if (i.withdrawn || i.closedByManager) return false;
       if ((i.staffCompleted || i.status === 'Resolved') && !(i.studentAcceptedResolved || i.studentConfirmed)) return true;
       if (i.status === 'In Progress' || i.assignedStaffId) return true;
       if (i.rescheduleRequested || i.staffDeclineRequested) return true;
@@ -790,9 +792,9 @@ export default function PageResidentDashboard() {
               ) : (
                 <div className="pt-4 space-y-3">
                   {issueReports.slice(0, 3).map(issue => {
-                    const isUnconfirmed = (issue.staffCompleted || issue.status === 'Resolved') && !(issue.studentAcceptedResolved || issue.studentConfirmed) && !issue.closedByManager;
-                    const isAwaitingDispatch = issue.status === 'Pending' || !issue.assignedStaffId;
-                    const isInProgress = issue.status === 'In Progress' || (issue.assignedStaffId && !issue.staffCompleted);
+                    const isUnconfirmed = !issue.withdrawn && (issue.staffCompleted || issue.status === 'Resolved') && !(issue.studentAcceptedResolved || issue.studentConfirmed) && !issue.closedByManager;
+                    const isAwaitingDispatch = !issue.withdrawn && (issue.status === 'Pending' || !issue.assignedStaffId);
+                    const isInProgress = !issue.withdrawn && (issue.status === 'In Progress' || (issue.assignedStaffId && !issue.staffCompleted));
 
                     return (
                       <div role="button" tabIndex={0} aria-label={`View complaint: ${issue.title}`} onKeyDown={activateOnKeyboard}
@@ -951,9 +953,9 @@ export default function PageResidentDashboard() {
                   </div>
                 ) : (
                   filteredIssues.map(issue => {
-                    const isUnconfirmed = (issue.staffCompleted || issue.status === 'Resolved') && !(issue.studentAcceptedResolved || issue.studentConfirmed) && !issue.closedByManager;
-                    const isInProgress = issue.status === 'In Progress' || (issue.assignedStaffId && !issue.staffCompleted);
-                    const hasAction = isUnconfirmed || issue.rescheduleRequested || issue.staffDeclineRequested;
+                    const isUnconfirmed = !issue.withdrawn && (issue.staffCompleted || issue.status === 'Resolved') && !(issue.studentAcceptedResolved || issue.studentConfirmed) && !issue.closedByManager;
+                    const isInProgress = !issue.withdrawn && (issue.status === 'In Progress' || (issue.assignedStaffId && !issue.staffCompleted));
+                    const hasAction = !issue.withdrawn && (isUnconfirmed || issue.rescheduleRequested || issue.staffDeclineRequested);
 
                     return (
                     <div 
@@ -1002,7 +1004,7 @@ export default function PageResidentDashboard() {
                           issue.assignedStaffId ? 'bg-blue-50 text-blue-700 border border-blue-200' :
                           'bg-slate-100 text-slate-600 border border-slate-200'
                         }`}>
-                          {(issue.status === 'Resolved' && (issue.studentAcceptedResolved || issue.studentConfirmed)) ? '✓ Resolved & Confirmed' :
+                          {issue.withdrawn ? 'Withdrawn · Evidence retained' : (issue.status === 'Resolved' && (issue.studentAcceptedResolved || issue.studentConfirmed)) ? '✓ Resolved & Confirmed' :
                            (issue.staffCompleted && !(issue.studentAcceptedResolved || issue.studentConfirmed)) ? '🛠️ Fixed - Awaiting Your Confirmation' :
                            issue.assignedStaffId ? '🛠️ Technician Assigned' :
                            '⏳ Awaiting Review'}
@@ -1142,7 +1144,7 @@ export default function PageResidentDashboard() {
                           )}
 
                           {/* Verification and Rating Button */}
-                          {!(issue.studentAcceptedResolved || issue.studentConfirmed) && (
+                          {!issue.withdrawn && !(issue.studentAcceptedResolved || issue.studentConfirmed) && (
                             <div className="pt-1">
                               <button
                                 type="button"
@@ -1246,6 +1248,8 @@ export default function PageResidentDashboard() {
               <p className="text-xs text-slate-500 font-medium">Manage your personal information, room credentials, avatar, and settings</p>
             </div>
 
+            <PortalPinSettings />
+            <ResidentAccountClosure />
             <div className="grid grid-cols-1 xl:grid-cols-2 items-start gap-6">
             {/* Settings Forms */}
             <form onSubmit={handleSaveProfile} className="bg-white border border-slate-200 rounded-3xl p-6 space-y-5 shadow-sm">

@@ -11,6 +11,7 @@ import { queryClient, invalidateAllQueries, setupRealtimeQuerySync } from './lib
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { NotificationProvider, useNotifications } from './context/NotificationContext';
 import ProtectedRoute from './components/ProtectedRoute';
+import {usesSupabasePersistence} from './lib/persistence';
 import RouteSkeleton from './components/RouteSkeleton';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import { ThemeProvider } from './context/ThemeContext';
@@ -25,9 +26,11 @@ const PagePublicStore = lazy(() => import('./components/PagePublicStore'));
 const PagePublicMarket = lazy(() => import('./components/PagePublicMarket'));
 const PagePaymentReturn = lazy(() => import('./components/PagePaymentReturn'));
 const PageStaffInvitation = lazy(() => import('./components/PageStaffInvitation'));
+const PageOfficerInvitation = lazy(() => import('./components/PageOfficerInvitation'));
 const PageAdminInvitation = lazy(() => import('./components/PageAdminInvitation'));
 import PageUnifiedLogin from './components/PageUnifiedLogin';
 const PageManagerOnboarding = lazy(() => import('./components/PageManagerOnboarding'));
+const ManagerGoogleResult = lazy(() => import('./components/ManagerGoogleResult'));
 const PageAdminDashboard = lazy(() => import('./components/PageAdminDashboard'));
 const PageManagerDashboard = lazy(() => import('./components/PageManagerDashboard'));
 const PageStaffDashboard = lazy(() => import('./components/PageStaffDashboard'));
@@ -149,6 +152,7 @@ function AppContent() {
         <Route path="/pinemarket" element={<PageWrapper loadingFallback={<p role="status" className="p-8 text-center text-sm text-slate-500">Loading PineMarket…</p>}><PagePublicMarket /></PageWrapper>} />
 
         <Route path="/staff-invitation" element={<PageWrapper><PageStaffInvitation /></PageWrapper>} />
+        <Route path="/officer-invitation" element={<PageWrapper><PageOfficerInvitation /></PageWrapper>} />
 
         {/* 2. UNIFIED LOGIN ROUTE */}
         <Route
@@ -160,12 +164,15 @@ function AppContent() {
           }
         />
 
+        <Route path="/manager-google-result" element={<PageWrapper><ManagerGoogleResult/></PageWrapper>}/>
         {/* 2B. MANAGER ONBOARDING PAGE */}
         <Route
           path="/register-manager"
           element={
             <PageWrapper>
-              <PageManagerOnboarding />
+              {usesSupabasePersistence
+                ? <ProtectedRoute><PageManagerOnboarding /></ProtectedRoute>
+                : <PageManagerOnboarding />}
             </PageWrapper>
           }
         />

@@ -21,8 +21,8 @@ function MaintenanceReturnNoticeContent() {
   const queryKey = ['maintenance-return-notice', user?.role, user?.id];
   const { data, dataUpdatedAt } = useQuery<{ serverTime: string; notice: { id: string; message: string; expiresAt: string } | null }>({
     queryKey, enabled: !!user && user.role !== 'admin', refetchInterval: 5000,
-    queryFn: async () => {
-      const response = await sessionFetch('/api/auth/maintenance-notice');
+    queryFn: async ({signal}) => {
+      const response = await sessionFetch('/api/auth/maintenance-notice', {signal:AbortSignal.any([signal,AbortSignal.timeout(30000)])});
       if (!response.ok) throw new Error('Notice could not load.');
       return response.json();
     },

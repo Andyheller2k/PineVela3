@@ -109,7 +109,7 @@ try{
   await saveListing(c,own.actor,{isAvailable:false},service.id);
   check((await sellerInventory(c,own.actor)).some((p:any)=>p.id===service.id && !p.isAvailable),'Closed service remains in private inventory');
   await denied(()=>saveListing(c,own.actor,svc),403,'Inactive service still counts against plan capacity');
-  check((await c.query('select id from public.listing_catalog where id=$1',[service.id])).rowCount===0,'Closed service is hidden from public catalog');
+  check((await c.query('select id from private.listing_catalog where id=$1',[service.id])).rowCount===0,'Closed service is hidden from public catalog');
   await saveListing(c,own.actor,{serviceLocationMode:'fixed',location:'Inventory verification campus',meetingLocation:'Inventory verification campus',lat:0,lng:0,isAvailable:true},service.id);
   check((await sellerInventory(c,own.actor)).find((p:any)=>p.id===service.id)?.lat===0,'Actual fixed pin preserves equator and prime meridian');
   await c.query('savepoint quota');await c.query(`insert into public.listings(store_id,kind,title,description,price,stock_quantity) select $1,'product','Quota verification '||n,$2,10,1 from generate_series(1,19) n`,[stores[0].id,draft.description]);
@@ -123,7 +123,7 @@ try{
   await bind(own.actor);await changeOrder(c,own.actor,order,{action:'agree-location'},orderPins);await changeOrder(c,own.actor,order,{newStatus:'Completed & Paid',inputPin:reservedOrder.otpPin},orderPins);
   check(!(await removeListing(c,own.actor,id)).idempotent && (await removeListing(c,own.actor,id)).idempotent,'Listing removal is recorded once and repeat is safe');
   check((await c.query('select id from public.market_orders where id=$1',[order])).rowCount===1,'Removed item preserves actual purchase history');
-  check(!(await sellerInventory(c,own.actor)).some((p:any)=>p.id===id) && (await c.query('select id from public.listing_catalog where id=$1',[id])).rowCount===0,'Removed item disappears from both inventories');
+  check(!(await sellerInventory(c,own.actor)).some((p:any)=>p.id===id) && (await c.query('select id from private.listing_catalog where id=$1',[id])).rowCount===0,'Removed item disappears from both inventories');
   await denied(()=>c.query('update public.listings set retired_at=null,is_published=true where id=$1',[id]),'23514','Removed listing evidence cannot reopen');
   await denied(()=>saveListing(c,own.actor,{title:'Reopen'},id),404,'API cannot overwrite removed evidence');
   await c.query("update public.store_subscriptions set status='expired' where store_id=$1 and status='active'",[stores[0].id]);

@@ -55,24 +55,6 @@ export function validateManagerWorkEmail(email: string): { isValid: boolean; err
   return { isValid: true };
 }
 
-/**
- * Validates Ghana Post Digital Address format.
- * Strictly 2 letters, hyphen, 3 digits, hyphen, 4 digits (e.g. GH-123-4567 or GA-123-4567)
- */
-export function validateGhanaPostDigitalAddress(addr: string): { isValid: boolean; error?: string } {
-  if (!addr || !addr.trim()) {
-    return { isValid: false, error: 'Ghana Post Digital Address is required.' };
-  }
-  const clean = addr.trim().toUpperCase();
-  const gpsRegex = /^[A-Z]{2}-[0-9]{3}-[0-9]{4}$/;
-  if (!gpsRegex.test(clean)) {
-    return {
-      isValid: false,
-      error: 'Invalid Digital Address. Must follow GhanaPost GPS format: GH-123-4567 or GA-123-4567 (2 letters, 3 numbers, 4 numbers).'
-    };
-  }
-  return { isValid: true };
-}
 
 /**
  * Validates Street Address format.

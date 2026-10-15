@@ -55,7 +55,7 @@ export default function ResidenceDetails({ hostel, onClose, onActivate }: { host
             <h3 className="text-xl font-black text-slate-900 mt-1">{hostel?.name}</h3>
             <p className="text-xs text-slate-500 font-medium flex items-center gap-1 mt-1">
               <MapPin className="w-3.5 h-3.5 text-rose-500 shrink-0" />
-              <span>{(hostel.digitalAddress || hostel.digital_address) ? `${hostel.digitalAddress || hostel.digital_address} • ` : ''}{hostel.location || hostel.addressLine1 || hostel.address_line_1 || 'Location not provided'}</span>
+              <span>{hostel.location || hostel.addressLine1 || hostel.address_line_1 || 'Location not provided'}</span>
             </p>
           </div>
 

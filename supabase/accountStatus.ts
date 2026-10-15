@@ -8,10 +8,11 @@ export async function registrationStatus(client: PoolClient,actor: VerifiedActor
   if (actor.kind !== 'primary') throw new ApiError(403,'Use your primary user account to view registrations.');
   const rows = (await client.query(`select c.id,c.kind,c.status,p.display_name,p.email,p.phone,c.created_at,
     e.id as enrollment_id,e.status as enrollment_status,e.verified_at,
-    v.status as review_status,v.review_notes
+    v.status as review_status,v.review_notes,v.id as verification_id,v.submitted_data,v.residence_id as verification_residence_id,v.withdrawn_by_wipe_id
     from public.account_contexts c join public.profiles p on p.id = c.auth_user_id
     left join private.account_enrollments e on e.linked_context_id = c.id
-    left join lateral (select status,review_notes from public.verification_cases where applicant_context_id = c.id
+    left join lateral (select id,status,review_notes,submitted_data,residence_id,withdrawn_by_wipe_id from public.verification_cases where applicant_context_id = c.id
+      and (c.kind<>'manager' or kind='manager_registration' and manager_generation=e.manager_generation)
       order by submitted_at desc limit 1) v on true
     where c.primary_owner_id = $1 and p.primary_owner_id = $1 and c.status <> 'closed'
     order by c.created_at desc`,[actor.authUserId])).rows;
@@ -24,7 +25,9 @@ export async function registrationStatus(client: PoolClient,actor: VerifiedActor
     managerAccount = { id:manager.id,managerId:manager.id,name:manager.display_name,email:manager.email,phone:manager.phone,
       status:approved ? 'approved' : manager.status !== 'pending' ? manager.status : manager.review_status || 'pending',
       isApproved:approved,isVerified:approved,emailVerified:Boolean(manager.verified_at),enrollmentId:manager.enrollment_id,
-      enrollmentStatus:manager.enrollment_status,submittedAt:manager.created_at,adminNotes:manager.review_notes,
+      enrollmentStatus:manager.enrollment_status,requiresPropertyRegistration:manager.status==='pending'&&manager.enrollment_status==='pending_review'&&Boolean(manager.verified_at)&&residences.length===0,submittedAt:manager.created_at,adminNotes:manager.review_notes,
+      verificationId:manager.verification_id,property:manager.submitted_data,
+      canCorrectRegistration:manager.status==='pending'&&manager.review_status==='more_info_required'&&!manager.withdrawn_by_wipe_id&&Boolean(manager.verified_at)&&residences.some(r=>r.id===manager.verification_residence_id&&r.status==='inspection'),
       hostelName:residences[0]?.name || '',hostelId:residences[0]?.id || null,residences };
   }
   const resident = rows.find(r => r.kind === 'resident');

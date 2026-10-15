@@ -40,7 +40,7 @@ For the existing Supabase project, `DATABASE_URL` must use its Session pooler on
 5432 in IPv4-only environments. Put the Supabase CA certificate's absolute path in
 `SUPABASE_DB_CA_FILE`. After checking the database inventory, prepare a separate
 encrypted PostgreSQL snapshot with `node --import tsx scripts/backup-supabase-database.ts`.
-This snapshots the `auth`, `public` and `storage` schemas using `pg_dump`, checks the
+This snapshots the `auth`, `public`, `private` and `storage` schemas using `pg_dump`, checks the
 archive listing, decrypts it and compares its digest. It does not save Storage object
 bytes; those need their own copy if the bucket inventory is nonempty.
 
@@ -105,5 +105,13 @@ The PostgreSQL archive now includes `auth`, `public`, `private` and `storage`, i
 their grants and revocations. `npm run db:rehearse-backup -- BACKUP_UUID` restores only
 into a temporary local Unix-socket PostgreSQL instance and verifies record/schema and
 access-control recovery. It never connects to the cloud target. Private Storage object
-bytes still need a separate backup once objects exist. Refresh both database and media
-snapshots with writers stopped before the final reset.
+bytes use `npm run db:backup-storage -- BACKUP_UUID` followed by
+`npm run db:rehearse-storage -- BACKUP_UUID STORAGE_ARCHIVE_UUID`. These bind encrypted
+object bytes to the fully rehearsed database checkpoint, including interrupted-upload
+orphans and verified local reconstruction. See [Storage recovery](storage-recovery.md).
+Refresh both database and media snapshots with writers stopped before the final reset;
+the backup commands do not establish a writer freeze or authorize deletion.
+Migration 41's keyed residence preparation pauses its saved housing scope only.
+Migration 42's explicit private operator command can attach verified database/Storage
+recovery evidence to that pause. Neither completes a project-wide reset freeze or
+enables operational deletion. See [residence deletion](residence-deletion.md).

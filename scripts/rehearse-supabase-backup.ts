@@ -51,9 +51,10 @@ try {
     create extension if not exists "uuid-ossp" with schema extensions;
     create extension if not exists pgcrypto with schema extensions;
     create extension if not exists pg_trgm with schema extensions;
-    do $$ declare name text; begin foreach name in array array['anon','authenticated','service_role','authenticator','supabase_auth_admin','supabase_storage_admin','postgres','supabase_admin','pinevela_backend','dashboard_user'] loop
+    do $$ declare name text; begin foreach name in array array['anon','authenticated','service_role','authenticator','supabase_auth_admin','supabase_storage_admin','postgres','supabase_admin','pinevela_backend','pinevela_catalog','dashboard_user'] loop
       if not exists (select 1 from pg_roles where rolname = name) then execute format('create role %I nologin',name); end if;
     end loop; end $$;
+    alter role pinevela_catalog nologin noinherit nobypassrls; grant pinevela_catalog to postgres;
     grant authenticated to pinevela_backend;
     grant pinevela_backend to postgres;`);
   command('pg_restore', ['--dbname=postgres','--clean','--if-exists','--no-owner','--single-transaction'], decrypted);
@@ -61,16 +62,25 @@ try {
     'authUsers',(select count(*) from auth.users),'profiles',(select count(*) from public.profiles),
     'sessions',(select count(*) from auth.sessions),'storageObjects',(select count(*) from storage.objects),
     'orderPins',(select count(*) from private.market_order_pins),
+    'activeAdministrators',(select count(*) from public.admin_memberships where status='active'),
+    'administratorApprovalKeys',(select count(*) from private.admin_secrets where approval_key_hash is not null),
+    'administratorSettingsKeys',(select count(*) from private.admin_secrets where settings_key_hash is not null),
     'orderPinKeyMismatches',(select count(*) from private.market_order_pins p where coalesce(to_jsonb(p)->>'key_id','')<>'${serverPinKeyDigest}'),
     'applicationTables',(select count(*) from pg_tables where schemaname = 'public'),
     'applicationTablesWithoutRLS',(select count(*) from pg_tables where schemaname = 'public' and not rowsecurity),
     'migrationVersions',(select count(*) from private.schema_migrations),
+    'publicViews',(select count(*) from pg_views where schemaname='public'),
+    'privateProjectionViews',(select count(*) from pg_views where schemaname='private'),
+    'catalogRoleCanLogin',(select rolcanlogin from pg_roles where rolname='pinevela_catalog'),
+    'catalogRoleInherits',(select rolinherit from pg_roles where rolname='pinevela_catalog'),
+    'catalogRoleBypassesRLS',(select rolbypassrls from pg_roles where rolname='pinevela_catalog'),
     'guestCanReadProfiles',has_table_privilege('anon','public.profiles','select'),
-    'guestCanReadCatalog',has_table_privilege('anon','public.residence_catalog','select'),
+    'guestCanReadCatalog',case when to_regclass('private.residence_catalog') is not null then has_table_privilege('pinevela_catalog','private.residence_catalog','select') else has_table_privilege('anon',to_regclass('public.residence_catalog'),'select') end,
     'authenticatedCanPromoteContext',has_table_privilege('authenticated','public.account_contexts','update'),
     'backendBypassesRLS',(select rolbypassrls from pg_roles where rolname = 'pinevela_backend'));`).toString());
   if (inventory.applicationTablesWithoutRLS !== 0 || inventory.applicationTables < 1 || inventory.migrationVersions < 6) throw new Error('Restored application schema failed verification.');
   if (inventory.guestCanReadProfiles || !inventory.guestCanReadCatalog || inventory.authenticatedCanPromoteContext || inventory.backendBypassesRLS) throw new Error('Restored access controls failed verification.');
+  if(inventory.migrationVersions>=54 && (inventory.publicViews!==0 || inventory.privateProjectionViews!==14 || inventory.catalogRoleCanLogin || inventory.catalogRoleInherits || inventory.catalogRoleBypassesRLS)) throw new Error('Restored private projection boundary failed verification.');
   if(inventory.orderPins && (!serverPinKeyVerified || inventory.orderPinKeyMismatches))throw new Error('Restored delivery challenges require their matching server key.');
   fs.writeFileSync(path.join(directory, `${args[0]}.restore.json`), JSON.stringify({ verifiedAt: new Date().toISOString(), archiveSha256: metadata.dumpSha256, isolatedLocalRestorePassed: true, serverPinKeyVerified, inventory }, null, 2), { mode: 0o600 });
   console.log(JSON.stringify({ isolatedLocalRestorePassed: true, encryptedArchiveVerified: true,serverPinKeyVerified, ...inventory, cloudRecordsModified: 0 }));

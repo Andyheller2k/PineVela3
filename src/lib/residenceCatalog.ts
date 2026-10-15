@@ -1,6 +1,6 @@
 import type { Hostel } from '../types';
 
-export type Residence = Partial<Hostel> & { id: string; name: string; hostelType?: string; exteriorPhotoUrl?: string; imagePreviewUrl?: string; images?: string[]; digitalAddress?: string; addressLine1?: string };
+export type Residence = Partial<Hostel> & { id: string; name: string; hostelType?: string; exteriorPhotoUrl?: string; imagePreviewUrl?: string; images?: string[]; addressLine1?: string };
 
 export function residenceImages(hostel: Residence): string[] {
   return [...new Set([hostel.image, hostel.imageUrl, hostel.exteriorPhotoUrl, hostel.imagePreviewUrl, hostel.image_url, ...(hostel.gallery || []), ...(hostel.images || [])].filter((image): image is string => typeof image === 'string' && !!image.trim()))];

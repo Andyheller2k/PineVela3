@@ -83,7 +83,7 @@ try{
   await denied(()=>c.query('update public.stores set setup_completed_at=null where id=$1',[store.id]),'23514','SQL prohibits setup evidence erasure');
   await denied(()=>c.query('update public.stores set delivery_mode=null where id=$1',[store.id]),'23514','SQL disallows NULL delivery on completed setup');
   await denied(()=>c.query("update public.stores set status='active',activated_at=now() where id=$1",[store.id]),'23514','SQL blocks activation without verified payment');
-  check((await c.query('select id from public.store_catalog')).rowCount===0,'Unpaid completed store remains outside public catalog');
+  check((await c.query('select id from private.store_catalog')).rowCount===0,'Unpaid completed store remains outside public catalog');
   await scoped(own.actor,async()=>check((await c.query('select id from public.stores')).rowCount===1,'Exact seller reads owned private store'));
   await scoped(foreignOwner,async()=>check((await c.query('select id from public.stores')).rowCount===0,'Foreign buyer cannot read private owner IDs'));
   await scoped(own.actor,()=>denied(()=>c.query("update public.stores set name='Direct write' where id=$1",[store.id]),'42501','Browser role cannot directly write store profile'));
@@ -93,9 +93,9 @@ try{
   check((await sellerStatus(c,own.actor)).store.customBranding,'Active saved Star subscription enables custom branding');
   await denied(()=>saveStoreProfile(c,own.actor,{profilePicture:'https://outside.invalid/logo.png'},false),400,'Paid plan still requires a valid private asset reference');
   await denied(()=>saveStoreProfile(c,own.actor,{coverPicture:'/api/media/'+crypto.randomUUID()},false),403,'Paid plan cannot adopt an unknown asset');
-  await scoped(foreignOwner,async()=>{check((await c.query('select id from public.stores')).rowCount===0,'Public store still hides raw ownership from buyer');check((await c.query('select id from public.store_catalog')).rowCount===1,'Buyer can read safe published store projection');});
+  await scoped(foreignOwner,async()=>{check((await c.query('select id from public.stores')).rowCount===0,'Public store still hides raw ownership from buyer');check((await c.query('select id from private.store_catalog')).rowCount===1,'Buyer can read safe published store projection');});
   await bind(own.actor);await c.query("update public.store_subscriptions set status='expired' where store_id=$1 and status='active'",[store.id]);
-  check(!(await sellerStatus(c,own.actor)).store.customBranding && (await c.query('select id from public.store_catalog')).rowCount===0,'Expired plan loses custom branding and public listing access');
+  check(!(await sellerStatus(c,own.actor)).store.customBranding && (await c.query('select id from private.store_catalog')).rowCount===0,'Expired plan loses custom branding and public listing access');
   check((await c.query("select count(*) from public.notification_recipients r join public.notifications n on n.id=r.notification_id where r.context_id=$1 and n.category='market'",[own.actor.contextId])).rows[0].count!=='0','Actual seller receives profile lifecycle notices');
   check((await c.query("select count(*) from private.audit_events where resource_id=$1 and event_type='store_setup_saved'",[store.id])).rows[0].count==='1','Setup retry does not duplicate initial audit');
   await c.query('rollback');assert.deepEqual(await counts(),before);

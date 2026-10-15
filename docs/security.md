@@ -1,5 +1,250 @@
 # PineVela Security
 
+Migration 69 supports the temporary local Google manager enrollment policy. The
+server requires the explicit development flag, direct loopback host and peer,
+non-production mode and no public origin. It verifies a real provider code with
+server-held PKCE/state/cookie/nonce, the exact Google email and native live session,
+then revalidates the original primary actor and owned enrollment. Existing PineVela
+profiles/contexts cannot be adopted. Initial OAuth account creation grants no app
+role; the private initializer remains inaccessible to browser/scoped backend roles.
+No primary auth cookie is replaced; provider proof tokens never reach the client.
+No RLS policy, public grant, inspection or approval boundary is relaxed. Later
+production email-delivery acceptance remains required. See
+[Google enrollment boundaries](migrations/google-manager-development-enrollment.md).
+
+Manager-application corrections require the original primary session and owned verified
+manager-identity enrollment, current generation and pending assigned inspection shell.
+Body IDs cannot replace those relationships. Restrictions, active inspections, final or
+withdrawn cases prevent edits. Captured account guards reject stale sessions. Old reports
+cannot approve changed property details; original targets and review evidence stay in
+private audit history. No RLS/grant changes support this path. See
+[correction boundaries and verification](migrations/manager-application-corrections.md).
+
+Reviewed pure administrator reads may share the settings advisory lock through
+explicit server-selected read wrappers. Mutations and status helpers that expire
+reviews or write receipts retain exclusive locking. Both paths revalidate the same
+live subject/session/context/role, access policies and RLS scope. Request methods
+or client flags cannot choose the weaker lock. See
+[concurrency evidence](migrations/administrator-read-concurrency.md).
+
+Migration 67 adds only private invoker queue guards; no public grants or broader
+RLS. Founder/session/key/version/scope deadlines are immutable. A worker derives
+authority and recovery identifiers from native receipts, re-verifies actual files
+and commits exact closure plus request outcome together. Request/worker release
+requires one exact server-only flag, which remains disabled. Preview never writes.
+See [operator boundary](operations/system-wipe-worker.md).
+
+Migration 66 adds a private invoker operational core, inaccessible to browser and
+scoped-backend roles. Native founder/key/session, five-vote scope, restored proof,
+transaction-bound exact changes and atomic outcome/audit checks remain mandatory.
+Withdrawal markers and dependent evidence cannot be rewritten or extended. The
+public execution gate remains disabled. See [protocol](migrations/operational-wipe-core.md).
+
+Migration 65 extends the existing metadata-only pause trigger to retained delivery
+notices. Statement locks precede row reads; old/new relationship checks see a
+committed pause after waiting. Own read/popup timestamps remain mutable and do not
+invalidate consent. The new enrollment predicate is private, invoker-only and
+unavailable to browser/scoped-backend roles. RLS/base grants remain unchanged;
+the metadata trigger grants no ownership or account access. Execution stays disabled.
+
+
+## Scoped wipe pauses and final consent (migration 60)
+
+Current five-admin/founder consent and the founder's own key authorize a scoped
+write pause only after unsettled work is resolved. Native READ COMMITTED statement
+locks and old/new-row guards prevent target changes and new dependencies, including
+selected Storage paths. Existing metadata trigger privileges remain revoked and
+outer RLS/ownership checks still apply. No new SECURITY DEFINER function is added.
+Unrelated tracked changes invalidate consent without releasing the durable pause.
+Founder preparation cancellation releases it and preserves immutable history.
+
+Final consent requires actual restored post-pause database/Storage recovery. It
+binds the founder Auth session, key version, exact scope/catalog and pause time
+for at most five minutes. Another sign-in cannot reuse it. Expiry, cancellation,
+maintenance or changes to keys/session/roster/data/catalog make it unusable. API
+bodies cannot supply verification proof; state projections exclude private bindings.
+Native scope pauses protect metadata rather than certify arbitrary external byte
+writes are impossible; real bytes must be reverified before any future execution.
+Execution remains disabled; this protocol closes/deletes no live data or identities.
+
+## Private projection boundary (migration 54)
+
+Owner-executed read projections are isolated in the unexposed `private` schema,
+with no SELECT/write grants for browser roles. Supabase's Data API must keep that
+schema excluded. Catalog APIs use `pinevela_catalog`, a non-login role with no
+inherited roles or BYPASSRLS, six filtered catalog reads and four boolean publication
+checks. Account APIs use the existing bound backend role and saved ownership filters.
+No base-table permission or RLS policy is broadened to support projection joins.
+
+Private projections deliberately retain owner execution for vetted joins to private
+profiles and relationships. They are not a substitute for RLS or proof of a fully
+completed cutover. Test both the actual projection filters and the HTTP/Data API
+boundary. New projections require explicit column/row/grant review; never expose
+the private schema or restore direct browser grants to fix a failing query.
+
+## Reviewed execution request boundary (migration 50)
+
+The public API accepts only the proposal identifier, the caller's private key
+and explicit confirmation. Authenticated sessions and native relationships
+derive the founder, authority, scope and archive identifiers. A server-only
+release gate defaults off. No request body or frontend flag can enable it.
+Native request insertion independently verifies current founder/session/key
+and exact short-lived authorization; direct role/helper grants are revoked.
+No raw credential, client ownership assertion or external-I/O proof is saved.
+
+The separate trusted worker holds a per-request session lock while restoring
+real encrypted archives, with no database transaction open during restoration.
+It rechecks current authority under exclusive housing admission before applying
+the existing exact execution protocol. Request completion and domain execution
+are atomic; deferred native guards reject partial completion. Lost responses
+reconcile immutable receipts. Changed or genuinely expired consent invalidates
+the request without resuming paused housing or reviving archived authority.
+Fresh founder consent or keyed preparation cancellation remains necessary.
+Positive provider-authenticated HTTP/browser acceptance remains pending.
+
+## Reviewed Storage cleanup boundary (migration 49)
+
+Only an immutable task from an actually completed reviewed execution can be
+claimed. Invoker-only lease helpers have no browser/backend table or EXECUTE
+grants. Native five-minute leases serialize workers and preserve failed/expired
+attempts; tokens, dates and terminal history cannot be forged or extended. The
+operator freshly restore-verifies the actual original database/Storage archives
+without reactivating archived approval or login authority. It verifies provider
+identity and full image hash before deletion, then rechecks actual absence before
+recording completion. Missing objects require explicit `NoSuchKey`; permission,
+bucket, route and transport failures cannot be treated as successful removal.
+
+Three private deny-only trigger guards use a fixed empty search path and revoked
+EXECUTE grants to inspect private queue state for ordinary table/Storage callers.
+They grant no new table/RLS permission or RPC access. Queued metadata cannot be
+mutated by ordinary reconciliation; queued paths cannot be replaced or acquire
+new references. Storage catalog deletion requires a current prepared lease,
+unchanged object identity and unshared scope. Truncation cannot erase queued
+history. SQL cannot prove external I/O: provider observations and real file
+verification remain trusted server responsibilities. Unknown or unguarded
+relations block cleanup. Independent privileged writers must still be controlled
+for production acceptance and final reset. Public execution remains disabled.
+
+## Reviewed residence execution core (migration 48)
+
+The private invoker-only worker has no browser/backend table or helper grants.
+Admission requires READ COMMITTED, the originating native transaction/backend,
+actual current founder Auth session/binding and own approval-key version, unexpired
+final consent, exact saved scope/catalog and the trusted archive-verification receipt.
+The trusted wrapper restore-tests the actual encrypted database/Storage archives
+outside the mutation transaction; SQL cannot verify filesystem bytes. It rechecks
+native consent and references after acquiring exclusive housing admission.
+
+Native guards permit only exact reviewed DELETEs and narrowly defined portal,
+enrollment, media and cooldown effects. Source-graph locks and an unknown-child-FK
+check prevent unchecked cascades. An unfinished admission cannot commit; failures
+roll back housing, access, cooldowns, receipts and notices together. Shared Auth,
+profiles, financial/governance history and unrelated portals receive no exemption.
+Completed receipts and cleanup candidates cannot be edited or reused as authority.
+Caller-set confirmation alone grants no removal access. Public `/execute` and UI
+execution remain disabled pending public integration and authenticated acceptance.
+
+## Retained media and enrollment targets (migration 47)
+
+Six operational foreign keys now reference private retained housing identities.
+Native capture derives only actual saved kind, residence and parent relationships;
+forged metadata, source UUID changes/reuse and retained-history mutation are denied.
+New housing-media/enrollment bindings still require live source rows. The private
+table has RLS, revoked browser/backend grants and invoker-only helpers with no RPC
+access. Bound-source DELETE requires migration 48's exact native worker admission;
+TRUNCATE and the public execution gate remain closed;
+caller-set configuration cannot authorize removal. Existing media ownership,
+immutable origins, enrollment lifecycle and frozen-scope guards remain enforced.
+Installation takes the housing advisory lock before source-graph table locks so
+concurrent native writes cannot escape atomic backfill/capture installation.
+
+## Retained residence history (migration 46)
+
+Financial and governance references retain actual saved residence identities rather
+than cascading or nulling their original targets. Native capture verifies the exact
+live source and immutable original metadata. History cannot be fabricated, altered,
+erased or used to recycle a residence UUID. It has RLS, no direct browser/backend
+grants and invoker-only helpers without RPC access. New reviews and quotes still
+require live native authorization. Replacing operational foreign keys does not
+weaken frozen-scope guards: residence DELETE is blocked outside migration 48's exact
+native admission, and TRUNCATE remains blocked. An unpaused root transaction or
+caller-set execution configuration alone cannot authorize removal.
+
+## Final residence execution consent (migration 45)
+
+Only the authenticated founder with their separately checked current approval key
+can record final consent after explicit confirmation. Server sessions and native
+relationships determine every identity and digest; request-supplied ownership or
+proof fields are rejected. Immutable private consent expires within five minutes
+and cannot outlive its review. Native checks require current founder/quorum consent,
+the original frozen preparation, matching receipt/cleanup plan, live session/binding,
+current key version and catalog. Dates are native; no caller can extend consent.
+Invoker helpers have no direct browser/backend grants or RPC exposure. Consent,
+admin-only notification and genuine founder audit commit together; concurrent
+retries reconcile without duplicate history. No freeze/RLS/history guard is bypassed.
+The future worker must independently reverify real recovery files and native validity
+before deletion; recording consent alone never enables operational or Storage removal.
+
+## Residence cleanup planning (migration 44)
+
+Cleanup plans require current frozen founder/quorum consent, an immutable recovery
+receipt and freshly reverified real archives. Invoker-only native helpers and guards
+recompute saved housing membership, every retained public/private reference and the
+exact catalog. No browser/backend table or RPC grants are added. Plans reject updates,
+deletion and truncation; plan, admin-only notice and operator audit commit together.
+Retries reconcile exact proof without duplicate notices. Historical plans grant no
+execution or deletion authority. The original freeze/payment/history guards remain
+active; no Storage API removal or orphan sweep is performed.
+
+## Residence payment retention (migration 43)
+
+Private reference rows require an actual payment and the exact saved residence
+relationship. Native guards reject edits, deletion and truncation; capture functions
+use invoker privileges, an empty search path and no callable browser/backend grants.
+New references and quotes commit or roll back together. Historical owner/name fields
+provide no authorization, payment proof or portal access. Existing payment RLS,
+immutability, checkout evidence and operational residence foreign keys remain intact.
+
+## Residence review boundary (migration 40)
+
+Migration 41 permits only the active keyed founder to start a durable housing pause
+after current two-admin consent and an explicit freeze confirmation. Native before/after
+guards check saved IDs and old/new foreign keys and prevent cascade/truncate bypasses;
+there is no browser-callable privileged helper. Ordinary transactions take the shared
+freeze lock before account-policy, maintenance, governance and actor/context locks;
+start/cancel takes it exclusively first. Preparation history is immutable except for
+keyed founder cancellation with a native actor/time/reason. Cancellation works after
+consent closes and invalidates still-open consent. No stale consent silently releases
+the pause. Failure rolls back the pause, founder vote, targeted notices and audit together.
+Old previews are invalidated; overlapping pauses and unsettled residence payments/media
+fail closed. This pause does not establish a project-wide freeze, revoke Supabase Auth,
+delete housing/Storage data or attach recovery evidence. Those execution gates remain
+unavailable. Primary owners receive actual pause/resume notices before entering a portal.
+
+Migration 42 rejects housing/preparation writes outside READ COMMITTED and explicitly
+sets that isolation in server transactions. A private operator worker restore-tests
+actual encrypted archives and attaches immutable historical evidence only to a
+still-current approved founder pause with a matching complete Storage/media catalog.
+No request-supplied proof, browser RPC, backend table grant or fabricated founder
+session is used. Receipt, admin-only notice and operator audit roll back together;
+exact retries create no duplicates. Native guards independently check consent/scope/
+catalog; external file restoration is trusted operator responsibility. Cancellation
+invalidates further attachment. Final deletion must freshly verify actual archives,
+provider state, consent and founder key; evidence attachment does not enable it.
+
+Dependency previews require a verified active administrator portal. Proposal/vote
+and founder final rejection require that actor's own approval key, never a settings
+key, another administrator's key or body-supplied ownership. Native SQL enforces
+two distinct votes, exact reviewed options/dependencies, enrolled founder availability,
+roster/key revisions and 24-hour expiry. Immutable lifecycle evidence invalidates
+relevant changes even when reversed. Invalid/overlapping reviews fail closed;
+notifications, votes and audits commit together. Raw private snapshots stay internal.
+Lifecycle tables have RLS and no public/browser/backend grants; metadata triggers
+use a fixed empty search path and no exposed execution grant. The HTTP execution
+endpoint remains disabled pending verified Storage cleanup and acceptance. The
+native transition requires migration 48's exact worker admission. No operational deletion or signup cooldown is
+applied by migration 40. Genuine browser acceptance remains a separate cutover gate.
+
 ## Account approval review boundary (Supabase replacement)
 
 The verified active administrator portal and its own current approval-key version
@@ -9,16 +254,41 @@ Private-key failure counters commit before denial. SQL requires five current key
 administrators, immutable votes/evidence and current roster/lifecycle revisions.
 Reversing lifecycle or roster changes does not revive prior consent. Administrator
 targets require their separate membership protocol. Browser/backend roles cannot
-write reviews or call private review helpers. Invoker lifecycle triggers can advance
-the private revision under a guarded column grant; direct writes cannot forge it.
+write reviews or call private review helpers. Migration 38 snapshots saved target
+descendants/ancestors and records append-only lifecycle events. Unrelated signups
+and sibling portals do not invalidate a leaf review; shared Auth identities do not
+merge their consent. The internal trigger resolves saved UUID links with a fixed
+empty search path, restricted source tables and no callable role grants. Outer domain
+writes retain their session/ownership authorization. SQL guards prevent forged/reversed
+revision values or arbitrary event insertion, alteration and deletion. The backend's
+former revision UPDATE grant is revoked. Pre-38 reviews require new consent.
 
 Approval, rejection and closure notifications belong to the exact reviewed active
 admin portals and the Approvals module. Mutations, notices and audits are atomic.
-Final policy application/deletion remains disabled, including native SQL transitions
-to executed. Auth/API/RLS enforcement, inherited policies and public seller visibility
-must be verified before enabling execution; deletion also needs reviewed dependencies
-and database plus Storage-byte backup/cleanup. Real signed-in browser acceptance and
-the elapsed 24-hour expiry journey remain verification gates.
+Migration 39 enables policy application only after five current distinct approvals,
+the founder's current own approval key and exact final confirmation. Native triggers
+derive policy/epoch values from immutable executed review evidence and stamp the
+actual actor/time. Direct policy mutation, epoch erasure and execution replay are denied.
+Saved primary/portal and manager/staff links carry policies; administrator portals and
+same-mailbox sibling portals retain their separate boundaries. Restoration cannot
+override an inherited policy or revive an older actual Auth session. Provider identities
+and shared Auth session records are preserved; server and RLS check saved per-portal
+epochs against actual session creation times, including after timed ban expiry.
+
+API transactions serialize policy application before actor checks. Restrictive RLS
+denies banned/old-session private data, alongside original ownership policies; public
+seller projections hide banned stores. Native guards independently restrict enrollment,
+room claims, new orders, publishing/evidence, buyer-seller messages and new maintenance.
+Publishing restrictions preserve the existing verified order-stock trigger, with exact
+nested order/listing evidence; direct stock edits gain no exemption. The own-context
+status endpoint and sign-in projection supply live restriction notices without exposing
+internal policy lookup RPCs. Applied notices reach saved affected portals and their
+primary owner. Review/apply/status SQL checks used isolated genuine Google identities
+and unchanged actual sessions; no fresh provider session was fabricated.
+
+Deletion/wipes still need reviewed dependencies and database plus Storage-byte
+backup/cleanup. Real signed-in browser acceptance, genuine post-policy provider
+sign-in and elapsed expiry journeys remain verification gates.
 
 ## Administrator announcement gateway (Supabase replacement)
 
@@ -222,7 +492,13 @@ triggers enforce account, purpose and inspection relationships. Image responses 
 publication/plan or private account access and verify digest/size, with no-store and a sandbox
 CSP. Failed transfers are reconciled through Storage APIs; ready assets are never removed by
 the stale-upload cleanup command. Ordinary replacement JSON bodies are 1MB. Distributed IP
-limits, operational object deletion and byte backups remain launch gates. Owned avatar media
+limits and operational object deletion remain launch gates. Encrypted byte backups now bind
+the private object/catalog manifest to a fully rehearsed PostgreSQL checkpoint, including
+interrupted-upload orphans; corruption, changed catalogs and missing ready bytes block
+completion. Normal image reads still require the original reservation digest. The operator
+orphan-backup method grants no browser access, and no new RLS/RPC grant is introduced.
+Final stopped-writer backup, approved-object cleanup and scoped deletion recovery remain
+cutover gates. See [Storage recovery](migrations/storage-recovery.md). Owned avatar media
 is ported in migration 35, with authenticated provider/browser acceptance still required. Maintenance
 report photographs use the original resident allocation or reporting manager residence;
 repair photographs use the exact accepted staff assignment and ticket. Related readers
@@ -541,6 +817,28 @@ An active verification officer may read only explicitly assigned inspections, us
 current server-side officer record and session. Query IDs, matching email addresses and
 report authorship do not grant access.
 
+Inspection GPS is a reported device measurement, not proof of a physical visit.
+Location failures must remain missing data with an actionable error; never substitute
+coordinates, accuracy or a property address. Capture results belong to the selected
+inspection and must be ignored after switching cases or accounts. Report viewers
+must distinguish missing checklist entries, observations, signatures and submission
+times from recorded evidence. An officer recommendation is separate from the final
+administrator decision; a new report requires an explicit recommendation choice.
+The server continues to derive the assigned officer, report author and submission
+time from the current authorized session. Development applications cannot establish
+genuine physical-inspection acceptance.
+
+When approving against an officer recommendation, the administrator must supply an
+explanation under the existing native decision rule. The approval dialog captures
+the current administrator context, blocks duplicate submission, and requires a
+saved-state refresh after an uncertain reply. It cannot replace the submitted
+report, current manager assignment or server-side activation checks.
+
+In the Supabase manager dashboard, housing-control eligibility follows the native
+`isApproved` reviewed-setup flag. The manager-approval residence status alone cannot
+unlock those controls. Native publication, staff invitation and room-key issuance
+continue to enforce their separate saved residence-review requirements.
+
 Resident directories are private. Administrators may view assigned residents; approved
 managers may view assigned residents only within their authorized residences. Primary
 accounts and unallocated records are excluded, and directory responses must not include
@@ -683,6 +981,18 @@ report, actual room/bed layout and ready photo ownership. Case decisions are ide
 and immutable after final approval/rejection; property rejection does not revoke its manager
 identity. The private administrator residence roster is unavailable to other portal roles.
 
+Residence corrections require the current assigned applicant and an existing request
+for more information. The same physical identity, restrictions and owned-media checks
+apply. The prior submission and review remain in private audit history. Contact/photo
+corrections preserve room identities; layout replacement is limited to unused pending
+setup with no keys, allocations, enrollments, staff or maintenance history. Publication
+still requires a new normal approval. See [correction evidence](migrations/residence-corrections.md).
+The administrator review dialog reloads private saved case details before enabling
+an explicit decision; expired authentication cannot appear as a successful save.
+Private review metadata remains restricted to administrators. Setup-review state
+and current publication are separate; closed/withdrawn/final cases are not actionable.
+See [administrator review evidence](migrations/admin-residence-review.md).
+
 ## Supabase Transport Failures
 
 The replacement caps server SQL statements at 15 seconds and client reads at 30
@@ -795,3 +1105,11 @@ sharing uses exact Auth UUID equality; primary-owner links confer no personal me
 SQL prevents removal/state retirement while a profile references the asset. Operational
 account deletion must detach references and use Storage deletion, with separate encrypted
 byte backups once permanent objects exist. No Storage metadata is deleted directly in SQL.
+
+Primary-only wipe closure (migration 61) uses native transaction/PID-bound admission,
+current founder key/session consent, checked recovery evidence and deferred atomic
+completion. Guards preserve unrelated data and administrator access; a failed notice
+rolls back closure. Re-entry requires an explicit server-verified Google signup,
+the same live subject/session, completed closure receipt and retained policy checks.
+No browser IDs or GUCs provide public authority: lifecycle helpers/tables have no
+anon, authenticated or scoped-backend grants. Live wipe execution remains disabled.

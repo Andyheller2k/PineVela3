@@ -466,7 +466,7 @@ export default function PageStaffDashboard() {
             { id: 'notifications', icon: Bell, label: 'Alerts', badge: notifications.filter(n => !n.read).length },
             { id: 'settings', icon: Settings, label: 'Settings' },
             ...(employment ? [
-              { id: 'maintenance', icon: Wrench, label: 'Orders', badge: assignedIssues.filter(i => i.status !== 'Resolved' && !i.staffCompleted).length }
+              { id: 'maintenance', icon: Wrench, label: 'Orders', badge: assignedIssues.filter(i => !i.withdrawn && i.status !== 'Resolved' && !i.staffCompleted).length }
             ] : [])
           ]} />
 
@@ -483,7 +483,7 @@ export default function PageStaffDashboard() {
           <span className="text-[9px] font-bold text-slate-500">Profile</span>
         </button>
         <div className="w-px h-6 bg-slate-200/70 shrink-0" />
-        {[{ id: 'maintenance', label: 'Fixes', icon: Wrench, badge: employment ? assignedIssues.filter(i => i.status !== 'Resolved' && !i.staffCompleted).length : 0 }, { id: 'notifications', label: 'Alerts', icon: Bell, badge: notifications.length }, { id: 'settings', label: 'Settings', icon: Settings }].map(tab => <button aria-current={activeTab === tab.id ? 'page' : undefined} key={tab.id} onClick={() => setActiveTab(tab.id as any)} aria-label={`${tab.label}${tab.badge ? ` (${tab.badge})` : ''}`} className={`flex-1 min-w-0 flex flex-col items-center gap-0.5 py-1.5 rounded-xl text-[9px] font-bold cursor-pointer ${activeTab === tab.id ? 'text-blue-700 bg-blue-100/65' : 'text-slate-500 hover:bg-white/70'}`}><span className="relative inline-flex"><tab.icon className="w-4 h-4" /><TopNavBadge count={tab.badge} /></span><span className="truncate max-w-full">{tab.label}</span></button>)}<button onClick={() => setShowLogoutConfirm(true)} title="Sign Out" className="shrink-0 flex flex-col items-center gap-0.5 px-2 py-1.5 text-[9px] font-bold text-rose-600 hover:bg-rose-50 rounded-xl cursor-pointer"><LogOutIcon className="w-4 h-4" /><span>Sign Out</span></button><button onClick={() => setIsSidebarTopNav(false)} title="Show sidebar" className="p-2 text-slate-500 hover:text-blue-700 cursor-pointer"><PanelLeftOpen className="w-4 h-4" /></button></div></nav>}
+        {[{ id: 'maintenance', label: 'Fixes', icon: Wrench, badge: employment ? assignedIssues.filter(i => !i.withdrawn && i.status !== 'Resolved' && !i.staffCompleted).length : 0 }, { id: 'notifications', label: 'Alerts', icon: Bell, badge: notifications.length }, { id: 'settings', label: 'Settings', icon: Settings }].map(tab => <button aria-current={activeTab === tab.id ? 'page' : undefined} key={tab.id} onClick={() => setActiveTab(tab.id as any)} aria-label={`${tab.label}${tab.badge ? ` (${tab.badge})` : ''}`} className={`flex-1 min-w-0 flex flex-col items-center gap-0.5 py-1.5 rounded-xl text-[9px] font-bold cursor-pointer ${activeTab === tab.id ? 'text-blue-700 bg-blue-100/65' : 'text-slate-500 hover:bg-white/70'}`}><span className="relative inline-flex"><tab.icon className="w-4 h-4" /><TopNavBadge count={tab.badge} /></span><span className="truncate max-w-full">{tab.label}</span></button>)}<button onClick={() => setShowLogoutConfirm(true)} title="Sign Out" className="shrink-0 flex flex-col items-center gap-0.5 px-2 py-1.5 text-[9px] font-bold text-rose-600 hover:bg-rose-50 rounded-xl cursor-pointer"><LogOutIcon className="w-4 h-4" /><span>Sign Out</span></button><button onClick={() => setIsSidebarTopNav(false)} title="Show sidebar" className="p-2 text-slate-500 hover:text-blue-700 cursor-pointer"><PanelLeftOpen className="w-4 h-4" /></button></div></nav>}
       {!isSidebarTopNav && <aside className={`hidden lg:flex ${isSidebarCollapsed ? 'w-20 p-4' : 'w-72 p-6'} my-6 ml-6 h-[calc(100vh-3rem)] bg-gradient-to-br from-sky-100/90 via-blue-100/85 to-amber-50/40 backdrop-blur-3xl border border-sky-200/80 shadow-2xl rounded-3xl flex flex-col justify-between shrink-0 overflow-y-auto z-20 transition-all duration-300 relative`}>
         <button onClick={() => setIsSidebarTopNav(true)} title="Use top navigation" className="absolute top-3 right-3 p-2 rounded-xl text-slate-500 hover:text-blue-700 hover:bg-white/70 cursor-pointer"><PanelLeftClose className="w-4 h-4" /></button>
 
@@ -570,9 +570,9 @@ export default function PageStaffDashboard() {
                   <div className="text-left overflow-hidden">
                     <div className="flex items-center gap-1.5">
                       <span className="text-sm font-black truncate">Assigned Work Orders</span>
-                      {assignedIssues.filter(i => i.status !== 'Resolved' && !i.staffCompleted).length > 0 && (
+                      {assignedIssues.filter(i => !i.withdrawn && i.status !== 'Resolved' && !i.staffCompleted).length > 0 && (
                         <span className="px-1.5 py-0.5 bg-rose-500 text-white rounded text-[9px] font-black uppercase animate-pulse shrink-0">
-                          {assignedIssues.filter(i => i.status !== 'Resolved' && !i.staffCompleted).length} NEW
+                          {assignedIssues.filter(i => !i.withdrawn && i.status !== 'Resolved' && !i.staffCompleted).length} NEW
                         </span>
                       )}
                     </div>
@@ -582,7 +582,7 @@ export default function PageStaffDashboard() {
                   </div>
                 )}
               </div>
-              {!isSidebarCollapsed && assignedIssues.filter(i => i.status !== 'Resolved' && !i.staffCompleted).length > 0 && (
+              {!isSidebarCollapsed && assignedIssues.filter(i => !i.withdrawn && i.status !== 'Resolved' && !i.staffCompleted).length > 0 && (
                 <span className="px-2.5 py-1 rounded-full text-[10px] font-black bg-rose-500 text-white shadow-sm animate-ping shrink-0">
                   !
                 </span>
@@ -955,8 +955,8 @@ export default function PageStaffDashboard() {
               </div>
             ) : (
               assignedIssues.map(issue => {
-                const isTaskCompleted = issue.status === 'Resolved' || issue.status === 'Closed' || issue.staffCompleted || issue.closedByManager || issue.isClosed;
-                const isOverdue = !isTaskCompleted && issue.deadline && new Date() > new Date(issue.deadline);
+                const isTaskCompleted = !issue.withdrawn && (issue.status === 'Resolved' || issue.status === 'Closed' || issue.staffCompleted || issue.closedByManager || issue.isClosed);
+                const isOverdue = !issue.withdrawn && !isTaskCompleted && issue.deadline && new Date() > new Date(issue.deadline);
                 
                 // Calculate countdown
                 let countdownText = 'No strict deadline';
@@ -1006,7 +1006,11 @@ export default function PageStaffDashboard() {
                       </div>
                       
                       {/* Clear Deadline Countdown Timer Badge (Removed when task is complete) */}
-                      {isTaskCompleted ? (
+                      {issue.withdrawn ? (
+                        <div role="status" className="rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-1.5 text-xs font-semibold text-slate-700">
+                          Withdrawn after a reviewed closure. Repair evidence is retained.
+                        </div>
+                      ) : isTaskCompleted ? (
                         <div className="flex items-center gap-1.5 bg-emerald-50 text-emerald-800 px-3.5 py-1.5 rounded-xl border border-emerald-200 shadow-xs">
                           <CheckCircle2 className="w-4 h-4 text-emerald-600" />
                           <span className="text-xs font-black uppercase tracking-wide">Task Completed</span>
@@ -1074,7 +1078,7 @@ export default function PageStaffDashboard() {
                           🕒 Decline requested - awaiting manager reassignment
                         </span>
                       )}
-                      {issue.rescheduleRequested && (
+                      {!issue.withdrawn && issue.rescheduleRequested && (
                         <span className="text-[10px] bg-amber-50 text-amber-800 border border-amber-200 px-3 py-1 rounded-full font-bold">
                           🕒 SLA Timeframe Extension pending manager approval
                         </span>
@@ -1130,7 +1134,7 @@ export default function PageStaffDashboard() {
                           <div className="flex items-center justify-between">
                             <span className="text-xs font-black text-emerald-800 flex items-center gap-1.5">
                               <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                              <span>{issue.closedByManager ? 'Work order closed' : issue.studentConfirmed ? 'Repair confirmed by resident' : usesSupabasePersistence && !issue.requiresResidentSignoff ? 'Repair completed · Awaiting management closure' : 'Repair submitted · Awaiting resident sign-off'}</span>
+                              <span>{issue.withdrawn ? 'Recorded repair submission · Withdrawn' : issue.closedByManager ? 'Work order closed' : issue.studentConfirmed ? 'Repair confirmed by resident' : usesSupabasePersistence && !issue.requiresResidentSignoff ? 'Repair completed · Awaiting management closure' : 'Repair submitted · Awaiting resident sign-off'}</span>
                             </span>
                             {issue.staffCompletedAt && (
                               <span className="text-[10px] text-emerald-700 font-semibold">

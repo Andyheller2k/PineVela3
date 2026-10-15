@@ -40,7 +40,7 @@ import {
 } from 'lucide-react';
 import { HostelRegistrationDraft, HostelBlockConfig, BlockRoomTypeConfig, Hostel } from '../types';
 import { safeJson } from '../lib/api';
-import { validateHostelStreetAddress, validateDigitalAddress } from '../utils/formValidation';
+import { validateHostelStreetAddress } from '../utils/formValidation';
 import HostelMapPicker from './HostelMapPicker';
 import HostelImageUploader from './HostelImageUploader';
 
@@ -109,6 +109,7 @@ export default function HostelRegistration({
 }: HostelRegistrationProps) {
   const { user } = useAuth();
   const [residenceId,setResidenceId] = useState<string | null>(null);
+  const [correctionNotes,setCorrectionNotes] = useState<string | null>(null);
   
   // Four-step residence registration draft
   const initialDraftState: HostelRegistrationDraft = {
@@ -136,7 +137,6 @@ export default function HostelRegistration({
     district: '',
     country: 'Ghana',
     postalCode: '',
-    digitalAddress: '',
     landmark: '',
     campusProximity: usesSupabasePersistence ? '' : '5-10 Mins Walk',
     campusProximityDetails: usesSupabasePersistence ? '' : 'Shuttle & walking routes',
@@ -213,6 +213,7 @@ export default function HostelRegistration({
       setValidationErrors({});
       setSubmitError(null);
       setResidenceId(null);
+      setCorrectionNotes(null);
       setFormData(initialDraftState);
       fetch('/api/manager/residence-registration').then(async response => {
         const result = await safeJson(response);
@@ -224,6 +225,7 @@ export default function HostelRegistration({
         const totalRooms = blocksList.reduce((n:number,b:any) => n + b.roomTypes.reduce((t:number,r:any) => t + r.totalRooms,0),0);
         const totalBeds = blocksList.reduce((n:number,b:any) => n + b.roomTypes.reduce((t:number,r:any) => t + r.totalRooms*r.bedsPerRoom,0),0);
         setResidenceId(result.residenceId);
+        setCorrectionNotes(result.status === 'more_info_required' ? result.reviewNotes : null);
         setFormData({...initialDraftState,...draft,...phoneDraft(draft.contactPhone,draft.contactPhoneCountry),
           hostelType:draft.propertyType || initialDraftState.hostelType,
           wing:draft.wing || initialDraftState.wing,
@@ -287,7 +289,7 @@ export default function HostelRegistration({
   const clearDraft = () => {
     if (!usesSupabasePersistence) localStorage.removeItem(DRAFT_STORAGE_KEY);
     setFormData(prev => usesSupabasePersistence ? {...initialDraftState,name:prev.name,addressLine1:prev.addressLine1,
-      digitalAddress:prev.digitalAddress,latitude:prev.latitude,longitude:prev.longitude,isLocationConfirmed:prev.isLocationConfirmed,
+      latitude:prev.latitude,longitude:prev.longitude,isLocationConfirmed:prev.isLocationConfirmed,
       contactEmail:prev.contactEmail,contactPhone:prev.contactPhone,contactPhoneCountry:prev.contactPhoneCountry} : initialDraftState);
     setDraftBannerVisible(false);
     setCurrentStep(1);
@@ -573,7 +575,6 @@ export default function HostelRegistration({
         district: formData.district,
         country: formData.country,
         postalCode: formData.postalCode,
-        digitalAddress: formData.digitalAddress,
         landmark: formData.landmark,
         campusProximity: formData.campusProximity || (usesSupabasePersistence ? '' : '5-10 Mins Walk'),
         campusProximityDetails: formData.campusProximityDetails || (usesSupabasePersistence ? '' : 'Shuttle & walking routes'),
@@ -667,8 +668,7 @@ export default function HostelRegistration({
             {registeredResult.name}{usesSupabasePersistence ? ' submitted for review' : ' is Live!'}
           </h2>
           <p className="text-sm text-slate-600 max-w-lg mx-auto">
-            The hostel record has been created in the database with all {formData.blocksList.length} blocks,
-            manager assignments and uploaded photography.
+            {correctionNotes !== null ? 'Your corrections have been saved and sent back for administrator review.' : `The hostel record has been created in the database with all ${formData.blocksList.length} blocks, manager assignments and uploaded photography.`}
           </p>
         </div>
 
@@ -769,6 +769,11 @@ export default function HostelRegistration({
       )}
 
       {submitError && <p role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">{submitError}</p>}
+      {correctionNotes !== null && <section aria-label="Residence corrections requested" className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+        <h2 className="font-bold">Update your residence registration</h2>
+        <p className="mt-1 whitespace-pre-wrap">{correctionNotes}</p>
+        <p className="mt-2">Your saved details are loaded below. The inspected name and map pin must stay the same. Room layouts can be corrected before activation keys or operational history exist. Resubmit for administrator review when ready.</p>
+      </section>}
       {usesSupabasePersistence && !hasLoadedDraft && !submitError && <p role="status" className="text-sm text-slate-600">Loading your verified residence…</p>}
       {/* Header Bar with Step Progress */}
       <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs text-left space-y-5">
@@ -1356,7 +1361,7 @@ export default function HostelRegistration({
                 ) : (
                   <>
                     <CheckCircle2 size={16} />
-                    <span>Submit & Register Hostel</span>
+                    <span>{correctionNotes !== null ? 'Resubmit for Review' : 'Submit & Register Hostel'}</span>
                   </>
                 )}
               </button>

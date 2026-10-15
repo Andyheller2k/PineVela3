@@ -9,6 +9,7 @@ import { maintenanceResidence,residentRoom } from './maintenance.js';
 import { SupabaseStorage,MAX_MEDIA_BYTES } from './storage.js';
 import { checkProfileContext,profileSettingsGrant } from './profiles.js';
 import { requireSettingsGrant } from './adminSettings.js';
+import {managerRegistrationRestricted} from './registrationRestrictions.js';
 export type Purpose = 'hostel'|'market'|'inspection'|'maintenance'|'repair'|'avatar';
 type HousingScope = {residenceId?:string;allocationId?:string;issueId?:string};
 const route = (work:(req:AuthRequest,res:any)=>Promise<unknown>):RequestHandler => (req,res,next) => {work(req as AuthRequest,res).catch(next);};
@@ -21,22 +22,21 @@ export async function canUploadMedia(client:PoolClient,actor:VerifiedActor,purpo
   } else if (purpose === 'hostel') {
     if (!['manager','admin'].includes(actor.kind)) throw new ApiError(403,'Manager or administrator access required.');
     if (actor.kind === 'manager') {
-      const banned = await client.query(`select 1 from public.registration_bans b join public.account_contexts c on c.id = b.account_context_id
-        join public.account_contexts own on own.id = $1 where (c.id = own.id or c.auth_user_id = own.primary_owner_id
-        or c.primary_owner_id = own.primary_owner_id) and b.kind in ('manager_account','residence') and b.until_at > clock_timestamp()`,[actor.contextId]);
-      if (banned.rowCount) throw new ApiError(403,'Residence registration is temporarily restricted.');
+      if (await managerRegistrationRestricted(client,actor.contextId))
+        throw new ApiError(403,'Residence registration is temporarily restricted.');
     }
   } else if (purpose === 'market') {
     if (!['seller','admin'].includes(actor.kind)) throw new ApiError(403,'Seller or administrator access required.');
     if (actor.kind === 'seller') {
       const store = await client.query(`select s.id from public.stores s where s.seller_context_id = $1 and s.status in ('pending','active')
-        and exists(select 1 from public.seller_applications a where a.seller_context_id = $1 and a.status = 'approved') for share of s`,[actor.contextId]);
+        and exists(select 1 from public.seller_applications a where a.seller_context_id = $1 and a.id=s.application_id and a.registration_generation=(select seller_generation from public.account_contexts where id=$1) and a.status = 'approved') for share of s`,[actor.contextId]);
       if (!store.rowCount) throw new ApiError(403,'An approved seller store is required to upload marketplace photographs.');
     }
   } else if (purpose === 'inspection') {
     if (actor.kind !== 'officer' || !inspectionId) throw new ApiError(403,'Assigned verification officer access required.');
     const inspection = await client.query(`select i.id from public.verification_inspections i join public.verification_cases v on v.id = i.case_id
       where i.id = $1 and i.officer_context_id = $2 and i.status in ('assigned','in_progress')
+      and i.withdrawn_by_wipe_id is null and v.withdrawn_by_wipe_id is null
       and v.status in ('inspection_pending','under_review','more_info_required') for share of i,v`,[inspectionId,actor.contextId]);
     if (!inspection.rowCount) throw new ApiError(404,'An open assigned inspection is required.');
   } else if (purpose === 'maintenance') {
@@ -59,27 +59,43 @@ export async function canUploadMedia(client:PoolClient,actor:VerifiedActor,purpo
     await maintenanceResidence(client,actor,initial.residence_id);
     const issue = await client.query(`select i.id from public.maintenance_issues i join public.staff_assignments s on s.id = i.assigned_staff_id
       where i.id = $1 and s.staff_context_id = $2 and s.status = 'active' and s.ended_at is null
-      and i.status in ('accepted','follow_up') and i.accepted_at is not null and i.declined_at is null for share of i,s`,[housing.issueId,actor.contextId]);
+      and i.withdrawn_by_wipe_id is null and i.status in ('accepted','follow_up') and i.accepted_at is not null and i.declined_at is null for share of i,s`,[housing.issueId,actor.contextId]);
     if (!issue.rowCount) throw new ApiError(403,'Accept your active assigned repair before uploading completion evidence.');
     return {residenceId:initial.residence_id,issueId:housing.issueId};
   }
 }
 /** Caller holds a verified actor transaction. The reservation remains durable
  * until upload succeeds or cleanup reconciles a failed/interrupted transfer. */
-export async function reserveMedia(client:PoolClient,actor:VerifiedActor,purpose:Purpose,bytes:Buffer,inspectionId?:string,housing:HousingScope = {}) {
+export async function reserveMedia(client:PoolClient,actor:VerifiedActor,purpose:Purpose,bytes:Buffer,inspectionId?:string,housing:HousingScope = {},reuseAvatar=false) {
   if (!bytes.length || bytes.length > MAX_MEDIA_BYTES) throw new ApiError(413,'The processed photograph must be at most 6MB.');
   const scope = await canUploadMedia(client,actor,purpose,inspectionId,housing);
   await client.query("select pg_advisory_xact_lock(hashtextextended('media:global',0))");
   const global = (await client.query("select coalesce(sum(byte_size),0) as bytes from public.media_assets where created_at > clock_timestamp() - interval '24 hours'")).rows[0];
-  if (Number(global.bytes) + bytes.length > 2 * 1024 * 1024 * 1024) throw new ApiError(429,'The daily platform photograph allowance is used. Try again later.');
   // Serialize per-account quota checks across processes. No local JSON counters.
   await client.query("select pg_advisory_xact_lock(hashtextextended('media:' || $1::text,0))",[actor.contextId]);
+  const digest = crypto.createHash('sha256').update(bytes).digest('hex');
+  if (purpose === 'avatar' && reuseAvatar) {
+    const existing = await reusableAvatar(client,actor,bytes);
+    if (existing?.state === 'ready') return existing;
+    if (existing) throw new ApiError(409,'This photograph is already uploading. Wait for that upload to finish, then retry.','avatar_upload_pending');
+  }
+  if (Number(global.bytes) + bytes.length > 2 * 1024 * 1024 * 1024) throw new ApiError(429,'The daily platform photograph allowance is used. Try again later.');
   const used = (await client.query(`select count(*) as count,coalesce(sum(byte_size),0) as bytes from public.media_assets
     where owner_context_id = $1 and created_at > clock_timestamp() - interval '24 hours'`,[actor.contextId])).rows[0];
   if (Number(used.count) >= 100 || Number(used.bytes) + bytes.length > 250 * 1024 * 1024) throw new ApiError(429,'Your daily photograph upload allowance is used. Try again later.');
   const id = crypto.randomUUID(),objectPath = `contexts/${actor.contextId}/${id}.png`;
   return (await client.query(`insert into public.media_assets(id,owner_context_id,owner_auth_user_id,purpose,inspection_id,object_path,byte_size,sha256,residence_id,allocation_id,issue_id)
-    values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) returning *`,[id,actor.contextId,actor.authUserId,purpose,inspectionId || null,objectPath,bytes.length,crypto.createHash('sha256').update(bytes).digest('hex'),scope?.residenceId || null,scope?.allocationId || null,scope?.issueId || null])).rows[0];
+    values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) returning *`,[id,actor.contextId,actor.authUserId,purpose,inspectionId || null,objectPath,bytes.length,digest,scope?.residenceId || null,scope?.allocationId || null,scope?.issueId || null])).rows[0];
+}
+/** Reuse only this exact verified portal's identical processed photograph.
+ * The upload route still checks its current settings grant and object integrity. */
+export async function reusableAvatar(client:PoolClient,actor:VerifiedActor,bytes:Buffer) {
+  await canUploadMedia(client,actor,'avatar');
+  return (await client.query(`select * from public.media_assets where owner_context_id=$1 and owner_auth_user_id=$2
+    and purpose='avatar' and sha256=$3 and byte_size=$4 and state in ('reserved','ready')
+    and (state='reserved' or exists(select 1 from storage.objects o where o.bucket_id=media_assets.bucket_id and o.name=media_assets.object_path))
+    order by (state='ready') desc,created_at desc,id limit 1`,
+    [actor.contextId,actor.authUserId,crypto.createHash('sha256').update(bytes).digest('hex'),bytes.length])).rows[0];
 }
 export async function finishMedia(client:PoolClient,actor:VerifiedActor,id:string) {
   const initial = (await client.query("select * from public.media_assets where id = $1 and owner_context_id = $2 and owner_auth_user_id = $3 and state = 'reserved'",[id,actor.contextId,actor.authUserId])).rows[0];
@@ -135,8 +151,21 @@ export function installMedia(app:Express,auth:SupabaseAuth) {
       const bytes = await decodeImageUpload(req.body,purpose==='avatar'?512:2048);
       const asset = await auth.db.authorizedSystem(req.actor,[req.actor.kind],async client => {
         if(grant)await requireSettingsGrant(client,req.actor,grant);
-        return reserveMedia(client,req.actor,purpose,bytes,inspectionId,housing);
+        return reserveMedia(client,req.actor,purpose,bytes,inspectionId,housing,purpose==='avatar');
       });
+      if (purpose==='avatar' && asset.state==='ready') {
+        // Do not create a second object after a lost response or refreshed page.
+        // Check the actual stored bytes, then recheck the live identity/key after
+        // the provider read. Missing/corrupt objects fail instead of being reused.
+        const stored = await storage.download(asset.object_path,{byte_size:Number(asset.byte_size),sha256:asset.sha256});
+        stored.fill(0);
+        return res.status(201).json(await auth.db.authorizedSystem(req.actor,[req.actor.kind],async client => {
+          if(grant)await requireSettingsGrant(client,req.actor,grant);
+          const current = await reusableAvatar(client,req.actor,bytes);
+          if (!current || current.id!==asset.id || current.state!=='ready') throw new ApiError(409,'Your photograph upload changed. Try again.');
+          return {success:true,imageUrl:mediaUrl(asset.id),imagePath:mediaUrl(asset.id),assetId:asset.id,storageType:'supabase-private',reused:true};
+        }));
+      }
       try {
         await storage.upload(asset.object_path,bytes);
         const result = await auth.db.authorizedSystem(req.actor,[req.actor.kind],async client => {

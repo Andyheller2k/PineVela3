@@ -5,6 +5,31 @@ below describe that transitional implementation. No accounts, keys or proposals 
 
 ## Supabase replacement checkpoint
 
+Migration 67 implements the reviewed own-key execution handoff and separate operator
+worker. Queueing is distinct from completed closure; requests, notifications/audit
+and native receipts stay consistent under duplicate delivery and failure. The
+server-only release gate remains off until genuine acceptance. See
+[worker operation](operations/system-wipe-worker.md). Earlier checkpoint descriptions
+below remain historical; normal-wipe verified login/history retention is unchanged.
+
+Migration 58 adds [system wipe scope previews and five-key consent](migrations/system-wipe.md).
+Normal wipes retain verified logins and account history. A saved exact preview,
+five independent own-key approvals including the founder, and a separate keyed
+founder final review are required. Roster/domain changes invalidate consent even
+after reversal. Approval and founder backup consent remove nothing; execution remains disabled. Single-administrator wipe calls return
+410 in the replacement. Migration 59 adds keyed founder preparation/cancellation
+and operator-only evidence from actual database restores and Storage-byte recovery.
+Records remain available; changes invalidate consent. Preparation evidence does
+not freeze writers or authorize execution. Detailed JSON recovery instructions below apply only to
+the transitional backend, not to this Supabase workflow.
+
+Migration 60 adds founder own-key scope pauses and final consent after actual
+post-pause recovery verification. Pauses block scoped writes and remain until keyed
+preparation cancellation; unrelated tracked changes invalidate consent. Final
+consent expires within five minutes and binds the founder sign-in/key and exact
+scope/catalog. Every transition sends administrator notifications. Operational wipe
+execution remains disabled. See the system wipe rules above for the native guards.
+
 Migration 37 adds account-action reviews to the actual account directory and Shared
 Approvals. Any active administrator can propose with their own approval key; all five,
 including the founder, must vote independently within 24 hours. A rejection closes

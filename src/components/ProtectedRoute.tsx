@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Navigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import RouteSkeleton from './RouteSkeleton';
+import SessionRestorationNotice from './SessionRestorationNotice';
 import LogoutConfirmationModal from './LogoutConfirmationModal';
 
 interface ProtectedRouteProps {
@@ -10,8 +11,10 @@ interface ProtectedRouteProps {
 }
 
 export default function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
-  const { user, loading, logout } = useAuth();
+  const { user, loading, restorationError, logout } = useAuth();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+
+  if (loading && restorationError) return <SessionRestorationNotice />;
 
   if (loading) {
     return <RouteSkeleton />;

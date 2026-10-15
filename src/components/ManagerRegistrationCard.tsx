@@ -21,7 +21,7 @@ export default function ManagerRegistrationCard({ managerAccount, onRegister, on
                         {managerAccount.name}
                       </h3>
                       <p className="text-xs text-slate-500 font-semibold mt-0.5">
-                        {managerAccount.organizationName || 'PineVela Property Manager'}
+                        {managerAccount.hostelName || managerAccount.organizationName || 'Property manager'}
                       </p>
                     </div>
                   </div>
@@ -43,10 +43,10 @@ export default function ManagerRegistrationCard({ managerAccount, onRegister, on
                     </div>
                     <div>
                       <span className="text-slate-400 block font-medium">Organization / Property</span>
-                      <span className="font-bold text-slate-800">{managerAccount.organizationName || 'PineVela'}</span>
+                      <span className="font-bold text-slate-800">{managerAccount.hostelName || managerAccount.organizationName || 'Not provided'}</span>
                     </div>
                     <div>
-                      <span className="text-slate-400 block font-medium">Work Email (Manager Logins)</span>
+                      <span className="text-slate-400 block font-medium">Manager login email</span>
                       <span className="font-bold text-emerald-900 font-mono break-all">{managerAccount.email}</span>
                     </div>
                     <div>
@@ -96,7 +96,7 @@ export default function ManagerRegistrationCard({ managerAccount, onRegister, on
                   <div className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-xs text-amber-950">
                     <Clock className="h-5 w-5 shrink-0 text-amber-700" /><div>
                       <strong className="block mb-1">{status === 'more_info_required' ? 'Additional Information Required' : 'Verification in Progress — Manager Login Locked'}</strong>
-                      {status === 'more_info_required' ? 'Review the administrator feedback above and provide the requested information through the existing verification flow.' : 'Your residence submission is awaiting administrator review and property verification. Manager access becomes available after approval.'}
+                      {managerAccount.requiresPropertyRegistration ? 'Your work identity is verified. Continue to submit your new residence for physical inspection.' : status === 'more_info_required' ? 'Review the administrator feedback above and provide the requested information through the existing verification flow.' : 'Your residence submission is awaiting administrator review and property verification. Manager access becomes available after approval.'}
                     </div>
                   </div>
                 )}
@@ -109,6 +109,8 @@ export default function ManagerRegistrationCard({ managerAccount, onRegister, on
                   <span>Real-time status updates are sent directly to your Alerts feed. You cannot create a duplicate manager account while this registration is active.</span>
                 </div>
 
+                {managerAccount.requiresPropertyRegistration && <button type="button" onClick={onRegister} className="min-h-11 rounded-xl bg-blue-600 px-5 py-3 text-sm font-bold text-white">Continue property registration</button>}
+                {status==='more_info_required'&&managerAccount.canCorrectRegistration&&<button type="button" onClick={onRegister} className="min-h-11 rounded-xl bg-blue-700 px-5 py-3 text-sm font-bold text-white">Review and correct application</button>}
                 {(status === 'approved' || (status === 'restricted' && (managerAccount.isApproved || managerAccount.isVerified))) && <button type="button" onClick={onLogin} className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-xs font-bold text-white hover:bg-blue-700"><LogIn className="h-4 w-4" />Log In to Manager Console</button>}
               </div>
             ) : (

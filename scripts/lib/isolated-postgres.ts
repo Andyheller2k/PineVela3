@@ -32,9 +32,10 @@ export async function withIsolatedBackup<T>(id:string,work:(config:PoolConfig)=>
       create extension if not exists "uuid-ossp" with schema extensions;
       create extension if not exists pgcrypto with schema extensions;
       create extension if not exists pg_trgm with schema extensions;
-      do $$ declare name text; begin foreach name in array array['anon','authenticated','service_role','authenticator','supabase_auth_admin','supabase_storage_admin','postgres','supabase_admin','pinevela_backend','dashboard_user'] loop
+      do $$ declare name text; begin foreach name in array array['anon','authenticated','service_role','authenticator','supabase_auth_admin','supabase_storage_admin','postgres','supabase_admin','pinevela_backend','pinevela_catalog','dashboard_user'] loop
         if not exists(select 1 from pg_roles where rolname=name) then execute format('create role %I nologin',name); end if;
-      end loop; end $$; grant authenticated to pinevela_backend; grant pinevela_backend to postgres;`);
+      end loop; end $$; alter role pinevela_catalog nologin noinherit nobypassrls; grant pinevela_catalog to postgres;
+    grant authenticated to pinevela_backend; grant pinevela_backend to postgres;`);
     command('pg_restore',['--dbname=postgres','--clean','--if-exists','--no-owner','--single-transaction'],decrypted);decrypted.fill(0);
     if(options.applicationCheckpoint) {
       // Only the disposable Unix-socket cluster is rebased. Keep the newest real

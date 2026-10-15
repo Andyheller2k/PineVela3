@@ -111,7 +111,7 @@ try{
   await denied(()=>purchaseReview(c,foreignOwner,{orderId:order.id,rating:5},item.id),409,'Service alias rejects product receipts');
   await denied(()=>c.query('update public.market_reviews set id=$2 where id=$1',[rating.ratingRecord.id,crypto.randomUUID()]),'23514','SQL review identity is immutable');
   await scoped(foreignOwner,async()=>await denied(()=>c.query('update public.market_reviews set rating=1 where id=$1',[rating.ratingRecord.id]),'42501','Browser cannot write raw review tables'));
-  await c.query('set local role anon');const publicRating=(await c.query('select * from public.market_reviews_public')).rows[0];check(publicRating.rating===5 && !('order_id' in publicRating) && !('buyer_context_id' in publicRating),'Guest gets only safe purchase reputation');await c.query('reset role');
+  await c.query('set local role pinevela_catalog');const publicRating=(await c.query('select * from private.market_reviews_public')).rows[0];check(publicRating.rating===5 && !('order_id' in publicRating) && !('buyer_context_id' in publicRating),'Guest gets only safe purchase reputation');await c.query('reset role');
   check((await c.query('select r.context_id from public.notifications n join public.notification_recipients r on r.notification_id=n.id where n.market_message_id=$1',[first.message.id])).rows[0].context_id===own.actor.contextId,'New inquiry notice belongs to seller portal');
   await c.query('set constraints all immediate');await c.query('rollback');assert.deepEqual(await counts(),before);
   console.log(JSON.stringify({checks,passed:true,rolledBack:true,authUsersCreated:0,providerFlowTested:false,livePaymentTested:false}));

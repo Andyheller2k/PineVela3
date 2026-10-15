@@ -1,11 +1,16 @@
 import type { Express,RequestHandler } from 'express';
 import type { PoolClient } from 'pg';
+import {managerRegistrationRestricted} from './registrationRestrictions.js';
 import { ApiError,uuid,type VerifiedActor } from './db.js';
 import { SupabaseAuth,type AuthRequest } from './auth.js';
 import { notify,notifyPrimaryOwner } from './notifications.js';
 import { buildInspectionReport,InspectionSubmissionError } from '../inspectionReportSecurity.js';
 import { ownedMedia } from './media.js';
-const route = (work:(req:AuthRequest,res:any)=>Promise<unknown>):RequestHandler => (req,res,next) => { work(req as AuthRequest,res).catch(next); };
+import {checkProfileContext} from './profiles.js';
+const route = (work:(req:AuthRequest,res:any)=>Promise<unknown>):RequestHandler => (req,res,next) => {
+  try{checkProfileContext((req as AuthRequest).actor,req.headers['x-pinevela-profile-context']);}catch(error){return next(error);}
+  work(req as AuthRequest,res).catch(next);
+};
 const text = (value:unknown,max:number,minimum=0) => {
   if (typeof value !== 'string' || value.trim().length < minimum || value.trim().length > max) throw new ApiError(400,'Check the notes and field lengths.');
   return value.trim();
@@ -20,12 +25,17 @@ async function audit(client:PoolClient,actor:VerifiedActor,type:string,id:string
 }
 /** These helpers run only inside authorizedSystem's live actor transaction. */
 async function dossier(client:PoolClient,id:string) {
-  const record = (await client.query(`select v.*,p.display_name as manager_name,c.status as manager_status
+  const target=(await client.query("select applicant_context_id from public.verification_cases where id=$1 and kind='manager_registration'",[id])).rows[0];
+  if(!target)throw new ApiError(404,'Manager registration not found.');
+  await client.query("select pg_advisory_xact_lock(hashtextextended('manager-registration:' || $1::text,0))",[target.applicant_context_id]);
+  const record = (await client.query(`select v.*,p.display_name as manager_name,c.status as manager_status,r.status as residence_status
     from public.verification_cases v join public.account_contexts c on c.id = v.applicant_context_id
     join public.residences r on r.id = v.residence_id and r.primary_owner_id = c.primary_owner_id
     join public.profiles p on p.id = c.auth_user_id where v.id = $1 and v.kind = 'manager_registration'
     and c.kind = 'manager' for update of v,c`,[id])).rows[0];
   if (!record) throw new ApiError(404,'Manager registration not found.');
+  const generation=(await client.query("select manager_generation from private.account_enrollments where linked_context_id=$1 and kind='manager'",[record.applicant_context_id])).rows[0];
+  if(record.withdrawn_by_wipe_id||record.residence_status==='closed'||!generation||generation.manager_generation!==record.manager_generation)throw new ApiError(409,'This inspection belongs to an earlier manager registration. Review the current property.');
   return record;
 }
 export async function dispatchInspection(client:PoolClient,actor:VerifiedActor,caseId:string,officerId:string,priority:string,notes:string) {
@@ -34,7 +44,9 @@ export async function dispatchInspection(client:PoolClient,actor:VerifiedActor,c
   notes = text(notes,4000);
   const record = await dossier(client,caseId);
   if (record.manager_status !== 'pending' || !['inspection_pending','under_review','more_info_required'].includes(record.status)) throw new ApiError(409,'This registration cannot receive a dispatch.');
-  const officer = (await client.query(`select c.id,p.display_name from public.account_contexts c join public.profiles p on p.id = c.auth_user_id
+  const officer = (await client.query(`select c.id,coalesce(e.enrollment_fields->>'fullName',p.display_name) as display_name
+    from public.account_contexts c join public.profiles p on p.id = c.auth_user_id
+    left join private.account_enrollments e on e.kind='officer' and e.status='completed' and e.linked_context_id=c.id and e.auth_user_id=c.auth_user_id
     where c.id = $1 and c.kind = 'officer' and c.status = 'active' for share of c`,[officerId])).rows[0];
   if (!officer) throw new ApiError(409,'Choose an active registered verification officer.');
   const prior = (await client.query(`select * from public.verification_inspections where case_id = $1
@@ -52,7 +64,7 @@ export async function dispatchInspection(client:PoolClient,actor:VerifiedActor,c
     message:`PineVela Verification Officer ${officer.display_name} has been assigned to visit and physically inspect "${record.submitted_data.name}". Please ensure you or an authorized representative are available.`,sender:actor.contextId});
   await notify(client,await administrators(client),{category:'verification',title:'Verification Team Dispatched',
     message:`${officer.display_name} was dispatched to inspect "${record.submitted_data.name}".`,sender:actor.contextId});
-  await audit(client,actor,'inspection_dispatched',caseId,{inspectionId:inspection.id,officerContextId:officerId,priority,notes});
+  await audit(client,actor,'inspection_dispatched',caseId,{inspectionId:inspection.id,officerContextId:officerId,priority,notes,property:record.submitted_data});
   return {...inspection,alreadyDispatched:false};
 }
 export async function submitInspection(client:PoolClient,actor:VerifiedActor,id:string,body:any) {
@@ -81,7 +93,9 @@ export async function submitInspection(client:PoolClient,actor:VerifiedActor,id:
     const value = body?.propertyDetails?.[field];
     if (value !== undefined && (!Number.isSafeInteger(value) || value < 0 || value > 100000)) throw new ApiError(400,'Invalid estimated property capacity.');
   }
-  const person = (await client.query('select display_name,email from public.profiles where id = $1',[actor.authUserId])).rows[0];
+  const person = (await client.query(`select coalesce(e.enrollment_fields->>'fullName',p.display_name) as display_name,p.email
+    from public.profiles p left join private.account_enrollments e on e.kind='officer' and e.status='completed'
+      and e.linked_context_id=$2 and e.auth_user_id=p.id where p.id=$1`,[actor.authUserId,actor.contextId])).rows[0];
   let report:any;
   try { report = buildInspectionReport(body,{id:actor.contextId,fullName:person.display_name,email:person.email}); }
   catch (error) { if (error instanceof InspectionSubmissionError) throw new ApiError(error.status,error.message); throw error; }
@@ -110,10 +124,8 @@ export async function decideManager(client:PoolClient,actor:VerifiedActor,id:str
   if (inspection && decision === 'approved' && inspection.report.recommendation !== 'recommend_approval' && notes.length < 5)
     throw new ApiError(400,'Explain the decision to approve despite the inspection recommendation.');
   if (decision === 'approved') {
-    const bans = await client.query(`select 1 from public.registration_bans b join public.account_contexts c on c.id = b.account_context_id
-      join public.account_contexts target on target.id = $1 where b.until_at > now() and b.kind in ('manager_account','residence')
-      and coalesce(c.primary_owner_id,c.auth_user_id) = target.primary_owner_id`,[record.applicant_context_id]);
-    if (bans.rowCount) throw new ApiError(409,'This manager registration is restricted by an active ban.');
+    if (await managerRegistrationRestricted(client,record.applicant_context_id))
+      throw new ApiError(409,'This manager registration is restricted by an active ban.');
     const assignment = await client.query(`select id from public.manager_assignments where manager_context_id = $1 and residence_id = $2 and ended_at is null for update`,[record.applicant_context_id,record.residence_id]);
     if (assignment.rowCount !== 1) throw new ApiError(409,'An unambiguous saved manager assignment is required.');
     await client.query("update public.account_contexts set status = 'active',updated_at = now() where id = $1",[record.applicant_context_id]);
@@ -137,46 +149,46 @@ export async function decideManager(client:PoolClient,actor:VerifiedActor,id:str
 export async function inspectionRows(client:PoolClient,actor:VerifiedActor) {
   if (!['admin','officer'].includes(actor.kind)) throw new ApiError(403,'Inspection access required.');
   return (await client.query(`select i.id,i.case_id as "managerVerificationId",v.applicant_context_id as "managerId",
-    p.display_name as "managerName",p.email as "managerEmail",p.phone as "managerPhone",v.submitted_data->>'name' as "hostelName",
-    v.submitted_data->>'location' as location,v.submitted_data->>'digitalAddress' as "digitalAddress",
-    i.officer_context_id as "assignedOfficerId",o.display_name as "assignedOfficerName",o.email as "assignedOfficerEmail",
+    p.display_name as "managerName",p.email as "managerEmail",p.phone as "managerPhone",coalesce(dispatched.property,v.submitted_data)->>'name' as "hostelName",
+    coalesce(dispatched.property,v.submitted_data)->>'location' as location,
+    i.officer_context_id as "assignedOfficerId",coalesce(oe.enrollment_fields->>'fullName',o.display_name) as "assignedOfficerName",o.email as "assignedOfficerEmail",
     i.assigned_at as "dispatchedAt",i.dispatched_by_context_id as "dispatchedBy",i.priority,i.dispatch_notes as "adminDispatchNotes",i.report,
-    case i.status when 'assigned' then 'dispatched' when 'in_progress' then 'dispatched' when 'submitted' then 'report_submitted'
-      when 'accepted' then 'approved' else 'rejected' end as status
+    case when i.withdrawn_by_wipe_id is not null or v.withdrawn_by_wipe_id is not null then 'withdrawn'
+      else case i.status when 'assigned' then 'dispatched' when 'in_progress' then 'dispatched' when 'submitted' then 'report_submitted'
+      when 'accepted' then 'approved' else 'rejected' end end as status
     from public.verification_inspections i join public.verification_cases v on v.id = i.case_id
     join public.account_contexts c on c.id = v.applicant_context_id join public.profiles p on p.id = c.auth_user_id
     join public.account_contexts oc on oc.id = i.officer_context_id join public.profiles o on o.id = oc.auth_user_id
+    left join private.account_enrollments oe on oe.kind='officer' and oe.status='completed' and oe.linked_context_id=oc.id and oe.auth_user_id=oc.auth_user_id
+    left join lateral(select event_data->'property' as property from private.audit_events
+      where resource_id=v.id and event_type in ('inspection_dispatched','inspection_property_preserved')
+      and event_data->>'inspectionId'=i.id::text and jsonb_typeof(event_data->'property')='object'
+      order by occurred_at limit 1) dispatched on true
     where ($1::boolean or i.officer_context_id = $2) order by i.assigned_at desc limit 500`,[actor.kind === 'admin',actor.contextId])).rows;
 }
 export function installInspections(app:Express,auth:SupabaseAuth) {
-  app.get(['/api/manager-verifications','/api/manager-requests'],auth.require(['admin','manager']),route(async (req,res) => res.json(await auth.db.authorizedSystem(req.actor,['admin','manager'],async c =>
+  app.get(['/api/manager-verifications','/api/manager-requests'],auth.require(['admin','manager']),route(async (req,res) => res.json(await auth.db.authorizedRead(req.actor,['admin','manager'],async c =>
     (await c.query(`select v.id,v.applicant_context_id as \"managerId\",p.display_name as \"managerName\",p.email as \"managerEmail\",p.phone as \"managerPhone\",
       v.residence_id as \"residenceId\",v.submitted_data->>'name' as \"hostelName\",v.submitted_data->>'location' as location,
-      v.submitted_data->>'digitalAddress' as \"digitalAddress\",v.status,v.review_notes as \"adminNotes\",v.submitted_at as \"createdAt\",v.reviewed_at as \"reviewedAt\"
+      case when v.withdrawn_by_wipe_id is not null then 'withdrawn' else v.status end as status,v.review_notes as \"adminNotes\",v.submitted_at as \"createdAt\",v.reviewed_at as \"reviewedAt\"
       from public.verification_cases v join public.account_contexts ac on ac.id = v.applicant_context_id
       join public.profiles p on p.id = ac.auth_user_id where v.kind = 'manager_registration' and ($1::boolean or v.applicant_context_id = $2)
       order by v.submitted_at desc limit 500`,[req.actor.kind === 'admin',req.actor.contextId])).rows))));
-  const read = route(async (req,res) => res.json(await auth.db.authorizedSystem(req.actor,['admin','officer'],c => inspectionRows(c,req.actor))));
+  const read = route(async (req,res) => res.json(await auth.db.authorizedRead(req.actor,['admin','officer'],c => inspectionRows(c,req.actor))));
   app.get(['/api/admin/verification-inspections','/api/verification-inspections'],auth.require(['admin']),read);
   app.get('/api/verification-team/my-inspections',auth.require(['officer']),read);
-  app.get('/api/verification-teams',auth.require(['admin']),route(async (req,res) => res.json(await auth.db.authorizedSystem(req.actor,['admin'],async c =>
-    (await c.query(`select ac.id,p.display_name as "fullName",p.email,p.phone,ac.status,ac.created_at as "createdAt"
-      from public.account_contexts ac join public.profiles p on p.id = ac.auth_user_id where ac.kind = 'officer' order by ac.created_at`)).rows))));
-  app.put('/api/verification-teams/:id/status',auth.require(['admin']),route(async (req,res) => {
-    if (!['active','suspended','inactive'].includes(req.body?.status) || Object.keys(req.body).some(key => key !== 'status')) throw new ApiError(400,'Choose active, suspended or inactive.');
-    const officer = await auth.db.authorizedSystem(req.actor,['admin'],async c => {
-      const id = uuid(req.params.id),status = req.body.status === 'inactive' ? 'closed' : req.body.status;
-      const row = (await c.query("update public.account_contexts set status = $2,updated_at = now() where id = $1 and kind = 'officer' returning id,status",[id,status])).rows[0];
-      if (!row) throw new ApiError(404,'Registered officer not found.');
-      await c.query('delete from private.account_sessions where active_context_id = $1',[id]);
-      await audit(c,req.actor,'officer_status_changed',id,{status});
-      await notify(c,await administrators(c),{category:'verification',title:'Verification Officer Status Updated',message:`A registered verification officer is now ${req.body.status}.`,sender:req.actor.contextId});
-      return row;
-    });
-    return res.json({success:true,officer});
-  }));
-  app.get('/api/verification-team/me',auth.require(['officer']),route(async (req,res) => res.json(await auth.db.actor(req.actor,async c =>
-    (await c.query('select $2::uuid as id,p.display_name as "fullName",p.email,p.phone from public.profiles p where p.id = $1',[req.actor.authUserId,req.actor.contextId])).rows[0]))));
+  app.get('/api/verification-teams',auth.require(['admin']),route(async (req,res) => res.json(await auth.db.authorizedRead(req.actor,['admin'],async c =>
+    (await c.query(`select ac.id,ac.id as "officerId",coalesce(e.enrollment_fields->>'fullName',p.display_name) as "fullName",
+      p.email,coalesce(e.enrollment_fields->>'phone',p.phone) as phone,e.enrollment_fields->>'assignedZone' as "assignedZone",
+      ac.status,ac.created_at as "createdAt",(select count(*)::int from public.verification_inspections i where i.officer_context_id=ac.id) as "totalDispatches"
+      from public.account_contexts ac join public.profiles p on p.id = ac.auth_user_id
+      left join private.account_enrollments e on e.kind='officer' and e.status='completed' and e.linked_context_id=ac.id and e.auth_user_id=ac.auth_user_id
+      where ac.kind = 'officer' order by ac.created_at`)).rows))));
+  app.get('/api/verification-team/me',auth.require(['officer']),route(async (req,res) => res.json(await auth.db.authorizedSystem(req.actor,['officer'],async c =>
+    (await c.query(`select $2::uuid as id,$2::uuid as "officerId",coalesce(e.enrollment_fields->>'fullName',p.display_name) as "fullName",
+      p.email,coalesce(e.enrollment_fields->>'phone',p.phone) as phone,e.enrollment_fields->>'assignedZone' as "assignedZone"
+      from public.profiles p left join private.account_enrollments e on e.kind='officer' and e.status='completed' and e.linked_context_id=$2 and e.auth_user_id=p.id
+      where p.id=$1`,[req.actor.authUserId,req.actor.contextId])).rows[0]))));
   app.post('/api/admin/dispatch-verification-team',auth.require(['admin']),route(async (req,res) => {
     const result = await auth.db.authorizedSystem(req.actor,['admin'],c => dispatchInspection(c,req.actor,uuid(req.body?.managerVerificationId),uuid(req.body?.assignedOfficerId),req.body?.priority || 'medium',req.body?.adminDispatchNotes || req.body?.dispatchNotes || ''));
     return res.status(result.alreadyDispatched ? 200 : 201).json({success:true,inspection:result});

@@ -7,7 +7,10 @@ import { signupChallenge, signupProviderConfig, requireConfirmationSettings } fr
 import { validateManagerWorkEmail } from '../src/lib/validation.js';
 import { notify } from './notifications.js';
 import { reactivateResident } from './residentReactivation.js';
+import {confirmSellerReactivation} from './sellerReactivation.js';
+import {confirmManagerReactivation} from './managerReactivation.js';
 import { portalPin,hashPortalPin,checkPortalPin } from './portalAccess.js';
+import {primaryManagerRegistrationRestricted} from './registrationRestrictions.js';
 
 const route = (work: (req: AuthRequest, res: Response) => Promise<unknown>): RequestHandler =>
   (req, res, next) => { work(req as AuthRequest, res).catch(next); };
@@ -32,17 +35,28 @@ export function enrollmentInput(body: any): EnrollmentInput {
   // Ownership, status and role fields in the body have no effect.
   return { kind, email, name, phone, password: body.password };
 }
-async function primaryOwner(client: PoolClient, actor: VerifiedActor) {
+async function primaryOwner(client: PoolClient, actor: VerifiedActor, readOnly=false) {
   const { rows: [owner] } = await client.query(`select p.id,p.email from public.profiles p
     join public.account_contexts c on c.auth_user_id = p.id
     where c.id = $1 and c.auth_user_id = $2 and c.kind = 'primary' and c.status = 'active'
-      and p.primary_owner_id is null for update of p`, [actor.contextId,actor.authUserId]);
+      and p.primary_owner_id is null ${readOnly?'for share':'for update'} of p`, [actor.contextId,actor.authUserId]);
   if (!owner) throw new ApiError(403, 'Start account enrollment from your primary user account.');
   return owner;
 }
+/** Pure owner-scoped read. Enrollment mutations retain primaryOwner's UPDATE lock. */
+export async function readOwnedEnrollments(client:PoolClient,actor:VerifiedActor){
+  if(actor.kind!=='primary')throw new ApiError(403,'Start account enrollment from your primary user account.');
+  await primaryOwner(client,actor,true);
+  return (await client.query(`select e.id,e.kind,e.invited_email as email,e.auth_user_id as signup_id,e.linked_context_id as account_id,
+    e.status,e.verified_at,e.expires_at,c.status as account_status,e.enrollment_fields->>'authentication' as authentication,
+    exists(select 1 from private.portal_access_keys k where k.context_id=e.linked_context_id) as requires_portal_pin
+    from private.account_enrollments e left join public.account_contexts c on c.id=e.linked_context_id
+    where e.primary_owner_id=$1 order by e.created_at desc`,[actor.authUserId])).rows;
+}
 /** Called only in a transaction that has already locked a verified primary actor. */
 type SharedIdentity = { authUserId:string; sessionId:string; email:string; existingContextId:string; newPinHash:string; existingPinHash:string };
-export async function reserveEnrollment(client: PoolClient, actor: VerifiedActor, input: EnrollmentInput, token: string, shared?: SharedIdentity) {
+export async function reserveEnrollment(client: PoolClient, actor: VerifiedActor, input: EnrollmentInput, token: string, shared?: SharedIdentity,googleManager=false) {
+  if(googleManager&&(input.kind!=='manager'||shared))throw new ApiError(400,'Google manager enrollment cannot select another account type.');
   const owner = await primaryOwner(client,actor);
   if (input.email === owner.email.toLowerCase()) throw new ApiError(400, 'Use a separate email address for this account.');
   await client.query(`update public.account_contexts c set status = 'closed',updated_at = now()
@@ -50,18 +64,24 @@ export async function reserveEnrollment(client: PoolClient, actor: VerifiedActor
       and e.expires_at <= clock_timestamp() and c.id = e.linked_context_id and c.status = 'pending'`, [owner.id]);
   await client.query(`update private.account_enrollments set status = 'expired'
     where primary_owner_id = $1 and status = 'pending_email' and expires_at <= clock_timestamp()`, [owner.id]);
-  const blocked = await client.query(`select 1 from public.registration_bans b
+  const blocked = input.kind === 'manager'
+    ? await primaryManagerRegistrationRestricted(client,owner.id)
+    : !!(await client.query(`select 1 from public.registration_bans b
     join public.account_contexts c on c.id = b.account_context_id
     where (c.auth_user_id = $1 or c.primary_owner_id = $1) and b.until_at > clock_timestamp()
-      and b.kind = $2`, [owner.id,input.kind === 'manager' ? 'manager_account' : input.kind === 'seller' ? 'seller_account' : 'resident_account']);
-  if (blocked.rowCount) throw new ApiError(403, 'Registration is temporarily restricted for this account.');
+      and b.kind = $2`, [owner.id,input.kind === 'seller' ? 'seller_account' : 'resident_account'])).rowCount;
+  if (blocked) throw new ApiError(403, 'Registration is temporarily restricted for this account.');
   const existing = await client.query(`select 1 from public.account_contexts where primary_owner_id = $1
     and kind = $2 and status <> 'closed' union all select 1 from private.account_enrollments
     where primary_owner_id = $1 and kind = $2 and status in ('pending_email','pending_review')`, [owner.id,input.kind]);
   if (existing.rowCount) throw new ApiError(409, 'This account is already registered or awaiting verification.');
   // Never adopt an existing public identity through email equality or the provider's
-  // anti-enumeration signup response. Only the new-user trigger can bind a subject.
-  const exists = (await client.query('select 1 from auth.users where lower(email) = $1', [input.email])).rowCount;
+  // anti-enumeration signup response. Binding requires the signup trigger or the
+  // separate server-verified Google enrollment callback with its private nonce.
+  const exists = (await client.query(`select 1 from auth.users u where lower(u.email)=$1
+    and (not $2::boolean or exists(select 1 from public.profiles p where p.id=u.id)
+      or exists(select 1 from public.account_contexts c where c.auth_user_id=u.id)
+      or exists(select 1 from private.account_enrollments e where e.auth_user_id=u.id))`, [input.email,googleManager])).rowCount;
   if (exists && !shared)
     throw new ApiError(409, 'That address cannot be used for a new separate account.');
   if (shared) {
@@ -80,7 +100,7 @@ export async function reserveEnrollment(client: PoolClient, actor: VerifiedActor
   const reserved = await client.query(`insert into private.account_enrollments
     (initiator_context_id,primary_owner_id,kind,invited_email,token_digest,enrollment_fields,expires_at)
     values ($1,$2,$3,$4,$5,$6,clock_timestamp() + interval '24 hours') returning id`,
-    [actor.contextId,owner.id,input.kind,input.email,digest(token),JSON.stringify({ displayName: input.name,phone: input.phone })]);
+    [actor.contextId,owner.id,input.kind,input.email,digest(token),JSON.stringify({ displayName: input.name,phone: input.phone,...(googleManager?{authentication:'google'}:{}) })]);
   const id = reserved.rows[0].id as string;
   if (shared) {
     const context = (await client.query(`insert into public.account_contexts(auth_user_id,primary_owner_id,kind,status)
@@ -217,18 +237,13 @@ export function installEnrollment(app: Express, auth: SupabaseAuth) {
     }
   }));
   app.get('/api/auth/enrollments',primary,route(async (req,res) => {
-    const rows = await auth.db.authorizedSystem(req.actor,['primary'],async client => {
-      await primaryOwner(client,req.actor);
-      return (await client.query(`select e.id,e.kind,e.invited_email as email,e.auth_user_id as signup_id,e.linked_context_id as account_id,
-        e.status,e.verified_at,e.expires_at,c.status as account_status,
-        exists(select 1 from private.portal_access_keys k where k.context_id = e.linked_context_id) as requires_portal_pin from private.account_enrollments e
-        left join public.account_contexts c on c.id = e.linked_context_id
-        where e.primary_owner_id = $1 order by e.created_at desc`, [req.actor.authUserId])).rows;
-    });
+    const rows = await auth.db.authorizedRead(req.actor,['primary'],client=>readOwnedEnrollments(client,req.actor));
     return res.json(rows);
   }));
   app.post('/api/auth/enrollments/:id/reactivate',primary,route(async (req,res) => {
     const record = await auth.db.authorizedSystem(req.actor,['primary'],client => ownedEnrollment(client,req.actor,req.params.id));
+    if(record.kind==='manager')return confirmManagerReactivation(auth,req,res);
+    if(record.kind==='seller')return confirmSellerReactivation(auth,req,res);
     if (record.kind !== 'resident' || !record.auth_user_id || !record.verified_at ||
         !((record.status === 'completed' && record.context_status === 'closed') || (record.status === 'pending_review' && record.context_status === 'pending')))
       throw new ApiError(409,'Only a released verified resident account can be reactivated.');
@@ -285,7 +300,7 @@ export function installEnrollment(app: Express, auth: SupabaseAuth) {
       if (record.linked_context_id) {
         // Submitted product applications use their own withdrawal/governance rules.
         const submitted = await client.query(`select 1 from public.verification_cases where applicant_context_id = $1
-          union all select 1 from public.seller_applications where seller_context_id = $1`, [record.linked_context_id]);
+          union all select 1 from public.seller_applications a join public.account_contexts x on x.id=a.seller_context_id where a.seller_context_id = $1 and a.registration_generation=x.seller_generation`, [record.linked_context_id]);
         if (submitted.rowCount) throw new ApiError(409,'Withdraw the submitted registration through its account workflow.');
         await client.query("update public.account_contexts set status = 'closed',updated_at = now() where id = $1", [record.linked_context_id]);
       }

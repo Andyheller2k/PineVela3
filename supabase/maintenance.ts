@@ -52,7 +52,7 @@ export async function maintenanceResidence(client:PoolClient,actor:VerifiedActor
   return row;
 }
 async function ticket(client:PoolClient,id:string) {
-  const row = (await client.query('select * from public.housing_issue_details where id = $1',[id])).rows[0];
+  const row = (await client.query('select * from private.housing_issue_details where id = $1',[id])).rows[0];
   if (!row) throw new ApiError(404,'Maintenance ticket not found.'); return issueRow(row);
 }
 async function record(client:PoolClient,actor:VerifiedActor,issue:any,event:string,notes:string,photos:string[]=[]) {
@@ -110,6 +110,7 @@ export async function actOnIssue(client:PoolClient,actor:VerifiedActor,id:string
   if (!initial) throw new ApiError(404,'Maintenance ticket not found.');
   await maintenanceResidence(client,actor,initial.residence_id);
   const issue = (await client.query('select * from public.maintenance_issues where id = $1 for update',[id])).rows[0];
+  if (issue.withdrawn_by_wipe_id) throw new ApiError(409,'This maintenance report was withdrawn after a reviewed closure. Its evidence is retained.');
   const managerAction = ['assign','approve-reschedule','decline-reschedule','manager-close'].includes(action);
   if (managerAction) {if (!['manager','admin'].includes(actor.kind)) throw new ApiError(403,'Manager action required.');}
   else if (action === 'student-confirm') {
@@ -180,6 +181,7 @@ export async function editIssue(client:PoolClient,actor:VerifiedActor,id:string,
   if (!initial) throw new ApiError(404,'Maintenance ticket not found.');
   await maintenanceResidence(client,actor,initial.residence_id);
   const issue=(await client.query('select * from public.maintenance_issues where id=$1 for update',[id])).rows[0];
+  if (issue.withdrawn_by_wipe_id) throw new ApiError(409,'This maintenance report was withdrawn after a reviewed closure. Its evidence is retained.');
   if (actor.kind === 'resident') {
     const room=await residentRoom(client,actor,true);
     if (issue.reporter_context_id!==actor.contextId || room.allocation_id!==issue.allocation_id) throw new ApiError(403,'Edit only reports from your current activated room.');
@@ -213,12 +215,4 @@ export function installMaintenance(app:Express,auth:SupabaseAuth) {
       const kinds=action==='student-confirm' ? ['resident'] : ['assign','approve-reschedule','decline-reschedule','manager-close'].includes(action) ? ['manager','admin'] : ['staff'];
       return res.json(await auth.db.authorizedSystem(req.actor,kinds,c=>actOnIssue(c,req.actor,uuid(req.params.id),action,req.body ?? {})));
     }));
-  app.get('/api/student/my-rooms',auth.require(['resident']),route(async (req,res)=> {
-    const room=await auth.db.authorizedSystem(req.actor,['resident'],async c=> {
-      const r=await residentRoom(c,req.actor);
-      const key=(await c.query('select id,code from private.room_activation_keys where room_id = $1 and revoked_at is null',[r.room_id])).rows[0];
-      return {id:key?.id || r.allocation_id,allocationId:r.allocation_id,roomId:r.room_id,bedId:r.bed_id,roomKey:key?.code,
-        hostelId:r.residence_id,hostelName:r.residence_name,blockName:r.block_name,floor:r.floor_number,roomNumber:r.room_number,isAssigned:true,assignedStudentId:req.actor.contextId};
-    });return res.json({rooms:[room]});
-  }));
 }

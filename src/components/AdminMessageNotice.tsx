@@ -3,6 +3,7 @@ import { CheckCircle2, XCircle, Info, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { sessionFetch } from '../lib/session';
 import DashboardOverlay from './DashboardOverlay';
+import { AccountRefreshGate } from '../lib/accountRefresh';
 export default function AdminMessageNotice() {
   const { user } = useAuth();
   return user?.id ? <MessageNotice key={`${user.role}:${user.id}`} accountId={user.id} /> : null;
@@ -14,8 +15,24 @@ function MessageNotice({ accountId }: { accountId: string }) {
   const acknowledged = useRef(new Set<string>());
   useEffect(() => {
     let stopped = false; setNotice(null); acknowledged.current.clear();
-    const poll = async () => { try { const r = await sessionFetch('/api/admin-messages/pending', { headers: { 'X-PineVela-Account-Context': accountId } }); if (r.ok) { const items = await r.json(); if (!stopped) setNotice(items.find((item: any) => !acknowledged.current.has(item.id)) || null); } } catch { /* Retry at next poll. */ } };
-    poll(); const timer = setInterval(poll, 8000); window.addEventListener('pinevela-data-change', poll); return () => { stopped = true; clearInterval(timer); window.removeEventListener('pinevela-data-change', poll); };
+    const gate = new AccountRefreshGate();
+    const poll = () => {
+      if (stopped || document.hidden) return;
+      return gate.run(accountId, 0, async cancellation => {
+        const signal = AbortSignal.any([cancellation, AbortSignal.timeout(30000)]);
+        try {
+          const r = await sessionFetch('/api/admin-messages/pending', { signal, headers: { 'X-PineVela-Account-Context': accountId } });
+          if (r.ok) {
+            const items = await r.json();
+            if (!stopped && !signal.aborted) setNotice(items.find((item: any) => !acknowledged.current.has(item.id)) || null);
+          }
+        } catch { /* Retry at next visible poll. */ }
+      });
+    };
+    const visibility = () => { if (document.hidden) gate.cancel(); else void poll(); };
+    void poll(); const timer = setInterval(poll, 8000);
+    window.addEventListener('pinevela-data-change', poll); document.addEventListener('visibilitychange', visibility);
+    return () => { stopped = true; gate.cancel(); clearInterval(timer); window.removeEventListener('pinevela-data-change', poll); document.removeEventListener('visibilitychange', visibility); };
   }, [accountId]);
   if (!notice) return null;
   const close = async () => { if (busy) return; setBusy(true); setError(''); try { const r = await sessionFetch(`/api/admin-messages/${encodeURIComponent(notice.id)}/ack`, { method: 'POST', headers: { 'X-PineVela-Account-Context': accountId } }); if (!r.ok) throw new Error('Could not acknowledge this message. Try again.'); if (!mounted.current) return; acknowledged.current.add(notice.id); setNotice((current: any) => current?.id === notice.id ? null : current); } catch (e: any) { if (mounted.current) setError(e.message); } finally { if (mounted.current) setBusy(false); } };

@@ -44,7 +44,6 @@ export function inspectionSubmissionTarget(id: string, inspections: any[], verif
       managerPhone: verification.managerPhone,
       hostelName: verification.hostelName || verification.residenceName,
       location: verification.location || verification.address,
-      digitalAddress: verification.digitalAddress,
       dispatchedAt: verification.dispatchedAt, dispatchedBy: verification.dispatchedBy,
       assignedOfficerId: verification.assignedOfficerId,
       assignedOfficerName: officer.fullName, assignedOfficerEmail: officer.email,

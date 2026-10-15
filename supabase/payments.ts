@@ -45,7 +45,7 @@ async function lockPayment(c:PoolClient,p:any){
 }
 async function operational(c:PoolClient,p:any){
   if(p.store_id){const s=(await c.query(`select s.*,x.auth_user_id from public.stores s join public.account_contexts x on x.id=s.seller_context_id
-    join public.seller_applications a on a.seller_context_id=x.id where s.id=$1 and s.seller_context_id=$2 and x.status='active' and a.status='approved' and s.status in ('pending','active')`,[p.store_id,p.actor_context_id])).rows[0];
+    join public.seller_applications a on a.seller_context_id=x.id and a.id=s.application_id and a.registration_generation=x.seller_generation where s.id=$1 and s.seller_context_id=$2 and x.status='active' and a.status='approved' and s.status in ('pending','active')`,[p.store_id,p.actor_context_id])).rows[0];
     if(!s?.setup_completed_at)throw new ApiError(409,'The store is no longer eligible. Contact support about your payment.');return s;}
   const r=(await c.query(`select r.* from public.residences r join public.manager_assignments m on m.residence_id=r.id
     join public.account_contexts x on x.id=m.manager_context_id where r.id=$1 and m.manager_context_id=$2 and m.ended_at is null and x.status='active' and r.status not in ('closed','suspended') for share of m,x`,[p.residence_id,p.actor_context_id])).rows[0];
@@ -63,7 +63,11 @@ export async function prepareCheckout(c:PoolClient,a:VerifiedActor,body:any,orig
   const fingerprint=crypto.createHash('sha256').update(JSON.stringify([purpose,selected,body.hostelId ?? null,mobile])).digest('hex');
   await c.query('select pg_advisory_xact_lock(hashtextextended($1,0))',[`payment:${a.contextId}`]);
   const existing=(await c.query(query+' where q.actor_context_id=$1 and q.request_id=$2',[a.contextId,nonce])).rows[0];
-  if(existing){if(existing.request_fingerprint!==fingerprint)throw new ApiError(409,'This checkout request already has different contents.');return {record:existing,created:false};}
+  if(existing){if(existing.request_fingerprint!==fingerprint)throw new ApiError(409,'This checkout request already has different contents.');
+    if(existing.store_id&&!(await c.query(`select 1 from public.stores s join public.account_contexts x on x.id=s.seller_context_id
+      where s.id=$1 and s.registration_generation=x.seller_generation and s.status<>'closed'`,[existing.store_id])).rowCount)
+      throw new ApiError(409,'This checkout belongs to an earlier store registration. Start a new checkout.');
+    return {record:existing,created:false};}
   const settings=(await c.query("select value from private.platform_settings where key='platform' for share")).rows[0]?.value;
   const prices=publicPlatformSettings({platformSettings:settings});let store:any,residence:any;
   if(purpose==='residence_onboarding'){
@@ -95,9 +99,12 @@ export async function prepareCheckout(c:PoolClient,a:VerifiedActor,body:any,orig
 async function result(c:PoolClient,p:any){
   const purpose=clientPurpose(p.purpose);
   const own=(await c.query('select private.current_context_id() as id')).rows[0].id===p.actor_context_id;
-  return {success:true,paid:p.status==='fulfilled' || !!p.review_required,accessGranted:p.status==='fulfilled',paymentRequired:p.status!=='fulfilled' && !p.review_required,
+  const currentStore=!p.store_id||!!(await c.query(`select 1 from public.stores s join public.account_contexts x on x.id=s.seller_context_id
+    where s.id=$1 and s.registration_generation=x.seller_generation and s.status<>'closed' and x.status='active'`,[p.store_id])).rowCount;
+  return {success:true,paid:p.status==='fulfilled' || !!p.review_required,accessGranted:p.status==='fulfilled'&&currentStore,
+    ...(!currentStore?{historical:true,message:'This payment belongs to a previous store registration. A new store requires its own registration payment.'}:{}),paymentRequired:p.status!=='fulfilled' && !p.review_required,
     reference:p.provider_reference,purpose,mode:p.mode,amount:Number(p.amount),currency:p.currency,lines:p.lines,
-    ...(p.review_required?{reviewRequired:true,message:p.review_required}:{}),...(p.store_id && own?{store:(await sellerStatus(c,{contextId:p.actor_context_id,kind:'seller'} as VerifiedActor)).store}:{})};
+    ...(p.review_required?{reviewRequired:true,message:p.review_required}:{}),...(p.store_id && own && currentStore?{store:(await sellerStatus(c,{contextId:p.actor_context_id,kind:'seller'} as VerifiedActor)).store}:{})};
 }
 function receipt(p:any,e:any){
   if(e?.status!=='success')throw new ApiError(409,'Payment has not succeeded. Finish checkout before verifying.');

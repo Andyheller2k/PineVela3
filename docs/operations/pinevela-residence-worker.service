@@ -1,0 +1,20 @@
+[Unit]
+Description=PineVela residence worker preview
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=wyse
+WorkingDirectory=/home/wyse/Documents/PineVela3
+ExecStart=/home/wyse/.nvm/versions/node/v22.16.0/bin/node /home/wyse/Documents/PineVela3/dist-supabase-backend/residence-worker.mjs --watch
+Restart=on-failure
+RestartSec=15
+KillSignal=SIGTERM
+TimeoutStopSec=15min
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

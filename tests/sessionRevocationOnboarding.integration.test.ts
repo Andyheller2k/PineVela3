@@ -110,7 +110,7 @@ test('S22/S26: current officer and employment status revoke sessions permanently
   noSession((await read()).users.find((u: any) => accountId(u) === directQuitter.id));
 
   const submit = '/api/hostel-verifications/submit';
-  const body = { hostelId: pendingHostel.id, hostelName: pendingHostel.name, digitalAddress: 'AK-123-1234', proofOfOwnershipUrl: '/private-document-reference', managerId: otherManager.id, managerEmail: 'forged@example.test', managerName: 'Forged author', status: 'approved', managerApproved: false, identityVerified: true, validationPassed: true, systemValidation: { identityVerified: true }, paymentStatus: 'paid' };
+  const body = { hostelId: pendingHostel.id, hostelName: pendingHostel.name, proofOfOwnershipUrl: '/private-document-reference', managerId: otherManager.id, managerEmail: 'forged@example.test', managerName: 'Forged author', status: 'approved', managerApproved: false, identityVerified: true, validationPassed: true, systemValidation: { identityVerified: true }, paymentStatus: 'paid' };
   const before = await read();
   await request('POST', submit, undefined, body, 401);
   for (const token of [primary.token, admin.token, pendingManager.token]) await request('POST', submit, token, body, 403);
@@ -118,7 +118,7 @@ test('S22/S26: current officer and employment status revoke sessions permanently
   await request('POST', submit, manager.token, { ...body, hostelId: 'missing' }, 403);
   await request('POST', submit, manager.token, { ...body, hostelId: {} }, 400);
   await request('POST', submit, manager.token, { ...body, hostelId: hostel.id }, 409);
-  await request('POST', submit, manager.token, { ...body, digitalAddress: {} }, 400);
+  await request('POST', submit, manager.token, { ...body, addressLine1: {} }, 400);
   assert.deepEqual((await read()).hostelVerifications, before.hostelVerifications);
   const submitted = (await request('POST', submit, manager.token, body, 201)).verification;
   assert.equal(submitted.managerId, manager.id); assert.equal(submitted.managerEmail, manager.email); assert.equal(submitted.managerName, manager.name);

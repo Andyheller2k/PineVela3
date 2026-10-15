@@ -94,7 +94,7 @@ try{
   for(const a of [own.actor,admin]){await bind(a);const rows=await orderRows(c,a,pins);check(rows.length===1 && !('otpPin' in rows[0]) && !('deliveryPinState' in rows[0]) && !('encrypted_pin' in rows[0]),'Seller/admin projections never include delivery secrets');}
   await bind(foreignOwner);
   check((await c.query('select stock_quantity from public.listings where id=$1',[item.id])).rows[0].stock_quantity===5,'Reservation does not deduct physical stock');
-  check((await c.query('select stock_quantity from public.listing_catalog where id=$1',[item.id])).rows[0].stock_quantity===3,'Public availability subtracts active reservations');
+  check((await c.query('select stock_quantity from private.listing_catalog where id=$1',[item.id])).rows[0].stock_quantity===3,'Public availability subtracts active reservations');
   await denied(()=>createOrder(c,foreignOwner,{...request,requestId:crypto.randomUUID(),quantity:4},pins),409,'API cannot oversell reserved stock');
   await denied(()=>c.query(`insert into public.market_orders(buyer_context_id,store_id,listing_id,quantity,unit_price,total_amount,currency,meeting_location,reserved_until,request_id,request_fingerprint,snapshot)
     select buyer_context_id,store_id,listing_id,4,unit_price,4*unit_price,currency,meeting_location,clock_timestamp()+interval '24 hours',$2,request_fingerprint,snapshot from public.market_orders where id=$1`,[id,crypto.randomUUID()]),'23514','SQL independently prevents overselling');

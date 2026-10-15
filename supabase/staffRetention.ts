@@ -107,7 +107,7 @@ export async function createStaffReview(c:PoolClient,a:VerifiedActor,body:any) {
 }
 export async function staffReviews(c:PoolClient,filter?:unknown) {
   const id=filter===undefined?null:uuid(filter);
-  return (await c.query('select * from public.housing_staff_reviews where ($1::uuid is null or staff_assignment_id=$1) order by created_at desc limit 1000',[id])).rows.map(r=>({
+  return (await c.query('select * from private.housing_staff_reviews where ($1::uuid is null or staff_assignment_id=$1) order by created_at desc limit 1000',[id])).rows.map(r=>({
     id:r.id,staffId:r.staff_assignment_id,hostelId:r.residence_id,reviewerId:r.resident_context_id,reviewerName:r.reviewer_name,rating:r.rating,comment:r.comment,createdAt:r.created_at
   }));
 }

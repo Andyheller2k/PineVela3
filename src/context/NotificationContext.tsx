@@ -2,6 +2,7 @@ import { sessionFetch as fetch } from '../lib/session';
 import React, { createContext, useContext, useState, useEffect, useRef, useMemo, useCallback, ReactNode } from 'react';
 import { useAuth } from './AuthContext';
 import { safeJson } from '../lib/api';
+import { AccountRefreshGate } from '../lib/accountRefresh';
 import { motion, AnimatePresence } from 'motion/react';
 import { Bell, CheckCircle2, AlertTriangle, Info, X } from 'lucide-react';
 
@@ -156,6 +157,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   activeAccountRef.current = notificationAccountKey;
   const generationRef = useRef(0);
   const requestRef = useRef(0);
+  const refreshGate = useRef(new AccountRefreshGate());
   const [stateAccountKey, setStateAccountKey] = useState(notificationAccountKey);
   const isPrimaryAccount = Boolean(
     user && (userRole === 'user' || userRole === '')
@@ -192,85 +194,96 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    if (document.hidden) return;
     const generation = generationRef.current;
-    const request = ++requestRef.current;
-    const isCurrentAccount = () => activeAccountRef.current === notificationAccountKey && generationRef.current === generation && requestRef.current === request;
+    if (activeAccountRef.current !== notificationAccountKey) return;
+    return refreshGate.current.run(notificationAccountKey, generation, async signal => {
+      const request = ++requestRef.current;
+      const isCurrentAccount = () => !signal.aborted && activeAccountRef.current === notificationAccountKey && generationRef.current === generation && requestRef.current === request;
 
-    // 1. Fetch Registered Manager, Resident and Seller Accounts
-    try {
-      const token = user?.token;
-      const regRes = await fetch('/api/users/my-registered-accounts', {
-        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
-      });
-      if (regRes.ok) {
-        const regData = await safeJson(regRes);
+      // Registered portals belong to the primary view. They must not delay the inbox.
+      const registered = (async () => {
+        if (!isPrimaryAccount) return;
+        try {
+          const token = user?.token;
+          const regRes = await fetch('/api/users/my-registered-accounts', {
+            signal,
+            headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+          });
+          if (regRes.ok) {
+            const regData = await safeJson(regRes);
+            if (!isCurrentAccount()) return;
+            const mgrAccount = regData.managerAccount || null;
+            const mktAccount = regData.merchantAccount || null;
+
+            setRegisteredAccounts(prev => {
+              if (
+                JSON.stringify(prev.managerAccount) === JSON.stringify(mgrAccount) &&
+                JSON.stringify(prev.residentAccount) === JSON.stringify(regData.residentAccount || null) &&
+                JSON.stringify(prev.merchantAccount) === JSON.stringify(mktAccount)
+              ) {
+                return prev;
+              }
+              return {
+                managerAccount: mgrAccount,
+                residentAccount: regData.residentAccount || null,
+                merchantAccount: mktAccount,
+              };
+            });
+          }
+        } catch (e) {
+          if (!signal.aborted) console.warn("NotificationService: Error fetching registered accounts:", e);
+        }
+      })();
+
+      // 2. Fetch Notifications list
+      let loaded = false;
+      try {
         if (!isCurrentAccount()) return;
-        const mgrAccount = regData.managerAccount || null;
-        const mktAccount = regData.merchantAccount || null;
+        const notifs: NotificationItem[] = await apiFetch('/api/notifications', { signal });
+        if (!isCurrentAccount()) return;
+        if (Array.isArray(notifs)) {
+          // Deduplicate notifications list
+          const uniqueNotifs: NotificationItem[] = [];
+          const seenMap = new Set<string>();
 
-        setRegisteredAccounts(prev => {
-          if (
-            JSON.stringify(prev.managerAccount) === JSON.stringify(mgrAccount) &&
-            JSON.stringify(prev.residentAccount) === JSON.stringify(regData.residentAccount || null) &&
-            JSON.stringify(prev.merchantAccount) === JSON.stringify(mktAccount)
-          ) {
-            return prev;
-          }
-          return {
-            managerAccount: mgrAccount,
-            residentAccount: regData.residentAccount || null,
-            merchantAccount: mktAccount,
-          };
-        });
-      }
-    } catch (e) {
-      console.warn("NotificationService: Error fetching registered accounts:", e);
-    }
+          for (const rawNotif of notifs) {
+            // Server read state is authoritative and specific to the current account.
+            const isRead = Boolean(rawNotif.read);
+            const notif: NotificationItem = { ...rawNotif, read: isRead };
+            if (isRead && rawNotif.id) {
+              notificationServiceSingleton.markNotificationRead(rawNotif.id, notificationAccountKey);
+            }
 
-    // 2. Fetch Notifications list
-    try {
-      if (!isCurrentAccount()) return;
-      const notifs: NotificationItem[] = await apiFetch('/api/notifications').catch(() => []);
-      if (!isCurrentAccount()) return;
-      if (Array.isArray(notifs)) {
-        // Deduplicate notifications list
-        const uniqueNotifs: NotificationItem[] = [];
-        const seenMap = new Set<string>();
+            const key = `id_${notif.id}_key_${(notif.title || '').toLowerCase()}_${(notif.message || '').toLowerCase()}`;
+            if (!seenMap.has(key)) {
+              seenMap.add(key);
+              uniqueNotifs.push(notif);
 
-        for (const rawNotif of notifs) {
-          // Server read state is authoritative and specific to the current account.
-          const isRead = Boolean(rawNotif.read);
-          const notif: NotificationItem = { ...rawNotif, read: isRead };
-          if (isRead && rawNotif.id) {
-            notificationServiceSingleton.markNotificationRead(rawNotif.id, notificationAccountKey);
-          }
-
-          const key = `id_${notif.id}_key_${(notif.title || '').toLowerCase()}_${(notif.message || '').toLowerCase()}`;
-          if (!seenMap.has(key)) {
-            seenMap.add(key);
-            uniqueNotifs.push(notif);
-
-            // Popups strictly ONLY fire in the primary user account for brand new unread notifications
-            if (!notif.adminMessage && notif.category !== 'system_announcement' && isPrimaryAccount && !notif.read && notificationServiceSingleton.shouldFireNotification(notif, isPrimaryAccount, notificationAccountKey) && !isFirstLoadRef.current) {
-              pushToast(notif.title, notif.message, notif.type === 'success' ? 'success' : notif.type === 'warning' ? 'warning' : 'info');
+              // Popups strictly ONLY fire in the primary user account for brand new unread notifications
+              if (!notif.adminMessage && notif.category !== 'system_announcement' && isPrimaryAccount && !notif.read && notificationServiceSingleton.shouldFireNotification(notif, isPrimaryAccount, notificationAccountKey) && !isFirstLoadRef.current) {
+                pushToast(notif.title, notif.message, notif.type === 'success' ? 'success' : notif.type === 'warning' ? 'warning' : 'info');
+              }
             }
           }
-        }
 
-        setNotifications(prev => {
-          if (JSON.stringify(prev) === JSON.stringify(uniqueNotifs)) {
-            return prev;
-          }
-          return uniqueNotifs;
-        });
+          setNotifications(prev => {
+            if (JSON.stringify(prev) === JSON.stringify(uniqueNotifs)) {
+              return prev;
+            }
+            return uniqueNotifs;
+          });
+          loaded = true;
+        }
+      } catch (e) {
+        if (!signal.aborted) console.warn("NotificationService: Error fetching notifications:", e);
+      } finally {
+        if (loaded && isCurrentAccount() && isFirstLoadRef.current) {
+          isFirstLoadRef.current = false;
+        }
       }
-    } catch (e) {
-      console.warn("NotificationService: Error fetching notifications:", e);
-    } finally {
-      if (isCurrentAccount() && isFirstLoadRef.current) {
-        isFirstLoadRef.current = false;
-      }
-    }
+      await registered;
+    });
   };
 
   const markAsRead = useCallback(async (id: string) => {
@@ -312,7 +325,8 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     }, 6000);
 
     const handleFocus = () => {
-      refreshNotifications();
+      if (document.hidden) refreshGate.current.cancel();
+      else void refreshNotifications();
     };
 
     window.addEventListener('focus', handleFocus);
@@ -321,6 +335,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
     return () => {
       generationRef.current += 1;
+      refreshGate.current.cancel();
       clearInterval(interval);
       window.removeEventListener('focus', handleFocus);
       window.removeEventListener('pinevela-data-change', handleFocus);

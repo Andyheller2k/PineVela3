@@ -13,6 +13,7 @@ const ThemeContext = createContext<{ theme: Theme; toggleTheme: () => void; save
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
+  const contextId = user ? String(user.id) : null;
   const identity = user ? `${user.role}:${user.id}` : null;
   const [theme, setTheme] = useState<Theme>(initialTheme);
   const [savePending, setSavePending] = useState(false);
@@ -20,7 +21,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const paintFrame = useRef(0);
   const account = useRef(identity);
   const revision = useRef(0);
-  const pending = useRef<{ identity: string; theme: Theme; revision: number } | null>(null);
+  const pending = useRef<{ identity: string; contextId: string; theme: Theme; revision: number } | null>(null);
   const writing = useRef(false);
   account.current = identity;
 
@@ -47,7 +48,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     writing.current = true;
     try {
       const response = await sessionFetch('/api/auth/appearance', {
-        method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ theme: change.theme }),
+        method: 'PUT', headers: { 'Content-Type': 'application/json', 'X-PineVela-Profile-Context': change.contextId }, body: JSON.stringify({ theme: change.theme }),
       });
       if (response.ok && pending.current?.revision === change.revision) {
         pending.current = null;
@@ -66,28 +67,28 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     revision.current++;
     pending.current = null;
     setSavePending(false);
-    if (!identity) return; // Public pages retain the last mode used on this device.
+    if (!identity || !contextId) return; // Public pages retain the last mode used on this device.
     const key = `${DEVICE_KEY}:${identity}`;
     const unsynced = read(`${key}:unsynced`);
     const cached = read(key);
     if (cached) apply(cached);
     if (unsynced) {
       apply(unsynced);
-      pending.current = { identity, theme: unsynced, revision: revision.current };
+      pending.current = { identity, contextId, theme: unsynced, revision: revision.current };
       setSavePending(true);
       void flush();
       return;
     }
     const version = revision.current;
     const controller = new AbortController();
-    void sessionFetch('/api/auth/appearance', { signal: controller.signal }).then(async response => {
+    void sessionFetch('/api/auth/appearance', { signal: controller.signal, headers: { 'X-PineVela-Profile-Context': contextId } }).then(async response => {
       if (!response.ok) return;
       const data = await response.json();
       if (controller.signal.aborted || account.current !== identity || revision.current !== version) return;
       if (valid(data.theme)) { cache(key, data.theme); apply(data.theme); }
       else {
         // A new account inherits this device's current mode once; other accounts are untouched.
-        pending.current = { identity, theme: current.current, revision: ++revision.current };
+        pending.current = { identity, contextId, theme: current.current, revision: ++revision.current };
         setSavePending(true);
         cache(key, current.current);
         cache(`${key}:unsynced`, current.current);
@@ -95,7 +96,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       }
     }).catch(() => {});
     return () => controller.abort();
-  }, [identity, loading, apply, flush]);
+  }, [identity, contextId, loading, apply, flush]);
 
   useEffect(() => {
     const reconnect = () => void flush();
@@ -112,14 +113,14 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     const next = current.current === 'light' ? 'dark' : 'light';
     apply(next);
     const version = ++revision.current;
-    if (account.current) {
+    if (account.current && contextId) {
       cache(`${DEVICE_KEY}:${account.current}`, next);
       cache(`${DEVICE_KEY}:${account.current}:unsynced`, next);
-      pending.current = { identity: account.current, theme: next, revision: version };
+      pending.current = { identity: account.current, contextId, theme: next, revision: version };
       setSavePending(true);
       void flush();
     }
-  }, [apply, flush]);
+  }, [contextId, apply, flush]);
 
   return <ThemeContext.Provider value={{ theme, toggleTheme, savePending }}>{children}</ThemeContext.Provider>;
 }

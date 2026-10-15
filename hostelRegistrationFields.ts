@@ -1,5 +1,6 @@
 /** Retired property sections. Historical persistence is preserved, with no active editors. */
 export const retiredHostelFields = new Set([
+  'digitalAddress', 'digital_address', 'gpsAddress',
   'facilities', 'amenities', 'customFacilities', 'rules', 'customRules',
   'checkInTime', 'checkOutTime', 'minStay', 'maxStay', 'guestPolicy', 'visitorPolicy',
   'curfew', 'smokingPolicy', 'petPolicy', 'noisePolicy', 'cancellationPolicy'

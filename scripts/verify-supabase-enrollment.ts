@@ -176,7 +176,7 @@ try {
     values ($1,$2,'manager',$3,$4,$5,$6,'{}',now() + interval '24 hours') returning id`,
     [foreign.contextId,other.id,secondChild.email.toLowerCase(),crypto.randomBytes(32).toString('hex'),secondChild.id,managerContext])).rows[0].id;
   const propertyInput = { hostelName:secondChild.raw_user_meta_data?.name || secondChild.email,
-    location:'KNUST, Kumasi',latitude:6.6745,longitude:-1.5716,digitalAddress:'AK-001-0001',knustAccreditedConfirmed:true };
+    location:'KNUST, Kumasi',latitude:6.6745,longitude:-1.5716,knustAccreditedConfirmed:true };
   const property = managerProperty(propertyInput);
   await failure(async () => managerProperty({ ...propertyInput,latitude:5.60 }),400,'A Kumasi address string cannot bypass geographic bounds');
   await failure(() => submitManagerRegistration(client,foreign,managerEnrollment,property),409,'Unverified manager enrollment cannot submit a residence');
@@ -199,8 +199,8 @@ try {
     'Primary user and active administrators receive exact submission notifications');
   check(!registrationNotices.some(row => row.context_id === managerContext),'Pending manager portal does not receive the primary lifecycle notice');
   await failure(() => submitManagerRegistration(client,foreign,managerEnrollment,{ ...property,name:property.name + ' changed' }),409,'Changed retry cannot rewrite an immutable inspection submission');
-  await client.query('set local role anon');
-  check((await client.query('select id from public.residence_catalog where id = $1',[submitted.residenceId])).rowCount === 0,'Pending inspection residence is excluded from guest catalog');
+  await client.query('set local role pinevela_catalog');
+  check((await client.query('select id from private.residence_catalog where id = $1',[submitted.residenceId])).rowCount === 0,'Pending inspection residence is excluded from guest catalog');
   await client.query('reset role');
   const admin:VerifiedActor = {...primary,contextId:adminContext,kind:'admin'};
   const officerContext = (await client.query("insert into public.account_contexts(auth_user_id,kind,status) values ($1,'officer','active') returning id",[owner.id])).rows[0].id;

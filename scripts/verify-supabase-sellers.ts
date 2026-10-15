@@ -62,15 +62,15 @@ try{
   const saved=await counts();check((await submitSellerApplication(c,owner,payload)).idempotent,'Exact submit retry is idempotent');assert.deepEqual(await counts(),saved);checks++;
   await denied(()=>submitSellerApplication(c,owner,{...payload,storeName:root.email}),409,'Pending original submission cannot be overwritten');
   await denied(()=>c.query('update public.seller_applications set enrollment_id=$2 where id=$1',[id,foreign.id]),'23514','SQL cannot reassign original enrollment');
-  check((await scoped(owner,()=>c.query('select id from public.seller_application_details'))).rowCount===1,'Primary owner can read exact registration status');
-  check((await scoped(foreignOwner,()=>c.query('select id from public.seller_application_details'))).rowCount===0,'Foreign primary cannot enumerate applications');
+  check((await scoped(owner,()=>c.query('select id from private.seller_application_details'))).rowCount===1,'Primary owner can read exact registration status');
+  check((await scoped(foreignOwner,()=>c.query('select id from private.seller_application_details'))).rowCount===0,'Foreign primary cannot enumerate applications');
   check((await scoped(owner,()=>c.query('select id from public.seller_applications'))).rowCount===0,'Primary status view does not grant raw child-table access');
-  await c.query('set local role anon');await denied(()=>c.query('select * from public.seller_application_details'),'42501','Guest cannot read private applications');await c.query('reset role');
+  await c.query('set local role anon');await denied(()=>c.query('select * from private.seller_application_details'),'42501','Guest cannot read private applications');await c.query('reset role');
   await c.query('set local role pinevela_backend');await denied(()=>c.query("update public.seller_applications set status='approved' where id=$1",[id]),'42501','Browser role cannot directly approve registration');await c.query('reset role');
   await denied(()=>decideSellerApplication(c,owner,{id},true),403,'Primary cannot approve its seller account');
   await denied(()=>decideSellerApplication(c,{...owner,kind:'manager'},{id},true),403,'Housing managers cannot approve arbitrary sellers');
   await bind(owner);await denied(()=>c.query("update public.seller_applications set status='approved',reviewed_at=now(),reviewed_by_context_id=$2 where id=$1",[id,admin.contextId]),'23514','SQL rejects a spoofed administrator decision');
-  await bind(admin);check((await scoped(admin,()=>c.query('select id from public.seller_application_details'))).rowCount===1,'Active administrator can review applications');
+  await bind(admin);check((await scoped(admin,()=>c.query('select id from private.seller_application_details'))).rowCount===1,'Active administrator can review applications');
   await denied(()=>decideSellerApplication(c,admin,{id},false),400,'Rejection needs actual feedback');
   await decideSellerApplication(c,admin,{id,adminNotes:'Correct the submitted school identification.'},false);
   check((await c.query('select count(*) from public.stores')).rows[0].count==='0','Rejection creates no store');
@@ -99,7 +99,7 @@ try{
   check((await scoped(foreignOwner,()=>sellerStatus(c,foreignOwner))).application===null,'Foreign status lookup returns no unrelated application');
   check((await scoped(own.actor,()=>c.query('select id from public.seller_applications'))).rowCount===1,'Raw RLS allows exact seller');
   await c.query('savepoint admin_revoked');await c.query('delete from auth.sessions where id=$1',[admin.sessionId]);
-  check((await scoped(admin,()=>c.query('select id from public.seller_application_details'))).rowCount===0,'Revoked administrator loses private review view');await c.query('rollback to savepoint admin_revoked');
+  check((await scoped(admin,()=>c.query('select id from private.seller_application_details'))).rowCount===0,'Revoked administrator loses private review view');await c.query('rollback to savepoint admin_revoked');
   check((await c.query("select r.context_id from public.notification_recipients r join public.notifications n on n.id=r.notification_id where n.category='account_submission' and r.context_id=$1",[owner.contextId])).rowCount!>0,'Primary user receives submission and decision notices before seller login');
   check((await c.query("select r.context_id from public.notification_recipients r join public.notifications n on n.id=r.notification_id where n.category='verification' and r.context_id=$1",[admin.contextId])).rowCount!>0,'Administrators receive review-state notices');
   await c.query('rollback');assert.deepEqual(await counts(),before);

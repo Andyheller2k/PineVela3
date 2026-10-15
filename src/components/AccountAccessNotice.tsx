@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { sessionFetch } from '../lib/session';
 import { ACCOUNT_FEATURES } from '../../accountFeatures';
 import DashboardOverlay from './DashboardOverlay';
+import { AccountRefreshGate } from '../lib/accountRefresh';
 
 export default function AccountAccessNotice() {
   const { user } = useAuth();
@@ -15,9 +16,21 @@ export default function AccountAccessNotice() {
   useEffect(() => {
     setAccess(null); if (user) setPopup(null); if (!user || user.role === 'admin') return;
     let disposed = false;
-    const refresh = async () => { try { const res = await sessionFetch('/api/auth/account-access'); if (res.ok) { const data = await res.json(); if (!disposed) setAccess(data); } } catch {} };
-    refresh(); const timer = setInterval(refresh, 15000);
-    return () => { disposed = true; clearInterval(timer); };
+    const gate = new AccountRefreshGate();
+    const refresh = () => {
+      if (disposed || document.hidden) return;
+      return gate.run(user.id, 0, async cancellation => {
+        const signal = AbortSignal.any([cancellation, AbortSignal.timeout(30000)]);
+        try {
+          const res = await sessionFetch('/api/auth/account-access', { signal });
+          if (res.ok) { const data = await res.json(); if (!disposed && !signal.aborted) setAccess(data); }
+        } catch { /* The server still enforces access on every request. */ }
+      });
+    };
+    const visibility = () => { if (document.hidden) gate.cancel(); else void refresh(); };
+    void refresh(); const timer = setInterval(refresh, 15000);
+    document.addEventListener('visibilitychange', visibility);
+    return () => { disposed = true; gate.cancel(); clearInterval(timer); document.removeEventListener('visibilitychange', visibility); };
   }, [user?.id, user?.role]);
   return <>
     {user && access?.restrictions.length > 0 && <aside role="status" aria-label="Account restrictions" className="fixed bottom-24 left-4 z-[80] max-h-36 w-[min(32rem,calc(100vw_-_6rem))] overflow-y-auto rounded-2xl border border-amber-200 bg-amber-50/95 px-4 py-3 text-xs text-amber-950 shadow-lg backdrop-blur-xl">

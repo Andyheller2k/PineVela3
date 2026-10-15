@@ -3,6 +3,7 @@ import DashboardOverlay from './DashboardOverlay';
 import ProtectedRoute from './ProtectedRoute';
 import { sessionFetch as fetch } from '../lib/session';
 import { usesSupabasePersistence } from '../lib/persistence';
+import { captureInspectionCoordinates, recordedInspectionCoordinates, type CapturedInspectionCoordinates } from '../lib/inspectionLocation';
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
@@ -52,7 +53,6 @@ interface InspectionItem {
   managerPhone: string;
   hostelName: string;
   location: string;
-  digitalAddress?: string;
   dispatchedAt: string;
   dispatchedBy: string;
   assignedOfficerId: string;
@@ -94,9 +94,14 @@ function OfficerWorkspace() {
   const [inspectionFilter, setInspectionFilter] = useState<'all' | 'pending' | 'submitted'>('all');
 
   // Report Form State
-  const [gps, setGps] = useState<{ lat: number; lng: number; accuracy: number; address: string } | null>(null);
+  const [gps, setGps] = useState<{ inspectionId: string; coordinates: CapturedInspectionCoordinates } | null>(null);
   const [isCapturingGps, setIsCapturingGps] = useState(false);
   const [gpsError, setGpsError] = useState<string | null>(null);
+  const gpsRequest = React.useRef(0);
+  const activeInspectionId = React.useRef<string | null>(null);
+  activeInspectionId.current = activeInspection?.id ?? null;
+  const currentGps = gps && gps.inspectionId === activeInspection?.id ? gps.coordinates : null;
+  const submittedGps = recordedInspectionCoordinates(viewingSubmittedReport?.report?.gpsCoordinates);
 
   const [checklist, setChecklist] = useState({
     residenceExists: false,
@@ -111,8 +116,8 @@ function OfficerWorkspace() {
     estimatedRooms: 0,
     estimatedBeds: 0,
     buildingStructure: '',
-    securityPresent: true,
-    utilitiesOperational: true
+    securityPresent: false,
+    utilitiesOperational: false
   });
 
   // Empty initial photos - no mockup/placeholder photos
@@ -126,7 +131,7 @@ function OfficerWorkspace() {
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
 
   const [observations, setObservations] = useState('');
-  const [recommendation, setRecommendation] = useState<'recommend_approval' | 'recommend_rejection' | 'requires_reinspection'>('recommend_approval');
+  const [recommendation, setRecommendation] = useState<'' | 'recommend_approval' | 'recommend_rejection' | 'requires_reinspection'>('');
   const [inspectorSignature, setInspectorSignature] = useState('');
   const [isSubmittingReport, setIsSubmittingReport] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -175,48 +180,26 @@ function OfficerWorkspace() {
   };
 
   // Live GPS Coordinate Fetcher
-  const captureLiveGps = () => {
+  const captureLiveGps = async (inspectionId = activeInspectionId.current) => {
+    if (!inspectionId) return;
+    const request = ++gpsRequest.current;
+    const current = () => mounted.current && request === gpsRequest.current && activeInspectionId.current === inspectionId;
+    setGps(null);
     setIsCapturingGps(true);
     setGpsError(null);
-
-    if (!navigator.geolocation) {
-      setGpsError("Geolocation is not supported by your browser.");
-      setGps({
-        lat: 5.6505,
-        lng: -0.1869,
-        accuracy: 4.8,
-        address: activeInspection ? activeInspection.location : 'Campus Belt Verification Zone, Accra'
-      });
-      setIsCapturingGps(false);
-      return;
+    try {
+      const coordinates = await captureInspectionCoordinates();
+      if (current()) setGps({ inspectionId, coordinates });
+    } catch (error) {
+      if (current()) setGpsError(error instanceof Error ? error.message : 'Location capture failed. Please retry.');
+    } finally {
+      if (current()) setIsCapturingGps(false);
     }
-
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setGps({
-          lat: parseFloat(pos.coords.latitude.toFixed(6)),
-          lng: parseFloat(pos.coords.longitude.toFixed(6)),
-          accuracy: parseFloat(pos.coords.accuracy.toFixed(1)),
-          address: activeInspection ? activeInspection.location : 'Captured Live On-Site'
-        });
-        setIsCapturingGps(false);
-      },
-      (err) => {
-        // Fallback default coordinates (Legon Campus Zone)
-        setGps({
-          lat: 5.6505,
-          lng: -0.1869,
-          accuracy: 5.2,
-          address: activeInspection?.location || 'Plot 44 University Ring Road, Accra'
-        });
-        setIsCapturingGps(false);
-      },
-      { enableHighAccuracy: true, timeout: 8000 }
-    );
   };
 
   const handleOpenInspection = (inspection: InspectionItem) => {
     setActiveInspection(inspection);
+    activeInspectionId.current = inspection.id;
     setSubmitSuccess(null);
     setSubmitError(null);
     
@@ -234,12 +217,12 @@ function OfficerWorkspace() {
         estimatedRooms: inspection.report.propertyDetails?.estimatedRooms || 0,
         estimatedBeds: inspection.report.propertyDetails?.estimatedBeds || 0,
         buildingStructure: inspection.report.propertyDetails?.buildingStructure || '',
-        securityPresent: inspection.report.propertyDetails?.securityPresent ?? true,
-        utilitiesOperational: inspection.report.propertyDetails?.utilitiesOperational ?? true
+        securityPresent: inspection.report.propertyDetails?.securityPresent === true,
+        utilitiesOperational: inspection.report.propertyDetails?.utilitiesOperational === true
       });
       setPhotos(Array.isArray(inspection.report.photos) ? inspection.report.photos : []);
       setObservations(inspection.report.observations || '');
-      setRecommendation(inspection.report.recommendation || 'recommend_approval');
+      setRecommendation(inspection.report.recommendation || '');
     } else {
       // Clear out all fields cleanly for new live inspection
       setChecklist({
@@ -254,15 +237,15 @@ function OfficerWorkspace() {
         estimatedRooms: 0,
         estimatedBeds: 0,
         buildingStructure: '',
-        securityPresent: true,
-        utilitiesOperational: true
+        securityPresent: false,
+        utilitiesOperational: false
       });
       setPhotos([]);
       setObservations('');
-      setRecommendation('recommend_approval');
+      setRecommendation('');
     }
-    setInspectorSignature(`${officerSession?.name || 'Officer'} (${officerSession?.officerId || 'PV-INSP'})`);
-    captureLiveGps();
+    setInspectorSignature(`${officerSession.name || officerSession.email} (${officerSession.officerId || officerSession.id})`);
+    void captureLiveGps(inspection.id);
   };
 
   const handlePhotoCapture = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -361,8 +344,14 @@ function OfficerWorkspace() {
     e.preventDefault();
     if (!activeInspection) return;
     if (isCompressingPhoto) {setSubmitError('Wait for the photographs to finish uploading.');return;}
+    if (isCapturingGps) {setSubmitError('Wait for location capture to finish before submitting the report.');return;}
     setSubmitError(null);
     setFieldErrors({});
+
+    if (!recommendation) {
+      setSubmitError('Choose your inspection recommendation before submitting.');
+      return;
+    }
 
     if (!observations.trim() || observations.length < 10) {
       setFieldErrors({ observations: "Please provide thorough on-site observations (minimum 10 characters)." });
@@ -372,12 +361,7 @@ function OfficerWorkspace() {
     try {
       setIsSubmittingReport(true);
       const payload = {
-        gpsCoordinates: gps || {
-          lat: 5.6534,
-          lng: -0.1832,
-          accuracyMeters: 4.5,
-          capturedAddress: activeInspection.location
-        },
+        gpsCoordinates: currentGps,
         checklist,
         propertyDetails,
         photos,
@@ -486,7 +470,7 @@ function OfficerWorkspace() {
               {renderAvatarGraphic(officerSession.avatar, "w-8 h-8 text-xs")}
               <div className="hidden md:flex flex-col text-right">
                 <span className="text-xs font-bold text-slate-900 truncate max-w-[120px]">{officerSession.name}</span>
-                <span className="text-[10px] text-blue-700 font-mono font-bold">{officerSession.officerId || 'PV-INSP'}</span>
+                <span className="text-[10px] text-blue-700 font-mono font-bold">{officerSession.officerId || officerSession.id}</span>
               </div>
             </div>
 
@@ -579,7 +563,7 @@ function OfficerWorkspace() {
                       </div>
                       <div className="text-xs text-slate-500 flex flex-wrap items-center gap-3 mt-1 font-medium">
                         <span className="font-mono text-blue-900 font-bold bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100">
-                          {officerSession.officerId || 'PV-INSP-2026'}
+                          {officerSession.officerId || officerSession.id}
                         </span>
                         <span>•</span>
                         <span>{officerSession.email}</span>
@@ -662,21 +646,22 @@ function OfficerWorkspace() {
                     <div className="space-y-1">
                       <div className="flex items-center gap-2 text-xs font-bold text-slate-900 uppercase tracking-wider">
                         <Crosshair className="w-4 h-4 text-blue-700" />
-                        <span>Live On-Site GPS Coordinates</span>
+                        <span>Device GPS Coordinates</span>
                       </div>
-                      {gps ? (
+                      {currentGps ? (
                         <div className="text-xs text-slate-600 font-mono font-semibold">
-                          Lat: <strong className="text-blue-900">{gps.lat}</strong> • Lng: <strong className="text-blue-900">{gps.lng}</strong> • Accuracy: ±{gps.accuracy}m
+                          Lat: <strong className="text-blue-900">{currentGps.lat}</strong> • Lng: <strong className="text-blue-900">{currentGps.lng}</strong> • Accuracy: ±{currentGps.accuracyMeters}m
                         </div>
                       ) : (
-                        <span className="text-xs text-amber-700 font-semibold">Capturing device coordinates...</span>
+                        <span className="text-xs text-amber-700 font-semibold">{isCapturingGps ? 'Capturing device coordinates…' : 'Device coordinates have not been recorded.'}</span>
                       )}
+                      {gpsError && <p role="alert" className="text-xs font-semibold text-rose-700">{gpsError}</p>}
                     </div>
 
                     <div className="flex items-center gap-2">
                       <button
                         type="button"
-                        onClick={captureLiveGps}
+                        onClick={() => { void captureLiveGps(); }}
                         disabled={isCapturingGps}
                         className="px-3 py-1.5 rounded-xl bg-white border border-slate-200 hover:bg-slate-100 text-xs font-bold text-slate-700 flex items-center gap-1.5 transition-colors shadow-xs cursor-pointer"
                       >
@@ -964,10 +949,12 @@ function OfficerWorkspace() {
                           Officer Recommendation
                         </label>
                         <select aria-label="Officer Recommendation"
+                          required
                           value={recommendation}
                           onChange={(e: any) => setRecommendation(e.target.value)}
                           className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs text-slate-900 font-bold focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white"
                         >
+                          <option value="" disabled>Choose your recommendation</option>
                           <option value="recommend_approval">RECOMMEND APPROVAL (Property & Manager Validated)</option>
                           <option value="recommend_rejection">RECOMMEND REJECTION (Fails Legitimacy/Absence)</option>
                           <option value="requires_reinspection">REQUIRES RE-INSPECTION (Access Rescheduled)</option>
@@ -1002,7 +989,7 @@ function OfficerWorkspace() {
 
                     <button
                       type="submit"
-                      disabled={isSubmittingReport}
+                      disabled={isSubmittingReport || isCompressingPhoto || isCapturingGps}
                       className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-blue-900 to-indigo-900 hover:from-blue-850 hover:to-indigo-850 text-white font-black text-xs flex items-center gap-2 shadow-lg shadow-blue-900/20 disabled:opacity-50 transition-all cursor-pointer"
                     >
                       {isSubmittingReport ? (
@@ -1345,12 +1332,12 @@ function OfficerWorkspace() {
                     <span className="text-xs font-bold text-slate-900 block mt-0.5">
                       {viewingSubmittedReport.report?.submittedAt
                         ? new Date(viewingSubmittedReport.report.submittedAt).toLocaleDateString()
-                        : new Date(viewingSubmittedReport.dispatchedAt).toLocaleDateString()}
+                        : 'Not recorded'}
                     </span>
                     <span className="text-[10px] text-slate-500">
                       {viewingSubmittedReport.report?.submittedAt
                         ? new Date(viewingSubmittedReport.report.submittedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                        : 'Official Submission'}
+                        : 'Submission time not recorded'}
                     </span>
                   </div>
 
@@ -1360,7 +1347,7 @@ function OfficerWorkspace() {
                       {viewingSubmittedReport.report?.officerName || viewingSubmittedReport.assignedOfficerName || 'Field Officer'}
                     </span>
                     <span className="text-[10px] text-blue-700 font-bold font-mono">
-                      {viewingSubmittedReport.report?.officerId || viewingSubmittedReport.assignedOfficerId || 'PV-INSP'}
+                      {viewingSubmittedReport.report?.officerId || viewingSubmittedReport.assignedOfficerId || 'Not recorded'}
                     </span>
                   </div>
 
@@ -1374,12 +1361,15 @@ function OfficerWorkspace() {
                         : 'text-amber-700'
                     }`}>
                       {viewingSubmittedReport.report?.recommendation === 'recommend_approval'
-                        ? 'Approved'
+                        ? 'Approval recommended'
                         : viewingSubmittedReport.report?.recommendation === 'recommend_rejection'
-                        ? 'Rejected'
-                        : 'Re-inspect'}
+                        ? 'Rejection recommended'
+                        : viewingSubmittedReport.report?.recommendation === 'requires_reinspection'
+                        ? 'Reinspection requested'
+                        : viewingSubmittedReport.report?.recommendation === 'requires_followup'
+                        ? 'Follow-up requested' : 'Not recorded'}
                     </span>
-                    <span className="text-[10px] text-slate-500">On-Site Decision</span>
+                    <span className="text-[10px] text-slate-500">Officer recommendation</span>
                   </div>
                 </div>
 
@@ -1388,11 +1378,11 @@ function OfficerWorkspace() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <Compass className="w-4 h-4 text-blue-700" />
-                      <h4 className="text-xs font-black text-blue-950 uppercase tracking-wider">Live On-Site GPS Coordinates</h4>
+                      <h4 className="text-xs font-black text-blue-950 uppercase tracking-wider">Recorded GPS Coordinates</h4>
                     </div>
-                    {viewingSubmittedReport.report?.gpsCoordinates && (
+                    {submittedGps && (
                       <a
-                        href={`https://www.google.com/maps/search/?api=1&query=${viewingSubmittedReport.report.gpsCoordinates.lat},${viewingSubmittedReport.report.gpsCoordinates.lng}`}
+                        href={`https://www.google.com/maps/search/?api=1&query=${submittedGps.lat},${submittedGps.lng}`}
                         target="_blank"
                         rel="noreferrer"
                         className="text-[11px] font-bold text-blue-700 hover:text-blue-900 flex items-center gap-1 underline cursor-pointer"
@@ -1403,20 +1393,20 @@ function OfficerWorkspace() {
                     )}
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs font-mono text-slate-700">
+                  {submittedGps ? <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs font-mono text-slate-700">
                     <div className="bg-white/80 p-2 rounded-xl border border-blue-100">
                       <span className="text-[10px] text-slate-400 font-sans block">Latitude</span>
-                      <strong className="text-slate-900">{viewingSubmittedReport.report?.gpsCoordinates?.lat || '5.6505'}° N</strong>
+                      <strong className="text-slate-900">{submittedGps.lat}°</strong>
                     </div>
                     <div className="bg-white/80 p-2 rounded-xl border border-blue-100">
                       <span className="text-[10px] text-slate-400 font-sans block">Longitude</span>
-                      <strong className="text-slate-900">{viewingSubmittedReport.report?.gpsCoordinates?.lng || '-0.1869'}° W</strong>
+                      <strong className="text-slate-900">{submittedGps.lng}°</strong>
                     </div>
                     <div className="bg-white/80 p-2 rounded-xl border border-blue-100">
                       <span className="text-[10px] text-slate-400 font-sans block">Geo-Accuracy</span>
-                      <strong className="text-emerald-700">± {viewingSubmittedReport.report?.gpsCoordinates?.accuracyMeters || 4.5}m (Ground Lock)</strong>
+                      <strong className="text-slate-900">{submittedGps.accuracyMeters !== undefined ? `± ${submittedGps.accuracyMeters}m` : 'Not recorded'}</strong>
                     </div>
-                  </div>
+                  </div> : <p className="text-xs text-slate-600">GPS coordinates were not recorded for this report.</p>}
                   <div className="text-[11px] text-slate-600 flex items-center gap-1.5 pt-1">
                     <MapPin className="w-3.5 h-3.5 text-rose-500 shrink-0" />
                     <span>Physical Premises Address: <strong>{viewingSubmittedReport.location}</strong></span>
@@ -1439,22 +1429,24 @@ function OfficerWorkspace() {
                       { key: 'generalLegitimacyConfirmed', label: 'General Property Legitimacy Confirmed' },
                       { key: 'safetyHabitableCompliance', label: 'Safety, Habitability & Security Standards Met' }
                     ].map(chk => {
-                      const isChecked = viewingSubmittedReport.report?.checklist?.[chk.key] ?? true;
+                      const recorded = viewingSubmittedReport.report?.checklist?.[chk.key];
+                      const isChecked = recorded === true;
+                      const isMissing = typeof recorded !== 'boolean';
                       return (
                         <div
                           key={chk.key}
                           className={`p-2.5 rounded-xl border flex items-center gap-2 text-xs font-bold ${
-                            isChecked
+                            isMissing ? 'bg-slate-50 border-slate-200 text-slate-700' : isChecked
                               ? 'bg-emerald-50/70 border-emerald-200 text-emerald-950'
                               : 'bg-rose-50/70 border-rose-200 text-rose-950'
                           }`}
                         >
                           <div className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 ${
-                            isChecked ? 'bg-emerald-600 text-white' : 'bg-rose-600 text-white'
+                            isMissing ? 'bg-slate-200 text-slate-600' : isChecked ? 'bg-emerald-600 text-white' : 'bg-rose-600 text-white'
                           }`}>
-                            {isChecked ? <Check className="w-3 h-3 stroke-[3]" /> : <X className="w-3 h-3 stroke-[3]" />}
+                            {isMissing ? '—' : isChecked ? <Check className="w-3 h-3 stroke-[3]" /> : <X className="w-3 h-3 stroke-[3]" />}
                           </div>
-                          <span>{chk.label}</span>
+                          <span>{chk.label}{isMissing ? ' — Not recorded' : ''}</span>
                         </div>
                       );
                     })}
@@ -1472,22 +1464,22 @@ function OfficerWorkspace() {
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
                       <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200/80">
                         <span className="text-[10px] text-slate-400 font-bold uppercase block">Estimated Rooms</span>
-                        <span className="text-sm font-black text-slate-900 mt-0.5 block">{viewingSubmittedReport.report.propertyDetails.estimatedRooms || 0} Rooms</span>
+                        <span className="text-sm font-black text-slate-900 mt-0.5 block">{viewingSubmittedReport.report.propertyDetails.estimatedRooms != null ? `${viewingSubmittedReport.report.propertyDetails.estimatedRooms} Rooms` : 'Not recorded'}</span>
                       </div>
                       <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200/80">
                         <span className="text-[10px] text-slate-400 font-bold uppercase block">Estimated Beds</span>
-                        <span className="text-sm font-black text-slate-900 mt-0.5 block">{viewingSubmittedReport.report.propertyDetails.estimatedBeds || 0} Beds</span>
+                        <span className="text-sm font-black text-slate-900 mt-0.5 block">{viewingSubmittedReport.report.propertyDetails.estimatedBeds != null ? `${viewingSubmittedReport.report.propertyDetails.estimatedBeds} Beds` : 'Not recorded'}</span>
                       </div>
                       <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200/80">
                         <span className="text-[10px] text-slate-400 font-bold uppercase block">Security Personnel</span>
                         <span className="text-sm font-black text-emerald-700 mt-0.5 block">
-                          {viewingSubmittedReport.report.propertyDetails.securityPresent ? 'Active On-Site' : 'None'}
+                          {viewingSubmittedReport.report.propertyDetails.securityPresent === true ? 'Confirmed present' : viewingSubmittedReport.report.propertyDetails.securityPresent === false ? 'Not confirmed' : 'Not recorded'}
                         </span>
                       </div>
                       <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200/80">
                         <span className="text-[10px] text-slate-400 font-bold uppercase block">Utilities (Water/Power)</span>
                         <span className="text-sm font-black text-emerald-700 mt-0.5 block">
-                          {viewingSubmittedReport.report.propertyDetails.utilitiesOperational ? 'Fully Operational' : 'Issue Reported'}
+                          {viewingSubmittedReport.report.propertyDetails.utilitiesOperational === true ? 'Confirmed operational' : viewingSubmittedReport.report.propertyDetails.utilitiesOperational === false ? 'Not confirmed' : 'Not recorded'}
                         </span>
                       </div>
                     </div>
@@ -1534,7 +1526,7 @@ function OfficerWorkspace() {
                     <span>Officer Ground Observations & Audit Findings</span>
                   </h4>
                   <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs text-slate-800 leading-relaxed font-medium">
-                    {viewingSubmittedReport.report?.observations || 'Physical verification conducted on-site with manager present. Property boundaries, security, and room layouts match submitted credentials.'}
+                    {viewingSubmittedReport.report?.observations || 'Observations were not recorded for this report.'}
                   </div>
                 </div>
 
@@ -1543,7 +1535,7 @@ function OfficerWorkspace() {
                   <div>
                     <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block">Digital Verification Sign-off</span>
                     <strong className="text-sm font-black text-emerald-400 block mt-0.5">
-                      {viewingSubmittedReport.report?.inspectorSignature || `${officerSession?.name} (Field Inspector)`}
+                      {viewingSubmittedReport.report?.inspectorSignature || 'Signature not recorded'}
                     </strong>
                     <span className="text-[10px] text-slate-300">PineVela Ground Audit & Verification Division</span>
                   </div>
@@ -1551,7 +1543,7 @@ function OfficerWorkspace() {
                   <div className="flex items-center gap-2 self-start sm:self-auto">
                     <BadgeCheck className="w-6 h-6 text-emerald-400 shrink-0" />
                     <span className="text-xs font-bold text-white uppercase tracking-wider bg-white/10 px-3 py-1.5 rounded-xl border border-white/20">
-                      Audit Certified
+                      Saved Officer Report
                     </span>
                   </div>
                 </div>
@@ -1642,7 +1634,7 @@ function OfficerWorkspace() {
               <div className="space-y-1.5">
                 <h3 className="text-base sm:text-lg font-black text-slate-900">Sign Out of Field Portal?</h3>
                 <p className="text-xs text-slate-500 leading-relaxed font-medium">
-                  You are currently logged in as <strong className="text-slate-800">{officerSession?.name || 'Field Officer'}</strong> ({officerSession?.officerId || 'PV-INSP'}). Any unsaved reports will be discarded.
+                  You are currently logged in as <strong className="text-slate-800">{officerSession?.name || officerSession.email}</strong> ({officerSession?.officerId || officerSession.id}). Any unsaved reports will be discarded.
                 </p>
               </div>
 

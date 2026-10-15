@@ -71,7 +71,7 @@ async function providerRequest(config: ReturnType<typeof signupProviderConfig>, 
   return response.json();
 }
 
-export function installGoogleAuth(app: Express, complete: (identity: GoogleIdentity, mode: Mode, session: GoogleSession) => Promise<string | {token:string;redirectTo:'/admin/dashboard'}>, issueCookie: (res: any, token: string, session?: GoogleSession) => void) {
+export function installGoogleAuth(app: Express, complete: (identity: GoogleIdentity, mode: Mode, session: GoogleSession) => Promise<string | {token:string;redirectTo:'/admin/dashboard'|'/field-officer'|'/manager/dashboard'}>, issueCookie: (res: any, token: string, session?: GoogleSession) => void) {
   const flows = new Map<string, { verifier: string; mode: Mode; origin: string; config: ReturnType<typeof signupProviderConfig>; expires: number; returnTo?: string }>();
   const cookieName = 'pv_google_flow';
   const cookieOptions = { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax' as const, path: '/api/auth/google/callback' };
@@ -118,7 +118,7 @@ export function installGoogleAuth(app: Express, complete: (identity: GoogleIdent
       const identity = googleIdentity(await providerRequest(flow.config, '/user', undefined, session.access_token));
       const completed = await complete(identity, flow.mode, session);
       const token=typeof completed==='string'?completed:completed.token;
-      const destination=typeof completed==='object'&&completed.redirectTo==='/admin/dashboard'?completed.redirectTo:'/user/dashboard';
+      const destination=typeof completed==='object'&&['/admin/dashboard','/field-officer','/manager/dashboard'].includes(completed.redirectTo)?completed.redirectTo:'/user/dashboard';
       issueCookie(res, token, session);
       return res.redirect(303, `${flow.origin}/#${flow.returnTo || destination}`);
     } catch (error) {
@@ -129,3 +129,5 @@ export function installGoogleAuth(app: Express, complete: (identity: GoogleIdent
 }
 
 export function googleAccountBlocked(): never { throw new GoogleError('blocked'); }
+export function googleAccountMissing(): never { throw new GoogleError('missing'); }
+export function googlePrimaryClosed(): never { throw new GoogleError('primary_closed'); }

@@ -14,6 +14,8 @@ export interface ManagerRegistration {
   submittedAt?: string;
   createdAt?: string;
   status?: string;
+  requiresPropertyRegistration?: boolean;
+  canCorrectRegistration?: boolean;
   isApproved?: boolean;
   isVerified?: boolean;
   isRejected?: boolean;
@@ -22,6 +24,15 @@ export interface ManagerRegistration {
   restrictionReason?: string;
   blockReason?: string;
   adminNotes?: string;
+}
+
+export function pendingManagerRegistration(account: {status?:string}) {
+  return !account.status||['pending','inspection_pending','under_review','more_info_required','submitted'].includes(account.status.toLowerCase());
+}
+
+export function currentManagerInspection<T extends {managerVerificationId?:string;status?:string}>(caseId:string,rows:readonly T[]):T|undefined {
+  const linked=rows.filter(row=>row.managerVerificationId===caseId);
+  return linked.find(row=>['dispatched','report_submitted'].includes(row.status||''))||linked[0];
 }
 
 export function managerRegistrationStatus(account: ManagerRegistration | null): RegistrationStatus {

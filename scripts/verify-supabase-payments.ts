@@ -110,7 +110,7 @@ try{await withIsolatedBackup(id,async config=>{
     check(registered.provider_receipt.source==='platform_zero_fee','A fee waiver is explicitly distinguished from a provider charge');
     check((await db.pool.query("select count(*) from private.audit_events where resource_id=$1 and event_type='payment_fulfilled'",[free.id])).rows[0].count==='1','Concurrent fulfillment audits once');
     check((await db.pool.query("select count(*) from public.notification_recipients r join public.notifications n on n.id=r.notification_id where r.context_id=$1 and n.category='market_payment'",[f.seller.contextId])).rows[0].count==='1','Registration retries notify the seller once');
-    check((await db.publicRows('select id from public.store_catalog where id=$1',[f.store])).length===1,'Verified initial registration exposes the actual store');
+    check((await db.publicRows('select id from private.store_catalog where id=$1',[f.store])).length===1,'Verified initial registration exposes the actual store');
     await denied(()=>prepare(f.seller,{...request,requestId:crypto.randomUUID()}),409,'One-time registration cannot be paid again');
     await denied(()=>payments.verify(f.foreignSeller,free.provider_reference),404,'Foreign seller cannot verify or discover this receipt');
     await denied(()=>payments.verify(f.buyer,free.provider_reference),403,'Linked primary cannot use seller payment verification');

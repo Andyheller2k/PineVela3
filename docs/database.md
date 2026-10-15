@@ -1,20 +1,373 @@
 # PineVela Database Model
 
-## Account approval reviews (migration 37)
+Migration 69 updates only the existing private Auth initializer: a pending, server-
+reserved Google manager subject receives no app profile/context until the owned,
+provider-verified callback supplies its private nonce. Existing identity, enrollment,
+context and inspection relationships are reused; no new table, browser grant or RLS
+policy is added. See [Google manager enrollment](migrations/google-manager-development-enrollment.md).
+
+Migration 68 removes the unused GhanaPost column from residences. Identity uses
+the saved street address and verified map pin; inspection/setup retains its existing
+ownership and approval checks. Historical dossier JSON, migrations and backups are
+preserved. No grants or RLS policies change. See
+[street and map registration](migrations/street-and-map-registration.md).
+
+Migration 67 adds one private RLS handoff table for immutable wipe requests. Native
+guards bind final-consent, preparation/proposal, administrator, notice and receipt
+foreign keys; subject/session UUID history is revalidated against native authority
+without retaining an ephemeral-session foreign key. Request and receipt finish
+atomically. No product records are imported from JSON. See
+[worker operation](operations/system-wipe-worker.md).
+
+Migration 66 extends the private wipe execution ledger and adds receipt-linked
+withdrawal markers. No application table or broader grant is added. Original
+inspection/repair evidence and financial history remain; exact native effects
+close operational access. See [operational closure](migrations/operational-wipe-core.md).
+
+Migration 65 adds no application table. Its invoker dependency predicate and
+review/pause updates use existing saved relationships. Room delivery history and
+immutable notice/recipient digests remain separate from lifecycle cancellation
+targets. Full private enrollment rows become SHA-256 digests, not exposed fields.
+See [the wipe protocol](migrations/system-wipe.md).
+
+## Officer invitations and room-key delivery
+
+The officer invitation protocol extends `private.account_enrollments`, preserving
+immutable verified identity receipts without adding another onboarding table.
+`private.room_key_deliveries` records atomic recipient notification deliveries.
+Housing UUIDs are validated historical snapshots without physical-housing foreign
+keys, so reviewed teardown preserves receipts. RLS/private grants, current
+manager/recipient authorization and lifecycle/queued-media guards remain intact.
+See [protocol and boundaries](migrations/officer-invitations-and-room-delivery.md).
+
+## System wipe backup preparation
+
+Migration 59 adds RLS-protected private `system_wipe_preparations` and
+`system_wipe_recovery_evidence`, with no browser/scoped-backend grants or public
+RPC. Preparation requires all five own-key votes, current final founder backup
+consent and another keyed founder confirmation. Cancellation invalidates consent
+and retains immutable history. Operator-only evidence binds actual restored
+PostgreSQL, recovered private keys and encrypted Storage bytes to that exact
+preparation. Status excludes private archive bindings. These snapshots neither
+freeze writers nor authorize execution; normal wipes retain verified logins and
+account history. See [system wipe protocol](migrations/system-wipe.md).
+
+## Annual room-key cycles
+
+Migration 57 adds only `private.residence_room_key_cycles` and a nullable `cycle_id`
+reference on existing private keys. The RLS-enabled receipt table has no browser/backend
+role grants or public RPC. Insert guards check native actor, current own manager/approval
+key version, approved reviewed residence, exact room/occupant counts, increasing academic
+year and explicit transaction consent. A deferred constraint prevents commit unless every
+room has one new unclaimed cycle key and no active allocation. Receipts cannot be edited,
+deleted or truncated; key-to-cycle associations are immutable and residence-scoped.
+
+The receipt stores the historical residence UUID/name without a live residence foreign
+key, so reviewed physical residence deletion can retain the receipt after removing housing.
+Actor context references and key-to-receipt foreign keys remain. Existing reviewed backup
+freeze guards protect new receipts. No cascade or new deletion exemption is introduced.
+Annual writes use the existing exclusive housing lifecycle lock before actor/room locks;
+claims, sign-ins, policies and reviewed deletion cannot cross the atomic operation. All
+replacement codes are generated before occupancy writes. SQL failures roll back notices,
+closures, allocations, key revocation and the receipt together. Individual release and
+subsequent key generation inherit the latest cycle where applicable.
+
+## Retained manager re-enrollment
+
+Migration 56 adds `manager_generation` to private enrollments and verification cases,
+using one open case per applicant/kind/generation. A private insert guard derives the
+case generation from the original owner's verified pending enrollment; it is immutable
+thereafter. Historical cases retain their original states and rows. Inspection mutations
+require the current generation and a live residence.
+
+Closed-manager revival is guarded independently of application code: it requires the
+original primary actor, saved enrollment, confirmed work subject and genuine native proof
+session, no live housing/staff dependencies, no competing manager enrollment, and no live
+registration restriction or unfinished/frozen closure review. Revival grants pending
+status only. It resolves final closure requests without altering their saved review
+receipts, clears obsolete manager bindings/key hashes and writes one primary notice and
+audit receipt. Exclusive existing lifecycle locks serialize confirmation/retries. Auth,
+old housing, policies, cooldowns, Storage and inspection history are retained. No public
+RPC, browser grant or new product table is added.
+
+## Unassigned manager portal closure
+
+Migration 55 extends the existing private request table and five-member account
+review; it adds no product table, browser grant or Data API projection. Portal-only
+review snapshots the exact own-key request, current manager-key version and retained
+registration restrictions. Eligibility requires an active manager, an issued key
+and no assignment, active staff or live property registration. Existing lifecycle
+events, exact preview comparison, roster/key checks and five-vote quorum remain.
+
+The founder’s final confirmation takes the existing exclusive housing/account-policy
+locks before actor locks. A private execution trigger rechecks the exact linked request,
+quorum, founder and dependencies, closes only the manager context, revokes its app
+bindings and writes one audit receipt. Policy application is skipped for this action;
+Auth, policy/cooldown/history, housing and Storage records are retained. Existing
+ban/restrict/restore behavior and reviewed residence deletion remain separate.
+
+## Resident self-release
+
+The existing allocation/context/key tables represent immediate resident closure; no new
+migration or imported records are needed. An authenticated resident's saved allocation,
+claimed current key and portal-key version form the server-generated preview digest.
+Within the existing exclusive housing lifecycle transaction, the backend rechecks native
+identity/session, confirms the PIN or five-minute sign-in age and records owner/manager
+notices and audit before ending the allocation/context. Notices appear only at commit.
+Failed PIN guesses commit without changing housing records. Closure retains the identity,
+history and sibling portals, deletes only resident app bindings and rotates only that room
+key. It never returns the replacement key to the former resident. Existing assigned-manager
+release uses the same atomic state changes. Sign-in binding creation takes shared lifecycle
+locks before session/context checks, preventing re-entry during a concurrent closure.
+
+## Private read projections
+
+Migration 54 moves the 14 reviewed catalog/account views from `public` to the
+unexposed `private` schema. It retains their column shapes, explicit publication
+and native-session/ownership filters, and security barriers. Every projection also
+checks maintenance access. `anon` and `authenticated` have no grants on these views;
+the browser cannot query them through the Data API. Express routes keep their
+existing response contracts and read the moved views instead.
+
+The new non-login, non-inheriting, non-BYPASSRLS `pinevela_catalog` role reads only
+the six safe public catalogs and invokes four boolean publication helpers. It has
+no base-table or operational-view access. Existing `pinevela_backend` reads the
+account projections after binding and verifying the actual native session.
+`media_asset_is_public` references the moved catalogs; its permissions stay unchanged.
+Three legacy trigger functions lose direct PUBLIC execution, while their triggers
+continue to run. Base-table grants, foreign keys, RLS policies and product rows do
+not change. Restores recreate the catalog role and its server membership explicitly;
+historical pre-54 checkpoints keep their older catalog-grant check.
+## Manager closure requests
+
+Migration 53 adds `private.manager_closure_requests`, referencing the exact manager
+account context and, after review, its independent residence-deletion proposal.
+Reason, waiver preference and creation identity are immutable; one pending/reviewing
+request is allowed per manager. Native guards enforce own assigned-manager submission,
+own withdrawal and current administrator approval-key decisions. Requests, proposals,
+votes, notifications and audit commit atomically when linked. A rejected, expired or
+invalidated unfrozen proposal can resolve its request while preserving the old link.
+RLS and revoked browser/scoped-backend grants protect this retained history; deletion
+and truncation are denied. Requests carry no raw keys and grant no deletion authority.
+
+## Reviewed residence changes
+
+Migration 52 adds a separate public manager contact name on the residence, without
+renaming its verified login profile. Existing `residence_change_requests` store
+immutable before/after snapshots and their baseline digest. Native guards require
+the assigned manager's current operation-key grant, serialize submissions and
+enforce one request per 30 days using database time. Terminal decisions require
+the current administrator approval-key grant and preserve the recorded decision.
+Browser/scoped backend roles retain read RLS and cannot write these records directly.
+No accounts, legacy requests or new application tables are imported.
+
+Review proofs expire after 30 minutes and are bound to the actual administrator,
+native session, immutable diff and current approval-key version. Their signing
+key is derived with a dedicated HKDF purpose from that administrator's private
+random approval-key verifier. The verifier stays server-side; a proof grants no
+decision authority by itself. It survives restart using existing private state,
+and key rotation invalidates it without another secret or persistence table.
+
+Approval rechecks the saved baseline, active manager assignment, owned ready
+photographs and block dependencies. Only empty unreferenced blocks may be removed;
+renames preserve floors, rooms, beds and staff relationships. Unrequested contact
+details are preserved. State changes commit with audit records and notices to
+the manager, primary owner and actual active administrators. General request
+editing remains retired.
+
+## Account appearance
+
+Migration 51 stores light/dark preferences in `private.account_appearance`, keyed
+by the existing account context with a cascading foreign key. Portals sharing one
+verified Auth identity retain independent preferences. The verified backend session
+binding supplies the context; RLS restricts SELECT/INSERT/UPDATE to that context.
+Browser roles have no table grants, and the backend cannot update ownership.
+Identical saves preserve the timestamp. A new portal returns `theme: null` until
+its first save; no legacy appearance data or accounts are imported.
+
+## Reviewed deletion requests
+
+Migration 50 adds immutable private `residence_execution_requests`, uniquely
+bound to a current final authorization and its exact founder/session/key version.
+PostgreSQL sets request identity and dates; the lifetime never extends consent.
+Requests contain no passwords or raw keys. Only actual current own-key founder
+confirmation can insert one. Invalidated requests permanently invalidate their
+authorization; restoring access cannot revive them. Native execution and request
+completion must commit together. RLS and revoked direct/helper grants protect
+the table. Its reference guard preserves migration 49's queued-media boundary.
+
+The API queues requests only when its server-only release gate is enabled. It
+does not restore backups or run deletion subprocesses. A separate read-only-by-
+default operator derives authority from the immutable request, rechecks current
+session/consent, restores the saved archives outside the mutation transaction,
+then executes the exact scope and completes its request atomically. Provider
+image cleanup remains the separate migration-49 processor. Actual HTTP/browser
+acceptance and enabling the release gate remain pending.
+
+## Reviewed Storage cleanup protocol
+
+Migration 49 adds private `residence_storage_cleanup_attempts`. Native claims bind
+one approved immutable image task to a generated token and a five-minute lease.
+Claimed, deleting, completed, failed and expired states preserve retry history;
+terminal records and lease identity cannot be rewritten. The trusted operator
+restore-verifies the exact original frozen archive and image bytes, then checks
+current references, provider identity and digest before requesting Storage removal.
+Completion requires independently observed provider absence and native catalog
+absence. A completed decision delegates this cleanup beyond its review lifetime;
+archived sessions and expired reviews confer no new authority.
+
+Queued media metadata is retained. Native guards prevent new image references,
+object-path replacement and unprepared catalog deletion/truncation. Unknown
+dependencies or missing reference guards block cleanup. Ordinary interrupted-upload
+reconciliation excludes these jobs. Public residence execution remains disabled
+pending its HTTP/UI integration and genuine authenticated acceptance.
+
+## Reviewed residence execution core
+
+Migration 48 adds private `residence_executions` and
+`residence_storage_cleanup_tasks`. Execution admission derives its exact saved
+scope, native transaction/backend, genuine current founder session/key, recovery
+receipt, final consent and execution-time cooldown. Admission cannot commit until
+all reviewed operational housing rows are removed, affected portals closed and
+bindings revoked, pending invitations cancelled and approved exclusive images queued.
+Residence-only retains manager sign-in; combined removal closes that portal while
+preserving shared Auth identities, other portals and financial/history references.
+Creator/admin notifications, audit, proposal completion and pause release commit
+together. Completed receipts and pending cleanup candidates are immutable.
+
+Version-3 previews require fresh review; older consent is invalidated without
+releasing existing pauses. RLS and revoked table/helper grants protect the worker.
+It has no HTTP/RPC execution entry. Migration 49 supplies the separate trusted
+Storage processor. See [residence deletion](migrations/residence-deletion.md).
+
+## Retained residence targets
+
+Migration 47 adds immutable private `housing_reference_targets` for actual room,
+allocation, verification-case, inspection and maintenance-issue identifiers. Four
+media foreign keys and two enrollment foreign keys retain enforced original targets
+without cascading or nulling historical links. Nullable verification-case residence
+links remain nullable. New or changed bindings still require live operational rows;
+historical identifiers never authorize access. Existing ownership, credentials,
+metadata and enrollment state remain unchanged. Bound-source DELETE/TRUNCATE stays
+blocked outside migration 48's exact native execution. Migration installation serializes
+housing writers and locks the source graph before backfill and trigger installation.
+
+Migration 46 captures actual residence identity in immutable private
+`residence_history_targets`. Payment and approval foreign keys preserve their
+historical target UUIDs independently of operational housing rows. Captured metadata
+provides no ownership authority; new quotes and reviews still require live saved
+relationships. Residence IDs cannot change or be reused. RLS and revoked role/helper
+grants protect retained metadata. DELETE requires migration 48's exact native admission;
+TRUNCATE remains denied. See [residence deletion](migrations/residence-deletion.md).
+
+## Final residence execution consent
+
+Migration 45 adds immutable private `residence_execution_authorizations`. Each
+record binds a reviewed preparation and its recovery/cleanup digests to the current
+founder, genuine Auth session and approval-key version. PostgreSQL sets a lifetime
+of at most five minutes, capped by review expiry. Native validity rechecks current
+consent, pause, session, key, scope, cleanup references and media catalog. History
+contains no credentials and does not reference `auth.sessions` through a foreign
+key, so sign-out remains possible. Only dates and validity reach admin status.
+This records final consent; public residence deletion remains unavailable.
+
+## Private residence cleanup plans
+
+Migration 44 adds immutable `private.residence_cleanup_plans`, tied to an actual
+recovery receipt and its approved frozen preparation. Native classification retains
+avatars, marketplace assets, unfinished reservations, foreign housing bindings and
+references in retained public/private rows. A trusted operator re-verifies actual
+archives before recording the exact native plan/catalog digest. Only planning time
+and counts reach administrator status; raw paths/owners/digests remain private.
+Recording a plan never deletes operational rows or Storage bytes. See
+[residence deletion](migrations/residence-deletion.md).
+
+## Object-byte recovery
+
+Encrypted Storage archives bind every supported saved object, including interrupted
+upload orphans, to the actual rehearsed PostgreSQL checkpoint and its catalog digest.
+Missing ready bytes, changed inventory, foreign objects and tampered archives block
+completion. Local reconstruction performs no cloud writes; the separate real-provider
+check uses the actual cover image and one journaled temporary object. Migration 42
+adds an immutable private receipt after trusted operator verification; no public
+RPC or RLS bypass is introduced. These archives do not establish a project-wide freeze
+or final consent needed for deletion. See [Storage recovery](migrations/storage-recovery.md).
+
+## Residence deletion reviews (migration 40)
+
+Migration 41 adds private durable preparation history. A current keyed founder can
+pause a version-2 review after two distinct approvals, or cancel the pause with a
+reason even after the review closes. Native guards block changes to the saved housing
+scope, both sides of relationship edits, new linked records and truncation. Shared
+writer locks precede governance/context locks; preparation takes the exclusive lock.
+The pause preserves reads and unrelated marketplace activity and survives reconnects.
+Cancellation invalidates consent. Pending residence payments and in-flight media block
+preparation. No recovery archive is attached automatically, no operational records are
+deleted and no registration cooldown starts. Private history/helpers have no callable
+browser/backend grants; narrow metadata-only guards retain outer RLS authorization.
+Migration 42 enforces READ COMMITTED for housing/preparation writers and binds an
+existing pause to its actual restored database/Storage evidence through a private
+operator command. Receipt, admin-only status notice and audit commit together;
+cancelled/changed scope and mismatched catalogs/archives cannot attach. Exact retries
+are idempotent. Receipts expose only verification time in admin status and are
+historical evidence, not execution authority. Deletion remains disabled.
+
+`admin_proposals`/`admin_votes` hold immutable residence previews and two-admin
+consent, with a keyed founder final decision and 24-hour expiry. Private
+`residence_review_state` and append-only `residence_review_events` record actual
+dependency UUID changes. Reversed relevant changes invalidate consent; unrelated
+properties and no-op writes preserve it. Private snapshots resolve saved manager,
+primary-owner and housing links, including financial/media foreign-key dependencies,
+without exposing raw activation keys or enrollment challenges. Review helpers use
+invoker privileges; the private metadata trigger has a fixed empty search path,
+no callable role grants and preserves outer-write authorization. Execution is
+disabled in SQL/API/UI; previews and approval do not delete data or impose cooldowns.
+See [residence deletion](migrations/residence-deletion.md) for the remaining protocol.
+
+## Account approval reviews and policies (migrations 37–39)
 
 Account review evidence/votes reuse `admin_proposals` and `admin_votes`, with five-admin
 quorum, 24-hour server-stamped lifetime and immutable founder final-rejection metadata.
 The target is a saved non-administrator context. Directory relationships use saved
 primary ownership and current staff-manager assignments; email never supplies a link.
 
-`private.account_review_state` holds only a monotonic lifecycle revision. Invoker
-triggers advance it for context, parent, assignment and allocation changes, so a
-change followed by reversal cannot revive old consent. Invalidation is conservatively
-global for these lifecycle changes. Its backend SELECT/column-UPDATE grants exist only
-for invoker lifecycle triggers; a nested-trigger guard denies direct revision writes.
-Browser roles have no grants, and new helper functions have no public execution.
-Roster/key revision and exact review snapshots are independently checked by SQL.
-Reviews create no active account policy and enable no destructive execution.
+`private.account_review_state` holds a monotonic lifecycle revision. Migration 38 adds
+append-only `private.account_review_events` with changed context and parent-branch UUIDs.
+Review snapshots include saved descendants and ancestors, excluding protected
+administrator contexts. Only relevant changes invalidate consent; unrelated signups
+and sibling portals, including resident/seller portals sharing an Auth identity, leave
+a leaf review valid. Relevant changes followed by reversal still invalidate it.
+
+The internal lifecycle trigger records saved links across RLS boundaries with a fixed
+empty search path and no callable public/browser/backend grant. Its supported sources
+are context, profile parent, staff/manager assignment and allocation writes. Those writes
+retain their original authorization. SQL guards deny arbitrary revision changes and
+event inserts/updates/deletes; the backend's former revision UPDATE grant is revoked.
+Other review helpers remain invoker functions with no public execution. Roster/key
+revision and exact snapshots are independently checked. Pre-38 reviews need fresh consent.
+The administrator context guard returns OLD for non-admin deletion, allowing actual
+deletion to reach lifecycle checks, while retaining protected administrator removal.
+Approval alone changes no account. Migration 39 permits the current keyed founder
+to apply a still-current five-admin review with explicit final confirmation.
+`private.account_policies` records exact approved features, execution-based ban
+expiry, reason, author and revision; `private.account_access_epochs` permanently
+rejects pre-ban/pre-restoration sessions against actual `auth.sessions.created_at`.
+Direct policy/epoch mutation is denied. Execution, inherited-policy lifecycle
+invalidation, targeted notices and audit are atomic; no existing review is executed
+by the migration. Deletion and wipes remain separate unfinished workflows.
+
+Policies follow saved primary/portal and manager/staff links, excluding administrators.
+Sharing an email does not merge portal policies. Restriction preserves an existing
+ban, ban preserves existing features, and restoration clears only the selected
+account's own policy; inherited policies still apply. An expired ban still requires
+a fresh actual provider session. Auth identities and shared-mailbox sibling sessions
+are preserved. Auth/API/native RLS, media reservations, feature writes and public
+seller eligibility enforce access. Private tables have RLS with no browser/backend
+table grants; only authenticated own-context status wrappers are callable.
+
+The existing order-completion trigger can decrement stock under a publishing
+restriction only for its exact completed order and unchanged listing metadata.
+Direct stock edits remain restricted; existing handovers are not publication actions.
 
 ## Supabase replacement status
 
@@ -119,6 +472,14 @@ amount, currency, provider reference and fulfillment state. Private `payment_che
 keeps immutable request UUID/fingerprint, payer email, quote lines, selected plan and
 receiving account. Browser roles cannot read provider evidence or checkout details,
 or directly write payment/subscription records.
+
+Migration 43 adds private immutable `residence_payment_references` containing the
+original residence UUID, name, primary-owner UUID and a genuine source-payment UUID.
+Existing payments are backfilled without modification; new quotes capture the
+reference in their transaction. Historical ownership is evidence, never authorization.
+The original operational foreign key remains enforced until a verified deletion
+workflow can replace it. This prerequisite neither deletes residences nor grants
+access from unpaid quotes. Browser/backend roles cannot read or edit the references.
 
 `store_fee_periods` represents two-month access independently from `store_subscriptions`.
 Verified registration creates both initial two-month periods. Separate plan and fee
@@ -516,15 +877,24 @@ and publication boundaries when migrating stores to PostgreSQL and private Stora
 
 ## Reviewed residence registration in the replacement backend
 
+Before physical approval, requested manager-application corrections reuse the owned
+case, verified manager identity and assigned inspection shell. Previous property,
+review metadata and inspection targets are retained in private audit events; fresh
+inspection is required after resubmission. Active dispatches and residence setup block
+correction. See [manager application corrections](migrations/manager-application-corrections.md).
+
 Manager physical verification creates an assigned property shell. The full registration form
 completes that exact property instead of creating a second residence. Current category, contacts,
 address, stay cycle and owned photo references persist alongside actual floor/room/bed rows.
 A separate residence-registration case and `setup_submitted_at` mark submission for review.
 Public cards/photos and new room activations require approved residence setup; an approved
 manager identity alone is insufficient. Administrator approval/rejection/information requests now use the saved case and accepted
-physical inspection, validate actual counts/photos, and notify the primary owner. Payment
-fulfillment, reviewed changes/resubmission and new-property registration after deletion
-remain pending migration work.
+physical inspection, validate actual counts/photos, and notify the primary owner.
+Requested setup corrections reuse the same case and archive the prior submission/review
+in private audit events. Unused room layouts may be replaced before operational history
+exists; unchanged layouts retain their identities. No new table or migration is required.
+See [residence corrections](migrations/residence-corrections.md) for authority and evidence;
+genuine provider/browser acceptance remains a separate cutover prerequisite.
 
 ## Supabase Maintenance Workflow
 
@@ -646,6 +1016,13 @@ quota/integrity checks and interrupted-transfer cleanup apply. An active adminis
 identity requires its admin portal and current settings key even when a primary portal
 shares the identity. SQL guards enforce this independently of frontend controls.
 
+Retrying an avatar upload reuses a ready object only when its processed image hash, byte
+size, verified Auth owner and active portal all match. The route verifies stored bytes and
+rechecks the live identity/settings grant before returning the existing reference. A matching
+upload still in progress returns a conflict rather than another reservation. Missing Storage
+objects are excluded from reuse. Profile editors retain a completed upload across a failed
+profile-save retry and prevent concurrent submissions.
+
 Same-email portals using one Auth identity share that identity's picture. Separate verified
 work/student identities and their linked primary owners do not inherit each other's media.
 Private owner RLS additionally permits only the current portrait of active staff through the
@@ -654,3 +1031,41 @@ Public catalog image rules do not publish avatars. Referenced assets cannot be r
 deleted; reset/deletion workflows must detach the profile first and delete bytes through the
 Storage API. Replacement pictures do not automatically delete prior ready objects; reviewed
 object cleanup and permanent object-byte backups remain cutover work.
+
+
+## Reviewed system wipe scope pause and final consent (migration 60)
+
+Two private RLS tables retain scope pauses and short-lived founder authorizations.
+Pause transitions serialize with existing residence/domain locks. Native guards
+block scoped old/new rows and selected Storage metadata paths, including future
+dependencies; existing outer RLS and residence execution rules remain. No new
+SECURITY DEFINER function or public RPC is added. Founder cancellation preserves
+history and releases the pause, even after the review becomes outdated.
+
+Final consent requires actual restored post-pause recovery and binds the exact
+scope/catalog, pause time, founder session and approval-key version for at most
+five minutes. Browser responses expose state/times only. Execution remains disabled;
+verified identities, operational records and Storage bytes are retained. See
+[system wipe rules](migrations/system-wipe.md) for admission, freshness and recovery.
+
+Migration 61 adds private, RLS-protected primary wipe execution/re-entry receipts.
+The primary context check allows active or closed status; a native lifecycle guard
+limits transitions to the exact reviewed execution or verified retained re-entry.
+Preparation/pause completion and execution notices commit atomically. No Auth or
+Storage data is deleted and no new public RPC is exposed. See
+[primary wipe lifecycle](migrations/primary-wipe-lifecycle.md) for its intentionally
+restricted eligibility and the still-disabled live execution route.
+
+Migration 62 adds retained seller registration generations and an immutable store
+application foreign key. Current-cycle readers no longer infer approval from any
+historical application for the same seller. Prior store/payment IDs remain history;
+new registration requires a fresh store and receipt. The re-entry trigger preserves
+RLS and the existing independent resident identity/PIN relationship. See
+[seller re-registration](migrations/seller-reenrollment.md).
+
+## Primary re-entry proof methods
+
+Migration 63 records the verified Google/email proof method on the immutable private
+primary re-entry receipt. Native eligibility uses confirmed Auth identities and live
+sessions; no editable profile metadata grants access. Primary IDs and history stay
+retained. See [verified email re-entry](migrations/primary-email-reentry.md).

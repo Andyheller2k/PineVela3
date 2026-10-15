@@ -1,5 +1,6 @@
 import { activateOnKeyboard } from '../lib/keyboardActivation';
 import { usesSupabasePersistence } from '../lib/persistence';
+import PortalPinSettings from './PortalPinSettings';
 import {isMarketService} from '../../marketListingAvailability';
 import DashboardOverlay from './DashboardOverlay';
 import MobileNavigation from './MobileNavigation';
@@ -2412,6 +2413,7 @@ export default function PageDigitalMarket() {
         {/* TAB 4: STORE PROFILE EDIT */}
         {activeTab === 'profile' && (
           <div className="space-y-6">
+          <PortalPinSettings />
           {storeData && <StoreProfileSummary store={storeData} />}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             

@@ -7,7 +7,7 @@ const route = (work: (req: any, res: any) => Promise<unknown>): RequestHandler =
 function residence(row: any) {
   return { id: row.id, name: row.name, location: row.location, description: row.description,
     image: row.cover_path, imageUrl: row.cover_path, gallery: row.gallery_paths,
-    contact_phone: row.contact_phone, contact_email: row.contact_email,
+    contact_phone: row.contact_phone, contact_email: row.contact_email, managerName: row.manager_contact_name || '',
     latitude:row.latitude === null ? null : Number(row.latitude),longitude:row.longitude === null ? null : Number(row.longitude),
     landmark:row.landmark,city:row.city,region:row.region,
     registrationDate: row.registered_at, isApproved: true, approvalStatus: 'Approved' };
@@ -22,13 +22,13 @@ function store(row: any) {
 }
 export async function publicProducts(db: SupabaseDatabase, storeId?: string) {
   const rows = await db.publicRows(`select l.*, s.name as store_name, s.campus, s.primary_phone, s.logo_path, s.plan,
-      (select coalesce(round(avg(r.rating),1),0) from public.market_reviews_public r where r.listing_id = l.id) as rating,
-      (select count(*) from public.market_reviews_public r where r.listing_id = l.id) as review_count,
-      (select coalesce(round(avg(r.rating),1),0) from public.market_reviews_public r where r.store_id = l.store_id) as store_rating,
-      (select count(*) from public.market_reviews_public r where r.store_id = l.store_id) as store_rating_count,
-      coalesce((select jsonb_agg(m.storage_path order by m.sort_order) from public.listing_media_public m where m.listing_id = l.id),'[]'::jsonb) as images,
-      coalesce((select jsonb_agg(jsonb_build_object('id',o.id,'name',o.label,'price',o.price,'imageUrl',o.image_path) order by o.sort_order) from public.listing_price_options_public o where o.listing_id = l.id),'[]'::jsonb) as price_options
-    from public.listing_catalog l join public.store_catalog s on s.id = l.store_id
+      (select coalesce(round(avg(r.rating),1),0) from private.market_reviews_public r where r.listing_id = l.id) as rating,
+      (select count(*) from private.market_reviews_public r where r.listing_id = l.id) as review_count,
+      (select coalesce(round(avg(r.rating),1),0) from private.market_reviews_public r where r.store_id = l.store_id) as store_rating,
+      (select count(*) from private.market_reviews_public r where r.store_id = l.store_id) as store_rating_count,
+      coalesce((select jsonb_agg(m.storage_path order by m.sort_order) from private.listing_media_public m where m.listing_id = l.id),'[]'::jsonb) as images,
+      coalesce((select jsonb_agg(jsonb_build_object('id',o.id,'name',o.label,'price',o.price,'imageUrl',o.image_path) order by o.sort_order) from private.listing_price_options_public o where o.listing_id = l.id),'[]'::jsonb) as price_options
+    from private.listing_catalog l join private.store_catalog s on s.id = l.store_id
     where ($1::uuid is null or l.store_id = $1) order by l.created_at desc`, [storeId || null]);
   return rows.map((row: any) => ({ ...marketPlanBenefits(row.plan === 'pine_pro' ? 'pro' : row.plan === 'pine_star' ? 'star' : 'default'), id: row.id, storeId: row.store_id, title: row.title, description: row.description,
     category: row.category, price: Number(row.price), currency: row.currency,
@@ -43,9 +43,9 @@ export async function publicProducts(db: SupabaseDatabase, storeId?: string) {
     rating: Number(row.rating), reviewCount: Number(row.review_count), storeRating: Number(row.store_rating), ratingCount: Number(row.store_rating_count) }));
 }
 export function installCatalog(app: Express, db: SupabaseDatabase) {
-  app.get('/api/hostels', route(async (_req, res) => res.json((await db.publicRows('select * from public.residence_catalog order by registered_at desc')).map(residence))));
+  app.get('/api/hostels', route(async (_req, res) => res.json((await db.publicRows('select * from private.residence_catalog order by registered_at desc')).map(residence))));
   app.get('/api/hostels/:id', route(async (req, res) => {
-    const rows = await db.publicRows('select * from public.residence_catalog where id = $1', [uuid(req.params.id)]);
+    const rows = await db.publicRows('select * from private.residence_catalog where id = $1', [uuid(req.params.id)]);
     if (!rows.length) throw new ApiError(404, 'Residence not found.'); return res.json(residence(rows[0]));
   }));
   app.get('/api/digital-market/products', route(async (req, res) => {
@@ -55,9 +55,9 @@ export function installCatalog(app: Express, db: SupabaseDatabase) {
   app.get('/api/digital-market/stores/:id', route(async (req, res) => {
     const id = uuid(req.params.id);
     const rows = await db.publicRows(`select s.*,
-      (select coalesce(round(avg(r.rating),1),0) from public.market_reviews_public r where r.store_id = s.id) as rating,
-      (select count(*) from public.market_reviews_public r where r.store_id = s.id) as rating_count
-      from public.store_catalog s where s.id = $1`, [id]);
+      (select coalesce(round(avg(r.rating),1),0) from private.market_reviews_public r where r.store_id = s.id) as rating,
+      (select count(*) from private.market_reviews_public r where r.store_id = s.id) as rating_count
+      from private.store_catalog s where s.id = $1`, [id]);
     if (!rows.length) throw new ApiError(404, 'Store not found.');
     return res.json({ store: store(rows[0]), products: await publicProducts(db, id) });
   }));
