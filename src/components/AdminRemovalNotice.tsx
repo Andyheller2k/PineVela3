@@ -10,7 +10,7 @@ export default function AdminRemovalNotice() {
   return <AccountRemovalNotice key={user?.id}/>;
 }
 function AccountRemovalNotice() {
-  const { data } = useAdminGovernance(), { apiFetch, user } = useAuth();
+  const { data } = useAdminGovernance(true, true), { apiFetch, user } = useAuth();
   const [dismissed, setDismissed] = useState<string[]>([]), [message, setMessage] = useState(''), [error, setError] = useState(''), [busy, setBusy] = useState(false);
   const change = data?.changes?.find((c: any) => c.targetId === user?.id && (c.canSubmitPlea || c.plea?.decision && !c.plea.acknowledgedAt) && !dismissed.includes(`${c.id}:${c.status}`));
   if (!change) return null;

@@ -3,6 +3,7 @@ import {Building2,X} from 'lucide-react';
 import DashboardOverlay from './DashboardOverlay';
 import {useAuth} from '../context/AuthContext';
 import {sessionFetch} from '../lib/session';
+import {requestKeyedApproval} from '../lib/approvalPrompt';
 import {invalidateAllQueries} from '../lib/queryClient';
 import {canDecideResidenceReview,residenceReviewLabel} from '../lib/residenceReview';
 
@@ -34,8 +35,15 @@ export default function AdminResidenceRegistrationReview({residenceId,onClose,on
     if(decision!=='approve'&&notes.trim().length<5){setError('Explain the requested corrections or rejection in at least five characters.');return;}
     inFlight.current=true;setBusy(true);setError('');setNotice('');const captured=user?.id;
     try{
-      const response=await sessionFetch(`/api/hostel-verifications/${encodeURIComponent(record.verificationId)}/${decision}`,{
-        method:'PUT',headers:{'content-type':'application/json','X-PineVela-Profile-Context':String(captured)},body:JSON.stringify({adminNotes:notes.trim()}),signal:AbortSignal.timeout(45000)});
+      const execute=async(privateKey?:string)=>{
+        if(!live.current||owner.current!==captured)throw Error('The administrator account changed.');
+        try{return{response:await sessionFetch(`/api/hostel-verifications/${encodeURIComponent(record.verificationId)}/${decision}`,{
+          method:'PUT',headers:{'content-type':'application/json','X-PineVela-Profile-Context':String(captured)},body:JSON.stringify({adminNotes:notes.trim(),...(privateKey?{privateKey}:{})}),signal:AbortSignal.timeout(45000)})};}
+        catch(error){return{error};}
+      };
+      const attempt=decision==='approve'?await requestKeyedApproval(execute):await execute();
+      if(attempt.error)throw attempt.error;
+      const response=attempt.response as Response;
       const result=await response.json();if(!response.ok)throw Error(result.error||'The residence decision could not be saved.');
       if(!result.success||!result.hostel||result.hostel.id!==residenceId)throw Error('The saved decision could not be confirmed. Refresh the review before retrying.');
       invalidateAllQueries();onReviewed();

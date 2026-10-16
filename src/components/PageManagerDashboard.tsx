@@ -1,38 +1,67 @@
-import AcademicYearRoomReset from './AcademicYearRoomReset';
-import { activateOnKeyboard } from '../lib/keyboardActivation';
-import MobileNavigation from './MobileNavigation';
-import { ManagerResidenceRequests } from './ResidenceChangeRequests';
-import { routePopupFeedback } from '../lib/feedback';
-import RouteSkeleton from './RouteSkeleton';
-import DashboardOverlay from './DashboardOverlay';
-import PasswordStrengthGauge from './PasswordStrengthGauge';
-import OnboardingProgress, { STAFF_ACCOUNT_STEPS } from './OnboardingProgress';
-import React, { useState, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { queryClient, invalidateAllQueries } from '../lib/queryClient';
+import React,{ useEffect,useMemo,useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
-import { saveNavigationLayout, usesTopNavigation } from '../lib/navigationLayout';
-import TopNavBadge from './TopNavBadge';
-import PineLogo from './PineLogo';
+import { routePopupFeedback } from '../lib/feedback';
+import { activateOnKeyboard } from '../lib/keyboardActivation';
+import { saveNavigationLayout,usesTopNavigation } from '../lib/navigationLayout';
+import { invalidateAllQueries,queryClient } from '../lib/queryClient';
+import AcademicYearRoomReset from './AcademicYearRoomReset';
+import DashboardOverlay from './DashboardOverlay';
 import HostelRegistration from './HostelRegistration';
-import ManagerProfileSettings from './ManagerProfileSettings';
-import ManagerAccountControls from './ManagerAccountControls';
-import { ManagerMeetingsTab } from './ManagerMeetingsTab';
 import LogoutConfirmationModal from './LogoutConfirmationModal';
+import ManagerAccountControls from './ManagerAccountControls';
 import ManagerDigitalKeysView from './ManagerDigitalKeysView';
-import { usesSupabasePersistence } from '../lib/persistence';
-import { } from '../utils/pdfHelper';
-import { 
-  Building2, Users, MapPin, CheckCircle2, XCircle, Clock, Plus,
-  ShieldCheck, LogOut as LogOutIcon, UserPlus,
-  AlertCircle, Check, ArrowRight, Layers, Wrench, Settings, Bell,
-  Send, MessageSquare, Phone, Mail, Trash2, Edit3, Eye, EyeOff, CheckCircle, Lock, CalendarCheck, RefreshCw, Scale, Handshake, ThumbsUp, ThumbsDown,
-  Key, Copy, X, ShieldAlert, PanelLeftClose, PanelLeftOpen
+import { ManagerMeetingsTab } from './ManagerMeetingsTab';
+import ManagerProfileSettings from './ManagerProfileSettings';
+import MobileNavigation from './MobileNavigation';
+import OnboardingProgress,{ STAFF_ACCOUNT_STEPS } from './OnboardingProgress';
+import PineLogo from './PineLogo';
+import { ManagerResidenceRequests } from './ResidenceChangeRequests';
+import RouteSkeleton from './RouteSkeleton';
+import TopNavBadge from './TopNavBadge';
+
+import {
+AlertCircle,
+ArrowRight,
+Bell,
+Building2,
+CalendarCheck,
+Check,
+CheckCircle,
+CheckCircle2,
+Clock,
+Copy,
+Edit3,
+Handshake,
+Key,
+Layers,
+Lock,
+LogOut as LogOutIcon,
+Mail,
+MapPin,
+MessageSquare,
+PanelLeftClose,PanelLeftOpen,
+Phone,
+Plus,
+RefreshCw,Scale,
+Send,
+Settings,
+ShieldAlert,
+ShieldCheck,
+ThumbsDown,
+ThumbsUp,
+Trash2,
+UserPlus,
+Users,
+Wrench,
+X,
+XCircle
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
-import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
+import { AnimatePresence,motion } from 'motion/react';
+import { Area,AreaChart,CartesianGrid,ResponsiveContainer,Tooltip,XAxis,YAxis } from 'recharts';
+import { } from '../utils/pdfHelper';
 
 interface StaffMember {
   id: string;
@@ -221,20 +250,7 @@ export default function PageManagerDashboard() {
 
   // Check if manager has approved properties
   const isPropertyApproved = (p: any) => 
-    usesSupabasePersistence ? p?.isApproved === true : Boolean(
-      p && (
-        p.isApproved === true || 
-        p.isApproved === 'true' ||
-        p.approvalStatus === 'Approved' || 
-        p.approvalStatus === 'approved' ||
-        p.status === 'Approved' || 
-        p.status === 'approved' ||
-        p.status === 'Active' || 
-        p.status === 'active' || 
-        p.status === 'Open' ||
-        p.status === 'open'
-      )
-    );
+    (p?.isApproved === true);
 
   const primaryProperty = properties[0] || null;
   const hasApprovedProperty = 
@@ -274,14 +290,14 @@ export default function PageManagerDashboard() {
   const { data: managerData, isPending: managerPending, error: managerError, refetch: retryManagerData } = useQuery({
     queryKey: ['managerData', user?.id, user?.email],
     queryFn: async ({ signal }) => {
-      const nativeData = usesSupabasePersistence ? await Promise.all([
+      const nativeData = (await Promise.all([
         '/api/hostels', '/api/manager/my-hostel', '/api/issue-reports', '/api/staff',
         '/api/staff/invitations', '/api/staff-bargains', '/api/board-requests',
         '/api/activities', '/api/room-keys'
-      ].map(path => apiFetch(path, { signal }))) : null;
+      ].map(path => apiFetch(path, { signal }))));
       // 1. Fetch properties from backend
-      const resProperties = nativeData ? nativeData[0] : await apiFetch('/api/hostels');
-      const myHostelRes = nativeData ? nativeData[1] : await apiFetch('/api/manager/my-hostel');
+      const resProperties = nativeData[0];
+      const myHostelRes = nativeData[1];
       
       const cleanEmail = (user?.email || '').toLowerCase().trim();
       const userId = user?.id;
@@ -305,7 +321,7 @@ export default function PageManagerDashboard() {
       }
 
       // 3. Fetch issue reports / maintenance
-      const resIssues = nativeData ? nativeData[2] : await apiFetch('/api/issue-reports');
+      const resIssues = nativeData[2];
       let mappedIssues: any[] = [];
       if (Array.isArray(resIssues)) {
         const relevantIssues = managerProperties.length > 0
@@ -315,26 +331,16 @@ export default function PageManagerDashboard() {
             )
           : resIssues;
 
-        mappedIssues = relevantIssues.map((i: any) => usesSupabasePersistence ? i : ({
-          ...i,
-          id: i.id || `issue-${Date.now()}`,
-          title: i.title || i.issue || 'Maintenance Request',
-          category: i.category || 'General',
-          roomNumber: i.roomNumber || i.room || 'General Area',
-          urgency: i.urgency || i.priority || 'Normal',
-          status: usesSupabasePersistence ? i.status : i.status === 'Resolved' ? 'Resolved' : i.status === 'In Progress' ? 'In Progress' : 'Open',
-          reportedAt: i.reportedAt || i.createdAt || 'Recent',
-          description: i.description || i.details || 'Maintenance requested by resident'
-        }));
+        mappedIssues = relevantIssues.map((i: any) => (i));
       }
 
       // 4. Fetch staff members
-      const resStaff = nativeData ? nativeData[3] : await apiFetch('/api/staff');
-      const invitations = nativeData ? nativeData[4] : [];
-      const resBargains = nativeData ? nativeData[5] : await apiFetch('/api/staff-bargains');
-      const resBoard = nativeData ? nativeData[6] : await apiFetch('/api/board-requests');
-      const resActivities = nativeData ? nativeData[7] : await apiFetch('/api/activities');
-      const resRoomKeys = nativeData ? nativeData[8] : await apiFetch('/api/room-keys');
+      const resStaff = nativeData[3];
+      const invitations = nativeData[4];
+      const resBargains = nativeData[5];
+      const resBoard = nativeData[6];
+      const resActivities = nativeData[7];
+      const resRoomKeys = nativeData[8];
 
       return {
         managerProperties,
@@ -383,10 +389,7 @@ export default function PageManagerDashboard() {
   const handleSendDigitalKey = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!selectedKeyForDispatch || dispatchPendingRef.current) return;
-    if (!usesSupabasePersistence) {
-      setDispatchErrorMsg('Verified room-key delivery requires the Supabase backend.');
-      return;
-    }
+
     const recipientEmail = dispatchRecipientEmail.trim().toLowerCase();
     const customNote = dispatchCustomNote.trim();
     if (!recipientEmail || !selectedKeyForDispatch.id) {
@@ -472,7 +475,7 @@ export default function PageManagerDashboard() {
       const res = await apiFetch('/api/auth/profile', {
         method: 'PUT',
         headers:{'X-PineVela-Profile-Context':String(user?.id)},
-        body: JSON.stringify(usesSupabasePersistence?{name:updatedProfile.name,phone:updatedProfile.phone,photo:updatedProfile.photo}:updatedProfile)
+        body: JSON.stringify(({name:updatedProfile.name,phone:updatedProfile.phone,photo:updatedProfile.photo}))
       });
       if(profileAccountRef.current!==profileAccount)return;
       if(!res?.success || !res?.user)throw new Error('Your profile could not be saved. Sign in and try again.');
@@ -495,10 +498,7 @@ export default function PageManagerDashboard() {
       triggerToast('Please enter the staff name, phone number and email.');
       return;
     }
-    if (!usesSupabasePersistence && !newStaffPassword.trim()) {
-      triggerToast('Please specify an initial account password for this staff member.');
-      return;
-    }
+
     if (newStaffBlock !== 'All Blocks' && !staffWingNames.includes(newStaffBlock)) {
       triggerToast('Choose a wing from this residence’s configured blocks.');
       return;
@@ -512,7 +512,7 @@ export default function PageManagerDashboard() {
           role: newStaffRole,
           phone: newStaffPhone.trim(),
           email: newStaffEmail.trim(),
-          ...(!usesSupabasePersistence ? {password:newStaffPassword.trim()} : {}),
+          ...(({})),
           shift: newStaffShift,
           assignedBlock: newStaffBlock,
           status: 'Active',
@@ -521,7 +521,7 @@ export default function PageManagerDashboard() {
         })
       });
 
-      if (usesSupabasePersistence) {
+      {
         if (!/^[a-f0-9]{64}$/.test(createdStaff?.invitationToken || '')) throw new Error('The invitation link could not be retrieved. Renew it from pending staff invitations.');
         setStaffInvitationLink(`${window.location.origin}${window.location.pathname}#/staff-invitation?token=${createdStaff.invitationToken}`);
         setNewStaffName(''); setNewStaffPhone(''); setNewStaffEmail('');
@@ -530,19 +530,7 @@ export default function PageManagerDashboard() {
         return;
       }
       // Deduplicate so duplicate entries are never added to local state
-      setStaffList(prev => {
-        if (prev.some(s => s.id === createdStaff.id)) return prev;
-        return [createdStaff, ...prev];
-      });
 
-      setShowAddStaffModal(false);
-      setNewStaffName('');
-      setNewStaffPhone('');
-      setNewStaffEmail('');
-      setNewStaffPassword('');
-      setShowStaffPassword(false);
-      triggerToast(`Staff account for ${createdStaff.name} created & verified! They can now log in using the password you set.`);
-      await fetchManagerData();
     } catch (err: any) {
       triggerToast(err.message || 'Failed to enroll staff member.');
     } finally {
@@ -614,16 +602,16 @@ export default function PageManagerDashboard() {
         body: JSON.stringify({
           title: newIssueTitle.trim(),
           category: newIssueCategory,
-          ...(usesSupabasePersistence ? {locationTag:newIssueRoom.trim()} : {roomNumber:newIssueRoom.trim() || 'General Facility'}),
+          ...(({locationTag:newIssueRoom.trim()})),
           urgency: newIssueUrgency,
-          ...(!usesSupabasePersistence ? {status:'Open',reportedAt:new Date().toISOString().split('T')[0]} : {}),
+          ...(({})),
           description: newIssueDescription.trim() || 'Logged via Manager Operations Center.',
-          ...(!usesSupabasePersistence ? {hostelName:primaryProperty?.name} : {}),
+          ...(({})),
           hostelId: primaryProperty?.id
         })
       });
       
-      if (usesSupabasePersistence && !createdTicket?.id) throw new Error('The maintenance ticket could not be saved.');
+      if ((!createdTicket?.id)) throw new Error('The maintenance ticket could not be saved.');
       const normalizedTicket: MaintenanceTicket = {
         id: createdTicket.id || `m-${Date.now().toString().slice(-4)}`,
         title: createdTicket.title || newIssueTitle.trim(),
@@ -659,7 +647,7 @@ export default function PageManagerDashboard() {
         method: 'POST',
         body: JSON.stringify({
           staffId: targetStaff.id,
-          ...(!usesSupabasePersistence ? {staffName:targetStaff.name,staffRole:targetStaff.role || 'Enrolled Staff'} : {}),
+          ...(({})),
           timeframe: selectedIssueTimeframe
         })
       });
@@ -740,7 +728,7 @@ export default function PageManagerDashboard() {
     }
   }, [user?.id, user?.email]);
 
-  const mayShowWelcome=!usesSupabasePersistence||activeTab!=='settings'&&!showAccountControls;
+  const mayShowWelcome=(activeTab!=='settings'&&!showAccountControls);
   useEffect(() => {
     if (!loading && !managerError && user) {
       const hasAnyHostel = (managerData?.managerProperties.length || properties.length) > 0;
@@ -788,7 +776,7 @@ export default function PageManagerDashboard() {
 
   if (isManagerBlocked) {
     return (
-      <div className="min-h-screen bg-slate-100 flex flex-col items-center justify-center p-4 font-sans text-slate-800">
+      <div className="page-canvas min-h-screen flex flex-col items-center justify-center p-4 font-sans text-slate-800">
         <div className="bg-white rounded-3xl border-2 border-rose-300 shadow-2xl max-w-md w-full p-6 sm:p-8 space-y-6 text-center relative overflow-hidden">
           <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-rose-600 via-red-500 to-amber-600" />
           
@@ -837,7 +825,7 @@ export default function PageManagerDashboard() {
   }
 
   if (managerError && !managerData) {
-    return <div className="min-h-screen flex flex-col items-center justify-center gap-4 p-6 text-blue-950">
+    return <div className="page-canvas min-h-screen flex flex-col items-center justify-center gap-4 p-6 text-blue-950">
       <p role="alert">{managerError.message || 'Could not load your management dashboard.'}</p>
       <button type="button" onClick={() => void retryManagerData()} className="rounded-xl bg-blue-900 px-5 py-3 text-white">Retry dashboard</button>
       <button type="button" onClick={() => void confirmLogout()} className="text-sm underline">Sign out</button>
@@ -847,7 +835,7 @@ export default function PageManagerDashboard() {
   if (loading && properties.length === 0) return <RouteSkeleton />;
 
   return (
-    <div className="min-h-screen h-screen flex flex-col lg:flex-row bg-transparent text-slate-800 overflow-hidden font-sans">
+    <div className="page-canvas min-h-screen h-screen flex flex-col lg:flex-row text-slate-800 overflow-hidden font-sans">
       {managerError && <div role="alert" className="fixed top-2 left-1/2 -translate-x-1/2 z-50 rounded-xl bg-red-50 border border-red-200 px-4 py-2 text-sm text-red-800">Updates unavailable: {managerError.message} <button onClick={() => void retryManagerData()} className="underline">Retry</button></div>}
       {/* Toast Notification */}
       <AnimatePresence>
@@ -1100,7 +1088,7 @@ export default function PageManagerDashboard() {
 
       {/* MAIN CONTENT AREA */}
       <main className={`dashboard-centered-content flex-1 p-6 pb-28 lg:p-10 lg:pb-10 space-y-8 overflow-y-auto h-full relative ${isSidebarTopNav ? 'lg:pt-24 lg:w-[calc(100vw-22rem)] lg:max-w-[calc(100vw-22rem)] lg:mx-auto' : ''}`}>
-        {usesSupabasePersistence && (primaryProperty?.registrationRequired || primaryProperty?.registrationStatus === 'more_info_required') && !showRegistration && <div className="relative z-10 flex flex-col gap-4 rounded-2xl border border-blue-200 bg-blue-50 p-5 sm:flex-row sm:items-center sm:justify-between dark:border-cyan-900 dark:bg-slate-900">
+        {((primaryProperty?.registrationRequired || primaryProperty?.registrationStatus === 'more_info_required')) && !showRegistration && <div className="relative z-10 flex flex-col gap-4 rounded-2xl border border-blue-200 bg-blue-50 p-5 sm:flex-row sm:items-center sm:justify-between dark:border-cyan-900 dark:bg-slate-900">
           <div><h2 className="font-bold text-blue-950 dark:text-cyan-100">{primaryProperty.registrationStatus === 'more_info_required' ? 'Residence corrections requested' : 'Complete residence registration'}</h2>
             <p className="mt-1 text-sm text-slate-700 dark:text-slate-200">{primaryProperty.registrationStatus === 'more_info_required' ? 'An administrator requested more information. Open your saved registration, review the feedback and submit your corrections.' : 'Your manager account is verified. Add the property photographs and actual room configuration for residence review.'}</p></div>
           <button type="button" onClick={() => setShowRegistration(true)} className="shrink-0 rounded-xl bg-blue-700 px-5 py-3 font-bold text-white hover:bg-blue-800">{primaryProperty.registrationStatus === 'more_info_required' ? 'Review & Correct Registration' : 'Complete Registration'}</button>
@@ -1114,7 +1102,7 @@ export default function PageManagerDashboard() {
                   setProperties([h]);
                   setShowWelcomePopup(false);
                   triggerToast('Hostel Registration Submitted to Admin for Review!');
-                  if (usesSupabasePersistence) void fetchManagerData();
+                  void fetchManagerData();
                   setShowRegistration(false);
                   setActiveTab('notifications');
                 }} 
@@ -1142,7 +1130,7 @@ export default function PageManagerDashboard() {
                     <div className="space-y-2 max-w-2xl">
                       <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/15 text-emerald-900 border border-emerald-300/60 rounded-full text-xs font-black uppercase tracking-wider">
                         <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                        <span>{usesSupabasePersistence && !primaryProperty?.isApproved ? primaryProperty?.registrationRequired ? 'Residence setup required' : 'Residence review pending' : 'Official Accredited Residence • Live & Active'}</span>
+                        <span>{(!primaryProperty?.isApproved) ? primaryProperty?.registrationRequired ? 'Residence setup required' : 'Residence review pending' : 'Official Accredited Residence • Live & Active'}</span>
                       </div>
                       <h2 className="text-2xl lg:text-3xl font-black tracking-tight text-slate-900">
                         {primaryProperty?.name || 'Premium PineVela'}
@@ -1402,8 +1390,8 @@ export default function PageManagerDashboard() {
                             <span className="block text-xl font-black text-slate-900 mt-0.5">{propertyBlocks.length} Blocks</span>
                           </div>
                           <div className="p-4 bg-white border border-slate-100 rounded-2xl shadow-sm text-center">
-                            <span className="text-[10px] font-bold uppercase text-slate-400">Digital GPS</span>
-                            <span className="block text-sm font-black text-indigo-700 mt-1">GA-183-9022</span>
+                            <span className="text-[10px] font-bold uppercase text-slate-400">Map coordinates</span>
+                            <span className="block break-words text-sm font-black text-indigo-700 mt-1">{p.latitude != null && p.longitude != null ? `${Number(p.latitude).toFixed(5)}, ${Number(p.longitude).toFixed(5)}` : 'Not provided'}</span>
                           </div>
                         </div>
                       </div>
@@ -1512,7 +1500,7 @@ export default function PageManagerDashboard() {
             )}
 
             {/* TAB 4: STAFF MANAGEMENT */}
-            {activeTab === 'staff' && usesSupabasePersistence && staffInvitations.length > 0 && <section className="relative z-10 space-y-3 rounded-2xl border border-blue-200 bg-white p-5 dark:border-cyan-900 dark:bg-slate-900"><h2 className="font-bold">Pending staff invitations</h2>{staffInvitations.map(invite => <div key={invite.id} className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 pt-3"><div><p className="text-sm font-semibold">{invite.name}</p><p className="text-xs break-all">{invite.email} · {new Date(invite.expires_at).getTime() <= Date.now() ? 'Expired link' : 'Awaiting email verification'}</p></div><div className="flex gap-3"><button disabled={invitationBusy} className="min-h-11 text-sm font-bold text-blue-700 dark:text-cyan-300" onClick={async () => {setInvitationBusy(true);try {const result=await apiFetch(`/api/staff/invitations/${invite.id}/rotate`,{method:'POST',body:'{}'});setStaffInvitationLink(`${window.location.origin}${window.location.pathname}#/staff-invitation?token=${result.invitationToken}`);setShowAddStaffModal(true);await fetchManagerData();}catch(e:any){triggerToast(e.message);}finally{setInvitationBusy(false);}}}>Renew invitation link</button><button disabled={invitationBusy} className="min-h-11 text-sm text-rose-700 dark:text-rose-300" onClick={async()=>{setInvitationBusy(true);try{await apiFetch(`/api/staff/invitations/${invite.id}`,{method:'DELETE'});await fetchManagerData();triggerToast('Invitation cancelled.');}catch(e:any){triggerToast(e.message);}finally{setInvitationBusy(false);}}}>Cancel invitation</button></div></div>)}</section>}
+            {activeTab === 'staff' && true && staffInvitations.length > 0 && <section className="relative z-10 space-y-3 rounded-2xl border border-blue-200 bg-white p-5 dark:border-cyan-900 dark:bg-slate-900"><h2 className="font-bold">Pending staff invitations</h2>{staffInvitations.map(invite => <div key={invite.id} className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 pt-3"><div><p className="text-sm font-semibold">{invite.name}</p><p className="text-xs break-all">{invite.email} · {new Date(invite.expires_at).getTime() <= Date.now() ? 'Expired link' : 'Awaiting email verification'}</p></div><div className="flex gap-3"><button disabled={invitationBusy} className="min-h-11 text-sm font-bold text-blue-700 dark:text-cyan-300" onClick={async () => {setInvitationBusy(true);try {const result=await apiFetch(`/api/staff/invitations/${invite.id}/rotate`,{method:'POST',body:'{}'});setStaffInvitationLink(`${window.location.origin}${window.location.pathname}#/staff-invitation?token=${result.invitationToken}`);setShowAddStaffModal(true);await fetchManagerData();}catch(e:any){triggerToast(e.message);}finally{setInvitationBusy(false);}}}>Renew invitation link</button><button disabled={invitationBusy} className="min-h-11 text-sm text-rose-700 dark:text-rose-300" onClick={async()=>{setInvitationBusy(true);try{await apiFetch(`/api/staff/invitations/${invite.id}`,{method:'DELETE'});await fetchManagerData();triggerToast('Invitation cancelled.');}catch(e:any){triggerToast(e.message);}finally{setInvitationBusy(false);}}}>Cancel invitation</button></div></div>)}</section>}
             {activeTab === 'staff' && (
               <div className="animate-fadeIn relative z-10 space-y-6">
                 <div className="bg-white/70 border border-blue-200/50 p-6 md:p-8 rounded-3xl backdrop-blur-xl shadow-lg space-y-6">
@@ -1543,7 +1531,6 @@ export default function PageManagerDashboard() {
                         <Users className="w-3.5 h-3.5" />
                         <span>Staff Roster ({staffList.length})</span>
                       </button>
-
 
 
                       <button
@@ -2400,9 +2387,9 @@ export default function PageManagerDashboard() {
                               <div className="bg-red-50 border border-red-200 p-4 rounded-2xl text-xs text-red-800 leading-relaxed space-y-1 animate-pulse">
                                 <div className="font-bold flex items-center gap-1.5">
                                   <XCircle className="w-4 h-4 text-red-600" />
-                                  <span>{usesSupabasePersistence ? 'Repair deadline exceeded' : '⚠️ SLA WORK TIMEFRAME EXCEEDED (DELAY PENALTY ACTIVE)'}</span>
+                                  <span>{('Repair deadline exceeded')}</span>
                                 </div>
-                                <p>Technician has missed the assigned timeframe of {selectedIssueDetail.timeframe} without marking the ticket completed or receiving an authorized reschedule extension. {usesSupabasePersistence ? 'Please review the overdue work order.' : 'Dynamic penalty logged.'}</p>
+                                <p>Technician has missed the assigned timeframe of {selectedIssueDetail.timeframe} without marking the ticket completed or receiving an authorized reschedule extension. {('Please review the overdue work order.')}</p>
                               </div>
                             )}
 
@@ -2436,7 +2423,7 @@ export default function PageManagerDashboard() {
                                   </div>
                                 ) : (
                                   <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 font-medium leading-relaxed">
-                                    {usesSupabasePersistence && !selectedIssueDetail.requiresResidentSignoff ? 'Manager-filed facility repair is ready for management closure.' : 'Awaiting confirmation from the reporting resident before closure.'}
+                                    {(!selectedIssueDetail.requiresResidentSignoff) ? 'Manager-filed facility repair is ready for management closure.' : 'Awaiting confirmation from the reporting resident before closure.'}
                                   </div>
                                 )}
                               </div>
@@ -2449,7 +2436,7 @@ export default function PageManagerDashboard() {
                                 <button
                                   type="button"
                                   onClick={() => handleCloseIssue(selectedIssueDetail.id, "Verified and signed off by hostel desk.")}
-                                  disabled={closingIssueState || usesSupabasePersistence && selectedIssueDetail.requiresResidentSignoff && !selectedIssueDetail.studentConfirmed}
+                                  disabled={closingIssueState || (selectedIssueDetail.requiresResidentSignoff) && !selectedIssueDetail.studentConfirmed}
                                   className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-600/40 disabled:cursor-not-allowed text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                                   title="Archive & Close Work Order"
                                 >
@@ -3082,7 +3069,7 @@ export default function PageManagerDashboard() {
                 </button>
                 <button
                   type="submit"
-                  disabled={!usesSupabasePersistence || dispatchSending || Boolean(dispatchSuccessMsg)}
+                  disabled={(dispatchSending) || Boolean(dispatchSuccessMsg)}
                   className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-black text-xs rounded-xl shadow-lg shadow-blue-500/20 transition-all flex items-center gap-2 cursor-pointer"
                 >
                   {dispatchSending ? (
@@ -3117,14 +3104,14 @@ export default function PageManagerDashboard() {
               </button>
             </div>
 
-            <OnboardingProgress steps={STAFF_ACCOUNT_STEPS} step={newStaffName.trim() && newStaffPhone.trim() && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newStaffEmail) ? ((usesSupabasePersistence || newStaffPassword.trim()) ? 3 : 2) : 1} label="Staff creation" />
+            <OnboardingProgress steps={STAFF_ACCOUNT_STEPS} step={newStaffName.trim() && newStaffPhone.trim() && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newStaffEmail) ? ((3)) : 1} label="Staff creation" />
 
             <div className="p-3 bg-emerald-50/80 border border-emerald-200/90 rounded-2xl text-xs text-emerald-900 flex items-start gap-2.5">
               <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
               <div>
-                <p className="font-bold">{usesSupabasePersistence ? 'Verified work email required' : 'Instant System Verification'}</p>
+                <p className="font-bold">{('Verified work email required')}</p>
                 <p className="text-[11px] text-emerald-800 mt-0.5 leading-relaxed">
-                  {usesSupabasePersistence ? 'Create an invitation for this residence. Staff choose their own password and verify their work email before gaining portal access.' : <>Manager-enrolled staff are automatically verified by the system and tied to {primaryProperty?.name || 'your property'}. No waiting for administrator verification required.</>}
+                  {('Create an invitation for this residence. Staff choose their own password and verify their work email before gaining portal access.')}
                 </p>
               </div>
             </div>
@@ -3186,44 +3173,9 @@ export default function PageManagerDashboard() {
                   />
                 </div>
 
-                {!usesSupabasePersistence && <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="block text-xs font-bold text-slate-700">Account Password <span className="text-rose-500">*</span></label>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const autoPass = `Staff@${Math.floor(1000 + Math.random() * 9000)}`;
-                        setNewStaffPassword(autoPass);
-                        setShowStaffPassword(true);
-                      }}
-                      className="text-[10px] font-bold text-blue-600 hover:text-blue-800 cursor-pointer"
-                    >
-                      Generate
-                    </button>
-                  </div>
-                  <div className="relative">
-                    <input aria-label="Account Password"
-                      type={showStaffPassword ? "text" : "password"} 
-                      value={newStaffPassword} 
-                      onChange={(e) => setNewStaffPassword(e.target.value)} 
-                      placeholder="Password for login" 
-                      className="w-full pl-3.5 pr-9 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:border-blue-600 focus:bg-white"
-                      required
-                    />
-                    <button aria-label={showStaffPassword ? 'Hide password' : 'Show password'} aria-pressed={showStaffPassword}
-                      type="button"
-                      onClick={() => setShowStaffPassword(p => !p)}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
-                    >
-                      {showStaffPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
-                  <PasswordStrengthGauge password={newStaffPassword} />
-                </div>}
+                {false}
               </div>
-              {!usesSupabasePersistence && <p className="text-[10px] text-slate-400">
-                The staff member will use their email (or phone/username) and this password to log into their staff account.
-              </p>}
+              {false}
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -3273,7 +3225,7 @@ export default function PageManagerDashboard() {
                       <span>Saving Staff...</span>
                     </>
                   ) : (
-                    <span>{usesSupabasePersistence ? 'Create staff invitation' : 'Save & Enroll Staff'}</span>
+                    <span>{('Create staff invitation')}</span>
                   )}
                 </button>
               </div>
@@ -3339,31 +3291,24 @@ export default function PageManagerDashboard() {
                   <Building2 className="w-5 h-5" />
                   <span>Register a Hostel to Start</span>
                 </button>
-                {usesSupabasePersistence&&<button type="button" onClick={()=>{setShowWelcomePopup(false);setActiveTab('settings');}} className="mt-3 min-h-11 w-full rounded-xl border border-blue-200 px-4 py-3 text-sm font-bold text-blue-800">Manager profile and account</button>}
+                {(<button type="button" onClick={()=>{setShowWelcomePopup(false);setActiveTab('settings');}} className="mt-3 min-h-11 w-full rounded-xl border border-blue-200 px-4 py-3 text-sm font-bold text-blue-800">Manager profile and account</button>)}
               </div>
             </motion.div>
           </DashboardOverlay>
         )}
       </AnimatePresence>
 
-      {roomAccessAction && (usesSupabasePersistence&&roomAccessAction.type==='reshuffle' ?
+      {roomAccessAction && ((roomAccessAction.type==='reshuffle') ?
         <AcademicYearRoomReset residenceId={primaryProperty.id} onClose={()=>setRoomAccessAction(null)} onComplete={async message=>{await fetchRoomKeys();triggerToast(message);}} /> :
         <DashboardOverlay aria-label="Room access confirmation" onClose={roomAccessBusy ? null : () => setRoomAccessAction(null)} className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-950/70 backdrop-blur-md p-4" role="dialog" aria-modal="true" aria-labelledby="room-access-title">
           <div data-popup-card className="w-full max-w-lg rounded-3xl border border-slate-200 bg-white p-6 space-y-4 shadow-2xl">
             <h3 id="room-access-title" className="text-lg font-black text-slate-900">
-              {roomAccessAction.type === 'release' ? `Remove occupant from Room ${roomAccessAction.room.roomNumber}?` : 'Reshuffle all room keys?'}
+              {(`Remove occupant from Room ${roomAccessAction.room.roomNumber}?`)}
             </h3>
             <p className="text-sm text-slate-600">
-              {roomAccessAction.type === 'release'
-                ? 'This removes the resident’s room account and active session, unlinks the room from their user account, and makes it available with a new key.'
-                : 'This ends occupancy for every room in this residence, removes all resident room accounts and sessions, and generates new random keys. Use it at the start of a new academic year. Residents must activate their rooms again with the new keys.'}
+              {('This removes the resident’s room account and active session, unlinks the room from their user account, and makes it available with a new key.')}
             </p>
-            {roomAccessAction.type === 'reshuffle' && (
-              <label className="block text-xs font-bold text-slate-700">
-                Academic year
-                <input value={keysAcademicYear} onChange={(event) => setKeysAcademicYear(event.target.value)} placeholder="2026/2027" className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" />
-              </label>
-            )}
+            {false}
             {roomAccessError && <p role="alert" className="text-xs font-semibold text-rose-700">{roomAccessError}</p>}
             <div className="flex justify-end gap-3">
               <button type="button" disabled={roomAccessBusy} onClick={() => setRoomAccessAction(null)} className="rounded-xl bg-slate-100 px-4 py-2 text-xs font-bold text-slate-700 cursor-pointer">Cancel</button>
@@ -3374,9 +3319,7 @@ export default function PageManagerDashboard() {
                   setRoomAccessBusy(true);
                   setRoomAccessError(null);
                   try {
-                    const endpoint = roomAccessAction.type === 'release'
-                      ? `/api/room-keys/${encodeURIComponent(roomAccessAction.room.id)}/release`
-                      : `/api/hostels/${encodeURIComponent(primaryProperty.id)}/reshuffle-room-keys`;
+                    const endpoint = (`/api/room-keys/${encodeURIComponent(roomAccessAction.room.id)}/release`);
                     const result = await apiFetch(endpoint, { method: 'POST', body: JSON.stringify({ confirm: true, academicYear: keysAcademicYear }) });
                     if (!result?.success) throw new Error('Could not update room access. Please sign in again.');
                     await fetchRoomKeys();
@@ -3389,7 +3332,7 @@ export default function PageManagerDashboard() {
                   }
                 }}
                 className="rounded-xl bg-rose-600 hover:bg-rose-700 px-4 py-2 text-xs font-bold text-white cursor-pointer disabled:opacity-50"
-              >{roomAccessBusy ? 'Updating...' : roomAccessAction.type === 'release' ? 'Remove Occupant' : 'Reshuffle & End Occupancy'}</button>
+              >{roomAccessBusy ? 'Updating...' : ('Remove Occupant')}</button>
             </div>
           </div>
         </DashboardOverlay>

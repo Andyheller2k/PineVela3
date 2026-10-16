@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
+import { useEffect,useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { queryClient } from '../lib/queryClient';
 import { useAdminGovernance } from './AdminGovernancePanel';
@@ -8,22 +8,22 @@ import DashboardOverlay from './DashboardOverlay';
 const control = 'mt-1 w-full min-w-0 rounded-xl border border-blue-200 bg-white p-3 text-sm text-slate-900';
 const action = 'rounded-xl bg-blue-700 px-4 py-3 text-sm font-semibold text-white disabled:opacity-40';
 const danger = 'rounded-xl bg-red-700 px-4 py-3 text-sm font-semibold text-white disabled:opacity-40';
-const native = import.meta.env.VITE_PERSISTENCE === 'supabase';
+
 function Preview({ preview }: { preview: any }) {
   return <div className="space-y-2 rounded-xl border border-red-200 bg-red-50 p-4 text-sm">
     <h4 className="font-bold">Deletion preview · {preview.hostelName}</h4>
     <p>Manager: {preview.managerName || 'No linked manager'} · {preview.deleteManager ? 'Account also deleted' : 'Account retained'}</p>
     {preview.residences?.map((home: any) => <p key={home.id} className="break-words">Residence: {home.name} <span className="break-all text-xs">({home.id})</span></p>)}
-    {!!preview.accounts?.length && <details><summary className="cursor-pointer font-semibold">{native ? 'Accounts affected by the proposed action' : 'Accounts included in deletion'} ({preview.accounts.length})</summary><ul className="mt-2 max-h-48 space-y-2 overflow-y-auto">{preview.accounts.map((account: any) => <li key={`${account.role}:${account.id}`} className="break-words">{account.name} · {account.role}{account.effect && <span className="block">{({ 'retain-sign-in': 'Manager sign-in retained', 'close-portal': 'Manager portal to be removed', 'end-housing-access': 'Housing access to end' } as Record<string,string>)[account.effect]}</span>}<span className="block break-all text-xs">{account.id}</span></li>)}</ul></details>}
+    {!!preview.accounts?.length && <details><summary className="cursor-pointer font-semibold">{('Accounts affected by the proposed action')} ({preview.accounts.length})</summary><ul className="mt-2 max-h-48 space-y-2 overflow-y-auto">{preview.accounts.map((account: any) => <li key={`${account.role}:${account.id}`} className="break-words">{account.name} · {account.role}{account.effect && <span className="block">{({ 'retain-sign-in': 'Manager sign-in retained', 'close-portal': 'Manager portal to be removed', 'end-housing-access': 'Housing access to end' } as Record<string,string>)[account.effect]}</span>}<span className="block break-all text-xs">{account.id}</span></li>)}</ul></details>}
     <dl className="grid gap-1 sm:grid-cols-2">{Object.entries(preview.counts).map(([name, count]) => <div key={name} className="flex justify-between gap-3"><dt className="break-all">{name}</dt><dd>{String(count)}</dd></div>)}</dl>
-    <p>{preview.uploadCount} {native ? 'media dependencies' : 'uploaded files'} · {(preview.uploadBytes / 1024 / 1024).toFixed(2)} MiB</p>
-    {native && preview.resources && <details><summary className="cursor-pointer font-semibold">Review dependent record IDs</summary><dl className="mt-2 max-h-48 space-y-2 overflow-y-auto">{Object.entries(preview.resources).map(([name, ids]) => <div key={name}><dt className="font-semibold">{name}</dt><dd className="break-all text-xs">{(ids as string[]).join(', ') || 'None'}</dd></div>)}</dl></details>}
+    <p>{preview.uploadCount} {('media dependencies')} · {(preview.uploadBytes / 1024 / 1024).toFixed(2)} MiB</p>
+    {(preview.resources) && <details><summary className="cursor-pointer font-semibold">Review dependent record IDs</summary><dl className="mt-2 max-h-48 space-y-2 overflow-y-auto">{Object.entries(preview.resources).map(([name, ids]) => <div key={name}><dt className="font-semibold">{name}</dt><dd className="break-all text-xs">{(ids as string[]).join(', ') || 'None'}</dd></div>)}</dl></details>}
     {preview.blockers?.map((message: string) => <p key={message} role="alert" className="text-red-700">{message}</p>)}
     {preview.notes.map((note: string) => <p key={note}>{note}</p>)}
   </div>;
 }
-export default function ResidenceDeletionPanel({ selectedHostel, onClose }: { selectedHostel?: any; onClose: () => void }) {
-  const { apiFetch } = useAuth(), { data, error } = useAdminGovernance();
+export default function ResidenceDeletionPanel({ active = true, selectedHostel, onClose }: { active?: boolean; selectedHostel?: any; onClose: () => void }) {
+  const { apiFetch } = useAuth(), { data, error } = useAdminGovernance(active);
   const [deleteManager, setDeleteManager] = useState(false), [amount, setAmount] = useState(0), [unit, setUnit] = useState('days');
   const [reason, setReason] = useState(''), [privateKey, setPrivateKey] = useState(''), [preview, setPreview] = useState<any>(null);
   const [busy, setBusy] = useState(false), [failure, setFailure] = useState(''), [notice, setNotice] = useState('');
@@ -48,14 +48,14 @@ export default function ResidenceDeletionPanel({ selectedHostel, onClose }: { se
   return <section aria-label="Hostel deletion approvals" className="space-y-4 rounded-3xl border border-blue-200 bg-white/70 p-5 text-slate-900">
     <h3 className="text-lg font-bold">Hostel deletion approvals</h3>
     <p className="text-sm">At least two distinct administrators must approve using their own keys. Administrator #1 (Andyheller2k) always makes the final keyed decision. Approvals expire after 24 hours.</p>
-    {native && <p role="status" className="text-sm">After two keyed approvals, the founder can pause reviewed housing records for backup preparation. {data?.capabilities?.residenceExecutionRequests ? 'After verified backups and fresh final consent, the founder can request deletion. A worker rechecks everything before execution.' : 'Deletion requests remain unavailable pending authenticated acceptance.'} Approving or pausing does not delete records.</p>}
+    {(<p role="status" className="text-sm">After two keyed approvals, the founder can pause reviewed housing records for backup preparation. {data?.capabilities?.residenceExecutionRequests ? 'After verified backups and fresh final consent, the founder can request deletion. A worker rechecks everything before execution.' : 'Deletion requests remain unavailable pending authenticated acceptance.'} Approving or pausing does not delete records.</p>)}
     {error && <p role="alert" className="text-red-700">{error.message}</p>}
     {failure && !selectedHostel && <p role="alert" className="text-red-700">{failure}</p>}
     {notice && <p role="status" className="text-blue-700">{notice}</p>}
     {!data && !error && <p role="status">Loading approvals…</p>}
     {data && !data.members.find((m: any) => m.id === data.currentId)?.keyEnrolled && <p className="text-sm">Enroll your approval key in the Admin Approvals tab before consenting.</p>}
     {!!data?.residenceProposals?.some((p: any) => ['pending', 'approved'].includes(p.status) || p.preparation?.state === 'frozen') && keyField}
-    {(native ? data?.residenceProposals : data?.residenceProposals?.slice().reverse())?.map((p: any) => {
+    {((data?.residenceProposals))?.map((p: any) => {
       const live = ['pending', 'approved'].includes(p.status), ownVote = p.votes.some((v: any) => v.id === data.currentId), main = data.currentId === data.mainId;
       return <article key={p.id} className="space-y-3 rounded-2xl border border-blue-200 p-4 text-sm">
         <h4 className="font-bold">{p.preview.hostelName} · {p.status}</h4><p>{p.reason}</p>
@@ -63,28 +63,28 @@ export default function ResidenceDeletionPanel({ selectedHostel, onClose }: { se
         <p>Expires {new Date(p.expiresAt).toLocaleString()}</p>
         {p.votes.map((v: any) => <p key={v.id}>#{v.slot} {v.name}: {v.decision}</p>)}
         {p.finalReason && <p>Founder’s final decision: {p.finalReason}</p>}
-        {native && p.preparation && <p role="status">{p.preparation.state === 'frozen' ? 'Housing records paused for backup preparation. No records deleted.' : p.preparation.state === 'executed' ? 'Reviewed residence deletion completed.' : 'Preparation cancelled. Housing records resumed; new deletion approvals are required.'}</p>}
-        {native && p.preparation?.state === 'frozen' && p.preparation.recovery && <p role="status">Recovery backups verified {new Date(p.preparation.recovery.verifiedAt).toLocaleString()}. Housing remains paused until execution or keyed cancellation.</p>}
-        {native && p.preparation?.cleanup && <p role="status">Storage cleanup planned: {p.preparation.cleanup.removeCount} exclusive housing images, {p.preparation.cleanup.retainCount} retained images. {p.preparation.state !== 'executed' && 'No images deleted.'}</p>}
-        {native && p.preparation?.state === 'frozen' && p.preparation?.authorization && <p role="status">Final founder consent {p.preparation.authorization.current ? 'is current' : 'is no longer usable'}. Expires {new Date(p.preparation.authorization.expiresAt).toLocaleString()}. No records or images deleted.</p>}
-        {native && p.preparation?.request && <p role="status">{p.preparation.request.state === 'completed' ? 'Deletion request completed.' : p.preparation.request.current ? 'Deletion requested. Waiting for backup and consent rechecks; no records deleted.' : 'Deletion request expired or changed. Give fresh consent or cancel preparation to resume housing.'}</p>}
-        {native && p.preparation?.execution && <p role="status">Completed {new Date(p.preparation.execution.completedAt).toLocaleString()}. {p.preparation.execution.cleanupTotal ? `Storage cleanup verified: ${p.preparation.execution.cleanupCompleted} of ${p.preparation.execution.cleanupTotal} exclusive images.` : 'No exclusive images require cleanup.'}</p>}
-        {native && live && main && p.status === 'approved' && p.preparation?.state === 'frozen' && p.preparation?.cleanup && !p.preparation?.authorization?.current && <div className="space-y-3 border-t pt-3">
+        {(p.preparation) && <p role="status">{p.preparation.state === 'frozen' ? 'Housing records paused for backup preparation. No records deleted.' : p.preparation.state === 'executed' ? 'Reviewed residence deletion completed.' : 'Preparation cancelled. Housing records resumed; new deletion approvals are required.'}</p>}
+        {(p.preparation?.state === 'frozen') && p.preparation.recovery && <p role="status">Recovery backups verified {new Date(p.preparation.recovery.verifiedAt).toLocaleString()}. Housing remains paused until execution or keyed cancellation.</p>}
+        {(p.preparation?.cleanup) && <p role="status">Storage cleanup planned: {p.preparation.cleanup.removeCount} exclusive housing images, {p.preparation.cleanup.retainCount} retained images. {p.preparation.state !== 'executed' && 'No images deleted.'}</p>}
+        {(p.preparation?.state === 'frozen') && p.preparation?.authorization && <p role="status">Final founder consent {p.preparation.authorization.current ? 'is current' : 'is no longer usable'}. Expires {new Date(p.preparation.authorization.expiresAt).toLocaleString()}. No records or images deleted.</p>}
+        {(p.preparation?.request) && <p role="status">{p.preparation.request.state === 'completed' ? 'Deletion request completed.' : p.preparation.request.current ? 'Deletion requested. Waiting for backup and consent rechecks; no records deleted.' : 'Deletion request expired or changed. Give fresh consent or cancel preparation to resume housing.'}</p>}
+        {(p.preparation?.execution) && <p role="status">Completed {new Date(p.preparation.execution.completedAt).toLocaleString()}. {p.preparation.execution.cleanupTotal ? `Storage cleanup verified: ${p.preparation.execution.cleanupCompleted} of ${p.preparation.execution.cleanupTotal} exclusive images.` : 'No exclusive images require cleanup.'}</p>}
+        {(live) && main && p.status === 'approved' && p.preparation?.state === 'frozen' && p.preparation?.cleanup && !p.preparation?.authorization?.current && <div className="space-y-3 border-t pt-3">
           <label className="block">Type AUTHORIZE APPROVED HOSTEL<input value={authorizations[p.id] || ''} onChange={e => setAuthorizations({ ...authorizations, [p.id]: e.target.value })} className={control} autoComplete="off" /></label>
           <p>Give final consent for this reviewed deletion. Consent expires within five minutes; this step does not delete records or images.</p>
           <button className={danger} disabled={busy || !privateKey || data.blocked || authorizations[p.id] !== 'AUTHORIZE APPROVED HOSTEL'} onClick={() => act(`${root}/${p.id}/authorize-execution`, { privateKey, confirmation: authorizations[p.id] })}>Founder: authorize reviewed deletion</button>
         </div>}
-        {native && live && main && p.status === 'approved' && p.preparationAvailable && !p.preparation && <div className="space-y-3 border-t pt-3">
+        {(live) && main && p.status === 'approved' && p.preparationAvailable && !p.preparation && <div className="space-y-3 border-t pt-3">
           <label className="block">Type FREEZE APPROVED HOSTEL<input value={pauses[p.id] || ''} onChange={e => setPauses({ ...pauses, [p.id]: e.target.value })} className={control} autoComplete="off" /></label>
           <button className={action} disabled={busy || !privateKey || data.blocked || pauses[p.id] !== 'FREEZE APPROVED HOSTEL'} onClick={() => act(`${root}/${p.id}/prepare`, { privateKey, confirmation: pauses[p.id] })}>Founder: pause records for backup</button>
         </div>}
-        {native && main && p.preparation?.state === 'frozen' && <div className="space-y-3 border-t pt-3">
+        {(main) && p.preparation?.state === 'frozen' && <div className="space-y-3 border-t pt-3">
           <label className="block">Reason for resuming housing records<textarea value={cancellations[p.id] || ''} maxLength={1000} onChange={e => setCancellations({ ...cancellations, [p.id]: e.target.value })} className={control} /></label>
           <button className={action} disabled={busy || !privateKey || data.blocked || (cancellations[p.id]?.trim().length || 0) < 3} onClick={() => act(`${root}/${p.id}/cancel-preparation`, { privateKey, reason: cancellations[p.id] })}>Founder: cancel preparation and resume</button>
         </div>}
         {live && !ownVote && <div className="flex flex-wrap gap-2"><button className={action} disabled={busy || !privateKey || data.blocked} onClick={() => act(`${root}/${p.id}/vote`, { privateKey, decision: 'approved' })}>Approve hostel deletion</button><button className={danger} disabled={busy || !privateKey || data.blocked} onClick={() => act(`${root}/${p.id}/vote`, { privateKey, decision: 'rejected' })}>Reject hostel deletion</button></div>}
         {live && main && <div className="space-y-3 border-t pt-3">
-          {p.status === 'approved' && (!native || p.executionAvailable) && <><label className="block">Type DELETE APPROVED HOSTEL<input value={confirmations[p.id] || ''} onChange={e => setConfirmations({ ...confirmations, [p.id]: e.target.value })} className={control} autoComplete="off" /></label><button className={danger} disabled={busy || !privateKey || data.blocked || confirmations[p.id] !== 'DELETE APPROVED HOSTEL'} onClick={() => act(`${root}/${p.id}/execute`, { privateKey, confirmation: confirmations[p.id] })}>Founder: {native ? 'request reviewed deletion' : 'execute approved deletion'}</button></>}
+          {p.status === 'approved' && ((p.executionAvailable)) && <><label className="block">Type DELETE APPROVED HOSTEL<input value={confirmations[p.id] || ''} onChange={e => setConfirmations({ ...confirmations, [p.id]: e.target.value })} className={control} autoComplete="off" /></label><button className={danger} disabled={busy || !privateKey || data.blocked || confirmations[p.id] !== 'DELETE APPROVED HOSTEL'} onClick={() => act(`${root}/${p.id}/execute`, { privateKey, confirmation: confirmations[p.id] })}>Founder: {('request reviewed deletion')}</button></>}
           <label className="block">Final rejection reason<textarea value={rejections[p.id] || ''} maxLength={1000} onChange={e => setRejections({ ...rejections, [p.id]: e.target.value })} className={control} /></label>
           <button className={action} disabled={busy || !privateKey || data.blocked || (rejections[p.id]?.trim().length || 0) < 3} onClick={() => act(`${root}/${p.id}/final-reject`, { privateKey, reason: rejections[p.id] })}>Founder: decline deletion</button>
         </div>}
@@ -93,7 +93,7 @@ export default function ResidenceDeletionPanel({ selectedHostel, onClose }: { se
     {selectedHostel && <DashboardOverlay aria-label="Review hostel deletion" onClose={busy ? null : onClose} className="flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm">
       <form className="max-h-[90dvh] w-full max-w-xl space-y-4 overflow-y-auto rounded-3xl bg-white p-5 text-slate-900" onSubmit={e => { e.preventDefault(); act(root, { ...options, reason, privateKey, fingerprint: preview?.fingerprint, ...(selectedHostel?.closureRequestId ? {closureRequestId:selectedHostel.closureRequestId} : {}) }, onClose); }}>
         <div className="flex items-center justify-between gap-3"><h2 className="text-lg font-bold">Delete {selectedHostel.name}</h2><button type="button" aria-label="Close deletion review" disabled={busy} onClick={onClose} className="p-2"><X /></button></div>
-        <label className="flex gap-2 text-sm"><input type="checkbox" checked disabled />{native ? 'Remove residence and its housing operations' : 'Delete hostel and its operational records'}</label>
+        <label className="flex gap-2 text-sm"><input type="checkbox" checked disabled />{('Remove residence and its housing operations')}</label>
         <label className="flex gap-2 text-sm"><input type="checkbox" disabled={!!selectedHostel?.closureRequestId} checked={deleteManager} onChange={e => { setDeleteManager(e.target.checked); setPreview(null); }} />Also delete its manager account and other residences owned by that manager</label>
         <p className="text-sm">{deleteManager ? 'The primary user stays. Choose how long they must wait before creating another manager account.' : 'The manager keeps their sign-in account. Choose how long they must wait before registering another hostel.'}</p>
         <div className="grid grid-cols-2 gap-3"><label className="text-sm">Registration ban duration<input type="number" min={0} step={1} value={amount} onChange={e => { setAmount(Number(e.target.value)); setPreview(null); }} className={control} /></label><label className="text-sm">Unit<select value={unit} onChange={e => { setUnit(e.target.value); setPreview(null); }} className={control}>{['hours', 'days', 'weeks', 'months', 'years'].map(u => <option key={u}>{u}</option>)}</select></label></div>

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { googleIdentity, googlePrimaryAccount, googlePublicOrigin, googleCallbackFailure, googleRequestLogUrl } from '../googleAuth.js';
+import { googleIdentity, googlePublicOrigin, googleCallbackFailure, googleRequestLogUrl } from '../googleAuth.js';
 import type { Request } from 'express';
 
 // Security input-contract cases; no provider requests or UI data are emulated.
@@ -23,18 +23,6 @@ test('Google identity requires a verified Google provider identity and confirmed
   assert.deepEqual(googleIdentity(user), identity);
   for (const changed of [{ identities: [] }, { is_anonymous: true }, { email_confirmed_at: null }, { email: 'different@example.test' }, { identities: [{ provider: 'email', identity_data: { email: identity.email, email_verified: true } }] }, { identities: [{ provider: 'google', identity_data: { email: identity.email, email_verified: false } }] }]) assert.throws(() => googleIdentity({ ...user, ...changed }));
 });
-test('Google sign-in cannot create accounts, select secondary roles or link by shared email', () => {
-  const primary = { user: { id: 'primary', role: 'user', email: identity.email, supabaseUserId: identity.id } };
-  const manager = { user: { id: 'manager', role: 'manager', email: identity.email, supabaseUserId: identity.id } };
-  assert.equal(googlePrimaryAccount([primary, manager], identity, 'login'), primary);
-  assert.equal(googlePrimaryAccount([], identity, 'signup'), undefined);
-  assert.throws(() => googlePrimaryAccount([], identity, 'login'), /missing/);
-  assert.throws(() => googlePrimaryAccount([manager], identity, 'signup'), /conflict/);
-  assert.throws(() => googlePrimaryAccount([{ user: { ...primary.user, supabaseUserId: 'another-subject' } }], identity, 'signup'), /conflict/);
-  assert.throws(() => googlePrimaryAccount([primary, primary], identity, 'login'), /conflict/);
-  assert.throws(() => googlePrimaryAccount([{ user: { ...primary.user, roomKey: 'room-key' } }], identity, 'login'), /conflict/);
-});
-
 test('Production-build localhost OAuth requires a real loopback host and peer; deployed origins remain HTTPS-only', () => {
   const savedOrigin = process.env.PINEVELA_PUBLIC_ORIGIN, savedMode = process.env.NODE_ENV;
   const request = (host: string, peer = '127.0.0.1', forwardedHostname = host) => ({ get: () => host, hostname: forwardedHostname, socket: { remoteAddress: peer } }) as unknown as Request;

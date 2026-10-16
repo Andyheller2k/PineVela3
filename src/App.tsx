@@ -1,34 +1,34 @@
-import ManagerSecretKey from './components/ManagerSecretKey';
+import { QueryClientProvider } from '@tanstack/react-query';
+import React,{ lazy,Suspense,useEffect,useLayoutEffect } from 'react';
+import { HashRouter,Navigate,Route,Routes,useLocation,useNavigate,useSearchParams } from 'react-router-dom';
 import AdminMessageNotice from './components/AdminMessageNotice';
 import ApprovalKeyPrompt from './components/ApprovalKeyPrompt';
 import FormFeedback from './components/FormFeedback';
-import { PlatformSettingsProvider, PlatformAccessBoundary } from './context/PlatformSettingsContext';
-import { sessionFetch as fetch } from './lib/session';
-import React, { useState, useEffect, useLayoutEffect, lazy, Suspense } from 'react';
-import { HashRouter, Routes, Route, Navigate, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
-import { QueryClientProvider } from '@tanstack/react-query';
-import { queryClient, invalidateAllQueries, setupRealtimeQuerySync } from './lib/queryClient';
-import { AuthProvider, useAuth } from './context/AuthContext';
-import { NotificationProvider, useNotifications } from './context/NotificationContext';
+import ManagerSecretKey from './components/ManagerSecretKey';
 import ProtectedRoute from './components/ProtectedRoute';
-import {usesSupabasePersistence} from './lib/persistence';
-import RouteSkeleton from './components/RouteSkeleton';
-import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
-import { ThemeProvider } from './context/ThemeContext';
+import { AuthProvider,useAuth } from './context/AuthContext';
+import { NotificationProvider } from './context/NotificationContext';
+import { PlatformAccessBoundary,PlatformSettingsProvider } from './context/PlatformSettingsContext';
+import { queryClient,setupRealtimeQuerySync } from './lib/queryClient';
+
+import { AnimatePresence,motion,useReducedMotion } from 'motion/react';
 import AccountAccessNotice from './components/AccountAccessNotice';
+import RouteSkeleton from './components/RouteSkeleton';
 import ThemeEnvironment from './components/ThemeEnvironment';
 import { ThemeDock } from './components/ThemeToggle';
+import { ThemeProvider } from './context/ThemeContext';
+import { portalRoles } from './lib/portalRoles';
 
 // Component imports
-import Page1Public from './components/Page1Public';
-import PagePublicResidence from './components/PagePublicResidence';
+const Page1Public = lazy(() => import('./components/Page1Public'));
+const PagePublicResidence = lazy(() => import('./components/PagePublicResidence'));
 const PagePublicStore = lazy(() => import('./components/PagePublicStore'));
 const PagePublicMarket = lazy(() => import('./components/PagePublicMarket'));
 const PagePaymentReturn = lazy(() => import('./components/PagePaymentReturn'));
 const PageStaffInvitation = lazy(() => import('./components/PageStaffInvitation'));
 const PageOfficerInvitation = lazy(() => import('./components/PageOfficerInvitation'));
 const PageAdminInvitation = lazy(() => import('./components/PageAdminInvitation'));
-import PageUnifiedLogin from './components/PageUnifiedLogin';
+const PageUnifiedLogin = lazy(() => import('./components/PageUnifiedLogin'));
 const PageManagerOnboarding = lazy(() => import('./components/PageManagerOnboarding'));
 const ManagerGoogleResult = lazy(() => import('./components/ManagerGoogleResult'));
 const PageAdminDashboard = lazy(() => import('./components/PageAdminDashboard'));
@@ -45,7 +45,7 @@ class RouteLoadBoundary extends React.Component<{ children: React.ReactNode }, {
   state = { failed: false };
   static getDerivedStateFromError() { return { failed: true }; }
   render() {
-    if (this.state.failed) return <div role="alert" className="flex min-h-screen flex-col items-center justify-center gap-4 bg-slate-50 p-6 text-slate-900">
+    if (this.state.failed) return <div role="alert" className="page-canvas flex min-h-screen flex-col items-center justify-center gap-4 p-6 text-slate-900">
       <p>This page could not load. Check your connection and try again.</p>
       <button type="button" onClick={() => window.location.reload()} className="rounded-xl bg-blue-600 px-5 py-3 font-semibold text-white">Reload page</button>
     </div>;
@@ -62,7 +62,7 @@ function PageWrapper({ children, noAnimation = false, smoothEntry = false, loadi
   }, [smoothEntry]);
   if (noAnimation) {
     return (
-      <div className="flex-1 flex flex-col w-full min-h-screen">
+      <div className="page-canvas flex-1 flex flex-col w-full min-h-screen">
         <RouteLoadBoundary><Suspense fallback={loadingFallback}>{children}</Suspense></RouteLoadBoundary>
       </div>
     );
@@ -73,7 +73,7 @@ function PageWrapper({ children, noAnimation = false, smoothEntry = false, loadi
       animate={smoothEntry ? { opacity: 1 } : { opacity: 1, y: 0 }}
       exit={smoothEntry ? { opacity: reducedMotion ? 1 : 0 } : { opacity: 0, y: -6 }}
       transition={smoothEntry ? { duration: reducedMotion ? 0 : 0.3, ease: [0.22, 1, 0.36, 1] } : { duration: 0.12, ease: 'easeOut' }}
-      className="flex-1 flex flex-col w-full min-h-screen"
+      className="page-canvas flex-1 flex flex-col w-full min-h-screen"
     >
       <RouteLoadBoundary><Suspense fallback={loadingFallback}>{children}</Suspense></RouteLoadBoundary>
     </motion.div>
@@ -88,7 +88,7 @@ function StudentDashboardRouter() {
   // Primary user accounts always render PageUserDashboard
   if (user?.role === 'user') {
     return (
-      <PageUserDashboard 
+      <PageUserDashboard key={`${user?.role}:${user?.id}`}
         initialTab={requestedTab === 'digital-market' ? 'digital-market' : 'home'} 
         initialMarketMode="vendor" 
       />
@@ -105,7 +105,7 @@ function StudentDashboardRouter() {
     return <Navigate to="/digital-market" replace />;
   }
 
-  return <PageResidentDashboard />;
+  return <PageResidentDashboard key={`${user?.role}:${user?.id}`} />;
 }
 
 // Inner component to handle router-aware states and logic
@@ -129,10 +129,12 @@ function AppContent() {
     // If not authenticated and on root path, stay on root
   }, []);
 
-  // Initialize real-time synchronization from Express API (SSE)
+  // Verified account changes close the previous event stream and retry timer.
+  const realtimeAccount = (user?.id);
   useEffect(() => {
-    setupRealtimeQuerySync();
-  }, []);
+    if (!realtimeAccount) return;
+    return setupRealtimeQuerySync();
+  }, [realtimeAccount]);
 
   return (
     <AnimatePresence mode="wait">
@@ -170,9 +172,7 @@ function AppContent() {
           path="/register-manager"
           element={
             <PageWrapper>
-              {usesSupabasePersistence
-                ? <ProtectedRoute><PageManagerOnboarding /></ProtectedRoute>
-                : <PageManagerOnboarding />}
+              {(<ProtectedRoute allowedRoles={['user']}><PageManagerOnboarding key={`${user?.role}:${user?.id}`} /></ProtectedRoute>)}
             </PageWrapper>
           }
         />
@@ -183,7 +183,7 @@ function AppContent() {
           element={
             <ProtectedRoute allowedRoles={['admin']}>
               <PageWrapper>
-                <PageAdminDashboard />
+                <PageAdminDashboard key={`${user?.role}:${user?.id}`} />
               </PageWrapper>
             </ProtectedRoute>
           }
@@ -193,9 +193,9 @@ function AppContent() {
         <Route
           path="/manager/dashboard"
           element={
-            <ProtectedRoute allowedRoles={['manager', 'admin', 'student', 'user']}>
+            <ProtectedRoute allowedRoles={portalRoles('manager')}>
               <PageWrapper>
-                <PageManagerDashboard />
+                <PageManagerDashboard key={`${user?.role}:${user?.id}`} />
               </PageWrapper>
             </ProtectedRoute>
           }
@@ -206,9 +206,9 @@ function AppContent() {
         <Route
           path="/staff/dashboard"
           element={
-            <ProtectedRoute allowedRoles={['staff', 'manager', 'admin', 'student', 'user']}>
+            <ProtectedRoute allowedRoles={portalRoles('staff')}>
               <PageWrapper>
-                <PageStaffDashboard />
+                <PageStaffDashboard key={`${user?.role}:${user?.id}`} />
               </PageWrapper>
             </ProtectedRoute>
           }
@@ -219,7 +219,7 @@ function AppContent() {
         <Route
           path="/student/dashboard"
           element={
-            <ProtectedRoute allowedRoles={['student', 'admin', 'manager', 'user', 'merchant']}>
+            <ProtectedRoute allowedRoles={portalRoles('student-alias')}>
               <PageWrapper>
                 <StudentDashboardRouter />
               </PageWrapper>
@@ -231,9 +231,9 @@ function AppContent() {
         <Route
           path="/user/dashboard"
           element={
-            <ProtectedRoute allowedRoles={['student', 'admin', 'manager', 'user', 'merchant']}>
+            <ProtectedRoute allowedRoles={portalRoles('primary')}>
               <PageWrapper>
-                <PageUserDashboard />
+                <PageUserDashboard key={`${user?.role}:${user?.id}`} />
               </PageWrapper>
             </ProtectedRoute>
           }
@@ -245,7 +245,7 @@ function AppContent() {
           element={
             <ProtectedRoute allowedRoles={['merchant']}>
               <PageWrapper>
-                <PageDigitalMarket />
+                <PageDigitalMarket key={`${user?.role}:${user?.id}`} />
               </PageWrapper>
             </ProtectedRoute>
           }
@@ -255,7 +255,7 @@ function AppContent() {
           element={
             <ProtectedRoute allowedRoles={['merchant']}>
               <PageWrapper>
-                <PageDigitalMarketOnboard />
+                <PageDigitalMarketOnboard key={`${user?.role}:${user?.id}`} />
               </PageWrapper>
             </ProtectedRoute>
           }
@@ -276,9 +276,9 @@ function AppContent() {
         <Route
           path="/market"
           element={
-            <ProtectedRoute allowedRoles={['merchant', 'student', 'admin', 'manager', 'user']}>
+            <ProtectedRoute allowedRoles={portalRoles('primary')}>
               <PageWrapper>
-                <PageUserDashboard initialTab="digital-market" initialMarketMode="vendor" />
+                <PageUserDashboard key={`${user?.role}:${user?.id}`} initialTab="digital-market" initialMarketMode="vendor" />
               </PageWrapper>
             </ProtectedRoute>
           }
@@ -292,9 +292,9 @@ function AppContent() {
         <Route
           path="/resident/dashboard"
           element={
-            <ProtectedRoute allowedRoles={['student', 'admin', 'manager']}>
+            <ProtectedRoute allowedRoles={portalRoles('resident')}>
               <PageWrapper>
-                <PageResidentDashboard />
+                <PageResidentDashboard key={`${user?.role}:${user?.id}`} />
               </PageWrapper>
             </ProtectedRoute>
           }

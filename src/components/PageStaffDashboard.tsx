@@ -1,24 +1,40 @@
-import { usesSupabasePersistence } from '../lib/persistence';
-import { uploadMaintenancePhoto } from '../lib/maintenanceMedia';
-import { activateOnKeyboard } from '../lib/keyboardActivation';
-import DashboardOverlay from './DashboardOverlay';
-import MobileNavigation from './MobileNavigation';
-import { routePopupFeedback } from '../lib/feedback';
-import React, { useState, useEffect } from 'react';
+
+import {
+AlertCircle,
+Bell,
+Briefcase,
+Camera,Check,
+CheckCircle2,
+ChevronRight,
+Clock,
+Loader2,
+LogOut as LogOutIcon,
+PanelLeftClose,PanelLeftOpen,
+RefreshCw,
+Scale,
+Settings,
+ShieldCheck,
+Wrench,
+X,
+XCircle
+} from 'lucide-react';
+import { AnimatePresence,motion } from 'motion/react';
+import React,{ useEffect,useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { } from '../lib/queryClient';
 import { useAuth } from '../context/AuthContext';
-import { apiFetch, } from '../lib/api';
-import { saveNavigationLayout, usesTopNavigation } from '../lib/navigationLayout';
+import { AccountRefreshGate } from '../lib/accountRefresh';
+import { apiFetch,} from '../lib/api';
+import { routePopupFeedback } from '../lib/feedback';
+import { activateOnKeyboard } from '../lib/keyboardActivation';
+import { uploadMaintenancePhoto } from '../lib/maintenanceMedia';
+import { saveNavigationLayout,usesTopNavigation } from '../lib/navigationLayout';
+import { } from '../lib/queryClient';
+import { } from '../utils/pdfHelper';
+import DashboardOverlay from './DashboardOverlay';
+import LogoutConfirmationModal from './LogoutConfirmationModal';
+import MobileNavigation from './MobileNavigation';
 import PineLogo from './PineLogo';
 import TopNavBadge from './TopNavBadge';
-import LogoutConfirmationModal from './LogoutConfirmationModal';
-import { } from '../utils/pdfHelper';
-import {
-  Bell, Settings, Briefcase, CheckCircle2, Clock, XCircle, AlertCircle, ChevronRight,
-  ShieldCheck, RefreshCw, Camera, Check, X, LogOut as LogOutIcon, Scale, Wrench, Loader2, PanelLeftClose, PanelLeftOpen
-} from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
 
 interface StaffBargain {
   id: string;
@@ -56,6 +72,11 @@ interface NotificationItem {
 
 export default function PageStaffDashboard() {
   const { user, logout, updateUser } = useAuth();
+  const account = React.useRef(user?.id); account.current = user?.id;
+  const mounted = React.useRef(true);
+  const profileReadVersion = React.useRef(0);
+  const issueReads = React.useRef(new AccountRefreshGate()), bargainReads = React.useRef(new AccountRefreshGate());
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; issueReads.current.cancel(); bargainReads.current.cancel(); }; }, []);
   const navigate = useNavigate();
   const [isSidebarTopNav, setIsSidebarTopNav] = useState(usesTopNavigation);
 
@@ -110,34 +131,54 @@ export default function PageStaffDashboard() {
     setToastMessage({ text, type });
     setTimeout(() => setToastMessage(null), 1500);
   };
+  const fetchStaffBargains = (fresh = false) => {
+    if (fresh) bargainReads.current.cancel();
+    const accountId = user?.id;
+    return bargainReads.current.run(accountId || '', 0, async cancellation => {
+      const rows = await apiFetch('/api/staff-bargains', {
+        signal: AbortSignal.any([cancellation, AbortSignal.timeout(30000)]),
+        headers: { 'X-PineVela-Profile-Context': accountId! },
+      });
+      if (mounted.current && !cancellation.aborted && account.current === accountId && Array.isArray(rows)) setStaffBargains(rows);
+    });
+  };
   const loadData = async () => {
+    const accountId = user?.id, version = ++profileReadVersion.current;
+    const current = () => mounted.current && account.current === accountId && profileReadVersion.current === version;
     setLoading(true);
     try {
-      const [allStaff, notifs, bargains] = await Promise.all([apiFetch('/api/staff'), apiFetch('/api/notifications'), apiFetch('/api/staff-bargains')]);
+      const [allStaff, notifs, bargains] = await Promise.all([apiFetch('/api/staff'), apiFetch('/api/notifications'),
+        (fetchStaffBargains(true))]);
+      if (!current()) return;
       setStaffRecord(Array.isArray(allStaff) ? allStaff.find(s => (s.userId || s.id) === user?.id) || null : null);
       setNotifications(Array.isArray(notifs) ? notifs : []);
-      setStaffBargains(Array.isArray(bargains) ? bargains : []);
-    } catch (error: any) { triggerToast(error.message || 'Could not load your staff account.', 'error'); }
-    finally { setLoading(false); }
+
+    } catch (error: any) { if (current()) triggerToast(error.message || 'Could not load your staff account.', 'error'); }
+    finally { if (current()) setLoading(false); }
   };
 
-  const fetchAssignedIssues = async () => {
+  const fetchAssignedIssuesRead = async (cancellation?: AbortSignal) => {
+    const accountId = user?.id;
     try {
-      const res = await apiFetch('/api/issue-reports');
+      const res = await apiFetch('/api/issue-reports', ({
+        signal: cancellation ? AbortSignal.any([cancellation, AbortSignal.timeout(30000)]) : AbortSignal.timeout(30000),
+        headers: { 'X-PineVela-Profile-Context': accountId! },
+      }));
+      if (!mounted.current || cancellation?.aborted || account.current !== accountId) return;
       if (Array.isArray(res)) {
         const cleanEmail = (user?.email || '').toLowerCase().trim();
         const userId = user?.id;
-        const myIssues = usesSupabasePersistence ? res : res.filter((issue: any) =>
-          (issue.assignedStaffId && (issue.assignedStaffId === userId || issue.assignedStaffId === user?.id)) ||
-          (issue.assignedStaffEmail && issue.assignedStaffEmail.toLowerCase().trim() === cleanEmail) ||
-          (issue.assignedStaffName && user?.name && issue.assignedStaffName.toLowerCase().trim() === user.name.toLowerCase().trim()) ||
-          (employment && (issue.hostelId === employment.hostelId || (issue.hostelName && employment.hostelName && issue.hostelName.toLowerCase().trim() === employment.hostelName.toLowerCase().trim())))
-        );
+        const myIssues = (res);
         setAssignedIssues(myIssues);
       }
     } catch (err) {
-      console.error("Error fetching assigned issues:", err);
+      if (mounted.current && !cancellation?.aborted && account.current === accountId) console.error("Error fetching assigned issues:", err);
     }
+  };
+  const fetchAssignedIssues = (fresh = false) => {
+
+    if (fresh) issueReads.current.cancel();
+    return issueReads.current.run(user?.id || '', 0, signal => fetchAssignedIssuesRead(signal));
   };
 
   const handleAcceptAssignment = async (issueId: string) => {
@@ -146,7 +187,7 @@ export default function PageStaffDashboard() {
         method: 'POST'
       });
       triggerToast("Work order accepted! Marked as In Progress.", "success");
-      fetchAssignedIssues();
+      void fetchAssignedIssues(true);
     } catch (err: any) {
       triggerToast(err.message || "Failed to accept work order.", "error");
     }
@@ -166,7 +207,7 @@ export default function PageStaffDashboard() {
       triggerToast("Assignment decline submitted to manager.", "success");
       setShowDeclineModal(null);
       setDeclineReason("");
-      fetchAssignedIssues();
+      void fetchAssignedIssues(true);
     } catch (err: any) {
       triggerToast(err.message || "Failed to decline.", "error");
     }
@@ -189,7 +230,7 @@ export default function PageStaffDashboard() {
       triggerToast("SLA extension request sent to manager.", "success");
       setShowRescheduleModal(null);
       setRescheduleReason("");
-      fetchAssignedIssues();
+      void fetchAssignedIssues(true);
     } catch (err: any) {
       triggerToast(err.message || "Failed to submit request.", "error");
     }
@@ -202,7 +243,7 @@ export default function PageStaffDashboard() {
       const uploadedPhoto = completionPhoto ? await uploadMaintenancePhoto(apiFetch,completionPhoto,showCompleteModal.id) : '';
       setCompletionPhoto(uploadedPhoto);
       const payload = {
-        completionNotes: usesSupabasePersistence ? completionNotes.trim() : completionNotes.trim() || "Repairs successfully completed and inspected on site.",
+        completionNotes: (completionNotes.trim()),
         completionPhoto: uploadedPhoto || undefined
       };
       await apiFetch(`/api/issue-reports/${showCompleteModal.id}/staff-complete`, {
@@ -213,7 +254,7 @@ export default function PageStaffDashboard() {
       setShowCompleteModal(null);
       setCompletionNotes("");
       setCompletionPhoto("");
-      await fetchAssignedIssues();
+      await fetchAssignedIssues(true);
     } catch (err: any) {
       console.error("Error completing work order:", err);
       triggerToast(err.message || "Failed to mark complete.", "error");
@@ -257,14 +298,14 @@ export default function PageStaffDashboard() {
 
   useEffect(() => {
     if (!user) return;
-    let active = true;
-    const interval = setInterval(() => {
-      fetchAssignedIssues();
-      if (usesSupabasePersistence) apiFetch('/api/staff-bargains').then(rows => {
-        if (active && Array.isArray(rows)) setStaffBargains(rows);
-      }).catch(() => {});
-    }, 8000);
-    return () => { active = false; clearInterval(interval); };
+    const refresh = () => {
+      if ((document.hidden)) return;
+      void fetchAssignedIssues();
+      void fetchStaffBargains().catch(() => {});
+    };
+    const interval = setInterval(refresh, 8000);
+    document.addEventListener('visibilitychange', refresh);
+    return () => { clearInterval(interval); document.removeEventListener('visibilitychange', refresh); };
   }, [user?.id, user?.email]);
 
   // Staff Bargains & Resignation State
@@ -326,7 +367,7 @@ export default function PageStaffDashboard() {
         };
       }
 
-      const directResignation = usesSupabasePersistence && quitMode !== 'bargain';
+      const directResignation = (quitMode !== 'bargain');
       const res = await apiFetch(directResignation ? '/api/staff/resign' : '/api/staff-bargains', {
         method: 'POST',
         body: JSON.stringify(directResignation ? {reason:quitReason.trim()} : payload)
@@ -394,7 +435,7 @@ export default function PageStaffDashboard() {
         body: JSON.stringify({
           name: settingsName,
           phone: settingsPhone,
-          ...(!usesSupabasePersistence ? {username:settingsUsername,email:settingsEmail,profilePicture:settingsPhoto} : {})
+          ...(({}))
         })
       });
 
@@ -415,7 +456,7 @@ export default function PageStaffDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-transparent flex flex-col lg:flex-row relative text-slate-900" data-staff-dashboard>
+    <div className="page-canvas min-h-screen flex flex-col lg:flex-row relative text-slate-900" data-staff-dashboard>
       {/* Toast Notification */}
       {toastMessage && (
         <div role="status" className="ux-dashboard-toast fixed bottom-24 left-1/2 -translate-x-1/2 z-50">
@@ -434,13 +475,11 @@ export default function PageStaffDashboard() {
           isOpen={showLogoutConfirm}
           onClose={() => setShowLogoutConfirm(false)}
           onConfirm={async () => {
-            setShowLogoutConfirm(false);
             if (!await logout()) return;
             navigate('/login');
           }}
         />
       )}
-
 
 
 
@@ -711,7 +750,6 @@ export default function PageStaffDashboard() {
 
 
 
-
         {/* ========================================================================= */}
         {/* TAB 2: NOTIFICATIONS (APPLICATION UPDATES, NOTICES & DECISIONS) */}
         {/* ========================================================================= */}
@@ -727,7 +765,7 @@ export default function PageStaffDashboard() {
               </span>
             </div>
 
-            {usesSupabasePersistence && staffBargains.length > 0 && (
+            {(staffBargains.length > 0) && (
               <section aria-label="Your retention proposals" className="space-y-4">
                 <h3 className="text-lg font-black text-slate-900">Your Retention Proposals</h3>
                 {staffBargains.map(proposal => (
@@ -799,7 +837,6 @@ export default function PageStaffDashboard() {
 
 
 
-
         {/* ========================================================================= */}
         {/* TAB 3: SETTINGS (PROFILE, USERNAME, EMAIL, PHONE, PICTURE -> MANAGER SYNC) */}
         {/* ========================================================================= */}
@@ -808,7 +845,7 @@ export default function PageStaffDashboard() {
             <div className="border-b pb-4">
               <h3 className="text-lg font-black text-slate-900">Staff Account Settings</h3>
               <p className="text-xs text-slate-500 font-medium">
-                {usesSupabasePersistence ? 'Update your display name and contact phone. Your verified work email stays tied to this staff account.' : "Update your contact phone, email address, profile picture, and username. Any changes made here are directly synchronized with your manager's staff management directory."}
+                {('Update your display name and contact phone. Your verified work email stays tied to this staff account.')}
               </p>
             </div>
 
@@ -827,26 +864,12 @@ export default function PageStaffDashboard() {
                       {settingsName?.[0] || 'S'}
                     </div>
                   )}
-                  {!usesSupabasePersistence && <label className="absolute -bottom-1.5 -right-1.5 p-1.5 bg-blue-900 text-white rounded-xl shadow-md cursor-pointer hover:bg-blue-800 transition-all">
-                    <Camera className="w-3.5 h-3.5" />
-                    <input 
-                      type="file" 
-                      accept="image/*" 
-                      onChange={handleProfilePhotoUpload} 
-                      className="hidden" 
-                    />
-                  </label>}
+                  {false}
                 </div>
                 <div className="space-y-1">
                   <h4 className="text-xs font-bold text-slate-900">Profile Picture</h4>
-                  <p className="text-[10px] text-slate-500">{usesSupabasePersistence ? 'Your saved photo appears on the manager roster.' : 'Tap camera icon to upload a passport-size photo. Shows on manager roster.'}</p>
-                  {!usesSupabasePersistence && <input aria-label="Or enter image URL"
-                    type="text"
-                    value={settingsPhoto}
-                    onChange={(e) => { setProfileDirty(true); setSettingsPhoto(e.target.value); }}
-                    placeholder="Or enter image URL"
-                    className="w-full px-2.5 py-1 text-[11px] bg-white border border-slate-200 rounded-lg text-slate-800"
-                  />}
+                  <p className="text-[10px] text-slate-500">{('Your saved photo appears on the manager roster.')}</p>
+                  {false}
                 </div>
               </div>
 
@@ -871,7 +894,7 @@ export default function PageStaffDashboard() {
                   <input aria-label="Username (Login ID)"
                     id="staff-profile-username"
                     type="text"
-                    readOnly={usesSupabasePersistence}
+                    readOnly={true}
                     value={settingsUsername}
                     onChange={(e) => { setProfileDirty(true); setSettingsUsername(e.target.value); }}
                     placeholder="e.g. kwame_staff"
@@ -899,7 +922,7 @@ export default function PageStaffDashboard() {
                   <input aria-label="Email Address"
                     id="staff-profile-email"
                     type="email"
-                    readOnly={usesSupabasePersistence}
+                    readOnly={true}
                     value={settingsEmail}
                     onChange={(e) => { setProfileDirty(true); setSettingsEmail(e.target.value); }}
                     placeholder="kwame@example.com"
@@ -1134,7 +1157,7 @@ export default function PageStaffDashboard() {
                           <div className="flex items-center justify-between">
                             <span className="text-xs font-black text-emerald-800 flex items-center gap-1.5">
                               <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                              <span>{issue.withdrawn ? 'Recorded repair submission · Withdrawn' : issue.closedByManager ? 'Work order closed' : issue.studentConfirmed ? 'Repair confirmed by resident' : usesSupabasePersistence && !issue.requiresResidentSignoff ? 'Repair completed · Awaiting management closure' : 'Repair submitted · Awaiting resident sign-off'}</span>
+                              <span>{issue.withdrawn ? 'Recorded repair submission · Withdrawn' : issue.closedByManager ? 'Work order closed' : issue.studentConfirmed ? 'Repair confirmed by resident' : (!issue.requiresResidentSignoff) ? 'Repair completed · Awaiting management closure' : 'Repair submitted · Awaiting resident sign-off'}</span>
                             </span>
                             {issue.staffCompletedAt && (
                               <span className="text-[10px] text-emerald-700 font-semibold">

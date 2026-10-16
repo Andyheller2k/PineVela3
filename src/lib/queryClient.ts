@@ -1,4 +1,5 @@
 import { QueryClient } from '@tanstack/react-query';
+import { RealtimeLifecycle } from './realtimeLifecycle';
 
 export const queryClient = new QueryClient({
   defaultOptions: {
@@ -52,16 +53,14 @@ export function invalidateAllQueries(keys?: (string | string[])[]) {
 }
 
 // Global Server-Sent Events (SSE) listener for immediate push notification from Express API
-let eventSource: EventSource | null = null;
-let reconnectTimer: any = null;
+let realtimeCleanup: (() => void) | undefined;
 
 export function setupRealtimeQuerySync() {
   if (typeof window === 'undefined') return;
-  if (eventSource) return;
+  if (realtimeCleanup) return;
 
-  function connect() {
-    try {
-      eventSource = new EventSource('/api/sync/events');
+  const lifecycle = new RealtimeLifecycle(retryAfter => {
+      const eventSource = new EventSource('/api/sync/events');
 
       eventSource.onmessage = (event) => {
         try {
@@ -114,19 +113,17 @@ export function setupRealtimeQuerySync() {
         }
       };
 
-      eventSource.onerror = () => {
-        if (eventSource) {
-          eventSource.close();
-          eventSource = null;
-        }
-        clearTimeout(reconnectTimer);
-        reconnectTimer = setTimeout(connect, 3000);
+      eventSource.onerror = () => retryAfter(3000);
+      return () => {
+        eventSource.onmessage = null; eventSource.onerror = null; eventSource.close();
       };
-    } catch (e) {
-      clearTimeout(reconnectTimer);
-      reconnectTimer = setTimeout(connect, 5000);
-    }
-  }
+  });
 
-  connect();
+  const cleanup = () => {
+    lifecycle.stop();
+    if (realtimeCleanup === cleanup) realtimeCleanup = undefined;
+  };
+  realtimeCleanup = cleanup;
+  lifecycle.start();
+  return cleanup;
 }

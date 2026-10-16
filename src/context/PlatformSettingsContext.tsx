@@ -28,7 +28,7 @@ export function PlatformSettingsProvider({ children }: { children: React.ReactNo
 export function PlatformAccessBoundary({ children }: { children: React.ReactNode }) {
   const { user } = useAuth(), { settings } = usePlatformSettings(), location = useLocation();
   const adminEntry = location.pathname === '/login' || location.pathname === '/admin-invitation';
-  if (settings?.maintenanceMode && user?.role !== 'admin' && !adminEntry && location.pathname !== '/') return <main className="flex min-h-screen flex-col items-center justify-center gap-5 bg-gradient-to-br from-sky-50 to-blue-100 p-6 text-center text-blue-950">
+  if (settings?.maintenanceMode && user?.role !== 'admin' && !adminEntry && location.pathname !== '/') return <main className="page-canvas flex min-h-screen flex-col items-center justify-center gap-5 p-6 text-center text-blue-950">
     <h1 className="text-2xl font-bold">PineVela is undergoing maintenance</h1>
     <p>{MAINTENANCE_MESSAGE}</p>
     <Link to="/login" className="rounded-xl bg-blue-600 px-5 py-3 font-semibold text-white">Sign in</Link>

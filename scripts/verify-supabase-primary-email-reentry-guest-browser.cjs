@@ -49,12 +49,10 @@ async function freePort(){const s=net.createServer();s.listen(0,'127.0.0.1');awa
     stage='guest login';
     await command('Page.enable');await command('Runtime.enable');
     await command('Page.navigate',{url:base+'/#/login'});
-    const opener="[...document.querySelectorAll('button')].find(b=>b.textContent.trim()==='Reopen primary account with email')";
-    await until('!!('+opener+')','Email re-entry login control');check(true,'Login offers explicit email re-entry');
+    await until("!!document.querySelector('.login-auth-card form')",'Login card');
     const toggle="[...document.querySelectorAll('[role=\"switch\"][aria-label=\"Dark mode\"]')].find(b=>b.getBoundingClientRect().width>0)";
     async function click(expression){const rect=await evaluate(`(()=>{const b=${expression};b.scrollIntoView({block:'center',behavior:'instant'});const r=b.getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2};})()`);
       await command('Input.dispatchMouseEvent',{type:'mousePressed',button:'left',clickCount:1,...rect});await command('Input.dispatchMouseEvent',{type:'mouseReleased',button:'left',clickCount:1,...rect});}
-    const field="[...document.querySelectorAll('input')].find(i=>i.closest('label')?.textContent.includes('Verified primary email'))";
     const backgrounds={};
     for(const width of[1440,768,390]){
       await command('Emulation.setDeviceMetricsOverride',{width,height:1000,deviceScaleFactor:1,mobile:width<768});
@@ -62,21 +60,17 @@ async function freePort(){const s=net.createServer();s.listen(0,'127.0.0.1');awa
         stage=width+' '+theme;
         if(await evaluate("document.documentElement.dataset.theme!=="+JSON.stringify(theme)))await click(toggle);
         await until("document.documentElement.dataset.theme==="+JSON.stringify(theme),'Guest theme');
-        await click(opener);await until('!!('+field+')','Email form');
-        check(await evaluate(`(()=>{const i=${field};return i.type==='email'&&!i.readOnly&&document.querySelector('button[aria-label=\"Close Reopen primary account\"]')!==null;})()`),'Own mailbox and visible close action');
-        const dimensions=await evaluate(`(()=>{const b=[...document.querySelectorAll('button')].find(b=>b.textContent.trim()==='Send sign-in email'),r=b.getBoundingClientRect();return {height:r.height,width:r.width,overflow:document.documentElement.scrollWidth>innerWidth+1};})()`);
-        check(dimensions.height>=44&&dimensions.width>=44&&!dimensions.overflow,'Responsive reachable send action without horizontal overflow');
-        const surface=await evaluate(`(()=>{const i=${field},style=getComputedStyle(i);return {background:style.backgroundColor,color:style.color};})()`);
-        backgrounds[theme]=surface.background;
-        const rgb=value=>value.match(/[0-9.]+/g).slice(0,3).map(Number).map(c=>{c/=255;return c<=.04045?c/12.92:((c+.055)/1.055)**2.4;});
-        const luminance=value=>{const c=rgb(value);return .2126*c[0]+.7152*c[1]+.0722*c[2];};
-        const l=[luminance(surface.background),luminance(surface.color)].sort((a,b)=>b-a);
-        check((l[0]+.05)/(l[1]+.05)>=4.5,'Readable themed email field contrast');
-        await click("document.querySelector('button[aria-label=\"Close Reopen primary account\"]')");
-        await until('!('+field+')','Close email form');
+        for(const index of[0,1]){
+          await click(`document.querySelectorAll('.login-mode-toggle button')[${index}]`);
+          await until(`document.querySelectorAll('.login-mode-toggle button')[${index}].getAttribute('aria-pressed')==='true'`,'Login mode');
+          check(await evaluate("!document.querySelector('.login-auth-card').textContent.includes('Reopen primary account')&&!document.querySelector('[aria-label=\"Close Reopen primary account\"]')"),'Login and signup omit primary email re-entry controls and labels');
+          const dimensions=await evaluate("(()=>{const b=document.querySelector('.login-auth-card button[type=submit]'),r=b.getBoundingClientRect();return {height:r.height,width:r.width,overflow:document.documentElement.scrollWidth>innerWidth+1};})()");
+          check(dimensions.height>0&&dimensions.width>=44&&!dimensions.overflow,'Responsive reachable account action without horizontal overflow');
+        }
+        backgrounds[theme]=await evaluate("getComputedStyle(document.querySelector('.unified-login')).backgroundColor");
       }
     }
-    check(backgrounds.light!==backgrounds.dark,'Email field changes with the actual PineVela theme');
+    check(backgrounds.light!==backgrounds.dark,'Page canvas changes with the actual PineVela theme');
     check(exceptions.length===0,'No browser runtime exception');
     const report={passed:true,checks,actualBrowser:true,responsiveWidths:[1440,768,390],themes:['light','dark'],credentialsExtracted:false,emailsSent:0,providerMocks:0,cloudRecordsModified:0,positiveEmailOtpProviderBrowserPending:true};
     await fs.writeFile(path.resolve('.security/migration-reset/primary-email-reentry-guest-browser.json'),JSON.stringify(report,null,2)+'\n',{mode:0o600});console.log(JSON.stringify(report));

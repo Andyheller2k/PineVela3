@@ -1,82 +1,75 @@
 import { activateOnKeyboard } from '../lib/keyboardActivation';
-import { usesSupabasePersistence } from '../lib/persistence';
-import PortalPinSettings from './PortalPinSettings';
-import {isMarketService} from '../../marketListingAvailability';
-import DashboardOverlay from './DashboardOverlay';
-import MobileNavigation from './MobileNavigation';
-import StoreBrandingEditor from './StoreBrandingEditor';
-import { STORE_DELIVERY_METHODS, storeDeliveryMode } from '../../storeDelivery';
-import { internationalPhone, phoneDraft, type CountryCode } from '../../internationalPhone';
-import InternationalPhoneInput from './InternationalPhoneInput';
-import StoreProfileSummary from './StoreProfileSummary';
-import ListingPlanBadge from './ListingPlanBadge';
-import { servicePoint } from '../../serviceLocation';
-import type { MarketPlan } from '../../marketPlans';
-import { routePopupFeedback } from '../lib/feedback';
-import { usePlatformSettings } from '../context/PlatformSettingsContext';
-import { openPaymentCheckout,pendingPaymentReference } from '../lib/payments';
-import { effectiveMarketPlan, PLAN_LIMITS } from '../../marketPlans';
-import RouteSkeleton from './RouteSkeleton';
-import TopNavBadge from './TopNavBadge';
-import MarketPhotoUpload from './MarketPhotoUpload';
-import { useNotifications } from '../context/NotificationContext';
-import { marketNoticeKind } from '../lib/marketNotifications';
-import { sessionFetch as fetch } from '../lib/session';
-import React, { useState, useEffect, useRef, useCallback, memo } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { queryClient, invalidateAllQueries } from '../lib/queryClient';
-import { useAuth } from '../context/AuthContext';
-import PineLogo from './PineLogo';
-import MarketplaceInbox from './MarketplaceInbox';
-import { optimizeImageDisplayUrl } from '../lib/imageOptimizer';
+
 import {
-  Store,
-  Package,
-  Plus,
-  Trash2,
-  CheckCircle2,
-  XCircle,
-  Clock,
-  MapPin,
-  Search,
-  School,
-  BadgeCheck,
-  LogOut,
-  ExternalLink,
-  ShieldCheck,
-  Star,
-  RefreshCw,
-  Edit3,
-  X,
-  ShoppingBag,
-  Users,
-  DollarSign,
-  Bell,
-  TrendingUp,
-  CreditCard,
-  AlertCircle,
-  ArrowRight,
-  User as UserIcon,
-  Camera,
-  Image as ImageIcon,
-  ChevronRight,
-  Compass,
-  SlidersHorizontal,
-  ArrowUpDown,
-  RotateCcw,
-  CheckCheck,
-  Inbox,
-  Tag,
-  ChevronDown,
-  Phone,
-  Wrench,
-  Scissors,
-  Briefcase,
-  MessageSquare
+ArrowRight,
+ArrowUpDown,
+BadgeCheck,
+Bell,
+CheckCheck,
+CheckCircle2,
+ChevronDown,
+Clock,
+Compass,
+CreditCard,
+Crop,
+DollarSign,
+Edit3,
+Image as ImageIcon,
+Inbox,
+LogOut,
+MapPin,
+MessageSquare,
+Package,
+Phone,
+Plus,
+RefreshCw,
+RotateCcw,
+Search,
+ShieldCheck,
+ShoppingBag,
+SlidersHorizontal,
+Star,
+Store,
+Tag,
+Trash2,
+TrendingUp,
+Users,
+Wrench,
+X,
+XCircle
 } from 'lucide-react';
+import React,{ memo,useCallback,useEffect,useRef,useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { internationalPhone,phoneDraft,type CountryCode } from '../../internationalPhone';
+import { isMarketService } from '../../marketListingAvailability';
+import type { MarketPlan } from '../../marketPlans';
+import { effectiveMarketPlan,PLAN_LIMITS } from '../../marketPlans';
+import { servicePoint } from '../../serviceLocation';
+import { STORE_DELIVERY_METHODS,storeDeliveryMode } from '../../storeDelivery';
+import { useAuth } from '../context/AuthContext';
+import { useNotifications } from '../context/NotificationContext';
+import { usePlatformSettings } from '../context/PlatformSettingsContext';
+import { AccountRefreshGate } from '../lib/accountRefresh';
+import { routePopupFeedback } from '../lib/feedback';
+import { optimizeImageDisplayUrl } from '../lib/imageOptimizer';
+import { marketNoticeKind } from '../lib/marketNotifications';
+import { openPaymentCheckout } from '../lib/payments';
+import { sessionFetch as fetch } from '../lib/session';
 import CampusMeetupMapPicker from './CampusMeetupMapPicker';
+import DashboardOverlay from './DashboardOverlay';
+import InternationalPhoneInput from './InternationalPhoneInput';
 import ItemImageCropModal from './ItemImageCropModal';
-import { Crop } from 'lucide-react';
+import ListingPlanBadge from './ListingPlanBadge';
+import MarketPhotoUpload from './MarketPhotoUpload';
+import MarketplaceInbox from './MarketplaceInbox';
+import MobileNavigation from './MobileNavigation';
+import PineLogo from './PineLogo';
+import '../marketCards.css';
+import PortalPinSettings from './PortalPinSettings';
+import RouteSkeleton from './RouteSkeleton';
+import StoreBrandingEditor from './StoreBrandingEditor';
+import StoreProfileSummary from './StoreProfileSummary';
+import TopNavBadge from './TopNavBadge';
 
 export const DIGITAL_MARKET_CATEGORIES = [
   "Services",
@@ -176,11 +169,11 @@ const SellerInventoryCard: React.FC<SellerInventoryCardProps> = memo(
 
     return (
       <div
-        data-market-plan={plan} data-listing-id={product.id}
-        className="market-plan-card bg-slate-100/55 border border-slate-300/60 rounded-3xl overflow-hidden shadow-none hover:bg-slate-100/80 hover:border-blue-300 transition-all duration-150 flex flex-col justify-between"
+        data-market-plan={plan} data-listing-id={product.id} data-market-kind={isService ? 'service' : 'item'}
+        className={`market-plan-card ${isService ? '' : 'market-product-card market-inventory-card'} bg-slate-100/55 border border-slate-300/60 rounded-3xl overflow-hidden shadow-none hover:bg-slate-100/80 hover:border-blue-300 transition-all duration-150 flex flex-col justify-between`}
       >
         <div>
-          <div className="relative h-48 bg-slate-900/5 overflow-hidden flex items-center justify-center p-1 border-b border-slate-100">
+          <div className="market-card-thumbnail relative h-48 bg-slate-900/5 overflow-hidden flex items-center justify-center p-1 border-b border-slate-100">
             <img
               src={optimizeImageDisplayUrl(product.imageUrl, 150, 20)}
               alt={product.title}
@@ -196,30 +189,27 @@ const SellerInventoryCard: React.FC<SellerInventoryCardProps> = memo(
                 <span>(Service)</span>
               </div>
             ) : (
-              <div className="absolute top-3 left-3 px-2.5 py-1 bg-slate-900/80 backdrop-blur-md text-white text-[9px] font-black rounded-lg uppercase">
+              <div className="market-card-category absolute top-1.5 left-1.5 max-w-[90px] truncate px-1.5 py-0.5 bg-slate-900/80 backdrop-blur-md text-white text-[8px] font-black rounded-md uppercase">
                 {product.category}
               </div>
             )}
-            <div className="absolute top-3 right-3 px-2.5 py-1 bg-blue-600 text-white text-xs font-black rounded-lg shadow-xs">
+            <div className={`market-card-price absolute ${isService ? 'top-3 right-3 px-2.5 py-1 text-xs rounded-lg' : 'top-1.5 right-1.5 px-1.5 py-0.5 text-[9px] rounded-md'} bg-blue-600 text-white font-black shadow-xs`}>
               GH₵ {product.price}
             </div>
           </div>
 
-          <div className="p-5 space-y-2">
+          <div className="market-card-copy p-5 space-y-2">
             <h3 className="text-xs font-black text-slate-950 line-clamp-1">{product.title}</h3>
             <p className="text-[11px] text-slate-500 line-clamp-2 leading-relaxed">{product.description || 'No description provided.'}</p>
           </div>
         </div>
 
-        <div className="p-5 pt-3 border-t border-slate-200/60 space-y-3 bg-transparent">
+        <div className="market-card-footer p-5 pt-3 border-t border-slate-200/60 space-y-3 bg-transparent">
           {!isService ? (
             /* REAL TIME STOCK ADJUSTER - ONLY FOR PHYSICAL PRODUCTS */
-            <div className="flex items-center justify-between">
+            <div className="market-inventory-stock flex items-center justify-between">
               <div className="text-xs font-bold text-slate-500">
-                In Stock:{' '}
-                <span className={`font-black ${Number(product.stockQuantity) > 0 ? 'text-slate-950' : 'text-rose-600'}`}>
-                  {product.stockQuantity} units
-                </span>
+                Stock
               </div>
 
               <div className="flex items-center gap-1.5">
@@ -232,7 +222,7 @@ const SellerInventoryCard: React.FC<SellerInventoryCardProps> = memo(
                 >
                   -
                 </button>
-                <span className="w-6 text-center text-xs font-black text-slate-950">{product.stockQuantity}</span>
+                <span aria-label={`${product.stockQuantity} units in stock`} className={`w-6 text-center text-xs font-black ${Number(product.stockQuantity) > 0 ? 'text-slate-950' : 'text-rose-600'}`}>{product.stockQuantity}</span>
                 <button
                   type="button"
                   onClick={() => onUpdateStock(product, 1)}
@@ -253,7 +243,7 @@ const SellerInventoryCard: React.FC<SellerInventoryCardProps> = memo(
             </div>
           )}
 
-          <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-200/50">
+          <div className="market-inventory-actions flex items-center justify-between gap-2 pt-2 border-t border-slate-200/50">
             <span className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase ${
               !isService
                 ? (Number(product.stockQuantity) > 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800')
@@ -300,6 +290,7 @@ export default function PageDigitalMarket() {
   const accountIsCurrent=(id:string | undefined,generation?:number)=>mounted.current && currentAccount.current===id && (generation===undefined || generation===accountGeneration.current);
   useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;};},[]);
   const initialLoadCompletedRef = useRef<boolean>(false);
+  const dashboardReads = useRef(new AccountRefreshGate());
 
   useEffect(() => {
     document.documentElement.classList.add('marketplace-scrollbar-hidden');
@@ -309,7 +300,7 @@ export default function PageDigitalMarket() {
   // Role Protection Guard: Only merchant and student roles can access digital market platform
   useEffect(() => {
     if (user) {
-      if (usesSupabasePersistence && !['merchant','staff','manager','admin'].includes(user.role)) {
+      if ((!['merchant','staff','manager','admin'].includes(user.role))) {
         navigate(user.role === 'student' ? '/resident/dashboard' : '/user/dashboard', {replace:true});return;
       }
       if (user.role === 'staff') {
@@ -334,6 +325,7 @@ export default function PageDigitalMarket() {
   const [notifFilter, setNotifFilter] = useState<'all' | 'unread' | 'orders' | 'system'>('all');
   const [loading, setLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
+  const [loadError, setLoadError] = useState('');
 
   // Search, Price Filter & Sort
   const [searchQuery, setSearchQuery] = useState('');
@@ -404,7 +396,7 @@ export default function PageDigitalMarket() {
   const [prodCategory, setProdCategory] = useState('Electronics');
   const [prodCondition, setProdCondition] = useState('Like New');
   const [prodStock, setProdStock] = useState('1');
-  const [prodLocation, setProdLocation] = useState(usesSupabasePersistence ? '' : 'KNUST Main Library Car Park');
+  const [prodLocation, setProdLocation] = useState((''));
   const [prodImageUrl, setProdImageUrl] = useState('');
   const [prodAdditionalImages, setProdAdditionalImages] = useState<string[]>([]);
   const [mediaUploads, setMediaUploads] = useState(0);
@@ -424,7 +416,7 @@ export default function PageDigitalMarket() {
   const [servDesc, setServDesc] = useState('');
   const [servPrice, setServPrice] = useState('');
   const [servPriceCategories, setServPriceCategories] = useState<Array<{ id: string; name: string; price: number | string; imageUrl?: string }>>([]);
-  const [servLocation, setServLocation] = useState(usesSupabasePersistence ? '' : 'KNUST Campus Enclave / Hostel Delivery');
+  const [servLocation, setServLocation] = useState((''));
   const [servLocationMode, setServLocationMode] = useState<'flexible' | 'fixed' | 'hybrid'>('flexible');
   const [servCallLine, setServCallLine] = useState('');
   const [servImageUrl, setServImageUrl] = useState('');
@@ -505,7 +497,7 @@ export default function PageDigitalMarket() {
     if(isPlanActivationLoading)return;
     const accountId=user?.id,generation=accountGeneration.current;
     const payload={purpose,plan};
-    if(usesSupabasePersistence){const params=JSON.stringify([accountId,purpose,plan]);if(checkoutRequest.current?.params!==params)checkoutRequest.current={params,id:crypto.randomUUID()};Object.assign(payload,{requestId:checkoutRequest.current.id});}
+    {const params=JSON.stringify([accountId,purpose,plan]);if(checkoutRequest.current?.params!==params)checkoutRequest.current={params,id:crypto.randomUUID()};Object.assign(payload,{requestId:checkoutRequest.current.id});}
     setPaymentError(''); setIsPlanActivationLoading(true);
     try { const result = await apiFetch('/api/payments/paystack/initialize', { method: 'POST', body: JSON.stringify(payload) });
       if(!accountIsCurrent(accountId,generation))return;
@@ -520,9 +512,14 @@ export default function PageDigitalMarket() {
   const activateMobilePlan = () => selectSubscription(displayedMobilePlan);
   useEffect(()=>{checkoutRequest.current=null;setIsPlanActivationLoading(false);setPaymentError('');},[user?.id]);
 
-  const loadData = async (isBackground = false) => {
+  const loadDataRead = async (isBackground = false, cancellation?: AbortSignal) => {
     const accountId=user?.id,epoch=accountEpoch.current;
-    const current=()=>mounted.current && currentAccount.current===accountId && accountEpoch.current===epoch;
+    const current=()=>mounted.current && currentAccount.current===accountId && accountEpoch.current===epoch && !cancellation?.aborted;
+    const nativeOptions = ({
+      signal: cancellation ? AbortSignal.any([cancellation, AbortSignal.timeout(30000)]) : AbortSignal.timeout(30000),
+      headers: { 'X-PineVela-Profile-Context': accountId! },
+    });
+    let completed = false;
     try {
       if (!isBackground && !initialLoadCompletedRef.current) {
         setLoading(true);
@@ -534,8 +531,14 @@ export default function PageDigitalMarket() {
       const userId = user?.id || '';
 
       // 1. Fetch store status & application
-      const statusRes = await apiFetch(usesSupabasePersistence ? '/api/digital-market/status' : `/api/digital-market/status?email=${encodeURIComponent(email)}&userId=${encodeURIComponent(userId)}`).catch(() => null);
+      // A failed status read says nothing about whether the seller completed
+      // setup. Keep their current route and offer retry instead of onboarding.
+      const statusRes = (await apiFetch('/api/digital-market/status', nativeOptions));
       if(!current())return;
+      if (((!statusRes || Array.isArray(statusRes) || !('store' in statusRes) || !('application' in statusRes))))
+        throw new Error('Could not load your verified seller account. Please retry.');
+      if ((!statusRes.store))
+        throw new Error('Your approved store is unavailable. Retry, or return to your primary account to check registration status.');
       
       if (statusRes?.application) {
         setApplicationData((prev: any) => JSON.stringify(prev) === JSON.stringify(statusRes.application) ? prev : statusRes.application);
@@ -562,35 +565,34 @@ export default function PageDigitalMarket() {
       }
 
       // 2. Fetch products
-      const allProducts: MarketProduct[] = await apiFetch(usesSupabasePersistence ? '/api/digital-market/inventory' : '/api/digital-market/products?includeAll=true');
+      const allProducts: MarketProduct[] = await apiFetch(('/api/digital-market/inventory'), nativeOptions);
       if(!current())return;
       const currentStoreId = statusRes?.store?.id || (user as any)?.merchantStoreId;
       const currentEmail = (user?.studentEmail || user?.email || '').toLowerCase();
 
       // Filter products belonging to this merchant store
-      const myProducts = usesSupabasePersistence ? allProducts : allProducts.filter((p: MarketProduct) => {
-        if (currentStoreId && p.storeId === currentStoreId) return true;
-        if (currentEmail && p.sellerEmail && p.sellerEmail.toLowerCase() === currentEmail) return true;
-        return false;
-      });
+      const myProducts = (allProducts);
       setProducts(prev => JSON.stringify(prev) === JSON.stringify(myProducts) ? prev : myProducts);
 
       // 3. Fetch orders
-      const ordersRes: MarketOrder[] = await apiFetch(usesSupabasePersistence ? '/api/digital-market/my-orders' : `/api/digital-market/my-orders?email=${encodeURIComponent(email)}&storeId=${encodeURIComponent(currentStoreId || '')}`);
+      const ordersRes: MarketOrder[] = await apiFetch(('/api/digital-market/my-orders'), nativeOptions);
       if(!current())return;
       setOrders(prev => JSON.stringify(prev) === JSON.stringify(ordersRes || []) ? prev : (ordersRes || []));
-
-
-    } catch (err) {
+      completed = true;
+      setLoadError('');
+    } catch (err: any) {
+      if (current() && true) setLoadError(err.message || 'Your seller account could not refresh. Please retry.');
       console.error("Error loading digital market data:", err);
     } finally {
       if(current()){
-        initialLoadCompletedRef.current = true;
+        if ((completed)) initialLoadCompletedRef.current = true;
         setLoadedAccount(accountId);setLoading(false);
         setRefreshing(false);
       }
     }
   };
+
+  const loadData = (isBackground = false) => (dashboardReads.current.run(user?.id || '', accountEpoch.current, cancellation => loadDataRead(isBackground, cancellation)));
 
   const handleMarkNotificationRead = markAsRead;
   const handleMarkAllNotificationsRead = async () => {
@@ -599,7 +601,7 @@ export default function PageDigitalMarket() {
   };
 
   useEffect(() => {
-    initialLoadCompletedRef.current=false;setLoadedAccount(undefined);setLoading(true);
+    initialLoadCompletedRef.current=false;setLoadedAccount(undefined);setLoading(true);setLoadError('');
     setStoreData(null);setApplicationData(null);setProducts([]);setOrders([]);setActiveTab('dashboard');
     setShowAddModal(false);setShowServiceModal(false);setProfileMediaUploads(0);setMediaUploads(0);
     setIsSubmittingProduct(false);setIsSubmittingService(false);setIsUpdatingProfile(false);
@@ -610,7 +612,7 @@ export default function PageDigitalMarket() {
     const interval = setInterval(() => {
       loadData(true);
     }, 10000);
-    return () => clearInterval(interval);
+    return () => { clearInterval(interval); dashboardReads.current.cancel(); };
   }, [user?.id, user?.email, user?.studentEmail]);
 
   // Handle Add Product (MANDATORY Description and Image)
@@ -644,12 +646,12 @@ export default function PageDigitalMarket() {
     const accountId=user?.id;accountEpoch.current++;
     try {
       const email = user?.studentEmail || user?.email || '';
-      const storeId = storeData?.id || (!usesSupabasePersistence ? (user as any)?.merchantStoreId || `store-${Date.now()}` : undefined);
+      const storeId = storeData?.id || ((undefined));
 
       const res = await apiFetch('/api/digital-market/products', {
         method: 'POST',
         body: JSON.stringify({
-          ...(!usesSupabasePersistence ? {storeId,userEmail:email} : {isService:false}),
+          ...(({isService:false})),
           title: prodTitle.trim(),
           description: prodDesc.trim(),
           price: parseFloat(prodPrice),
@@ -831,7 +833,7 @@ export default function PageDigitalMarket() {
       const res = await apiFetch('/api/digital-market/store', {
         method: 'PUT',
         body: JSON.stringify({
-          ...(!usesSupabasePersistence ? {studentEmail: email} : {}),
+          ...(({})),
           storeName: editStoreName.trim(),
           location: editLocation,
           deliveryMode: editDeliveryForm,
@@ -893,7 +895,7 @@ export default function PageDigitalMarket() {
     setServDesc('');
     setServPrice('');
     setServPriceCategories([]);
-    setServLocation(storeData?.location || (usesSupabasePersistence ? '' : 'KNUST Campus Enclave / Hostel Delivery'));
+    setServLocation(storeData?.location || (('')));
     setServLocationMode('flexible');
     setServCallLine(storeData?.phone || (user as any)?.phone || '');
     setServImageUrl('');
@@ -995,17 +997,17 @@ export default function PageDigitalMarket() {
     const accountId=user?.id;accountEpoch.current++;
     try {
       const email = user?.studentEmail || user?.email || '';
-      const storeId = storeData?.id || (!usesSupabasePersistence ? (user as any)?.merchantStoreId || `store-${Date.now()}` : undefined);
+      const storeId = storeData?.id || ((undefined));
 
       if (servPriceCategories.length > 4 || servPriceCategories.some(c => !c.name.trim() || c.price === '' || !Number.isFinite(Number(c.price)) || Number(c.price) < 0)) {
         triggerToast('Add a name and valid price for every option (maximum four).', 'error'); return;
       }
       const validPriceCategories = servPriceCategories.map(c => ({
-        ...(!usesSupabasePersistence || /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(c.id) ? {id:c.id} : {}), name: c.name.trim(), price: Number(c.price), ...(c.imageUrl ? { imageUrl: c.imageUrl } : {})
+        ...((/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(c.id)) ? {id:c.id} : {}), name: c.name.trim(), price: Number(c.price), ...(c.imageUrl ? { imageUrl: c.imageUrl } : {})
       }));
 
       const payload = {
-        ...(!usesSupabasePersistence ? {storeId,userEmail:email,stockQuantity:999} : {}),
+        ...(({})),
         title: servTitle.trim(),
         description: servDesc.trim(),
         price: parseFloat(servPrice),
@@ -1022,8 +1024,8 @@ export default function PageDigitalMarket() {
         openingTime: servOpeningTime,
         closingTime: servClosingTime,
         isOpen247: servIsOpen247,
-        lat: usesSupabasePersistence && servLocationMode==='flexible' ? null : servLat,
-        lng: usesSupabasePersistence && servLocationMode==='flexible' ? null : servLng,
+        lat: (servLocationMode==='flexible') ? null : servLat,
+        lng: (servLocationMode==='flexible') ? null : servLng,
         isAvailable: servIsAvailable
       };
 
@@ -1160,11 +1162,13 @@ export default function PageDigitalMarket() {
   // Loading Screen
   if (loading || loadedAccount!==user?.id) return <RouteSkeleton />;
 
+  if ((loadError) && !storeData) return <main className="flex min-h-screen items-center justify-center p-6"><section role="alert" className="w-full max-w-lg space-y-4 rounded-3xl border border-blue-200 bg-white p-6 text-slate-900 dark:border-cyan-900 dark:bg-slate-900 dark:text-slate-100"><h1 className="text-xl font-bold">Your seller account could not load</h1><p className="text-sm">{loadError}</p><button type="button" onClick={() => void loadData(false)} className="min-h-11 rounded-xl bg-blue-600 px-4 py-3 font-semibold text-white">Retry seller account</button><button type="button" onClick={() => navigate('/login')} className="ml-3 min-h-11 rounded-xl border border-blue-200 px-4 py-3 text-sm">Return to sign in</button></section></main>;
+
   if (!storeData && applicationData?.status === 'approved') return <div className="p-8 text-center"><button onClick={() => navigate('/digital-market/onboard')} className="rounded-xl bg-blue-600 p-4 text-white">Complete store details and secure checkout</button></div>;
 
   // REDESIGNED MERCHANT MANAGEMENT WORKBENCH (GLOSSY LIGHT-BLUE VIBE)
   return (
-    <div className="seller-frosty-background min-h-screen text-slate-800 pb-24 relative">
+    <div className="page-canvas min-h-screen text-slate-800 pb-24 relative">
 
       {/* Toast */}
       {toastMessage && (
@@ -1349,16 +1353,13 @@ export default function PageDigitalMarket() {
 
       {/* MAIN CONTAINER — OFFSET FOR FIXED HEADER */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-[96px] sm:pt-[154px] space-y-8">
+        {(loadError) && <div role="alert" className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-900 dark:border-rose-900 dark:bg-rose-950 dark:text-rose-100"><p>{loadError}</p><button type="button" disabled={refreshing} onClick={() => void loadData(false)} className="mt-2 min-h-11 font-semibold underline disabled:opacity-50">Retry seller account</button></div>}
         
         {/* TAB 1: DASHBOARD / MINI POS HOME */}
         {activeTab === 'dashboard' && (
           <div className="space-y-8">
             {/* Frosty, Transparent and Premium Greeting banner */}
             <div className="relative overflow-hidden bg-white/40 backdrop-blur-xl text-slate-800 rounded-3xl p-6 sm:p-8 shadow-[0_8px_32px_0_rgba(59,130,246,0.12)] border border-blue-400/25">
-              {/* Massive PinVela Watermark Logo */}
-              <div className="absolute right-[-30px] bottom-[-45px] opacity-10 pointer-events-none transform rotate-12 scale-[2.2]">
-                <PineLogo size={150} hideText={true} />
-              </div>
               <div className="absolute top-0 right-0 w-80 h-80 bg-blue-400/5 rounded-full blur-3xl pointer-events-none" />
               <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                 <div>
@@ -1782,11 +1783,11 @@ export default function PageDigitalMarket() {
 
             {/* Inventory table & Stock Editor */}
             {refreshing && products.length === 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-pulse pb-6">
+              <div className="market-inventory-grid animate-pulse pb-6">
                 {[1, 2, 3, 4, 5, 6].map((i) => (
-                  <div key={i} className="bg-white/60 border border-slate-200/50 rounded-3xl overflow-hidden shadow-2xs flex flex-col justify-between h-[340px]">
+                  <div key={i} data-market-kind="item" className="market-plan-card market-product-card bg-white/60 border border-slate-200/50 rounded-3xl overflow-hidden shadow-2xs flex flex-col justify-between">
                     <div>
-                      <div className="h-44 bg-slate-200/50 relative overflow-hidden flex items-center justify-center">
+                      <div className="market-card-thumbnail bg-slate-200/50 relative overflow-hidden flex items-center justify-center">
                         <ShoppingBag className="w-10 h-10 text-slate-300/60" />
                       </div>
                       <div className="p-3.5 space-y-2.5">
@@ -1810,7 +1811,7 @@ export default function PageDigitalMarket() {
               </div>
             ) : filteredProducts.length > 0 ? (
               <div className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="market-inventory-grid">
                   {filteredProducts.slice(0, marketVisibleCount).map(product => (
                     <SellerInventoryCard
                       key={product.id}
@@ -1866,9 +1867,6 @@ export default function PageDigitalMarket() {
           <div className="space-y-6 animate-fadeIn">
             {/* Services Header Banner with White Glassy Backdrop */}
             <div className="relative overflow-hidden bg-white/80 backdrop-blur-xl border border-slate-200/80 text-slate-900 rounded-3xl p-6 sm:p-8 shadow-xl">
-              <div className="absolute right-[-20px] bottom-[-30px] opacity-5 pointer-events-none transform rotate-12 scale-[1.8]">
-                <PineLogo size={140} hideText={true} />
-              </div>
               <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                 <div className="space-y-1.5 max-w-2xl">
                   
@@ -2400,7 +2398,7 @@ export default function PageDigitalMarket() {
               <p>Plan paid until: {storeData?.subscriptionExpiresAt ? new Date(storeData.subscriptionExpiresAt).toLocaleDateString() : 'No verified paid period'}. Two-month fee paid until: {storeData?.semesterExpiresAt ? new Date(storeData.semesterExpiresAt).toLocaleDateString() : 'Payment required'}.</p>
               {storeData?.paymentMode === 'test' && <p className="font-semibold text-amber-700">Paystack test payment — development access only.</p>}
               <button disabled={isPlanActivationLoading || !paymentSettings} onClick={() => checkoutPayment(storeData?.registrationFeePaid ? 'semester' : 'activation')} className="rounded-xl bg-blue-600 px-4 py-3 text-white disabled:opacity-50">{storeData?.registrationFeePaid ? 'Renew two-month fee' : 'Complete verified registration'}</button>
-              {(usesSupabasePersistence || pendingPaymentReference(user?.id)) && <button onClick={() => navigate('/payments/return')} className="ml-3 text-blue-700">View unfinished payments</button>}
+              {(<button onClick={() => navigate('/payments/return')} className="ml-3 text-blue-700">View unfinished payments</button>)}
             </div>
             <div className="hidden grid-cols-1 gap-5 sm:grid lg:grid-cols-3">
               <button type="button" disabled={isPlanActivationLoading || !paymentSettings} onClick={() => selectSubscription("default")} className={`group relative overflow-hidden rounded-3xl border bg-white/70 p-6 text-left shadow-sm transition-all hover:-translate-y-1 hover:shadow-xl ${subscriptionPlan === "default" ? "border-blue-500 ring-2 ring-blue-200" : "border-slate-200"}`}><div className="flex items-start justify-between"><div className="rounded-2xl bg-blue-100 p-3 text-blue-700"><Store className="h-6 w-6" /></div>{subscriptionPlan === "default" && <BadgeCheck className="h-6 w-6 text-blue-600" />}</div><h3 className="mt-5 text-xl font-black text-slate-900">Pine Default</h3><p className="mt-1 text-sm text-slate-500">Everything needed to begin selling.</p><div className="my-5 h-px bg-slate-200" /><div className="space-y-3 text-sm font-semibold text-slate-700"><div className="flex gap-2"><CheckCircle2 className="h-4 w-4 text-blue-600" />Publish 20 items at a time</div><div className="flex gap-2"><CheckCircle2 className="h-4 w-4 text-blue-600" />1 active service</div><div className="flex gap-2"><CheckCircle2 className="h-4 w-4 text-blue-600" />200 total inventory units</div><div className="flex gap-2"><ImageIcon className="h-4 w-4 text-blue-600" />Four PineVela covers and standard logo</div></div><div className="mt-6 text-sm font-black text-blue-700">{planPrice("default")} <ArrowRight className="ml-1 inline h-4 w-4" /></div></button>
@@ -3630,17 +3628,15 @@ export default function PageDigitalMarket() {
             const accountId=user?.id,target=cropTarget;
             if(!accountIsCurrent(accountId))return;
             setIsCropModalOpen(false);setCropRawImage(null);
-            if(usesSupabasePersistence)mediaBusyChange(true);
+            mediaBusyChange(true);
             try {
-              const url=usesSupabasePersistence
-                ? (await apiFetch('/api/storage/upload-market-image',{method:'POST',body:JSON.stringify({fileType:'image/jpeg',fileData:croppedBase64})})).imageUrl
-                : croppedBase64;
+              const url=((await apiFetch('/api/storage/upload-market-image',{method:'POST',body:JSON.stringify({fileType:'image/jpeg',fileData:croppedBase64})})).imageUrl);
               if(!accountIsCurrent(accountId))return;
               if(target==='service')setServImageUrl(url);else setProdImageUrl(url);
             } catch(err:any) {
               if(accountIsCurrent(accountId))triggerToast(err?.message || 'Could not upload your cover photograph.','error');
             } finally {
-              if(usesSupabasePersistence && accountIsCurrent(accountId))mediaBusyChange(false);
+              if((accountIsCurrent(accountId)))mediaBusyChange(false);
             }
           }}
           onClose={() => {

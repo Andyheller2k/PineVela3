@@ -35,11 +35,9 @@ table grant or SECURITY DEFINER function is introduced. The guarded primary-only
 closure core can recognize supported confirmed email identities; general operational
 wipe execution remains disabled and has no newly mounted execution entry.
 
-The login/signup page exposes **Reopen primary account with email**. Its modal has
-an explicit send step, verified mailbox, private code/link field, progress/disable
-state and retry controls. Successful re-entry resumes the existing public
-continuation or opens the primary dashboard. It does not change the identity's
-password or any independent portal PIN.
+The login/signup cards no longer expose an email re-entry button or modal. The
+verified email re-entry API remains available for retained primary accounts and
+does not change the identity's password or any independent portal PIN.
 
 Verification:
 

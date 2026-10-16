@@ -1,5 +1,21 @@
 # PineVela Product Rules
 
+## Runtime checkpoint — 16 October 2026
+
+Supabase PostgreSQL/Storage and Supabase Auth are the sole runtime persistence and
+identity services. Default `dev`, `build` and `start` use `supabase-server.ts`.
+Forty legacy JSON/custom-session modules are removed. The owner classified all
+legacy records as development data; 29 data/upload files and the old build were
+privately archived with verified hashes. No legacy records were imported. The
+hosted checkpoint retained exactly seven Auth subjects, six profiles and ten
+contexts, with unchanged UUID-set fingerprints.
+
+See [isolated workflow acceptance](migrations/isolated-workflow-acceptance.md) for
+the actual HTTP/browser coverage and remaining acceptance scope. Automated checks
+do not establish a physical property visit or every nested form/provider journey.
+Dated migration/checkpoint descriptions below are historical evidence, not an
+instruction to restore retired runtime paths.
+
 ## Officer access and room-key delivery
 
 Officers verify their own separate official Google/email identity and accept an
@@ -126,7 +142,7 @@ a deletion proposal, pause, recovery receipt or final consent starts no cooldown
 
 ## Verified account identities
 
-The Supabase replacement uses separate verified child identities linked to a primary owner.
+The native Supabase runtime uses separate verified child identities linked to a primary owner.
 Resident and seller accounts with the same student email may share one Supabase login
 password, with different portal access PINs. Managers use a separate verified organization
 email in the production email-enrollment flow. A server-selected, direct-loopback,
@@ -156,7 +172,7 @@ not remove or mark the notification read. Resident and seller portals sharing on
 verified mailbox retain independent inboxes/dismissals. Gateway announcements do not
 change submission-status rules: those still notify the primary owner before portal entry.
 
-## Shared pricing changes in the Supabase replacement
+## Shared pricing changes in native Supabase
 
 Registration fees, two-month fees, monthly plan prices and commission changes require
 three distinct administrator settings-key approvals and administrator #1's final keyed
@@ -184,7 +200,7 @@ Existing active non-admin portals receive an account-specific dismissible popup 
 24 hours after restoration. Later portals are excluded, dismissal persists across sign-in,
 and a later restoration has its own notice. No client-selected recipient or timestamp is accepted.
 
-## Store billing in the Supabase replacement
+## Store billing
 
 Activation charges only the one-time registration fee. Verified registration grants
 two calendar months of initial Pine Default access; the two-month fee becomes due
@@ -195,8 +211,8 @@ listings and new orders. Existing buyer–seller conversations remain available 
 Quotes use saved administrator pricing and the verified portal identity. A retry keeps
 its request UUID, original amount and reference. Zero-valued fees are genuine waivers,
 recorded separately from provider payments; repeated free renewals cannot accumulate
-future access. Test-mode payments do not activate stores in the replacement database.
-The legacy JSON backend retains its earlier billing behavior until cutover.
+future access. Test-mode payments do not activate stores in the native database.
+Legacy development billing records are privately archived; no old billing path remains active.
 
 ## Marketplace Reviews
 
@@ -210,7 +226,7 @@ verified purchase reviews and offer no orderless review form. Stores/items witho
 reviews appear unrated. Historical unverified reviews are preserved privately, without
 influencing public reputation.
 
-The Supabase replacement requires verified handover before review submission. A buyer can
+The native Supabase runtime requires verified handover before review submission. A buyer can
 edit their own feedback without changing its purchase receipt or creation time; identical
 retries do not send duplicate seller notifications. Reviews remain available for completed
 purchases after their listing is unpublished.
@@ -384,7 +400,7 @@ Core rules:
 Housing booking applications are retired. There is no accommodation application/approval
 workflow. Resident access uses the supported room-key activation flow. Marketplace service
 bookings and meeting appointments are separate supported features. Historical housing
-applications are retained only in a private inactive archive during migration.
+applications are retained only in the private legacy recovery archive.
 
 ## Residence Configuration and Profile Controls
 
@@ -412,7 +428,7 @@ checkbox scopes, show all dependent deletions, and require all five independent 
 Residence deletion uses its separate two-voter rule above. Any rejection cancels;
 membership/data changes invalidate approval. Administrator #1 explicitly confirms execution.
 Total wipe preserves administrators, governance and protected recovery/audit artifacts.
-In the Supabase replacement, key recovery requires two other active administrators with
+In native Supabase, key recovery requires two other active administrators with
 enrolled approval keys. The proposer counts once and the target cannot consent to their
 own recovery. Reviews expire after 24 hours and roster/key changes invalidate them.
 A second approval clears only the chosen approval or settings key, preserving the other

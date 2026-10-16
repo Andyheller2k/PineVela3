@@ -1,33 +1,25 @@
-import { STORE_DELIVERY_METHODS, storeDeliveryMode } from '../../storeDelivery';
-import { internationalPhone, phoneDraft, type CountryCode } from '../../internationalPhone';
-import InternationalPhoneInput from './InternationalPhoneInput';
-import StoreBrandingEditor from './StoreBrandingEditor';
-import { MARKET_DEFAULT_COVERS, MARKET_DEFAULT_LOGO } from '../../marketBranding';
+import React,{ useEffect,useRef,useState } from 'react';
+import { internationalPhone,phoneDraft,type CountryCode } from '../../internationalPhone';
+import { MARKET_DEFAULT_COVERS,MARKET_DEFAULT_LOGO } from '../../marketBranding';
+import { STORE_DELIVERY_METHODS,storeDeliveryMode } from '../../storeDelivery';
 import { usePlatformSettings } from '../context/PlatformSettingsContext';
 import { openPaymentCheckout } from '../lib/payments';
-import OnboardingProgress, { STORE_SETUP_STEPS } from './OnboardingProgress';
 import { sessionFetch as fetch } from '../lib/session';
-import React, { useState, useEffect, useRef } from 'react';
-import { usesSupabasePersistence } from '../lib/persistence';
-import { useNavigate } from 'react-router-dom';
-import { 
-  Store, 
-  ArrowRight, 
-  ArrowLeft, 
-  CheckCircle2, 
-  Clock, 
-  ShieldCheck, 
-  MapPin, 
-  Building2, 
-  CreditCard,
-  Phone,
-  User,
-  X
+import InternationalPhoneInput from './InternationalPhoneInput';
+import OnboardingProgress,{ STORE_SETUP_STEPS } from './OnboardingProgress';
+import StoreBrandingEditor from './StoreBrandingEditor';
+
+import {
+ArrowLeft,
+ArrowRight,
+Clock,
+X
 } from 'lucide-react';
-import PineLogo from './PineLogo';
+import { motion } from 'motion/react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { safeJson } from '../lib/api';
-import { motion } from 'motion/react';
+import PineLogo from './PineLogo';
 
 const DIGITAL_MARKET_CATEGORIES = [
   "Electronics, Gadgets & Accessories",
@@ -61,7 +53,7 @@ export default function PageDigitalMarketOnboard() {
   // Role Protection Guard: Only merchant and student roles can access store onboarding
   useEffect(() => {
     if (user) {
-      if (usesSupabasePersistence && !['merchant','staff','manager','admin'].includes(user.role)) {
+      if ((!['merchant','staff','manager','admin'].includes(user.role))) {
         navigate(user.role === 'student' ? '/resident/dashboard' : '/user/dashboard', { replace: true });
         return;
       }
@@ -99,22 +91,22 @@ export default function PageDigitalMarketOnboard() {
   const [customBranding, setCustomBranding] = useState(false);
   const [coverPicture, setCoverPicture] = useState<string>(MARKET_DEFAULT_COVERS[0].url);
   const registrationFee = settings?.registrationFee;
-  const checkoutTotal = settings ? usesSupabasePersistence?settings.registrationFee:settings.registrationFee + settings.semesterFee + settings.subscriptionPrices[selectedPlan] : undefined;
+  const checkoutTotal = settings ? (settings.registrationFee) : undefined;
 
   useEffect(() => {
     const controller = new AbortController(); let live = true;
     setLoading(true);setAppData(null);setStoreData(null);setErrorMessage(null);setPhase(1);setSubmitting(false);
     const fetchStatus = async () => {
       try {
-        if (usesSupabasePersistence && user?.role !== 'merchant') return;
+        if ((user?.role !== 'merchant')) return;
         const targetEmail = user?.email || '';
         const targetId = user?.id || '';
-        const res = await fetch(usesSupabasePersistence ? '/api/digital-market/status' : `/api/digital-market/status?email=${encodeURIComponent(targetEmail)}&userId=${encodeURIComponent(targetId)}`, { signal:controller.signal, headers: { Authorization: `Bearer ${user?.token || ''}` } });
+        const res = await fetch(('/api/digital-market/status'), { signal:controller.signal, headers: { Authorization: `Bearer ${user?.token || ''}` } });
         if (!res.ok) throw new Error('Could not load your verified store registration. Please reload to retry.');
         if (res.ok) {
           const data = await safeJson(res);
           if (!live || currentAccount.current !== targetId) return;
-          if (usesSupabasePersistence && !data?.store) throw new Error('Your approved store is unavailable. Return to your primary account to check registration status.');
+          if ((!data?.store)) throw new Error('Your approved store is unavailable. Return to your primary account to check registration status.');
           if (data) {
             setAppData(data.application);
             setStoreData(data.store);
@@ -130,12 +122,12 @@ export default function PageDigitalMarketOnboard() {
             const contact = phoneDraft(ref.phone, ref.phoneCountry); setPhone(contact.contactPhone); setPhoneCountry(contact.contactPhoneCountry);
             setProfilePicture(ref.profilePicture || ref.logoUrl || MARKET_DEFAULT_LOGO); setCoverPicture(ref.coverPicture || ref.bannerUrl || MARKET_DEFAULT_COVERS[0].url); setCustomBranding(ref.customBranding === true);
             if (ref) {
-              setStoreName(usesSupabasePersistence ? ref.storeName || '' : ref.storeName || `${ref.fullName || user?.name || 'Student'}'s Campus Store`);
-              setUsername(usesSupabasePersistence ? ref.username || '' : ref.fullName ? ref.fullName.toLowerCase().replace(/[^a-z0-9]/g, '') : 'studentstore');
-              setLocation(usesSupabasePersistence ? ref.location || '' : ref.university ? `${ref.university} Campus` : 'KNUST Campus');
-              setCategory(ref.category || ref.categoryToSell || (usesSupabasePersistence ? '' : DIGITAL_MARKET_CATEGORIES[0]));
-              setDescription(usesSupabasePersistence ? ref.description || '' : ref.description || `Official student digital market store by ${ref.fullName || user?.name || 'Student'}.`);
-              if (usesSupabasePersistence) setSelectedPlan(['star','pro'].includes(ref.subscriptionPlan) ? ref.subscriptionPlan : 'default');
+              setStoreName((ref.storeName || ''));
+              setUsername((ref.username || ''));
+              setLocation((ref.location || ''));
+              setCategory(ref.category || ref.categoryToSell || (('')));
+              setDescription((ref.description || ''));
+              setSelectedPlan(['star','pro'].includes(ref.subscriptionPlan) ? ref.subscriptionPlan : 'default');
             }
           }
         }
@@ -151,7 +143,7 @@ export default function PageDigitalMarketOnboard() {
 
   const handleCompleteSetup = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (loading || loadedAccount !== user?.id || usesSupabasePersistence && (!storeData || user?.role !== 'merchant')) return;
+    if (loading || loadedAccount !== user?.id || ((!storeData || user?.role !== 'merchant'))) return;
     const accountId = user?.id,generation=accountGeneration.current;
     setSubmitting(true);
     setErrorMessage(null);
@@ -160,7 +152,7 @@ export default function PageDigitalMarketOnboard() {
       const res = await apiFetch('/api/digital-market/store-setup', {
         method: 'POST',
         body: JSON.stringify({
-          ...(!usesSupabasePersistence ? {studentEmail: appData?.studentEmail || storeData?.studentEmail || user?.email || ''} : {}),
+          ...(({})),
           storeName: storeName.trim(),
           username: username.trim(),
           location: location.trim(),
@@ -176,7 +168,7 @@ export default function PageDigitalMarketOnboard() {
       if (!mounted.current || currentAccount.current !== accountId || accountGeneration.current!==generation) return;
 
       if (res && res.success) {
-        const payment = await apiFetch('/api/payments/paystack/initialize', { method: 'POST', body: JSON.stringify(usesSupabasePersistence?{purpose:'activation',plan:'default',requestId:(activationRequest.current?.account===accountId?activationRequest.current:(activationRequest.current={account:accountId!,id:crypto.randomUUID()})).id}:{ purpose: 'activation', plan: selectedPlan }) });
+        const payment = await apiFetch('/api/payments/paystack/initialize', { method: 'POST', body: JSON.stringify(({purpose:'activation',plan:'default',requestId:(activationRequest.current?.account===accountId?activationRequest.current:(activationRequest.current={account:accountId!,id:crypto.randomUUID()})).id})) });
         if (!mounted.current || currentAccount.current !== accountId || accountGeneration.current!==generation) return;
         if (openPaymentCheckout(payment,user?.id)) return;
         if (!payment?.paid || payment.accessGranted===false) throw new Error(payment.message || 'Store activation requires verified payment.');
@@ -198,7 +190,7 @@ export default function PageDigitalMarketOnboard() {
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ duration: 0.3 }}
-      className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/40 to-indigo-50/50 text-slate-900 flex flex-col justify-center gap-8 p-4 sm:p-8"
+      className="page-canvas min-h-screen text-slate-900 flex flex-col justify-center gap-8 p-4 sm:p-8"
     >
       {/* Top Bar */}
       <div className="max-w-4xl mx-auto w-full flex items-center justify-between pb-6 border-b border-blue-100">
@@ -235,7 +227,7 @@ export default function PageDigitalMarketOnboard() {
         )}
 
         <form onSubmit={handleCompleteSetup} className="space-y-6">
-          <fieldset disabled={loading || loadedAccount !== user?.id || submitting || usesSupabasePersistence && !storeData} className="space-y-6">
+          <fieldset disabled={loading || loadedAccount !== user?.id || submitting || (!storeData)} className="space-y-6">
           {phase === 1 && (
             <div className="space-y-5 animate-fadeIn">
               <div>
@@ -379,7 +371,7 @@ export default function PageDigitalMarketOnboard() {
               <div>
                 <h2 className="text-xl font-black text-slate-900">Step 3: Review your market fees</h2>
                 <p className="text-xs text-slate-500 font-medium mt-0.5">
-                  {usesSupabasePersistence?'Activation charges only the one-time registration fee and includes two months of Pine Default access. Star and Pro upgrades are separate.':checkoutTotal === 0 ? 'Your selected fees are waived. Continue to verify and activate your store without a payment.' : 'Pay securely through Paystack. Registration is one-time, the selected plan renews monthly, and the semester fee renews every two months.'}
+                  {('Activation charges only the one-time registration fee and includes two months of Pine Default access. Star and Pro upgrades are separate.')}
                 </p>
               </div>
 
@@ -396,9 +388,9 @@ export default function PageDigitalMarketOnboard() {
                   </div>
                 </div>
 
-                {!usesSupabasePersistence && <label className="block text-sm font-semibold">Monthly plan<select value={selectedPlan} onChange={event => setSelectedPlan(event.target.value as typeof selectedPlan)} className="mt-2 w-full rounded-xl border border-blue-200 p-3">{(['default', 'star', 'pro'] as const).map(plan => <option key={plan} value={plan}>Pine {plan} — GHS {settings?.subscriptionPrices[plan] ?? '…'} / month</option>)}</select></label>}
-                <dl className="space-y-2 text-sm"><div className="flex justify-between"><dt>Registration (one-time)</dt><dd>GHS {registrationFee ?? '…'}</dd></div>{!usesSupabasePersistence && <><div className="flex justify-between"><dt>Semester fee (every two months)</dt><dd>GHS {settings?.semesterFee ?? '…'}</dd></div><div className="flex justify-between"><dt>Selected plan (monthly)</dt><dd>GHS {settings?.subscriptionPrices[selectedPlan] ?? '…'}</dd></div></>}</dl>
-                {usesSupabasePersistence && <p className="text-sm text-blue-900">The two-month fee becomes due after your initial two months. Choose a paid monthly plan from your seller dashboard whenever you need an upgrade.</p>}
+                {false}
+                <dl className="space-y-2 text-sm"><div className="flex justify-between"><dt>Registration (one-time)</dt><dd>GHS {registrationFee ?? '…'}</dd></div>{false}</dl>
+                {(<p className="text-sm text-blue-900">The two-month fee becomes due after your initial two months. Choose a paid monthly plan from your seller dashboard whenever you need an upgrade.</p>)}
                 <p className="text-xs text-slate-600">{checkoutTotal === 0 ? 'No payment details are needed. PineVela verifies the current fee exemption when you continue.' : 'Zero-valued fees are waived. Paystack collects any remaining payment on its secure checkout. Closing checkout does not activate your store.'}</p>
               </div>
 

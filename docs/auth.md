@@ -1,5 +1,21 @@
 # PineVela Authentication and Authorization
 
+## Runtime checkpoint — 16 October 2026
+
+Supabase PostgreSQL/Storage and Supabase Auth are the sole runtime persistence and
+identity services. Default `dev`, `build` and `start` use `supabase-server.ts`.
+Forty legacy JSON/custom-session modules are removed. The owner classified all
+legacy records as development data; 29 data/upload files and the old build were
+privately archived with verified hashes. No legacy records were imported. The
+hosted checkpoint retained exactly seven Auth subjects, six profiles and ten
+contexts, with unchanged UUID-set fingerprints.
+
+See [isolated workflow acceptance](migrations/isolated-workflow-acceptance.md) for
+the actual HTTP/browser coverage and remaining acceptance scope. Automated checks
+do not establish a physical property visit or every nested form/provider journey.
+Dated migration/checkpoint descriptions below are historical evidence, not an
+instruction to restore retired runtime paths.
+
 ## Local Google manager enrollment — migration 69, 14 October 2026
 
 The local Supabase preview can enroll a separate real Google identity for a manager
@@ -33,9 +49,9 @@ remained pending. On the owner's later explicit authorization, the real officer
 submitted a clearly marked development-only report with physical findings unconfirmed
 and a reinspection recommendation. A genuine administrator then approved it with an
 explicit development-only explanation; the saved manager became active and the user
-completed genuine Google manager sign-in. The owned property remains unpublished
-and still requires residence setup/review. These development checks do not establish
-a physical site visit. See the [current continuation](../SUPABASE_CONTINUATION.md).
+completed genuine Google manager sign-in. That development property was later
+removed through the owner-approved native cleanup while retaining the real manager
+account. These development checks do not establish a physical site visit. See the [current continuation](../SUPABASE_CONTINUATION.md).
 Email delivery and the final student/work/email-signup domain and single-use token rules
 are deferred to launch-auth setup after development persistence cutover, before release.
 See [implementation and evidence](migrations/google-manager-development-enrollment.md).
@@ -69,7 +85,7 @@ establish the complete form and recovery, not resolution of all cold-browser lat
 successful Google-manager signup/property submission. Native manager/residence acceptance
 passed 155 checks, including maintenance denial, with zero security-advisor findings.
 
-## Migration status (2026-10-12)
+## Native account lifecycle and historical migration checkpoints
 
 Academic-year room reset uses the authenticated assigned manager’s current operation
 key or an administrator’s own approval-key grant. Body ownership selectors and stale
@@ -109,19 +125,18 @@ Pending/rejected registrations never gain an active manager login from this flow
 An active unassigned manager can issue or petition/reset its operation key through
 the existing authenticated key endpoints. Primary callers cannot close that portal.
 
-The running `server.ts` still uses transitional local credentials and sessions.
-The separate `supabase-server.ts` backend implements Supabase password/Google login,
+The default `supabase-server.ts` backend implements Supabase password/Google login,
 confirmed signup, HttpOnly access/refresh cookies, session refresh/revocation and
-subject-bound account selection. It is not yet the default backend. Resident,
+subject-bound account selection. The former JSON credential/session backend is removed. Resident,
 manager and seller accounts retain verified student/work identities linked to the
 primary owner through authorized enrollment. Resident and seller may share the same
 student identity with one Supabase password and distinct portal access PINs; managers
 use their separate verified manager identity (normally work email; the local Google
-development exception is described above). The replacement enrollment API and room claim
-transactions exist; enrollment forms and complete authenticated flows remain to be verified.
+development exception is described above). Native enrollment, room claim and
+authenticated portal journeys have the coverage recorded in the isolated acceptance report.
 Primary-user sign-in must never select a child's account without that account's own
-verified Auth session. The legacy-provider description below documents the running
-transition implementation, not the final target. See [migration status](migrations/supabase-implementation-status.md).
+verified Auth session. The provider/session sections below describe the active native
+boundary. Dated checkpoint results remain historical evidence.
 
 Initial browser restoration now shares one cookie-backed check across StrictMode
 subscribers. Temporary network, rate-limit and server failures receive at most
@@ -134,10 +149,25 @@ restoration as signed out. Login/logout and explicit account replacement invalid
 older restoration results, and login/logout wait for the pending check to drain.
 Transport expiry/access notices from an earlier client session generation are
 ignored. This does not change native session verification, key requirements or RLS.
+
+Logout shows immediate pending feedback and coalesces duplicate clicks. Success
+is shown only after deleting the exact provider-verified session's native app
+binding. The local-scope provider cleanup then runs with its existing bounded
+deadline, outside the response path. A still-valid JWT cannot regain app or direct
+Data API access without that binding. Provider verification or database failure
+does not report success; cookies remain available for retry. Other browser/device
+sessions are retained. Private query caches are cleared on logout, without
+triggering another round of dashboard reads.
+
+Session discovery reads the live binding and account policy in one atomic SQL
+statement. Protected operations still recheck both inside their transaction.
+Ordered admission locks are sent with BEGIN; claims, maintenance checks and the
+server-selected RLS role use ordered statements in one round trip. No identity,
+policy or authorization result is cached across requests.
 Actual administrator and isolated guest browser checks passed with delayed outgoing
 requests and native connection failures; no API responses or identities were mocked.
 
-The replacement appearance API derives preference ownership from the verified
+The native appearance API derives preference ownership from the verified
 native session's active portal and uses the scoped backend role under RLS. The
 browser sends its captured `X-PineVela-Profile-Context` only as a consistency check;
 a mismatch returns 409 and never selects an account. Delayed writes whose native
@@ -156,12 +186,12 @@ existing authorized context switch; an invalidated binding cannot revive itself
 through refresh. Credential hashes stay server-only under existing private-table
 RLS/grants. Audits and notices to the portal and its saved primary owner are atomic.
 
-In the replacement backend, the old parent-managed
+In the native backend, the old parent-managed
 `POST /api/users/reset-registered-account-password` returns 410 to an authenticated
 primary account. The primary UI instead directs the person to sign in through the
 verified resident identity. Resident Settings and seller Store Profile offer own
-PIN rotation. Account deletion remains an unfinished reviewed lifecycle. The
-transitional JSON backend's credential handlers are retained until final cutover.
+PIN rotation. Account closure uses the native reviewed lifecycle; legacy credential
+handlers are removed. See the individual lifecycle documents for available actions.
 
 The manager's active `POST /api/auth/change-password` caller now has a replacement:
 only a verified manager session with its existing manager-key grant may invoke it.
@@ -175,15 +205,16 @@ are never changed. Password strength, secure reauthentication and MFA restrictio
 remain enforced by the provider. The temporary session is never bound to a portal or
 returned to the client, and its local provider logout is attempted in `finally`.
 
-`Forgot Password?` on the replacement login and the manager's recovery button open
+`Forgot Password?` on the native login and the manager's recovery button open
 an email-proof form. `POST /api/auth/recover` requests delivery with the provider's
 non-enumerating successful response; `POST /api/auth/recover/complete` accepts only
 email, recovery code/link and new password. An unopened configured-project recovery
 link is parsed without being followed; signup/invitation/foreign/ambiguous links are
 rejected. Supabase verifies recovery proof, and its verified mailbox and native
 session must match an already-enrolled identity. Recovery never creates a profile,
-selects a portal, grants roles, or substitutes for a portal PIN. Email delivery/SMTP
-and successful real password replacement still need acceptance verification.
+selects a portal, grants roles, or substitutes for a portal PIN. The isolated acceptance
+report records actual local captured-mail recovery and password replacement; production
+mail delivery and unlisted provider journeys require their own acceptance.
 
 After a provider-confirmed change, one native transaction deletes all application
 bindings for that Auth identity and records a secret-free audit and notices to its
@@ -206,7 +237,7 @@ mocked and no live credentials were changed. No migration was needed for this ro
 See [Supabase password security](https://supabase.com/docs/guides/auth/password-security)
 and the provider's [password lifecycle](https://github.com/supabase/auth/blob/master/internal/models/user.go).
 
-The replacement `/api/student/my-profile` and `/api/student/my-rooms` reads allow
+The native `/api/student/my-profile` and `/api/student/my-rooms` reads allow
 only a verified primary or resident portal. Resident access derives from that
 portal's active allocation. Primary status access requires the allocation, child
 context and child profile to agree on the saved primary owner. It exposes room
@@ -217,7 +248,7 @@ This status projection does not widen direct allocation RLS or authorize a
 primary account to perform resident maintenance operations.
 
 Retained Google identities created before the schema must explicitly choose Google
-Sign Up in the replacement app to initialize their ordinary primary profile.
+Sign Up in the native app to initialize their ordinary primary profile.
 The server verifies the PKCE session with Supabase `/user`, then rechecks the exact
 saved verified Google identity and live native session within the transaction.
 Initialization is serialized per Auth subject and leaves an existing profile intact.
@@ -225,7 +256,7 @@ No legacy credentials, photographs, linked records or secondary roles are import
 no administrator membership is granted. Normal login never initializes a missing
 profile. Pending sub-account invitations still require their authorized enrollment
 token. The selected founder is provisioned separately by the private operator script
-after their own genuine signup. For loopback acceptance on the replacement server,
+after their own genuine signup. For loopback acceptance on the native server,
 allow `http://127.0.0.1:3001/api/auth/google/callback**` in Supabase redirect URLs.
 Google login with a retained identity that has no new-app profile now redirects
 with `google_error=missing`, instructing the person to use Google Sign Up with the
@@ -258,7 +289,7 @@ officer sign-in. Native context locks serialize binding with keyed suspension or
 restoration. A consumed invitation reports status and cannot restore access. See
 [officer invitations](migrations/officer-invitations-and-room-delivery.md).
 
-In the replacement backend, an active administrator enrolls a separate settings key
+In the native backend, an active administrator enrolls a separate settings key
 within five minutes of an actual Google or verified-email sign-in. A refresh token does
 not create a fresh enrollment window, and no local password is required for Google-only
 accounts. The key is displayed once and its salted, context-bound hash stays private.
@@ -295,7 +326,7 @@ returns to the administrator dashboard using the server-verified bound role. Exi
 promoted by supplying an email or identity field.
 
 Manager password changes and closure requests require that manager's authenticated
-account and current operation-key grant. In the Supabase replacement, registered-account
+account and current operation-key grant. In the native Supabase runtime, registered-account
 deletion submits a review request using saved assignments, never mailbox-based purging.
 Only an administrator's own approval key can decline or link it to an independently
 authorized combined residence deletion proposal. Requests cannot bypass founder consent,
@@ -307,8 +338,7 @@ rejected. Closure ends that allocation, closes only the resident context, revoke
 bindings and rotates the room key. Auth sessions, sibling portals and history remain.
 Native sign-in binding creation shares the housing lifecycle lock so it cannot recreate
 resident bindings during closure. The closure response never clears provider cookies.
-Legacy JSON behavior remains isolated until
-verified cutover and removal.
+The legacy JSON/custom-session implementation is retired.
 
 ## Authentication Provider
 
@@ -320,20 +350,18 @@ Supabase, configure its Google client credentials there, and allow
 environments. A blank value also supports testing the built app with
 `NODE_ENV=production npm run start` on localhost: the fallback accepts only a
 loopback Host and an actual loopback socket peer, never forwarded host headers.
-Allow `http://localhost:3000/api/auth/google/callback**` in Supabase Redirect URLs
+Allow `http://localhost:3001/api/auth/google/callback**` in Supabase Redirect URLs
 (and the equivalent `127.0.0.1` URL if using that address). A deployed site still
 requires its configured HTTPS origin and matching Supabase redirect allowlist.
 See [Supabase Google setup](https://supabase.com/docs/guides/auth/social-login/auth-google).
 
 The server exchanges the code and reads the verified identity from Supabase `/user`.
-It matches an existing primary account only by persisted Supabase ID and verified
-email. Shared-email secondary accounts are never selected or implicitly linked.
-Login cannot create a local account; Google signup creates only the primary `user`
-role. Existing primary accounts created without a Supabase identity continue using
-their credentials. Governed/legacy bans and maintenance remain enforced.
-Google-only signups receive an unguessable local credential, and sign in through
-Google. Provider tokens never reach the browser or the JSON store; the callback
-issues the same existing PineVela session cookie used by password login.
+The server resolves native profiles and account contexts by the verified Supabase
+subject and live session. Shared email never selects or links a secondary portal.
+Google signup can initialize an eligible native primary profile; it cannot import
+legacy credentials or grant a secondary role. Current access restrictions and
+maintenance still apply. Provider access/refresh tokens are confined to HttpOnly
+cookies, never API profile data or browser storage; no local credential is generated.
 
 Provider errors after consent are distinguished from a user denying access. An
 `Unable to exchange external code` return is a Supabase-to-Google exchange failure;
@@ -416,7 +444,7 @@ The server must verify the manager's hostel assignment.
 
 The request body must not be the authority for manager identity or hostel authorization.
 
-In the Supabase replacement, staff enrollment starts from the assigned manager portal
+In the native Supabase runtime, staff enrollment starts from the assigned manager portal
 and requires the current manager operation key and approved residence setup. The manager
 receives a private invitation link; only its SHA-256 digest is stored. Links expire after
 24 hours and can be renewed or cancelled by the initiating assigned manager. Renewing
@@ -443,31 +471,24 @@ Sensitive operations must require a valid authenticated session.
 
 Session revocation, expiration, and invalid sessions must be rejected.
 
-### Current session bridge during migration
+### Native sessions
 
-The existing JSON login paths now share expiring server sessions while full Supabase
-Auth/database migration remains pending. A record stores only a SHA-256 token hash,
-issuance time and absolute expiry. The default lifetime is one day; configure
-`PINEVELA_SESSION_TTL_SECONDS` from 60 to 604800 seconds. Reads do not extend it.
-Historical raw sessions without expiry require a fresh login. Account data and passwords
-are preserved; password changes/recovery, room release and logout revoke sessions.
+`pv_sb_access` and `pv_sb_refresh` are HttpOnly, SameSite=Strict cookies with Secure
+in production. `/api/auth/me` verifies the provider identity, refreshes through the
+provider when needed, and rechecks the live Auth session, active account-context
+binding, role and policy in PostgreSQL. It returns no token material. Context or
+ownership fields supplied by a client never create an authorization relationship.
 
-The browser uses `pv_auth_token`, an HttpOnly, SameSite=Strict cookie with Secure enabled
-in production. Same-origin API requests use cookies and do not retain session tokens in
-localStorage, sessionStorage or cached officer/user profiles. Reload resolves identity
-through `/api/auth/me`, which never returns token material. Non-browser API clients may
-still receive a raw token once at successful login; bearer and cookie authentication use
-the same hash/expiry checks. Invalid explicit bearer credentials never fall back to cookies.
+Logout revokes the native binding/provider session and clears cookies. Closed,
+revoked or suspended contexts fail immediately even if a JWT has not expired.
+Portal PIN and manager/administrator key versions are rechecked inside authorized
+transactions. Native CSRF checks deny cross-site writes; configure
+`PINEVELA_PUBLIC_ORIGIN` for the deployed HTTPS origin.
 
-`POST /api/auth/logout` persists revocation of the presented session across all account
-copies before clearing the cookie. It is idempotent and accepts no body-supplied identity
-or token as authority. UI sign-out awaits confirmation and preserves the session screen
-when the request fails. Cookie-authenticated writes require a same-origin browser signal;
-set `PINEVELA_PUBLIC_ORIGIN` to the public HTTPS origin behind a production proxy.
-
-Supabase migration must preserve expiry, explicit session revocation and profile/account
-isolation, including immediate denial after logout. This local bridge does not replace
-Supabase Auth or RLS in the target architecture.
+The old `pv_auth_token` record-hash session store, one-day local TTL setting and
+raw-token login responses are retired. The server clears an old cookie for
+compatibility but never authenticates it. Exact native recovery, concurrency and
+browser evidence is in the isolated acceptance report.
 
 ---
 
@@ -512,7 +533,7 @@ review activates only the saved seller portal; store setup and verified payment 
 separate. Same-email resident/seller identities retain their separate portal PINs.
 
 
-## Profile edits during Supabase migration
+## Native profile edits
 
 Migration 35 supports owned contact/picture edits without changing the verified credential
 email, account owner or portal kind. Picture aliases project one persisted value; no Google
@@ -529,7 +550,7 @@ current account before applying a queued response.
 Administrator #1 completed a genuine Google-session, settings-key-protected picture save
 and identical-file retry on 2026-10-12; the browser reported success with its photograph
 count unchanged. Native persistence and cross-administrator media ownership checks passed.
-Other account portals' authenticated profile/browser acceptance remains a cutover gate.
+The isolated acceptance report records later local profile/browser checks; unlisted nested flows still require their own acceptance.
 
 ## Retained primary account after a normal wipe
 

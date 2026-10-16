@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useEffect,useRef,useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { sessionFetch } from '../lib/session';
 
@@ -40,7 +40,7 @@ function MessageGateway() {
       else setPreview(result);
     } catch (err: any) { if (mounted.current) {
       setFailure(err.message || 'The message could not be delivered.');
-      if (err.status === 409 || send && import.meta.env.VITE_PERSISTENCE !== 'supabase') setPreview(null);
+      if (err.status === 409 || send && false) setPreview(null);
       if (err.status === 409) { setSelected([]); void refetch(); }
     } }
     finally { if (mounted.current) setBusy(false); }

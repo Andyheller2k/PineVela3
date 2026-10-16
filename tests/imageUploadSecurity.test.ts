@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import sharp from 'sharp';
-import { createImageStorage, decodeImageUpload, ImageUploadError, MAX_IMAGE_INPUT_BYTES } from '../imageUploadSecurity.js';
+import { decodeImageUpload, ImageUploadError, MAX_IMAGE_INPUT_BYTES } from '../imageUploadSecurity.js';
 
 const pixels = () => sharp({ create: { width: 9, height: 7, channels: 4, background: '#1266aacc' } });
 
@@ -38,11 +38,4 @@ test('S19: MIME claims, SVG/HTML, malformed base64, corrupt rasters, animation a
   const animation = await sharp(Buffer.concat([Buffer.alloc(12, 0), Buffer.alloc(12, 255)]), { raw: { width: 2, height: 4, channels: 3, pageHeight: 2 } }).webp({ loop: 0 }).toBuffer();
   assert.equal((await sharp(animation, { animated: true }).metadata()).pages, 2);
   await assert.rejects(decodeImageUpload({ fileType: 'image/webp', fileData: animation.toString('base64') }), ImageUploadError);
-});
-
-test('S19: media configuration must use a distinct plain origin', () => {
-  assert.throws(() => createImageStorage({ mediaOrigin: 'https://app.example.test', publicOrigin: 'https://app.example.test' }));
-  for (const origin of ['file:///tmp', 'https://media.example.test/path', 'https://user:password@media.example.test', 'https://media.example.test?x=1']) {
-    assert.throws(() => createImageStorage({ mediaOrigin: origin, publicOrigin: 'https://app.example.test' }));
-  }
 });

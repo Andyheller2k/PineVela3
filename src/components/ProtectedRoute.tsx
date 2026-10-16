@@ -31,7 +31,7 @@ export default function ProtectedRoute({ children, allowedRoles }: ProtectedRout
     if (!isPermitted) {
       // Show a high-fidelity "Access Denied" view
     return (
-      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center font-sans p-6 text-left">
+      <div className="page-canvas min-h-screen flex flex-col items-center justify-center font-sans p-6 text-left">
         <div className="max-w-md w-full bg-white rounded-3xl border border-slate-100 shadow-2xl p-8 space-y-6 text-center relative overflow-hidden">
           <div className="absolute top-0 left-0 right-0 h-1.5 bg-rose-600" />
           

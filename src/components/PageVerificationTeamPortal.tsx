@@ -1,49 +1,41 @@
 import { activateOnKeyboard } from '../lib/keyboardActivation';
+import { sessionFetch as fetch } from '../lib/session';
 import DashboardOverlay from './DashboardOverlay';
 import ProtectedRoute from './ProtectedRoute';
-import { sessionFetch as fetch } from '../lib/session';
-import { usesSupabasePersistence } from '../lib/persistence';
-import { captureInspectionCoordinates, recordedInspectionCoordinates, type CapturedInspectionCoordinates } from '../lib/inspectionLocation';
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'motion/react';
+
 import {
-  Shield,
-  ShieldCheck,
-  MapPin,
-  Camera,
-  Clock,
-  CheckCircle2,
-  AlertTriangle,
-  FileText,
-  Building,
-  ArrowRight,
-  Lock,
-  LogOut,
-  RefreshCw,
-  Eye,
-  Crosshair,
-  Upload,
-  Check,
-  X,
-  Phone,
-  Compass,
-  AlertCircle,
-  Sparkles,
-  ExternalLink,
-  ChevronRight,
-  BadgeCheck,
-  Settings,
-  ClipboardList,
-  Trash2,
-  ZoomIn,
-  Edit3,
-  Calendar
+AlertCircle,
+ArrowRight,
+BadgeCheck,
+Building,
+Camera,
+Check,
+CheckCircle2,
+ClipboardList,
+Compass,
+Crosshair,
+Edit3,
+ExternalLink,
+FileText,
+LogOut,
+MapPin,
+RefreshCw,
+Settings,
+ShieldCheck,
+Trash2,
+Upload,
+X,
+ZoomIn
 } from 'lucide-react';
-import PineLogo from './PineLogo';
-import { safeJson } from '../lib/api';
+import { AnimatePresence,motion } from 'motion/react';
+import React,{ useEffect,useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import UserAvatarSelector, { renderAvatarGraphic } from './UserAvatarSelector';
+import { AccountRefreshGate } from '../lib/accountRefresh';
+import { safeJson } from '../lib/api';
+import { captureInspectionCoordinates,recordedInspectionCoordinates,type CapturedInspectionCoordinates } from '../lib/inspectionLocation';
+import PineLogo from './PineLogo';
+import UserAvatarSelector,{ renderAvatarGraphic } from './UserAvatarSelector';
 
 interface InspectionItem {
   id: string;
@@ -88,7 +80,9 @@ function OfficerWorkspace() {
 
   // Inspections State
   const [inspections, setInspections] = useState<InspectionItem[]>([]);
-  const [isLoadingInspections, setIsLoadingInspections] = useState(false);
+  const [isLoadingInspections, setIsLoadingInspections] = useState(true);
+  const [inspectionLoadError, setInspectionLoadError] = useState('');
+  const inspectionReads = React.useRef(new AccountRefreshGate());
   const [activeInspection, setActiveInspection] = useState<InspectionItem | null>(null);
   const [viewingSubmittedReport, setViewingSubmittedReport] = useState<InspectionItem | null>(null);
   const [inspectionFilter, setInspectionFilter] = useState<'all' | 'pending' | 'submitted'>('all');
@@ -139,31 +133,38 @@ function OfficerWorkspace() {
   const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
 
   // Fetch Inspections for the Officer
-  const fetchMyInspections = async () => {
+  const fetchMyInspections = () => {
     if (!officerSession) return;
-    try {
-      setIsLoadingInspections(true);
-      const token = officerSession.token || '';
-      const res = await fetch('/api/verification-team/my-inspections', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      if (res.ok) {
+    return inspectionReads.current.run(officerSession.id, 0, async cancellation => {
+      const current = () => mounted.current && !cancellation.aborted;
+      try {
+        setIsLoadingInspections(true);
+        const token = officerSession.token || '';
+        const res = await fetch('/api/verification-team/my-inspections', {
+          signal: AbortSignal.any([cancellation, AbortSignal.timeout(30000)]),
+          headers: { 'Authorization': `Bearer ${token}`,
+            ...(({ 'X-PineVela-Profile-Context': officerSession.id })) },
+        });
         const data = await safeJson(res);
-        if (mounted.current) setInspections(Array.isArray(data) ? data : []);
+        if (((!res.ok || !Array.isArray(data))))
+          throw new Error(data?.error || 'Could not load your inspection assignments. Please retry.');
+        if (current() && res.ok) { setInspections(Array.isArray(data) ? data : []); setInspectionLoadError(''); }
+      } catch (err: any) {
+        if (current() && true) setInspectionLoadError(err.name === 'TimeoutError'
+          ? 'Loading your inspection assignments timed out. Please retry.'
+          : err.message || 'Could not load your inspection assignments. Please retry.');
+        if (current()) console.error("Failed to load inspections:", err);
+      } finally {
+        if (current()) setIsLoadingInspections(false);
       }
-    } catch (err) {
-      console.error("Failed to load inspections:", err);
-    } finally {
-      if (mounted.current) setIsLoadingInspections(false);
-    }
+    });
   };
 
   useEffect(() => {
     if (officerSession) {
-      fetchMyInspections();
+      void fetchMyInspections();
     }
+    return () => inspectionReads.current.cancel();
   }, [officerSession]);
 
   const handleLogout = async () => {
@@ -254,7 +255,7 @@ function OfficerWorkspace() {
 
     setIsCompressingPhoto(true);
     const fileList = Array.from(files);
-    if (usesSupabasePersistence) {
+    {
       const input = e.target;
       try {
         if (!activeInspection || fileList.length + photos.length > 12) throw new Error('Choose an assigned inspection and at most twelve photographs.');
@@ -276,64 +277,7 @@ function OfficerWorkspace() {
       return;
     }
 
-    const readers = fileList.map((file, i) => {
-      return new Promise<{ title: string; url: string; capturedAt: string }>((resolve) => {
-        const reader = new FileReader();
-        reader.onload = (uploadEvent) => {
-          const rawData = uploadEvent.target?.result as string;
-          const img = new Image();
-          img.onload = () => {
-            const canvas = document.createElement('canvas');
-            const MAX_DIM = 1200;
-            let width = img.width;
-            let height = img.height;
 
-            if (width > height) {
-              if (width > MAX_DIM) {
-                height = Math.round((height * MAX_DIM) / width);
-                width = MAX_DIM;
-              }
-            } else {
-              if (height > MAX_DIM) {
-                width = Math.round((width * MAX_DIM) / height);
-                height = MAX_DIM;
-              }
-            }
-
-            canvas.width = width;
-            canvas.height = height;
-            const ctx = canvas.getContext('2d');
-            ctx?.drawImage(img, 0, 0, width, height);
-            const optimizedUrl = canvas.toDataURL('image/jpeg', 0.85);
-
-            const label = newPhotoTitle.trim() || selectedPhotoTag || (fileList.length > 1 ? `Inspection Photo #${photos.length + i + 1}` : 'On-Site Inspection Photograph');
-            resolve({
-              title: label,
-              url: optimizedUrl,
-              capturedAt: new Date().toISOString()
-            });
-          };
-          img.onerror = () => {
-            resolve({
-              title: newPhotoTitle.trim() || selectedPhotoTag || 'On-Site Inspection Photograph',
-              url: rawData,
-              capturedAt: new Date().toISOString()
-            });
-          };
-          img.src = rawData;
-        };
-        reader.readAsDataURL(file);
-      });
-    });
-
-    Promise.all(readers).then((newItems) => {
-      setPhotos(prev => [...prev, ...newItems]);
-      setNewPhotoTitle('');
-      setIsCompressingPhoto(false);
-      if (e.target) e.target.value = '';
-    }).catch(() => {
-      setIsCompressingPhoto(false);
-    });
   };
 
   const handleDeletePhoto = (indexToDelete: number) => {
@@ -399,14 +343,7 @@ function OfficerWorkspace() {
   };
 
   return (
-    <div className="relative min-h-screen w-full bg-gradient-to-br from-slate-50 via-blue-50/70 to-indigo-50/50 text-slate-800 flex flex-col items-center justify-start p-4 sm:p-6 md:p-10 overflow-x-hidden font-sans">
-      {/* Background PineVela Frost Logo Watermark */}
-      <div className="fixed inset-0 flex items-center justify-center pointer-events-none select-none overflow-hidden -z-0">
-        <div className="opacity-[0.07] transform-gpu scale-100 transition-opacity">
-          <PineLogo size={72} hideText={true} />
-        </div>
-      </div>
-
+    <div className="page-canvas relative min-h-screen w-full text-slate-800 flex flex-col items-center justify-start p-4 sm:p-6 md:p-10 overflow-x-hidden font-sans">
       {/* Decorative ambient blurred blobs */}
       <div className="fixed top-1/4 -left-48 w-96 h-96 bg-blue-400/15 rounded-full blur-3xl pointer-events-none" />
       <div className="fixed bottom-1/4 -right-48 w-96 h-96 bg-indigo-400/15 rounded-full blur-3xl pointer-events-none" />
@@ -585,6 +522,7 @@ function OfficerWorkspace() {
                       <span>Change Picture</span>
                     </button>
                     <button
+                      disabled={isLoadingInspections}
                       onClick={fetchMyInspections}
                       className="flex items-center gap-2 text-xs font-bold text-slate-700 hover:text-blue-900 bg-slate-100 hover:bg-slate-200/80 px-3.5 py-2 rounded-xl transition-all shadow-xs cursor-pointer"
                     >
@@ -1081,12 +1019,13 @@ function OfficerWorkspace() {
                         </div>
                       </div>
 
+                      {inspectionLoadError && <div role="alert" className="mb-4 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-900 dark:border-rose-900 dark:bg-rose-950 dark:text-rose-100"><p>{inspectionLoadError}</p><button type="button" disabled={isLoadingInspections} onClick={() => void fetchMyInspections()} className="mt-2 min-h-11 font-semibold underline disabled:opacity-50">Retry inspection assignments</button></div>}
                       {isLoadingInspections ? (
                         <div className="text-center py-12 bg-white/80 rounded-3xl border border-slate-200/80 shadow-xs">
                           <div className="w-6 h-6 border-2 border-blue-900 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
                           <span className="text-xs font-medium text-slate-500">Loading your dispatched assignments...</span>
                         </div>
-                      ) : filteredInspections.length === 0 ? (
+                      ) : filteredInspections.length === 0 && !inspectionLoadError ? (
                         <div className="text-center py-12 bg-white/80 rounded-3xl border border-slate-200/80 shadow-xs space-y-2">
                           <ShieldCheck className="w-10 h-10 text-slate-400 mx-auto" />
                           <h4 className="text-sm font-bold text-slate-700">

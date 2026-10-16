@@ -1,16 +1,23 @@
-# Current application data audit
+# Historical application data audit — 8 October 2026
 
-Status: inspected on 2026-10-08 before designing the Supabase application schema.
-The current project has **no `public` application tables** in PostgreSQL, five Supabase
-Auth users, and no Supabase Storage buckets or objects. The live application still reads
-and writes JSON through `persistentDb.ts`, `localDb.ts`, and many direct store accesses
+Historical snapshot: inspected on 2026-10-08 before designing the Supabase application schema.
+At that time the project had **no `public` application tables** in PostgreSQL, five Supabase
+Auth users, and no Supabase Storage buckets or objects. The application then read
+and wrote JSON through `persistentDb.ts`, `localDb.ts`, and many direct store accesses
 in `server.ts`. The snapshot had 34 local user records, three residences, 480 room keys,
 eight stores, 17 listings, three orders, and 23 local upload files. Counts describe the
 inspection snapshot and are not seeds or data to import.
 
-## Active data and genuinely required entities
+Current disposition (16 October 2026): Supabase is the sole default runtime. Forty
+legacy JSON/custom-session modules are removed. The owner confirmed all legacy records
+are development data and authorized private archiving; 29 data/upload files and the old
+build have verified recovery hashes. Seven Auth subjects, six profiles and ten contexts
+retained their exact native UUID sets. Nothing below is an active deployment or restore
+instruction. See [isolated acceptance](isolated-workflow-acceptance.md) for tested scope.
 
-| Product area | Active behavior and source | Relational concepts |
+## Entities identified in the historical snapshot
+
+| Product area | Historical behavior and source | Relational concepts |
 | --- | --- | --- |
 | Identity | `server.ts` login/signup, Google callback, profile, secondary-account status; `accountSecurity.ts` | Supabase `auth.users`; profile; account roles/contexts; manager and seller applications; server-owned role grants |
 | Housing | `localDb.ts` residence registration, `roomKeys` generation/claim; `server.ts` public catalog, management, activation | Residences, assigned managers, blocks, floors, rooms, beds, room activation keys, active allocations |
@@ -93,11 +100,11 @@ operations remain server-only and must perform the same relationship checks. Pub
 projections redact internal keys, PINs, private contacts and approval digests. Private
 Storage policies follow the same owner and role boundaries.
 
-## API dependence on JSON to replace
+## Historical API dependence identified for replacement
 
-`server.ts` has hundreds of references to `getStoreInstance`, `MOCK_USERS` (a misleading
+The former `server.ts` had hundreds of references to `getStoreInstance`, `MOCK_USERS` (a misleading
 name for the operational user array), `persistStore`, and the `db*` wrappers in
-`localDb.ts`. The route groups below need query and transaction replacements rather
+`localDb.ts`. The route groups below needed query and transaction replacements rather
 than a single storage switch:
 
 | Route group | Current JSON access to replace |
@@ -131,18 +138,10 @@ restart persistence, RLS and rollback checks.
 - Direct manager/hostel edits and single-admin destructive actions already retired by
   the API. The reviewed request and governance workflows are the supported paths.
 
-## Migration consequence
+## Archive consequence
 
-Disposable local accounts and their linked operational records will not be imported.
-The latest retention instruction (2026-10-09) preserves only identities with saved,
-verified Google Auth evidence and exact local UUID/mailbox bindings. The private
-preview distinguishes those accounts from removal candidates; linked-record and media
-dependencies still require review. A full backup is recovery evidence, not permission
-to restore test accounts into production. Earlier all-account reset previews are stale.
-The local JSON and all uploads have a verified encrypted snapshot. At the initial audit,
-Supabase had five existing Auth identities and no application tables or Storage objects.
-The active schema has since been created without importing accounts or linked records.
-An encrypted PostgreSQL archive including private tables and access controls passed an
-isolated local restore rehearsal. Fresh stopped-writer backups are required at cutover. The
-app remains on JSON until the relational schema, Auth integration, RLS and affected API
-workflows pass positive and negative tests.
+The later owner instruction superseded the earlier Google-only preview: archive all
+legacy development records and retain all current Supabase accounts. No legacy account,
+credential or business-record import is required. Native role/ownership and RLS rules remain
+unchanged. The encrypted legacy checkpoint and private moved originals are recovery
+material, not runtime inputs. See [native retention](native-account-retention.md).

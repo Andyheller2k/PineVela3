@@ -2,6 +2,7 @@
  * No fabricated identities/sessions, provider replies or cloud product writes. */
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import type {PoolClient} from 'pg';
 import {withIsolatedBackup} from './lib/isolated-postgres.js';
 import {SupabaseDatabase,ApiError,type VerifiedActor} from '../supabase/db.js';
 import {SupabaseAuth} from '../supabase/auth.js';
@@ -9,6 +10,7 @@ import {readNotifications} from '../supabase/notifications.js';
 import {housingDashboardRows} from '../supabase/dashboardReads.js';
 import {administratorStores,administratorManagerRestrictions} from '../supabase/adminStoreOverview.js';
 import {accountDirectory} from '../supabase/accountReviews.js';
+import {administratorSettingsStatus} from '../supabase/adminSettings.js';
 const [checkpoint]=process.argv.slice(2);
 if(process.argv.length!==3||!/^[a-f0-9-]{36}$/.test(checkpoint||''))throw Error('Pass a genuine PostgreSQL backup UUID.');
 let checks=0,stage='restore';const check=(v:unknown,label:string)=>{assert.ok(v,label);checks++;};
@@ -33,6 +35,60 @@ try{await withIsolatedBackup(checkpoint,async config=>{
     and i.provider='google' and i.identity_data->'email_verified'='true'::jsonb and u.email_confirmed_at is not null and not u.is_anonymous)
    order by c.id,n.created_at desc`)).rows as VerifiedActor[];
   check(actors.length>=2,'At least two actual archived Google administrator bindings');const [owner,other]=actors;
+  stage='lifecycle admission order';
+  const barriers=['residence-deletion-freeze','account-policies','platform-maintenance','platform-settings'];
+  const lockSnapshot=async(pid:number)=>(await db.pool.query(`select k.name,l.mode,l.granted
+   from unnest($2::text[]) k(name) join pg_locks l on l.locktype='advisory' and l.pid=$1 and l.objsubid=1
+    and l.classid::bigint=((hashtextextended(k.name,0)>>32)&4294967295)
+    and l.objid::bigint=(hashtextextended(k.name,0)&4294967295)
+   order by k.name,l.mode`,[pid,barriers])).rows;
+  type Work=(c:PoolClient)=>Promise<void>;
+  const admissionCases:{name:string;run:(work:Work)=>Promise<void>;administrator?:'read'|'write';exclusive?:string}[]=[
+   {name:'scoped read',run:work=>db.readActor(owner,work),administrator:'read'},
+   {name:'scoped mutation',run:work=>db.actor(owner,work),administrator:'write'},
+   {name:'authorized read',run:work=>db.authorizedRead(owner,['admin'],work),administrator:'read'},
+   {name:'authorized mutation',run:work=>db.authorizedSystem(owner,['admin'],work),administrator:'write'},
+   {name:'available lifecycle',run:work=>db.availableSystem(work)},
+   {name:'maintenance transition',run:work=>db.authorizedSystem(owner,['admin'],work,true),administrator:'write',exclusive:'platform-maintenance'},
+   {name:'account policy transition',run:work=>db.authorizedSystem(owner,['admin'],work,false,true),administrator:'write',exclusive:'account-policies'},
+   {name:'residence freeze transition',run:work=>db.authorizedSystem(owner,['admin'],work,false,false,true),administrator:'write',exclusive:'residence-deletion-freeze'},
+  ];
+  for(const entry of admissionCases){
+   const barrierEntered=deferred(),barrierRelease=deferred(),callbackEntered=deferred(),callbackRelease=deferred();
+   let holderPid=0,admitted=false;
+   const barrier=db.system(async c=>{
+    holderPid=Number((await c.query("select pg_backend_pid() as pid,pg_advisory_xact_lock(hashtextextended('residence-deletion-freeze',0))")).rows[0].pid);
+    barrierEntered.resolve();await barrierRelease.promise;
+   });
+   await barrierEntered.promise;
+   const pending=entry.run(async()=>{admitted=true;callbackEntered.resolve();await callbackRelease.promise;})
+    .then(()=>null,error=>error);
+   try{
+    let waitingPid=0;const deadline=Date.now()+3000;
+    while(Date.now()<deadline){
+     waitingPid=Number((await db.pool.query(`select pid from pg_locks where locktype='advisory' and not granted
+      and $1::integer=any(pg_blocking_pids(pid)) limit 1`,[holderPid])).rows[0]?.pid||0);
+     if(waitingPid)break;await new Promise(resolve=>setTimeout(resolve,20));
+    }
+    check(waitingPid>0&&!admitted,entry.name+' waits at the first residence-freeze barrier');
+    const waiting=await lockSnapshot(waitingPid);
+    check(waiting.length===1&&waiting[0].name==='residence-deletion-freeze'&&!waiting[0].granted,
+     entry.name+' acquires no later policy, maintenance or settings lock ahead of the freeze barrier');
+    barrierRelease.resolve();await barrier;
+    await Promise.race([callbackEntered.promise,pending.then(error=>{throw error||new Error('Admission callback did not run.');})]);
+    check(admitted,entry.name+' completes admission after the first barrier is released');
+    const locks=await lockSnapshot(waitingPid),expected=barriers.filter(name=>name!=='platform-settings'||entry.administrator)
+     .map(name=>({name,mode:name===entry.exclusive||name==='platform-settings'&&entry.administrator==='write'?'ExclusiveLock':'ShareLock',granted:true}))
+     .sort((a,b)=>a.name.localeCompare(b.name));
+    check(JSON.stringify(locks)===JSON.stringify(expected),entry.name+' retains the exact shared and exclusive admission scopes');
+    if(entry.exclusive)await db.system(async c=>{
+     const result=await c.query('select pg_try_advisory_xact_lock_shared(hashtextextended($1,0)) as allowed',[entry.exclusive]);
+     check(!result.rows[0].allowed,entry.name+' excludes a concurrent reader of its exclusive lifecycle scope');
+    });
+   }finally{
+    barrierRelease.resolve();callbackRelease.resolve();await barrier;const error=await pending;if(error)throw error;
+   }
+  }
   stage='shared read exclusion';
   const entered=deferred(),release=deferred(),writers:Promise<void>[]=[];let admittedWriters=0;
   const held=db.readActor(owner,async c=>{await c.query('select 1');entered.resolve();await release.promise;});
@@ -40,6 +96,12 @@ try{await withIsolatedBackup(checkpoint,async config=>{
   try{
    await db.readActor(other,c=>c.query('select 1'));check(true,'Second scoped read completes while first read remains held');
    await db.authorizedRead(other,['admin'],c=>c.query('select 1'));check(true,'Privileged authorized read also shares the reader lock');
+   const settings=await db.authorizedRead(other,['admin'],c=>administratorSettingsStatus(c,other));
+   check(settings.currentId===other.contextId&&settings.members.some(member=>member.id===other.contextId),
+    'Actual administrator settings status completes while another reader remains held');
+   check(settings.members.every(member=>typeof member.keyEnrolled==='boolean'&&typeof member.settingsKeyEnrolled==='boolean'
+    &&!Object.keys(member).some(key=>/hash|secret|privateKey|settingsKey$/i.test(key))),
+    'Settings status exposes enrollment booleans without private credential values');
    for(const actor of [{...owner,contextId:other.contextId},{...owner,authUserId:other.authUserId},{...owner,sessionId:other.sessionId},{...owner,kind:'primary'}]){
     let error:any;try{await db.readActor(actor,c=>c.query('select 1'));}catch(e){error=e;}
     check(error instanceof ApiError&&error.status===401,'Read path retains exact session/context/kind binding');
@@ -80,6 +142,7 @@ try{await withIsolatedBackup(checkpoint,async config=>{
   check(Array.isArray((await db.authorizedRead(owner,['admin'],c=>accountDirectory(c,owner))).users),'Actual account directory read');
   check(await fingerprint()===before,'Genuine Auth, profiles, bindings and private keys remain byte exact');
   const result={passed:true,checks,isolatedNative:true,genuineArchivedGoogleIdentities:true,concurrentReads:true,
+   lifecycleAdmissionOrderPreserved:true,lifecycleSharedAndExclusiveScopesPreserved:true,
    exclusiveMutationsPreserved:true,rlsAndSessionBindingPreserved:true,cloudRecordsModified:0,authRecordsChanged:false,providerRepliesMocked:false};
   fs.writeFileSync('.security/migration-reset/administrator-read-concurrency-native.json',JSON.stringify(result,null,2)+'\n',{mode:0o600});console.log(JSON.stringify(result));
  }finally{await db.close();}

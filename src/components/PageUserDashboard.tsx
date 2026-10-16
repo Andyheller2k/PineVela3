@@ -1,92 +1,97 @@
+import { isMarketService,marketListingAvailable } from '../../marketListingAvailability';
 import { activateOnKeyboard } from '../lib/keyboardActivation';
-import {marketListingAvailable,isMarketService} from '../../marketListingAvailability';
-import { usesSupabasePersistence } from '../lib/persistence';
-import SupabaseResidentActivation from './SupabaseResidentActivation';
-import SupabaseSellerRegistration from './SupabaseSellerRegistration';
-import MobileNavigation from './MobileNavigation';
-import MarketStorefront from './MarketStorefront';
-import ResidenceCard from './ResidenceCard';
-import ResidenceDetails from './ResidenceDetails';
-import { filterResidences } from '../lib/residenceCatalog';
-import { matchesMarketCategory } from '../lib/marketCatalog';
-import MarketplaceFilters from './MarketplaceFilters';
-import { servicePoint } from '../../serviceLocation';
-import NearbyServicesMap from './NearbyServicesMap';
-import ListingPlanBadge from './ListingPlanBadge';
-import { compareMarketPriority } from '../../marketPlans';
-import { routePopupFeedback } from '../lib/feedback';
-import { usePlatformSettings } from '../context/PlatformSettingsContext';
-import RouteSkeleton from './RouteSkeleton';
-import PasswordStrengthGauge from './PasswordStrengthGauge';
-import OnboardingProgress, { ROOM_ACTIVATION_STEPS, MARKET_APPLICATION_STEPS } from './OnboardingProgress';
-import MarketImageGallery from './MarketImageGallery';
-import { marketNoticeKind } from '../lib/marketNotifications';
-import { sessionFetch as fetch } from '../lib/session';
-import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { queryClient } from '../lib/queryClient';
+
 import { useQuery } from '@tanstack/react-query';
-import AccountStatusDialog from './AccountStatusDialog';
-import MerchantAccountPanel from './MerchantAccountPanel';
-import ManagerRegistrationCard from './ManagerRegistrationCard';
-import RegistrationStatusButton from './RegistrationStatusButton';
-import { managerRegistrationStatus, merchantRegistrationStatus, type ManagerRegistration } from '../lib/registrationStatus';
+import {
+AlertCircle,
+ArrowLeft,
+ArrowRight,
+Bell,
+Building2,
+Camera,
+Check,
+CheckCircle,
+CheckCircle2,
+ChevronRight,
+Clock,
+Compass,
+Copy,
+Eye,
+EyeOff,
+Heart,
+Home,
+Key,
+KeyRound,
+Lock,
+LogIn,
+LogOut,
+Mail,
+MapPin,
+MessageSquare,
+Package,
+PanelLeftClose,
+PanelLeftOpen,
+Phone,
+Plus,
+RefreshCw,
+Search,
+Send,
+Settings,
+ShieldAlert,
+ShieldCheck,
+ShoppingBag,
+Star,
+Store,
+Tag,
+Trash2,
+Upload,
+User,
+Wrench,
+X
+} from 'lucide-react';
+import { AnimatePresence,motion } from 'motion/react';
+import React,{ useCallback,useEffect,useMemo,useRef,useState } from 'react';
+import { useNavigate,useSearchParams } from 'react-router-dom';
+import { compareMarketPriority } from '../../marketPlans';
+import { servicePoint } from '../../serviceLocation';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
+import { usePlatformSettings } from '../context/PlatformSettingsContext';
 import { safeJson } from '../lib/api';
+import { routePopupFeedback } from '../lib/feedback';
 import { optimizeImageDisplayUrl } from '../lib/imageOptimizer';
-import { saveNavigationLayout, usesTopNavigation } from '../lib/navigationLayout';
-import PineLogo from './PineLogo';
-import TopNavBadge from './TopNavBadge';
-import MarketplaceInbox from './MarketplaceInbox';
-import DashboardOverlay from './DashboardOverlay';
-import UserAvatarSelector, { renderAvatarGraphic } from './UserAvatarSelector';
-import MarketItemCard, { getServiceActionLabel } from './MarketItemCard';
-import { 
-  Home, 
-  Wrench, 
-  MessageSquare, 
-  Bell, 
-  Key, 
-  ShieldCheck, 
-  AlertCircle, 
-  CheckCircle2, 
-  Clock, 
-  Camera, 
-  Upload, 
-  Send, 
-  Phone, 
-  Mail, 
-  Building2, 
-  ChevronRight, 
-  ChevronLeft, 
-  Eye, 
-  EyeOff, 
-  Copy, 
-  Check, 
-  X, 
-  Plus, 
-  RefreshCw, 
-  LogOut, ArrowRight,
-  ArrowLeft, 
-  Search, MapPin,
-  Calendar,
-  Settings, AlertTriangle, Star, Trash2,
-  KeyRound,
-  Lock,
-  ShieldAlert, School, User, CheckCircle, ShoppingBag,
-  Store,
-  Package,
-  Tag,
-  BadgeCheck, LogIn,
-  Compass,
-  Heart,
-  PanelLeftClose,
-  PanelLeftOpen
-} from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
-import { IssueReport, HostelRoomKey, DigitalMarketApplication, DigitalMarketStore, DigitalMarketProduct, DigitalMarketOrder } from '../types';
+import { matchesMarketCategory } from '../lib/marketCatalog';
+import { marketNoticeKind } from '../lib/marketNotifications';
+import { saveNavigationLayout,usesTopNavigation } from '../lib/navigationLayout';
+import { queryClient } from '../lib/queryClient';
+import { managerRegistrationStatus,merchantRegistrationStatus,type ManagerRegistration } from '../lib/registrationStatus';
+import { filterResidences } from '../lib/residenceCatalog';
+import { sessionFetch as fetch } from '../lib/session';
+import { DigitalMarketApplication,DigitalMarketOrder,DigitalMarketProduct,DigitalMarketStore,HostelRoomKey,IssueReport } from '../types';
+import AccountStatusDialog from './AccountStatusDialog';
 import CampusMeetupMapPicker from './CampusMeetupMapPicker';
+import DashboardOverlay from './DashboardOverlay';
+import ListingPlanBadge from './ListingPlanBadge';
+import ManagerRegistrationCard from './ManagerRegistrationCard';
+import MarketImageGallery from './MarketImageGallery';
+import MarketItemCard,{ getServiceActionLabel } from './MarketItemCard';
+import MarketplaceFilters from './MarketplaceFilters';
+import MarketplaceInbox from './MarketplaceInbox';
+import MarketStorefront from './MarketStorefront';
+import MerchantAccountPanel from './MerchantAccountPanel';
+import MobileNavigation from './MobileNavigation';
+import NearbyServicesMap from './NearbyServicesMap';
+import OnboardingProgress,{ MARKET_APPLICATION_STEPS,ROOM_ACTIVATION_STEPS } from './OnboardingProgress';
+import PasswordStrengthGauge from './PasswordStrengthGauge';
+import PineLogo from './PineLogo';
+import RegistrationStatusButton from './RegistrationStatusButton';
+import ResidenceCard from './ResidenceCard';
+import ResidenceDetails from './ResidenceDetails';
+import RouteSkeleton from './RouteSkeleton';
+import SupabaseResidentActivation from './SupabaseResidentActivation';
+import SupabaseSellerRegistration from './SupabaseSellerRegistration';
+import TopNavBadge from './TopNavBadge';
+import UserAvatarSelector,{ renderAvatarGraphic } from './UserAvatarSelector';
 
 export interface PageUserDashboardProps {
   initialTab?: 'home' | 'notifications' | 'options' | 'overview' | 'issues' | 'announcements' | 'settings' | 'register-resident' | 'login-room' | 'digital-market';
@@ -195,9 +200,9 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
   
   // Order placement & PIN verification state
   const [selectedProdForOrder, setSelectedProdForOrder] = useState<DigitalMarketProduct | null>(null);
-  const [orderMeetupLocation, setOrderMeetupLocation] = useState<string>(usesSupabasePersistence ? '' : 'KNUST Main Library Car Park');
-  const [orderMeetupLat, setOrderMeetupLat] = useState<number | null>(usesSupabasePersistence ? null : 6.6745);
-  const [orderMeetupLng, setOrderMeetupLng] = useState<number | null>(usesSupabasePersistence ? null : -1.5716);
+  const [orderMeetupLocation, setOrderMeetupLocation] = useState<string>((''));
+  const [orderMeetupLat, setOrderMeetupLat] = useState<number | null>((null));
+  const [orderMeetupLng, setOrderMeetupLng] = useState<number | null>((null));
   const [serviceLocationOption, setServiceLocationOption] = useState<'seller-location' | 'buyer-location'>('buyer-location');
   const [showMeetupMapModal, setShowMeetupMapModal] = useState<boolean>(false);
   const [viewingOrderMap, setViewingOrderMap] = useState<DigitalMarketOrder | null>(null);
@@ -245,87 +250,20 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
   const [dmIdNumber, setDmIdNumber] = useState<string>('');
   const [dmProposedStoreName, setDmProposedStoreName] = useState<string>('');
   const [dmCertifyAccepted, setDmCertifyAccepted] = useState<boolean>(false);
-  const [submittingDMReg, setSubmittingDMReg] = useState<boolean>(false);
+
   const [dmRegError, setDmRegError] = useState<string | null>(null);
 
   // Helper to check if email domain is a commercial provider
-  const isCommercialEmail = (email: string) => {
-    const clean = (email || '').toLowerCase().trim();
-    const domain = clean.split('@')[1] || '';
-    return ['gmail.com', 'yahoo.com', 'outlook.com', 'hotmail.com', 'icloud.com', 'aol.com', 'mail.com', 'zoho.com', 'protonmail.com'].includes(domain);
-  };
 
   // Helper to check if email is valid accredited student email
-  const isValidStudentDomain = (email: string) => {
-    const clean = (email || '').toLowerCase().trim();
-    if (!clean.includes('@')) return false;
-    const parts = clean.split('@');
-    if (parts.length !== 2 || !parts[1]) return false;
-    const domain = parts[1];
-    if (isCommercialEmail(clean)) return false;
-    return domain.endsWith('.edu.gh') || domain.endsWith('.ac.gh');
-  };
 
   // Wizard Phase Validation & Navigation Handlers
-  const handleNextDmPhase1 = () => {
-    setDmRegError(null);
-    if (!dmFullName.trim() || dmFullName.trim().length < 3) {
-      setDmRegError("Please enter your full legal name as shown on your Ghana Card (minimum 3 characters).");
-      return;
-    }
-    const cleanGhanaCard = dmIdNumber.trim().toUpperCase();
-    const GHANA_CARD_REGEX = /^[A-Z0-9][A-Z0-9\-\/]{3,31}$/i;
-    if (!cleanGhanaCard || !GHANA_CARD_REGEX.test(cleanGhanaCard)) {
-      setDmRegError("Invalid Ghana Card format. Format must strictly match official NIA Ghana Card: GHA-XXXXXXXXX-X (e.g. GHA-712345678-9).");
-      return;
-    }
-    setDmWizardPhase(2);
-  };
 
-  const handleNextDmPhase2 = () => {
-    setDmRegError(null);
-    const cleanEmail = dmStudentEmail.trim().toLowerCase();
-    if (!cleanEmail || !cleanEmail.includes('@')) {
-      setDmRegError("Please enter your official university student email address.");
-      return;
-    }
-    if (isCommercialEmail(cleanEmail)) {
-      setDmRegError("Personal or commercial email addresses are strictly prohibited. Please use your official university student email.");
-      return;
-    }
-    if (!isValidStudentDomain(cleanEmail)) {
-      setDmRegError("Unrecognized student domain. Only official accredited university student emails ending in .edu.gh or .ac.gh are eligible.");
-      return;
-    }
-    if (!dmPassword || dmPassword.length < 6) {
-      setDmRegError("Please enter a secure merchant password of at least 6 characters.");
-      return;
-    }
-    if (dmPassword !== dmConfirmPassword) {
-      setDmRegError("Merchant passwords do not match. Please ensure both password fields are identical.");
-      return;
-    }
-    setDmWizardPhase(3);
-  };
-
-  // Legacy store setup navigation state
+  // Store setup navigation state
   const [showStoreSetupModal, setShowStoreSetupModal] = useState<boolean>(false);
-  const [setupStoreName, setSetupStoreName] = useState<string>('');
-  const [setupUsername, setSetupUsername] = useState<string>('');
-  const [setupLocation, setSetupLocation] = useState<string>('');
-  const [setupDeliveryMode, setSetupDeliveryMode] = useState<string>('Campus Meetup & Secure Escrow');
-  const [setupCategory, setSetupCategory] = useState<string>(DIGITAL_MARKET_CATEGORIES[0]);
-  const [setupDescription, setSetupDescription] = useState<string>('');
-  const [setupPhone, setSetupPhone] = useState<string>('');
-  const [setupProfilePicture, setSetupProfilePicture] = useState<string>('https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80');
-  const [setupCoverPicture, setSetupCoverPicture] = useState<string>('https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=1200&auto=format&fit=crop&q=80');
-  const [paymentMomoNetwork, setPaymentMomoNetwork] = useState<string>('MTN Mobile Money');
-  const [paymentMomoPhone, setPaymentMomoPhone] = useState<string>('0244123456');
-  const [paymentPinSim, setPaymentPinSim] = useState<string>('1234');
-  const [paymentStep, setPaymentStep] = useState<'form' | 'processing' | 'success'>('form');
-  const [submittingSetup, setSubmittingSetup] = useState<boolean>(false);
+
   const [storeOnboardingModalOpen, setStoreOnboardingModalOpen] = useState<boolean>(false);
-  const [onboardStep, setOnboardStep] = useState<1 | 2 | 3>(1);
+
   const initialStoreSetupFilledRef = useRef<boolean>(false);
 
   // Add Product state
@@ -359,7 +297,6 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
   }, [selectedProductForBuy]);
   const [selectedPriceCategory, setSelectedPriceCategory] = useState<{ id?: string; name: string; price: number; imageUrl?: string } | null>(null);
 
-
   // Data states
   const [issueReports, setIssueReports] = useState<IssueReport[]>([]);
   const [roomKeyDetails, setRoomKeyDetails] = useState<HostelRoomKey | null>(null);
@@ -373,19 +310,8 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
   const [viewingHostelModal, setViewingHostelModal] = useState<any | null>(null);
 
   // Add Room Modal states (Up to 5 rooms)
-  const [showAddRoomModal, setShowAddRoomModal] = useState<boolean>(false);
-  const [addRoomKeyInput, setAddRoomKeyInput] = useState<string>('');
-  const [verifyingAddKey, setVerifyingAddKey] = useState<boolean>(false);
-  const [verifiedAddKeyInfo, setVerifiedAddKeyInfo] = useState<any | null>(null);
-  const [addRoomError, setAddRoomError] = useState<string | null>(null);
-  const [submittingAddRoom, setSubmittingAddRoom] = useState<boolean>(false);
 
   // Delete Room Modal state
-  const [deletingRoomTarget, setDeletingRoomTarget] = useState<any | null>(null);
-  const [submittingDeleteRoom, setSubmittingDeleteRoom] = useState<boolean>(false);
-  const [delRoomEmailInput, setDelRoomEmailInput] = useState<string>('');
-  const [delRoomPasswordInput, setDelRoomPasswordInput] = useState<string>('');
-  const [delRoomError, setDelRoomError] = useState<string | null>(null);
 
   const currentUser = {
     ...(studentProfile || {}),
@@ -404,26 +330,19 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
       triggerToast("Please log in first to message the merchant.");
       return;
     }
-    if (!usesSupabasePersistence && currentUser?.email?.toLowerCase() === product.sellerEmail?.toLowerCase()) {
-      setMarketActionError("This is your own product listed by your merchant account!");
-      return;
-    }
-    
-    
+
     const inquiryText = `Hi ${product.storeName}! I am interested in your item "${product.title}" (GHS ${product.price}). Is it still available for meetup?`;
     
     if(inquiryBusy.current)return;
     inquiryBusy.current=true;
     const accountId=user?.id,generation=marketGeneration.current;
     const inquiry={productId:product.id,sellerStoreId:product.storeId,content:inquiryText};
-    if(usesSupabasePersistence){const params=JSON.stringify(inquiry);if(inquiryRequest.current?.params!==params)inquiryRequest.current={params,id:crypto.randomUUID()};}
+    {const params=JSON.stringify(inquiry);if(inquiryRequest.current?.params!==params)inquiryRequest.current={params,id:crypto.randomUUID()};}
     try {
       const res = await fetch('/api/digital-market/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${user?.token || ''}` },
-        body: JSON.stringify(usesSupabasePersistence?{...inquiry,requestId:inquiryRequest.current!.id}:{
-          productId:product.id,productTitle:product.title,senderEmail:currentUser?.email,senderName:currentUser?.name,
-          recipientEmail:product.sellerEmail,recipientName:product.storeName,content:inquiryText})
+        body: JSON.stringify(({...inquiry,requestId:inquiryRequest.current!.id}))
       });
       const data = await res.json();if(!marketAccountCurrent(accountId,generation))return;
       if (!res.ok) throw new Error(data.error || 'Could not contact the seller.');
@@ -465,21 +384,13 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
   const [showClaimModal, setShowClaimModal] = useState<boolean>(false);
   const [showWelcomePopup, setShowWelcomePopup] = useState<boolean>(false);
   const [claimRoomKeyInput, setClaimRoomKeyInput] = useState<string>('');
-  const [verifyingKey, setVerifyingKey] = useState<boolean>(false);
+
   const [verifiedKeyInfo, setVerifiedKeyInfo] = useState<any | null>(null);
   const [claimError, setClaimError] = useState<string | null>(null);
-  const [submittingClaim, setSubmittingClaim] = useState<boolean>(false);
+
   const [claimStep, setClaimStep] = useState<1 | 2 | 3 | 4>(1);
-  const [claimConfirmPassword, setClaimConfirmPassword] = useState<string>('');
-  const [showClaimPassword, setShowClaimPassword] = useState<boolean>(false);
-  const [showClaimConfirmPassword, setShowClaimConfirmPassword] = useState<boolean>(false);
-  const [claimAgreeTerms, setClaimAgreeTerms] = useState<boolean>(true);
 
   // Resident Account Creation fields on key claim
-  const [claimStudentName, setClaimStudentName] = useState<string>('');
-  const [claimStudentPhone, setClaimStudentPhone] = useState<string>('');
-  const [claimEmail, setClaimEmail] = useState<string>('');
-  const [claimPassword, setClaimPassword] = useState<string>('');
 
   // Reset Password Modal states
   const [showResetPasswordModal, setShowResetPasswordModal] = useState<boolean>(false);
@@ -493,7 +404,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
 
   // Delete Account Modal states
   const [showDeleteAccountModal, setShowDeleteAccountModal] = useState<boolean>(false);
-  const [deleteTargetRole, setDeleteTargetRole] = useState<'resident'>('resident');
+
   const [deleteTargetEmail, setDeleteTargetEmail] = useState<string>('');
   const [deletePasswordInput, setDeletePasswordInput] = useState<string>('');
   const [deleteAccountError, setDeleteAccountError] = useState<string | null>(null);
@@ -723,195 +634,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
     }
   };
 
-  const loadStudentData = async (isSilent = false) => {
-    if(usesSupabasePersistence&&user?.role==='user')return loadSupabaseDashboard(isSilent);
-    if (!isSilent) setLoadingData(true);
-    try {
-      // Fetch user registered Manager/Staff/Resident accounts
-      try {
-        const token = (user as any)?.token;
-        const headers: any = {};
-        if (token) headers['Authorization'] = `Bearer ${token}`;
-        const uEmail = (user?.email || '').toLowerCase().trim();
-        const uId = user?.id || '';
-        const registrationUrl = usesSupabasePersistence ? '/api/users/my-registered-accounts'
-          : `/api/users/my-registered-accounts?email=${encodeURIComponent(uEmail)}&userId=${encodeURIComponent(uId)}`;
-        const regRes = await fetch(registrationUrl, { headers });
-        if (regRes.ok) {
-          const regData = await safeJson(regRes);
-          
-          if (!usesSupabasePersistence && regData.managerAccount && uEmail) {
-            try {
-              const localMgrs = JSON.parse(localStorage.getItem('pinevela_registered_managers') || '[]');
-              let updated = false;
-              const syncedMgrs = localMgrs.map((m: any) => {
-                const mEmail = (m.email || '').toLowerCase().trim();
-                const mParentEmail = (m.parentUserEmail || '').toLowerCase().trim();
-                if ((mEmail !== '' && mEmail === uEmail) || (mParentEmail !== '' && mParentEmail === uEmail)) {
-                  updated = true;
-                  return {
-                    ...m,
-                    status: regData.managerAccount.status,
-                    isApproved: regData.managerAccount.isApproved,
-                    isVerified: regData.managerAccount.isVerified
-                  };
-                }
-                return m;
-              });
-              if (updated) {
-                localStorage.setItem('pinevela_registered_managers', JSON.stringify(syncedMgrs));
-              }
-            } catch (storageErr) {
-              console.warn("Storage sync error:", storageErr);
-            }
-          }
-
-          // Check local fallbacks if server is still indexing
-          if (!usesSupabasePersistence && !regData.managerAccount && uEmail) {
-            try {
-              const localMgrs = JSON.parse(localStorage.getItem('pinevela_registered_managers') || '[]');
-              const matchedLocalMgr = localMgrs.find((m: any) => {
-                const mEmail = (m.email || '').toLowerCase().trim();
-                const mParentEmail = (m.parentUserEmail || '').toLowerCase().trim();
-                return Boolean(uEmail) && ((mEmail !== '' && mEmail === uEmail) || (mParentEmail !== '' && mParentEmail === uEmail));
-              });
-              if (matchedLocalMgr) {
-                const isAppr = matchedLocalMgr.status === 'approved' || matchedLocalMgr.isApproved === true;
-                const isRej = matchedLocalMgr.status === 'rejected' || matchedLocalMgr.isRejected === true;
-                regData.managerAccount = {
-                  id: `local-mgr-${Date.now()}`,
-                  name: matchedLocalMgr.name || 'Hostel Manager',
-                  email: matchedLocalMgr.email || uEmail,
-                  organizationName: matchedLocalMgr.organization || 'PineVela Operations',
-                  status: isAppr ? 'approved' : (isRej ? 'rejected' : 'pending'),
-                  displayStatus: isAppr ? 'Approved' : (isRej ? 'Rejected' : 'Pending Admin Approval'),
-                  isApproved: isAppr,
-                  isVerified: isAppr,
-                  isRejected: isRej,
-                  submittedAt: matchedLocalMgr.savedAt || new Date().toISOString()
-                };
-              }
-            } catch (storageErr) {
-              console.warn("Storage fallback error:", storageErr);
-            }
-          }
-
-          // Supabase room cards come exclusively from the authorized allocation
-          // projection below; a pending registration is not an occupied room.
-          if (!usesSupabasePersistence && regData.residentRooms && Array.isArray(regData.residentRooms) && regData.residentRooms.length > 0) {
-            const mappedRooms: HostelRoomKey[] = regData.residentRooms.map((rk: any) => ({
-              id: rk.roomKey || rk.id,
-              hostelId: rk.hostelId || '',
-              hostelName: rk.hostelName || 'PineVela Student Residence',
-              blockName: rk.blockName || 'Block A',
-              blockInitial: ((rk.blockName || 'A')[0] || 'A').toUpperCase(),
-              roomNumber: rk.roomNumber || '101',
-              roomKey: rk.roomKey || rk.id,
-              status: 'Occupied' as const,
-              isAssigned: true,
-              assignedStudentId: rk.assignedStudentId || rk.studentId || rk.residentId,
-              assignedStudentName: rk.assignedStudentName || rk.studentName || rk.name,
-              assignedStudentEmail: rk.assignedStudentEmail || rk.studentEmail || rk.email,
-              assignedStudentPhone: rk.assignedStudentPhone || rk.studentPhone || rk.phone,
-              assignedResidentType: rk.assignedResidentType || rk.residentType,
-              assignedProgram: rk.assignedProgram || rk.programOfStudy,
-              assignedDepartment: rk.assignedDepartment || rk.department,
-              assignedInstitution: rk.assignedInstitution || rk.institution,
-              managerName: rk.managerName,
-              managerPhone: rk.managerPhone,
-              assignedAt: rk.assignedAt || rk.submittedAt || rk.claimedAt || new Date().toISOString(),
-              createdAt: rk.assignedAt || rk.submittedAt || rk.claimedAt || new Date().toISOString()
-            }));
-            setUserRooms(mappedRooms);
-            if (mappedRooms[0]) {
-              setRoomKeyDetails(mappedRooms[0]);
-            }
-          } else if (!usesSupabasePersistence && regData.residentAccount) {
-            const defaultRoom: HostelRoomKey = {
-              id: regData.residentAccount.roomKey,
-              hostelId: regData.residentAccount.hostelId || '',
-              hostelName: regData.residentAccount.hostelName || 'PineVela Student Residence',
-              blockName: regData.residentAccount.blockName || 'Block A',
-              blockInitial: ((regData.residentAccount.blockName || 'A')[0] || 'A').toUpperCase(),
-              roomNumber: regData.residentAccount.roomNumber || '101',
-              roomKey: regData.residentAccount.roomKey,
-              status: 'Occupied' as const,
-              isAssigned: true,
-              assignedStudentId: regData.residentAccount.studentId,
-              assignedStudentName: regData.residentAccount.name,
-              assignedStudentEmail: regData.residentAccount.email,
-              assignedStudentPhone: regData.residentAccount.phone,
-              assignedResidentType: regData.residentAccount.residentType,
-              assignedProgram: regData.residentAccount.programOfStudy,
-              assignedDepartment: regData.residentAccount.department,
-              assignedInstitution: regData.residentAccount.institution,
-              managerName: regData.residentAccount.managerName,
-              managerPhone: regData.residentAccount.managerPhone,
-              assignedAt: regData.residentAccount.submittedAt || regData.residentAccount.claimedAt || new Date().toISOString(),
-              createdAt: regData.residentAccount.submittedAt || regData.residentAccount.claimedAt || new Date().toISOString()
-            };
-            setRoomKeyDetails(defaultRoom);
-            setUserRooms([defaultRoom]);
-          } else if (!usesSupabasePersistence) {
-            setUserRooms([]);
-            setRoomKeyDetails(null);
-          }
-        }
-      } catch (e) {
-        console.warn("Notice loading registered accounts status:", e);
-      }
-
-      // 1. Fetch accredited staff and their resident ratings
-      try {
-      } catch (e) {
-        console.warn("Notice loading accredited staff & reviews:", e);
-      }
-
-      // 2. Fetch available hostels
-      try {
-        const hostelsList = await apiFetch('/api/hostels').catch(() => []);
-        if (Array.isArray(hostelsList)) {
-          setAvailableHostels(prev => JSON.stringify(prev) === JSON.stringify(hostelsList) ? prev : hostelsList);
-        }
-      } catch (e) {
-        console.warn("Notice loading available hostels:", e);
-      } finally { setResidencesLoaded(true); }
-
-      // 4. Fetch room key record and profile details
-      try {
-        const profileData = await apiFetch('/api/student/my-profile').catch(() => null);
-        if (profileData) {
-          setRoomKeyDetails((prev: any) => JSON.stringify(prev) === JSON.stringify(profileData.roomKeyDetails || null) ? prev : (profileData.roomKeyDetails || null));
-          if (profileData.user) {
-            setStudentProfile((prev: any) => JSON.stringify(prev) === JSON.stringify(profileData.user) ? prev : profileData.user);
-          }
-          if (Array.isArray(profileData.rooms)) {
-            setUserRooms((prev: any) => JSON.stringify(prev) === JSON.stringify(profileData.rooms) ? prev : profileData.rooms);
-          }
-        }
-      } catch (e) {
-        console.warn("Notice loading student profile:", e);
-      }
-
-      // Always load digital market catalog and data in real-time for all users
-      await loadDigitalMarketData();
-
-      if (user?.role === 'user') {
-        if (!isSilent) setLoadingData(false);
-        return;
-      }
-
-      // 5. Fetch student's issue reports
-      const issues = await apiFetch('/api/issue-reports').catch(() => []);
-      if (Array.isArray(issues)) {
-        setIssueReports(prev => JSON.stringify(prev) === JSON.stringify(issues) ? prev : issues);
-      }
-    } catch (err) {
-      console.error("Error loading student dashboard data:", err);
-    } finally {
-      if (!isSilent) setLoadingData(false);
-    }
-  };
+  const loadStudentData = async (isSilent = false) => { if(user?.role==='user')return loadSupabaseDashboard(isSilent); };
 
   const loadDigitalMarketData = async () => {
     const accountId=user?.id,epoch=marketEpoch.current;
@@ -922,15 +645,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
       const { data: statusRes } = await merchantRegistration.refetch();
       if(!current())return;
       if (statusRes) {
-        if (!usesSupabasePersistence && statusRes.application && !initialStoreSetupFilledRef.current) {
-          initialStoreSetupFilledRef.current = true;
-          const app = statusRes.application;
-          setSetupStoreName(app.storeName || `${app.fullName || 'Student'}'s Campus Store`);
-          setSetupUsername(app.fullName ? app.fullName.toLowerCase().replace(/[^a-z0-9]/g, '') : 'studentstore');
-          setSetupLocation(`${app.university || 'KNUST'} Campus`);
-          setSetupCategory(app.categoryToSell || 'Electronics, Gadgets & Accessories');
-          setSetupDescription(`Official student digital market store by ${app.fullName || 'Student'} at ${app.university || 'Accredited University'}.`);
-        }
+
       }
 
       const productsRes = await apiFetch('/api/digital-market/products?includeAll=true');
@@ -948,7 +663,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
         }
       }
 
-      const ordersRes = await apiFetch(usesSupabasePersistence ? '/api/digital-market/my-orders' : `/api/digital-market/my-orders?email=${encodeURIComponent(targetEmail)}&userId=${encodeURIComponent(targetId)}`);
+      const ordersRes = await apiFetch(('/api/digital-market/my-orders'));
       if(!current())return;
       setMarketOrdersAccount(accountId);setMarketReadError('');
       if (Array.isArray(ordersRes)) {
@@ -960,7 +675,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
   };
 
   useEffect(() => {
-    if(usesSupabasePersistence){setDashboardLoadError('');setStudentProfile(null);setUserRooms([]);setRoomKeyDetails(null);setAvailableHostels([]);setPublicCatalog([]);setResidencesLoaded(false);}
+    {setDashboardLoadError('');setStudentProfile(null);setUserRooms([]);setRoomKeyDetails(null);setAvailableHostels([]);setPublicCatalog([]);setResidencesLoaded(false);}
     loadStudentData(false);
     const refreshVisible = () => { if (!document.hidden) void loadStudentData(true); };
     const interval = setInterval(refreshVisible, 8000);
@@ -1074,157 +789,8 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
   };
 
   // Verify room key during claim modal
-  const handleVerifyClaimKey = async () => {
-    if (!claimRoomKeyInput.trim()) {
-      setClaimError("Please enter your Digital Room Key");
-      return;
-    }
-    setVerifyingKey(true);
-    setClaimError(null);
-    try {
-      const res = await fetch('/api/room-keys/verify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${user?.token || currentUser?.token || ''}` },
-        body: JSON.stringify({ roomKey: claimRoomKeyInput.trim() })
-      });
-      const data = await safeJson(res);
-      if (!res.ok || !data.valid) {
-        setClaimError(data.error || "Invalid room key. Check with your manager.");
-        setVerifiedKeyInfo(null);
-      } else if (claimHostelId && data.hostelId !== claimHostelId) {
-        setClaimError("This key belongs to a different residence. Enter a key for the selected residence.");
-        setVerifiedKeyInfo(null);
-      } else {
-        setVerifiedKeyInfo(data);
-        setClaimError(null);
-        setClaimStudentName(data.assignedStudentName || currentUser?.name || '');
-        setClaimStudentPhone(data.assignedStudentPhone || currentUser?.phone || '');
-        if (data.assignedStudentEmail && data.assignedStudentEmail.toLowerCase().includes('knust.edu.gh')) {
-          setClaimEmail(data.assignedStudentEmail);
-        } else {
-          setClaimEmail('');
-        }
-      }
-    } catch (err: any) {
-      setClaimError("Could not verify key. Check network connection.");
-    } finally {
-      setVerifyingKey(false);
-    }
-  };
 
   // Confirm claim room key & initiate resident account creation
-  const handleClaimRoomKey = async () => {
-    if (userRooms.length >= 1) {
-      setClaimError("Users can now only activate one room per user account. You already have an active room on this account.");
-      return;
-    }
-
-    if (!verifiedKeyInfo) return;
-    if (!claimStudentName.trim()) {
-      setClaimError("Please enter your username / full name for your resident account.");
-      return;
-    }
-    if (!claimStudentPhone.trim()) {
-      setClaimError("Please enter your phone number.");
-      return;
-    }
-
-    const resolvedEmail = claimEmail.trim().toLowerCase();
-    if (!resolvedEmail) {
-      setClaimError("Please enter your official KNUST student email address.");
-      return;
-    }
-
-    if (currentUser?.email && resolvedEmail === currentUser.email.toLowerCase().trim()) {
-      setClaimError("You cannot use your primary user account email to activate your room account. Only your official KNUST student email is permitted.");
-      return;
-    }
-
-    const knustEmailRegex = /^[a-zA-Z0-9._%+-]+@(st\.)?knust\.edu\.gh$/i;
-    if (!knustEmailRegex.test(resolvedEmail)) {
-      setClaimError("Only official KNUST student email format is permitted (e.g. yourname@st.knust.edu.gh or yourname@knust.edu.gh). This serves as your dedicated credential for logging into your digital room.");
-      return;
-    }
-
-    if (!claimPassword.trim()) {
-      setClaimError("Please create a password for your resident account.");
-      return;
-    }
-
-    if (claimPassword.trim() && claimConfirmPassword.trim() && claimPassword.trim() !== claimConfirmPassword.trim()) {
-      setClaimError("Passwords do not match. Please verify and repeat your password.");
-      return;
-    }
-
-    const rawPassword = claimPassword.trim();
-
-    setSubmittingClaim(true);
-    try {
-      const res = await fetch('/api/room-keys/claim', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${user?.token || ''}` },
-        body: JSON.stringify({
-          roomKey: verifiedKeyInfo.roomKey,
-          name: claimStudentName.trim(),
-          studentName: claimStudentName.trim(),
-          username: claimStudentName.trim(),
-          email: resolvedEmail,
-          studentEmail: resolvedEmail,
-          parentUserEmail: currentUser?.email || '',
-          phone: claimStudentPhone.trim(),
-          studentPhone: claimStudentPhone.trim(),
-          password: rawPassword,
-          userId: currentUser?.id
-        })
-      });
-      const data = await safeJson(res);
-      if (res.ok && data.success) {
-        setRoomKeyDetails(verifiedKeyInfo);
-        triggerToast(`Resident Account Created & Room Key Activated! Connected to ${verifiedKeyInfo.hostelName} (${verifiedKeyInfo.blockName}, Room ${verifiedKeyInfo.roomNumber})`, 'success');
-        
-        if (updateUser) {
-          const newRoomRecord = {
-            email: resolvedEmail,
-            name: claimStudentName.trim() || currentUser?.name,
-            phone: claimStudentPhone.trim() || currentUser?.phone,
-            roomKey: verifiedKeyInfo.roomKey,
-            roomNumber: verifiedKeyInfo.roomNumber,
-            blockName: verifiedKeyInfo.blockName,
-            hostelName: verifiedKeyInfo.hostelName,
-            hostelId: verifiedKeyInfo.hostelId,
-            managerName: data.user?.managerName,
-            managerPhone: data.user?.managerPhone,
-            active: true
-          };
-
-          const existingRoomsList = Array.isArray(currentUser?.registeredAccounts?.residentRooms)
-            ? currentUser.registeredAccounts.residentRooms
-            : (currentUser?.registeredAccounts?.residentAccount ? [currentUser.registeredAccounts.residentAccount] : []);
-          
-          const updatedRoomsList = [
-            ...existingRoomsList.filter((r: any) => (r.roomKey || r.id)?.toUpperCase() !== verifiedKeyInfo.roomKey.toUpperCase()),
-            newRoomRecord
-          ];
-
-          updateUser({
-            registeredAccounts: {
-              ...(currentUser?.registeredAccounts || {}),
-              residentAccount: newRoomRecord,
-              residentRooms: updatedRoomsList
-            }
-          });
-        }
-        await loadStudentData();
-        setClaimStep(3); // Advance to success step
-      } else {
-        setClaimError(data.error || "Failed to link room key and create resident account");
-      }
-    } catch (err: any) {
-      setClaimError("Failed to claim room key and create resident account");
-    } finally {
-      setSubmittingClaim(false);
-    }
-  };
 
   // Open reset password modal
   const openResetPasswordModal = (role: 'resident', email: string) => {
@@ -1238,127 +804,21 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
   };
 
   // Submit password reset
-  const handleResetRegisteredAccountPassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (usesSupabasePersistence) { setResetPasswordError('Use the verified resident portal to manage its credentials.'); return; }
-    if (resetTargetRole === 'resident' && !currentPasswordInput) {
-      setResetPasswordError("Please enter your current resident account password first.");
-      return;
-    }
-    if (!newPasswordInput || newPasswordInput.length < 6) {
-      setResetPasswordError("Password must be at least 6 characters long.");
-      return;
-    }
-    if (newPasswordInput !== confirmPasswordInput) {
-      setResetPasswordError("Passwords do not match. Please verify.");
-      return;
-    }
-
-    setResettingPassword(true);
-    setResetPasswordError(null);
-    try {
-      const authToken = user?.token || '';
-      const res = await fetch('/api/users/reset-registered-account-password', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${authToken}`
-        },
-        body: JSON.stringify({
-          role: resetTargetRole,
-          email: resetTargetEmail,
-          currentPassword: currentPasswordInput,
-          newPassword: newPasswordInput
-        })
-      });
-      const data = await safeJson(res);
-      if (!res.ok || !data.success) {
-        setResetPasswordError(data.error || "Failed to reset password.");
-      } else {
-        setShowResetPasswordModal(false);
-        setCurrentPasswordInput('');
-        setNewPasswordInput('');
-        setConfirmPasswordInput('');
-        triggerToast(`Password reset successfully for your registered ${resetTargetRole} account!`);
-      }
-    } catch (err: any) {
-      setResetPasswordError(err.message || "Failed to reset password. Check connection.");
-    } finally {
-      setResettingPassword(false);
-    }
-  };
 
   // Open delete account modal
   const openDeleteAccountModal = (role: 'resident', email: string) => {
-    if (usesSupabasePersistence) {
+    {
       triggerToast('Sign in to your separately verified resident portal, then open Settings → End resident room access. Your primary account cannot close a separate portal.');
       return;
     }
-    setDeleteTargetRole(role);
-    setDeleteTargetEmail(email);
-    setDeletePasswordInput('');
-    setDeleteAccountError(null);
-    setShowDeleteAccountModal(true);
+
   };
 
   // Submit account deletion (unlocks registration)
   const handleDeleteRegisteredAccount = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (usesSupabasePersistence) return;
-    setDeletingAccount(true);
-    setDeleteAccountError(null);
-    try {
-      const authToken = user?.token || '';
-      const res = await fetch('/api/users/delete-registered-account', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${authToken}`
-        },
-        body: JSON.stringify({
-          role: deleteTargetRole,
-          email: deleteTargetEmail,
-          password: deletePasswordInput,
-          deletionReason: ''
-        })
-      });
-      const data = await safeJson(res);
-      if (!res.ok || !data.success) {
-        setDeleteAccountError(data.error || "Failed to delete account.");
-      } else {
-        setShowDeleteAccountModal(false);
-        setDeletePasswordInput('');
-        triggerToast(`${deleteTargetRole.toUpperCase()} account deleted. You can now start the registration process again.`);
-        
-        const tEmail = (deleteTargetEmail || currentUser?.email || user?.email || '').toLowerCase().trim();
-        const activeUserEmail = (user?.email || currentUser?.email || '').toLowerCase().trim();
-        const isTargetingActiveSession = activeUserEmail !== '' && activeUserEmail === tEmail;
-        setRoomKeyDetails(null);
+    return;
 
-        if (isTargetingActiveSession) {
-          if (!await logout()) return;
-          navigate('/login');
-          return;
-        }
-
-        if (updateUser) {
-          updateUser({
-            role: 'user',
-            registeredAccounts: {
-              ...(currentUser?.registeredAccounts || user?.registeredAccounts || {}),
-              residentAccount: null
-            }
-          });
-        }
-
-        await refreshNotifications();
-        await loadStudentData();
-      }
-    } catch (err: any) {
-      setDeleteAccountError(err.message || "Failed to delete account.");
-    } finally {
-      setDeletingAccount(false);
-    }
   };
 
   const unreadNotificationsCount = notifications.filter(n => !n.read).length;
@@ -1404,7 +864,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
     try {
       const result = await merchantRegistration.refetch();
       if (!result.data || result.isError) { triggerToast('Could not check merchant registration. Please try again.', 'error'); return; }
-      if ((!result.data.application && !result.data.store) || (usesSupabasePersistence && result.data.application?.status === 'rejected')) startMerchantRegistration();
+      if ((!result.data.application && !result.data.store) || ((result.data.application?.status === 'rejected'))) startMerchantRegistration();
       else setShowMerchantCard(true);
     } finally { setCheckingMerchant(false); }
   };
@@ -1414,13 +874,13 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
     try {
       const result = await managerRegistration.refetch();
       if (!result.data || result.isError) { triggerToast('Could not check manager registration. Please try again.', 'error'); return; }
-      if (managerRegistrationStatus(result.data.managerAccount) === 'unregistered' || (usesSupabasePersistence && result.data.managerAccount?.requiresPropertyRegistration)) navigate('/register-manager');
+      if (managerRegistrationStatus(result.data.managerAccount) === 'unregistered' || ((result.data.managerAccount?.requiresPropertyRegistration))) navigate('/register-manager');
       else setShowManagerCard(true);
     } finally { setCheckingManager(false); }
   };
 
   // Dedicated merchant login entry point
-  const [quickLoggingInMerchant, setQuickLoggingInMerchant] = useState<boolean>(false);
+
   const [showMerchantStoreLoginModal, setShowMerchantStoreLoginModal] = useState<boolean>(false);
   const [storeLoginEmail, setStoreLoginEmail] = useState<string>('');
   const [storeLoginPassword, setStoreLoginPassword] = useState<string>('');
@@ -1476,112 +936,8 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
   };
 
   // Submit Digital Market Application Handler (Phase 3 Submission)
-  const handleRegisterDigitalMarket = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    setSubmittingDMReg(true);
-    setDmRegError(null);
-
-    try {
-      if (digitalMarketApp || digitalMarketStore) {
-        setDmRegError("You already have an existing Digital Student Market registration. Duplicate applications are not allowed.");
-        setSubmittingDMReg(false);
-        return;
-      }
-
-      if (!dmFullName.trim() || dmFullName.trim().length < 3) {
-        setDmRegError("Please enter your full legal name as recorded by your university.");
-        setDmWizardPhase(1);
-        setSubmittingDMReg(false);
-        return;
-      }
-
-      const cleanStudentId = dmIdNumber.trim().toUpperCase();
-      if (!cleanStudentId || !/^[A-Z0-9][A-Z0-9\-\/]{3,31}$/i.test(cleanStudentId)) {
-        setDmRegError("Enter a valid student ID or school-issued identification number (4–32 letters, numbers, hyphens, or slashes).");
-        setDmWizardPhase(1);
-        setSubmittingDMReg(false);
-        return;
-      }
-      
-      const cleanEmail = dmStudentEmail.trim().toLowerCase();
-      if (!cleanEmail || !cleanEmail.includes('@')) {
-        setDmRegError("Please enter your official university student email.");
-        setDmWizardPhase(2);
-        setSubmittingDMReg(false);
-        return;
-      }
-
-      if (isCommercialEmail(cleanEmail)) {
-        setDmRegError("Personal or commercial email addresses are strictly prohibited. Please use your official university student email.");
-        setDmWizardPhase(2);
-        setSubmittingDMReg(false);
-        return;
-      }
-
-      if (!isValidStudentDomain(cleanEmail)) {
-        setDmRegError("Unrecognized institutional email. Only official accredited university student emails ending in .edu.gh or .ac.gh are eligible.");
-        setDmWizardPhase(2);
-        setSubmittingDMReg(false);
-        return;
-      }
-
-      if (!dmPassword || dmPassword.length < 6) {
-        setDmRegError("Please enter a secure student password (at least 6 characters) for your merchant account.");
-        setDmWizardPhase(2);
-        setSubmittingDMReg(false);
-        return;
-      }
-
-      if (dmPassword !== dmConfirmPassword) {
-        setDmRegError("Merchant passwords do not match. Please verify both password fields.");
-        setDmWizardPhase(2);
-        setSubmittingDMReg(false);
-        return;
-      }
-
-      if (!dmCertifyAccepted) {
-        setDmRegError("Please verify and check the student merchant certification declaration.");
-        setSubmittingDMReg(false);
-        return;
-      }
-
-      const payload = {
-        fullName: dmFullName.trim(),
-        university: dmUniversity,
-        studentEmail: cleanEmail,
-        password: dmPassword,
-        categoryToSell: dmCategory,
-        idNumber: cleanStudentId,
-        storeName: dmProposedStoreName.trim() || `${dmFullName.trim()}'s Campus Store`,
-        parentUserEmail: currentUser?.email || user?.email || '',
-        userId: currentUser?.id || user?.id || ''
-      };
-
-      const res = await apiFetch('/api/digital-market/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-
-      if (res && res.success) {
-        setShowDMRegModal(false);
-        queryClient.setQueryData(['digital-market', 'registration', user?.id], { application: res.application, store: null });
-        setShowMerchantCard(true);
-        triggerToast("Digital Student Market Application Submitted! 🎉");
-        await loadDigitalMarketData();
-      } else {
-        setDmRegError(res?.error || "Failed to submit application.");
-      }
-    } catch (err: any) {
-      setDmRegError(err.message || "Failed to submit application.");
-    } finally {
-      setSubmittingDMReg(false);
-    }
-  };
 
   const { settings: marketPrices } = usePlatformSettings();
-  const handleStoreSetup = async (e: React.FormEvent) => { e.preventDefault(); setShowStoreSetupModal(false); navigate('/login'); triggerToast('Sign in with your seller account to complete secure market checkout.'); };
-  const handleMandatoryStoreSetup = async (e: React.FormEvent) => { e.preventDefault(); setStoreOnboardingModalOpen(false); navigate('/login'); };
 
   const handleAddProduct = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1651,7 +1007,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
         quantity: orderQtyInput,
         priceCategoryId: selectedPriceCategory?.id || undefined,
         priceCategoryName: selectedPriceCategory?.name || undefined,
-        ...(!usesSupabasePersistence ? {buyerName:currentUser?.name || user?.name || 'Student Buyer',buyerEmail:currentUser?.email || user?.email || '',buyerId:currentUser?.id || user?.id || ''} : {}),
+        ...(({})),
         buyerPhone: buyerPhoneInput || currentUser?.phone || '',
         meetingLocation: orderMeetupLocation,
         meetingLatitude: orderMeetupLat,
@@ -1659,7 +1015,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
         serviceLocationOption
       };
 
-      if(usesSupabasePersistence){const params=JSON.stringify(payload);if(orderRequest.current?.params!==params)orderRequest.current={params,id:crypto.randomUUID()};Object.assign(payload,{requestId:orderRequest.current.id});}
+      {const params=JSON.stringify(payload);if(orderRequest.current?.params!==params)orderRequest.current={params,id:crypto.randomUUID()};Object.assign(payload,{requestId:orderRequest.current.id});}
       const res = await apiFetch('/api/digital-market/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1825,316 +1181,8 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
 
   if (loadingData && issueReports.length === 0) return <RouteSkeleton />;
 
-  if (false && currentUser?.role === 'user') {
-    return (
-      <div className="min-h-screen h-screen flex flex-col lg:flex-row bg-transparent text-slate-800 overflow-hidden font-sans relative">
-         {/* Toast Notification */}
-         <AnimatePresence>
-           {toastMessage && (
-             <motion.div role="status"
-               initial={{ opacity: 0, y: 15, scale: 0.95 }}
-               animate={{ opacity: 1, y: 0, scale: 1 }}
-               exit={{ opacity: 0, y: 15, scale: 0.95 }}
-               transition={{ duration: 0.15 }}
-               className="ux-dashboard-toast fixed bottom-24 left-1/2 -translate-x-1/2 z-50 bg-slate-950/95 text-white px-4 py-2 rounded-full shadow-lg border border-slate-800 flex items-center gap-2 backdrop-blur-md text-xs font-semibold"
-             >
-               <div className="w-1.5 h-1.5 rounded-full bg-blue-400" />
-               <span>{toastMessage}</span>
-             </motion.div>
-           )}
-         </AnimatePresence>
-
-         {/* Sidebar for Base User */}
-         <aside className="hidden lg:flex w-72 my-6 ml-6 h-[calc(100vh-3rem)] bg-gradient-to-br from-sky-100/90 via-blue-100/85 to-amber-50/40 backdrop-blur-3xl border border-sky-200/80 shadow-2xl rounded-3xl p-6 flex flex-col justify-between shrink-0 overflow-y-auto z-20">
-           <div className="space-y-6">
-             <div className="flex items-center space-x-3 px-2">
-               <PineLogo size={36} />
-               <div>
-                 <h1 className="text-sm font-extrabold tracking-tight bg-gradient-to-r from-blue-900 to-cyan-800 bg-clip-text text-transparent">
-                   PineVela Center
-                 </h1>
-                 <p className="text-[10px] font-medium text-blue-600/70 uppercase tracking-widest">Onboarding & Setup</p>
-               </div>
-             </div>
-
-             <div className="p-3 bg-white/70 border border-blue-200/60 rounded-2xl flex items-center justify-between shadow-xs">
-               <div className="flex items-center gap-3 overflow-hidden">
-                 {renderAvatarGraphic(currentUser?.avatar, "w-10 h-10 text-xs")}
-                 <div className="overflow-hidden">
-                   <div className="text-xs font-bold text-slate-900 truncate">{currentUser?.name || 'PineVela User'}</div>
-                   <span className="px-1.5 py-0.5 bg-slate-100 text-slate-600 text-[9px] font-bold rounded-md">Generic Identity</span>
-                 </div>
-               </div>
-             </div>
-           </div>
-
-           <button
-             onClick={() => setShowSignoutConfirmModal(true)}
-             className="w-full flex items-center justify-center space-x-2 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 px-4 py-2.5 rounded-2xl font-semibold text-xs transition-all shadow-xs cursor-pointer"
-           >
-             <LogOut className="w-4 h-4" />
-             <span>Sign Out</span>
-           </button>
-         </aside>
-
-         {/* Onboarding Dashboard Area */}
-         <main className="flex-1 p-6 pb-28 lg:p-10 lg:pb-10 space-y-8 overflow-y-auto h-full relative z-10 flex flex-col justify-start">
-           
-           {/* Top greeting bar */}
-           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-sky-100">
-             <div>
-               <h2 className="text-2xl font-black text-slate-900 tracking-tight">Welcome to PineVela, {currentUser?.name}!</h2>
-               <p className="text-xs text-slate-500 font-semibold mt-1">
-                 You are currently signed in with a unified generic user profile. Activate your PineVela capabilities below:
-               </p>
-             </div>
-             
-             {/* Mobile Sign out button */}
-             <button
-               onClick={() => setShowSignoutConfirmModal(true)}
-               className="lg:hidden w-fit flex items-center space-x-2 bg-rose-50 text-rose-600 border border-rose-200 px-4 py-2 rounded-xl font-semibold text-xs transition-all cursor-pointer"
-             >
-               <LogOut className="w-4 h-4" />
-               <span>Sign Out</span>
-             </button>
-           </div>
-
-           {/* Capabilities Selection Grid */}
-           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl">
-             
-             {/* 1. Student / Resident capability card */}
-             <div className="bg-white hover:bg-blue-50/20 border border-sky-150 rounded-3xl p-6 shadow-md hover:shadow-xl transition-all duration-200 flex flex-col justify-between">
-               <div className="space-y-4">
-                 <div className="w-12 h-12 rounded-2xl bg-blue-100 text-blue-900 flex items-center justify-center shadow-sm">
-                   <Key className="w-6 h-6" />
-                 </div>
-                 <div className="space-y-1">
-                   <div className="flex items-center gap-2">
-                     <h3 className="font-black text-slate-900 text-base">Resident & Student</h3>
-                     <span className="px-2 py-0.5 bg-blue-100 text-blue-800 text-[9px] font-black uppercase tracking-wider rounded-md">Activate</span>
-                   </div>
-                   <p className="text-xs text-slate-500 leading-relaxed font-medium">
-                     Onboard into your designated student room using a digital room key code issued by your hostel manager.
-                   </p>
-                 </div>
-               </div>
-               
-               <button
-                 type="button"
-                 onClick={() => {
-                   setClaimRoomKeyInput('');
-                   setVerifiedKeyInfo(null);
-                   setClaimError(null);
-                   setShowClaimModal(true);
-                 }}
-                 className="mt-6 w-full py-2.5 px-4 bg-blue-900 hover:bg-blue-800 text-white font-black text-xs rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-               >
-                 <span>Activate Room Key</span>
-                 <ArrowRight className="w-3.5 h-3.5" />
-               </button>
-             </div>
-
-             {/* 2. Staff / Artisan capability card */}
-             <div className="hidden bg-white hover:bg-amber-50/20 border border-amber-150 rounded-3xl p-6 shadow-md hover:shadow-xl transition-all duration-200 flex flex-col justify-between">
-               <div className="space-y-4">
-                 <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-900 flex items-center justify-center shadow-sm">
-                   <Wrench className="w-6 h-6" />
-                 </div>
-                 <div className="space-y-1">
-                   <div className="flex items-center gap-2">
-                     <h3 className="font-black text-slate-900 text-base">Staff & Artisan</h3>
-                     <span className="px-2 py-0.5 bg-amber-100 text-amber-800 text-[9px] font-black uppercase tracking-wider rounded-md">Register</span>
-                   </div>
-                   <p className="text-xs text-slate-500 leading-relaxed font-medium">
-                     Register your professional service skills, set up working credentials, and apply for verified jobs around residences.
-                   </p>
-                 </div>
-               </div>
-
-               <button
-                 type="button"
-                 onClick={() => {
-                   sessionStorage.setItem('navigated_to_staff_register', 'true');
-                   navigate('/staff/register');
-                 }}
-                 className="mt-6 w-full py-2.5 px-4 bg-amber-600 hover:bg-amber-700 text-white font-black text-xs rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-               >
-                 <span>Register as Staff</span>
-                 <ArrowRight className="w-3.5 h-3.5" />
-               </button>
-             </div>
-
-             {/* 3. Hostel / Residence Manager capability card */}
-             <div className="bg-white hover:bg-emerald-50/20 border border-emerald-150 rounded-3xl p-6 shadow-md hover:shadow-xl transition-all duration-200 flex flex-col justify-between">
-               <div className="space-y-4">
-                 <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-900 flex items-center justify-center shadow-sm">
-                   <Home className="w-6 h-6" />
-                 </div>
-                 <div className="space-y-1">
-                   <div className="flex items-center gap-2">
-                     <h3 className="font-black text-slate-900 text-base">Hostel Manager</h3>
-                     <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 text-[9px] font-black uppercase tracking-wider rounded-md">Manager Setup</span>
-                   </div>
-                   <p className="text-xs text-slate-500 leading-relaxed font-medium">
-                     Register KNUST-accredited hostel properties in Kumasi, manage active student room keys, track occupancy, and respond to maintenance reports.
-                   </p>
-                 </div>
-               </div>
-
-               <button
-                 type="button"
-                 onClick={() => {
-                   navigate('/register-manager');
-                 }}
-                 className="mt-6 w-full py-2.5 px-4 bg-emerald-700 hover:bg-emerald-800 text-white font-black text-xs rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-               >
-                 <span>Register Property</span>
-                 <ArrowRight className="w-3.5 h-3.5" />
-               </button>
-             </div>
-
-           </div>
-
-           {/* Guidance Note */}
-           <div className="p-5 bg-blue-50/50 border border-blue-100 rounded-3xl max-w-5xl flex items-start gap-4">
-             <div className="p-2.5 bg-blue-100 text-blue-900 rounded-xl shrink-0">
-             </div>
-             <div className="space-y-1">
-               <h4 className="text-sm font-black text-slate-800">Need help onboarding?</h4>
-               <p className="text-xs text-slate-650 leading-relaxed font-medium">
-                 PineVela uses a Unified User Account. Your single email credentials protect your entire identity. If you are a student, your hostel manager has already generated a Digital Room Key for you. Activating your Room Key will automatically configure your Student Residence Desk.
-               </p>
-             </div>
-           </div>
-
-         </main>
-
-         {/* MODALS */}
-         {showClaimModal && usesSupabasePersistence && <SupabaseResidentActivation name={user?.name} phone={user?.phone} residenceId={claimHostelId} onClose={() => setShowClaimModal(false)} onActivated={() => { void queryClient.invalidateQueries({ queryKey:['userData'] }); }} />}
-         {showClaimModal && !usesSupabasePersistence && (
-           <DashboardOverlay aria-label="Activate Digital Room Key" onClose={() => setShowClaimModal(false)} className="fixed inset-0 bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-4">
-             <div className="onboarding-fields bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-2xl border border-blue-200 space-y-5">
-               <div className="flex items-start justify-between gap-3 pb-3 border-b border-blue-100">
-                 <div className="flex items-start gap-3">
-                   <div className="w-11 h-11 rounded-2xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-blue-600/30">
-                     <Key className="w-5 h-5" />
-                   </div>
-                   <div>
-                     <h3 className="text-lg font-black text-slate-900">Activate Digital Room Key</h3>
-                     <p className="text-xs text-slate-500 font-medium">Provided exclusively by your manager</p>
-                   </div>
-                 </div>
-                 <button aria-label="Close dialog"
-                   type="button"
-                   onClick={() => setShowClaimModal(false)}
-                   className="text-slate-400 hover:text-slate-700 p-1.5 rounded-xl hover:bg-slate-100 cursor-pointer"
-                 >
-                   <X className="w-5 h-5" />
-                 </button>
-               </div>
-
-               <OnboardingProgress steps={ROOM_ACTIVATION_STEPS} step={claimStep} label="Room key activation" />
-
-               <div className="space-y-3">
-                 <div className="space-y-1">
-                   <label className="text-xs font-black text-slate-800 block">Enter Key (Format: MAZE-A-123456)</label>
-                   <div className="flex gap-2">
-                     <input aria-label="Enter Key (Format: MAZE-A-123456)"
-                       type="text"
-                       value={claimRoomKeyInput}
-                       onChange={(e) => setClaimRoomKeyInput(e.target.value.toUpperCase())}
-                       placeholder="e.g. EMERALD-A-849201"
-                       className="flex-1 px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl font-mono text-xs font-bold uppercase text-slate-900 focus:outline-none focus:border-blue-600"
-                     />
-                     <button
-                       type="button"
-                       onClick={handleVerifyClaimKey}
-                       disabled={verifyingKey || !claimRoomKeyInput.trim()}
-                       className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition-all cursor-pointer disabled:opacity-50"
-                     >
-                       {verifyingKey ? <RefreshCw className="w-4 h-4 animate-spin" /> : 'Verify'}
-                     </button>
-                   </div>
-                 </div>
-
-                 {claimError && (
-                   <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-900 font-bold flex items-center gap-2">
-                     <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
-                     <span>{claimError}</span>
-                   </div>
-                 )}
-
-                 {verifiedKeyInfo && (
-                   <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl space-y-2 text-xs text-emerald-950 animate-in fade-in slide-in-from-bottom-2 duration-150">
-                     <div className="font-black flex items-center gap-1.5 text-emerald-850">
-                       <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                       <span>Verified Room Match!</span>
-                     </div>
-                     <div className="grid grid-cols-2 gap-2 text-[11px] font-semibold">
-                       <div>Hostel: <strong>{verifiedKeyInfo.hostelName}</strong></div>
-                       <div>Block: <strong>{verifiedKeyInfo.blockName}</strong></div>
-                       <div>Room: <strong>{verifiedKeyInfo.roomNumber}</strong></div>
-                       <div>Status: <strong>{verifiedKeyInfo.status}</strong></div>
-                     </div>
-
-                     <button
-                       type="button"
-                       onClick={handleClaimRoomKey}
-                       disabled={submittingClaim}
-                       className="w-full mt-2 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
-                     >
-                       {submittingClaim ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-                       <span>Confirm & Activate Room Access</span>
-                     </button>
-                   </div>
-                 )}
-               </div>
-             </div>
-           </DashboardOverlay>
-         )}
-
-         {/* SIGN OUT CONFIRMATION MODAL */}
-         {showSignoutConfirmModal && (
-           <DashboardOverlay aria-label="Sign Out Confirmation" onClose={() => setShowSignoutConfirmModal(false)} className="fixed inset-0 bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-4">
-             <div className="bg-white rounded-3xl max-w-sm w-full p-6 text-center space-y-5 border border-slate-100 shadow-2xl">
-               <div className="w-16 h-16 rounded-2xl bg-amber-50 border border-amber-200/60 flex items-center justify-center shadow-xs mx-auto">
-                 <PineLogo size={36} hideText={true} />
-               </div>
-               <div className="space-y-1.5">
-                 <h3 className="text-lg font-black text-slate-900 tracking-tight">Sign Out Confirmation</h3>
-                 <p className="text-xs text-slate-500 leading-relaxed">
-                   Are you sure you want to sign out of your PineVela account?
-                 </p>
-               </div>
-               <div className="grid grid-cols-2 gap-3 pt-2">
-                 <button
-                   type="button"
-                   onClick={() => setShowSignoutConfirmModal(false)}
-                   className="py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-xl transition-all cursor-pointer"
-                 >
-                   Cancel
-                 </button>
-                 <button
-                   type="button"
-                   onClick={async () => {
-                     setShowSignoutConfirmModal(false);
-                     if (!await logout()) return;
-                     navigate('/login');
-                   }}
-                   className="py-2.5 px-4 bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-xs rounded-xl shadow-md transition-all cursor-pointer"
-                 >
-                   Sign Out
-                 </button>
-               </div>
-             </div>
-           </DashboardOverlay>
-         )}
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen h-screen flex flex-col lg:flex-row bg-transparent text-slate-800 overflow-hidden font-sans relative">
+    <div className="page-canvas min-h-screen h-screen flex flex-col lg:flex-row text-slate-800 overflow-hidden font-sans relative">
       {/* Toast Notification */}
       <AnimatePresence>
         {toastMessage && (
@@ -2309,11 +1357,10 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
         </div>
       </aside>}
 
-
-      {/* MAIN CONTENT AREA WITH PERSISTENT PINEVELA GIANT WATERMARK */}
+      {/* MAIN CONTENT AREA */}
       <main ref={mainScrollRef} className={`user-dashboard-content hide-scrollbar flex-1 p-6 pb-28 lg:px-10 lg:pb-10 space-y-8 overflow-y-auto h-full relative z-10 ${isSidebarHidden ? 'lg:pt-24 lg:w-[calc(100vw-22rem)] lg:max-w-[calc(100vw-22rem)] lg:mx-auto' : 'lg:pt-10'}`}>
 
-        {usesSupabasePersistence&&dashboardLoadError&&<section role="alert" className="space-y-3 rounded-2xl border border-blue-200 bg-[var(--pv-panel)] p-5 text-[var(--pv-text)]">
+        {(dashboardLoadError)&&<section role="alert" className="space-y-3 rounded-2xl border border-blue-200 bg-[var(--pv-panel)] p-5 text-[var(--pv-text)]">
           <h2 className="text-lg font-semibold">Could not refresh your dashboard</h2><p className="text-sm">{dashboardLoadError}</p>
           <button type="button" disabled={dashboardRefreshing} onClick={()=>void loadStudentData(false)} className="min-h-11 rounded-xl bg-blue-700 px-5 font-semibold text-white disabled:opacity-60">{dashboardRefreshing?'Refreshing…':'Retry dashboard'}</button>
         </section>}
@@ -2416,7 +1463,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                       </div>
                     ) : (
                       <div className="space-y-4">
-                        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-4 pb-2">
+                        <div className="market-catalog-grid pb-2">
                           {filteredProducts.slice(0, marketVisibleCount).map(product => (
                             <MarketItemCard
                               key={product.id}
@@ -2490,9 +1537,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
 
             {/* Staff & Hire Staff Section (Staff View) */}
 
-
               {/* Staff Reviews Modal */}
-
 
               {/* Job Offer Proposal Modal */}
 
@@ -2555,7 +1600,6 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
         )}
 
         {/* TAB 4: BECOME A STAFF TAB */}
-
 
                 {/* TAB 5: RESIDENT ROOM TAB (SUPPORTS UP TO 5 REGISTERED ROOMS & DELETION) */}
         {activeTab === 'login-room' && (
@@ -2691,16 +1735,13 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                         <button
                           type="button"
                           onClick={() => {
-                            if(usesSupabasePersistence){openDeleteAccountModal('resident','');return;}
-                            setDeletingRoomTarget(roomItem);
-                            setDelRoomEmailInput(roomItem.assignedStudentEmail || roomItem.email || registeredAccounts.residentAccount?.email || currentUser?.email || '');
-                            setDelRoomPasswordInput('');
-                            setDelRoomError(null);
+                            {openDeleteAccountModal('resident','');return;}
+
                           }}
                           className="px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-xs rounded-xl transition-all flex items-center gap-1.5 cursor-pointer"
                         >
                           <Trash2 className="w-3.5 h-3.5 text-rose-600" />
-                          <span>{usesSupabasePersistence?'Resident room access':'Delete Room'}</span>
+                          <span>{('Resident room access')}</span>
                         </button>
 
                         <div className="flex items-center gap-2">
@@ -3024,8 +2065,6 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
           </div>
         )}
 
-
-
         {showMerchantCard && <AccountStatusDialog title="Merchant Registration" onClose={() => setShowMerchantCard(false)}>
           {merchantRegistration.isPending ? <p role="status">Checking registration…</p> : merchantRegistration.isError ?
             <p role="alert">Could not refresh your merchant registration. Close this card and retry the status button.</p> :
@@ -3038,7 +2077,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
             <ManagerRegistrationCard managerAccount={managerAccount} onRegister={() => void openManagerRegistration()} onLogin={() => navigate('/login')} />}
         </AccountStatusDialog>}
         {showMarketChat && <AccountStatusDialog title="Buyer–Seller Messages" onClose={() => setShowMarketChat(false)}>
-          <MarketplaceInbox initialPeerEmail={activeChatEmail} initialStore={usesSupabasePersistence?activeChatStore:undefined} />
+          <MarketplaceInbox initialPeerEmail={activeChatEmail} initialStore={(activeChatStore)} />
         </AccountStatusDialog>}
 
         {showStoreSetupModal && <DashboardOverlay onClose={() => setShowStoreSetupModal(false)} aria-label="Seller checkout" className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4"><section className="w-full max-w-md space-y-4 rounded-3xl bg-white p-6"><h2 className="text-xl font-bold">Activate your seller account</h2><p>Sign in with your seller password to save store details and pay the current registration, monthly plan and two-month fees through Paystack.</p><button onClick={() => navigate('/login')} className="rounded-xl bg-blue-600 px-5 py-3 text-white">Sign in as seller</button><button onClick={() => setShowStoreSetupModal(false)} className="ml-3 text-slate-600">Close</button></section></DashboardOverlay>}
@@ -3073,7 +2112,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                   <span>Institutional Credential Check</span>
                 </div>
                 <p className="text-slate-600 leading-relaxed">
-                  {usesSupabasePersistence ? 'Enter your verified student email and password. If this email also opens your resident account, use the seller portal PIN when prompted.' : 'Enter your registered student email and digital store password. Primary resident account credentials cannot access the digital market platform.'}
+                  {('Enter your verified student email and password. If this email also opens your resident account, use the seller portal PIN when prompted.')}
                 </p>
               </div>
 
@@ -3858,10 +2897,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                   <span className="px-2.5 py-1 bg-emerald-100 text-emerald-800 text-[10px] font-black uppercase rounded-lg">Verified Account</span>
                 </div>
 
-
-
               </div>
-
 
               </div>
 
@@ -3908,7 +2944,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                         className="px-3.5 py-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 font-bold text-xs rounded-xl transition-all flex items-center gap-1 cursor-pointer"
                       >
                         <KeyRound className="w-3.5 h-3.5" />
-                        <span>{usesSupabasePersistence ? 'Resident account security' : 'Reset Resident Password'}</span>
+                        <span>{('Resident account security')}</span>
                       </button>
                       <button
                         type="button"
@@ -3916,7 +2952,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                         className="px-3.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-xs rounded-xl transition-all flex items-center gap-1 cursor-pointer"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
-                        <span>{usesSupabasePersistence?'Resident room access':'Unlink & Delete Resident Account'}</span>
+                        <span>{('Resident room access')}</span>
                       </button>
                     </div>
                   </div>
@@ -4405,391 +3441,13 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
       {/* ========================================================================= */}
       {/* MODAL 3: LINK / CLAIM DIGITAL ROOM KEY */}
       {/* ========================================================================= */}
-      {showClaimModal && usesSupabasePersistence && <SupabaseResidentActivation name={user?.name} phone={user?.phone} residenceId={claimHostelId} onClose={() => setShowClaimModal(false)} onActivated={() => { void queryClient.invalidateQueries({ queryKey:['userData'] }); }} />}
-      {showClaimModal && !usesSupabasePersistence && (
-        <DashboardOverlay aria-label="Resident Room Registration" onClose={() => setShowClaimModal(false)} className="fixed inset-0 bg-slate-950/70 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-          <div className="onboarding-fields bg-white/95 backdrop-blur-2xl rounded-3xl max-w-lg w-full p-5 sm:p-7 shadow-2xl border border-blue-200 space-y-5 animate-in fade-in zoom-in-95 duration-150">
-            
-            {/* Modal Header */}
-            <div className="flex items-start justify-between gap-3 pb-3 border-b border-slate-100">
-              <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-blue-600/30">
-                  <Key className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-base sm:text-lg font-black text-slate-900 tracking-tight flex items-center gap-2">
-                    <span>Resident Room Registration</span>
-                    <span className="text-[9px] uppercase font-black px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-800 tracking-wider">PineVela Key</span>
-                  </h3>
-                  <p className="text-[11px] text-slate-500 font-semibold leading-tight">
-                    {claimStep === 1 && (availableHostels.find(hostel => hostel.id === claimHostelId)?.name ? `Enter the digital room key for ${availableHostels.find(hostel => hostel.id === claimHostelId).name}` : 'Enter your digital room key provided by your hostel manager')}
-                    {claimStep === 2 && 'Enter your resident account details and password'}
-                    {claimStep === 3 && 'Room verified! Your resident account is ready'}
-                  </p>
-                </div>
-              </div>
-              {claimStep !== 3 && (
-                <button aria-label="Close dialog"
-                  type="button"
-                  onClick={() => setShowClaimModal(false)}
-                  className="text-slate-400 hover:text-slate-700 p-1 rounded-lg hover:bg-slate-100 cursor-pointer"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              )}
-            </div>
-
-            <OnboardingProgress steps={ROOM_ACTIVATION_STEPS} step={claimStep} label="Room activation" />
-
-            {/* STEP 1: Simple Digital Room Key Verification */}
-            {claimStep === 1 && (
-              <div className="space-y-4 pt-1">
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <label className="text-xs font-black text-slate-800 block">
-                      Digital Room Key <span className="text-rose-600">*</span>
-                    </label>
-                    <span className="text-[10px] text-blue-750 font-bold">
-                      Issued by Hostel Manager
-                    </span>
-                  </div>
-
-                  <div className="relative">
-                    <Key className="w-4 h-4 text-blue-600 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                    <input aria-label="Digital Room Key"
-                      type="text"
-                      autoFocus
-                      value={claimRoomKeyInput}
-                      onChange={(e) => {
-                        setClaimRoomKeyInput(e.target.value.toUpperCase());
-                        setClaimError(null);
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') handleVerifyClaimKey();
-                      }}
-                      placeholder="e.g. MAZE-A-749201"
-                      className="w-full pl-10 pr-24 py-3 bg-white border border-slate-200 rounded-2xl font-mono text-sm font-black uppercase text-slate-900 tracking-wider focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-400/20 shadow-inner"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => handleVerifyClaimKey()}
-                      disabled={verifyingKey || !claimRoomKeyInput.trim()}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 px-3.5 py-1.5 bg-blue-900 hover:bg-blue-800 text-white rounded-xl text-xs font-bold transition-all cursor-pointer disabled:opacity-40 flex items-center gap-1.5"
-                    >
-                      {verifyingKey ? (
-                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                      ) : (
-                        <ShieldCheck size={13} />
-                      )}
-                      <span>Verify Key</span>
-                    </button>
-                  </div>
-                </div>
-
-                {claimError && (
-                  <div className="p-3 bg-rose-50 border border-rose-200 rounded-2xl text-xs text-rose-900 font-bold flex items-center gap-2 animate-fade-in">
-                    <ShieldAlert size={15} className="text-rose-600 shrink-0" />
-                    <span>{claimError}</span>
-                  </div>
-                )}
-
-                {/* Verified Room Card & Progression Button */}
-                {verifiedKeyInfo && (
-                  <div className="space-y-3 animate-fade-in">
-                    <div className="p-3.5 bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200 rounded-2xl space-y-1.5 text-xs text-emerald-950 shadow-xs">
-                      <div className="flex items-center justify-between font-black text-emerald-900">
-                        <span className="flex items-center gap-1.5">
-                          <CheckCircle2 size={15} className="text-emerald-600" />
-                          <span>Room Key Validated: {verifiedKeyInfo.roomKey}</span>
-                        </span>
-                        <span className="px-2 py-0.5 bg-emerald-200/85 text-emerald-900 font-extrabold rounded-full text-[9px]">
-                          Available
-                        </span>
-                      </div>
-                      <div className="grid grid-cols-3 gap-2 pt-1 font-bold text-[10px] bg-white/75 p-2 rounded-xl border border-emerald-200/50">
-                        <div>
-                          <span className="text-slate-400 block text-[9px] font-semibold">Hostel</span>
-                          <span className="text-slate-900 truncate block font-bold">{verifiedKeyInfo.hostelName}</span>
-                        </div>
-                        <div>
-                          <span className="text-slate-400 block text-[9px] font-semibold">Block</span>
-                          <span className="text-slate-900 truncate block font-bold">{verifiedKeyInfo.blockName}</span>
-                        </div>
-                        <div>
-                          <span className="text-slate-400 block text-[9px] font-semibold">Room No.</span>
-                          <span className="text-slate-900 truncate block font-bold">{verifiedKeyInfo.roomNumber}</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="pt-1">
-                      <button
-                        type="button"
-                        onClick={() => setClaimStep(2)}
-                        className="w-full py-3 bg-gradient-to-r from-blue-900 to-indigo-900 hover:from-blue-800 hover:to-indigo-800 text-white font-extrabold text-xs rounded-2xl shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer"
-                      >
-                        <span>Continue to Account Details</span>
-                        <ArrowRight size={14} />
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* STEP 2: Resident Credentials (Username, Phone, Email, Password only) */}
-            {claimStep === 2 && verifiedKeyInfo && (
-              <div className="space-y-4 pt-1">
-                {/* Room Info Badge */}
-                <div className="p-3 bg-blue-50/80 border border-blue-200 rounded-2xl flex items-center justify-between text-xs text-blue-950">
-                  <div className="flex items-center gap-2">
-                    <Building2 className="w-4 h-4 text-blue-600 shrink-0" />
-                    <span className="font-bold">{verifiedKeyInfo.hostelName} ({verifiedKeyInfo.blockName}, Room {verifiedKeyInfo.roomNumber})</span>
-                  </div>
-                  <span className="font-mono text-[10px] font-bold bg-blue-200/80 px-2 py-0.5 rounded-md text-blue-900">
-                    {verifiedKeyInfo.roomKey}
-                  </span>
-                </div>
-
-                <div className="space-y-3">
-                  {/* Username / Name */}
-                  <div className="space-y-1">
-                    <label className="text-xs font-black text-slate-800 block">
-                      Username / Full Name <span className="text-rose-600">*</span>
-                    </label>
-                    <div className="relative">
-                      <User className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                      <input aria-label="Username / Full Name"
-                        type="text"
-                        required
-                        value={claimStudentName}
-                        onChange={(e) => setClaimStudentName(e.target.value)}
-                        placeholder="e.g. Kwesi Mensah"
-                        className="w-full pl-9 pr-3 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-blue-600"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Phone Number */}
-                  <div className="space-y-1">
-                    <label className="text-xs font-black text-slate-800 block">
-                      Phone Number <span className="text-rose-600">*</span>
-                    </label>
-                    <div className="relative">
-                      <Phone className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                      <input aria-label="Phone Number"
-                        type="tel"
-                        required
-                        value={claimStudentPhone}
-                        onChange={(e) => setClaimStudentPhone(e.target.value)}
-                        placeholder="e.g. +233 24 123 4567"
-                        className="w-full pl-9 pr-3 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-blue-600"
-                      />
-                    </div>
-                  </div>
-
-                  {/* KNUST Student Email Requirement */}
-                  <div className="space-y-2 bg-blue-50/60 border border-blue-200/80 p-3.5 rounded-2xl">
-                    <div className="flex items-center justify-between">
-                      <label className="text-xs font-black text-slate-900 flex items-center gap-1.5">
-                        <Mail className="w-3.5 h-3.5 text-blue-700" />
-                        <span>KNUST Student Email</span>
-                        <span className="text-rose-600">*</span>
-                      </label>
-                      <span className="text-[10px] font-bold text-blue-700 bg-blue-100/80 px-2 py-0.5 rounded-full border border-blue-200">
-                        Required Format
-                      </span>
-                    </div>
-
-                    <p className="text-[11px] text-slate-600 leading-snug">
-                      Your primary user account email cannot be used. Only an official KNUST student email is permitted (e.g. <strong>username@st.knust.edu.gh</strong> or <strong>username@knust.edu.gh</strong>). This email serves as your dedicated credential for logging into your digital room.
-                    </p>
-
-                    <div className="relative pt-1">
-                      <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                      <input aria-label="KNUST Student Email"
-                        type="email"
-                        required
-                        value={claimEmail}
-                        onChange={(e) => setClaimEmail(e.target.value)}
-                        placeholder="e.g. kwame.mensah@st.knust.edu.gh"
-                        className="w-full pl-9 pr-3 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-blue-600"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Password & Confirm Password */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                    <div className="space-y-1">
-                      <label className="text-xs font-black text-slate-800 block">
-                        Password <span className="text-rose-600">*</span>
-                      </label>
-                      <div className="relative">
-                        <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                        <input aria-label="Password"
-                          type={showClaimPassword ? "text" : "password"}
-                          required
-                          value={claimPassword}
-                          onChange={(e) => setClaimPassword(e.target.value)}
-                          placeholder="Min 6 chars"
-                          className="w-full pl-9 pr-8 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-blue-600"
-                        />
-                        <button aria-label={showClaimPassword ? 'Hide password' : 'Show password'} aria-pressed={showClaimPassword}
-                          type="button"
-                          onClick={() => setShowClaimPassword(!showClaimPassword)}
-                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
-                        >
-                          {showClaimPassword ? <EyeOff size={14} /> : <Eye size={14} />}
-                        </button>
-                      </div>
-                      <PasswordStrengthGauge password={claimPassword} />
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-xs font-black text-slate-800 block">
-                        Confirm Password <span className="text-rose-600">*</span>
-                      </label>
-                      <div className="relative">
-                        <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                        <input aria-label="Confirm Password"
-                          type={showClaimConfirmPassword ? "text" : "password"}
-                          required
-                          value={claimConfirmPassword}
-                          onChange={(e) => setClaimConfirmPassword(e.target.value)}
-                          placeholder="Repeat password"
-                          className="w-full pl-9 pr-8 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-blue-600"
-                        />
-                        <button aria-label={showClaimConfirmPassword ? 'Hide password' : 'Show password'} aria-pressed={showClaimConfirmPassword}
-                          type="button"
-                          onClick={() => setShowClaimConfirmPassword(!showClaimConfirmPassword)}
-                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
-                        >
-                          {showClaimConfirmPassword ? <EyeOff size={14} /> : <Eye size={14} />}
-                        </button>
-                      </div>
-                      <PasswordStrengthGauge password={claimConfirmPassword} />
-                    </div>
-                  </div>
-
-                  <label className="flex items-start gap-2 pt-1 text-[11px] text-slate-600 cursor-pointer font-medium leading-normal">
-                    <input
-                      type="checkbox"
-                      checked={claimAgreeTerms}
-                      onChange={(e) => setClaimAgreeTerms(e.target.checked)}
-                      className="mt-0.5 rounded text-blue-600 focus:ring-blue-500 border-slate-300"
-                    />
-                    <span>
-                      I agree to the <strong>Hostel Community Code of Conduct</strong> and PineVela Resident Terms.
-                    </span>
-                  </label>
-                </div>
-
-                {claimError && (
-                  <div className="p-3 bg-rose-50 border border-rose-200 rounded-2xl text-xs text-rose-900 font-bold flex items-center gap-2 animate-fade-in">
-                    <ShieldAlert size={15} className="text-rose-600 shrink-0" />
-                    <span>{claimError}</span>
-                  </div>
-                )}
-
-                <div className="pt-2 flex items-center justify-end gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setClaimStep(1)}
-                    className="px-4 py-2.5 border border-slate-200 text-slate-600 rounded-xl text-xs font-bold hover:bg-slate-50 cursor-pointer"
-                  >
-                    Back
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleClaimRoomKey}
-                    disabled={submittingClaim || !claimStudentName.trim() || !claimStudentPhone.trim() || !claimPassword.trim() || claimPassword !== claimConfirmPassword || !claimAgreeTerms}
-                    className="flex-1 py-3 bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white font-black text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-                  >
-                    {submittingClaim ? (
-                      <>
-                        <RefreshCw className="w-4 h-4 animate-spin" />
-                        <span>Registering & Activating...</span>
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircle size={15} />
-                        <span>Complete Registration & Enter Room</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* STEP 3: Minimalistic Confirmation & Room Activated */}
-            {claimStep === 3 && verifiedKeyInfo && (
-              <div className="space-y-5 text-center py-4 animate-fade-in">
-                <div className="w-16 h-16 bg-gradient-to-br from-emerald-500 to-teal-600 text-white rounded-3xl mx-auto flex items-center justify-center shadow-lg shadow-emerald-500/30 animate-bounce">
-                  <CheckCircle2 size={32} />
-                </div>
-
-                <div className="space-y-1.5">
-                  <h4 className="text-xl font-black text-slate-900 tracking-tight">
-                    Room Successfully Activated!
-                  </h4>
-                  <p className="text-xs text-slate-600 max-w-sm mx-auto font-medium">
-                    Welcome to <strong>{verifiedKeyInfo.hostelName}</strong>. Your resident account credentials have been created and all details are synchronized.
-                  </p>
-                </div>
-
-                <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 text-left space-y-2 text-xs">
-                  <div className="flex justify-between items-center text-[11px]">
-                    <span className="text-slate-500">Digital Room Key:</span>
-                    <strong className="font-mono text-blue-900 bg-blue-100/80 px-2 py-0.5 rounded border border-blue-200">{verifiedKeyInfo.roomKey}</strong>
-                  </div>
-                  <div className="flex justify-between items-center text-[11px]">
-                    <span className="text-slate-500">Resident Name:</span>
-                    <strong className="text-slate-800">{claimStudentName || currentUser?.name}</strong>
-                  </div>
-                  <div className="flex justify-between items-center text-[11px]">
-                    <span className="text-slate-500">Login Email:</span>
-                    <strong className="text-slate-800">{claimEmail || currentUser?.email}</strong>
-                  </div>
-                  <div className="flex justify-between items-center text-[11px]">
-                    <span className="text-slate-500">Room Location:</span>
-                    <strong className="text-slate-800">{verifiedKeyInfo.blockName} • Room {verifiedKeyInfo.roomNumber}</strong>
-                  </div>
-                </div>
-
-                <div className="space-y-2.5 pt-2">
-                  <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-2xl text-left space-y-1">
-                    <div className="flex items-center gap-1.5 text-xs font-black text-emerald-900">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                      <span>Room Credentials Activated</span>
-                    </div>
-                    <p className="text-[11px] text-emerald-800 font-medium">
-                      Your digital room credentials have been created with your official KNUST student email (<strong>{claimEmail}</strong>). To enter your digital room dashboard, sign out and sign in using your KNUST student email and password.
-                    </p>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowClaimModal(false);
-                      setActiveTab('login-room');
-                    }}
-                    className="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white font-black text-xs rounded-xl shadow-md transition-all cursor-pointer"
-                  >
-                    Close & View in Registered Rooms
-                  </button>
-                </div>
-              </div>
-            )}
-
-          </div>
-        </DashboardOverlay>
-      )}
+      {showClaimModal && true && <SupabaseResidentActivation name={user?.name} phone={user?.phone} residenceId={claimHostelId} onClose={() => setShowClaimModal(false)} onActivated={() => { void queryClient.invalidateQueries({ queryKey:['userData'] }); }} />}
 
       {/* ========================================================================= */}
       {/* MODAL: RESET REGISTERED ACCOUNT PASSWORD */}
       {/* ========================================================================= */}
       {showResetPasswordModal && (
-        <DashboardOverlay aria-label={usesSupabasePersistence ? 'Resident account security' : 'Reset Registered Account Password'} onClose={() => setShowResetPasswordModal(false)} className="fixed inset-0 bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-4 animate-in fade-in duration-150">
+        <DashboardOverlay aria-label={('Resident account security')} onClose={() => setShowResetPasswordModal(false)} className="fixed inset-0 bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-4 animate-in fade-in duration-150">
           <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-2xl border border-slate-200 space-y-5">
             <div className="flex items-start justify-between gap-3 pb-3 border-b border-slate-100">
               <div className="flex items-start gap-3">
@@ -4798,7 +3456,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                 </div>
                 <div>
                   <h3 className="text-base font-black text-slate-900">
-                    {usesSupabasePersistence ? 'Resident account security' : 'Reset Resident Password'}
+                    {('Resident account security')}
                   </h3>
                   <p className="text-xs text-slate-500 font-medium truncate max-w-xs">{resetTargetEmail}</p>
                 </div>
@@ -4812,7 +3470,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
               </button>
             </div>
 
-            {usesSupabasePersistence ? <div className="space-y-4">
+            {(<div className="space-y-4">
               <p className="text-sm text-slate-600">Sign in with the verified resident email to manage its credentials. If that email also opens your seller account, its email password is shared and each portal has a separate access PIN.</p>
               <p className="text-sm text-slate-600">The resident portal's Settings page lets you change its current PIN. Your primary account cannot change another verified identity's password.</p>
               <button type="button" disabled={resettingPassword} className="min-h-11 rounded-xl bg-blue-700 px-5 py-3 text-sm font-semibold text-white disabled:opacity-50" onClick={async () => {
@@ -4820,74 +3478,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                 if (await logout()) navigate('/login', { replace: true });
                 else setResettingPassword(false);
               }}>Sign in to resident account</button>
-            </div> : (
-            <form onSubmit={handleResetRegisteredAccountPassword} className="space-y-4">
-              {resetTargetRole === 'resident' && (
-                <div className="space-y-1">
-                  <label className="text-xs font-black text-slate-800 block">Old / Current Resident Password *</label>
-                  <input aria-label="Old / Current Resident Password"
-                    type="password"
-                    value={currentPasswordInput}
-                    onChange={(e) => setCurrentPasswordInput(e.target.value)}
-                    placeholder="Enter your current resident password"
-                    className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-blue-600 font-mono"
-                    required
-                  />
-                </div>
-              )}
-
-              <div className="space-y-1">
-                <label className="text-xs font-black text-slate-800 block">New Password</label>
-                <input aria-label="New Password"
-                  type="password"
-                  value={newPasswordInput}
-                  onChange={(e) => setNewPasswordInput(e.target.value)}
-                  placeholder="Enter new password (at least 6 characters)"
-                  className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-blue-600"
-                  required
-                />
-                <PasswordStrengthGauge password={newPasswordInput} />
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-xs font-black text-slate-800 block">Confirm New Password</label>
-                <input aria-label="Confirm New Password"
-                  type="password"
-                  value={confirmPasswordInput}
-                  onChange={(e) => setConfirmPasswordInput(e.target.value)}
-                  placeholder="Re-enter new password"
-                  className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-blue-600"
-                  required
-                />
-                <PasswordStrengthGauge password={confirmPasswordInput} />
-              </div>
-
-              {resetPasswordError && (
-                <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-900 font-semibold flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
-                  <span>{resetPasswordError}</span>
-                </div>
-              )}
-
-              <div className="grid grid-cols-2 gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowResetPasswordModal(false)}
-                  className="py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-xl transition-all cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={resettingPassword}
-                  className="py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs rounded-xl shadow-md transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50"
-                >
-                  {resettingPassword ? <RefreshCw className="w-4 h-4 animate-spin" /> : <KeyRound className="w-4 h-4" />}
-                  <span>Update Password</span>
-                </button>
-              </div>
-            </form>
-            )}
+            </div>)}
           </div>
         </DashboardOverlay>
       )}
@@ -5049,682 +3640,11 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
       {viewingHostelModal && <ResidenceDetails key={viewingHostelModal.id} hostel={viewingHostelModal} onClose={() => setViewingHostelModal(null)} onActivate={openResidenceActivation} />}
 
       {/* ADD ADDITIONAL ROOM MODAL */}
-      {showAddRoomModal && (
-        <DashboardOverlay aria-label="Register Additional Room" onClose={() => setShowAddRoomModal(false)} className="fixed inset-0 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
-          <div className="onboarding-fields bg-white rounded-3xl p-6 sm:p-8 max-w-lg w-full shadow-2xl border border-slate-200 space-y-5 animate-scaleUp">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-2xl bg-blue-100 text-blue-900 font-bold">
-                  <Plus className="w-5 h-5 text-blue-700" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-black text-slate-900">Register Additional Room</h3>
-                  <p className="text-xs text-slate-500 font-medium">Add up to 5 rooms under your resident account.</p>
-                </div>
-              </div>
-              <button aria-label="Close dialog"
-                type="button"
-                onClick={() => setShowAddRoomModal(false)}
-                className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <OnboardingProgress steps={ROOM_ACTIVATION_STEPS} step={verifiedAddKeyInfo ? 2 : 1} label="Room registration" />
-
-            <form
-              onSubmit={async (e) => {
-                e.preventDefault();
-                if (!addRoomKeyInput.trim()) return;
-                setSubmittingAddRoom(true);
-                setAddRoomError(null);
-                try {
-                  const res = await apiFetch('/api/student/add-room', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ roomKey: addRoomKeyInput.trim() })
-                  });
-                  if (res && res.success) {
-                    triggerToast(res.message || "Room added successfully!", 'success');
-                    setUserRooms(res.rooms || []);
-                    setShowAddRoomModal(false);
-                    setAddRoomKeyInput('');
-                    setVerifiedAddKeyInfo(null);
-                  } else {
-                    setAddRoomError(res?.error || "Failed to register room key.");
-                  }
-                } catch (err: any) {
-                  setAddRoomError(err.message || "Error adding room key.");
-                } finally {
-                  setSubmittingAddRoom(false);
-                }
-              }}
-              className="space-y-4"
-            >
-              <div className="space-y-1.5">
-                <label className="text-xs font-black uppercase tracking-wider text-slate-600 block">
-                  Digital Room Key Code
-                </label>
-                <div className="flex items-center gap-2">
-                  <input aria-label="Digital Room Key Code"
-                    type="text"
-                    value={addRoomKeyInput}
-                    onChange={(e) => {
-                      setAddRoomKeyInput(e.target.value.toUpperCase());
-                      setAddRoomError(null);
-                      setVerifiedAddKeyInfo(null);
-                    }}
-                    placeholder="e.g. MAZE-B-204123"
-                    className="flex-1 px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl font-mono text-sm font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-900 uppercase"
-                  />
-                  <button
-                    type="button"
-                    disabled={verifyingAddKey || !addRoomKeyInput.trim()}
-                    onClick={async () => {
-                      if (!addRoomKeyInput.trim() || addRoomKeyInput.trim().length < 5) {
-                        setAddRoomError("Please enter a valid digital room key format.");
-                        return;
-                      }
-                      setVerifyingAddKey(true);
-                      setAddRoomError(null);
-                      try {
-                        const res = await apiFetch('/api/room-keys/verify', {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ roomKey: addRoomKeyInput.trim() })
-                        });
-                        if (res && res.valid) {
-                          setVerifiedAddKeyInfo(res);
-                          setAddRoomError(null);
-                          triggerToast(`Room Found: ${res.hostelName} (${res.blockName}, Room ${res.roomNumber})`, 'success');
-                        } else {
-                          setVerifiedAddKeyInfo(null);
-                          setAddRoomError(res?.error || "Invalid room key or already used.");
-                        }
-                      } catch (err: any) {
-                        setVerifiedAddKeyInfo(null);
-                        setAddRoomError(err.message || "Failed to verify key.");
-                      } finally {
-                        setVerifyingAddKey(false);
-                      }
-                    }}
-                    className="px-4 py-3 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs rounded-xl transition-all cursor-pointer disabled:opacity-50 flex items-center gap-1.5 shrink-0"
-                  >
-                    {verifyingAddKey ? (
-                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                    ) : (
-                      <Search className="w-3.5 h-3.5" />
-                    )}
-                    <span>Verify</span>
-                  </button>
-                </div>
-              </div>
-
-              {addRoomError && (
-                <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold rounded-xl flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
-                  <span>{addRoomError}</span>
-                </div>
-              )}
-
-              {verifiedAddKeyInfo && (
-                <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl space-y-2 text-xs">
-                  <div className="flex items-center gap-2 text-emerald-900 font-black">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                    <span>Digital Room Key Verified!</span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2 text-slate-700 font-medium">
-                    <div>
-                      <span className="text-slate-400 block text-[10px]">Hostel</span>
-                      <span className="font-bold text-slate-900">{verifiedAddKeyInfo.hostelName}</span>
-                    </div>
-                    <div>
-                      <span className="text-slate-400 block text-[10px]">Room & Block</span>
-                      <span className="font-bold text-slate-900">{verifiedAddKeyInfo.blockName}, Room {verifiedAddKeyInfo.roomNumber}</span>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => setShowAddRoomModal(false)}
-                  className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={submittingAddRoom || !addRoomKeyInput.trim()}
-                  className="px-6 py-2.5 bg-blue-900 hover:bg-blue-850 text-white font-black text-xs rounded-xl shadow-md transition-all cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
-                >
-                  {submittingAddRoom ? (
-                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                  ) : (
-                    <Plus className="w-3.5 h-3.5" />
-                  )}
-                  <span>Claim & Register Room</span>
-                </button>
-              </div>
-            </form>
-          </div>
-        </DashboardOverlay>
-      )}
 
       {/* DELETE / UNLINK ROOM CONFIRMATION MODAL */}
-      {deletingRoomTarget && !usesSupabasePersistence && (
-        <DashboardOverlay aria-label="Delete Resident Room" onClose={() => { setDeletingRoomTarget(null); setDelRoomError(null); setDelRoomPasswordInput(''); }} className="fixed inset-0 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl border border-slate-200 space-y-5 animate-scaleUp">
-            <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
-              <div className="p-3 rounded-2xl bg-rose-100 text-rose-700 font-bold">
-                <Trash2 className="w-6 h-6" />
-              </div>
-              <div>
-                <h3 className="text-lg font-black text-slate-900">Delete Resident Room</h3>
-                <p className="text-xs text-slate-500 font-medium">Confirm account details to release digital room key.</p>
-              </div>
-            </div>
-
-            <div className="space-y-3.5 text-xs text-slate-600 font-medium">
-              <p>
-                Deleting <strong className="text-slate-900">{deletingRoomTarget.hostelName || 'Hostel Room'} ({deletingRoomTarget.blockName || 'Block'}, Room {deletingRoomTarget.roomNumber || 'Room'})</strong> with key <code className="font-mono bg-amber-100 px-1.5 py-0.5 rounded text-amber-900 font-bold">{deletingRoomTarget.roomKey}</code>.
-              </p>
-
-              {delRoomError && (
-                <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-900 text-xs font-bold flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
-                  <span>{delRoomError}</span>
-                </div>
-              )}
-
-              <div className="space-y-3 pt-1">
-                <div>
-                  <label className="text-[11px] font-black uppercase text-slate-700 block mb-1">
-                    Resident Account Email
-                  </label>
-                  <input aria-label="Resident Account Email"
-                    type="email"
-                    value={delRoomEmailInput}
-                    onChange={(e) => {
-                      setDelRoomEmailInput(e.target.value);
-                      setDelRoomError(null);
-                    }}
-                    placeholder="e.g. resident@gmail.com"
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl font-medium text-slate-900 text-xs focus:ring-2 focus:ring-rose-500 focus:outline-none"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="text-[11px] font-black uppercase text-slate-700 block mb-1">
-                    Resident Account Password
-                  </label>
-                  <input aria-label="Resident Account Password"
-                    type="password"
-                    value={delRoomPasswordInput}
-                    onChange={(e) => {
-                      setDelRoomPasswordInput(e.target.value);
-                      setDelRoomError(null);
-                    }}
-                    placeholder="Enter password for this resident account"
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl font-medium text-slate-900 text-xs focus:ring-2 focus:ring-rose-500 focus:outline-none"
-                    required
-                  />
-                  <p className="text-[10px] text-slate-400 mt-1 font-semibold">
-                    Enter the secure password used when creating this resident account.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
-              <button
-                type="button"
-                onClick={() => {
-                  setDeletingRoomTarget(null);
-                  setDelRoomError(null);
-                  setDelRoomPasswordInput('');
-                }}
-                className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                disabled={submittingDeleteRoom}
-                onClick={async () => {
-                  if (!deletingRoomTarget) return;
-                  if (!delRoomEmailInput.trim()) {
-                    setDelRoomError("Please enter the resident account email.");
-                    return;
-                  }
-                  if (!delRoomPasswordInput.trim()) {
-                    setDelRoomError("Please enter the resident account password to confirm deletion.");
-                    return;
-                  }
-                  setSubmittingDeleteRoom(true);
-                  setDelRoomError(null);
-                  try {
-                    const res = await apiFetch('/api/student/delete-room', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ 
-                        roomKey: deletingRoomTarget.roomKey,
-                        email: delRoomEmailInput.trim(),
-                        password: delRoomPasswordInput.trim()
-                      })
-                    });
-                    if (res && res.success) {
-                      triggerToast(res.message || "Room deleted successfully!", 'success');
-                      setUserRooms(res.rooms || []);
-                      setDeletingRoomTarget(null);
-                      setDelRoomPasswordInput('');
-                    } else {
-                      setDelRoomError(res?.error || "Failed to delete room. Please check your credentials.");
-                    }
-                  } catch (err: any) {
-                    setDelRoomError(err.message || "Error unlinking room. Verify credentials.");
-                  } finally {
-                    setSubmittingDeleteRoom(false);
-                  }
-                }}
-                className="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-black text-xs rounded-xl shadow-md transition-all cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
-              >
-                {submittingDeleteRoom ? (
-                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                ) : (
-                  <Trash2 className="w-3.5 h-3.5" />
-                )}
-                <span>Verify & Delete Room</span>
-              </button>
-            </div>
-          </div>
-        </DashboardOverlay>
-      )}
 
       {/* PINEVELA FULL-SCREEN STUDENT MERCHANT ONBOARDING WIZARD (WHITE FROSTY THEME & ROOT Z-INDEX) */}
-      {showDMRegModal && usesSupabasePersistence && <SupabaseSellerRegistration key={user?.id} name={user?.name} phone={user?.phone} categories={DIGITAL_MARKET_CATEGORIES} onClose={() => setShowDMRegModal(false)} onSubmitted={() => {void loadDigitalMarketData();void queryClient.invalidateQueries({queryKey:['userData']});triggerToast('Seller application submitted for review.');}} />}
-      {showDMRegModal && !usesSupabasePersistence && (
-        <DashboardOverlay aria-label="Digital Market Registration" onClose={() => { setShowDMRegModal(false); setDmWizardPhase(1); }} layer={99999} className="fixed inset-0 h-full w-full bg-slate-50/95 backdrop-blur-md flex flex-col items-center justify-start p-3 sm:p-6 overflow-hidden font-sans text-slate-800 animate-fadeIn">
-          
-          {/* Ambient background blur shapes */}
-          <div className="absolute top-0 right-0 w-96 h-96 bg-blue-100/60 rounded-full blur-3xl opacity-30 -z-10 pointer-events-none fixed" />
-          <div className="absolute bottom-0 left-0 w-96 h-96 bg-indigo-100/60 rounded-full blur-3xl opacity-30 -z-10 pointer-events-none fixed" />
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[140%] md:w-[120%] h-[380px] md:h-[480px] bg-gradient-to-b from-blue-50/70 via-slate-50/60 to-blue-100/30 border-b border-blue-200/30 rounded-b-[50%] -z-10 shadow-sm pointer-events-none fixed" />
-
-          {/* STATIC TOP HEADER BAR - DOES NOT SCROLL AWAY WITH FORM */}
-          <div className="w-full max-w-4xl flex items-center justify-between my-2 shrink-0 relative bg-white/95 backdrop-blur-md px-6 py-3.5 rounded-2xl border border-slate-200/90 shadow-md z-30">
-            <div className="flex items-center gap-3">
-              <PineLogo size={32} hideText={false} />
-              <span className="hidden sm:inline-block h-5 w-px bg-slate-200" />
-              <span className="text-xs font-extrabold text-blue-900 uppercase tracking-wider bg-blue-50 px-2.5 py-1 rounded-full border border-blue-200/80">
-                Digital Market Gateway
-              </span>
-            </div>
-
-            <button 
-              type="button"
-              onClick={() => {
-                setShowDMRegModal(false);
-                setDmWizardPhase(1);
-              }}
-              className="w-9 h-9 flex items-center justify-center rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 transition-all cursor-pointer border border-slate-200"
-              title="Close and return to dashboard"
-            >
-              <X size={18} />
-            </button>
-          </div>
-
-          {/* SCROLLABLE FORM BODY CONTAINER */}
-          <div className="w-full max-w-4xl flex-1 overflow-y-auto pb-12 pr-0.5">
-            <div className="w-full bg-white rounded-3xl border border-slate-200 shadow-2xl overflow-hidden relative z-10 space-y-0 my-2 sm:my-4">
-              
-              {/* Accent Top Bar */}
-              <div className="h-1.5 bg-gradient-to-r from-blue-900 via-indigo-800 to-blue-700 w-full" />
-
-            <div className="p-6 sm:p-8"><OnboardingProgress steps={MARKET_APPLICATION_STEPS} step={dmWizardPhase} label="Marketplace application" /></div>
-
-            {/* Form Body Container */}
-            <div className="onboarding-fields p-6 sm:p-10 space-y-6 text-slate-800">
-              
-              {dmRegError && (
-                <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold flex items-center gap-3">
-                  <AlertCircle className="w-5 h-5 shrink-0 text-rose-600" />
-                  <span>{dmRegError}</span>
-                </div>
-              )}
-
-              {/* PHASE 1: STUDENT IDENTITY & ACCREDITATION */}
-              {dmWizardPhase === 1 && (
-                <div className="space-y-5 animate-fadeIn">
-                  <div className="p-4 rounded-2xl bg-blue-50 border border-blue-200 text-xs text-blue-950 flex items-start gap-3">
-                    <User className="w-5 h-5 text-blue-700 shrink-0 mt-0.5" />
-                    <div>
-                      <strong className="text-blue-950 block font-black text-xs mb-0.5">Phase 1 of 3: Academic Identity & Accreditation</strong>
-                      Please provide your legal student identity and select your accredited Ghanaian institution.
-                    </div>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider">
-                      Full Legal Name <span className="text-rose-500">*</span>
-                    </label>
-                    <input aria-label="Full Legal Name"
-                      type="text"
-                      required
-                      placeholder="e.g. Samuel Mensah"
-                      value={dmFullName}
-                      onChange={e => setDmFullName(e.target.value)}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-xs sm:text-sm text-slate-800 font-semibold focus:outline-none focus:ring-2 focus:ring-blue-800 focus:border-blue-800 transition-all"
-                    />
-                    <p className="text-[11px] text-slate-500 font-medium">Use the name recorded by your university.</p>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider">
-                      Accredited Ghanaian University <span className="text-rose-500">*</span>
-                    </label>
-                    <select aria-label="Accredited Ghanaian University"
-                      value={dmUniversity}
-                      onChange={e => setDmUniversity(e.target.value)}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-xs sm:text-sm text-slate-800 font-semibold focus:outline-none focus:ring-2 focus:ring-blue-800 focus:border-blue-800 transition-all"
-                    >
-                      <option value="Kwame Nkrumah University of Science and Technology (KNUST)">KNUST - Kwame Nkrumah Univ of Science & Tech</option>
-                      <option value="University of Ghana (UG - Legon)">UG - University of Ghana (Legon)</option>
-                      <option value="University of Cape Coast (UCC)">UCC - University of Cape Coast</option>
-                      <option value="University of Professional Studies, Accra (UPSA)">UPSA - Univ of Professional Studies Accra</option>
-                      <option value="University for Development Studies (UDS)">UDS - Univ for Development Studies</option>
-                      <option value="University of Mines and Technology (UMaT)">UMaT - Univ of Mines & Tech</option>
-                      <option value="University of Health and Allied Sciences (UHAS)">UHAS - Univ of Health & Allied Sciences</option>
-                      <option value="Ashesi University">Ashesi University</option>
-                      <option value="Ghana Communication Technology University (GCTU)">GCTU - Ghana Communication Tech Univ</option>
-                      <option value="Accra Technical University (ATU)">ATU - Accra Technical University</option>
-                      <option value="Kumasi Technical University (KsTU)">KsTU - Kumasi Technical University</option>
-                      <option value="University of Energy and Natural Resources (UENR)">UENR - Univ of Energy & Natural Resources</option>
-                      <option value="University of Education, Winneba (UEW)">UEW - Univ of Education Winneba</option>
-                      <option value="AAMUSTED">AAMUSTED - Akenten Appiah-Menka Univ</option>
-                    </select>
-                  </div>
-
-                  {/* Student identification input */}
-                  <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider">
-                        Student ID or School-issued ID <span className="text-rose-500">*</span>
-                      </label>
-                      {dmIdNumber && (
-                        /^[A-Z0-9][A-Z0-9\-\/]{3,31}$/i.test(dmIdNumber) ? (
-                          <span className="text-[10px] font-black text-blue-900 bg-blue-100 px-2.5 py-0.5 rounded-full flex items-center gap-1 border border-blue-300">
-                            <Check className="w-3 h-3" /> Valid ID format
-                          </span>
-                        ) : (
-                          <span className="text-[10px] font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-300">
-                            {dmIdNumber.length}/32 chars
-                          </span>
-                        )
-                      )}
-                    </div>
-
-                    <input aria-label="Student ID or School-issued ID"
-                      type="text"
-                      required
-                      maxLength={32}
-                      placeholder="e.g. KNUST/2024/00123"
-                      value={dmIdNumber}
-                      onChange={e => setDmIdNumber(e.target.value.toUpperCase())}
-                      className={`w-full bg-white border rounded-2xl px-4 py-3 text-xs sm:text-sm font-bold font-mono tracking-wider transition-all ${
-                        dmIdNumber && /^[A-Z0-9][A-Z0-9\-\/]{3,31}$/i.test(dmIdNumber)
-                          ? 'border-blue-600 text-blue-950 focus:outline-none'
-                          : 'border-slate-200 text-slate-800 placeholder-slate-400 focus:ring-2 focus:ring-blue-800'
-                      }`}
-                    />
-                    <p className="text-[11px] text-slate-500 font-medium">
-                      Use your active university Student ID or another school-issued ID.
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {/* PHASE 2: MERCHANT SECURITY & CREDENTIALS */}
-              {dmWizardPhase === 2 && (
-                <div className="space-y-5 animate-fadeIn">
-                  <div className="p-4 rounded-2xl bg-blue-50 border border-blue-200 text-xs text-blue-950 flex items-start gap-3">
-                    <Lock className="w-5 h-5 text-blue-700 shrink-0 mt-0.5" />
-                    <div>
-                      <strong className="text-blue-950 block font-black text-xs mb-0.5">Phase 2 of 3: Merchant Security & Credentials</strong>
-                      Set up your student merchant portal authentication credentials.
-                    </div>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider">
-                        Student Email Address <span className="text-rose-500">*</span>
-                      </label>
-                      {dmStudentEmail && (
-                        isCommercialEmail(dmStudentEmail) ? (
-                          <span className="text-[10px] font-bold text-rose-800 bg-rose-100 px-2 py-0.5 rounded-md border border-rose-300">
-                            Commercial Email Not Permitted
-                          </span>
-                        ) : isValidStudentDomain(dmStudentEmail) ? (
-                          <span className="text-[10px] font-black text-blue-900 bg-blue-100 px-2.5 py-0.5 rounded-full flex items-center gap-1 border border-blue-300">
-                            <Check className="w-3 h-3" /> Valid Domain
-                          </span>
-                        ) : null
-                      )}
-                    </div>
-                    <input aria-label="Student Email Address"
-                      type="email"
-                      required
-                      placeholder="Enter your student email address"
-                      value={dmStudentEmail}
-                      onChange={e => setDmStudentEmail(e.target.value)}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-xs sm:text-sm text-slate-800 font-semibold focus:outline-none focus:ring-2 focus:ring-blue-800 focus:border-blue-800 transition-all font-mono"
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider">
-                        Student Merchant Password <span className="text-rose-500">*</span>
-                      </label>
-                      <button aria-label={showDmPassword ? 'Hide password' : 'Show password'} aria-pressed={showDmPassword}
-                        type="button"
-                        onClick={() => setShowDmPassword(!showDmPassword)}
-                        className="text-xs font-bold text-blue-800 hover:text-blue-950 transition-colors cursor-pointer flex items-center gap-1"
-                      >
-                        {showDmPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                        <span>{showDmPassword ? 'Hide' : 'Show'}</span>
-                      </button>
-                    </div>
-                    <input aria-label="Student Merchant Password"
-                      type={showDmPassword ? "text" : "password"}
-                      required
-                      placeholder="Create a secure 6+ character password"
-                      value={dmPassword}
-                      onChange={e => setDmPassword(e.target.value)}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-xs sm:text-sm text-slate-800 font-semibold focus:outline-none focus:ring-2 focus:ring-blue-800 focus:border-blue-800 transition-all"
-                    />
-                    <PasswordStrengthGauge password={dmPassword} />
-                    <p className="text-[11px] text-slate-500 font-medium">Used to access your student seller store and inventory dashboard.</p>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider">
-                        Confirm Merchant Password <span className="text-rose-500">*</span>
-                      </label>
-                      {dmConfirmPassword && (
-                        dmPassword === dmConfirmPassword ? (
-                          <span className="text-[10px] font-black text-blue-900 bg-blue-100 px-2.5 py-0.5 rounded-full flex items-center gap-1 border border-blue-300">
-                            <Check className="w-3 h-3" /> Passwords Match
-                          </span>
-                        ) : (
-                          <span className="text-[10px] font-bold text-rose-800 bg-rose-100 px-2 py-0.5 rounded-md border border-rose-300">
-                            Passwords Mismatch
-                          </span>
-                        )
-                      )}
-                    </div>
-                    <input aria-label="Confirm Merchant Password"
-                      type={showDmPassword ? "text" : "password"}
-                      required
-                      placeholder="Re-enter your merchant password"
-                      value={dmConfirmPassword}
-                      onChange={e => setDmConfirmPassword(e.target.value)}
-                      className={`w-full bg-slate-50 border rounded-2xl px-4 py-3 text-xs sm:text-sm text-slate-800 font-semibold focus:outline-none transition-all ${
-                        dmConfirmPassword && dmPassword !== dmConfirmPassword ? 'border-rose-400 focus:ring-2 focus:ring-rose-500' : 'border-slate-200 focus:ring-2 focus:ring-blue-800'
-                      }`}
-                    />
-                    <PasswordStrengthGauge password={dmConfirmPassword} />
-                  </div>
-                </div>
-              )}
-
-              {/* PHASE 3: STORE SPECIALIZATION & ACCREDITATION REVIEW */}
-              {dmWizardPhase === 3 && (
-                <div className="space-y-5 animate-fadeIn">
-                  <div className="p-4 rounded-2xl bg-blue-50 border border-blue-200 text-xs text-blue-950 flex items-start gap-3">
-                    <ShoppingBag className="w-5 h-5 text-blue-700 shrink-0 mt-0.5" />
-                    <div>
-                      <strong className="text-blue-950 block font-black text-xs mb-0.5">Phase 3 of 3: Store Category & Verification Review</strong>
-                      Choose your primary product line and review the verified merchant activation terms.
-                    </div>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider">
-                      Primary Selling Category <span className="text-rose-500">*</span>
-                    </label>
-                    <select aria-label="Primary Selling Category"
-                      value={dmCategory}
-                      onChange={e => setDmCategory(e.target.value)}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-xs sm:text-sm text-slate-800 font-semibold focus:outline-none focus:ring-2 focus:ring-blue-800 transition-all"
-                    >
-                      {DIGITAL_MARKET_CATEGORIES.map(cat => (
-                        <option key={cat} value={cat}>{cat}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider">
-                      Proposed Campus Store Name <span className="text-slate-400 font-normal">(Optional)</span>
-                    </label>
-                    <input aria-label="Proposed Campus Store Name (Optional)"
-                      type="text"
-                      placeholder={`e.g. ${dmFullName ? dmFullName.trim() + "'s Campus Market" : "Campus Tech Depot"}`}
-                      value={dmProposedStoreName}
-                      onChange={e => setDmProposedStoreName(e.target.value)}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-xs sm:text-sm text-slate-800 font-semibold focus:outline-none focus:ring-2 focus:ring-blue-800 transition-all"
-                    />
-                  </div>
-
-                  {/* Fee & Verified P2P Schedule Card */}
-                  <div className="p-4 rounded-2xl bg-slate-50 border border-blue-200 space-y-2.5">
-                    <div className="flex justify-between items-center text-xs font-black text-blue-900">
-                      <span>Registration Fee: <strong>{marketPrices?.registrationFee ?? "…"} GHS</strong> + <strong>{marketPrices?.semesterFee ?? "…"} GHS</strong> every two months + selected monthly plan</span>
-                      <span className="px-2.5 py-0.5 bg-blue-100 text-blue-900 border border-blue-300 rounded-full font-black text-[10px]">
-                        Verified P2P
-                      </span>
-                    </div>
-                    <p className="text-xs text-slate-600 leading-relaxed font-medium">
-                      🛡️ <strong>Verified P2P Activation:</strong> Verified P2P merchant access is only accepted and unlocked after you have completed setting up your digital market following approval by the manager/admin. Payment is verified by the server after Paystack checkout.
-                    </p>
-                  </div>
-
-                  {/* Student Code of Conduct & Identity Certification */}
-                  <label className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex items-start gap-3 cursor-pointer hover:bg-slate-100 transition-colors">
-                    <input
-                      type="checkbox"
-                      checked={dmCertifyAccepted}
-                      onChange={e => setDmCertifyAccepted(e.target.checked)}
-                      className="mt-0.5 rounded border-slate-300 text-blue-800 focus:ring-blue-800 cursor-pointer"
-                    />
-                    <span className="text-xs text-slate-700 font-medium leading-relaxed">
-                      I certify that I am an enrolled student at the selected university and that all details and identification provided are genuine. I agree to abide by PineVela Student Market community guidelines.
-                    </span>
-                  </label>
-                </div>
-              )}
-            </div>
-
-            {/* Wizard Navigation Footer */}
-            <div className="p-6 sm:px-10 py-4 bg-slate-50/80 border-t border-slate-100 flex items-center justify-between">
-              {dmWizardPhase === 1 ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowDMRegModal(false);
-                    setDmWizardPhase(1);
-                  }}
-                  className="px-5 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-700 font-extrabold text-xs rounded-xl cursor-pointer transition-all"
-                >
-                  Cancel
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setDmRegError(null);
-                    setDmWizardPhase((dmWizardPhase - 1) as any);
-                  }}
-                  className="px-5 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-700 font-extrabold text-xs rounded-xl cursor-pointer transition-all flex items-center gap-1.5"
-                >
-                  <ArrowLeft className="w-3.5 h-3.5" />
-                  <span>Back</span>
-                </button>
-              )}
-
-              {dmWizardPhase === 1 && (
-                <button
-                  type="button"
-                  onClick={handleNextDmPhase1}
-                  className="px-6 py-2.5 bg-blue-900 hover:bg-blue-800 text-white font-black text-xs rounded-xl shadow-md transition-all flex items-center gap-2 cursor-pointer"
-                >
-                  <span>Next: Merchant Security</span>
-                  <ArrowRight className="w-4 h-4" />
-                </button>
-              )}
-
-              {dmWizardPhase === 2 && (
-                <button
-                  type="button"
-                  onClick={handleNextDmPhase2}
-                  className="px-6 py-2.5 bg-blue-900 hover:bg-blue-800 text-white font-black text-xs rounded-xl shadow-md transition-all flex items-center gap-2 cursor-pointer"
-                >
-                  <span>Next: Store Review</span>
-                  <ArrowRight className="w-4 h-4" />
-                </button>
-              )}
-
-              {dmWizardPhase === 3 && (
-                <button
-                  type="button"
-                  onClick={() => handleRegisterDigitalMarket()}
-                  disabled={submittingDMReg}
-                  className="px-6 py-2.5 bg-blue-900 hover:bg-blue-800 text-white font-black text-xs rounded-xl shadow-md transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
-                >
-                  {submittingDMReg ? (
-                    <>
-                      <RefreshCw className="w-4 h-4 animate-spin" />
-                      <span>Submitting Application...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Check className="w-4 h-4" />
-                      <span>Submit Application</span>
-                    </>
-                  )}
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      </DashboardOverlay>
-    )}
+      {showDMRegModal && true && <SupabaseSellerRegistration key={user?.id} name={user?.name} phone={user?.phone} categories={DIGITAL_MARKET_CATEGORIES} onClose={() => setShowDMRegModal(false)} onSubmitted={() => {void loadDigitalMarketData();void queryClient.invalidateQueries({queryKey:['userData']});triggerToast('Seller application submitted for review.');}} />}
 
     {/* STORE RATING & REVIEW MODAL FOR BUYERS */}
     {ratingOrderTarget && (

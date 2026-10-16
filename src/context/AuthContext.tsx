@@ -1,10 +1,12 @@
-import { needsApprovalKey } from '../../adminApprovalSecurity';
-import { requestKeyedApproval } from '../lib/approvalPrompt';
-import { sessionFetch as fetch, clearLegacySessionStorage, advanceSessionGeneration } from '../lib/session';
-import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
-import { SessionRestoration, SessionCheckUnavailable } from '../lib/sessionRestoration';
+import { createContext,ReactNode,useContext,useEffect,useRef,useState } from 'react';
+import { needsApprovalKey } from '../lib/administratorApproval';
 import { safeJson } from '../lib/api';
-import { invalidateAllQueries } from '../lib/queryClient';
+import { requestKeyedApproval } from '../lib/approvalPrompt';
+import { invalidateAllQueries,queryClient } from '../lib/queryClient';
+import DashboardOverlay from '../components/DashboardOverlay';
+import { advanceSessionGeneration,clearLegacySessionStorage,sessionFetch as fetch } from '../lib/session';
+import { SessionCheckUnavailable,SessionRestoration } from '../lib/sessionRestoration';
+
 
 export interface AuthenticatedUser {
   id: string;
@@ -83,6 +85,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   userRef.current = user;
   const [restorationError, setRestorationError] = useState<string | null>(null);
   const [retry, setRetry] = useState(0);
+  const [signingOut,setSigningOut]=useState(false);
+  const pendingLogout=useRef<Promise<boolean>|null>(null);
 
   function supersedeRestoration() {
     restoration.invalidate();
@@ -97,7 +101,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       clearLegacySessionStorage();
       userRef.current = null;
       setUser(null);
-      invalidateAllQueries();
+      queryClient.clear();
     };
     const channel = new BroadcastChannel('pinevela-session');
     channel.onmessage = event => { if (event.data === 'logout') clear(); };
@@ -163,34 +167,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let hasApprovedHostel = false;
     let hostelStatus = 'None';
 
-    if (userData && userData.role === 'manager') {
-      try {
-        const hostelRes = await fetch('/api/manager/my-hostel', {
-          headers: {
-            'Content-Type': 'application/json'
-          }
-        });
-        if (hostelRes.ok) {
-          const hostelData = await safeJson(hostelRes);
-          if (hostelData?.hostel) {
-            const h = hostelData.hostel;
-            const isApproved = h.isApproved === true || h.isApproved === 'true' || h.approvalStatus === 'Approved' || h.approvalStatus === 'approved' || h.status === 'Approved' || h.status === 'approved' || h.status === 'Active' || h.status === 'active' || h.status === 'Open' || h.status === 'open';
-            hasApprovedHostel = isApproved;
-            hostelStatus = h.approvalStatus || h.status || 'Pending';
-          }
-        }
-      } catch (e) {
-        console.error("Error prefetching hostel status during login:", e);
-      }
-    }
+    // Native setup eligibility is loaded by the manager dashboard. Do not hold
+    // an already verified sign-in behind a second, duplicate property read.
+
 
     const resolvedAvatar = userData.avatar || userData.photo || userData.photoUrl || userData.avatarUrl || userData.profilePicture || undefined;
 
     const finalUser = {
       ...userData,
       token: '',
-      hasApprovedHostel,
-      hostelStatus,
+      ...(({})),
       avatar: resolvedAvatar,
       photo: resolvedAvatar,
       photoUrl: resolvedAvatar,
@@ -222,27 +208,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
   };
 
-  const logout = async (): Promise<boolean> => {
-    supersedeRestoration();
-    const generation = restoration.generation;
-    await restoration.settled();
-    if (generation !== restoration.generation) return false;
-    try {
-      const res = await fetch('/api/auth/logout', { method: 'POST', keepalive: true });
-      if (!res.ok) throw new Error('Server did not confirm sign out.');
-      if (generation !== restoration.generation) return false;
-      userRef.current = null;
-      clearLegacySessionStorage();
-      setUser(null);
-      invalidateAllQueries();
-      const channel = new BroadcastChannel('pinevela-session');
-      channel.postMessage('logout');
-      channel.close();
-      return true;
-    } catch {
-      window.alert('Could not sign out of the server. Please check your connection and try again.');
-      return false;
-    }
+  const logout = (): Promise<boolean> => {
+    if(pendingLogout.current)return pendingLogout.current;
+    const pending=(async()=>{
+      setSigningOut(true);
+      supersedeRestoration();
+      const generation = restoration.generation;
+      try {
+        await restoration.settled();
+        if (generation !== restoration.generation) return false;
+        const res = await fetch('/api/auth/logout', { method: 'POST', keepalive: true });
+        if (!res.ok) throw new Error('Server did not confirm sign out.');
+        if (generation !== restoration.generation) return false;
+        userRef.current = null;
+        clearLegacySessionStorage();
+        setUser(null);
+        // Discard private cached results without starting fresh dashboard reads
+        // while the just-signed-out components are still unmounting.
+        queryClient.clear();
+        const channel = new BroadcastChannel('pinevela-session');
+        channel.postMessage('logout');
+        channel.close();
+        return true;
+      } catch {
+        window.alert('Could not sign out of the server. Please check your connection and try again.');
+        return false;
+      }finally{setSigningOut(false);}
+    })();
+    pendingLogout.current=pending;
+    void pending.finally(()=>{if(pendingLogout.current===pending)pendingLogout.current=null;});
+    return pending;
   };
 
   const apiFetch = async (url: string, options: RequestInit = {}): Promise<any> => {
@@ -288,6 +283,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   return (
     <AuthContext.Provider value={{ user, loading, restorationError, retrySession: () => setRetry(value => value + 1), login, setSessionUser, updateUser, logout, apiFetch }}>
       {children}
+      {signingOut&&<DashboardOverlay aria-label="Signing out" onClose={null}
+        className="fixed inset-0 flex items-center justify-center bg-slate-950/40 p-6 backdrop-blur-sm">
+        <div role="status" className="rounded-2xl bg-white p-8 text-center text-slate-900 shadow-xl">
+          <p className="font-semibold">Signing out…</p>
+          <p className="mt-2 text-sm">Closing your session securely.</p>
+        </div>
+      </DashboardOverlay>}
     </AuthContext.Provider>
   );
 }
@@ -316,18 +318,7 @@ async function readSessionUser(): Promise<AuthenticatedUser | null> {
   const roles: AuthenticatedUser['role'][] = ['student', 'manager', 'admin', 'staff', 'user', 'merchant', 'verification_team', 'officer', 'field_officer'];
   if (!data || typeof data.id !== 'string' || !data.id || !roles.includes(data.role)) throw new Error('Session check did not return a verified identity.');
   let hasApprovedHostel = false, hostelStatus = 'None';
-  if (data.role === 'manager') {
-    try {
-      const response = await fetch('/api/manager/my-hostel', { headers: { 'Content-Type': 'application/json' } });
-      if (response.ok) {
-        const {hostel} = await response.json();
-        if (hostel) {
-          hasApprovedHostel = hostel.isApproved === true || hostel.isApproved === 'true' || ['Approved', 'approved'].includes(hostel.approvalStatus) || ['Approved', 'approved', 'Active', 'active', 'Open', 'open'].includes(hostel.status);
-          hostelStatus = hostel.approvalStatus || hostel.status || 'Pending';
-        }
-      }
-    } catch { /* Optional hostel status does not invalidate a verified login. */ }
-  }
+
   const avatar = data.avatar || data.photo || data.photoUrl || data.avatarUrl || data.profilePicture || undefined;
-  return { ...data, token: '', hasApprovedHostel, hostelStatus, avatar, photo: avatar, photoUrl: avatar, avatarUrl: avatar, profilePicture: avatar };
+  return { ...data, token: '', ...(({})), avatar, photo: avatar, photoUrl: avatar, avatarUrl: avatar, profilePicture: avatar };
 }

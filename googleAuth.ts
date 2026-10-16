@@ -1,7 +1,7 @@
 import { validateLoginContinuation } from './publicContinuation.js';
 import crypto from 'node:crypto';
 import type { Express, Request } from 'express';
-import { accountData, accountRole, normalizeEmail } from './accountSecurity.js';
+import { normalizeEmail } from './accountSecurity.js';
 import { signupProviderConfig } from './supabaseSignup.js';
 
 type Mode = 'login' | 'signup';
@@ -33,17 +33,6 @@ export function googleIdentity(user: any): GoogleIdentity {
       normalizeEmail(google.identity_data?.email) !== email || !email ||
       !Number.isFinite(Date.parse(user.email_confirmed_at))) throw new GoogleError('failed');
   return { id: String(user.id), email, name: String(google.identity_data?.full_name || google.identity_data?.name || email.split('@')[0]).slice(0, 120), verifiedAt: user.email_confirmed_at };
-}
-
-export function googlePrimaryAccount(users: any[], identity: GoogleIdentity, mode: Mode) {
-  const linked = users.filter(entry => accountData(entry).supabaseUserId === identity.id);
-  const eligible = linked.filter(entry => accountRole(entry) === 'user' && normalizeEmail(accountData(entry).email || entry.email) === identity.email && !accountData(entry).roomKey && !accountData(entry).isDigitalMarketOnly);
-  if (linked.length && eligible.length !== 1) throw new GoogleError('conflict');
-  if (eligible.length === 1) return eligible[0];
-  // Never link an account using only a shared email or grant access to a secondary role.
-  if (users.some(entry => normalizeEmail(accountData(entry).email || entry.email) === identity.email)) throw new GoogleError('conflict');
-  if (mode !== 'signup') throw new GoogleError('missing');
-  return undefined;
 }
 
 export function googlePublicOrigin(req: Request) {

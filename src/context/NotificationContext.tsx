@@ -1,10 +1,12 @@
-import { sessionFetch as fetch } from '../lib/session';
-import React, { createContext, useContext, useState, useEffect, useRef, useMemo, useCallback, ReactNode } from 'react';
-import { useAuth } from './AuthContext';
-import { safeJson } from '../lib/api';
+import { createContext,ReactNode,useCallback,useContext,useEffect,useMemo,useRef,useState } from 'react';
 import { AccountRefreshGate } from '../lib/accountRefresh';
-import { motion, AnimatePresence } from 'motion/react';
-import { Bell, CheckCircle2, AlertTriangle, Info, X } from 'lucide-react';
+import { safeJson } from '../lib/api';
+import { queryClient } from '../lib/queryClient';
+import { sessionFetch as fetch } from '../lib/session';
+import { useAuth } from './AuthContext';
+
+import { AlertTriangle,Bell,CheckCircle2,X } from 'lucide-react';
+import { AnimatePresence,motion } from 'motion/react';
 
 export interface NotificationItem {
   id: string;
@@ -205,13 +207,20 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       const registered = (async () => {
         if (!isPrimaryAccount) return;
         try {
-          const token = user?.token;
-          const regRes = await fetch('/api/users/my-registered-accounts', {
-            signal,
-            headers: token ? { 'Authorization': `Bearer ${token}` } : {}
-          });
-          if (regRes.ok) {
-            const regData = await safeJson(regRes);
+          const regData = (await queryClient.fetchQuery({
+              queryKey: ['userData', 'registration', user.id],
+              queryFn: async ({ signal: querySignal }) => {
+                const response = await fetch('/api/users/my-registered-accounts', {
+                  signal: AbortSignal.any([querySignal, AbortSignal.timeout(30000)]),
+                  headers: { 'X-PineVela-Profile-Context': user.id },
+                });
+                const data = await safeJson(response);
+                if (!response.ok || !data || Array.isArray(data) || !('managerAccount' in data))
+                  throw new Error('Could not check registered accounts.');
+                return data;
+              },
+            }));
+          if (regData) {
             if (!isCurrentAccount()) return;
             const mgrAccount = regData.managerAccount || null;
             const mktAccount = regData.merchantAccount || null;

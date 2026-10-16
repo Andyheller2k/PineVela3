@@ -1,12 +1,13 @@
-import { useState } from 'react';
-import { useAuth } from '../context/AuthContext';
 import { useQuery } from '@tanstack/react-query';
-import { Edit3, Plus, Trash2, X, GitCompareArrows, KeyRound } from 'lucide-react';
+import { Edit3,GitCompareArrows,KeyRound,Plus,Trash2,X } from 'lucide-react';
+import { useState } from 'react';
+import { phoneDraft } from '../../internationalPhone';
+import { useAuth } from '../context/AuthContext';
 import { apiFetch } from '../lib/api';
 import { invalidateAllQueries } from '../lib/queryClient';
 import DashboardOverlay from './DashboardOverlay';
 import InternationalPhoneInput from './InternationalPhoneInput';
-import { phoneDraft } from '../../internationalPhone';
+
 
 const fieldClass = 'mt-1 w-full rounded-xl border border-blue-200 bg-slate-50 p-3 text-sm text-slate-900';
 const cardClass = 'space-y-5 rounded-3xl border border-blue-200 bg-white/90 p-5 text-slate-900 shadow-lg backdrop-blur-xl md:p-7';
@@ -26,7 +27,15 @@ function History({ requests }: { requests: any[] }) {
 }
 export function ManagerResidenceRequests() {
   const { user } = useAuth();
-  const { data, error: loadError } = useQuery({ queryKey: ['managerResidenceRequests', user?.id], queryFn: async () => ({ info: await apiFetch('/api/manager/residence-requests'), requests: await apiFetch('/api/board-requests') }), refetchInterval: 8000 });
+  const { data, error: loadError } = useQuery({
+    queryKey: ['managerResidenceRequests', user?.id],
+    queryFn: async ({ signal }) => {
+      const options = { signal, headers: { 'X-PineVela-Profile-Context': user!.id } };
+      const [info, requests] = (await Promise.all([apiFetch('/api/manager/residence-requests', options), apiFetch('/api/board-requests', options)]));
+      return { info, requests };
+    },
+    enabled: Boolean(user), refetchInterval: 8000,
+  });
   const [draft, setDraft] = useState<any>(null), [original, setOriginal] = useState<any>(null), [key, setKey] = useState(''), [busy, setBusy] = useState(false), [error, setError] = useState(''), [message, setMessage] = useState('');
   const [petition, setPetition] = useState(false), [reason, setReason] = useState('');
   const hostel = data?.info.hostels[0], next = data?.info.nextRequestAt || 0, waiting = next > Date.now();
@@ -58,7 +67,18 @@ export function ManagerResidenceRequests() {
 
 export function AdminResidenceRequests() {
   const { user } = useAuth();
-  const { data, error: loadError } = useQuery({ queryKey: ['adminResidenceRequests', user?.id], queryFn: async () => ({ requests: await apiFetch('/api/board-requests'), petitions: await apiFetch('/api/admin/manager-key-petitions'), managers: await apiFetch('/api/admin/manager-request-keys') }), refetchInterval: 8000 });
+  const { data, error: loadError } = useQuery({
+    queryKey: ['adminResidenceRequests', user?.id],
+    queryFn: async ({ signal }) => {
+      const options = { signal, headers: { 'X-PineVela-Profile-Context': user!.id } };
+      const [requests, petitions, managers] = (await Promise.all([
+          apiFetch('/api/board-requests', options), apiFetch('/api/admin/manager-key-petitions', options),
+          apiFetch('/api/admin/manager-request-keys', options),
+        ]));
+      return { requests, petitions, managers };
+    },
+    enabled: user?.role === 'admin', refetchInterval: 8000,
+  });
   const [review, setReview] = useState<any>(null), [decision, setDecision] = useState('approve'), [key, setKey] = useState(''), [reason, setReason] = useState(''), [custom, setCustom] = useState(''), [busy, setBusy] = useState(false), [error, setError] = useState('');
   const [resetId, setResetId] = useState(''), [resetOpen, setResetOpen] = useState(false), [settingsKey, setSettingsKey] = useState(''), [message, setMessage] = useState('');
   const openReview = async (id: string) => { setError(''); setBusy(true); try { setReview(await apiFetch(`/api/board-requests/${encodeURIComponent(id)}/review`)); setKey(''); setReason(''); setDecision('approve'); } catch (e: any) { setError(e.message); } finally { setBusy(false); } };

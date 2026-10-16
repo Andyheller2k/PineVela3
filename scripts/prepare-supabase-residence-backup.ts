@@ -10,11 +10,14 @@ import {attachResidenceRecovery,recoveryPreparation} from './lib/residence-recov
 dotenv.config({quiet:true});
 const args=process.argv.slice(2);
 let db:SupabaseDatabase|undefined,journal:string|undefined;
+// Allow the bounded 20-minute pg_dump plus its PIN inventory and verification
+// to finish before the recovery parent stops the subprocess.
+const recoverySubprocessTimeoutMs=21*60_000;
 async function command(script:string,values:string[]) {
   return new Promise<any>((resolve,reject)=>{
     const child=spawn(process.execPath,['--import','tsx',script,...values],{stdio:['ignore','pipe','pipe'],env:process.env});
     const output:Buffer[]=[];let bytes=0,failed=false;
-    const timeout=setTimeout(()=>{failed=true;child.kill('SIGTERM');},360000);
+    const timeout=setTimeout(()=>{failed=true;child.kill('SIGTERM');},recoverySubprocessTimeoutMs);
     child.stdout.on('data',(b:Buffer)=>{bytes+=b.length;if(bytes>2*1024*1024){failed=true;child.kill('SIGTERM');}else output.push(b);});
     // Diagnostics can include server connection details. Keep them out of public output.
     child.stderr.on('data',()=>{});

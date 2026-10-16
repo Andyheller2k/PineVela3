@@ -1,5 +1,5 @@
 import { installPrimaryEmailReentry } from './primaryEmailReentry.js';
-import {accountFeaturesForRequest,requireAccountAccess} from './accountAccess.js';
+import {accountFeaturesForRequest,requireAccountAccess,checkAccountAccess} from './accountAccess.js';
 import crypto from 'node:crypto';
 import { managerKeyNeeded,managerBootstrapAllowed,checkManagerKey,managerKeyError } from './managerKeys.js';
 import type { Express, Request, Response, RequestHandler } from 'express';
@@ -11,6 +11,7 @@ import { ApiError, UUID, uuid, type VerifiedActor, SupabaseDatabase } from './db
 import { WorkPool } from '../resourceSecurity.js';
 import { checkPortalPin } from './portalAccess.js';
 import { maintenanceError } from './platformMaintenance.js';
+import { takeTransactionAdmission } from './transactionAdmission.js';
 
 type Session = GoogleSession & { user?: any };
 export type AuthRequest = Request & { actor: VerifiedActor; accessToken: string };
@@ -54,9 +55,21 @@ export function verifiedClaims(token: string, user: any): { authUserId: string; 
 
 export class SupabaseAuth {
   private refreshing = new Map<string, Promise<Session>>();
+  private userReads = new Map<string, Promise<any>>();
   private requests = new WorkPool(8, 32);
   constructor(readonly db: SupabaseDatabase) {}
   async provider(route: string, body?: unknown, token?: string, method?: string): Promise<any> {
+    // Parallel dashboard reads with the same access token can share one pending
+    // provider verification. Never retain a settled identity or share across
+    // tokens; every API request still checks the live session/actor in PostgreSQL.
+    if (route !== '/user' || body !== undefined || !token || method && method !== 'GET')
+      return this.providerRequest(route,body,token,method);
+    let pending=this.userReads.get(token);
+    if(!pending){pending=this.providerRequest(route,body,token,method);this.userReads.set(token,pending);}
+    try{return await pending;}
+    finally{if(this.userReads.get(token)===pending)this.userReads.delete(token);}
+  }
+  private async providerRequest(route: string, body?: unknown, token?: string, method?: string): Promise<any> {
     const config = signupProviderConfig();
     let response: globalThis.Response;
     try {
@@ -100,9 +113,7 @@ export class SupabaseAuth {
     const result = await this.db.system(async client => {
       // Sign-in must not recreate a binding while a room/portal is closing.
       // Acquire lifecycle locks before native session and context row locks.
-      await client.query("select pg_advisory_xact_lock_shared(hashtextextended('residence-deletion-freeze',0))");
-      await client.query("select pg_advisory_xact_lock_shared(hashtextextended('account-policies',0))");
-      await client.query("select pg_advisory_xact_lock_shared(hashtextextended('platform-maintenance',0))");
+      await takeTransactionAdmission(client);
       const live = await client.query(`select id from auth.sessions where id = $1 and user_id = $2
         and (not_after is null or not_after > now()) for share`, [identity.sessionId, identity.authUserId]);
       if (!live.rowCount) throw new ApiError(401, 'Your session has ended. Please sign in again.');
@@ -137,7 +148,7 @@ export class SupabaseAuth {
     if (!result) throw new ApiError(403,'A valid portal access PIN is required. After five failed attempts, wait 15 minutes.','portal_pin_required');
     return result;
   }
-  async authenticate(req: Request, res: Response): Promise<{ actor: VerifiedActor; accessToken: string }> {
+  private async verifySession(req:Request,res:Response) {
     let token = readCookie(req, ACCESS);
     if (!token || token.length > 12000) throw new ApiError(401, 'Please sign in.');
     let user: any;
@@ -161,21 +172,43 @@ export class SupabaseAuth {
       user = await this.provider('/user', undefined, token);
     }
     const identity = verifiedClaims(token, user);
-    const actor = await this.db.system(async client => {
-      const binding = await client.query(`select s.active_context_id, c.kind from private.account_sessions s
-        join public.account_contexts c on c.id = s.active_context_id and c.auth_user_id = s.auth_user_id
-        join auth.sessions live on live.id = s.session_id and live.user_id = s.auth_user_id
-        where s.session_id = $1 and s.auth_user_id = $2 and c.status = 'active'
-          and (live.not_after is null or live.not_after > now())
-          and private.portal_session_allowed(c.id,s.portal_pin_version)
-          and (c.kind <> 'admin' or private.administrator_session_allowed(c.id,s.session_id) and exists (select 1 from public.admin_memberships m where m.context_id = c.id and m.status = 'active'))
-          and (c.kind <> 'resident' or exists (select 1 from public.allocations a where a.resident_context_id = c.id and a.ended_at is null))
-          and (c.kind <> 'staff' or exists (select 1 from public.staff_assignments a where a.staff_context_id = c.id and a.status = 'active' and a.ended_at is null))`, [identity.sessionId, identity.authUserId]);
-      if (!binding.rowCount) throw new ApiError(401, 'Your session has ended. Please sign in again.');
-      await requireAccountAccess(client,binding.rows[0].active_context_id,[],identity.sessionId);
-      return { ...identity, contextId: binding.rows[0].active_context_id, kind: binding.rows[0].kind };
-    });
-    return { actor, accessToken: token };
+    return {identity,accessToken:token};
+  }
+  async authenticate(req: Request, res: Response): Promise<{ actor: VerifiedActor; accessToken: string }> {
+    const {identity,accessToken}=await this.verifySession(req,res);
+    const binding = await this.db.statement(`select s.active_context_id, c.kind,
+      private.account_access(c.id) as access,private.account_session_allowed(c.id,s.session_id) as allowed
+      from private.account_sessions s
+      join public.account_contexts c on c.id = s.active_context_id and c.auth_user_id = s.auth_user_id
+      join auth.sessions live on live.id = s.session_id and live.user_id = s.auth_user_id
+      where s.session_id = $1 and s.auth_user_id = $2 and c.status = 'active'
+        and (live.not_after is null or live.not_after > now())
+        and private.portal_session_allowed(c.id,s.portal_pin_version)
+        and (c.kind <> 'admin' or private.administrator_session_allowed(c.id,s.session_id) and exists (select 1 from public.admin_memberships m where m.context_id = c.id and m.status = 'active'))
+        and (c.kind <> 'resident' or exists (select 1 from public.allocations a where a.resident_context_id = c.id and a.ended_at is null))
+        and (c.kind <> 'staff' or exists (select 1 from public.staff_assignments a where a.staff_context_id = c.id and a.status = 'active' and a.ended_at is null))`, [identity.sessionId, identity.authUserId]);
+    if (!binding.rowCount) throw new ApiError(401, 'Your session has ended. Please sign in again.');
+    checkAccountAccess(binding.rows[0].access,[],binding.rows[0].allowed);
+    const actor={ ...identity, contextId: binding.rows[0].active_context_id, kind: binding.rows[0].kind };
+    return { actor, accessToken };
+  }
+  async logout(req:Request,res:Response) {
+    let verified:Awaited<ReturnType<SupabaseAuth['verifySession']>>;
+    try {verified=await this.verifySession(req,res);}
+    catch(error){
+      // A provider outage cannot be represented as a confirmed logout. Preserve
+      // cookies for retry unless the provider actually rejected the session.
+      if(error instanceof ApiError&&error.status===401){clearAuthCookies(res);return;}
+      throw error;
+    }
+    // Only verified token identifiers select the binding, never body/context
+    // fields. Revocation commits before success, including banned/closed roles.
+    await this.db.statement('delete from private.account_sessions where session_id=$1 and auth_user_id=$2',
+      [verified.identity.sessionId,verified.identity.authUserId]);
+    clearAuthCookies(res);
+    // App access is already revoked durably. Provider refresh-token cleanup has
+    // its existing bounded deadline and cannot delay the user's confirmed exit.
+    void this.provider('/logout?scope=local',{},verified.accessToken).catch(()=>undefined);
   }
   require(kinds?: string[]): RequestHandler {
     return (req, res, next) => {
@@ -321,17 +354,7 @@ export function installSupabaseAuth(app: Express, auth: SupabaseAuth) {
   }));
   app.post('/api/auth/context', auth.require(), route(async (req, res) => res.json(await auth.projection(await auth.switchContext(req.actor, req.body?.contextId,req.body?.portalPin)))));
   app.post('/api/auth/logout', route(async (req, res) => {
-    let verified: Awaited<ReturnType<SupabaseAuth['authenticate']>>;
-    try { verified = await auth.authenticate(req, res); }
-    catch (error) {
-      clearAuthCookies(res);
-      if (error instanceof ApiError && (error.status === 401||error.code==='account_banned')) return res.json({ success: true });
-      throw error;
-    }
-    // Binding deletion immediately denies access, even if the provider is down.
-    await auth.db.system(client => client.query('delete from private.account_sessions where session_id = $1 and auth_user_id = $2', [verified.actor.sessionId, verified.actor.authUserId]));
-    clearAuthCookies(res);
-    await auth.provider('/logout?scope=local', {}, verified.accessToken).catch(() => undefined);
+    await auth.logout(req,res);
     return res.json({ success: true });
   }));
   // Cross-origin mutations are denied before parsing credentials or performing writes.

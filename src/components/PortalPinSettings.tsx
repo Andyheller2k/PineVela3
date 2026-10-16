@@ -1,12 +1,12 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useEffect,useRef,useState,type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { sessionFetch } from '../lib/session';
-import { usesSupabasePersistence } from '../lib/persistence';
+
 
 export default function PortalPinSettings() {
   const { user } = useAuth();
-  if (!usesSupabasePersistence || !user || !['student', 'merchant'].includes(user.role)) return null;
+  if ((!user) || !['student', 'merchant'].includes(user.role)) return null;
   return <OwnPortalPinSettings key={user.id} contextId={user.id} />;
 }
 

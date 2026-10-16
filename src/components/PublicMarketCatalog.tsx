@@ -1,6 +1,6 @@
 import { publicLoginPath } from '../lib/publicContinuation';
 import {marketListingAvailable} from '../../marketListingAvailability';
-import { useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { ArrowRight, ShoppingBag, Store, X, LockKeyhole, MapPin, Phone, Star } from 'lucide-react';
@@ -10,8 +10,9 @@ import MarketItemCard, { getServiceActionLabel, type MarketProductItem } from '.
 import MarketplaceFilters, { type MarketSort } from './MarketplaceFilters';
 import MarketImageGallery from './MarketImageGallery';
 import DashboardOverlay from './DashboardOverlay';
-import NearbyServicesMap from './NearbyServicesMap';
 import PublicCatalogRail from './PublicCatalogRail';
+
+const NearbyServicesMap = lazy(() => import('./NearbyServicesMap'));
 
 type PublicListing = MarketProductItem & { sellerPhone?: string; sellerName?: string };
 
@@ -88,7 +89,9 @@ export default function PublicMarketCatalog({ preview = false, searchQuery, cata
       </div>
       <div className="flex flex-wrap gap-2"><button type="button" onClick={() => { setDirections(''); setShowNearby(true); }} className="px-4 py-2.5 border border-blue-200 bg-blue-50 text-blue-700 text-xs font-bold rounded-xl flex items-center gap-2"><MapPin size={16} />Services near you</button>{preview && <button type="button" onClick={() => navigate('/pinemarket')} className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-black rounded-xl flex items-center gap-2">Explore Market <ArrowRight size={16} /></button>}</div>
     </div>}
-    {showNearby && <NearbyServicesMap products={catalog} onClose={() => { setShowNearby(false); setDirections(''); }} onInspect={(product, url) => { inspect(product); setDirections(url); }} />}
+    {showNearby && <Suspense fallback={<DashboardOverlay aria-label="Services near you" onClose={() => setShowNearby(false)} className="fixed inset-0 flex items-center justify-center bg-slate-950/60 p-4">
+      <div className="space-y-4 rounded-2xl bg-white p-6 text-slate-900"><p role="status">Loading services map…</p><button type="button" onClick={() => setShowNearby(false)} className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white">Close services map</button></div>
+    </DashboardOverlay>}><NearbyServicesMap products={catalog} onClose={() => { setShowNearby(false); setDirections(''); }} onInspect={(product, url) => { inspect(product); setDirections(url); }} /></Suspense>}
     {!preview && <MarketplaceFilters catalogSearch={catalogSearch} setCatalogSearch={setCatalogSearch}
       catalogCategory={catalogCategory} setCatalogCategory={setCatalogCategory}
       minPriceFilter={minPriceFilter} setMinPriceFilter={setMinPriceFilter}
@@ -100,7 +103,7 @@ export default function PublicMarketCatalog({ preview = false, searchQuery, cata
       : catalogOverride === undefined && isError ? <div role="alert" className="rounded-2xl border border-rose-200 bg-rose-50 p-6 text-center text-sm text-rose-800"><p>PineMarket could not load. Please try again.</p><button type="button" onClick={() => refetch()} className="mt-3 rounded-xl bg-blue-600 px-4 py-2 text-white font-bold">Try again</button></div>
       : !shown.length ? <div className={`p-8 text-center space-y-2 ${preview ? "bg-transparent" : "bg-slate-50/60 rounded-2xl border border-dashed border-slate-200"}`}><Store className="w-8 h-8 text-slate-300 mx-auto" /><p className="text-sm font-bold text-slate-700">{catalog.length ? 'No items match your criteria' : 'No listings available yet'}</p><p className="text-xs text-slate-500">{catalog.length ? 'Try another category or refine your search.' : 'Check back for items and services from campus sellers.'}</p></div>
       : preview ? <PublicCatalogRail label="PineMarket">{cards}</PublicCatalogRail>
-      : <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-4 pb-2">{cards}</div>}
+      : <div className="market-catalog-grid pb-2">{cards}</div>}
     {!preview && visibleCount < filtered.length && <div className="flex justify-center"><button type="button" onClick={() => setVisibleCount(count => count + 32)} className="px-5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-black rounded-xl border border-slate-200">Load More Items ({shown.length} of {filtered.length})</button></div>}
     {selected && <DashboardOverlay aria-label={`Inspect ${selected.title}`} onClose={closeInspection} className="fixed inset-0 bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-2 sm:p-4">
       <section className="bg-white rounded-3xl max-w-[calc(100vw-1rem)] sm:max-w-lg w-full max-h-[88dvh] sm:max-h-[92vh] overflow-y-auto p-3 sm:p-6 shadow-2xl border border-slate-200 space-y-4">

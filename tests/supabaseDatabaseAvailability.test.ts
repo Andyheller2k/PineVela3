@@ -18,5 +18,9 @@ test('connection acquisition failure returns a retryable service error without r
       assert(!/password|postgresql:|127\.0\.0\.1/.test(error.message));return true;
     });
     assert.equal(calls,0,'Unavailable connections cannot run or replay work');
+    await assert.rejects(()=>db.statement('select 1'),error=>{
+      assert(error instanceof ApiError);assert.equal(error.status,503);
+      assert.equal(error.code,'database_unavailable');return true;
+    });
   }finally{await db.close();}
 });

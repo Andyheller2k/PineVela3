@@ -1,10 +1,11 @@
-import { useNotifications } from '../context/NotificationContext';
-import { sessionFetch as fetch } from '../lib/session';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, MessageSquare, Send, RefreshCw } from 'lucide-react';
+import { ArrowLeft,MessageSquare,RefreshCw,Send } from 'lucide-react';
+import React,{ useEffect,useMemo,useRef,useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useNotifications } from '../context/NotificationContext';
 import { safeJson } from '../lib/api';
-import {usesSupabasePersistence} from '../lib/persistence';
+import { sessionFetch as fetch } from '../lib/session';
+
+import { AccountRefreshGate } from '../lib/accountRefresh';
 
 interface MarketMessage {
   id: string; buyerId?: string; sellerStoreId?: string; storeId?: string;
@@ -30,18 +31,25 @@ export default function MarketplaceInbox({ initialPeerEmail, initialStore }: { i
   const end = useRef<HTMLDivElement>(null);
   const controller = useRef<AbortController | null>(null);
   const inboxOwner = useRef<string | undefined>(undefined);
+  const reads = useRef(new AccountRefreshGate());
   const normalize = (value: string) => value?.trim().toLowerCase();
   const seller = user?.role === 'merchant';
-  const load = async (signal?: AbortSignal) => {
-    const id=user?.id,generation=version.current,epoch=++readEpoch.current;
-    const current=()=>mounted.current && account.current===id && version.current===generation && readEpoch.current===epoch && !signal?.aborted;
-    try {
-      const response = await fetch('/api/digital-market/messages', { headers: { Authorization: `Bearer ${user?.token || ''}` }, signal });
-      const data = await safeJson(response);
-      if (!response.ok) throw new Error(data.error || 'Could not load your messages.');
-      if (current()) { setMessageOwner(id);setMessages(Array.isArray(data) ? data : []); setError(''); }
-    } catch (e: any) { if (e.name !== 'AbortError' && current()) setError(e.message || 'Could not load your messages.'); }
-    finally { if (current()) setLoading(false); }
+  const load = (lifecycleSignal?: AbortSignal) => {
+    const id=user?.id,generation=version.current;
+    // A slow read must be allowed to finish. Advancing its epoch on each poll
+    // previously discarded every reply whenever latency exceeded five seconds.
+    return reads.current.run(JSON.stringify([user?.role,id]), generation, async cancellation => {
+      const signal = lifecycleSignal ? AbortSignal.any([cancellation, lifecycleSignal]) : cancellation;
+      const epoch=++readEpoch.current;
+      const current=()=>mounted.current && account.current===id && version.current===generation && readEpoch.current===epoch && !signal.aborted;
+      try {
+        const response = await fetch('/api/digital-market/messages', { headers: { Authorization: `Bearer ${user?.token || ''}` }, signal });
+        const data = await safeJson(response);
+        if (!response.ok) throw new Error(data.error || 'Could not load your messages.');
+        if (current()) { setMessageOwner(id);setMessages(Array.isArray(data) ? data : []); setError(''); }
+      } catch (e: any) { if (e.name !== 'AbortError' && current()) setError(e.message || 'Could not load your messages.'); }
+      finally { if (current()) setLoading(false); }
+    });
   };
   useEffect(() => {
     const abort = new AbortController(); controller.current = abort;
@@ -50,9 +58,14 @@ export default function MarketplaceInbox({ initialPeerEmail, initialStore }: { i
       setMessages([]);setMessageOwner(undefined);request.current=null;setError('');setSelected(null);setDraft('');setLoading(true);
     }
     setSending(false);
-    void load(abort.signal);
-    const interval = window.setInterval(() => { if (document.visibilityState === 'visible') void load(abort.signal); }, 5000);
-    return () => { abort.abort(); window.clearInterval(interval); };
+    const refreshVisible = () => {
+      if (document.hidden) reads.current.cancel();
+      else void load(abort.signal);
+    };
+    refreshVisible();
+    const interval = window.setInterval(refreshVisible, 5000);
+    document.addEventListener('visibilitychange', refreshVisible);
+    return () => { abort.abort(); reads.current.cancel(); window.clearInterval(interval); document.removeEventListener('visibilitychange', refreshVisible); };
   }, [user?.id, user?.token]);
   const threads = useMemo(() => {
     const map = new Map<string, { id: string; email: string; name: string; buyerId?: string; messages: MarketMessage[] }>();
@@ -85,16 +98,17 @@ export default function MarketplaceInbox({ initialPeerEmail, initialStore }: { i
     event.preventDefault(); if (!active || !draft.trim() || sending) return;
     const text = draft.trim(),id=user?.id,generation=version.current,signal=controller.current?.signal,threadId=active.id;
     const current=()=>mounted.current && account.current===id && version.current===generation && !signal?.aborted;
-    readEpoch.current++;setSending(true);setError('');
+    reads.current.cancel();readEpoch.current++;setSending(true);setError('');
     try {
       const body={sellerStoreId:seller?undefined:active.id,buyerId:seller?active.buyerId:undefined,content:text,
-        ...(!usesSupabasePersistence?{recipientEmail:active.email}:{})};
-      if(usesSupabasePersistence){const params=JSON.stringify(body);if(request.current?.params!==params)request.current={params,id:crypto.randomUUID()};Object.assign(body,{requestId:request.current.id});}
+        ...(({}))};
+      {const params=JSON.stringify(body);if(request.current?.params!==params)request.current={params,id:crypto.randomUUID()};Object.assign(body,{requestId:request.current.id});}
       const response = await fetch('/api/digital-market/messages', { method: 'POST', signal,
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${user?.token || ''}` },body:JSON.stringify(body) });
       const data = await safeJson(response);if(!current())return;
       if (!response.ok) throw new Error(data.error || 'Your message could not be sent.');
-      request.current=null;if(selection.current===threadId && currentDraft.current.trim()===text)setDraft('');await load(signal);
+      request.current=null;if(selection.current===threadId && currentDraft.current.trim()===text)setDraft('');
+      reads.current.cancel();await load(signal);
     } catch (e: any) { if (e.name !== 'AbortError' && current()) setError(e.message || 'Your message could not be sent.'); }
     finally { if(current())setSending(false); }
   };

@@ -7,6 +7,7 @@ import { notify,notifyPrimaryOwner } from './notifications.js';
 import { buildInspectionReport,InspectionSubmissionError } from '../inspectionReportSecurity.js';
 import { ownedMedia } from './media.js';
 import {checkProfileContext} from './profiles.js';
+import {administratorApproval} from './administratorApproval.js';
 const route = (work:(req:AuthRequest,res:any)=>Promise<unknown>):RequestHandler => (req,res,next) => {
   try{checkProfileContext((req as AuthRequest).actor,req.headers['x-pinevela-profile-context']);}catch(error){return next(error);}
   work(req as AuthRequest,res).catch(next);
@@ -196,7 +197,7 @@ export function installInspections(app:Express,auth:SupabaseAuth) {
   app.post('/api/verification-team/inspections/:id/submit-report',auth.require(['officer']),route(async (req,res) =>
     res.json({success:true,...await auth.db.authorizedSystem(req.actor,['officer'],c => submitInspection(c,req.actor,uuid(req.params.id),req.body))})));
   app.put(['/api/manager-requests/:id/approve','/api/manager-verifications/:id/approve'],auth.require(['admin']),route(async (req,res) =>
-    res.json({success:true,verification:await auth.db.authorizedSystem(req.actor,['admin'],c => decideManager(c,req.actor,uuid(req.params.id),'approved',req.body?.adminNotes || ''))})));
+    res.json({success:true,verification:await administratorApproval(auth,req.actor,req.body?.privateKey,c => decideManager(c,req.actor,uuid(req.params.id),'approved',req.body?.adminNotes || ''))})));
   app.put(['/api/manager-requests/:id/reject','/api/manager-verifications/:id/reject'],auth.require(['admin']),route(async (req,res) =>
     res.json({success:true,verification:await auth.db.authorizedSystem(req.actor,['admin'],c => decideManager(c,req.actor,uuid(req.params.id),'rejected',req.body?.adminNotes || req.body?.rejectionReason || req.body?.reason || ''))})));
   app.put('/api/manager-verifications/:id/request-info',auth.require(['admin']),route(async (req,res) =>

@@ -1,0 +1,165 @@
+/* Physical items share compact dimensions across catalogs, rails and inventory. */
+.market-catalog-grid,
+.market-inventory-grid,
+.market-product-card {
+  --market-item-width: min(176px, calc((100vw - 3.5rem) / 2));
+}
+
+.market-catalog-grid,
+.market-inventory-grid {
+  --market-card-gap: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--market-card-gap);
+}
+
+.market-plan-card.market-product-card[data-market-kind="item"] {
+  box-sizing: border-box;
+  flex: 0 0 var(--market-item-width);
+  width: var(--market-item-width);
+  max-width: 100%;
+  height: 272px;
+  min-height: 272px;
+  border-radius: 16px;
+}
+
+.market-product-card .market-card-thumbnail {
+  height: 144px;
+  padding: 4px;
+}
+
+.market-product-card .market-card-category {
+  max-width: calc(100% - 16px);
+}
+
+.market-product-card .market-card-price {
+  top: auto;
+  right: auto;
+  bottom: 8px;
+  left: 8px;
+  max-width: calc(100% - 48px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.market-product-card .market-card-copy {
+  padding: 8px;
+  margin: 0;
+}
+
+.market-product-card .market-card-copy > * {
+  margin-block: 0;
+}
+
+.market-product-card .market-card-copy > * + * {
+  margin-block-start: 2px;
+}
+
+.market-product-card .market-card-footer {
+  flex-shrink: 0;
+  padding: 7px 8px;
+  margin-block-start: 0;
+}
+
+/* Services retain their existing two, three and four-column widths. */
+.market-catalog-grid > [data-market-kind="service"] {
+  flex: 0 0 calc((100% - var(--market-card-gap)) / 2);
+  min-width: 0;
+}
+
+.market-inventory-grid {
+  --market-card-gap: 24px;
+}
+
+.market-inventory-grid > [data-market-kind="service"] {
+  flex: 0 0 100%;
+  min-width: 0;
+}
+
+.market-inventory-card .market-card-copy p {
+  -webkit-line-clamp: 1;
+}
+
+.market-inventory-card .market-card-copy h3 {
+  font-size: 11px;
+}
+
+.market-inventory-card .market-card-footer {
+  padding: 6px 8px;
+}
+
+.market-inventory-card .market-card-footer > * {
+  margin-block: 0;
+}
+
+.market-inventory-card .market-card-footer > * + * {
+  margin-block-start: 6px;
+}
+
+.market-inventory-card .market-inventory-stock {
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.market-inventory-card .market-inventory-stock > div:first-child {
+  font-size: 10px;
+}
+
+.market-inventory-card .market-inventory-stock button {
+  width: 24px;
+  height: 24px;
+}
+
+.market-inventory-card .market-inventory-stock > div:last-child {
+  margin-left: auto;
+  gap: 3px;
+}
+
+.market-inventory-card .market-inventory-stock > div:last-child > span {
+  width: 20px;
+  font-size: 10px;
+}
+
+.market-inventory-card .market-inventory-actions {
+  gap: 2px;
+  padding-top: 5px;
+}
+
+.market-inventory-card .market-inventory-actions > span {
+  padding-inline: 4px;
+  font-size: 8px;
+}
+
+.market-inventory-card .market-inventory-actions button {
+  gap: 2px;
+  padding-inline: 0;
+  font-size: 10px;
+}
+
+@media (min-width: 640px) {
+  .market-catalog-grid {
+    --market-card-gap: 16px;
+  }
+}
+
+@media (min-width: 768px) {
+  .market-catalog-grid > [data-market-kind="service"] {
+    flex-basis: calc((100% - 2 * var(--market-card-gap)) / 3);
+  }
+
+  .market-inventory-grid > [data-market-kind="service"] {
+    flex-basis: calc((100% - var(--market-card-gap)) / 2);
+  }
+}
+
+@media (min-width: 1024px) {
+  .market-catalog-grid > [data-market-kind="service"] {
+    flex-basis: calc((100% - 3 * var(--market-card-gap)) / 4);
+  }
+
+  .market-inventory-grid > [data-market-kind="service"] {
+    flex-basis: calc((100% - 2 * var(--market-card-gap)) / 3);
+  }
+}

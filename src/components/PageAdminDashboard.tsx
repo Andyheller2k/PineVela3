@@ -1,50 +1,76 @@
-import { activateOnKeyboard } from '../lib/keyboardActivation';
-import DashboardOverlay from './DashboardOverlay';
-import MobileNavigation from './MobileNavigation';
-import { useActionFeedback } from '../lib/useActionFeedback';
-import AdminAccountDirectory from './AdminAccountDirectory';
 import { routePopupFeedback } from '../lib/feedback';
-import PasswordStrengthGauge from './PasswordStrengthGauge';
-import OnboardingProgress, { OFFICER_ACCOUNT_STEPS } from './OnboardingProgress';
+import { activateOnKeyboard } from '../lib/keyboardActivation';
+import { useActionFeedback } from '../lib/useActionFeedback';
+import AccountModerationPanel from './AccountModerationPanel';
+import AdminAccountDirectory from './AdminAccountDirectory';
+import AdminGovernancePanel,{ useAdminGovernance } from './AdminGovernancePanel';
+import AdminMessageGateway from './AdminMessageGateway';
+import AdminRemovalNotice from './AdminRemovalNotice';
 import AdminSettingsPanel from './AdminSettingsPanel';
 import AdministratorLabel from './AdministratorLabel';
-import AdminGovernancePanel, { useAdminGovernance } from './AdminGovernancePanel';
-import AdminRemovalNotice from './AdminRemovalNotice';
-import AccountModerationPanel from './AccountModerationPanel';
-import ResidenceDeletionPanel from './ResidenceDeletionPanel';
+import DashboardOverlay from './DashboardOverlay';
 import { AdminManagerClosureRequests } from './ManagerClosureRequest';
-import AdminMessageGateway from './AdminMessageGateway';
-import { usesSupabasePersistence } from '../lib/persistence';
-import { recordedInspectionCoordinates } from '../lib/inspectionLocation';
-import SupabaseOfficerInvitationControls from './SupabaseOfficerInvitationControls';
-import { requestKeyedApproval } from '../lib/approvalPrompt';
-import { sessionFetch as fetch } from '../lib/session';
-import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import MobileNavigation from './MobileNavigation';
+import ResidenceDeletionPanel from './ResidenceDeletionPanel';
+
 import { useQuery } from '@tanstack/react-query';
-import { queryClient, } from '../lib/queryClient';
-import { useAuth } from '../context/AuthContext';
-import { safeJson } from '../lib/api';
-import { saveNavigationLayout, usesTopNavigation } from '../lib/navigationLayout';
-import { useNotifications } from '../context/NotificationContext';
-import PineLogo from './PineLogo';
-import TopNavBadge from './TopNavBadge';
-import HostelRegistration from './HostelRegistration';
-import { AdminResidenceRequests } from './ResidenceChangeRequests';
-import AdminResidenceRegistrationReview from './AdminResidenceRegistrationReview';
-import {pendingResidenceReview,residenceReviewStatus,residenceReviewLabel} from '../lib/residenceReview';
-import {pendingManagerRegistration,currentManagerInspection} from '../lib/registrationStatus';
-import LogoutConfirmationModal from './LogoutConfirmationModal';
-import { getPdfBlobUrl, downloadPdfDocument } from '../utils/pdfHelper';
-import { 
-  Building2, Users, DollarSign, CheckCircle2, XCircle, Clock, Plus, 
-  ShieldCheck, LogOut as LogOutIcon, Search, UserPlus,
-  AlertCircle, Check, Trash2, Edit3, Eye, ArrowRight,
-  Bell, MessageSquare, X, FileText, Download, Lock, Unlock, FileCheck, ShieldAlert, Ban, ExternalLink, CreditCard,
-  Image as ImageIcon, MapPin, Camera,
-  ShoppingBag, Store, PanelLeftClose, PanelLeftOpen
+import {
+AlertCircle,
+ArrowRight,
+Ban,
+Bell,
+Building2,
+Camera,
+Check,
+CheckCircle2,
+Clock,
+DollarSign,
+Download,
+Edit3,
+ExternalLink,
+Eye,
+FileCheck,
+FileText,
+Image as ImageIcon,
+Lock,
+LogOut as LogOutIcon,
+MapPin,
+MessageSquare,
+PanelLeftClose,PanelLeftOpen,
+Plus,
+Search,
+ShieldAlert,
+ShieldCheck,
+ShoppingBag,Store,
+Trash2,
+Unlock,
+UserPlus,
+Users,
+X,
+XCircle
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import { AnimatePresence,motion } from 'motion/react';
+import React,{ useEffect,useRef,useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { useNotifications } from '../context/NotificationContext';
+import { safeJson } from '../lib/api';
+import { readAdministratorDirectories } from '../lib/adminDirectories';
+import { requestKeyedApproval } from '../lib/approvalPrompt';
+import { recordedInspectionCoordinates } from '../lib/inspectionLocation';
+import { saveNavigationLayout,usesTopNavigation } from '../lib/navigationLayout';
+import { queryClient,} from '../lib/queryClient';
+import { currentManagerInspection,pendingManagerRegistration } from '../lib/registrationStatus';
+import { pendingResidenceReview,residenceReviewLabel,residenceReviewStatus } from '../lib/residenceReview';
+import { sessionFetch as fetch } from '../lib/session';
+import { downloadPdfDocument,getPdfBlobUrl } from '../utils/pdfHelper';
+import AdminResidenceRegistrationReview from './AdminResidenceRegistrationReview';
+import HostelRegistration from './HostelRegistration';
+import LogoutConfirmationModal from './LogoutConfirmationModal';
+import PineLogo from './PineLogo';
+import { AdminResidenceRequests } from './ResidenceChangeRequests';
+import SupabaseOfficerInvitationControls from './SupabaseOfficerInvitationControls';
+import TopNavBadge from './TopNavBadge';
 
 export default function PageAdminDashboard() {
   const [moderationTarget, setModerationTarget] = useState<any>(null);
@@ -108,7 +134,7 @@ export default function PageAdminDashboard() {
 
   // Settings State
 
-  const { data: governanceData } = useAdminGovernance();
+  const { data: governanceData } = useAdminGovernance(true, true);
   const adminSlot = governanceData?.members.find((m: any) => m.id === user?.id)?.slot;
   const governanceUnread = notifications.filter(n => !n.read && n.module === 'admin_governance').length;
   const settingsUnread = notifications.filter(n => !n.read && n.module === 'admin_settings').length;
@@ -120,7 +146,7 @@ export default function PageAdminDashboard() {
   const [managerRestrictions, setManagerRestrictions] = useState<any[]>([]);
   const [managerRestrictionError, setManagerRestrictionError] = useState('');
   const [marketStoreError, setMarketStoreError] = useState('');
-  const [rejectionNotes, setRejectionNotes] = useState<{[key: string]: string}>({});
+
   const residents = allUsersData.users.filter((account: any) => ['student', 'resident'].includes(account.role)).map((account: any) => ({ ...account, residenceName: account.hostelName || account.residenceName || '', roomNumber: account.roomNumber || '' }));
   const [feesPaid, setFeesPaid] = useState<any[]>([]);
   const [activities, setActivities] = useState<any[]>([]);
@@ -130,16 +156,7 @@ export default function PageAdminDashboard() {
   const [verificationTeams, setVerificationTeams] = useState<any[]>([]);
   const [officerRosterError, setOfficerRosterError] = useState('');
   const [verificationInspections, setVerificationInspections] = useState<any[]>([]);
-  const [showRegisterOfficerModal, setShowRegisterOfficerModal] = useState(false);
-  const [newOfficerData, setNewOfficerData] = useState({
-    fullName: '',
-    email: '',
-    phone: '',
-    assignedZone: 'Greater Accra - Campus Belt A',
-    password: ''
-  });
-  const [createdOfficerCredentials, setCreatedOfficerCredentials] = useState<any | null>(null);
-  
+
   // Dispatch Officer Modal State
   const [dispatchModalManager, setDispatchModalManager] = useState<any | null>(null);
   const [dispatchOfficerId, setDispatchOfficerId] = useState('');
@@ -190,8 +207,6 @@ export default function PageAdminDashboard() {
     fileName?: string;
     name?: string;
     endpoint?: string;
-    reqId?: string;
-    docKey?: 'operatingCertificate' | 'idFront' | 'idBack';
   } | null>(null);
   const [previewBlobUrl, setPreviewBlobUrl] = useState<string | null>(null);
   const [activeDocTab, setActiveDocTab] = useState<'text' | 'pdf'>('text');
@@ -246,7 +261,7 @@ export default function PageAdminDashboard() {
   const { data: managerReviewData, error: managerReviewError, isPending: managerReviewPendingRead,
     isFetching: managerReviewFetching, refetch: retryManagerReview } = useQuery({
     queryKey: ['adminData', user?.id, 'managerReview'],
-    enabled: usesSupabasePersistence && user?.role === 'admin',
+    enabled: (user?.role === 'admin'),
     queryFn: async ({ signal }) => {
       const ownerId = user!.id;
       const requestSignal = AbortSignal.any([signal, AbortSignal.timeout(30000)]);
@@ -270,7 +285,7 @@ export default function PageAdminDashboard() {
   const { data: officerRosterData, error: officerRosterReadError, isPending: officerRosterPendingRead,
     isFetching: officerRosterFetching, refetch: retryOfficerRoster } = useQuery({
     queryKey: ['adminData', user?.id, 'officerRoster'],
-    enabled: usesSupabasePersistence && user?.role === 'admin',
+    enabled: (user?.role === 'admin'),
     queryFn: async ({ signal }) => {
       const ownerId = user!.id;
       const requestSignal = AbortSignal.any([signal, AbortSignal.timeout(30000)]);
@@ -286,96 +301,50 @@ export default function PageAdminDashboard() {
   });
 
   useEffect(() => {
-    if (!usesSupabasePersistence) return;
+
     setManagerRequests([]); setVerificationInspections([]); setVerificationTeams([]); setOfficerRosterError('');
     setDispatchModalManager(null); setReviewReportInspection(null);
   }, [user?.id]);
 
   useEffect(() => {
-    if (!usesSupabasePersistence || !managerReviewData || managerReviewData.ownerId !== user?.id) return;
+    if ((!managerReviewData) || managerReviewData.ownerId !== user?.id) return;
     setManagerRequests(managerReviewData.requests);
     setVerificationInspections(managerReviewData.inspections);
   }, [managerReviewData, user?.id]);
 
   useEffect(() => {
-    if (!usesSupabasePersistence) return;
+
     setOfficerRosterError(officerRosterReadError ? 'Could not load field officers. Please retry.' : '');
     if (officerRosterData && officerRosterData.ownerId === user?.id) setVerificationTeams(officerRosterData.officers);
   }, [officerRosterData, officerRosterReadError, user?.id]);
 
-  // TanStack Query for the remaining dashboard datasets and legacy review.
-  const { data: adminData } = useQuery({
+  // TanStack Query for the remaining dashboard datasets.
+  const { data: adminData, isPending: adminDataPending, error: adminDataError,
+    isFetching: adminDataFetching, refetch: retryAdminData } = useQuery({
     queryKey: ['adminData', user?.id],
     enabled: user?.role === 'admin',
-    queryFn: async () => {
-      const resHostels = await fetch(usesSupabasePersistence ? '/api/admin/hostels' : '/api/hostels');
-      let residencesData: any[] = [];
-      if (resHostels.ok) {
-        const data = await safeJson(resHostels);
-        residencesData = Array.isArray(data) ? data : [];
-      }
-
-      const resMgrReqs = usesSupabasePersistence ? null : await apiFetch('/api/manager-requests').catch(() => []);
-      const resMgrVerifications = usesSupabasePersistence ? null : await apiFetch('/api/manager-verifications').catch(() => []);
-      const mergedMgrs = Array.isArray(resMgrReqs) ? resMgrReqs.map((req: any) => {
-        const matchingVerif = Array.isArray(resMgrVerifications) ? resMgrVerifications.find((v: any) => v.id === req.id || v.managerEmail === req.managerEmail) : null;
-        return {
-          ...matchingVerif,
-          ...req,
-          documentsVerified: matchingVerif?.documentsVerified || req.documentsVerified || { operatingCertificate: 'pending', idFront: 'pending', idBack: 'pending' },
-          operatingCertificate: matchingVerif?.operatingCertificate || req.operatingCertificate || req.ownershipDocument,
-          idFront: matchingVerif?.idFront || req.idFront,
-          idBack: matchingVerif?.idBack || req.idBack
-        };
-      }) : [];
-
-      let restrictionLoadError='', storeLoadError='', officerLoadError='';
-      const resRestrictions = await apiFetch('/api/admin/manager-restrictions').then(result => {
-        if (!Array.isArray(result)) throw new Error('Could not load registration restrictions.');
-        return result;
-      }).catch((error: any) => {restrictionLoadError=error.message || 'Could not load registration restrictions.';return [];});
-      const resBoard = await apiFetch('/api/board-requests').catch(() => []);
-      const resActs = await apiFetch('/api/activities').catch(() => []);
-
-      const marketAppsRes = await apiFetch('/api/admin/digital-market/applications').catch(() => []);
-      const marketStoresRes = await apiFetch('/api/admin/digital-market/stores').then(result => {
-        if (!Array.isArray(result)) throw new Error('Could not load digital stores.');
-        return result;
-      }).catch((error: any) => {storeLoadError=error.message || 'Could not load digital stores.';return [];});
-      const vtRes = usesSupabasePersistence ? null : await apiFetch('/api/verification-teams').catch((error: any) => {officerLoadError=error.message || 'Could not load verification officers.';return [];});
-      const inspectionsRes = usesSupabasePersistence ? null : await apiFetch('/api/admin/verification-inspections').catch(() => []);
-      const paymentRecords = await apiFetch('/api/admin/payments').catch(() => []);
-      const allUsersRes = await apiFetch('/api/admin/all-users').catch(() => null);
-
-      return {
-        paymentRecords: Array.isArray(paymentRecords) ? paymentRecords : [],
-        residences: residencesData,
-        managerRequests: mergedMgrs,
-        managerRestrictions: Array.isArray(resRestrictions) ? resRestrictions : [],
-        managerRestrictionError: restrictionLoadError, marketStoreError: storeLoadError, officerRosterError: officerLoadError,
-        boardRequests: Array.isArray(resBoard) ? resBoard : [],
-        activities: Array.isArray(resActs) ? resActs : [], digitalMarketApps: Array.isArray(marketAppsRes) ? marketAppsRes : [],
-        digitalMarketStores: Array.isArray(marketStoresRes) ? marketStoresRes : [],
-        verificationTeams: Array.isArray(vtRes) ? vtRes : (vtRes?.verificationTeams || []),
-        verificationInspections: Array.isArray(inspectionsRes) ? inspectionsRes : [],
-        allUsersData: Array.isArray(allUsersRes?.users) ? allUsersRes : null
-      };
+    queryFn: async ({ signal }) => {
+      const ownerId = user!.id;
+      const directories = await readAdministratorDirectories(signal, requestSignal => fetch('/api/admin/dashboard-directories', {
+        signal: requestSignal, headers: { 'X-PineVela-Profile-Context': ownerId },
+      }));
+      signal.throwIfAborted();
+      if (reviewOwner.current !== ownerId) throw new DOMException('The administrator account changed.', 'AbortError');
+      return directories;
     },
-    refetchInterval: 8000,
+    retry: (false),
+    refetchInterval: query => (query.state.error) ? false : 30000,
   });
+
+  const adminDirectoriesUnavailable = (!adminData);
 
   useEffect(() => {
     if (!adminData) return;
     setResidences(adminData.residences);
-    if (!usesSupabasePersistence) {
-      setManagerRequests(adminData.managerRequests);
-      setVerificationTeams(adminData.verificationTeams);
-      setOfficerRosterError(adminData.officerRosterError);
-      setVerificationInspections(adminData.verificationInspections);
-    }
+
     setManagerRestrictions(adminData.managerRestrictions);
-    setManagerRestrictionError(adminData.managerRestrictionError);
-    setMarketStoreError(adminData.marketStoreError);
+    setManagerRestrictionError('');
+    setMarketStoreError('');
     setBoardRequests(adminData.boardRequests);
     setActivities(adminData.activities);
     setDigitalMarketApps(adminData.digitalMarketApps);
@@ -404,7 +373,7 @@ export default function PageAdminDashboard() {
   };
 
   const handleRejectMarketApp = async (appId: string, notes?: string) => {
-    if (usesSupabasePersistence && notes === undefined) {setRejectSellerId(appId);setRejectSellerNotes('');return;}
+    if ((notes === undefined)) {setRejectSellerId(appId);setRejectSellerNotes('');return;}
     setRejectSellerBusy(true);
     try {
       const res = await apiFetch('/api/admin/digital-market/reject-application', {
@@ -430,42 +399,6 @@ export default function PageAdminDashboard() {
     triggerToast('Select the seller account and submit a proposal for five-administrator approval.');
   };
 
-  const handleRegisterOfficer = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newOfficerData.fullName || !newOfficerData.email || !newOfficerData.password) {
-      triggerToast('Please fill in officer name, official email, and password.');
-      return;
-    }
-    try {
-      const response = await apiFetch('/api/verification-teams', {
-        method: 'POST',
-        body: JSON.stringify(newOfficerData)
-      });
-      const created = response?.officer || response;
-      setVerificationTeams(prev => [created, ...prev.filter(o => o.id !== created.id && o.officerId !== created.officerId)]);
-      setCreatedOfficerCredentials(response?.credentials || {
-        officerId: created.officerId,
-        fullName: created.fullName,
-        email: created.email,
-        phone: created.phone,
-        assignedZone: created.assignedZone,
-        password: newOfficerData.password,
-        securityPasscode: created.securityPasscode || 'PV-VERIFY-2026'
-      });
-      setShowRegisterOfficerModal(false);
-      setNewOfficerData({
-        fullName: '',
-        email: '',
-        phone: '',
-        assignedZone: 'Greater Accra - Campus Belt A',
-        password: ''
-      });
-      triggerToast(`Officer ${created.fullName || 'Verification Officer'} registered successfully! Credentials card generated.`);
-    } catch (err: any) {
-      triggerToast(err.message || 'Failed to register verification officer.');
-    }
-  };
-
   const handleToggleOfficerStatus = async (officerId: string, currentStatus: string) => {
     const newStatus = currentStatus === 'active' ? 'suspended' : 'active';
     try {
@@ -473,7 +406,7 @@ export default function PageAdminDashboard() {
         method: 'PUT',
         body: JSON.stringify({ status: newStatus, ...(privateKey ? { privateKey } : {}) })
       });
-      const res = usesSupabasePersistence ? await requestKeyedApproval(update) : await update();
+      const res = (await requestKeyedApproval(update));
       const updated = res?.officer || res;
       setVerificationTeams(prev => prev.map(o => (o.id === officerId || o.officerId === officerId) ? { ...o, ...updated } : o));
       triggerToast(`Officer status updated to ${newStatus}.`);
@@ -526,38 +459,12 @@ export default function PageAdminDashboard() {
     }
   };
 
-  const handleApproveBypass = async (id: string, userEmail: string) => {
-    try {
-      await apiFetch(`/api/admin/manager-restrictions/${id}/approve`, {
-        method: 'POST'
-      });
-      triggerToast(`Bypass approved for ${userEmail}. 30-day restriction cleared.`);
-      fetchAdminData();
-    } catch (err: any) {
-      triggerToast(err.message || 'Failed to approve bypass request.');
-    }
-  };
-
-  const handleRejectBypass = async (id: string, userEmail: string) => {
-    try {
-      const notes = rejectionNotes[id] || '';
-      await apiFetch(`/api/admin/manager-restrictions/${id}/reject`, {
-        method: 'POST',
-        body: JSON.stringify({ adminNotes: notes })
-      });
-      triggerToast(`Bypass rejected for ${userEmail}. Restriction remains active.`);
-      fetchAdminData();
-    } catch (err: any) {
-      triggerToast(err.message || 'Failed to reject bypass request.');
-    }
-  };
-
   useEffect(() => {
     fetchAdminData();
   }, []);
 
   const handleApproveManager = async (reqId: string, managerEmail: string) => {
-    if(usesSupabasePersistence){
+    {
       if(managerReviewPending.current||!user?.id)return;
       const inspection=currentManagerInspection(reqId,verificationInspections);
       if(inspection?.status!=='report_submitted'||!inspection.report){
@@ -569,37 +476,7 @@ export default function PageAdminDashboard() {
       setApproveManagerNotes('');setApproveManagerError('');setApprovalUncertain(false);
       return;
     }
-    try {
-      await apiFetch(`/api/manager-verifications/${reqId}/approve`, {
-        method: 'PUT',
-        body: JSON.stringify({ status: 'approved', force: true })
-      }).catch(async (error) => {
-        if (error.status !== 404) throw error;
-        return await apiFetch(`/api/manager-requests/${reqId}/approve`, {
-          method: 'PUT',
-          body: JSON.stringify({ status: 'approved', force: true })
-        });
-      });
 
-      setManagerRequests(prev => prev.map(r => (r.id === reqId || r.managerEmail === managerEmail) ? {
-        ...r,
-        status: 'approved',
-        inspectionStatus: 'approved',
-        documentsVerified: { operatingCertificate: 'verified', idFront: 'verified', idBack: 'verified' }
-      } : r));
-
-      setVerificationInspections(prev => prev.map(i => (i.managerVerificationId === reqId || i.managerEmail === managerEmail || i.id === reqId) ? {
-        ...i,
-        status: 'approved'
-      } : i));
-
-      triggerToast(`Manager account for ${managerEmail || 'manager'} approved successfully! Property is now verified.`);
-      refreshNotifications();
-      fetchAdminData();
-    } catch (err: any) {
-      console.error(err);
-      triggerToast(err.message || 'Failed to approve manager.');
-    }
   };
 
   const submitManagerApproval = async (event: React.FormEvent) => {
@@ -611,11 +488,21 @@ export default function PageAdminDashboard() {
     }
     managerReviewPending.current=true;setApprovingManager(true);setApproveManagerError('');
     const captured=target.ownerId,controller=new AbortController();managerReviewRequest.current=controller;
-    let uncertain=true;
+    let uncertain=false;
     try{
-      const response=await fetch(`/api/manager-verifications/${target.id}/approve`,{method:'PUT',
-        headers:{'content-type':'application/json','X-PineVela-Profile-Context':captured},body:JSON.stringify({adminNotes:notes}),
-        signal:AbortSignal.any([controller.signal,AbortSignal.timeout(45000)])});
+      const attempt=await requestKeyedApproval(async privateKey=>{
+        controller.signal.throwIfAborted();
+        if(reviewOwner.current!==captured)throw Error('The administrator account changed.');
+        uncertain=true;
+        // Resolve transport failures to the caller so an uncertain write closes
+        // the key prompt and requires the existing saved-record recovery step.
+        try{return{response:await fetch(`/api/manager-verifications/${target.id}/approve`,{method:'PUT',
+          headers:{'content-type':'application/json','X-PineVela-Profile-Context':captured},body:JSON.stringify({adminNotes:notes,privateKey}),
+          signal:AbortSignal.any([controller.signal,AbortSignal.timeout(45000)])})};}
+        catch(error){return{error};}
+      });
+      if(attempt.error)throw attempt.error;
+      const response=attempt.response as Response;
       const result=await response.json();
       if(!response.ok){uncertain=response.status>=500;throw Error(result.error||'Could not approve this application.');}
       if(!result.success||result.verification?.id!==target.id||result.verification?.status!=='approved')throw Error('The saved decision could not be confirmed.');
@@ -632,38 +519,6 @@ export default function PageAdminDashboard() {
     }finally{
       managerReviewPending.current=false;managerReviewRequest.current=null;
       if(reviewOwner.current===captured)setApprovingManager(false);
-    }
-  };
-
-  const handleVerifyManagerDoc = async (reqId: string, docKey: 'operatingCertificate' | 'idFront' | 'idBack', status: 'verified' | 'rejected') => {
-    try {
-      await apiFetch(`/api/manager-verifications/${reqId}/verify-doc`, {
-        method: 'PUT',
-        body: JSON.stringify({ docKey, status })
-      }).catch(async () => {
-        return await apiFetch(`/api/manager-requests/${reqId}/verify-doc`, {
-          method: 'PUT',
-          body: JSON.stringify({ docKey, status })
-        });
-      });
-
-      setManagerRequests(prev => prev.map(r => {
-        if (r.id === reqId || r.managerEmail === reqId) {
-          const currentDocs = r.documentsVerified || { operatingCertificate: 'pending', idFront: 'pending', idBack: 'pending' };
-          return {
-            ...r,
-            documentsVerified: {
-              ...currentDocs,
-              [docKey]: status
-            }
-          };
-        }
-        return r;
-      }));
-
-      triggerToast(`Manager document (${docKey}) marked as ${status.toUpperCase()}!`);
-    } catch (err: any) {
-      triggerToast(err.message || "Failed to update document status.");
     }
   };
 
@@ -714,7 +569,7 @@ export default function PageAdminDashboard() {
         adminNotes: rejectManagerReason.trim()
       };
 
-      if(usesSupabasePersistence){
+      {
         const response=await fetch(`/api/manager-verifications/${rejectManagerModal.id}/${managerReviewAction}`,{
           method:'PUT',headers:{'content-type':'application/json','X-PineVela-Profile-Context':String(captured)},
           body:JSON.stringify(payload),signal:AbortSignal.any([controller.signal,AbortSignal.timeout(45000)])});
@@ -722,15 +577,7 @@ export default function PageAdminDashboard() {
         const expected=managerReviewAction==='request-info'?'more_info_required':'rejected';
         if(!result.success||result.verification?.id!==rejectManagerModal.id||result.verification?.status!==expected)
           throw Error('The saved decision could not be confirmed. Refresh the application before retrying.');
-      }else await apiFetch(`/api/manager-verifications/${rejectManagerModal.id}/reject`, {
-        method: 'PUT',
-        body: JSON.stringify(payload)
-      }).catch(async () => {
-        return await apiFetch(`/api/manager-requests/${rejectManagerModal.id}/reject`, {
-          method: 'PUT',
-          body: JSON.stringify(payload)
-        });
-      });
+      }
 
       if(reviewOwner.current!==captured)return;
       setManagerRequests(prev => prev.map(r => r.id === rejectManagerModal.id ? {
@@ -762,32 +609,26 @@ export default function PageAdminDashboard() {
     navigate('/login', { replace: true });
   };
 
-  const pendingManagersCount = managerRequests.filter(r => usesSupabasePersistence?pendingManagerRegistration(r):r.status === 'pending' || !r.status).length;
-  const hostelCount = residences.filter(r => (usesSupabasePersistence ? r.wing || '' : r.hostel_type || '').toLowerCase().includes('hostel')).length;
-  const hotelCount = residences.filter(r => (usesSupabasePersistence ? r.wing || '' : r.hostel_type || '').toLowerCase().includes('hotel')).length;
+  const pendingManagersCount = managerRequests.filter(r => (pendingManagerRegistration(r))).length;
+  const hostelCount = residences.filter(r => ((r.wing || '')).toLowerCase().includes('hostel')).length;
+  const hotelCount = residences.filter(r => ((r.wing || '')).toLowerCase().includes('hotel')).length;
   const loungeCount = residences.filter(r => (r.hostel_type || '').toLowerCase().includes('lounge')).length;
-  const totalManagers = 1 + managerRequests.filter(m => m.status === 'approved' || m.status === 'Approved').length;
+  const totalManagers = allUsersData.breakdown.managers;
   const totalResidents = residents.length;
   const totalResidences = residences.length;
   const totalFeesCollected = feesPaid.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
 
   // Revenue is counted once from server-verified live transactions. Test/free payments are excluded.
   const totalMerchantFeesCollected = (adminData?.paymentRecords || []).filter((p: any) => p.mode === 'live' && p.purpose !== 'housing').reduce((sum: number, p: any) => sum + p.amount, 0);
-  const activeMerchantCount = digitalMarketStores.filter((s: any) => usesSupabasePersistence ? s.isActive : s.registrationFeePaid && Date.parse(s.semesterExpiresAt) > Date.now()).length;
+  const activeMerchantCount = digitalMarketStores.filter((s: any) => (s.isActive)).length;
 
-  const pendingHostelsCount = residences.filter(r => usesSupabasePersistence ? pendingResidenceReview(r) : (
-    r.status === 'Pending Approval' || 
-    r.approvalStatus === 'Pending Approval' || 
-    r.isApproved === false
-  )).length;
+  const pendingHostelsCount = residences.filter(r => (pendingResidenceReview(r))).length;
 
   const pendingBoardRequestsCount = boardRequests.filter(r => r.status === 'Pending').length;
   const adminAlertCount = pendingBoardRequestsCount + pendingHostelsCount + unreadCount;
 
-
-
   return (
-    <div onClickCapture={actionFeedback.capture} onSubmitCapture={actionFeedback.capture} className="min-h-screen h-screen flex flex-col lg:flex-row bg-gradient-to-br from-slate-50 via-blue-50/70 to-indigo-50/50 text-slate-800 overflow-hidden font-sans">
+    <div onClickCapture={actionFeedback.capture} onSubmitCapture={actionFeedback.capture} className="page-canvas min-h-screen h-screen flex flex-col lg:flex-row text-slate-800 overflow-hidden font-sans">
       <AdminRemovalNotice />
       {/* Toast Notification */}
       <AnimatePresence>
@@ -803,7 +644,6 @@ export default function PageAdminDashboard() {
         )}
       </AnimatePresence>
 
-      
       {/* MOBILE HEADER (lg:hidden) */}
       <header className="lg:hidden flex items-center justify-between px-5 py-3 bg-white/90 backdrop-blur-xl border-b border-sky-200/50 sticky top-0 z-40 shadow-sm">
         <div className="flex items-center gap-2">
@@ -894,17 +734,13 @@ export default function PageAdminDashboard() {
                     }`}>
                       <Icon className="w-4 h-4" />
                       {isSidebarCollapsed && tab.badge ? <span className="absolute -top-1 -right-1 min-w-4 rounded-full bg-rose-500 px-1 text-center text-[9px] font-bold text-white">{tab.badge}</span> : null}
-                      {false && (
-                        <span className="absolute -top-1 -right-1 w-3 h-3 bg-rose-500 rounded-full border-2 border-white animate-ping" />
-                      )}
+
                     </div>
                     {!isSidebarCollapsed && (
                       <div className="overflow-hidden">
                         <div className="text-xs font-semibold tracking-wide flex items-center gap-1.5 truncate">
                           <span>{tab.label}</span>
-                          {false && (
-                            <span className="w-2 h-2 rounded-full bg-rose-500 inline-block" />
-                          )}
+
                         </div>
                         <div className={`text-[10px] font-normal truncate ${isActive ? 'text-blue-100' : 'text-slate-500'}`}>{tab.sub}</div>
                       </div>
@@ -934,15 +770,16 @@ export default function PageAdminDashboard() {
         </div>
       </aside>}
 
-
       {/* MAIN CONTENT AREA */}
       <main className={`dashboard-centered-content flex-1 p-6 lg:p-10 space-y-8 overflow-y-auto h-full relative ${isSidebarTopNav ? 'lg:pt-24 lg:w-[calc(100vw-22rem)] lg:max-w-[calc(100vw-22rem)] lg:mx-auto' : ''}`}>
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-blue-200 bg-white/65 p-4 text-sm backdrop-blur-xl"><span className="flex min-w-0 items-center gap-3 font-semibold text-blue-950">{(user?.photo || user?.avatar) && <img src={user.photo || user.avatar} alt="Administrator profile" className="h-9 w-9 shrink-0 rounded-full object-cover" />}<AdministratorLabel slot={adminSlot} name={user?.name} /></span><button onClick={() => setActiveTab('governance')} className="rounded-xl bg-blue-600 px-4 py-2 font-semibold text-white">Shared approvals{pendingGovernance ? ` (${pendingGovernance})` : ''}</button></div>
-        {activeTab === 'governance' && <><AdminGovernancePanel />{usesSupabasePersistence && <AdminManagerClosureRequests />}<ResidenceDeletionPanel onClose={() => {}} /><AccountModerationPanel target={null} onClose={() => {}} onApplied={fetchAdminData} /></>}
+        {(adminDataPending) && <p role="status" className="rounded-2xl border border-blue-200 bg-white/70 p-5 text-sm text-slate-700 dark:border-cyan-900 dark:bg-slate-900 dark:text-slate-100">Loading administrator directories…</p>}
+        {(adminDataError) && <div role="alert" className="rounded-2xl border border-rose-200 bg-rose-50 p-5 text-sm text-rose-900 dark:border-rose-900 dark:bg-rose-950 dark:text-rose-100"><p>{adminDataError.message}</p>{adminData && <p className="mt-2">Showing the last successfully loaded directory information.</p>}<button type="button" disabled={adminDataFetching} onClick={() => void retryAdminData()} className="mt-2 min-h-11 font-semibold underline disabled:opacity-50">Retry administrator directories</button></div>}
+        {activeTab === 'governance' && <><AdminGovernancePanel />{(<AdminManagerClosureRequests />)}<ResidenceDeletionPanel onClose={() => {}} /><AccountModerationPanel target={null} onClose={() => {}} onApplied={fetchAdminData} /></>}
         {activeTab === 'messages' && <AdminMessageGateway />}
 
         {/* TAB 1: OVERVIEW */}
-        {activeTab === 'overview' && (
+        {activeTab === 'overview' && !adminDirectoriesUnavailable && (
           <div className="space-y-8 animate-fadeIn relative z-10">
             {/* Welcome banner */}
             <div className="bg-sky-50/20 border border-sky-200/50 p-8 rounded-3xl backdrop-blur-2xl shadow-xl relative overflow-hidden">
@@ -957,8 +794,8 @@ export default function PageAdminDashboard() {
               {[
                 { 
                   label: 'All Registered User Accounts', 
-                  value: allUsersData.totalUsers || (totalResidents + totalManagers + allUsersData.breakdown.staff + verificationTeams.length + activeMerchantCount + 1),
-                  sub: `${allUsersData.breakdown.residents || totalResidents} Residents, ${allUsersData.breakdown.managers || totalManagers} Managers, ${allUsersData.breakdown.staff || 0} Staff, ${allUsersData.breakdown.officers || verificationTeams.length} Officers, ${allUsersData.breakdown.merchants || activeMerchantCount} Merchants`,
+                  value: allUsersData.totalUsers,
+                  sub: `${allUsersData.breakdown.residents} Residents, ${totalManagers} Managers, ${allUsersData.breakdown.staff} Staff, ${allUsersData.breakdown.officers} Officers, ${allUsersData.breakdown.merchants} Merchants`,
                   icon: Users, 
                   color: 'bg-emerald-600 text-white' 
                 },
@@ -1038,8 +875,6 @@ export default function PageAdminDashboard() {
                       <Plus className="w-4 h-4" />
                     </button>
 
-
-
                     <button
                       onClick={() => setActiveTab('managers')}
                       className="w-full flex items-center justify-between px-5 py-3.5 rounded-2xl bg-sky-100/40 hover:bg-sky-100/70 border border-sky-200/60 text-blue-900 font-semibold text-xs transition-all cursor-pointer backdrop-blur-md"
@@ -1063,16 +898,16 @@ export default function PageAdminDashboard() {
         )}
 
         {/* TAB: ALL REGISTERED ACCOUNTS */}
-        {activeTab === 'user_accounts' && (
+        {activeTab === 'user_accounts' && !adminDirectoriesUnavailable && (
           <div className="space-y-6 animate-fadeIn relative z-10">
             <AccountModerationPanel target={moderationTarget} onClose={() => setModerationTarget(null)} onApplied={fetchAdminData} />
             <AdminAccountDirectory accounts={allUsersData.users} onManage={setModerationTarget} />
           </div>
         )}
 
-        <div className={activeTab === 'residences' ? '' : 'hidden'}><ResidenceDeletionPanel selectedHostel={deletingResidence} onClose={() => setDeletingResidence(null)} /></div>
+        <div className={activeTab === 'residences' ? '' : 'hidden'}><ResidenceDeletionPanel active={activeTab === 'residences'} selectedHostel={deletingResidence} onClose={() => setDeletingResidence(null)} /></div>
         {/* TAB 2: AVAILABLE RESIDENCES */}
-        {activeTab === 'residences' && (
+        {activeTab === 'residences' && !adminDirectoriesUnavailable && (
           <div className="space-y-6 animate-fadeIn relative z-10">
             <div className="flex flex-col md:flex-row items-center justify-between gap-4 bg-white/80 border border-blue-200/80 p-6 rounded-3xl backdrop-blur-xl shadow-xl">
               <div role="region" aria-label="Residence directory">
@@ -1147,18 +982,18 @@ export default function PageAdminDashboard() {
                   <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${
                     approvalTabFilter === 'approved' ? 'bg-white text-emerald-700' : 'bg-emerald-600 text-white'
                   }`}>
-                    {residences.filter(r => usesSupabasePersistence ? residenceReviewStatus(r) === 'approved' : ((r.status === 'Approved' || r.approvalStatus === 'Approved' || r.isApproved === true || r.status === 'Open') && r.status !== 'Pending Approval' && r.approvalStatus !== 'Pending Approval' && r.isApproved !== false)).length}
+                    {residences.filter(r => (residenceReviewStatus(r) === 'approved')).length}
                   </span>
                 </button>
-                {usesSupabasePersistence && <button type="button" onClick={() => setApprovalTabFilter('rejected')}
+                {(<button type="button" onClick={() => setApprovalTabFilter('rejected')}
                   className={`flex min-h-11 items-center gap-1.5 rounded-2xl px-4 py-2 text-xs font-bold ${approvalTabFilter === 'rejected' ? 'bg-rose-700 text-white' : 'border border-rose-200 bg-rose-50 text-rose-900'}`}>
                   Rejected ({residences.filter(r => residenceReviewStatus(r) === 'rejected').length})
-                </button>}
+                </button>)}
               </div>
 
               {/* Category Filter Pills */}
               <div className="flex flex-wrap items-center gap-2">
-                {(usesSupabasePersistence ? ['all', 'Hostel', 'Inn', 'Hotel', 'Estate'] : ['all', 'Hostel', 'Hotel', 'Lounge']).map((cat) => (
+                {((['all', 'Hostel', 'Inn', 'Hotel', 'Estate'])).map((cat) => (
                   <button
                     key={cat}
                     onClick={() => setResidenceFilter(cat as any)}
@@ -1183,17 +1018,14 @@ export default function PageAdminDashboard() {
                     res.approvalStatus !== 'Pending Approval' &&
                     res.isApproved !== false;
 
-                  if (usesSupabasePersistence) {
+                  {
                     if (approvalTabFilter === 'pending' && !pendingResidenceReview(res)) return false;
                     if (approvalTabFilter === 'approved' && residenceReviewStatus(res) !== 'approved') return false;
                     if (approvalTabFilter === 'rejected' && residenceReviewStatus(res) !== 'rejected') return false;
-                  } else {
-                    if (approvalTabFilter === 'pending' && isApproved) return false;
-                    if (approvalTabFilter === 'approved' && !isApproved) return false;
                   }
 
                   if (residenceFilter !== 'all') {
-                    const type = usesSupabasePersistence ? res.wing || '' : res.hostel_type || 'Hostel';
+                    const type = (res.wing || '');
                     if (!type.toLowerCase().includes(residenceFilter.toLowerCase())) return false;
                   }
                   if (searchQuery.trim()) {
@@ -1203,21 +1035,21 @@ export default function PageAdminDashboard() {
                   return true;
                 })
                 .map((residence) => {
-                  const type = usesSupabasePersistence ? residence.wing || 'Not provided' : residence.hostel_type || 'Hostel';
+                  const type = (residence.wing || 'Not provided');
                   const cover = residence.image || residence.imageUrl || residence.exteriorPhotoUrl || residence.imagePreviewUrl || residence.images?.[0];
-                  const managerVerified = !usesSupabasePersistence || residence.managerStatus === 'active';
-                  const isApproved = usesSupabasePersistence ? residenceReviewStatus(residence) === 'approved' : residence.isApproved === true || residence.approvalStatus === 'Approved' || residence.status === 'Approved';
+                  const managerVerified = (residence.managerStatus === 'active');
+                  const isApproved = (residenceReviewStatus(residence) === 'approved');
 
                   return (
                     <div key={residence.id} className="bg-white/90 border border-blue-200/80 rounded-3xl overflow-hidden backdrop-blur-xl shadow-xl flex flex-col justify-between">
                       <div>
                         <div className="relative h-48 w-full overflow-hidden bg-slate-100">
-                          {usesSupabasePersistence && !cover ? <div className="flex h-full items-center justify-center gap-2 text-sm text-slate-600"><Building2 size={24}/>No residence photos uploaded</div> : <img
+                          {(!cover) ? <div className="flex h-full items-center justify-center gap-2 text-sm text-slate-600"><Building2 size={24}/>No residence photos uploaded</div> : <img
                             src={residence.image || residence.imageUrl || residence.exteriorPhotoUrl || residence.imagePreviewUrl || residence.images?.[0] || 'https://images.unsplash.com/photo-1555854877-bab0e564b8d5?auto=format&fit=crop&w=800&q=80'}
                             alt={residence.name}
                             onError={(e) => {
-                              if (usesSupabasePersistence) {e.currentTarget.style.display='none';return;}
-                              (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1555854877-bab0e564b8d5?auto=format&fit=crop&w=800&q=80';
+                              {e.currentTarget.style.display='none';return;}
+
                             }}
                             className="w-full h-full object-cover"
                           />}
@@ -1228,12 +1060,12 @@ export default function PageAdminDashboard() {
                             {isApproved ? (
                               <span className="bg-emerald-600 text-white px-3 py-1 rounded-xl text-xs font-bold shadow-lg flex items-center gap-1">
                                 <Check className="w-3.5 h-3.5 stroke-[3]" />
-                                {usesSupabasePersistence ? residenceReviewLabel(residence) : 'Approved & Live'}
+                                {(residenceReviewLabel(residence))}
                               </span>
                             ) : (
                               <span className="bg-amber-500 text-white px-3 py-1 rounded-xl text-xs font-bold shadow-lg flex items-center gap-1">
                                 <Clock className="w-3.5 h-3.5" />
-                                {usesSupabasePersistence ? residenceReviewLabel(residence) : 'Pending Approval'}
+                                {(residenceReviewLabel(residence))}
                               </span>
                             )}
                           </div>
@@ -1251,18 +1083,14 @@ export default function PageAdminDashboard() {
                           <div className="grid grid-cols-2 gap-2 pt-2 border-t border-blue-100 text-xs">
                             <div>
                               <span className="text-slate-400 block text-[10px] uppercase font-semibold">Capacity</span>
-                              {usesSupabasePersistence && <span className="font-semibold text-slate-800">{residence.totalRooms} rooms · {residence.totalBeds} beds</span>}
+                              {(<span className="font-semibold text-slate-800">{residence.totalRooms} rooms · {residence.totalBeds} beds</span>)}
                             </div>
                           </div>
 
                           {/* Verified Manager Profile with Photo */}
                           <div className="p-3 bg-blue-50/70 rounded-2xl border border-blue-200/60 flex items-center gap-3">
                             <div className="relative shrink-0">
-                              {usesSupabasePersistence ? <span className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-sm font-bold text-blue-900" aria-label="Manager initials">{residence.managerName?.slice(0,2).toUpperCase() || '?'}</span> : <img
-                                src={residence.managerPhoto || (residence as any).managerAvatar || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80'}
-                                alt={residence.managerName || 'Manager'}
-                                className="w-10 h-10 rounded-full object-cover border-2 border-white shadow-xs"
-                              />}
+                              {(<span className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-sm font-bold text-blue-900" aria-label="Manager initials">{residence.managerName?.slice(0,2).toUpperCase() || '?'}</span>)}
                               {managerVerified && <span className="absolute -bottom-0.5 -right-0.5 bg-emerald-500 text-white rounded-full p-0.5 shadow-xs" title="Verified Manager">
                                 <Check className="w-2.5 h-2.5 stroke-[3]" />
                               </span>}
@@ -1270,17 +1098,17 @@ export default function PageAdminDashboard() {
                             <div className="min-w-0 flex-1">
                               <div className="flex items-center gap-1.5">
                                 <span className="text-xs font-bold text-slate-900 truncate">
-                                  {residence.managerName || (usesSupabasePersistence ? 'Not provided' : 'Anthony Davis')}
+                                  {residence.managerName || (('Not provided'))}
                                 </span>
                                 {managerVerified && <span className="px-1.5 py-0.2 rounded text-[9px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300 shrink-0">
                                   Verified
                                 </span>}
                               </div>
                               <p className="text-[10px] text-slate-500 truncate">
-                                {residence.managerEmail || (usesSupabasePersistence ? 'Email not provided' : 'manager@pinevela.com')}
+                                {residence.managerEmail || (('Email not provided'))}
                               </p>
                               <p className="text-[10px] text-slate-700 font-semibold">
-                                {residence.managerPhone || (usesSupabasePersistence ? 'Phone not provided' : '+233 24 123 4567')}
+                                {residence.managerPhone || (('Phone not provided'))}
                               </p>
                             </div>
                           </div>
@@ -1295,40 +1123,21 @@ export default function PageAdminDashboard() {
                           </div>
                         ) : (
                           <div className="flex items-center gap-2">
-                            {!usesSupabasePersistence && <button
-                              onClick={() => {
-                                setRejectingResidenceModal(residence);
-                                setResidenceRejectionReason('');
-                              }}
-                              className="text-xs bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold py-2.5 px-3.5 rounded-xl transition-all cursor-pointer border border-rose-200 flex items-center gap-1"
-                            >
-                              <X className="w-3.5 h-3.5" />
-                              <span>Reject</span>
-                            </button>}
+
                             <button
                               onClick={async () => {
-                                if (usesSupabasePersistence) {setInspectingResidenceModal(residence);return;}
-                                try {
-                                  const updated = await apiFetch(`/api/hostels/${residence.id}/verify`, {
-                                    method: 'PUT',
-                                    body: JSON.stringify({ status: 'Approved', isApproved: true, approvalStatus: 'Approved' })
-                                  });
-                                  const freshHostel = updated.hostel || { ...residence, status: 'Approved', isApproved: true, approvalStatus: 'Approved' };
-                                  setResidences(prev => prev.map(r => r.id === residence.id ? freshHostel : r));
-                                  triggerToast(`Residence "${residence.name}" approved successfully and published live!`);
-                                } catch(e) {
-                                  triggerToast('Failed to approve residence');
-                                }
+                                {setInspectingResidenceModal(residence);return;}
+
                               }}
                               className="text-xs bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 px-4 rounded-xl transition-all cursor-pointer shadow-md flex items-center gap-1.5"
                             >
                               <CheckCircle2 className="w-3.5 h-3.5" />
-                              <span>{usesSupabasePersistence ? pendingResidenceReview(residence) ? 'Review Registration' : 'View Registration' : 'Approve Residence'}</span>
+                              <span>{(pendingResidenceReview(residence) ? 'Review Registration' : 'View Registration')}</span>
                             </button>
                           </div>
                         )}
                         <div className="flex items-center gap-2">
-                            {(!usesSupabasePersistence || isApproved) && <button
+                            {((isApproved)) && <button
                               onClick={() => {
                                 setInspectingResidenceModal(residence);
                                 setInspectActiveImage('');
@@ -1414,12 +1223,12 @@ export default function PageAdminDashboard() {
                 </button>
                 <button type="button" onClick={() => setManagerSubTab("cooldowns")} className="px-3.5 py-2 rounded-xl text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-all cursor-pointer flex items-center gap-1.5">
                   <Clock className="w-3.5 h-3.5" />
-                  <span>Restrictions ({managerRestrictions.filter(r => usesSupabasePersistence ? r.isActive : Date.parse(r.expiresAt)>Date.now() && !r.bypassApproved).length})</span>
+                  <span>Restrictions ({managerRestrictions.filter(r => (r.isActive)).length})</span>
                 </button>
               </div>
             </div>
 
-            {usesSupabasePersistence && (managerReviewPendingRead || managerReviewError) && (
+            {((managerReviewPendingRead || managerReviewError)) && (
               <div role={managerReviewError ? 'alert' : 'status'} className="rounded-2xl border border-sky-200 bg-white/90 p-4 text-sm text-slate-800">
                 <p className="font-semibold">{managerReviewError ? 'Manager applications could not load.' : 'Loading manager applications…'}</p>
                 {managerReviewError && <>
@@ -1485,21 +1294,11 @@ export default function PageAdminDashboard() {
                       );
                     })
                     .map((req, idx) => {
-                      const inspection = usesSupabasePersistence?currentManagerInspection(req.id,verificationInspections):verificationInspections.find(i => i.managerVerificationId === req.id || i.managerEmail === req.managerEmail || (i.id && (req.inspectionId === i.id || req.id === i.id)));
-                      const hasSubmittedReport = usesSupabasePersistence?inspection?.status==='report_submitted'&&Boolean(inspection.report):Boolean(inspection?.report || req.inspectionReport || req.verificationReport || inspection?.status === 'report_submitted');
+                      const inspection = (currentManagerInspection(req.id,verificationInspections));
+                      const hasSubmittedReport = (inspection?.status==='report_submitted'&&Boolean(inspection.report));
                       const isBlocked = req.status === 'blocked' || req.isBlocked === true;
-                      const isApproved = !isBlocked && (usesSupabasePersistence?req.status==='approved':req.status === 'approved' || req.inspectionStatus === 'approved' || inspection?.status === 'approved');
-                      const currentStatus = usesSupabasePersistence
-                        ? (['approved','rejected','withdrawn','more_info_required','blocked','suspended'].includes(req.status)?req.status:hasSubmittedReport?'report_submitted':inspection?.status==='dispatched'?'dispatched':'pending_dispatch')
-                        : req.status === 'withdrawn' || inspection?.status === 'withdrawn'
-                        ? 'withdrawn'
-                        : isBlocked
-                        ? 'blocked'
-                        : isApproved 
-                        ? 'approved' 
-                        : (req.inspectionStatus === 'report_submitted' || hasSubmittedReport)
-                        ? 'report_submitted'
-                        : (req.inspectionStatus || inspection?.status || req.status || 'pending_dispatch');
+                      const isApproved = !isBlocked && ((req.status==='approved'));
+                      const currentStatus = ((['approved','rejected','withdrawn','more_info_required','blocked','suspended'].includes(req.status)?req.status:hasSubmittedReport?'report_submitted':inspection?.status==='dispatched'?'dispatched':'pending_dispatch'));
 
                       return (
                         <div key={`${req.id || 'mreq'}-${idx}`} className="bg-sky-50/20 border border-sky-200/50 p-6 rounded-3xl backdrop-blur-2xl shadow-xl space-y-4">
@@ -1563,8 +1362,6 @@ export default function PageAdminDashboard() {
                               <span className="font-bold text-slate-800">{req.location || req.preciseLocation || req.physicalAddress || 'Not provided'}</span>
                             </div>
                           </div>
-
-
 
                           {/* Dispatch & Inspection Status Block */}
                           <div className="p-4 bg-sky-100/30 rounded-2xl border border-sky-200/50 flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
@@ -1631,7 +1428,7 @@ export default function PageAdminDashboard() {
                               )}
 
                               {/* Dispatch Button */}
-                              {(usesSupabasePersistence?currentStatus==='pending_dispatch':currentStatus !== 'withdrawn' && (currentStatus === 'pending_dispatch' || !req.inspectionStatus) && req.status !== 'approved' && req.status !== 'blocked' && !req.isBlocked) && (
+                              {((currentStatus==='pending_dispatch')) && (
                                 <button
                                   type="button"
                                   onClick={() => {
@@ -1675,12 +1472,12 @@ export default function PageAdminDashboard() {
                               )}
 
                               {/* Direct Approve/Reject buttons */}
-                              {(usesSupabasePersistence?pendingManagerRegistration(req):req.status !== 'approved' && req.status !== 'rejected' && req.status !== 'blocked' && !req.isBlocked) && (
+                              {((pendingManagerRegistration(req))) && (
                                 <>
-                                  {usesSupabasePersistence&&req.status!=='more_info_required'&&<button type="button" onClick={()=>{
+                                  {(req.status!=='more_info_required')&&<button type="button" onClick={()=>{
                                     handleRejectManager(req.id,req.managerName,req.managerEmail);setManagerReviewAction('request-info');
                                   }} className="min-h-11 rounded-xl border border-blue-300 bg-blue-50 px-3.5 py-2.5 text-xs font-bold text-blue-900">Request corrections</button>}
-                                  {(!usesSupabasePersistence||hasSubmittedReport)&&
+                                  {((hasSubmittedReport))&&
                                   <button
                                     type="button"
                                     onClick={() => handleApproveManager(req.id, req.managerEmail)}
@@ -1736,7 +1533,7 @@ export default function PageAdminDashboard() {
                       );
                     })}
 
-                  {managerRequests.length === 0 && (!usesSupabasePersistence || managerReviewData && managerReviewData.ownerId === user?.id && managerReviewData.requests.length === 0 && !managerReviewError) && (
+                  {managerRequests.length === 0 && ((managerReviewData && managerReviewData.ownerId === user?.id && managerReviewData.requests.length === 0 && !managerReviewError)) && (
                     <div className="text-center py-16 bg-sky-50/20 border border-sky-200/50 rounded-3xl backdrop-blur-2xl">
                       <Users className="w-12 h-12 text-slate-400 mx-auto mb-4" />
                       <h4 className="text-lg font-bold text-slate-900 mb-1 text-outline-sm">No Manager Verification Requests</h4>
@@ -1755,19 +1552,12 @@ export default function PageAdminDashboard() {
                     <h4 className="text-base font-black text-slate-900">PineVela Verification Team Roster</h4>
                     <p className="text-xs text-slate-600">Accredited field officers responsible for physical on-site inspections.</p>
                   </div>
-                  {!usesSupabasePersistence && <button
-                    type="button"
-                    onClick={() => setShowRegisterOfficerModal(true)}
-                    className="px-5 py-2.5 bg-blue-900 hover:bg-blue-850 text-white font-black text-xs rounded-2xl shadow-md cursor-pointer transition-all flex items-center gap-2"
-                  >
-                    <Plus className="w-4 h-4 text-sky-300" />
-                    <span>Register New Verification Officer</span>
-                  </button>}
+
                 </div>
 
-                {usesSupabasePersistence && <SupabaseOfficerInvitationControls onChanged={fetchAdminData} />}
-                {usesSupabasePersistence && officerRosterPendingRead && <p role="status" className="text-sm text-slate-600">Loading field officers…</p>}
-                {officerRosterError && <p role="alert" className="rounded-xl bg-rose-50 p-3 text-sm text-rose-800">{officerRosterError}<button type="button" disabled={usesSupabasePersistence && officerRosterFetching} onClick={() => { void (usesSupabasePersistence ? retryOfficerRoster() : fetchAdminData()); }} className="ml-3 min-h-11 font-semibold underline disabled:opacity-50">Retry field officers</button></p>}
+                {(<SupabaseOfficerInvitationControls onChanged={fetchAdminData} />)}
+                {(officerRosterPendingRead) && <p role="status" className="text-sm text-slate-600">Loading field officers…</p>}
+                {officerRosterError && <p role="alert" className="rounded-xl bg-rose-50 p-3 text-sm text-rose-800">{officerRosterError}<button type="button" disabled={(officerRosterFetching)} onClick={() => { void ((retryOfficerRoster())); }} className="ml-3 min-h-11 font-semibold underline disabled:opacity-50">Retry field officers</button></p>}
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {verificationTeams.map((officer, oIdx) => (
@@ -1802,24 +1592,6 @@ export default function PageAdminDashboard() {
                       </div>
 
                       <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-100">
-                        {!usesSupabasePersistence && <button
-                          type="button"
-                          onClick={() => {
-                            setCreatedOfficerCredentials({
-                              officerId: officer.officerId,
-                              fullName: officer.fullName,
-                              email: officer.email,
-                              phone: officer.phone,
-                              assignedZone: officer.assignedZone,
-                              password: '••••••••',
-                              securityPasscode: officer.securityPasscode || 'PV-VERIFY-2026'
-                            });
-                          }}
-                          className="flex-1 py-2 px-3 bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 text-xs font-bold rounded-xl cursor-pointer transition-all flex items-center justify-center gap-1"
-                        >
-                          <CreditCard className="w-3.5 h-3.5 text-blue-700" />
-                          <span>Credentials Card</span>
-                        </button>}
 
                         <button
                           type="button"
@@ -1836,18 +1608,12 @@ export default function PageAdminDashboard() {
                     </div>
                   ))}
 
-                  {verificationTeams.length === 0 && !officerRosterError && (!usesSupabasePersistence || officerRosterData && officerRosterData.ownerId === user?.id && officerRosterData.officers.length === 0 && !officerRosterReadError) && (
+                  {verificationTeams.length === 0 && !officerRosterError && ((officerRosterData && officerRosterData.ownerId === user?.id && officerRosterData.officers.length === 0 && !officerRosterReadError)) && (
                     <div className="col-span-full text-center py-12 bg-white/70 border border-sky-200 rounded-3xl">
                       <ShieldCheck className="w-10 h-10 text-slate-400 mx-auto mb-3" />
                       <h5 className="text-sm font-bold text-slate-900">No Verification Officers Registered</h5>
                       <p className="text-xs text-slate-500 mb-4">Invite accredited officers to handle physical property inspections.</p>
-                      {!usesSupabasePersistence && <button
-                        type="button"
-                        onClick={() => setShowRegisterOfficerModal(true)}
-                        className="px-4 py-2 bg-blue-900 text-white font-bold text-xs rounded-xl shadow-sm"
-                      >
-                        Register Officer
-                      </button>}
+
                     </div>
                   )}
                 </div>
@@ -1855,7 +1621,7 @@ export default function PageAdminDashboard() {
             )}
 
             {/* SUBTAB 3: REVIEWED REGISTRATION COOLDOWNS */}
-            {managerSubTab === 'cooldowns' && usesSupabasePersistence && (
+            {managerSubTab === 'cooldowns' && true && (
               <section aria-label="Manager registration restrictions" className="space-y-4 rounded-3xl border border-sky-200/50 bg-sky-50/20 p-6 backdrop-blur-2xl">
                 <div><h3 className="text-lg font-bold text-slate-900">Manager registration restrictions</h3><p className="mt-1 text-sm text-slate-600">Residence and manager-account cooldowns recorded by reviewed administrator decisions. Each restriction applies to the account shown and expires on its recorded date.</p></div>
                 {managerRestrictionError && <p role="alert" className="rounded-xl bg-rose-50 p-3 text-sm text-rose-800">{managerRestrictionError}<button type="button" onClick={fetchAdminData} className="ml-3 font-semibold underline">Retry</button></p>}
@@ -1866,131 +1632,10 @@ export default function PageAdminDashboard() {
                   <dl className="grid gap-3 text-xs sm:grid-cols-2"><div><dt className="font-semibold text-slate-500">Recorded</dt><dd>{new Date(restr.createdAt).toLocaleString()}</dd></div><div><dt className="font-semibold text-slate-500">Expires</dt><dd>{new Date(restr.expiresAt).toLocaleString()}</dd></div><div><dt className="font-semibold text-slate-500">Primary account</dt><dd className="break-all">{restr.userEmail}</dd></div><div><dt className="font-semibold text-slate-500">Recorded by</dt><dd>{restr.imposedByName}</dd></div></dl>
                   {restr.proposalId && <p className="break-all text-xs text-slate-500">Review: {restr.proposalId} · {restr.proposalStatus}</p>}
                 </article>)}
-                {!managerRestrictionError && managerRestrictions.length===0 && <p className="rounded-xl bg-white/65 p-4 text-sm text-slate-500">No manager or residence registration restrictions have been recorded.</p>}
+                {!managerRestrictionError && managerRestrictions.length===0 && ((adminData && !adminDataError)) && <p className="rounded-xl bg-white/65 p-4 text-sm text-slate-500">No manager or residence registration restrictions have been recorded.</p>}
               </section>
             )}
-            {managerSubTab === 'cooldowns' && !usesSupabasePersistence && (
-              <div className="bg-sky-50/20 border border-sky-200/50 p-6 rounded-3xl backdrop-blur-2xl shadow-xl space-y-6">
-                <div>
-                  <h3 className="text-lg font-bold text-slate-900">Anti-Abuse Restrictions & Bypass Requests</h3>
-                  <p className="text-xs text-slate-600 font-medium">
-                    Review 30-day account creation restrictions applied to deleted Hostel Manager accounts, and evaluate detailed bypass requests.
-                  </p>
-                </div>
 
-                <div className="space-y-4">
-                  {managerRestrictions.map((restr, idx) => {
-                    const isExpired = new Date(restr.expiresAt).getTime() <= Date.now();
-                    const remainingDays = isExpired 
-                      ? 0 
-                      : Math.ceil((new Date(restr.expiresAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-
-                    return (
-                      <div 
-                        key={restr.id || `restr-${idx}`} 
-                        className="bg-white border border-slate-200 p-5 rounded-2xl shadow-xs space-y-4"
-                      >
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <span className="text-xs font-black text-slate-900">{restr.userEmail}</span>
-                              {restr.deletedManagerEmail && restr.deletedManagerEmail !== restr.userEmail && (
-                                <span className="text-[10px] text-slate-500 font-medium">
-                                  (Manager account: {restr.deletedManagerEmail})
-                                </span>
-                              )}
-                            </div>
-                            <p className="text-[10px] text-slate-400 font-bold">
-                              Deleted At: {new Date(restr.deletedAt).toLocaleString()}
-                            </p>
-                          </div>
-
-                          <div className="flex items-center gap-2">
-                            {restr.bypassApproved ? (
-                              <span className="px-2.5 py-1 text-[10px] font-extrabold bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-full">
-                                Bypass Approved (Restriction Waived)
-                              </span>
-                            ) : restr.bypassRejected ? (
-                              <span className="px-2.5 py-1 text-[10px] font-extrabold bg-rose-50 text-rose-800 border border-rose-200 rounded-full">
-                                Bypass Rejected
-                              </span>
-                            ) : isExpired ? (
-                              <span className="px-2.5 py-1 text-[10px] font-extrabold bg-slate-100 text-slate-500 rounded-full">
-                                Restriction Expired
-                              </span>
-                            ) : (
-                              <span className="px-2.5 py-1 text-[10px] font-extrabold bg-amber-50 text-amber-800 border border-amber-200 rounded-full animate-pulse">
-                                Active: {remainingDays} Days Left
-                              </span>
-                            )}
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs text-slate-700 font-medium">
-                          <div className="p-3 bg-slate-50 rounded-xl space-y-1">
-                            <span className="text-[10px] uppercase font-black text-slate-400 block">User Reason for Deletion / Restart</span>
-                            <p className="text-slate-800 italic font-semibold">
-                              {restr.reason ? `"${restr.reason}"` : "No bypass reason submitted."}
-                            </p>
-                          </div>
-
-                          <div className="p-3 bg-slate-50 rounded-xl space-y-1">
-                            <span className="text-[10px] uppercase font-black text-slate-400 block">Admin Action Notes / Status</span>
-                            {restr.adminNotes ? (
-                              <p className="text-slate-800 font-semibold italic">"{restr.adminNotes}"</p>
-                            ) : (
-                              <p className="text-slate-400 font-semibold">No action notes recorded.</p>
-                            )}
-                          </div>
-                        </div>
-
-                        {restr.bypassRequested && !restr.bypassApproved && !restr.bypassRejected && !isExpired && (
-                          <div className="pt-2 border-t border-slate-100 flex flex-col gap-3">
-                            <div className="space-y-1.5">
-                              <label className="text-[10px] font-black text-slate-800 block uppercase tracking-wider">
-                                Decision / Rejection Feedback Notes
-                              </label>
-                              <input aria-label="Decision / Rejection Feedback Notes"
-                                type="text"
-                                value={rejectionNotes[restr.id] || ''}
-                                onChange={(e) => setRejectionNotes(prev => ({ ...prev, [restr.id]: e.target.value }))}
-                                placeholder="Explain rejection reason or append approval comments..."
-                                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                              />
-                            </div>
-
-                            <div className="flex items-center justify-end gap-2.5">
-                              <button
-                                type="button"
-                                onClick={() => handleRejectBypass(restr.id, restr.userEmail)}
-                                className="px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-extrabold cursor-pointer transition-all"
-                              >
-                                Reject Bypass Request
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleApproveBypass(restr.id, restr.userEmail)}
-                                className="px-4 py-2 bg-blue-900 hover:bg-blue-850 text-white rounded-xl text-xs font-black shadow-md cursor-pointer transition-all"
-                              >
-                                Approve Bypass (Waive Cooldown)
-                              </button>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-
-                  {managerRestrictions.length === 0 && (
-                    <div className="text-center py-10 bg-slate-50 border border-slate-200 rounded-2xl">
-                      <Clock className="w-10 h-10 text-slate-400 mx-auto mb-3 animate-pulse" />
-                      <h4 className="text-sm font-bold text-slate-900 mb-0.5">No Manager Account Restrictions Active</h4>
-                      <p className="text-xs text-slate-500 font-semibold">Active cooldown restrictions and bypass requests will be shown here.</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
           </div>
         )}
 
@@ -2042,15 +1687,15 @@ export default function PageAdminDashboard() {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {residences.filter(r => usesSupabasePersistence ? pendingResidenceReview(r) : r.status === 'Pending Approval' || r.approvalStatus === 'Pending Approval' || r.isApproved === false).map((res, idx) => (
+                  {residences.filter(r => (pendingResidenceReview(r))).map((res, idx) => (
                     <div key={`${res.id || 'res'}-${idx}`} className="bg-white/90 border border-amber-200/80 p-4 rounded-2xl shadow-xs flex flex-col justify-between space-y-3">
                       <div className="flex items-start gap-3">
-                        {usesSupabasePersistence && !(res.image || res.imageUrl || res.exteriorPhotoUrl || res.imagePreviewUrl) ? <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-slate-100" aria-label="No residence photo submitted"><Building2 size={24}/></div> : <img
+                        {(!(res.image || res.imageUrl || res.exteriorPhotoUrl || res.imagePreviewUrl)) ? <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-slate-100" aria-label="No residence photo submitted"><Building2 size={24}/></div> : <img
                           src={res.image || res.imageUrl || res.exteriorPhotoUrl || res.imagePreviewUrl || 'https://images.unsplash.com/photo-1555854877-bab0e564b8d5?auto=format&fit=crop&w=400&q=80'}
                           alt={res.name}
                           onError={(e) => {
-                            if (usesSupabasePersistence) {e.currentTarget.style.display='none';return;}
-                            (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1555854877-bab0e564b8d5?auto=format&fit=crop&w=400&q=80';
+                            {e.currentTarget.style.display='none';return;}
+
                           }}
                           className="w-16 h-16 rounded-xl object-cover border border-amber-200 shrink-0"
                         />}
@@ -2071,37 +1716,9 @@ export default function PageAdminDashboard() {
                             title="Inspect full details, uploaded photos & GPS location"
                           >
                             <Eye className="w-3.5 h-3.5 text-indigo-600" />
-                            <span>{usesSupabasePersistence ? 'Review Registration' : 'Details'}</span>
+                            <span>{('Review Registration')}</span>
                           </button>
-                          {!usesSupabasePersistence && <button
-                            onClick={() => {
-                              setRejectingResidenceModal(res);
-                              setResidenceRejectionReason('');
-                            }}
-                            className="text-xs bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold py-2 px-3 rounded-xl transition-all cursor-pointer border border-rose-200 flex items-center gap-1"
-                          >
-                            <X className="w-3.5 h-3.5" />
-                            <span>Reject</span>
-                          </button>}
-                          {!usesSupabasePersistence && <button
-                            onClick={async () => {
-                              try {
-                                const updated = await apiFetch(`/api/hostels/${res.id}/verify`, {
-                                  method: 'PUT',
-                                  body: JSON.stringify({ status: 'Approved', isApproved: true, approvalStatus: 'Approved' })
-                                });
-                                const freshHostel = updated.hostel || { ...res, status: 'Approved', isApproved: true, approvalStatus: 'Approved' };
-                                setResidences(prev => prev.map(r => r.id === res.id ? freshHostel : r));
-                                triggerToast(`Residence "${res.name}" approved successfully and is now Live!`);
-                              } catch (e) {
-                                triggerToast('Failed to approve residence');
-                              }
-                            }}
-                            className="text-xs bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 px-4 rounded-xl transition-all cursor-pointer shadow-md flex items-center gap-1.5"
-                          >
-                            <CheckCircle2 className="w-3.5 h-3.5" />
-                            <span>{usesSupabasePersistence ? 'Review Registration' : 'Approve & Go Live'}</span>
-                          </button>}
+
                         </div>
                       </div>
                     </div>
@@ -2112,7 +1729,6 @@ export default function PageAdminDashboard() {
 
             {/* Manager Requests */}
             <div className="flex items-center gap-2 p-1.5 bg-slate-200/70 border border-slate-300/60 rounded-2xl w-fit">
-
 
               <button
                 type="button"
@@ -2132,7 +1748,6 @@ export default function PageAdminDashboard() {
             </div>
 
             {/* VERIFIED STAFFS CREDENTIAL REVIEW SECTION */}
-
 
             {notifSubTab === 'manager_requests' && <AdminResidenceRequests />}
 
@@ -2203,7 +1818,6 @@ export default function PageAdminDashboard() {
                         </p>
                       </div>
 
-
                     </div>
                   ))}
                 </div>
@@ -2214,9 +1828,8 @@ export default function PageAdminDashboard() {
 
         {/* TAB: STAFF VERIFICATION DESK */}
 
-
         {/* TAB: STUDENT DIGITAL MARKET MANAGEMENT */}
-        {activeTab === 'digital_market' && (
+        {activeTab === 'digital_market' && !adminDirectoriesUnavailable && (
           <div className="space-y-6 animate-fadeIn">
             {/* Header Card */}
             <div className="bg-white/90 border border-blue-200/80 p-6 rounded-3xl backdrop-blur-xl shadow-xl space-y-4">
@@ -2283,7 +1896,7 @@ export default function PageAdminDashboard() {
                 </div>
                 <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl">
                   <div className="text-[10px] font-extrabold text-emerald-800 uppercase tracking-wider">Active Stores</div>
-                  <div className="text-2xl font-black text-emerald-900 mt-1">{digitalMarketStores.filter(s => usesSupabasePersistence ? s.isActive : !s.isBanned).length}</div>
+                  <div className="text-2xl font-black text-emerald-900 mt-1">{digitalMarketStores.filter(s => (s.isActive)).length}</div>
                 </div>
                 <div className="p-4 bg-rose-50 border border-rose-200 rounded-2xl">
                   <div className="text-[10px] font-extrabold text-rose-800 uppercase tracking-wider">Banned / Disabled Stores</div>
@@ -2401,28 +2014,24 @@ export default function PageAdminDashboard() {
                             <td className="p-3 text-slate-600">{store.category}</td>
                             <td className="p-3">
                               <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
-                                store.isBanned ? 'bg-rose-100 text-rose-800' : usesSupabasePersistence && !store.isActive ? 'bg-slate-100 text-slate-600' : 'bg-emerald-100 text-emerald-800'
+                                store.isBanned ? 'bg-rose-100 text-rose-800' : (!store.isActive) ? 'bg-slate-100 text-slate-600' : 'bg-emerald-100 text-emerald-800'
                               }`}>
-                                {usesSupabasePersistence ? store.statusLabel : store.isBanned ? 'Banned / Disabled' : 'Active'}
+                                {(store.statusLabel)}
                               </span>
                             </td>
                             <td className="p-3 text-right">
                               <button
                                 type="button"
-                                disabled={usesSupabasePersistence && (!store.isCurrent || store.accountStatus==='closed')}
+                                disabled={((!store.isCurrent || store.accountStatus==='closed'))}
                                 onClick={() => {
-                                  if (usesSupabasePersistence) {
+                                  {
                                     const account=allUsersData.users.find(account => account.id===store.accountId && account.role==='merchant');
                                     setActiveTab('user_accounts');
                                     if (account) setModerationTarget(account);
                                     else triggerToast('Refresh Accounts and select this seller to submit a reviewed access proposal.');
                                     return;
                                   }
-                                  if (store.isBanned) {
-                                    handleToggleBanStore(store.id);
-                                  } else {
-                                    setBanningStoreTarget(store);
-                                  }
+
                                 }}
                                 className={`px-3 py-1.5 font-bold rounded-xl transition-all cursor-pointer ${
                                   store.isBanned
@@ -2430,7 +2039,7 @@ export default function PageAdminDashboard() {
                                     : 'bg-rose-100 hover:bg-rose-200 text-rose-800'
                                 }`}
                               >
-                                {usesSupabasePersistence ? 'Review account access' : store.isBanned ? 'Unban Store' : 'Ban / Disable Store'}
+                                {('Review account access')}
                               </button>
                             </td>
                           </tr>
@@ -2525,254 +2134,11 @@ export default function PageAdminDashboard() {
       )}
 
       {/* MODAL: READ-ONLY INSPECTION FOR PENDING RESIDENCE APPROVAL */}
-      {inspectingResidenceModal && usesSupabasePersistence && <AdminResidenceRegistrationReview
+      {inspectingResidenceModal && true && <AdminResidenceRegistrationReview
         key={`${user?.id}:${inspectingResidenceModal.id}`} residenceId={inspectingResidenceModal.id}
         onClose={() => setInspectingResidenceModal(null)} onReviewed={() => {
           void queryClient.invalidateQueries({queryKey:['adminData',user?.id]});void refreshNotifications();
         }} />}
-      {inspectingResidenceModal && !usesSupabasePersistence && (
-        <DashboardOverlay aria-label="Inspect residence registration" onClose={() => setInspectingResidenceModal(null)} className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-md flex items-center justify-center p-4">
-          <div data-popup-card className="bg-white border border-blue-200 rounded-3xl max-w-4xl w-full max-h-[92vh] overflow-y-auto p-6 sm:p-8 space-y-6 shadow-2xl animate-fadeIn">
-            {/* Header */}
-            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-              <div className="flex items-center gap-3">
-                <div className="p-3 bg-amber-50 rounded-2xl border border-amber-200 text-amber-700">
-                  <Building2 className="w-6 h-6" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="px-2.5 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider bg-amber-100 text-amber-800 border border-amber-300">
-                      Pending Approval
-                    </span>
-                    <span className="px-2.5 py-0.5 rounded-md text-[10px] font-extrabold uppercase tracking-wider bg-blue-100 text-blue-800">
-                      {inspectingResidenceModal.hostel_type || inspectingResidenceModal.wing || 'Student Residence'}
-                    </span>
-                  </div>
-                  <h3 className="text-xl font-black text-slate-900 mt-1">{inspectingResidenceModal.name}</h3>
-                </div>
-              </div>
-              <button aria-label="Close dialog"
-                onClick={() => setInspectingResidenceModal(null)}
-                className="p-2 rounded-full hover:bg-slate-100 text-slate-500 cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Read-Only Banner Notice */}
-            <div className="p-3.5 bg-blue-50/80 rounded-2xl border border-blue-200/70 flex items-center gap-2.5 text-xs text-blue-900 font-semibold">
-              <ShieldCheck className="w-4 h-4 text-blue-700 shrink-0" />
-              <span>Read-Only Inspection Mode: Inspect the actual photos, street address, map coordinates, block gender settings, and capacity details before approving or rejecting this application.</span>
-            </div>
-
-            {/* 1. ACTUAL UPLOADED PHOTOS GALLERY */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <h4 className="text-xs font-black uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
-                  <ImageIcon className="w-4 h-4 text-blue-700" />
-                  <span>Submitted Residence Photographs</span>
-                </h4>
-                <span className="text-[11px] font-bold text-slate-500">
-                  Exact manager uploaded photos (No placeholders)
-                </span>
-              </div>
-
-              {/* Gallery Grid */}
-              {(() => {
-                const photos: string[] = [];
-                const main = inspectingResidenceModal.image || inspectingResidenceModal.imageUrl || inspectingResidenceModal.exteriorPhotoUrl || inspectingResidenceModal.imagePreviewUrl;
-                if (main) photos.push(main);
-                if (Array.isArray(inspectingResidenceModal.gallery)) {
-                  inspectingResidenceModal.gallery.forEach((g: string) => {
-                    if (g && !photos.includes(g)) photos.push(g);
-                  });
-                } else if (Array.isArray(inspectingResidenceModal.images)) {
-                  inspectingResidenceModal.images.forEach((g: string) => {
-                    if (g && !photos.includes(g)) photos.push(g);
-                  });
-                }
-
-                return photos.length === 0 ? (
-                  <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl text-xs text-slate-500 text-center font-bold">
-                    No photographs attached
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    <div className="relative h-64 sm:h-80 w-full rounded-2xl overflow-hidden bg-slate-900 border border-slate-200 shadow-sm">
-                      <img
-                        src={inspectActiveImage || photos[0]}
-                        alt="Submitted property photo"
-                        className="w-full h-full object-cover"
-                      />
-                      <div className="absolute top-3 left-3 bg-black/70 backdrop-blur-md text-white text-[10px] font-bold px-3 py-1 rounded-lg">
-                        {inspectActiveImage === photos[0] || (!inspectActiveImage && photos[0] === main) ? 'Primary Exterior Photo' : 'Gallery Photograph'}
-                      </div>
-                    </div>
-
-                    {photos.length > 1 && (
-                      <div className="flex items-center gap-2 overflow-x-auto pb-1">
-                        {photos.map((pUrl, pIdx) => (
-                          <button
-                            key={pIdx}
-                            onClick={() => setInspectActiveImage(pUrl)}
-                            className={`relative w-20 h-16 rounded-xl overflow-hidden border-2 shrink-0 cursor-pointer transition-all ${
-                              (inspectActiveImage || photos[0]) === pUrl ? 'border-blue-600 ring-2 ring-blue-600/30 scale-105' : 'border-slate-200 opacity-70 hover:opacity-100'
-                            }`}
-                          >
-                            <img src={pUrl} alt={`Photo ${pIdx + 1}`} className="w-full h-full object-cover" />
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                );
-              })()}
-            </div>
-
-            {/* 2. ON-SITE GPS VERIFICATION & MAP LOCATION */}
-            <div className="p-5 bg-slate-50 rounded-2xl border border-slate-200 space-y-4">
-              <div className="flex items-center justify-between">
-                <h4 className="text-xs font-black uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
-                  <MapPin className="w-4 h-4 text-rose-600" />
-                  <span>On-Site Dispatch & GPS Verification</span>
-                </h4>
-                <a
-                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-                    inspectingResidenceModal.latitude != null && inspectingResidenceModal.longitude != null &&
-                    Number.isFinite(Number(inspectingResidenceModal.latitude)) && Number.isFinite(Number(inspectingResidenceModal.longitude))
-                      ? `${inspectingResidenceModal.latitude},${inspectingResidenceModal.longitude}`
-                      : `${inspectingResidenceModal.addressLine1 || inspectingResidenceModal.location || ''} ${inspectingResidenceModal.city || ''} Ghana`
-                  )}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-3.5 py-2 bg-blue-900 hover:bg-blue-800 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
-                >
-                  <ExternalLink className="w-3.5 h-3.5" />
-                  <span>Dispatch Team (Google Maps)</span>
-                </a>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-                <div className="bg-white p-3 rounded-xl border border-slate-200">
-                  <span className="text-[10px] font-bold text-slate-400 block uppercase">Street Address</span>
-                  <span className="font-bold text-slate-800 truncate block">{inspectingResidenceModal.addressLine1 || inspectingResidenceModal.location || 'Not provided'}</span>
-                </div>
-                <div className="bg-white p-3 rounded-xl border border-slate-200">
-                  <span className="text-[10px] font-bold text-slate-400 block uppercase">City & Region</span>
-                  <span className="font-bold text-slate-800 block">{[inspectingResidenceModal.city, inspectingResidenceModal.region].filter(Boolean).join(', ') || 'Not provided'}</span>
-                </div>
-                <div className="bg-white p-3 rounded-xl border border-slate-200">
-                  <span className="text-[10px] font-bold text-slate-400 block uppercase">Campus Proximity</span>
-                  <span className="font-bold text-emerald-800 block">{inspectingResidenceModal.campusProximity || 'Not provided'}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* 3. BLOCKS, GENDER & CAPACITY SPECIFICATIONS */}
-            <div className="space-y-3">
-              <h4 className="text-xs font-black uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
-                <Building2 className="w-4 h-4 text-indigo-600" />
-                <span>Blocks, Gender Designation & Room Types</span>
-              </h4>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div className="p-3.5 bg-blue-50/70 border border-blue-200 rounded-xl text-center">
-                </div>
-              </div>
-
-              {/* Blocks breakdown */}
-              {Array.isArray(inspectingResidenceModal.blocksList) && inspectingResidenceModal.blocksList.length > 0 && (
-                <div className="space-y-2">
-                  {inspectingResidenceModal.blocksList.map((block: any, bIdx: number) => (
-                    <div key={block.id || bIdx} className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-black text-slate-900">{block.name || `Block ${bIdx + 1}`}</span>
-                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
-                          block.gender === 'Female' ? 'bg-pink-100 text-pink-800 border border-pink-200' :
-                          block.gender === 'Male' ? 'bg-blue-100 text-blue-800 border border-blue-200' :
-                          'bg-purple-100 text-purple-800 border border-purple-200'
-                        }`}>
-                          {block.gender ? `${block.gender} Block` : 'Mixed Block'}
-                        </span>
-                      </div>
-
-                      {Array.isArray(block.roomTypes) && block.roomTypes.length > 0 ? (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs pt-1">
-                          {block.roomTypes.map((rt: any, rtIdx: number) => (
-                            <div key={rt.id || rtIdx} className="p-2.5 bg-white border border-slate-200 rounded-xl flex items-center justify-between">
-                              <span className="font-bold text-slate-800">{rt.typeName}</span>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="text-xs text-slate-500 font-medium">Standard structure: {block.totalRooms || 0} rooms ({block.bedsPerRoom || 1} beds/room)</p>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* 4. MANAGER PROFILE & CONTACT */}
-            <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl flex items-center gap-3">
-              <img
-                src={inspectingResidenceModal.managerPhoto || (inspectingResidenceModal as any).managerAvatar || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80'}
-                alt="Manager"
-                className="w-12 h-12 rounded-xl object-cover border border-slate-300"
-              />
-              <div>
-                <span className="text-[10px] font-bold uppercase text-slate-400 block">Submitted By Manager</span>
-                <p className="text-xs font-black text-slate-900">{inspectingResidenceModal.managerName || 'Assigned Manager'}</p>
-                <p className="text-xs text-slate-600 font-semibold">{inspectingResidenceModal.managerPhone || '+233 24 123 4567'} • {inspectingResidenceModal.managerEmail || 'manager@pinevela.com'}</p>
-              </div>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex items-center justify-between pt-4 border-t border-slate-200 gap-3">
-              <button
-                onClick={() => setInspectingResidenceModal(null)}
-                className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl cursor-pointer"
-              >
-                Close Details
-              </button>
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={() => {
-                    const targetRes = inspectingResidenceModal;
-                    setInspectingResidenceModal(null);
-                    setRejectingResidenceModal(targetRes);
-                    setResidenceRejectionReason('');
-                  }}
-                  className="px-5 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs rounded-xl border border-rose-200 flex items-center gap-1.5 cursor-pointer"
-                >
-                  <X className="w-4 h-4" />
-                  <span>Reject Application</span>
-                </button>
-                <button
-                  onClick={async () => {
-                    try {
-                      const updated = await apiFetch(`/api/hostels/${inspectingResidenceModal.id}/verify`, {
-                        method: 'PUT',
-                        body: JSON.stringify({ status: 'Approved', isApproved: true, approvalStatus: 'Approved' })
-                      });
-                      const freshHostel = updated.hostel || { ...inspectingResidenceModal, status: 'Approved', isApproved: true, approvalStatus: 'Approved' };
-                      setResidences(prev => prev.map(r => r.id === inspectingResidenceModal.id ? freshHostel : r));
-                      setInspectingResidenceModal(null);
-                      triggerToast(`Residence "${inspectingResidenceModal.name}" approved and live!`);
-                    } catch(e) {
-                      triggerToast('Failed to approve residence');
-                    }
-                  }}
-                  className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs rounded-xl shadow-md flex items-center gap-1.5 cursor-pointer"
-                >
-                  <CheckCircle2 className="w-4 h-4" />
-                  <span>Approve & Publish Live</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        </DashboardOverlay>
-      )}
 
       {/* MODAL: DETAILED REJECTION REASON FOR RESIDENCE APPLICATION */}
       {rejectingResidenceModal && (
@@ -2916,10 +2282,6 @@ export default function PageAdminDashboard() {
           }
         } catch (e) {}
 
-        // Find request to resolve live status
-        const activeRequest = null;
-        const liveDocStatus = activeRequest?.documentsVerified?.[docPreviewModal.docKey!] || 'pending';
-
         return (
           <DashboardOverlay aria-label="Review identity document" onClose={() => setDocPreviewModal(null)} className="fixed inset-0 z-[100] bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 md:p-6">
             <div data-popup-card className="bg-white border border-slate-100 rounded-3xl p-6 max-w-6xl w-full max-h-[96vh] flex flex-col space-y-4 shadow-2xl animate-in fade-in zoom-in-95 duration-150 overflow-hidden">
@@ -2948,7 +2310,7 @@ export default function PageAdminDashboard() {
               {/* Advanced 2-Column Split View Grid */}
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 flex-1 overflow-hidden">
                 
-                {/* LEFT COLUMN: Inline Read-Only PDF Viewer Mockup */}
+                {/* LEFT COLUMN: Read-only document preview */}
                 <div className="lg:col-span-8 flex flex-col h-[52vh] lg:h-[65vh] bg-slate-800 border border-slate-700 rounded-2xl overflow-hidden shadow-inner relative">
                   
                   {/* Browser-Native Style PDF Viewer Toolbar */}
@@ -3040,11 +2402,6 @@ export default function PageAdminDashboard() {
                             <span className="text-[9px] font-sans text-slate-500 font-extrabold tracking-wider uppercase block mt-1">Official PineVela Secured Record — Handled Inline</span>
                           </div>
 
-                          {/* Watermark layer */}
-                          <div className="absolute inset-0 flex items-center justify-center opacity-[0.03] select-none pointer-events-none rotate-45 text-slate-900 font-black text-6xl uppercase tracking-widest">
-                            PineVela Secure
-                          </div>
-
                           {displayText ? (
                             <pre className="whitespace-pre-wrap font-sans text-slate-800 text-xs md:text-sm leading-relaxed tracking-normal font-medium">{displayText}</pre>
                           ) : (
@@ -3123,68 +2480,6 @@ export default function PageAdminDashboard() {
                       </div>
                     </div>
 
-                    {/* REQUESTED 'VERIFY' STATUS TOGGLE NEXT TO PREVIEW */}
-                    <div className="space-y-3 p-4 bg-white border border-slate-200 rounded-2xl shadow-xs">
-                      <div className="flex items-center gap-1.5">
-                        <ShieldCheck className="w-4 h-4 text-blue-700" />
-                        <span className="text-xs font-black uppercase tracking-wider text-slate-700">Document Verification Toggle</span>
-                      </div>
-
-                      {/* Display Current State */}
-                      <div className="py-2.5 px-3 rounded-xl border flex items-center justify-between text-xs font-bold bg-slate-50">
-                        <span className="text-slate-500">Current Status:</span>
-                        {activeRequest && docPreviewModal.docKey ? (
-                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border ${
-                            liveDocStatus === 'verified'
-                              ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
-                              : liveDocStatus === 'rejected'
-                              ? 'bg-rose-100 text-rose-800 border-rose-300'
-                              : 'bg-amber-100 text-amber-800 border-amber-300'
-                          }`}>
-                            {liveDocStatus}
-                          </span>
-                        ) : (
-                          <span className="bg-slate-200 text-slate-700 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider">Unregistered</span>
-                        )}
-                      </div>
-
-                      {/* Decisive Toggle buttons */}
-                      {activeRequest && docPreviewModal.docKey ? (
-                        <div className="space-y-1.5">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              handleVerifyManagerDoc(activeRequest.id, docPreviewModal.docKey as any, 'verified');
-                            }}
-                            className={`w-full py-2.5 px-3 text-xs font-black rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2 ${
-                              liveDocStatus === 'verified'
-                                ? 'bg-emerald-600 text-white shadow-md'
-                                : 'bg-slate-100 hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 border border-slate-200'
-                            }`}
-                          >
-                            <Check className="w-4 h-4" />
-                            <span>{liveDocStatus === 'verified' ? '✓ Document Verified' : 'Mark Document as Verified'}</span>
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => {
-                              handleVerifyManagerDoc(activeRequest.id, docPreviewModal.docKey as any, 'rejected');
-                            }}
-                            className={`w-full py-2.5 px-3 text-xs font-black rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2 ${
-                              liveDocStatus === 'rejected'
-                                ? 'bg-rose-600 text-white shadow-md'
-                                : 'bg-slate-100 hover:bg-rose-50 text-slate-700 hover:text-rose-700 border border-slate-200'
-                            }`}
-                          >
-                            <X className="w-4 h-4" />
-                            <span>{liveDocStatus === 'rejected' ? '✕ Document Rejected' : 'Reject Document'}</span>
-                          </button>
-                        </div>
-                      ) : (
-                        <p className="text-[10px] text-slate-400 text-center">Interactive decision actions are not available for unregistered guest attachments.</p>
-                      )}
-                    </div>
                   </div>
 
                   {/* Actions & Close */}
@@ -3227,12 +2522,9 @@ export default function PageAdminDashboard() {
 
       {/* MODAL: REJECT STAFF CREDENTIALS WITH REASON */}
 
-
       {/* MODAL: VERIFIED STAFF MANAGEMENT & DETAILS */}
 
-
       {/* MODAL: DISABLE / BAN / REACTIVATE STAFF ACCOUNT ACTION */}
-
 
       {/* MODAL: DISPATCH PINEVELA VERIFICATION TEAM OFFICER */}
       {dispatchModalManager && (
@@ -3275,15 +2567,15 @@ export default function PageAdminDashboard() {
                   className="w-full p-3 bg-slate-50 border border-slate-300 rounded-2xl text-xs font-bold text-slate-900 focus:ring-2 focus:ring-blue-500 focus:outline-none"
                 >
                   <option value="">-- Select Field Officer --</option>
-                  {verificationTeams.filter(o => usesSupabasePersistence ? o.status === 'active' : o.status !== 'suspended').map((officer) => (
+                  {verificationTeams.filter(o => (o.status === 'active')).map((officer) => (
                     <option key={officer.officerId || officer.id} value={officer.officerId || officer.id}>
                       {officer.fullName} ({officer.officerId}) — {officer.assignedZone}
                     </option>
                   ))}
                 </select>
-                {usesSupabasePersistence && officerRosterPendingRead && <p role="status" className="text-xs text-slate-600">Loading field officers…</p>}
-                {officerRosterError && <p role="alert" className="text-xs text-rose-800">{officerRosterError}<button type="button" disabled={usesSupabasePersistence && officerRosterFetching} onClick={() => { void (usesSupabasePersistence ? retryOfficerRoster() : fetchAdminData()); }} className="ml-2 min-h-11 font-semibold underline disabled:opacity-50">Retry field officers</button></p>}
-                {verificationTeams.length === 0 && !officerRosterError && (!usesSupabasePersistence || officerRosterData && officerRosterData.ownerId === user?.id && officerRosterData.officers.length === 0 && !officerRosterReadError) && (
+                {(officerRosterPendingRead) && <p role="status" className="text-xs text-slate-600">Loading field officers…</p>}
+                {officerRosterError && <p role="alert" className="text-xs text-rose-800">{officerRosterError}<button type="button" disabled={(officerRosterFetching)} onClick={() => { void ((retryOfficerRoster())); }} className="ml-2 min-h-11 font-semibold underline disabled:opacity-50">Retry field officers</button></p>}
+                {verificationTeams.length === 0 && !officerRosterError && ((officerRosterData && officerRosterData.ownerId === user?.id && officerRosterData.officers.length === 0 && !officerRosterReadError)) && (
                   <p className="text-[11px] text-amber-600 font-bold">
                     No verification officers registered. Please register an officer in the "Field Officers" tab first.
                   </p>
@@ -3341,7 +2633,7 @@ export default function PageAdminDashboard() {
         </DashboardOverlay>
       )}
 
-      {usesSupabasePersistence && approveManagerModal?.ownerId === user?.id && approveManagerModal && (
+      {(approveManagerModal?.ownerId === user?.id) && approveManagerModal && (
         <DashboardOverlay aria-label="Approve manager application" onClose={() => { if (!approvingManager) setApproveManagerModal(null); }} className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-md">
           <div data-popup-card className="max-h-[90vh] w-full max-w-lg space-y-5 overflow-y-auto rounded-3xl border border-slate-200 bg-white p-5 shadow-2xl sm:p-6">
             <div className="flex items-start justify-between gap-3">
@@ -3569,206 +2861,8 @@ export default function PageAdminDashboard() {
       )}
 
       {/* MODAL: REGISTER NEW PINEVELA VERIFICATION OFFICER */}
-      {!usesSupabasePersistence && showRegisterOfficerModal && (
-        <DashboardOverlay aria-label="Register verification officer" onClose={() => setShowRegisterOfficerModal(false)} className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-md flex items-center justify-center p-4">
-          <div data-popup-card className="bg-white border border-slate-200 rounded-3xl p-6 max-w-md w-full space-y-5 shadow-2xl animate-fadeIn">
-            <div className="flex items-center justify-between border-b pb-3">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-blue-900 text-sky-400 flex items-center justify-center font-bold shadow-md shadow-blue-900/30">
-                  <ShieldCheck className="w-5 h-5" />
-                </div>
-                <div>
-                  <h4 className="text-base font-black text-slate-900">Register Verification Officer</h4>
-                  <p className="text-xs text-slate-500">Add an accredited on-site inspection officer</p>
-                </div>
-              </div>
-              <button aria-label="Close dialog"
-                type="button"
-                onClick={() => setShowRegisterOfficerModal(false)}
-                className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <OnboardingProgress steps={OFFICER_ACCOUNT_STEPS} step={newOfficerData.fullName.trim() && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newOfficerData.email) ? (newOfficerData.password ? 3 : 2) : 1} label="Officer registration" />
-            <form onSubmit={handleRegisterOfficer} className="onboarding-fields space-y-4 text-xs">
-              <div className="space-y-1.5">
-                <label className="font-bold text-slate-700 block">Officer Full Name *</label>
-                <input aria-label="Officer Full Name"
-                  required
-                  type="text"
-                  placeholder="e.g. Kwame Mensah"
-                  value={newOfficerData.fullName}
-                  onChange={(e) => setNewOfficerData(prev => ({ ...prev, fullName: e.target.value }))}
-                  className="w-full p-3 bg-slate-50 border border-slate-300 rounded-2xl font-bold text-slate-900 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="font-bold text-slate-700 block">Official Verification Email *</label>
-                <input aria-label="Official Verification Email"
-                  required
-                  type="email"
-                  placeholder="officer.mensah@pinevela.com"
-                  value={newOfficerData.email}
-                  onChange={(e) => setNewOfficerData(prev => ({ ...prev, email: e.target.value }))}
-                  className="w-full p-3 bg-slate-50 border border-slate-300 rounded-2xl font-bold text-slate-900 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="font-bold text-slate-700 block">Phone / WhatsApp *</label>
-                <input aria-label="Phone / WhatsApp"
-                  required
-                  type="tel"
-                  placeholder="+233 24 123 4567"
-                  value={newOfficerData.phone}
-                  onChange={(e) => setNewOfficerData(prev => ({ ...prev, phone: e.target.value }))}
-                  className="w-full p-3 bg-slate-50 border border-slate-300 rounded-2xl font-bold text-slate-900 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="font-bold text-slate-700 block">Assigned Geographic Zone</label>
-                <select aria-label="Assigned Geographic Zone"
-                  value={newOfficerData.assignedZone}
-                  onChange={(e) => setNewOfficerData(prev => ({ ...prev, assignedZone: e.target.value }))}
-                  className="w-full p-3 bg-slate-50 border border-slate-300 rounded-2xl font-semibold text-slate-900 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                >
-                  <option value="Greater Accra - Campus Belt A (Legon / UPSA)">Greater Accra - Campus Belt A (Legon / UPSA)</option>
-                  <option value="Greater Accra - Campus Belt B (ATU / Central)">Greater Accra - Campus Belt B (ATU / Central)</option>
-                  <option value="Ashanti Region - KNUST / Kumasi">Ashanti Region - KNUST / Kumasi</option>
-                  <option value="Central Region - UCC / Cape Coast">Central Region - UCC / Cape Coast</option>
-                  <option value="Western Region - UMaT / Takoradi">Western Region - UMaT / Takoradi</option>
-                  <option value="Northern Region - UDS / Tamale">Northern Region - UDS / Tamale</option>
-                </select>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="font-bold text-slate-700 block">Initial Officer Access Password *</label>
-                <input aria-label="Initial Officer Access Password"
-                  required
-                  type="text"
-                  placeholder="SecurePassword2026!"
-                  value={newOfficerData.password}
-                  onChange={(e) => setNewOfficerData(prev => ({ ...prev, password: e.target.value }))}
-                  className="w-full p-3 bg-slate-50 border border-slate-300 rounded-2xl font-mono text-xs font-bold text-slate-900 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                />
-                <PasswordStrengthGauge password={newOfficerData.password} />
-              </div>
-
-              <div className="flex items-center justify-end gap-3 pt-3 border-t">
-                <button
-                  type="button"
-                  onClick={() => setShowRegisterOfficerModal(false)}
-                  className="px-4 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2.5 bg-blue-900 hover:bg-blue-850 text-white text-xs font-black rounded-xl shadow-md transition-all cursor-pointer flex items-center gap-1.5"
-                >
-                  <Plus className="w-4 h-4 text-sky-300" />
-                  <span>Register Officer</span>
-                </button>
-              </div>
-            </form>
-          </div>
-        </DashboardOverlay>
-      )}
 
       {/* MODAL: OFFICIAL OFFICER CREDENTIALS ID CARD (FOR HANDOVER) */}
-      {!usesSupabasePersistence && createdOfficerCredentials && (
-        <DashboardOverlay aria-label="Officer credentials" onClose={() => setCreatedOfficerCredentials(null)} className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-md flex items-center justify-center p-4">
-          <div data-popup-card className="bg-white border border-slate-200 rounded-3xl p-6 max-w-md w-full space-y-5 shadow-2xl animate-fadeIn">
-            <div className="flex items-center justify-between border-b pb-3">
-              <div className="flex items-center gap-2">
-                <ShieldCheck className="w-5 h-5 text-blue-900" />
-                <h4 className="text-base font-black text-slate-900">Official PineVela Officer Credentials</h4>
-              </div>
-              <button aria-label="Close dialog"
-                type="button"
-                onClick={() => setCreatedOfficerCredentials(null)}
-                className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Frosty Credential ID Card */}
-            <div className="p-6 rounded-3xl bg-linear-to-br from-blue-950 via-blue-900 to-indigo-950 text-white shadow-xl relative overflow-hidden border border-blue-800">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-xl bg-sky-400/20 text-sky-300 flex items-center justify-center border border-sky-400/30">
-                    <ShieldCheck className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <span className="text-[10px] font-black uppercase tracking-widest text-sky-300 block">PineVela Security</span>
-                    <span className="text-xs font-bold text-white">Physical Verification Officer</span>
-                  </div>
-                </div>
-                <span className="px-2.5 py-0.5 bg-sky-500/20 text-sky-200 border border-sky-400/40 rounded-full font-mono text-[10px] font-bold">
-                  {createdOfficerCredentials.officerId}
-                </span>
-              </div>
-
-              <div className="space-y-2 text-xs py-2 border-y border-blue-800/60">
-                <div>
-                  <span className="text-[10px] uppercase font-bold text-sky-300/80 block">Officer Name</span>
-                  <span className="text-sm font-extrabold text-white">{createdOfficerCredentials.fullName}</span>
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <span className="text-[10px] uppercase font-bold text-sky-300/80 block">Official Login Email</span>
-                    <span className="font-mono text-[11px] font-bold text-white break-all">{createdOfficerCredentials.email}</span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] uppercase font-bold text-sky-300/80 block">Officer Password</span>
-                    <span className="font-mono text-[11px] font-bold text-amber-300">{createdOfficerCredentials.password}</span>
-                  </div>
-                </div>
-                <div>
-                  <span className="text-[10px] uppercase font-bold text-sky-300/80 block">Assigned Zone</span>
-                  <span className="font-bold text-sky-100">{createdOfficerCredentials.assignedZone}</span>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between mt-4 text-[10px] text-sky-300">
-                <span>Passcode: <strong className="text-white font-mono">{createdOfficerCredentials.securityPasscode}</strong></span>
-                <span className="font-bold">Portal: /verification-team</span>
-              </div>
-            </div>
-
-            <p className="text-[11px] text-slate-500 text-center leading-normal">
-              Provide these credentials securely to the field officer. They can log in to their assigned inspection queue at the <strong>PineVela Verification Team Portal</strong>.
-            </p>
-
-            <div className="flex items-center justify-end gap-3 pt-2">
-              <button
-                type="button"
-                onClick={() => {
-                  navigator.clipboard.writeText(`PineVela Verification Team Credentials:\nOfficer: ${createdOfficerCredentials.fullName}\nOfficer ID: ${createdOfficerCredentials.officerId}\nEmail: ${createdOfficerCredentials.email}\nPassword: ${createdOfficerCredentials.password}\nPortal: https://pinevela.com/verification-team`);
-                  triggerToast('Credentials copied to clipboard!');
-                }}
-                className="px-4 py-2.5 bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 text-xs font-black rounded-xl cursor-pointer transition-all flex items-center gap-1.5"
-              >
-                <Check className="w-3.5 h-3.5 text-blue-700" />
-                <span>Copy Credentials</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setCreatedOfficerCredentials(null)}
-                className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl cursor-pointer"
-              >
-                Done
-              </button>
-            </div>
-          </div>
-        </DashboardOverlay>
-      )}
 
       {/* MODAL: REJECT MANAGER APPLICATION WITH DETAILED REASON */}
       {rejectManagerModal && (
@@ -3921,7 +3015,6 @@ export default function PageAdminDashboard() {
         userName={user?.name || 'Administrator'}
       />
 
-              
     </div>
   );
 }

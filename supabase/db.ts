@@ -1,9 +1,10 @@
-import {requireAccountAccess} from './accountAccess.js';
+import {checkAccountAccess} from './accountAccess.js';
 import type {AccountFeature} from '../accountFeatures.js';
 import fs from 'node:fs';
 import { requireManagerKeyGrant } from './managerKeys.js';
-import { Pool, type PoolClient, type PoolConfig, type QueryResultRow } from 'pg';
+import { Pool, escapeLiteral, type PoolClient, type PoolConfig, type QueryResult, type QueryResultRow } from 'pg';
 import { MAINTENANCE_MESSAGE } from '../platformSettings.js';
+import {takeTransactionAdmission,transactionAdmissionSql,type AdmissionOptions} from './transactionAdmission.js';
 
 export type VerifiedActor = { authUserId: string; sessionId: string; contextId: string; kind: string; managerKeyVersion?:string; requiredFeatures?:AccountFeature[] };
 export class ApiError extends Error {
@@ -27,7 +28,9 @@ export function databaseConfig(env: NodeJS.ProcessEnv = process.env) {
     host: database.hostname, port: 5432, database: decodeURIComponent(database.pathname.slice(1)),
     user: decodeURIComponent(database.username), password: decodeURIComponent(database.password),
     ssl: { rejectUnauthorized: true, ca: fs.readFileSync(env.SUPABASE_DB_CA_FILE, 'utf8') },
-    max: 8, connectionTimeoutMillis: 15000, idleTimeoutMillis: 30000,
+    // Keep one established connection across quiet periods; extra burst
+    // connections still expire after 30 seconds. The pool remains lazy.
+    min: 1, max: 8, connectionTimeoutMillis: 15000, idleTimeoutMillis: 30000,
     statement_timeout: 15000, query_timeout:30000, application_name: 'pinevela-supabase',
   };
 }
@@ -41,13 +44,29 @@ export class SupabaseDatabase {
     this.pool.on('connect',client => client.on('error',() => console.error('[Database] Client connection failed.')));
     this.pool.on('error', () => console.error('[Database] Idle connection failed.'));
   }
-  async system<T>(work: (client: PoolClient) => Promise<T>): Promise<T> {
+  /** One atomic server-owned statement. No transaction-local roles or claims
+   * may escape into this path; multi-statement operations use system/actor. */
+  async statement<T extends QueryResultRow=any>(sql:string,values:unknown[]=[]):Promise<QueryResult<T>> {
+    let client:PoolClient;
+    try{client=await this.pool.connect();}
+    catch{throw new ApiError(503,'The database connection is temporarily unavailable. Please retry.','database_unavailable');}
+    let discard=false;
+    try{return await client.query<T>(sql,values);}
+    catch(error){
+      discard=true;
+      if((error as any)?.message==='Query read timeout'||/^Connection (?:terminated|closed)/i.test((error as any)?.message||'')
+        ||/^(?:ECONNRESET|ETIMEDOUT|EPIPE|ECONNREFUSED)$/.test(String((error as any)?.code||'')))
+        throw new ApiError(503,'The database connection was interrupted. Refresh your account before retrying.','database_unavailable');
+      throw error;
+    }finally{client.release(discard);}
+  }
+  async system<T>(work: (client: PoolClient) => Promise<T>,admission?:AdmissionOptions): Promise<T> {
     let client:PoolClient;
     try{client=await this.pool.connect();}
     catch{throw new ApiError(503,'The database connection is temporarily unavailable. Please retry.','database_unavailable');}
     let discard = false;
     try {
-      await client.query('begin isolation level read committed');
+      await client.query('begin isolation level read committed'+(admission?';'+transactionAdmissionSql(admission):''));
       const result = await work(client);
       await client.query('commit');
       return result;
@@ -69,7 +88,9 @@ export class SupabaseDatabase {
   private async lockActor(client: PoolClient, actor: VerifiedActor) {
       // Check and lock the binding inside the same transaction as the operation.
       // Never let request body fields populate these four parameters.
-      const binding = await client.query(`select s.session_id from private.account_sessions s
+      const binding = await client.query(`select s.session_id,
+        private.account_access(c.id) as access,private.account_session_allowed(c.id,s.session_id) as allowed
+        from private.account_sessions s
         join auth.sessions live on live.id = s.session_id and live.user_id = s.auth_user_id
         join public.account_contexts c on c.id = s.active_context_id
         where s.session_id = $1 and s.auth_user_id = $2 and s.active_context_id = $3
@@ -81,9 +102,8 @@ export class SupabaseDatabase {
           and (c.kind <> 'staff' or exists (select 1 from public.staff_assignments a where a.staff_context_id = c.id and a.status = 'active' and a.ended_at is null))
         for share of s, c`, [actor.sessionId, actor.authUserId, actor.contextId, actor.kind]);
       if (!binding.rowCount) throw new ApiError(401, 'Your session is no longer active. Please sign in.');
-      await requireAccountAccess(client,actor.contextId,actor.requiredFeatures,actor.sessionId);
+      checkAccountAccess(binding.rows[0].access,actor.requiredFeatures,binding.rows[0].allowed);
       await requireManagerKeyGrant(client,actor);
-      await client.query("select set_config('request.jwt.claims', $1, true)", [JSON.stringify({ sub: actor.authUserId, session_id: actor.sessionId, role: 'authenticated' })]);
   }
   async actor<T>(actor: VerifiedActor, work: (client: PoolClient) => Promise<T>): Promise<T> {
     return this.actorTransaction(actor,work,false);
@@ -95,20 +115,13 @@ export class SupabaseDatabase {
   }
   private async actorTransaction<T>(actor:VerifiedActor,work:(client:PoolClient)=>Promise<T>,read:boolean):Promise<T> {
     return this.system(async client => {
-      await client.query("select pg_advisory_xact_lock_shared(hashtextextended('residence-deletion-freeze',0))");
-      await client.query("select pg_advisory_xact_lock_shared(hashtextextended('account-policies',0))");
-      await client.query("select pg_advisory_xact_lock_shared(hashtextextended('platform-maintenance',0))");
       // Removal closes another administrator context. Take the governance
       // lock before actor/context row locks so a concurrent target request cannot
       // hold its context while waiting for the founder's governance transaction.
-      if(actor.kind==='admin')await client.query(read
-        ? "select pg_advisory_xact_lock_shared(hashtextextended('platform-settings',0))"
-        : "select pg_advisory_xact_lock(hashtextextended('platform-settings',0))");
       await this.lockActor(client, actor);
-      await this.requirePlatformAccess(client);
-      await client.query('set local role pinevela_backend');
+      await this.prepareActor(client,actor,true);
       return work(client);
-    });
+    },{administrator:actor.kind==='admin'?(read?'read':'write'):undefined});
   }
   /** For narrowly scoped server-owned lifecycle writes that browser roles cannot
    * perform. Rechecks the live actor inside the write transaction; callers must
@@ -125,35 +138,28 @@ export class SupabaseDatabase {
     return this.system(async client => {
       // Lock before account/governance/context rows. Upgrading after taking the
       // settings lock could deadlock with another administrator waiting on it.
-      await client.query(residenceFreezeChange
-        ? "select pg_advisory_xact_lock(hashtextextended('residence-deletion-freeze',0))"
-        : "select pg_advisory_xact_lock_shared(hashtextextended('residence-deletion-freeze',0))");
-      await client.query(accountPolicyChange
-        ? "select pg_advisory_xact_lock(hashtextextended('account-policies',0))"
-        : "select pg_advisory_xact_lock_shared(hashtextextended('account-policies',0))");
-      await client.query(maintenanceChange
-        ? "select pg_advisory_xact_lock(hashtextextended('platform-maintenance',0))"
-        : "select pg_advisory_xact_lock_shared(hashtextextended('platform-maintenance',0))");
-      if(actor.kind==='admin')await client.query(read
-        ? "select pg_advisory_xact_lock_shared(hashtextextended('platform-settings',0))"
-        : "select pg_advisory_xact_lock(hashtextextended('platform-settings',0))");
       await this.lockActor(client, actor);
       if (!kinds.includes(actor.kind)) throw new ApiError(403, 'This account cannot perform that action.');
-      await this.requirePlatformAccess(client);
+      await this.prepareActor(client,actor,false);
       return work(client);
-    });
+    },{residenceFreezeChange,accountPolicyChange,maintenanceChange,
+      administrator:actor.kind==='admin'?(read?'read':'write'):undefined});
   }
-  private async requirePlatformAccess(client: PoolClient) {
-    if (!(await client.query('select private.platform_access_allowed() as allowed')).rows[0].allowed)
+  private async prepareActor(client:PoolClient,actor:VerifiedActor,scoped:boolean) {
+    // Separate statements retain strict execution order in a single round trip.
+    // pg's literal encoder protects the verified claims; SQL/role selection is
+    // server-owned. Work starts only after the maintenance result is checked.
+    const claims=escapeLiteral(JSON.stringify({sub:actor.authUserId,session_id:actor.sessionId,role:'authenticated'}));
+    const results=await client.query(`select set_config('request.jwt.claims', ${claims}, true);select private.platform_access_allowed() as allowed`
+      +(scoped?';set local role pinevela_backend':'')) as unknown as QueryResult<{allowed:boolean}>[];
+    if (!results[1]?.rows[0]?.allowed)
       throw new ApiError(503,MAINTENANCE_MESSAGE,'platform_maintenance');
   }
   /** Public invitation lifecycle operations use private tables without a bound
    * portal, but still serialize with maintenance transitions. */
   async availableSystem<T>(work:(client:PoolClient)=>Promise<T>):Promise<T> {
     return this.system(async client=>{
-      await client.query("select pg_advisory_xact_lock_shared(hashtextextended('residence-deletion-freeze',0))");
-      await client.query("select pg_advisory_xact_lock_shared(hashtextextended('account-policies',0))");
-      await client.query("select pg_advisory_xact_lock_shared(hashtextextended('platform-maintenance',0))");
+      await takeTransactionAdmission(client);
       if (!(await client.query('select private.platform_available() as available')).rows[0].available)
         throw new ApiError(503,MAINTENANCE_MESSAGE,'platform_maintenance');
       return work(client);
@@ -161,8 +167,11 @@ export class SupabaseDatabase {
   }
   async publicRows<T extends QueryResultRow>(sql: string, values: unknown[] = []): Promise<T[]> {
     return this.system(async client => {
-      await client.query("select pg_advisory_xact_lock_shared(hashtextextended('platform-maintenance',0))");
-      if (!(await client.query('select private.platform_available() as available')).rows[0].available)
+      // Ordered statements retain the transaction lock before checking current
+      // availability, while avoiding an extra network round trip. node-postgres
+      // returns one result per statement for this parameter-free simple query.
+      const admission = await client.query("select pg_advisory_xact_lock_shared(hashtextextended('platform-maintenance',0));select private.platform_available() as available") as unknown as QueryResult<{available:boolean}>[];
+      if (!admission[1]?.rows[0]?.available)
         throw new ApiError(503,MAINTENANCE_MESSAGE,'platform_maintenance');
       await client.query('set local role pinevela_catalog');
       return (await client.query<T>(sql, values)).rows;

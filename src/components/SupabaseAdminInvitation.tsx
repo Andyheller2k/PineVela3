@@ -28,7 +28,7 @@ function InvitationContent({token}:{token:string}){
     }catch(e:any){if(mounted.current)setError(e.message||'Administrator enrollment could not be saved.');}finally{if(mounted.current)setBusy(false);}
   }
   if (loading && restorationError) return <SessionRestorationNotice />;
-  return <main className="flex min-h-screen items-center justify-center bg-gradient-to-br from-sky-50 via-blue-50 to-white p-5"><section className="w-full max-w-lg space-y-5 rounded-3xl border border-blue-200 bg-white/75 p-6 text-slate-900 shadow-xl backdrop-blur-xl">
+  return <main className="page-canvas flex min-h-screen items-center justify-center p-5"><section className="w-full max-w-lg space-y-5 rounded-3xl border border-blue-200 bg-white/75 p-6 text-slate-900 shadow-xl backdrop-blur-xl">
     <PineLogo size={36}/><h1 className="text-xl font-bold">Private administrator invitation</h1>
     {error&&<p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-800">{error}</p>}
     {accepted?<><p>Administrator #{accepted.slot} · {accepted.email} is enrolled.</p><p className="text-sm">Sign in again, then open Admin Approvals and Settings to enroll your separate keys. Each is shown once.</p>

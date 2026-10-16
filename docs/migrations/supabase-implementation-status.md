@@ -1,5 +1,52 @@
 # Supabase implementation status
 
+## Current: sole Supabase persistence — 16 October 2026
+
+Default commands now use the native Supabase server/build. Forty legacy runtime
+modules and frontend persistence switches are removed; unknown APIs return 404.
+The owner explicitly classified the reviewed JSON records as development data:
+29 files / 32,690,351 bytes and the old build are privately archived, with matching
+hashes and an independently restored encrypted recovery checkpoint. Active JSON
+and local-upload roots are absent. All seven hosted Auth subjects, six profiles
+and ten contexts are unchanged by final read-only retention checks.
+
+89 security/unit tests, native TypeScript/build/privacy checks and the pre-retirement
+365-check eight-role browser run passed. Real local native business, RLS, recovery,
+Storage, role/key and polling checks passed. Final post-retirement restart and 392-check browser
+verification passed. See [current continuation](../../SUPABASE_CONTINUATION.md)
+and [isolated acceptance](isolated-workflow-acceptance.md) for evidence and limits.
+
+The sections below are historical migration checkpoints, preserved as history;
+their earlier pending/default-JSON statements do not describe the current runtime.
+
+## Project latency and approved development cleanup — 15 October 2026; no migration
+
+- Batched ordered transaction admission and live account/session checks preserve
+  existing authorization, locks and RLS. Three pure settings reads now share read
+  admission. Public catalog reads retain their own maintenance lock/check without
+  a duplicate preliminary transaction; unsigned session probes fail without SQL.
+- Independent native UI reads are concurrent, slow inbox polls coalesce, background
+  governance observers refresh every 30 seconds, and native guest SSE retries stop.
+  Route/map deferral reduces common entry JavaScript from 859,463 to 507,999 bytes.
+- Actual four-lock phase timings were 3,129/2,991 ms separately and 215/865 ms batched.
+  65 native admission/read checks and 11 real archived-session policy checks pass;
+  focused UI lifecycle tests, TypeScript and Supabase builds pass. Cloud connection
+  latency remains variable; authenticated browser timing has not been repeated.
+  See [latency evidence and limits](../operations/latency.md).
+- The reviewed Premuim Pine development cleanup is **completed**. Two distinct
+  approvals, the user's own keyed founder pause/final consent/request and fresh
+  restored DB/PIN-key/Storage recovery preceded the exact native worker. Four
+  housing rows were removed, with zero image tasks or registration bans. The
+  temporary local request control is disabled again; persistent defaults stay off.
+- **44 post-execution checks passed** against the genuine backup: completed linked
+  receipts, retained active manager/Auth subject/operation key, all seven Auth users
+  and provider IDs, reviewed profiles/contexts/completed enrollment, 49 original
+  history rows and unchanged seven-object Storage catalog/media metadata. No manager
+  session existed before or after cleanup; fresh real login remains separate.
+  Provider object bytes were not downloaded again. Evidence is private
+  `development-cleanup-saved-verification.json`; the first session-baseline assertion
+  and read-only diagnosis are retained. No schema/default-backend changes or JSON removal.
+
 ## Authorized development inspection report — 15 October 2026; no migration
 
 - The owner explicitly authorized development inspection/approval before reviewed
@@ -451,9 +498,8 @@
   The immutable proof method must match the server flow. Concurrent Google/email
   attempts reopen once; notice failure rolls back the receipt, status and binding.
   Historical IDs, Auth, administrator access/keys and independent portals remain.
-- Login/signup exposes **Reopen primary account with email**, with explicit send,
-  private code/link, busy/retry states and the existing public continuation. Fields
-  use PineVela theme variables. General operational wipe execution remains disabled.
+- The email re-entry API remains available; its button and modal have been removed
+  from the login/signup cards. General operational wipe execution remains disabled.
 - **172 native checks passed:** 106 primary closure/recovery and both re-entry
   methods, 41 closure-planner regressions and 25 retained Google signup checks.
   Tests use genuine archived Google identities/confirmed mailboxes/native sessions

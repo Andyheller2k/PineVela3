@@ -1,5 +1,21 @@
 # PineVela Security
 
+## Runtime checkpoint — 16 October 2026
+
+Supabase PostgreSQL/Storage and Supabase Auth are the sole runtime persistence and
+identity services. Default `dev`, `build` and `start` use `supabase-server.ts`.
+Forty legacy JSON/custom-session modules are removed. The owner classified all
+legacy records as development data; 29 data/upload files and the old build were
+privately archived with verified hashes. No legacy records were imported. The
+hosted checkpoint retained exactly seven Auth subjects, six profiles and ten
+contexts, with unchanged UUID-set fingerprints.
+
+See [isolated workflow acceptance](migrations/isolated-workflow-acceptance.md) for
+the actual HTTP/browser coverage and remaining acceptance scope. Automated checks
+do not establish a physical property visit or every nested form/provider journey.
+Dated migration/checkpoint descriptions below are historical evidence, not an
+instruction to restore retired runtime paths.
+
 Migration 69 supports the temporary local Google manager enrollment policy. The
 server requires the explicit development flag, direct loopback host and peer,
 non-production mode and no public origin. It verifies a real provider code with
@@ -243,9 +259,10 @@ Lifecycle tables have RLS and no public/browser/backend grants; metadata trigger
 use a fixed empty search path and no exposed execution grant. The HTTP execution
 endpoint remains disabled pending verified Storage cleanup and acceptance. The
 native transition requires migration 48's exact worker admission. No operational deletion or signup cooldown is
-applied by migration 40. Genuine browser acceptance remains a separate cutover gate.
+applied by migration 40. Later local browser coverage and remaining acceptance scope
+are recorded in the isolated acceptance report.
 
-## Account approval review boundary (Supabase replacement)
+## Account approval review boundary (native Supabase)
 
 The verified active administrator portal and its own current approval-key version
 authorize account proposals, votes and founder final rejection. Settings/other-admin
@@ -290,7 +307,7 @@ Deletion/wipes still need reviewed dependencies and database plus Storage-byte
 backup/cleanup. Real signed-in browser acceptance, genuine post-policy provider
 sign-in and elapsed expiry journeys remain verification gates.
 
-## Administrator announcement gateway (Supabase replacement)
+## Administrator announcement gateway (native Supabase)
 
 Directory, preview and send require a live account-bound administrator session and
 active membership, rechecked inside the transaction. Client sender/owner aliases and
@@ -312,7 +329,7 @@ requests only; the session remains the source of authority. Frontend account cha
 remount gateway/popup state and ignore late responses. Provider-authenticated HTTP and
 browser journeys remain acceptance checks; isolated tests send no live announcements.
 
-## Administrator settings credentials (Supabase replacement)
+## Administrator settings credentials (native Supabase)
 
 Active administrator membership and a live account-bound Auth session are required.
 Settings keys use salted scrypt with the administrator context and `settings` purpose;
@@ -365,7 +382,7 @@ See [Supabase sessions](https://supabase.com/docs/guides/auth/sessions) and
 administrator enrollment and selecting a verified non-default provider subaccount
 remain acceptance checks; no Auth sessions or provider accounts are fabricated.
 
-## Verified administrator invitations (Supabase replacement)
+## Verified administrator invitations (native Supabase)
 
 Only active administrator #1 with their current approval key may reserve or cancel an
 invitation. The private token is shown once and stored as SHA-256, with an exact 24-hour
@@ -383,7 +400,7 @@ than browser storage, are removed from the route after acceptance, and are exclu
 roster/history responses. Browser/backend roles cannot read the table or invoke its
 privileged functions. Real provider sign-in and authenticated invitation UI remain gates.
 
-## Shared pricing approvals (Supabase replacement)
+## Shared pricing approvals (native Supabase)
 
 Pricing proposals require three distinct active administrators' settings-key approvals.
 The proposer contributes one approval; administrator #1 must make the final keyed push,
@@ -414,7 +431,7 @@ rechecked inside the same locked write transaction. Identical retries create no 
 notices; changed announcements target active non-admin portals rather than administrator
 accounts. The private configuration ACLs and notification recipient RLS remain unchanged.
 
-## Platform maintenance (Supabase replacement)
+## Platform maintenance (native Supabase)
 
 Only an active administrator with their separate settings key may change maintenance state.
 Ordinary actor transactions and public invitation/catalog reads hold a shared maintenance
@@ -443,7 +460,7 @@ and prevents resetting it, changing recipients or acknowledging expired/old noti
 No client identity or timestamp establishes eligibility. Later contexts are excluded from
 the saved audience. Positive fresh provider login and authenticated UI remain acceptance gates.
 
-## Verified payment boundary (Supabase replacement)
+## Verified payment boundary (native Supabase)
 
 Checkout prices, payer email and ownership come from the verified session and saved
 relationships. Actor-scoped request UUIDs preserve immutable quotes; store/residence
@@ -464,9 +481,9 @@ Actual paid checkout/webhook delivery, refunds and reviewed payment resolution r
 release gates. See [Paystack verification](https://paystack.com/docs/payments/verify-payments/)
 and [webhook authentication](https://paystack.com/docs/payments/webhooks/).
 
-## Supabase replacement boundary
+## Supabase runtime boundary
 
-The independent migration backend verifies tokens with Supabase Auth, checks the live
+The default native backend verifies tokens with Supabase Auth, checks the live
 Auth session and trusted account binding, and assumes a non-BYPASSRLS database role for
 request transactions. Client ownership/role fields never populate this binding. Revoked
 sessions fail RLS before JWT expiry. Primary-owner links do not permit signing into a
@@ -474,32 +491,32 @@ sub-account: its student/work identity must be verified and authenticated. Share
 identities also require the selected portal's access PIN; RLS checks the accepted key
 version and changing a PIN invalidates earlier proof. Failed PIN attempts are serialized
 and persist before returning a denial; five failures lock that portal for 15 minutes.
-Private enrollment, keys and founder provisioning remain server controlled. The running
-JSON backend has not yet been replaced; see [migration status](migrations/supabase-implementation-status.md).
+Private enrollment, keys and founder provisioning remain server controlled. The legacy
+JSON/custom-session backend is removed; see the isolated acceptance report above.
 
-The replacement manager operation guard preserves separate secret-key authorization.
+The manager operation guard preserves separate secret-key authorization.
 Only salted scrypt hashes are stored; five wrong attempts lock the key for 15 minutes.
 Accepted key versions are checked again inside the mutation transaction, so reset invalidates
 earlier proof. First issuance is shown once; recovery requires an administrator-reviewed
-petition and the pending settings-key decision port. Narrow first-property bootstrap paths
+petition and native settings-key decision. Narrow first-property bootstrap paths
 remain exempt only when the manager has no active residence assignment.
 
-Replacement photos use private Supabase Storage and an immutable portal/Auth-owned registry.
+Photos use private Supabase Storage and an immutable portal/Auth-owned registry.
 Uploads authenticate before the 28MB parser, decode actual raster pixels, strip metadata,
 resize to 2048px and cap output at 6MB. Daily account/global quotas serialize in PostgreSQL;
 IP admission and worker limits are bounded per process. Browser writes are denied. Attachment
 triggers enforce account, purpose and inspection relationships. Image responses check current
 publication/plan or private account access and verify digest/size, with no-store and a sandbox
 CSP. Failed transfers are reconciled through Storage APIs; ready assets are never removed by
-the stale-upload cleanup command. Ordinary replacement JSON bodies are 1MB. Distributed IP
-limits and operational object deletion remain launch gates. Encrypted byte backups now bind
+the stale-upload cleanup command. Ordinary API JSON bodies are 1MB. IP admission remains bounded per process;
+multi-instance deployments need shared ingress limits. Encrypted byte backups now bind
 the private object/catalog manifest to a fully rehearsed PostgreSQL checkpoint, including
 interrupted-upload orphans; corruption, changed catalogs and missing ready bytes block
 completion. Normal image reads still require the original reservation digest. The operator
 orphan-backup method grants no browser access, and no new RLS/RPC grant is introduced.
-Final stopped-writer backup, approved-object cleanup and scoped deletion recovery remain
-cutover gates. See [Storage recovery](migrations/storage-recovery.md). Owned avatar media
-is ported in migration 35, with authenticated provider/browser acceptance still required. Maintenance
+Native database and Storage recovery remain separately verified operator procedures. See [Storage recovery](migrations/storage-recovery.md). Owned avatar media
+was introduced in migration 35; later local Auth/Storage/browser coverage is recorded in
+the isolated acceptance report. Maintenance
 report photographs use the original resident allocation or reporting manager residence;
 repair photographs use the exact accepted staff assignment and ticket. Related readers
 are the reporter, assigned managers and exact active assigned staff. Parent portals and
@@ -507,7 +524,7 @@ unassigned staff receive no access. All transitions recheck saved relationships 
 transaction locks; completion needs acceptance, and resident reports need original active
 allocation sign-off before closure. Generic edits cannot change ownership or workflow.
 
-Replacement order writes derive the primary buyer or exact seller from the live verified
+Native order writes derive the primary buyer or exact seller from the live verified
 session and saved store relationship. Client prices, emails, owner IDs, PINs and commissions
 cannot assert order ownership or terms. Stock and request UUID checks serialize in PostgreSQL;
 browser roles cannot write raw orders, access private history or read PIN ciphertext. Only
@@ -517,9 +534,10 @@ rechecks current stock/plan eligibility, rotates the challenge and invalidates t
 Wrong/missing encryption keys fail closed. Completion history never stores the submitted PIN.
 The private server key is encrypted in checkpoint backups and is never a browser environment
 variable. Revocation and duplicate/completion races have been tested with committed transactions
-in an isolated real backup restore; authenticated provider/API/browser journeys remain gates.
+in isolated real restores. The isolated acceptance report records subsequent actual local
+provider/API/browser checks and their limits.
 
-Replacement chat reads and writes require the exact primary buyer or approved seller portal.
+Native buyer–seller message reads and writes require the exact primary buyer or approved seller portal.
 Client-supplied emails, names, sender identity and listing titles are rejected; store/buyer/item
 selectors are checked against saved relationships. A seller cannot initiate unsolicited chat,
 and admins and linked parent accounts have no private conversation access. Messages are
@@ -536,66 +554,39 @@ including when a cached user copy contains an older token. Disabling an officer 
 removing or resigning staff revokes associated sessions. Reactivation requires a new login.
 Staff access additionally requires explicitly active employment in the manager's residence.
 
-## Onboarding Submissions
+## Onboarding submissions and approval keys
 
-Manager requests derive identity from the manager session. Hostel verification submissions
-require an approved manager and an existing owned residence; record identity, property fields,
-validation results and audit authorship come from server records. Duplicate outstanding or
-already-approved submissions are rejected. Payment references are evidence, not confirmation.
-See [S22/S26 verification](audits/S22-S26-remediation-2026-10-03.md).
+The primary owner submits manager registration through its exact verified enrollment.
+An assigned officer submits the native inspection report; physical approval activates
+only the saved pending manager/property. Full residence setup is a separate registration
+and review. Manager, seller and residence approvals require the current administrator's
+own separate approval key. Wrong guesses commit before denial; the mutation rechecks
+live membership and key version. Role labels, body ownership fields or UI prompts alone
+cannot authorize approval. Report authorship and review/audit attribution are server derived.
 
-## Attempt and Resource Budgets
+## Attempt and resource budgets
 
-API/upload traffic is bounded before parsing. Photo uploads require an administrator or
-approved manager for housing photos, or a merchant for marketplace photos, before accepting their large JSON body. General bodies are 4MB; login,
-password and simple signup bodies are 256KB; authenticated photo JSON is 28MB. Compressed
-bodies and excessive nesting are rejected. Login variants share durable identity/IP budgets
-(20/account identity, 30/IP per 15 minutes); successful attempts also count. Valid authenticated
-reads remain available while login is throttled. Signup/PIN/room-key challenge guards remain
-additional boundaries.
+Native API/auth/room-key admission and live stream limits are bounded per process;
+PostgreSQL persists portal/key failed-attempt state and serialized media quotas. Native
+IP admission is in memory and is not a durable global limiter across replicas.
+General API bodies are 1MB, authenticated photograph bodies 28MB and avatar bodies 7MB.
+Image and credential work use bounded asynchronous queues. Forwarded addresses are
+trusted only with explicit `PINEVELA_TRUST_PROXY` IPs/CIDRs and ingress controls.
+The retired JSON writer and `request-limits.json` are not deployment dependencies.
 
-Request-time scrypt and image processing use bounded asynchronous pools. Writes, body bytes,
-daily uploads, physical photo-directory usage and live SSE connections have separate limits.
-Room generation is bounded and idempotent generation does not rewrite JSON. Login/daily
-quotas persist in private `request-limits.json`; do not delete it to restart/reset limits.
-Forwarded client IPs are ignored by default. Configure only actual proxy IPs/CIDRs in
-`PINEVELA_TRUST_PROXY`, with ingress controls at the proxy as well.
+## Photograph uploads
 
-The current JSON backend/limiter supports one server process. Preserve atomic order writes;
-multiple workers require transactional PostgreSQL and shared rate/connection limits.
-See [S23 policy and verification](audits/S23-remediation-2026-10-03.md) for precise budgets,
-expiry behavior and deployment limits.
+Housing/market/inspection/maintenance/repair/avatar uploads authenticate the exact
+eligible portal and saved purpose relationship before processing. JPEG, PNG and WebP
+inputs require matching signatures, strict base64 and actual pixel decoding; metadata
+and appended content are stripped. Processed owned assets are reserved transactionally,
+uploaded to private Supabase Storage and marked ready only after the provider operation.
+Daily account/global media quotas serialize in PostgreSQL. Image reads verify current
+scope, stored digest and size; private attachments are not public catalog assets.
 
-## Photograph Uploads
-
-`POST /api/storage/upload-hostel-image` requires an administrator or approved manager.
-It accepts only explicitly declared JPEG, PNG or WebP, strict base64, and matching raster
-signatures. A full pixel decode and lossless PNG encoding strip original metadata and
-appended bytes; SVG and document formats never reach the decoder. Limits are 20MB input,
-25 million pixels, 16,384 pixels per dimension, 100MB output and five seconds of processing.
-`POST /api/storage/upload-market-image` applies the same decoder, pre-auth size limits,
-worker limits, persistent daily quotas, disk capacity and safe serving policy to active seller
-uploads. Marketplace photos are resized to at most 1600 pixels per side. New extra and
-price-option images must reference the publishing account's saved uploads; another seller's
-upload, arbitrary URL or inline active content is rejected. Image ownership records persist
-in `marketMedia` during the JSON migration period.
-
-Generated UUID `.png` names replace all submitted filenames. Failed uploads stop property
-registration rather than silently using an unvalidated preview.
-
-`/uploads` is not a static directory. Only photograph paths are public, with decoded PNG
-responses, `nosniff`, a sandbox CSP without script/same-origin permissions, and no-store.
-Existing photograph paths pass the same decoding policy; unsafe historical files stay on
-disk but cannot be served. Path escapes/symlinks outside the storage root are blocked.
-Vite also denies direct raw-file access to upload storage in development.
-
-Optional `PINEVELA_MEDIA_ORIGIN` must differ from `PINEVELA_PUBLIC_ORIGIN` and use HTTPS in
-production. Route that media host's `/uploads/*` to this backend through the deployment
-proxy. Upload responses then use the media origin, app-host image requests redirect there,
-and the media hostname serves no API or application pages. App host-only authentication
-cookies must not be widened to that hostname. Without a configured media origin, local
-development serves only sanitized PNGs with the sandbox policy; raw originals are never
-public. `PINEVELA_UPLOADS_DIR` optionally relocates storage without modifying the JSON data.
+No raw `/uploads` directory or alternate legacy media host is served. Archived originals
+remain private recovery material; the local image writer, disk quotas and
+`PINEVELA_MEDIA_ORIGIN`/`PINEVELA_UPLOADS_DIR` serving instructions are retired.
 
 ## Marketplace Purchase Reviews
 
@@ -610,9 +601,8 @@ Public listings, catalog scores, seller status and order review attachments use 
 purchase-verified records with consistent receipt ownership. Legacy unverified reviews
 remain privately stored and do not count toward reputation. Public review responses omit
 buyer email/account IDs and order IDs. Sellers can read reviews, but cannot submit or edit
-on a buyer's behalf. Review writes and aggregate updates save synchronously in the current
-single-process JSON backend. PostgreSQL migration needs a unique order constraint,
-transactional upserts and RLS preserving the same completed-purchase/ownership policy.
+on a buyer's behalf. Native unique receipt relationships, transactional review upserts
+and RLS enforce completed-purchase ownership.
 
 ## Marketplace Order Prices and Quantities
 
@@ -628,12 +618,10 @@ fail closed, including corrupt historical orders at completion.
 
 Orders reserve quantity for 24 hours at creation. Active reservations reduce available
 capacity; rejection, cancellation, completion and expiry release the reservation. Completion
-rechecks stock against other reservations, deducts physical stock, marks the order complete
-and saves synchronously, without an intervening await. Terminal orders cannot be reopened.
-This provides serialized reservations and consumption in the current single-process
-JSON backend; multiple server processes sharing that JSON file are unsupported. Migration
-must put the stock predicate, deduction and order transition in one PostgreSQL transaction
-with row locking or a conditional update, while preserving authorization and RLS.
+rechecks stock against other reservations, deducts physical stock and marks the order
+complete in one PostgreSQL transaction with store/listing/order locks. Request UUIDs make
+retries idempotent. Terminal orders cannot be reopened. Authorization and RLS remain
+independent constraints on these transactional changes.
 
 Marketplace orders require the primary buyer's session. Buyer ID, email and name come
 from that session. Seller authority uses the current seller account's exact store, not a
@@ -658,18 +646,17 @@ renew them. Orders without a trustworthy buyer ID cannot obtain a PIN through an
 
 The browser is untrusted.
 
-Local sessions carry only a hashed secret and server-owned absolute expiry in persistent
-account records. All token lookups, including officer checks and account-creation/list
-middleware, must enforce that expiry. Cookie and bearer transport must apply identical
-actor and relationship policies. Logout revokes only the presented session, persists before
-success and cannot target another account through request fields. Never return session
-hashes/metadata in API projections or raw credentials from session-profile endpoints.
+Supabase verifies the Auth identity; PostgreSQL rechecks its live session and exact
+active portal binding on each authorized transaction. Revocation, account closure,
+assignment loss and key/PIN version changes invalidate access independently of JWT
+expiry. The old local token-hash session store and raw-token login responses are
+removed. No profile/session endpoint exposes provider tokens or private key hashes.
 
-Browser cookies are HttpOnly, SameSite=Strict and Secure in production. API fetches use
-same-origin cookies; legacy browser token caches are cleared. Cookie writes must reject
-foreign origins and cross-site requests. Session expiry clears stale browser identity and
-queries. Browser logout confirms server revocation before navigation and clears other
-open tabs through a logout event.
+Browser cookies are HttpOnly, SameSite=Strict and Secure in production. Native CSRF
+checks deny foreign-origin/cross-site writes. Browser restoration, logout and account
+switches clear or ignore stale identity/query state; successful logout confirms server
+revocation before navigation. A client role, email or ownership field never replaces
+these server-derived relationships.
 
 Never assume that:
 
@@ -812,9 +799,9 @@ Passing the UI flow is not sufficient evidence of authorization correctness.
 
 ## Private Verification and Resident Records
 
-Verification inspection lists and hostel verification applications are administrator-only.
-An active verification officer may read only explicitly assigned inspections, using the
-current server-side officer record and session. Query IDs, matching email addresses and
+Administrator directories require an active administrator. A manager may read only its
+own allowed verification/registration records; an active verification officer may read
+only explicitly assigned inspections through its current native officer context/session. Query IDs, matching email addresses and
 report authorship do not grant access.
 
 Inspection GPS is a reported device measurement, not proof of a physical visit.
@@ -876,39 +863,27 @@ create duplicate repair reviews. Administrator management access does not permit
 resident impersonation.
 
 
-## Meeting and Notification Record Access
+## Meeting and notification record access
 
-Meeting list, update and delete share one record policy. Managers access meetings for
-currently assigned residences; explicit residence IDs take precedence over stored manager
-names or contact emails. Direct manager-only meetings require their exact manager ID or
-an unambiguous legacy manager email. Meetings without a resolvable manager or residence
-are excluded from manager lists; administrators can manage them.
-Active managed staff retain access to meetings for their residence or their own requests;
-requesters can list their own meetings. Route role restrictions still apply to mutations.
+Meeting access uses native manager assignment, residence and exact participant/context
+relationships. Requesters read their own permitted appointments; route and RLS boundaries
+remain separate from display labels. Legacy name/email aliases do not grant access.
 
-Notification list, individual read and bulk read use the same recipient policy. Explicit
-account IDs, target roles and seller store IDs take precedence over contact aliases.
-Legacy staff roster IDs resolve through the current active roster/account relationship.
-Email-only legacy recipients must resolve unambiguously within the specified role;
-linked accounts do not inherit alerts from another role. A notification is not an
-administrator-accessible private record merely because the actor is an administrator.
+Notifications have exact native recipient contexts with independent read and popup
+acknowledgement rows. A linked account or an administrator does not inherit another
+portal's private inbox. API projections expose the requesting account's state, not other
+recipients. Browser read/toast caches are account scoped and update only after successful
+server acknowledgement. The retired JSON `readBy` representation is not consulted.
 
-Read acknowledgements are persisted per `(role, account ID)` in `readBy`, including for
-shared administrator alerts. API responses omit `readBy` and expose only the current
-account's `read`/`isRead`. Historical global read flags are preserved. Browser read/toast
-caches are scoped by account; UI read state follows successful server acknowledgement.
+## Historical JSON storage and current recovery
 
-
-## JSON Storage Safety During Migration
-
-Corrupt/unreadable existing databases fail startup; default initialization is only for a
-new database with no recovery artifacts. Database/backup errors must not log record contents.
-A kernel writer lease, digest fencing, structural validation and a configurable size bound
-protect the single local JSON snapshot. Offline tools take the same lease. Vite must deny
-the real data directory, including configured custom directories and recovery artifacts.
-Backup restoration is offline, preserves the original, and revokes restored sessions and
-pending challenges rather than silently reviving old credentials. PostgreSQL transactions
-and recipient/ownership RLS remain required for future multi-worker deployments.
+The JSON writer, custom token store and offline credential/restore commands are removed.
+Their writer leases, local TTLs and `.bak` policy are historical details. All legacy records
+were explicitly classified as development data and privately archived with hash verification.
+Native Auth/profile/context UUID sets were retained unchanged. Current database and Storage
+recovery use their separate authenticated encrypted archives; private recovery paths must
+remain inaccessible to HTTP/static/Vite serving. No legacy session or identity is reactivated
+by restoring an archive to a separate offline directory.
 
 ## Administrator destructive operations
 
@@ -970,7 +945,7 @@ Approved merchants may upload account-owned branding while their store is in
 Public storefront visibility, listing publication and order acceptance continue
 to require active paid market access; draft photos never grant those capabilities.
 
-Residence setup in the replacement backend resolves ownership from the live manager
+Residence setup in the native backend resolves ownership from the live manager
 assignment and previously approved physical dossier. Property identity/map changes,
 unowned media, active registration bans and conflicting retries are rejected. Full
 submission writes hierarchy, case, notices and audit atomically. Public shell/photo
@@ -995,7 +970,7 @@ See [administrator review evidence](migrations/admin-residence-review.md).
 
 ## Supabase Transport Failures
 
-The replacement caps server SQL statements at 15 seconds and client reads at 30
+The native backend caps server SQL statements at 15 seconds and client reads at 30
 seconds. Client transport errors have a sanitized listener, including while checked out.
 Interrupted or timed-out transactions discard their connection and return a temporary
 error. They never automatically replay writes; a lost commit response can be ambiguous,

@@ -1,15 +1,16 @@
-import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { LockKeyhole,MessageSquare,X } from 'lucide-react';
+import { useEffect,useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MessageSquare, X, LockKeyhole } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { publicLoginPath } from '../lib/publicContinuation';
-import StoreProfileSummary, { type StoreProfile } from './StoreProfileSummary';
-import PublicMarketCatalog from './PublicMarketCatalog';
+import DashboardOverlay from './DashboardOverlay';
 import type { MarketProductItem } from './MarketItemCard';
 import MarketplaceInbox from './MarketplaceInbox';
-import DashboardOverlay from './DashboardOverlay';
+import PublicMarketCatalog from './PublicMarketCatalog';
+import StoreProfileSummary,{ type StoreProfile } from './StoreProfileSummary';
 import ThemeToggle from './ThemeToggle';
+
 
 type Storefront = { store: StoreProfile; products: MarketProductItem[] };
 export default function MarketStorefront({ storeId, onInspect, initialMessage = false }: { storeId: string; onInspect?: (product: MarketProductItem) => void; initialMessage?: boolean }) {
@@ -40,7 +41,7 @@ export default function MarketStorefront({ storeId, onInspect, initialMessage = 
     <StoreProfileSummary store={store} />
     <h2 className="text-lg font-black text-slate-900">Items &amp; Services</h2>
     <PublicMarketCatalog catalogOverride={data.products} hideHeading onInspect={onInspect} />
-    {showMessages && user?.role === 'user' && store.studentEmail && <DashboardOverlay layer={200} aria-label={`Message ${store.storeName}`} onClose={() => setShowMessages(false)} className="fixed inset-0 bg-slate-950/70 backdrop-blur-xl flex items-center justify-center p-3 sm:p-6">
+    {showMessages && user?.role === 'user' && ((Boolean(store.id))) && <DashboardOverlay layer={200} aria-label={`Message ${store.storeName}`} onClose={() => setShowMessages(false)} className="fixed inset-0 bg-slate-950/70 backdrop-blur-xl flex items-center justify-center p-3 sm:p-6">
       <section className="w-full max-w-4xl max-h-[92dvh] overflow-y-auto rounded-3xl bg-white/80 backdrop-blur-2xl border border-blue-200 p-3 sm:p-5 space-y-3"><div className="flex items-center justify-between gap-3"><h2 className="font-black text-slate-900">Message {store.storeName}</h2><button type="button" aria-label="Close store messages" onClick={() => setShowMessages(false)} className="p-2 text-slate-600"><X size={20} /></button></div><MarketplaceInbox initialStore={{ id: store.id, email: store.studentEmail, name: store.storeName }} /></section>
     </DashboardOverlay>}
     {authPrompt && <DashboardOverlay layer={200} aria-label="Sign in to message store" onClose={() => setAuthPrompt(false)} className="fixed inset-0 bg-slate-950/70 backdrop-blur-xl flex items-center justify-center p-4">

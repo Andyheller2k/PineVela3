@@ -1,48 +1,45 @@
 import { activateOnKeyboard } from '../lib/keyboardActivation';
 import DashboardOverlay from './DashboardOverlay';
-import { usesSupabasePersistence } from '../lib/persistence';
-import VerifiedAccountEnrollment,{type ManagerEnrollmentSnapshot} from './VerifiedAccountEnrollment';
-import ManagerClosureRequest from './ManagerClosureRequest';
-import ManagerApplicationCorrections from './ManagerApplicationCorrections';
-import { routePopupFeedback } from '../lib/feedback';
-import RouteSkeleton from './RouteSkeleton';
-import PasswordStrengthGauge from './PasswordStrengthGauge';
-import OnboardingProgress from './OnboardingProgress';
-import { sessionFetch as fetch } from '../lib/session';
-import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'motion/react';
-import { 
-  User, 
-  Phone, 
-  MapPin, 
-  ShieldCheck, 
-  Mail, 
-  Lock, 
-  ArrowRight, 
-  ArrowLeft, 
-  CheckCircle2, 
-  Clock,
-  Building, 
-  Eye, 
-  EyeOff, 
-  Check, 
-  Compass, 
-  Info,
-  AlertTriangle,
-  HelpCircle,
-  Footprints,
-  Building2,
-  Trash2,
-  X
+
+import {
+AlertTriangle,
+ArrowLeft,
+ArrowRight,
+Building,
+Building2,
+CheckCircle2,
+Clock,
+Eye,
+EyeOff,
+Footprints,
+HelpCircle,
+Info,
+Lock,
+Mail,
+MapPin,
+Phone,
+ShieldCheck,
+Trash2,
+User,
+X
 } from 'lucide-react';
-import PineLogo from './PineLogo';
-import HostelMapPicker from './HostelMapPicker';
+import { motion } from 'motion/react';
+import React,{ useEffect,useRef,useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
 import { safeJson } from '../lib/api';
-import { validateManagerWorkEmail, DISALLOWED_MANAGER_DOMAINS } from '../utils/formValidation';
-import { checkIsKumasiLocation } from './HostelMapPicker';
+import { routePopupFeedback } from '../lib/feedback';
+import { sessionFetch as fetch } from '../lib/session';
+import { DISALLOWED_MANAGER_DOMAINS,validateManagerWorkEmail } from '../utils/formValidation';
+import HostelMapPicker,{ checkIsKumasiLocation } from './HostelMapPicker';
+import ManagerApplicationCorrections from './ManagerApplicationCorrections';
+import ManagerClosureRequest from './ManagerClosureRequest';
+import OnboardingProgress from './OnboardingProgress';
+import PasswordStrengthGauge from './PasswordStrengthGauge';
+import PineLogo from './PineLogo';
+import RouteSkeleton from './RouteSkeleton';
+import VerifiedAccountEnrollment,{ type ManagerEnrollmentSnapshot } from './VerifiedAccountEnrollment';
 
 export default function PageManagerOnboarding() {
   const navigate = useNavigate();
@@ -104,28 +101,28 @@ export default function PageManagerOnboarding() {
     try {
       setCheckingExisting(true);
       setManagerStatusError('');
-      if(usesSupabasePersistence){setCheckingRestriction(true);setRestrictionOwner(`${captured}:${user.role}`);setRestrictionError(null);}
+      {setCheckingRestriction(true);setRestrictionOwner(`${captured}:${user.role}`);setRestrictionError(null);}
       const uEmail = (user.email || '').toLowerCase().trim();
       const uId = user.id || '';
       const token = user?.token;
       const headers: any = {};
       if (token) headers['Authorization'] = `Bearer ${token}`;
-      if(usesSupabasePersistence)headers['X-PineVela-Profile-Context']=captured;
+      headers['X-PineVela-Profile-Context']=captured;
       const signal=AbortSignal.any([controller.signal,AbortSignal.timeout(30000)]);
-      const res=await fetch(usesSupabasePersistence?'/api/users/manager-onboarding':`/api/users/my-registered-accounts?email=${encodeURIComponent(uEmail)}&userId=${encodeURIComponent(uId)}`,{headers,signal});
-      if(usesSupabasePersistence&&!res.ok){
+      const res=await fetch(('/api/users/manager-onboarding'),{headers,signal});
+      if((!res.ok)){
         const failure=await safeJson(res);
         throw Error([401,403].includes(res.status)?'Open manager registration from your primary user account, then retry loading its sign-in options.':failure.error||'Could not load your manager registration. Please retry.');
       }
       if (res.ok) {
         const payload = await safeJson(res);
-        const data=usesSupabasePersistence?payload.registrations:payload;
+        const data=(payload.registrations);
         if(!current())return;
-        if(usesSupabasePersistence&&(!data||!('managerAccount'in data)))throw Error('Could not confirm your manager registration. Please retry.');
-        if(usesSupabasePersistence&&data.managerAccount?.requiresPropertyRegistration){
+        if(((!data||!('managerAccount'in data))))throw Error('Could not confirm your manager registration. Please retry.');
+        if((data.managerAccount?.requiresPropertyRegistration)){
           setManagerName(data.managerAccount.name||'');setPhone(data.managerAccount.phone||'');setEmail(data.managerAccount.email||'');
         }
-        if(usesSupabasePersistence){
+        {
           const policy=payload.policy,enrollments=payload.enrollments,access=payload.access;
           if(!policy)throw Error('Could not check manager sign-in options.');
           if(typeof policy.googleManagerEnrollment!=='boolean')throw Error('Could not confirm manager sign-in options. Please retry.');
@@ -142,18 +139,18 @@ export default function PageManagerOnboarding() {
           setRetainedManagerEmail(retained?.email||null);
           if(retained){setEmail(retained.email);setPassword('');setConfirmPassword('');}
         }
-        if (data.managerAccount && !(usesSupabasePersistence&&data.managerAccount.requiresPropertyRegistration)) {
+        if (data.managerAccount && !((data.managerAccount.requiresPropertyRegistration))) {
           setExistingManagerRecord(data.managerAccount);
-          setCorrectingManager(usesSupabasePersistence&&Boolean(data.managerAccount.canCorrectRegistration));
+          setCorrectingManager((Boolean(data.managerAccount.canCorrectRegistration)));
         } else {
           setExistingManagerRecord(null);
         }
       }
     } catch (err) {
-      if(usesSupabasePersistence&&current())setManagerStatusError(err instanceof Error&&err.name==='TimeoutError'?'Your manager registration check took too long. Retry when your connection is ready.':err instanceof Error?err.message:'Could not load manager registration.');
+      if((current()))setManagerStatusError(err instanceof Error&&err.name==='TimeoutError'?'Your manager registration check took too long. Retry when your connection is ready.':err instanceof Error?err.message:'Could not load manager registration.');
       console.error("Error checking existing manager record:", err);
     } finally {
-      if(current()){setCheckingExisting(false);if(usesSupabasePersistence)setCheckingRestriction(false);}
+      if(current()){setCheckingExisting(false);setCheckingRestriction(false);}
     }
   };
 
@@ -170,46 +167,8 @@ export default function PageManagerOnboarding() {
 
   const handleDeleteManagerAccount = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (usesSupabasePersistence) return;
-    if (!delPassword) {
-      setDelError('Manager account password is required to delete registration.');
-      return;
-    }
-    try {
-      setIsDeleting(true);
-      setDelError(null);
-      const token = user?.token;
-      const res = await fetch('/api/users/delete-registered-account', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-        },
-        body: JSON.stringify({
-          role: 'manager',
-          email: existingManagerRecord?.email || user?.email,
-          password: delPassword
-        })
-      });
-      const data = await safeJson(res);
-      if (!res.ok) {
-        throw new Error(data.error || 'Failed to delete manager account.');
-      }
-      setShowDeleteModal(false);
-      setExistingManagerRecord(null);
-      setDelPassword('');
-      try {
-        await refreshNotifications();
-      } catch (e) {
-        // ignore
-      }
-      triggerToast('Manager account deleted. You can now register a new property.', 'success');
-      setPhase(1);
-    } catch (err: any) {
-      setDelError(err.message || 'Failed to delete manager account.');
-    } finally {
-      setIsDeleting(false);
-    }
+    return;
+
   };
 
   // Form State
@@ -261,51 +220,15 @@ export default function PageManagerOnboarding() {
   const restrictionActorKey = `${user?.id || ''}:${user?.role || ''}`;
   const currentRestrictionActor = useRef(restrictionActorKey);
   currentRestrictionActor.current = restrictionActorKey;
-  const shouldCheckRestriction = !!user && (!usesSupabasePersistence || user.role === 'user');
+  const shouldCheckRestriction = !!user && ((user.role === 'user'));
 
   const fetchRestrictionStatus = async () => {
-    if(usesSupabasePersistence)return fetchExistingManagerStatus();
-    restrictionController.current?.abort();
-    const controller = new AbortController();
-    restrictionController.current = controller;
-    const request = ++restrictionRequest.current;
-    const capturedActor = restrictionActorKey;
-    const isCurrent = () => !controller.signal.aborted && request === restrictionRequest.current && currentRestrictionActor.current === capturedActor;
-    setRestrictionOwner(capturedActor);
-    setRestrictionError(null);
-    setActiveRestriction(null);
-    setRestrictionTimeLeft('');
-    if (!shouldCheckRestriction) {
-      setCheckingRestriction(false);
-      return;
-    }
-    setCheckingRestriction(true);
-    try {
-      const token = (user as any)?.token;
-      const headers: any = {};
-      if (token) headers['Authorization'] = `Bearer ${token}`;
-      if (usesSupabasePersistence) headers['X-PineVela-Account-Context'] = user!.id;
-      const res = await fetch('/api/users/manager-restriction', { headers, signal: AbortSignal.any([controller.signal,AbortSignal.timeout(30000)]) });
-      const data = await safeJson(res);
-      if (!res.ok) throw new Error(data.error || 'Could not check your manager registration cooldown.');
-      if (!isCurrent()) return;
-      if (data.restriction) {
-        const expiresAt = Date.parse(data.restriction.expiresAt);
-        const serverTime = usesSupabasePersistence ? Date.parse(data.serverTime) : Date.now();
-        if (!Number.isFinite(expiresAt) || !Number.isFinite(serverTime)) throw new Error('Could not read your registration cooldown. Please retry.');
-        // Use database time and a monotonic timer rather than the device clock.
-        restrictionDeadline.current = performance.now() + Math.max(0, expiresAt - serverTime);
-      }
-      setActiveRestriction(data.restriction || null);
-    } catch (err) {
-      if (isCurrent()) setRestrictionError(err instanceof Error&&err.name==='TimeoutError'?'The registration access check took too long. Retry when your connection is ready.':err instanceof Error ? err.message : 'Could not check your manager registration cooldown.');
-    } finally {
-      if (isCurrent()) setCheckingRestriction(false);
-    }
+    return fetchExistingManagerStatus();
+
   };
 
   useEffect(() => {
-    if(!usesSupabasePersistence)fetchRestrictionStatus();
+
     return () => { restrictionController.current?.abort(); restrictionRequest.current++; };
   }, [user?.id, user?.role]);
 
@@ -449,35 +372,12 @@ export default function PageManagerOnboarding() {
         parentUserEmail: user?.email || null
       };
 
-      if (usesSupabasePersistence) {
+      {
         const { password: _password,parentUserId: _parentId,parentUserEmail: _parentEmail,...property } = payload;
         setVerifiedSubmission(property);
         return;
       }
-      const res = await fetch('/api/manager-verifications/submit', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(user?.token ? { 'Authorization': `Bearer ${user.token}` } : {})
-        },
-        body: JSON.stringify(payload)
-      });
 
-      const data = await safeJson(res);
-
-      if (!res.ok) {
-        throw new Error(data.error || 'Failed to submit manager registration.');
-      }
-
-      setSubmittedData(data.verification || payload);
-      setIsSuccess(true);
-      setExistingManagerRecord(data.verification || payload);
-      try {
-        await refreshNotifications();
-      } catch (e) {
-        // ignore
-      }
-      triggerToast('Manager Account Registered Successfully!', 'success');
     } catch (err: any) {
       const msg = err.message || 'An error occurred while submitting your registration.';
       setErrorMessage(msg);
@@ -494,7 +394,7 @@ export default function PageManagerOnboarding() {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50/50 flex flex-col font-sans relative text-slate-800">
+    <div className="page-canvas min-h-screen flex flex-col font-sans relative text-slate-800">
       
       {/* Decorative gradient backdrops */}
       <div className="absolute top-0 right-0 w-96 h-96 bg-blue-100/60 rounded-full blur-3xl opacity-30 -z-10 pointer-events-none fixed" />
@@ -544,7 +444,7 @@ export default function PageManagerOnboarding() {
         
         {checkingExisting || checkingRestriction || (shouldCheckRestriction && restrictionOwner !== restrictionActorKey) ? (
           <RouteSkeleton />
-        ) : usesSupabasePersistence&&managerStatusError ? (
+        ) : (managerStatusError) ? (
           <section role="alert" className="space-y-4 rounded-3xl border border-blue-200 bg-[var(--pv-panel)] p-6 text-[var(--pv-text)]">
             <h1 className="text-xl font-bold">Manager registration could not load</h1><p className="text-sm">{managerStatusError}</p>
             <button type="button" onClick={()=>void fetchExistingManagerStatus()} className="min-h-11 rounded-xl bg-blue-700 px-5 text-sm font-semibold text-white">Retry registration</button>
@@ -580,14 +480,14 @@ export default function PageManagerOnboarding() {
               </button>
             </div>
           </div>
-        ) : usesSupabasePersistence&&googleManagerPreview&&!retainedManagerEmail&&!existingManagerRecord ? (
+        ) : (googleManagerPreview)&&!retainedManagerEmail&&!existingManagerRecord ? (
           <section className="rounded-3xl border border-blue-200 bg-white p-6 text-slate-900 shadow-lg dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 sm:p-8">
             <h1 className="mb-3 text-2xl font-bold">Create your manager login</h1>
             <p className="mb-5 text-sm text-slate-600 dark:text-slate-300">Verify your separate Google account first. You can enter your property details afterward.</p>
             <VerifiedAccountEnrollment key={user?.id} kind="manager" initialName={managerName} initialPhone={phone} initialEmail={email} initialSnapshot={managerEnrollmentSnapshot||undefined}
               onVerified={async()=>{await fetchExistingManagerStatus();await refreshNotifications();}}/>
           </section>
-        ) : usesSupabasePersistence&&correctingManager ? (
+        ) : (correctingManager) ? (
           <ManagerApplicationCorrections key={user?.id} onClose={()=>{setCorrectingManager(false);}} onSubmitted={()=>{setCorrectingManager(false);void fetchExistingManagerStatus();void refreshNotifications();}}/>
         ) : existingManagerRecord && !isSuccess ? (
           /* Live Status Card: Replaces form card when an account is submitted */
@@ -661,7 +561,7 @@ export default function PageManagerOnboarding() {
 
               {/* Status explanation notice */}
               {existingManagerRecord.adminNotes&&<p className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950"><strong>Administrator feedback: </strong>{existingManagerRecord.adminNotes}</p>}
-              {usesSupabasePersistence&&existingManagerRecord.canCorrectRegistration&&<button type="button" onClick={()=>setCorrectingManager(true)} className="min-h-11 rounded-xl bg-blue-700 px-5 py-3 text-sm font-bold text-white">Review and correct application</button>}
+              {(existingManagerRecord.canCorrectRegistration)&&<button type="button" onClick={()=>setCorrectingManager(true)} className="min-h-11 rounded-xl bg-blue-700 px-5 py-3 text-sm font-bold text-white">Review and correct application</button>}
               {!(existingManagerRecord.isApproved || existingManagerRecord.isVerified || existingManagerRecord.status?.toLowerCase() === 'approved' || existingManagerRecord.status?.toLowerCase() === 'verified') ? (
                 <div className="p-4 rounded-2xl bg-amber-50/80 border border-amber-200 flex items-start gap-3">
                   <Clock className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
@@ -693,7 +593,7 @@ export default function PageManagerOnboarding() {
                   className="w-full sm:w-auto px-5 py-3 rounded-2xl bg-rose-50 hover:bg-rose-100 text-rose-700 font-black text-xs border border-rose-200 flex items-center justify-center gap-2 cursor-pointer transition-all shadow-xs"
                 >
                   <Trash2 className="w-4 h-4" />
-                  <span>{usesSupabasePersistence ? 'Request account closure' : 'Delete Account & Restart Registration'}</span>
+                  <span>{('Request account closure')}</span>
                 </button>
                 )}
 
@@ -1158,83 +1058,7 @@ export default function PageManagerOnboarding() {
       </footer>
 
       {/* Account Deletion Modal */}
-      {showDeleteModal && (usesSupabasePersistence ? <ManagerClosureRequest onClose={() => setShowDeleteModal(false)} /> :
-        <DashboardOverlay aria-label="Authenticate Manager Account Deletion" onClose={() => setShowDeleteModal(false)} className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fadeIn">
-          <div data-popup-card className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-slate-100 space-y-6 relative">
-            <button aria-label="Close dialog"
-              type="button"
-              onClick={() => setShowDeleteModal(false)}
-              className="absolute top-4 right-4 w-8 h-8 rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 flex items-center justify-center cursor-pointer"
-            >
-              <X className="w-4 h-4" />
-            </button>
-
-            <div className="space-y-2">
-              <div className="w-12 h-12 rounded-2xl bg-rose-100 text-rose-700 flex items-center justify-center font-bold">
-                <Lock className="w-6 h-6" />
-              </div>
-              <h3 className="text-lg font-black text-slate-900">Authenticate Manager Account Deletion</h3>
-              <p className="text-xs text-slate-500 leading-relaxed font-medium">
-                Enter your account password to confirm permanent deletion of this Manager registration. Once deleted, you can register a new property immediately.
-              </p>
-            </div>
-
-            {delError && (
-              <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold flex items-center gap-2">
-                <span>⚠️</span>
-                <span>{delError}</span>
-              </div>
-            )}
-
-            <form onSubmit={handleDeleteManagerAccount} className="space-y-4">
-              <div>
-                <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">Official Work Email</label>
-                <input aria-label="Official Work Email"
-                  type="email"
-                  value={existingManagerRecord?.email || user?.email || ''}
-                  disabled
-                  className="w-full px-4 py-3 rounded-xl bg-slate-100 border border-slate-200 text-slate-500 text-sm font-medium cursor-not-allowed"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">Account Password</label>
-                <input aria-label="Account Password"
-                  type="password"
-                  value={delPassword}
-                  onChange={(e) => setDelPassword(e.target.value)}
-                  required
-                  placeholder="Enter your account password"
-                  className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500 font-medium"
-                />
-              </div>
-
-              <div className="flex items-center justify-end gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowDeleteModal(false)}
-                  className="px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-extrabold cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isDeleting}
-                  className="px-6 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-black shadow-md cursor-pointer disabled:opacity-50 flex items-center gap-2"
-                >
-                  {isDeleting ? (
-                    <>
-                      <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      <span>Deleting Registration...</span>
-                    </>
-                  ) : (
-                    <span>Confirm & Delete</span>
-                  )}
-                </button>
-              </div>
-            </form>
-          </div>
-        </DashboardOverlay>
+      {showDeleteModal && ((<ManagerClosureRequest onClose={() => setShowDeleteModal(false)} />)
       )}
       {verifiedSubmission && <DashboardOverlay aria-label="Verify manager email" onClose={() => setVerifiedSubmission(null)} className="fixed inset-0 bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-4">
         <section className="onboarding-fields w-full max-w-lg max-h-[90dvh] overflow-y-auto rounded-3xl border border-blue-200 bg-white p-5 sm:p-7 space-y-4">

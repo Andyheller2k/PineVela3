@@ -38,9 +38,12 @@ const pinInventory=spawnSync(clientDirectory?path.join(clientDirectory,'psql'):'
   input:`select json_build_object('pins',count(*),'wrongKey',count(*) filter(where coalesce(to_jsonb(p)->>'key_id','')<>'${keyId}')) from private.market_order_pins p;`});
 if(pinInventory.status!==0)throw new Error('Delivery PIN backup inventory failed.');
 const pinCounts=JSON.parse(pinInventory.stdout);if(pinCounts.pins && (!orderPinKey || pinCounts.wrongKey))throw new Error('The current delivery PIN key is required to recover existing challenges.');
+// Full schema extraction performs many metadata round trips on a remote
+// connection. Bound the whole dump without truncating its recovery coverage.
+const dumpTimeoutMs=20*60_000;
 const dump = spawnSync(dumpCommand, [
   '--format=custom', '--no-owner', '--verbose', '--lock-wait-timeout=10s', '--schema=auth', '--schema=public', '--schema=private', '--schema=storage',
-], { env: pgEnv, encoding: 'buffer', timeout: 300000, maxBuffer: 256 * 1024 * 1024 });
+], { env: pgEnv, encoding: 'buffer', timeout: dumpTimeoutMs, maxBuffer: 256 * 1024 * 1024 });
 if (dump.status !== 0 || !dump.stdout?.subarray(0, 5).equals(Buffer.from('PGDMP'))) {
   // libpq error text may include a host or connection string; keep it private.
   const diagnostic=path.join(directory,crypto.randomUUID()+'.backup-failure.log');

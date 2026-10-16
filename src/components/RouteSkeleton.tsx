@@ -16,7 +16,7 @@ export default function RouteSkeleton() {
     const timer=window.setTimeout(()=>setSlow(true),30000);
     return()=>window.clearTimeout(timer);
   },[pathname]);
-  if(slow)return <main data-route-loading-retry role="alert" className="flex min-h-screen items-center justify-center bg-[var(--pv-canvas)] p-6 text-[var(--pv-text)]">
+  if(slow)return <main data-route-loading-retry role="alert" className="page-canvas flex min-h-screen items-center justify-center p-6 text-[var(--pv-text)]">
     <section className="w-full max-w-md space-y-4 rounded-2xl border border-[var(--pv-edge)] bg-[var(--pv-panel)] p-6 text-center">
       <h1 className="text-xl font-semibold">Loading is taking longer than usual</h1>
       <p className="text-sm">Check your connection and reload this page to try again.</p>
@@ -27,7 +27,7 @@ export default function RouteSkeleton() {
   const panel = 'rounded-3xl border border-white/70 bg-white/40 p-6 shadow-sm backdrop-blur-xl';
 
   return (
-    <div role="status" aria-busy="true" aria-live="polite" data-route-skeleton={formPage ? 'form' : 'dashboard'} className="min-h-screen w-full bg-blue-50/25 p-4 text-blue-950 sm:p-6 lg:p-8">
+    <div role="status" aria-busy="true" aria-live="polite" data-route-skeleton={formPage ? 'form' : 'dashboard'} className="page-canvas min-h-screen w-full p-4 text-blue-950 sm:p-6 lg:p-8">
       <span className="sr-only">Loading page</span>
       <div aria-hidden="true" className="mx-auto w-full max-w-7xl space-y-6">
         <div className="flex h-16 items-center justify-between gap-4 rounded-2xl border border-white/70 bg-white/40 px-4 backdrop-blur-xl">

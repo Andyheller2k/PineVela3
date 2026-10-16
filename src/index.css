@@ -119,14 +119,6 @@ html.marketplace-scrollbar-hidden::-webkit-scrollbar {
   display: none;
 }
 
-/* Shared icy-blue glass canvas for the merchant/seller workbench. */
-.seller-frosty-background {
-  background:
-    radial-gradient(circle at 8% 8%, rgb(144 224 239 / .28), transparent 25rem),
-    radial-gradient(circle at 92% 18%, rgb(202 240 248 / .65), transparent 28rem),
-    linear-gradient(135deg, #f2fbfd 0%, #fafeff 60%, #e8f8fc 100%);
-}
-
 /* Glowing red SOS alert styling */
 @keyframes sos-pulse {
   0%, 100% {

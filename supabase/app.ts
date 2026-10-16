@@ -49,6 +49,7 @@ import { installInspections } from './inspections.js';
 import { installOfficerInvitations } from './officerInvitations.js';
 import { installRoomKeyDelivery } from './roomKeyDelivery.js';
 import { installAdminStoreOverview } from './adminStoreOverview.js';
+import {installAdministratorDashboardDirectories} from './adminDashboardDirectories.js';
 import { installManagerRegistration } from './managerRegistration.js';
 import { installRegistrationRestrictions } from './registrationRestrictions.js';
 import { installManagerOnboarding } from './managerOnboarding.js';
@@ -82,6 +83,9 @@ export function createSupabaseApp(db: SupabaseDatabase) {
   // This private bootstrap read enforces maintenance inside authorizedRead's
   // live actor transaction. Avoid a second remote maintenance transaction first.
   installManagerOnboarding(app,auth);
+  // Every catalog read takes the maintenance lock and checks availability in
+  // publicRows before entering its restricted catalog role.
+  installCatalog(app,db);
   app.use('/api', maintenanceBoundary(auth));
   installMedia(app,auth);
   app.use(express.json({ limit: '1mb',inflate:false }));
@@ -92,7 +96,7 @@ export function createSupabaseApp(db: SupabaseDatabase) {
       return publicPlatformSettings({ platformSettings: rows[0]?.value });
     }).then(settings => res.json(settings)).catch(next);
   });
-  installSupabaseAuth(app, auth); installCatalog(app, db); installNotifications(app, auth);
+  installSupabaseAuth(app, auth); installNotifications(app, auth);
   installProfiles(app,auth);
   installAppearance(app,auth);
   installPortalSecurity(app,auth);
@@ -127,6 +131,7 @@ export function createSupabaseApp(db: SupabaseDatabase) {
   installAdministratorSettings(app,auth);
   installAdminGovernance(app,auth);
   installAdminStoreOverview(app,auth);
+  installAdministratorDashboardDirectories(app,auth);
   installSystemWipeReviews(app,auth);
   installAdminInvitations(app,auth);
   installAdminMessages(app,auth);
@@ -141,9 +146,8 @@ export function createSupabaseApp(db: SupabaseDatabase) {
     db.actor((req as AuthRequest).actor, async client => (await client.query('select now() as checked_at')).rows[0])
       .then(result => res.json({ persistence: 'supabase', connected: true, ...result })).catch(next);
   });
-  // Failing clearly prevents an unported operation from writing to JSON or pretending
-  // success. This backend is not the default until the workflow checklist is complete.
-  app.all('/api/*', (_req, res) => res.status(503).json({ error: 'This operation is not yet available in the Supabase migration backend.' }));
+  // Retired and unknown operations have no persistence fallback.
+  app.all('/api/*', (_req, res) => res.status(404).json({ error: 'API operation not found.' }));
   const errorHandler: ErrorRequestHandler = (error, req, res, _next) => {
     const known = error instanceof ApiError || error instanceof ResourceLimitError || error instanceof SignupError || error instanceof ImageUploadError || error instanceof PaymentError;
     const status = known ? error.status : error?.type === 'entity.too.large' ? 413 : error?.type === 'entity.parse.failed' ? 400 :

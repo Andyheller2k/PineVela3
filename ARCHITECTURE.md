@@ -20,7 +20,7 @@ Supabase Auth provides authentication.
 
 PostgreSQL and Row Level Security provide database-level isolation.
 
-The replacement backend uses Express for product data access. Reviewed catalog
+The backend uses Express for product data access. Reviewed catalog
 and account projections live in the unexposed `private` schema. Public catalog
 transactions use the non-login `pinevela_catalog` role, which can read only six
 filtered projections and invoke four publication predicates. Authenticated account
@@ -162,39 +162,23 @@ Retired messaging systems must not be reintroduced.
 
 ---
 
-## Current Persistence Migration
+## Persistence and recovery
 
-The project may contain legacy JSON persistence during migration.
+Supabase is the sole runtime datastore. Default `npm run dev`, `npm run build` and
+`npm start` run the native Express/Supabase application and frontend. Supabase Auth,
+server-derived account bindings, PostgreSQL transactions and RLS remain the security
+boundaries. Private Storage and its owned-media registry replace local upload serving.
 
-Legacy architecture:
+Forty legacy JSON/custom-session modules are removed. The owner authorized archiving
+all legacy development data: 29 original data/upload files and the old build are in
+private recovery storage with verified hashes. Seven existing hosted Auth subjects,
+six profiles and ten contexts retained their exact UUID sets; no legacy account or
+business record was imported. Recovery material is not a runtime dependency.
 
-```text
-Express
- ↓
-Repository
- ↓
-JSON persistence
- ↓
-pinevela_store.json
-```
-
-Target architecture:
-
-```text
-Express
- ↓
-Repository / service layer
- ↓
-Supabase
- ↓
-PostgreSQL
-```
-
-During migration, preserve the legacy system as a rollback/reference source until the replacement is verified.
-
-See:
-
-`docs/migrations/`
+See [database](docs/database.md), [native retention](docs/migrations/native-account-retention.md)
+and [isolated workflow acceptance](docs/migrations/isolated-workflow-acceptance.md).
+The recorded automated scope does not claim every nested form, external provider
+journey or physical inspection has passed human acceptance.
 
 ---
 

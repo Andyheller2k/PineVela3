@@ -20,12 +20,20 @@ export function accountFeaturesForRequest(method:string,path:string):AccountFeat
  return [...new Set(features)];
 }
 export async function requireAccountAccess(c:PoolClient,contextId:string,features:AccountFeature[]=[],sessionId?:string) {
- const access=(await c.query('select private.account_access($1) as access',[contextId])).rows[0].access;
+ // Both functions read current native policy/session state. Share one database
+ // round trip without retaining either result across requests or transactions.
+ const {access,allowed}=(await c.query(sessionId
+  ? 'select private.account_access($1) as access,private.account_session_allowed($1,$2) as allowed'
+  : 'select private.account_access($1) as access',sessionId?[contextId,sessionId]:[contextId])).rows[0];
+ return checkAccountAccess(access,features,sessionId ? allowed : true);
+}
+/** Validate a policy projection read in the same SQL statement as its binding. */
+export function checkAccountAccess(access:any,features:AccountFeature[]=[],allowed=true) {
  if(access.banned) {
   const error=new ApiError(403,'This account is banned until '+access.until+'. Reason: '+access.reason,'account_banned');
   Object.assign(error,{accountAccess:access});throw error;
  }
- if(sessionId&&!(await c.query('select private.account_session_allowed($1,$2) as allowed',[contextId,sessionId])).rows[0].allowed)
+ if(!allowed)
   throw new ApiError(401,'Please sign in again to access this account.','account_signin_required');
  const restriction=access.restrictions.find((r:any)=>r.features.some((f:AccountFeature)=>features.includes(f)));
  if(restriction) {

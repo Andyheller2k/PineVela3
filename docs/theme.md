@@ -20,11 +20,12 @@ on ice use the darker `#00679E` tint (5.05:1 contrast).
 and `src/theme.css` provide the atmosphere, switch and existing-surface adaptation.
 Page surfaces switch in one paint; existing utility transitions are suppressed for two
 animation frames. Only the switch and decorative layers use short 180 ms transitions.
-The landing welcome area uses a full-width continuous blue gradient with a decorative,
-palette-toned mountain texture from `assets/pinepeak.jpg`; its upper surface is
-more shaded than its pale lower landscape, with navy equivalents in night mode.
-Login retains the shared atmosphere without a cover photograph or background
-logo. Opaque public headers, including their search fields and secondary buttons,
+Other pages use the login's primary `--pv-canvas` background through `.page-canvas`:
+`#e0f1fa` in light mode and `#060e29` in dark mode. Decorative PineVela background
+logos are removed; header branding and content photographs remain. The landing
+welcome area retains its original blue gradient and mountain texture from
+`assets/pinepeak.jpg`, with a navy gradient in dark mode. Opaque public headers,
+including their search fields and secondary buttons,
 follow light/night mode. Reduced-motion users get
 the same theme and readable surfaces without travel, breathing or transition effects.
 
@@ -63,7 +64,10 @@ Administrators edit these public contacts in Admin Settings using their own
 private settings key. Profile URLs require HTTPS on the matching platform.
 
 Landing PineMarket and PineResidence list all matching API-backed cards in
-single horizontal rows, with at most three cards fitting at once. Native touch
+single horizontal rows. Physical market items use the same compact cards across
+landing, catalog, storefront, resident and seller views: 176 by 272 pixels with
+144-pixel-high image areas. Item widths shrink on narrow screens; service and
+residence card dimensions retain their existing responsive rules. Native touch
 and trackpad scrolling, named previous/next controls and keyboard arrows/Home/End
 work without visible scrollbars. Soft edge masks indicate more cards, clear at
 the ends, and adapt to both themes. Standalone Explore catalogs retain their grids.

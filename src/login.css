@@ -11,7 +11,7 @@ html[data-theme="dark"] .unified-login .login-mode-toggle { background: var(--pv
 
 @media (max-width: 1023px) {
   .unified-login { min-height: 100svh; isolation: isolate; }
-  .mobile-login-backdrop { display: block; position: fixed; inset: 0; overflow: hidden; background: linear-gradient(155deg, #f5fcfe, var(--pv-blue-ice) 65%, #e8f8fc); z-index: -2; pointer-events: none; }
+  .mobile-login-backdrop { display: block; position: fixed; inset: 0; overflow: hidden; background: var(--pv-canvas); z-index: -2; pointer-events: none; }
   .mobile-login-backdrop img { position: absolute; width: 100%; height: 100%; object-fit: cover; filter: blur(16px) opacity(.12); transform: scale(1.05); }
   .mobile-login-photo { display: block; position: fixed; inset: 0; width: 100%; height: 100dvh; padding: 0; border: 0; background: transparent; pointer-events: none; z-index: -1; }
   .mobile-login-photo img { position: absolute; inset: 0 0 auto; width: 100%; height: max(340px, 70svh); object-fit: contain; object-position: center 20%; }

@@ -6,14 +6,15 @@ import { useActionFeedback } from '../lib/useActionFeedback';
 import AdministratorLabel from './AdministratorLabel';
 import AdminRemovalActions from './AdminRemovalActions';
 import SystemWipeReviewPanel from './SystemWipeReviewPanel';
+import { governanceRefreshInterval } from '../lib/governanceRefresh';
 
 const control='w-full rounded-xl border border-blue-200 bg-white/80 px-3 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500';
 const button='rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-40';
 export default function SupabaseAdminGovernancePanel() {
   const {apiFetch,user}=useAuth(),client=useQueryClient(),feedback=useActionFeedback(),mounted=useRef(true);
   useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;};},[]);
-  const {data,error,isPending}=useQuery<any>({queryKey:['adminGovernance',user?.id],enabled:user?.role==='admin',refetchInterval:8000,
-    queryFn:async()=>{const value=await apiFetch('/api/admin/governance');if(!Array.isArray(value?.members))throw new Error('Administrator approvals could not load. Sign in again.');return value;}});
+  const {data,error,isPending}=useQuery<any>({queryKey:['adminGovernance',user?.id],enabled:user?.role==='admin',refetchInterval:governanceRefreshInterval(false),refetchOnWindowFocus:true,
+    queryFn:async({signal})=>{const ownerId=user!.id;const value=await apiFetch('/api/admin/governance',{signal,headers:{'X-PineVela-Account-Context':ownerId}});if(!Array.isArray(value?.members)||value.currentId!==ownerId)throw new Error('Administrator approvals could not load. Sign in again.');return value;}});
   const [key,setKey]=useState(''),[secret,setSecret]=useState(''),[busy,setBusy]=useState(false),[notice,setNotice]=useState('');
   const [target,setTarget]=useState(''),[action,setAction]=useState('reset-key'),[reason,setReason]=useState('');
   const [inviteName,setInviteName]=useState(''),[inviteEmail,setInviteEmail]=useState(''),[inviteLink,setInviteLink]=useState('');

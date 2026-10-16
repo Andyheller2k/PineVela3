@@ -1,12 +1,10 @@
 import { Store, Star, Phone } from 'lucide-react';
-import PineLogo from './PineLogo';
 import { storeDeliveryMode } from '../../storeDelivery';
 
 export type StoreProfile = { id: string; storeName: string; university?: string; location?: string; category?: string; description?: string; phone?: string; studentEmail?: string; deliveryMode?: string; deliveryForm?: string; profilePicture?: string; logoUrl?: string; coverPicture?: string; bannerUrl?: string; storeRating?: number; ratingCount?: number };
 export default function StoreProfileSummary({ store }: { store: StoreProfile }) {
   const cover = store.coverPicture || store.bannerUrl, logo = store.profilePicture || store.logoUrl;
   return <section aria-label="Store profile" className="store-profile-glass relative isolate overflow-hidden rounded-3xl border border-blue-200/60 bg-white/65 shadow-xl backdrop-blur-2xl">
-    <div aria-hidden="true" className="pointer-events-none absolute right-0 top-0 -z-10 opacity-[.08]"><PineLogo size={380} hideText /></div>
     {cover && <img src={cover} alt={`${store.storeName} store cover`} className="h-44 sm:h-60 w-full object-cover" />}
     <div className="relative p-5 sm:p-7 space-y-5">
       <div className="flex flex-wrap items-center gap-4">

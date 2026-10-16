@@ -5,6 +5,7 @@ import React, { memo } from 'react';
 import { Heart, GraduationCap, Store, ChevronRight, Star, MapPin } from 'lucide-react';
 import { useCardActivation } from './useCardActivation';
 import { optimizeImageDisplayUrl } from '../lib/imageOptimizer';
+import '../marketCards.css';
 
 export interface MarketProductItem {
   id: string;
@@ -102,12 +103,13 @@ export const MarketItemCard: React.FC<MarketItemCardProps> = memo(
         onPointerMove={activation.onPointerMove}
         onPointerCancel={activation.onPointerCancel}
         data-market-surface={transparent ? "transparent" : "glass"}
+        data-market-kind={isService ? 'service' : 'item'}
         data-market-plan={product.subscriptionPlan || 'default'} data-listing-id={product.id}
-        className={`market-plan-card isolate relative cursor-pointer focus-within:ring-2 focus-within:ring-blue-400 ${transparent ? "bg-transparent border-0 shadow-none" : "bg-white/90 border border-slate-200/80 shadow-xs hover:border-blue-400 hover:shadow-md"} rounded-2xl sm:rounded-3xl overflow-hidden transition-all duration-150 flex flex-col justify-between`}
+        className={`market-plan-card ${isService ? '' : 'market-product-card'} isolate relative cursor-pointer focus-within:ring-2 focus-within:ring-blue-400 ${transparent ? "bg-transparent border-0 shadow-none" : "bg-white/90 border border-slate-200/80 shadow-xs hover:border-blue-400 hover:shadow-md"} rounded-2xl sm:rounded-3xl overflow-hidden transition-all duration-150 flex flex-col justify-between`}
       >
         <div>
           {/* Product Thumbnail Container with Lazy Loading */}
-          <div className={`relative h-28 sm:h-36 overflow-hidden flex items-center justify-center select-none ${transparent ? "bg-transparent" : `bg-slate-100 border-b border-slate-100 ${isService ? "bg-slate-900" : ""}`} ${isService ? "p-0" : "p-1"}`}>
+          <div className={`market-card-thumbnail relative h-28 sm:h-36 overflow-hidden flex items-center justify-center select-none ${transparent ? "bg-transparent" : `bg-slate-100 border-b border-slate-100 ${isService ? "bg-slate-900" : ""}`} ${isService ? "p-0" : "p-1"}`}>
             <img
               src={optimizeImageDisplayUrl(product.imageUrl, 180, 30)}
               alt={product.title}
@@ -126,13 +128,13 @@ export const MarketItemCard: React.FC<MarketItemCardProps> = memo(
                 <span className="text-white font-black">(Service)</span>
               </div>
             ) : (
-              <div className="absolute top-1.5 left-1.5 sm:top-2 sm:left-2 px-1.5 sm:px-2 py-0.5 bg-slate-900/85 text-white text-[8px] sm:text-[9px] font-bold rounded-md pointer-events-none truncate max-w-[100px] sm:max-w-[140px]">
+              <div className="market-card-category absolute top-1.5 left-1.5 sm:top-2 sm:left-2 px-1.5 sm:px-2 py-0.5 bg-slate-900/85 text-white text-[8px] sm:text-[9px] font-bold rounded-md pointer-events-none truncate max-w-[100px] sm:max-w-[140px]">
                 {product.category}
               </div>
             )}
 
             {/* Price Badge */}
-            <div className="absolute top-1.5 right-1.5 sm:top-2 sm:right-2 px-1.5 sm:px-2 py-0.5 bg-emerald-600 text-white text-[9px] sm:text-[10px] font-black rounded-md shadow-xs pointer-events-none">
+            <div className="market-card-price absolute top-1.5 right-1.5 sm:top-2 sm:right-2 px-1.5 sm:px-2 py-0.5 bg-emerald-600 text-white text-[9px] sm:text-[10px] font-black rounded-md shadow-xs pointer-events-none">
               GHS {product.price}
             </div>
 
@@ -154,7 +156,7 @@ export const MarketItemCard: React.FC<MarketItemCardProps> = memo(
           </div>
 
           {/* Details Section */}
-          <div className="p-2 sm:p-3 space-y-1 sm:space-y-1.5">
+          <div className="market-card-copy p-2 sm:p-3 space-y-1 sm:space-y-1.5">
             <div className="flex items-center justify-between gap-1 text-[9px] sm:text-[10px] font-semibold text-blue-700">
               <div className="flex items-center gap-1 sm:gap-1.5 min-w-0">
                 <GraduationCap className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
@@ -184,7 +186,7 @@ export const MarketItemCard: React.FC<MarketItemCardProps> = memo(
         </div>
 
         {/* Store & Action Footer */}
-        <div className="p-2 sm:p-3 pt-0 sm:pt-0 border-t border-slate-100 flex items-center justify-between gap-1 sm:gap-2 mt-1 sm:mt-1.5">
+        <div className="market-card-footer p-2 sm:p-3 pt-0 sm:pt-0 border-t border-slate-100 flex items-center justify-between gap-1 sm:gap-2 mt-1 sm:mt-1.5">
           <div className="flex items-center gap-1.5 min-w-0">
             <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-md bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center overflow-hidden border border-blue-400/20 shrink-0 shadow-2xs">
               {product.storeLogoUrl ? (

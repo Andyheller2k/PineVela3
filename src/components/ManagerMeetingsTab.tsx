@@ -1,33 +1,31 @@
-import DashboardOverlay from './DashboardOverlay';
-import { sessionFetch as fetch } from '../lib/session';
-import React, { useState, useEffect, useRef } from 'react';
-import { safeJson } from '../lib/api';
-import { 
-  Calendar, 
-  Clock, 
-  User, 
-  MapPin, 
-  Video, 
-  Phone, 
-  Plus, 
-  CheckCircle, 
-  XCircle, 
-  Clock3, 
-  Search, 
-  Filter, 
-  ExternalLink, 
-  MessageSquare, 
-  FileText, 
-  AlertCircle,
-  RefreshCw,
-  Trash2,
-  Send,
-  Building2,
-  CalendarCheck,
-  Tag
+import {
+AlertCircle,
+Building2,
+Calendar,
+CalendarCheck,
+CheckCircle,
+Clock,
+Clock3,
+ExternalLink,
+Filter,
+MapPin,
+Phone,
+Plus,
+RefreshCw,
+Search,
+Send,
+Tag,
+Trash2,
+User,
+Video,
+XCircle
 } from 'lucide-react';
+import React,{ useEffect,useRef,useState } from 'react';
+import { safeJson } from '../lib/api';
+import { sessionFetch as fetch } from '../lib/session';
 import { MeetingLog } from '../types';
-import { usesSupabasePersistence } from '../lib/persistence';
+import DashboardOverlay from './DashboardOverlay';
+
 
 interface ManagerMeetingsTabProps {
   currentUser: any;
@@ -62,7 +60,7 @@ export const ManagerMeetingsTab: React.FC<ManagerMeetingsTabProps> = ({
   const [participants, setParticipants] = useState<{contextId:string;kind:string;name:string;email:string;phone:string;roomLabel:string}[]>([]);
   const [bookParticipantId, setBookParticipantId] = useState('');
   const selectedParticipant = participants.find(p => p.contextId === bookParticipantId && p.kind === (bookRequesterType === 'student' ? 'resident' : bookRequesterType));
-  const savedParticipant = usesSupabasePersistence && bookRequesterType !== 'external';
+  const savedParticipant = (bookRequesterType !== 'external');
   const [bookRoomOrUnit, setBookRoomOrUnit] = useState('');
   const [bookTopic, setBookTopic] = useState('');
   const [bookCategory, setBookCategory] = useState<MeetingLog['category']>('Room / Accommodation');
@@ -97,7 +95,7 @@ export const ManagerMeetingsTab: React.FC<ManagerMeetingsTabProps> = ({
       const data = await safeJson(res);
       if (generation !== readGeneration.current) return;
       setMeetings(Array.isArray(data) ? data : []);
-      if (usesSupabasePersistence && primaryHostel?.id) {
+      if ((primaryHostel?.id)) {
         const people = await fetch(`/api/meetings/participants?hostelId=${encodeURIComponent(primaryHostel.id)}`);
         if (!people.ok) throw new Error('Could not load the residence participants.');
         const list = await safeJson(people);
@@ -146,7 +144,7 @@ export const ManagerMeetingsTab: React.FC<ManagerMeetingsTabProps> = ({
         mode: bookMode,
         notes: bookNotes.trim(),
         hostelId: primaryHostel.id,
-        ...(!usesSupabasePersistence ? {hostelName:primaryHostel.name,managerId:currentUser.id,managerName:currentUser.name} : {})
+        ...(({}))
       };
 
       const res = await fetch('/api/meetings', {
@@ -237,7 +235,7 @@ export const ManagerMeetingsTab: React.FC<ManagerMeetingsTabProps> = ({
       if (generation !== accountGeneration.current) return;
       setMeetings(prev => prev.filter(m => m.id !== meetingId));
       if (selectedMeeting?.id === meetingId) setSelectedMeeting(null);
-      setSuccessMessage(usesSupabasePersistence ? 'Meeting removed from the log. Its history is retained.' : 'Meeting record deleted successfully.');
+      setSuccessMessage(('Meeting removed from the log. Its history is retained.'));
       setTimeout(() => setSuccessMessage(null), 4000);
     } catch (err: any) {
       console.error('Delete meeting error:', err);

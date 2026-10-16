@@ -88,7 +88,7 @@ export function runtimeSources(roots:string[]):string[] {
 /** References are evidence of text in source, not proof of reachability or of a
  * network request. Include templates but never interpret arbitrary client code. */
 export function frontendApiReferences(directory='src') {
-  const references:{path:string;source:string;line:number;method:string|null}[]=[];
+  const references:{path:string;source:string;line:number;method:string|null;dynamic:boolean}[]=[];
   function inspect(folder:string) {
     for (const file of fs.readdirSync(folder,{withFileTypes:true})) {
       const name=path.join(folder,file.name);
@@ -99,8 +99,9 @@ export function frontendApiReferences(directory='src') {
         const value=ts.isStringLiteralLike(node)?node.text:ts.isTemplateExpression(node)
           ?node.head.text+node.templateSpans.map(span=>':parameter'+span.literal.text).join(''):'';
         if (value.startsWith('/api/')) {
-          let method:string|null=null,child=node,parent=node.parent;
+          let method:string|null=null,child=node,parent=node.parent,dynamic=ts.isTemplateExpression(node);
           while(parent&&!ts.isStatement(parent)&&!ts.isJsxAttribute(parent)) {
+            if(ts.isBinaryExpression(parent)&&parent.operatorToken.kind===ts.SyntaxKind.PlusToken)dynamic=true;
             if (ts.isCallExpression(parent)) {
               const callee=parent.expression.getText(source).split('.').pop();
               if (parent.arguments[0]===child&&['fetch','apiFetch','sessionFetch'].includes(callee||'')) {
@@ -117,7 +118,7 @@ export function frontendApiReferences(directory='src') {
             child=parent;parent=parent.parent;
           }
           references.push({path:value.split('?')[0],source:name,
-            line:source.getLineAndCharacterOfPosition(node.getStart()).line+1,method});
+            line:source.getLineAndCharacterOfPosition(node.getStart()).line+1,method,dynamic});
         }
         ts.forEachChild(node,visit);
       }

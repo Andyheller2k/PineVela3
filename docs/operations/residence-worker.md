@@ -10,6 +10,14 @@ recovery archives/keys and PostgreSQL 18 tools available. Use an unprivileged OS
 account: local recovery clusters cannot run as root. The required native schema
 is migration 50. No schema migration is introduced by the runner.
 
+Fresh recovery preparation after the keyed founder pause uses
+`npm run db:prepare-residence-backup -- <proposal UUID>`. Its full PostgreSQL dump
+has a 20-minute deadline, with 21 minutes allowed by the parent for each recovery
+subprocess. Remote schema extraction performs many metadata round trips and can
+exceed the earlier five-minute limit. These bounds preserve the full schema,
+privileges, RLS policies and encrypted archive; they do not replace the matching
+Storage byte backup or successful restore rehearsal required before execution.
+
 ```sh
 npm run worker:supabase
 npm run worker:supabase -- --watch

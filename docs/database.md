@@ -1,5 +1,21 @@
 # PineVela Database Model
 
+## Runtime checkpoint — 16 October 2026
+
+Supabase PostgreSQL/Storage and Supabase Auth are the sole runtime persistence and
+identity services. Default `dev`, `build` and `start` use `supabase-server.ts`.
+Forty legacy JSON/custom-session modules are removed. The owner classified all
+legacy records as development data; 29 data/upload files and the old build were
+privately archived with verified hashes. No legacy records were imported. The
+hosted checkpoint retained exactly seven Auth subjects, six profiles and ten
+contexts, with unchanged UUID-set fingerprints.
+
+See [isolated workflow acceptance](migrations/isolated-workflow-acceptance.md) for
+the actual HTTP/browser coverage and remaining acceptance scope. Automated checks
+do not establish a physical property visit or every nested form/provider journey.
+Dated migration/checkpoint descriptions below are historical evidence, not an
+instruction to restore retired runtime paths.
+
 Migration 69 updates only the existing private Auth initializer: a pending, server-
 reserved Google manager subject receives no app profile/context until the owned,
 provider-verified callback supplies its private nonce. Existing identity, enrollment,
@@ -369,16 +385,18 @@ The existing order-completion trigger can decrement stock under a publishing
 restriction only for its exact completed order and unchanged listing metadata.
 Direct stock edits remain restricted; existing handovers are not publication actions.
 
-## Supabase replacement status
+## Supabase runtime status
 
-The normalized Supabase schema and RLS have been created without importing disposable
-accounts. The running backend still uses JSON while workflows are ported. Verified
-resident/manager/seller identities are separate from their primary owner; resident and
-seller may share their verified student identity with different portal PINs. Saved foreign
-keys and private enrollment challenges establish relationships. The primary owner,
-room and bed each allow only one active allocation. See the [implementation status](migrations/supabase-implementation-status.md)
-and [schema design](migrations/schema-design.md). Preserve JSON and uploads until cutover
-verification succeeds.
+The normalized schema, native Auth integration and RLS are active by default.
+Verified resident/manager/seller identities remain distinct from their primary owner;
+resident and seller may share a verified student identity with separate portal PINs.
+Saved foreign keys and private enrollment challenges establish relationships. The
+primary owner, room and bed each permit only one active allocation. The completed
+legacy development archive does not import or grant any native identity or role.
+See [implementation history](migrations/supabase-implementation-status.md),
+[schema design](migrations/schema-design.md) and the acceptance report above.
+
+The following numbered migrations describe how the current schema was introduced.
 
 Migration 36 reuses `notifications` and `notification_recipients` for one-way admin
 announcements. `admin_message_type` preserves the selected severity independently of
@@ -465,7 +483,7 @@ Removed memberships and closed admin contexts preserve foreign-key history; priv
 keys are deleted and only live memberships occupy unique slots. Auth and primary access
 remain intact. Final notices reach the exact roster and affected primary account.
 
-## Verified payment quotes and access periods (replacement)
+## Verified payment quotes and access periods (native)
 
 `payments` records the exact verified portal, saved store/residence, server-calculated
 amount, currency, provider reference and fulfillment state. Private `payment_checkouts`
@@ -490,83 +508,36 @@ evidence; no legacy payment, test account or saved client assertion is imported.
 
 ## Selected hostel deletion and administrator announcements
 
-During JSON migration, `adminGovernance.residenceProposals` stores immutable hostel/account
-choices, affected-record previews, fingerprints, distinct keyed votes and the founder's
-final execution or rejection. `adminGovernance.registrationBans` stores exact account ID,
-role, registration kind and expiry separately from removable hostel/manager records.
-Preserve these relationships, expiry rules and server authorization when migrating to
-PostgreSQL. No existing JSON storage is removed by this feature.
+Native reviewed proposals retain exact residence/account targets, current dependency
+fingerprints, independent keyed votes and final founder consent. Private preparation,
+backup, execution and Storage-cleanup receipts enforce the reviewed protocol. Registration
+bans retain their exact context/kind/expiry. The former JSON governance arrays are archived.
 
-Gateway announcements are persisted notifications with `category: admin_gateway`, a
-batch ID, sender ID and exact `targetRole`/`targetAccountId`. Existing per-account popup
-acknowledgements and notification read receipts persist independently. Hostel deletion
-notifications target the saved primary owner and, for hostel-only deletion, the retained
-manager. Encrypted recovery archives remain private and are never served by API routes.
+Announcements use native notifications and exact recipient rows with independent read
+and popup acknowledgements. Residence lifecycle notices reach the saved primary owner
+and retained operational manager as applicable. Recovery archives are never served by API
+routes. See [residence deletion](migrations/residence-deletion.md).
 
-## Marketplace Media During Migration
+## Native marketplace media and messages
 
-The current JSON backend persists `marketMedia` records containing `imageUrl`, `accountId`
-and `createdAt`. Products store up to three `additionalImages`; service `priceCategories`
-contain up to four options with optional `imageUrl`. The server validates upload ownership
-before accepting these references. Preserve these relationships when moving media to
-Supabase Storage/PostgreSQL, with account ownership enforced by RLS and server authorization.
+`public.media_assets` records the verified owner context/Auth subject, purpose,
+Storage path, digest, size and readiness. Listing media/options reference authorized
+market assets. Private Storage and scoped `/api/media/:id` reads enforce current
+publication or account access; archived local upload paths are not served.
 
-The replacement now uses a private `pinevela-media` Storage bucket plus `media_assets`.
-Each asset records its verified portal owner, purpose, original digest/size and upload state.
-Residence, store, listing and inspection attachment triggers validate ownership. Public images
-are served only while their actual catalog/plan permits them; private images require the current
-account relationship. Browser object writes and media-registry mutations are denied. Incomplete
-transfers are reconciled through Storage APIs, preserving ready objects. Maintenance
-report media records the original allocation and residence; repair evidence records its
-exact ticket. Ready evidence is private and accessible only to saved related accounts.
-Owned avatar uploads and profile foreign-key references are ported by migration 35.
-Operational account/object deletion and permanent byte-backup restoration remain cutover gates. PostgreSQL backups include
-Storage metadata; object bytes require a separate backup once any permanent objects exist.
+Buyer–seller messages, orders, purchase reviews and notifications use native foreign
+keys and exact account relationships. Conversations remain append-only; a linked
+primary or administrator does not gain a seller's private inbox. Receipt-linked
+reviews require the completed native handover. No legacy conversation/review record
+was imported. See [security boundaries](security.md).
 
-## Marketplace Purchase Reviews During Migration
+## Marketplace reservations
 
-`digitalMarketRatings` contains server-owned receipt, buyer, seller, store and item fields.
-Only records marked `purchaseVerifiedVersion: 1` that match their completed order contribute
-to public review lists and aggregates. There is one active verified review per order, updated
-only by its exact buyer. Historical unverified ratings and `digitalMarketServiceReviews`
-remain private and preserved across load/save; they are not automatically promoted.
+Orders reserve positive integer quantities for 24 hours. Completion deducts stock
+once; terminal or expired orders release capacity while preserving history. Only the
+exact authenticated buyer can retrieve or renew its active private delivery challenge.
 
-The replacement requires an actual completed order with verified handover and its exact
-primary buyer. A unique `order_id` permits one editable review per purchase; SQL preserves
-receipt ownership and creation time. Review changes, audit and the exact seller's notice
-commit together. Public projections and catalog aggregates exclude private receipt/account
-fields and unavailable stores. Historical unpublished purchases remain reviewable by their
-buyer. Unchanged retries retain the review and do not send another notice.
-
-## Marketplace Conversations (replacement backend)
-
-`market_messages` represents only an exact primary buyer and verified seller store.
-Messages are append-only. Sender-scoped request UUIDs and fingerprints serialize retries
-with the store lock; saved stores, listings and orders determine participants and titles.
-Only a buyer may start a new public-store inquiry. A seller may reply to an existing inquiry
-or its own order. Existing conversations remain available after subscription expiry while
-the seller/store remain eligible. Neither the primary owner of a seller portal nor an
-administrator can read that portal's conversations through chat APIs or RLS.
-
-Notifications carry the actual message/review foreign key and an exact account recipient.
-The inbox acknowledges incoming message notices by message ID. Purchase feedback stays
-separate from activated-room staff reviews and maintenance ratings. Keyed deletion workflows
-must explicitly handle append-only message history; destructive cutover remains pending.
-
-## Marketplace Reservations During Migration
-
-The current JSON order record carries server-owned `stockReservationVersion` and
-`stockReservedUntil`; active Awaiting Seller Confirmation/Pending Meetup records reserve
-their positive integer quantity until that timestamp. Physical product stock is deducted
-only on completion. All checks account for other active reservations. Terminal or expired
-orders release reserved capacity without deleting historical records.
-
-PIN version, expiry, issuance time and attempts also persist on the server-private order.
-Only the exact authenticated buyer may retrieve an active PIN or issue a replacement.
-Unversioned historical PINs require buyer renewal; ownership is never inferred from a
-matching email when an exact buyer ID is absent or conflicts.
-
-The replacement serializes creation, renewal and handover with store → listing → order
+The native implementation serializes creation, renewal and handover with store → listing → order
 locks. A buyer-scoped request UUID and fingerprint make retries idempotent. Purchase
 price, option photo, contact and location snapshots remain immutable after catalog edits.
 Twenty-four-hour reservations subtract from availability; completion deducts physical stock
@@ -581,167 +552,53 @@ exclude all delivery secrets. `MARKET_ORDER_PIN_KEY_FILE` points to a private 32
 outside PostgreSQL. Keep this key when restarting or restoring; replacing it cannot decrypt
 existing challenges. Database checkpoint backups include an independently authenticated
 encrypted `.pvsecrets` key sidecar and refuse backups with missing/mismatched active PIN keys.
-Restoration verifies this sidecar in addition to PostgreSQL privileges and data. A final
-stopped-writer recovery rehearsal and permanent Storage-byte backup remain cutover gates.
+Restoration verifies this sidecar in addition to PostgreSQL privileges and data. Database
+and Storage-byte recovery remain separate verified operator procedures.
 
 ## Database
 
-Target database:
-
-PostgreSQL through Supabase.
-
-During migration, JSON account records may contain a private `session` object with
-`tokenHash`, numeric `issuedAt` and `expiresAt`. Raw `token`, `merchantToken` and
-`sessionToken` fields are removed on load and before writes. One current session per
-account is retained; a fresh login replaces the previous hash. Logout/password recovery
-must remove every copy of that session. Target session handling must preserve those
-revocation/expiry invariants through Supabase Auth and server-side authorization/RLS.
+PostgreSQL through Supabase is the active datastore. Supabase Auth owns provider
+sessions; `private.account_sessions` binds their exact Auth session and selected
+native context. No JSON credential/session record participates in login, refresh,
+logout or authorization. Private keys and challenges remain server-only.
 
 ---
 
-## Core Identity
+## Core identity and housing rules
 
-```text
-profiles
-manager_profiles
-staff_profiles
-```
+Supabase `auth.users`, `public.profiles` and `public.account_contexts` establish
+identity and portal ownership. Manager/staff assignments determine operational scope.
+The housing hierarchy is residence → block → floor → room → bed. Properties retain
+identity, verified location/address, E.164 contact details, owned images, assigned
+managers and supported stay-cycle/configuration fields.
 
-Supabase Auth owns authentication.
+Managers may manage only assigned residences. Only an authorized assigned manager
+may invite staff into an approved, reviewed residence. Staff remain within their
+saved employment/residence scope.
 
-Application tables store application-specific identity and relationships.
+An active allocation connects the resident to a configured bed/room. The resident,
+primary owner, room and bed permit at most one active allocation under the current
+product rules. Database constraints and authorized transactions enforce uniqueness;
+client-selected IDs never prove access.
 
----
+Manager/residence verification cases and seller applications are native review
+workflows. Housing booking applications remain retired; room access uses activation
+keys. No generic application table or retired public recruitment flow is recreated.
 
-## Housing Hierarchy
+Financial records retain amount, currency, method/provider references, timestamps,
+status and exact account/charge relationships. Historical financial state remains
+auditable. Only buyer–seller messaging is active. Resident-to-staff reviews require
+the activated housing relationship; unrestricted public staff reviews remain retired.
 
-```text
-hostels
-    ↓
-blocks
-    ↓
-floors
-    ↓
-rooms
-    ↓
-beds
-```
+## Archive and recovery principle
 
----
-
-## Hostel
-
-A hostel/residence contains:
-
-* identity
-* location
-* address
-* public contact phone in E.164 format with its selected country
-* images
-* managers
-* fee structures
-
----
-
-## Managers
-
-A manager-hostel relationship determines which hostels a manager can manage.
-
-Managers must not automatically gain access to every hostel.
-
----
-
-## Staff
-
-Staff belong to the appropriate hostel/manager context.
-
-Staff creation must be restricted to authorized managers.
-
----
-
-## Allocation
-
-Conceptually:
-
-```text
-Resident
-   ↓
-Allocation
-   ↓
-Bed
-   ↓
-Room
-   ↓
-Floor
-   ↓
-Block
-   ↓
-Hostel
-```
-
-Constraints:
-
-* resident: maximum one active allocation
-* bed: maximum one active occupant
-
-These rules should be enforced as strongly as practical at the database/application level.
-
----
-
-## Applications
-
-Applications represent a resident's housing application.
-
-Applications must belong to the appropriate resident and housing context.
-
----
-
-## Payments
-
-Financial records should be auditable.
-
-Payments should not simply overwrite historical financial state.
-
-Payment records should preserve:
-
-* amount
-* currency
-* payment method
-* relevant references
-* timestamps
-* status
-* associated user/application/charge
-
----
-
-## Messaging
-
-Only buyer-seller messaging remains active.
-
-Do not create generic messaging tables for retired chat systems.
-
----
-
-## Reviews
-
-Resident-to-staff reviews are permitted only within the appropriate activated room/housing relationship.
-
-Public staff review systems are not part of the target schema.
-
----
-
-## Migration Principle
-
-The legacy JSON database may be used as a migration/reference source.
-
-Do not delete the JSON data until:
-
-1. schema is verified
-2. relationships are verified
-3. data migration succeeds
-4. critical workflows pass
-5. authorization tests pass
-6. rollback is possible
+The owner classified every legacy JSON record as development data and authorized
+private archiving after native verification. Original files and the old build are
+outside the runtime tree; verified encrypted recovery remains available. Do not
+restore legacy identities, sessions or operational records into the native database.
+Current Supabase identities and relationships are retained. Native database and
+Storage backups remain separate recovery artifacts and require their documented
+verification/rehearsal procedures.
 
 ---
 
@@ -758,124 +615,46 @@ Before changing schema:
 * identify legacy fields that contain implicit relationships
 
 
-## Retired Feature Records During Migration
+## Retired feature records and notification state
 
-The transitional JSON persistence model has no active housing booking application collection.
-Legacy housing applications are retained privately under `retiredFeatureRecords.housingApplications`
-when old stores load and save. This archive has no API or operational workflow and must not
-be exposed as a public directory or silently discarded during the Supabase migration.
+Retired housing/chat/recruitment records exist only in the private legacy recovery
+archive. They have no active route or new database/RLS workflow.
 
+Native lifecycle submissions route to the saved primary owner. Notifications use
+exact `notification_recipients` context relationships and independent read/dismissal
+state; acknowledging one account never acknowledges another. Portal access does not
+follow from shared email or a client-supplied recipient.
 
-## Transitional Notification Read State
+## Historical JSON writer and offline recovery
 
-Pre-entry account submission notices persist `targetRole: user` and the primary owner's
-`targetAccountId`, with registration metadata where available. Historical manager, seller and
-resident lifecycle notices resolve through stored parent relationships at read time without
-rewriting or deleting records. Secondary read flags do not acknowledge a rerouted primary
-notice; the primary account's `readBy` and popup acknowledgements remain authoritative.
-Preserve this recipient/registration relationship and ownership checks in PostgreSQL/RLS.
+The single-writer JSON implementation and its restore/credential commands are
+removed. Earlier writer leases, local `.bak` rotation, `request-limits.json` and
+JSON size settings are historical implementation details, not deployment controls.
+The retained `scripts/backup-legacy-persistence.ts` can verify/list the protected
+encrypted legacy checkpoint or reconstruct it into a new private offline recovery
+directory. It is not an application datastore and must never merge records into
+native accounts. See [native retention](migrations/native-account-retention.md).
 
-JSON notifications may include `readBy: string[]`, storing serialized `[role, accountId]`
-acknowledgements. Reads expose only the requesting account's `read` and `isRead`, not
-other reader identities. Historical global flags remain compatible. Preserve per-account
-read acknowledgements when migrating to PostgreSQL; shared alerts need a recipient/read
-relation with a unique `(notification_id, profile_id)` key and recipient-scoped RLS.
+Residence facilities, amenities and property policies remain retired from current
+registration, editing and presentation. Archived values do not justify new active
+columns, routes or RLS grants.
 
+## Native residence requests
 
-## Collection Round-Trip Contract
+Reviewed residence changes use manager-assignment authority, an operation-key grant,
+an immutable baseline and administrator approval. Key resets invalidate older grants.
+Native transactions, private receipts, cooldowns and RLS preserve these relationships;
+the retired `boardRequests`/`managerOperationKeys` JSON arrays are not queried.
 
-Every supported array declared in `PersistentStore` must survive load/save and server
-startup. Ratings, staff bargains, onboarding payments and manager profiles are explicitly
-loaded alongside legacy private service reviews. Separate historical records sharing an
-email are preserved in these collections; stored empty arrays remain empty. New onboarding
-payments are written once through the canonical database collection, without a parallel
-seeded payment list. Tests cover the declared collection contract and repeated real server
-restarts. Adding a collection requires declaring it, loading it, and preserving its defaults.
+## Native storefront profiles
 
+Store contact, handover method and branding fields persist in `public.stores`.
+Uploaded image references must belong to the verified seller's native media registry.
+Public storefront projections expose only eligible business fields and published
+listings; ratings require completed, verified purchases. Plan and publication checks
+remain server enforced.
 
-## JSON Writer and Offline Recovery (B09/B10)
-
-The transitional JSON database permits one process per data directory. Linux `flock` is
-required, and the filesystem must be a supported local Linux filesystem (ext, XFS, Btrfs,
-F2FS, ZFS, overlay, tmpfs or ramfs). NFS, SMB, FUSE and other unsupported filesystems are
-rejected. This is not a cluster, shared network volume or multi-worker storage backend.
-Use transactional PostgreSQL before scaling to multiple workers. Memory filesystems are
-volatile and are suitable for isolated tests rather than durable deployment.
-
-The writer acquires a kernel lease before reading/initializing the database, keeps it for
-its in-memory snapshot lifetime, and uses the same lease for offline credential recovery.
-The OS releases it on process exit/crash; the `.lock` file remains. Never delete/rotate
-that inode to bypass a running writer. Writes also reject out-of-band file changes using
-an expected SHA-256 content digest. Stop all writers before editing/restoring runtime data.
-
-Existing JSON must be readable, valid UTF-8, an object with a users/hostels array, and have
-valid shapes for present supported collections/settings. Missing legacy collections may
-still use defaults. Present malformed fields now fail closed instead of B01's earlier
-fallback behavior. An invalid/unreadable existing file blocks startup without replacing it
-or its backup. A missing primary with recovery artifacts also blocks empty initialization.
-
-`PINEVELA_JSON_MAX_BYTES` defaults to 64 MiB and accepts 1–256 MiB. Oversized reads/writes
-are rejected; they are not truncated. Whole-store serialization, hashing and fsynced disk
-writes remain synchronous. The size bound is a guard, not a latency/throughput guarantee.
-The backend still needs PostgreSQL for large datasets and transactional multi-worker work.
-
-Each successful replacement preserves the prior validated snapshot as
-`pinevela_store.json.bak` using a private atomic, fsynced write. There is one rotating
-backup, not a history archive. File and directory fsync are used; database, backup,
-quarantine and temporary write artifacts are private, Git-ignored and denied by Vite's
-file-serving rules. Budget disk space for primary, backup and one temporary copy (roughly
-3 times the configured limit), plus one quarantine after recovery. Maintain separate
-operator backups for hardware failure, long-term retention and writes bypassing this tool.
-
-With the application stopped, from the project folder:
-
-```bash
-node --import tsx scripts/database-recovery.ts check
-node --import tsx scripts/database-recovery.ts restore
-```
-
-`check` validates the backup without changing records. `restore` validates it first,
-retains the existing primary bytes in `pinevela_store.json.quarantine`, replaces the
-primary, and revokes all restored sessions and pending signup challenges. It refuses
-invalid/oversized backups or an existing quarantine. Archive an existing quarantine
-securely before another restore; do not remove it blindly. Unreadable/oversized originals
-require an operator to preserve them offline before recovery. A last-good snapshot can
-predate recent operations; verify account approvals, room allocation and orders after
-restore. Credential recovery also refuses a missing database or a running writer.
-
-Residence facilities, amenities and property policies are retired from registration, editing,
-verification submissions and presentation. Historical JSON values remain archived in place
-during migration; the application rejects attempts to create or change them. An unchanged
-archived value in a full-record save is ignored, preserving existing records. No new active
-PostgreSQL columns or RLS policies should be introduced for these retired sections.
-
-
-## Residence Request Workflow During Migration
-
-The transitional JSON store persists `boardRequests` with immutable manager/residence IDs,
-before/after snapshots, review receipts and final decisions; historical general requests remain
-read-only. `managerOperationKeys` contains only private account-bound hashes and rate limits.
-`managerKeyPetitions` records recovery requests; `hostelMedia` binds validated uploads to their
-manager. Notification popup acknowledgements are keyed by role and account ID, separately
-from read receipts. These fields survive load/save and are never exposed as a public catalog.
-
-A PostgreSQL migration must implement transactional approval with a baseline/version check,
-a database-enforced cooldown, private key/rate-limit storage and manager-owned requests under
-RLS. Only server-authorized admin decisions may write approved residence fields. Key resets
-must atomically revoke the old digest. Preserve archived JSON records until that replacement
-is verified; this workflow currently runs on the transitional backend.
-
-## Merchant storefront profiles during migration
-
-Stores persist `deliveryMode` (with the legacy `deliveryForm` alias), normalized
-`phone`/`phoneCountry`, and uploaded `profilePicture`/`logoUrl` and
-`coverPicture`/`bannerUrl`. Existing delivery values and branding remain readable.
-New image references must belong to the authenticated merchant in `marketMedia`.
-The public storefront projects only business contact/profile fields and published
-listings; ratings come from verified completed purchases. Preserve these ownership
-and publication boundaries when migrating stores to PostgreSQL and private Storage.
-
-## Reviewed residence registration in the replacement backend
+## Reviewed native residence registration
 
 Before physical approval, requested manager-application corrections reuse the owned
 case, verified manager identity and assigned inspection shell. Previous property,
@@ -894,7 +673,7 @@ Requested setup corrections reuse the same case and archive the prior submission
 in private audit events. Unused room layouts may be replaced before operational history
 exists; unchanged layouts retain their identities. No new table or migration is required.
 See [residence corrections](migrations/residence-corrections.md) for authority and evidence;
-genuine provider/browser acceptance remains a separate cutover prerequisite.
+the isolated acceptance report distinguishes completed local checks from remaining human/provider acceptance.
 
 ## Supabase Maintenance Workflow
 
@@ -910,7 +689,7 @@ Primary portals must enter the verified resident portal to report or sign off. A
 resolution of unfinished reports after allocation release remains a separate lifecycle gate.
 
 
-## Verified staff lifecycle (replacement backend)
+## Verified staff lifecycle (native backend)
 
 Migration 19 extends existing staff assignments with job role, shift and resignation
 reason; it creates no parallel staff account table or public recruitment model. Staff
@@ -925,7 +704,7 @@ exclude ended assignments, while maintenance evidence keeps its original foreign
 Browser roles cannot mutate assignments, enrollment secrets or lifecycle status. Profile
 contact edits derive the subject from the active employment, never a body identifier.
 
-## Staff retention and resident reviews (replacement backend)
+## Staff retention and resident reviews (native backend)
 
 Migration 20 extends the existing staff bargain table with original employment snapshots,
 resignation reasons, actual manager notes and decision times. One unresolved proposal
@@ -937,7 +716,7 @@ Their author, allocation and rating remain immutable. The unused maintenance iss
 is removed after checking it contains no evidence; repair ratings remain separate. Read
 access uses saved housing relationships and live portal bindings, with no public reviews.
 
-## Scoped meeting appointments (replacement backend)
+## Scoped meeting appointments (native backend)
 
 Migration 21 reuses `meetings` with an exact assigned manager, optional internal
 participant and the original allocation/employment foreign key. Internal contact
@@ -953,7 +732,7 @@ an appointment from the manager log retains its row and cancels it if still acti
 Scoped views and raw-table RLS restrict participant reads to the original current
 housing relationship; the assigned manager retains history while authorized.
 
-## Verified seller applications (replacement backend)
+## Verified seller applications (native backend)
 
 Migration 22 links each seller application to its saved verified enrollment. School ID,
 campus, category and proposed store name are actual submitted fields. Review requires

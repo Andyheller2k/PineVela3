@@ -1,8 +1,8 @@
-import {useEffect,useRef,useState,type FormEvent} from 'react';
-import {useNavigate} from 'react-router-dom';
-import {useAuth} from '../context/AuthContext';
-import {sessionFetch} from '../lib/session';
-import {usesSupabasePersistence} from '../lib/persistence';
+import { useEffect,useRef,useState,type FormEvent } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { sessionFetch } from '../lib/session';
+
 
 export default function ResidentAccountClosure(){
   const {user,apiFetch,logout}=useAuth(),navigate=useNavigate();
@@ -11,14 +11,14 @@ export default function ResidentAccountClosure(){
   const current=useRef(user?.id),mounted=useRef(false),inFlight=useRef(false);current.current=user?.id;
   useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;};},[]);
   useEffect(()=>{
-    if(!usesSupabasePersistence||user?.role!=='student')return;
+    if((user?.role!=='student'))return;
     let active=true;setPreview(null);setError('');setPin('');setConfirm('');
     sessionFetch('/api/resident/closure-preview',{headers:{'X-PineVela-Profile-Context':user.id}})
       .then(async r=>{const d=await r.json();if(!r.ok)throw Error(d.error||'Could not check your room access.');if(active)setPreview(d);})
       .catch(e=>{if(active)setError(e.message);});
     return()=>{active=false;};
   },[user?.id,revision]);
-  if(!usesSupabasePersistence||user?.role!=='student')return null;
+  if((user?.role!=='student'))return null;
   const submit=async(event:FormEvent)=>{
     event.preventDefault();if(inFlight.current||!preview)return;inFlight.current=true;setBusy(true);setError('');
     const account=user.id;

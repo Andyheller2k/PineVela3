@@ -1,21 +1,15 @@
-import { activateOnKeyboard } from '../lib/keyboardActivation';
-import { sessionFetch as fetch } from '../lib/session';
-import React, { useState, useRef, useEffect } from 'react';
-import { 
-  Camera, 
-  Upload, 
-  Check, 
-  RotateCcw, 
-  User, 
-  Sparkles, 
-  Smile,
-  X,
-  AlertCircle
+import {
+Check,
+Smile,
+Upload
 } from 'lucide-react';
+import React,{ useEffect,useRef,useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import PineLogo from './PineLogo';
 import { compressImageFileToLowRes } from '../lib/imageOptimizer';
+import { activateOnKeyboard } from '../lib/keyboardActivation';
 import { uploadProfileImage } from '../lib/profileImages';
+import { sessionFetch as fetch } from '../lib/session';
+import PineLogo from './PineLogo';
 
 // System-provided avatar presets with custom styles (PineVela logo in varied colors)
 export interface PresetAvatar {
@@ -168,7 +162,7 @@ export default function UserAvatarSelector({ onAvatarSave }: UserAvatarSelectorP
         });
         const result=await res.json().catch(()=>null);
         if (!res.ok) throw new Error(result?.error || 'Could not save your profile picture. Please try again.');
-        if(import.meta.env.VITE_PERSISTENCE==='supabase')newAvatarVal=result?.user?.avatar || 'preset:pine-classic';
+        newAvatarVal=result?.user?.avatar || 'preset:pine-classic';
       }
     } catch (err) {
       if (activeAccountRef.current === accountKey) setSaveError(err instanceof Error?err.message:'Could not save your profile picture. Please try again.');

@@ -5,6 +5,7 @@ import type { SupabaseAuth,AuthRequest } from './auth.js';
 import { ownedEnrollment } from './enrollment.js';
 import { notify,notifyPrimaryOwner } from './notifications.js';
 import { MARKET_DEFAULT_COVERS,MARKET_DEFAULT_LOGO,marketStoreBranding } from '../marketBranding.js';
+import {administratorApproval} from './administratorApproval.js';
 const route=(work:(req:AuthRequest,res:any)=>Promise<unknown>):RequestHandler=>(req,res,next)=>{work(req as AuthRequest,res).catch(next);};
 function fields(body:any,allowed:string[]){if(!body || typeof body!=='object' || Array.isArray(body) || Object.keys(body).some(k=>!allowed.includes(k)))throw new ApiError(400,'Unsupported seller application fields.');}
 function text(v:unknown,max:number,min=1){if(typeof v!=='string' || v.length>max || v.trim().length<min)throw new ApiError(400,'Enter valid seller registration details.');return v.trim();}
@@ -13,6 +14,11 @@ function application(r:any){return {id:r.id,accountId:r.seller_context_id,enroll
   idNumber:r.student_id,storeName:r.proposed_store_name,status:r.withdrawn_by_wipe_id?'withdrawn':r.status==='submitted'?'pending':r.status,
   accountStatus:r.account_status,submittedAt:r.submitted_at,reviewedAt:r.reviewed_at,adminNotes:r.review_notes,
   emailVerified:Boolean(r.verified_at),registrationGeneration:r.registration_generation,isCurrent:r.is_current,submissionVersion:r.submission_version};}
+/** Call only inside an administrator readActor transaction, retaining the
+ * private view's RLS boundary and the existing current-registration filter. */
+export async function administratorSellerApplications(c:PoolClient) {
+  return (await c.query('select * from private.seller_application_details where is_current order by submitted_at desc limit 1000')).rows.map(application);
+}
 async function administrators(c:PoolClient){return (await c.query("select c.id from public.account_contexts c join public.admin_memberships m on m.context_id=c.id where c.kind='admin' and c.status='active' and m.status='active'")).rows.map(r=>r.id);}
 async function audit(c:PoolClient,a:VerifiedActor,id:string,event:string,data:any){await c.query("insert into private.audit_events(actor_context_id,event_type,resource_type,resource_id,event_data) values ($1,$2,'seller_application',$3,$4)",[a.contextId,event,id,JSON.stringify(data)]);}
 export async function sellerStatus(c:PoolClient,a:VerifiedActor){
@@ -100,8 +106,12 @@ export async function decideSellerApplication(c:PoolClient,a:VerifiedActor,body:
 export function installSellerRegistration(app:Express,auth:SupabaseAuth){
   app.get('/api/digital-market/status',auth.require(['primary','seller']),route(async(req,res)=>res.json(await auth.db.authorizedSystem(req.actor,['primary','seller'],c=>sellerStatus(c,req.actor)))));
   app.post('/api/digital-market/register',auth.require(['primary']),route(async(req,res)=>res.json(await auth.db.authorizedSystem(req.actor,['primary'],c=>submitSellerApplication(c,req.actor,req.body)))));
-  app.get('/api/admin/digital-market/applications',auth.require(['admin']),route(async(req,res)=>res.json(await auth.db.readActor(req.actor,async c=>(await c.query('select * from private.seller_application_details where is_current order by submitted_at desc limit 1000')).rows.map(application)))));
-  const decide=(approved:boolean)=>route(async(req,res)=>res.json(await auth.db.authorizedSystem(req.actor,['admin'],c=>decideSellerApplication(c,req.actor,req.body,approved))));
+  app.get('/api/admin/digital-market/applications',auth.require(['admin']),route(async(req,res)=>res.json(await auth.db.readActor(req.actor,administratorSellerApplications))));
+  const decide=(approved:boolean)=>route(async(req,res)=>{
+    if(!approved)return res.json(await auth.db.authorizedSystem(req.actor,['admin'],c=>decideSellerApplication(c,req.actor,req.body,false)));
+    const {privateKey,...body}=req.body || {};
+    return res.json(await administratorApproval(auth,req.actor,privateKey,c=>decideSellerApplication(c,req.actor,body,true)));
+  });
   app.post('/api/admin/digital-market/approve-application',auth.require(['admin']),decide(true));
   app.post('/api/admin/digital-market/reject-application',auth.require(['admin']),decide(false));
 }

@@ -11,7 +11,7 @@ export default function PagePublicStore() {
   const { logout } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
-  return <div className="h-dvh flex flex-col overflow-hidden bg-transparent font-sans">
+  return <div className="page-canvas h-dvh flex flex-col overflow-hidden font-sans">
     <PublicHeader searchQuery={searchQuery} setSearchQuery={setSearchQuery} onHome={() => navigate('/')}
       onSearch={() => navigate(`/?search=${encodeURIComponent(searchQuery)}`)}
       onCompanySection={section => navigate(`/?section=${section}`)} setShowLogoutConfirm={setShowLogoutConfirm} />

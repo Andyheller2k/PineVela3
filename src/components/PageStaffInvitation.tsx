@@ -1,9 +1,9 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { useEffect,useRef,useState } from 'react';
+import { Link,useSearchParams } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
-import { usesSupabasePersistence } from '../lib/persistence';
-import PineLogo from './PineLogo';
+
 import PasswordStrengthGauge from './PasswordStrengthGauge';
+import PineLogo from './PineLogo';
 
 export default function PageStaffInvitation() {
   const [params] = useSearchParams(), token = params.get('token') || '';
@@ -14,7 +14,7 @@ export default function PageStaffInvitation() {
   useEffect(() => {
     let active = true;
     setInvitation(null); setVerified(false); setPassword(''); setConfirmation(''); setCode(''); setNotice(''); setError(''); setBusy(false);
-    if (!usesSupabasePersistence) { setError('This staff invitation is unavailable.'); return; }
+
     apiFetch('/api/auth/staff-invitations/inspect', { method: 'POST', body: JSON.stringify({ invitationToken: token }) })
       .then(data => { if (active) { setInvitation(data); setError(''); } }).catch(e => { if (active) setError(e.message); });
     return () => { active = false; };
@@ -32,7 +32,7 @@ export default function PageStaffInvitation() {
     } catch (e:any) { if (activeToken.current === requestToken) setError(e.message || 'The invitation could not be completed.'); }
     finally { if (activeToken.current === requestToken) setBusy(false); }
   }
-  return <main className="min-h-screen flex items-center justify-center p-6 bg-sky-50 dark:bg-slate-950">
+  return <main className="page-canvas min-h-screen flex items-center justify-center p-6">
     <section className="w-full max-w-lg rounded-3xl border border-sky-200 bg-white p-6 sm:p-8 text-slate-900 shadow-xl dark:border-cyan-900 dark:bg-slate-900 dark:text-slate-100">
       <PineLogo className="h-12 w-12 mb-4" />
       <h1 className="text-2xl font-bold">Join your residence staff</h1>

@@ -1,6 +1,6 @@
 /** Hosted checkout is initialized by the server; no Paystack key belongs in the browser. */
-import {usesSupabasePersistence} from './persistence';
-const key=(account?:string)=>usesSupabasePersistence?`pinevela.pendingPayment.${account || 'signed-out'}`:'pinevela.pendingPayment';
+
+const key=(account?:string)=>(`pinevela.pendingPayment.${account || 'signed-out'}`);
 export const pendingPaymentReference=(account?:string)=>sessionStorage.getItem(key(account));
 export const clearPendingPayment=(account?:string)=>sessionStorage.removeItem(key(account));
 export function openPaymentCheckout(result: any,account?:string) {

@@ -1,9 +1,9 @@
-import React, { useState,useRef,useEffect } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { useEffect,useRef,useState } from 'react';
+import { Link,useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { clearPendingPayment,pendingPaymentReference } from '../lib/payments';
 import { queryClient } from '../lib/queryClient';
-import {pendingPaymentReference,clearPendingPayment} from '../lib/payments';
-import {usesSupabasePersistence} from '../lib/persistence';
+
 export default function PagePaymentReturn() {
   const [params] = useSearchParams();
   const { apiFetch, user, updateUser } = useAuth();
@@ -21,7 +21,7 @@ export default function PagePaymentReturn() {
   useEffect(()=>{setBusy(false);setError('');setResult(null);},[reference]);
   useEffect(()=>{
     setPending({rows:[]});setSelected(null);
-    if(!usesSupabasePersistence || !user || !['merchant','manager'].includes(user.role))return;
+    if((!user) || !['merchant','manager'].includes(user.role))return;
     let live=true;const id=user.id,epoch=generation.current;
     void apiFetch('/api/payments/paystack/pending').then(rows=>{if(live && account.current===id && generation.current===epoch)setPending({account:id,rows:Array.isArray(rows)?rows:[]});}).catch(err=>{if(live && account.current===id && generation.current===epoch)setError(err.message || 'Could not load unfinished payments.');});
     return()=>{live=false;};
@@ -41,7 +41,7 @@ export default function PagePaymentReturn() {
     } catch (err: any) { if(current())setError(err.message || 'Payment could not be verified.'); }
     finally { if(current())setBusy(false); }
   }
-  return <main className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-50 to-slate-100 p-6"><section className="w-full max-w-lg space-y-5 rounded-3xl border border-blue-200 bg-white/80 p-8 text-slate-900 shadow-xl">
+  return <main className="page-canvas flex min-h-screen items-center justify-center p-6"><section className="w-full max-w-lg space-y-5 rounded-3xl border border-blue-200 bg-white/80 p-8 text-slate-900 shadow-xl">
     <h1 className="text-2xl font-bold">Confirm your PineVela payment</h1>
     <p className="text-sm">Your account is activated only after PineVela verifies the transaction directly with Paystack.</p>
     {error && <p role="alert" className="text-red-700">{error}</p>}

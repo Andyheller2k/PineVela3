@@ -1,7 +1,7 @@
-import { renderAvatarGraphic,PRESET_AVATARS as SYSTEM_AVATARS } from './UserAvatarSelector';
+import { Check,Lock,Upload,User } from 'lucide-react';
+import React,{ useEffect,useRef,useState } from 'react';
 import { uploadProfileImage } from '../lib/profileImages';
-import React, { useState,useRef,useEffect } from 'react';
-import { User, Check, Upload, Lock } from 'lucide-react';
+import { renderAvatarGraphic,PRESET_AVATARS as SYSTEM_AVATARS } from './UserAvatarSelector';
 
 interface ManagerProfileSettingsProps {
   currentUser: any;
@@ -23,7 +23,7 @@ export default function ManagerProfileSettings({
   onManageAccount,
   onSave
 }: ManagerProfileSettingsProps) {
-  const supabaseMode=import.meta.env.VITE_PERSISTENCE==='supabase';
+
   const mounted=useRef(true);
   useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;};},[]);
 
@@ -124,9 +124,9 @@ export default function ManagerProfileSettings({
               </div>
 
               <div className="flex-1 space-y-2">
-                <p className="text-[11px] text-slate-500 font-medium">{supabaseMode?'Choose a PineVela icon or upload your own picture:':'Choose from presets or paste image link:'}</p>
+                <p className="text-[11px] text-slate-500 font-medium">{('Choose a PineVela icon or upload your own picture:')}</p>
                 <div className="flex flex-wrap gap-2">
-                  {(supabaseMode?SYSTEM_AVATARS.map(p=>`preset:${p.id}`):PRESET_AVATARS).map((av, idx) => (
+                  {((SYSTEM_AVATARS.map(p=>`preset:${p.id}`))).map((av, idx) => (
                     <button
                       type="button"
                       key={idx}
@@ -137,22 +137,14 @@ export default function ManagerProfileSettings({
                         photo === av ? 'border-blue-600 ring-2 ring-blue-400/40 scale-105' : 'border-slate-200 opacity-70 hover:opacity-100'
                       }`}
                     >
-                      {supabaseMode?renderAvatarGraphic(av,'w-8 h-8'):<img src={av} alt="preset" className="w-full h-full object-cover" />}
+                      {(renderAvatarGraphic(av,'w-8 h-8'))}
                     </button>
                   ))}
                 </div>
               </div>
             </div>
 
-            {!supabaseMode && <div>
-              <input aria-label="Or paste image URL (https://...)"
-                type="text" 
-                value={photo} 
-                onChange={(e) => setPhoto(e.target.value)}
-                placeholder="Or paste image URL (https://...)" 
-                className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:border-blue-600 focus:bg-white"
-              />
-            </div>}
+            {false}
           </div>
 
           {/* Full Name & Phone */}
@@ -188,7 +180,7 @@ export default function ManagerProfileSettings({
               <label className="block text-xs font-bold text-slate-700 mb-1">Organization / Entity</label>
               <input aria-label="Organization / Entity"
                 type="text" 
-                disabled={isVerified || supabaseMode}
+                disabled={isVerified || true}
                 value={organization} 
                 onChange={(e) => setOrganization(e.target.value)} 
                 placeholder="e.g. PineVela Prime Properties" 
@@ -204,7 +196,7 @@ export default function ManagerProfileSettings({
               <label className="block text-xs font-bold text-slate-700 mb-1">Manager Role Title</label>
               <input aria-label="Manager Role Title"
                 type="text" 
-                disabled={isVerified || supabaseMode}
+                disabled={isVerified || true}
                 value={roleTitle} 
                 onChange={(e) => setRoleTitle(e.target.value)} 
                 placeholder="e.g. Lead Property Manager" 

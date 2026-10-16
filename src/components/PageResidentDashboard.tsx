@@ -1,46 +1,56 @@
+import { routePopupFeedback } from '../lib/feedback';
 import { activateOnKeyboard } from '../lib/keyboardActivation';
 import DashboardOverlay from './DashboardOverlay';
 import MobileNavigation from './MobileNavigation';
-import { routePopupFeedback } from '../lib/feedback';
 import RouteSkeleton from './RouteSkeleton';
-import { usesSupabasePersistence } from '../lib/persistence';
-import PortalPinSettings from './PortalPinSettings';
-import ResidentAccountClosure from './ResidentAccountClosure';
-import { uploadMaintenancePhoto } from '../lib/maintenanceMedia';
-import QuickMaintenanceReport from './QuickMaintenanceReport';
-import React, { useState, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+
 import { useQuery } from '@tanstack/react-query';
-import { sessionFetch } from '../lib/session';
+import {
+AlertCircle,
+ArrowRight,
+Bed,
+Bell,
+Calendar,
+Camera,
+CheckCircle2,
+Clock,
+Copy,
+Eye,
+Home,
+Key,
+Layers,
+Lock,
+LogOut,
+Mail,
+MapPin,
+PanelLeftClose,PanelLeftOpen,
+Phone,
+Plus,
+RefreshCw,
+Search,
+Settings,
+ShieldCheck,
+Star,
+Upload,
+User,
+Wrench,
+X
+} from 'lucide-react';
+import { AnimatePresence,motion } from 'motion/react';
+import React,{ useEffect,useMemo,useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
-import { saveNavigationLayout, usesTopNavigation } from '../lib/navigationLayout';
+import { uploadMaintenancePhoto } from '../lib/maintenanceMedia';
+import { saveNavigationLayout,usesTopNavigation } from '../lib/navigationLayout';
+import { sessionFetch } from '../lib/session';
+import { HostelRoomKey,IssueReport } from '../types';
 import PineLogo from './PineLogo';
+import PortalPinSettings from './PortalPinSettings';
+import QuickMaintenanceReport from './QuickMaintenanceReport';
+import ResidentAccountClosure from './ResidentAccountClosure';
 import TopNavBadge from './TopNavBadge';
-import UserAvatarSelector, { renderAvatarGraphic } from './UserAvatarSelector';
-import { 
-  Home, 
-  Wrench, Bell,
-  Key, 
-  ShieldCheck, 
-  AlertCircle, 
-  CheckCircle2, 
-  Clock, 
-  Camera, 
-  Upload, Phone,
-  Mail, X,
-  Plus, 
-  RefreshCw, 
-  LogOut, Search,
-  MapPin, 
-  Calendar, 
-  Settings, Lock, User,
-  Copy,
-  Bed,
-  Layers, Eye, Star, ArrowRight, PanelLeftClose, PanelLeftOpen
-} from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
-import { IssueReport, HostelRoomKey } from '../types';
+import UserAvatarSelector,{ renderAvatarGraphic } from './UserAvatarSelector';
 
 export default function PageResidentDashboard() {
   const { user, logout, apiFetch, updateUser } = useAuth();
@@ -318,7 +328,7 @@ export default function PageResidentDashboard() {
     !i.closedByManager && 
     !i.studentAcceptedResolved && 
     !i.studentConfirmed && 
-    (usesSupabasePersistence || i.status !== 'Resolved')
+    (true)
   );
 
   // Filtering issues
@@ -338,7 +348,7 @@ export default function PageResidentDashboard() {
     return matchesFilter && matchesSearch;
   });
 
-  if (residentError && !residentData) return <main role="alert" className="flex min-h-screen flex-col items-center justify-center gap-4 bg-blue-50 p-6 text-center text-blue-950">
+  if (residentError && !residentData) return <main role="alert" className="page-canvas flex min-h-screen flex-col items-center justify-center gap-4 p-6 text-center text-blue-950">
     <PineLogo size={60} />
     <p>Your resident portal could not load. Please try again.</p>
     <button type="button" onClick={() => void retryResidentData()} className="rounded-xl bg-blue-900 px-5 py-3 font-semibold text-white">Retry resident portal</button>
@@ -347,7 +357,7 @@ export default function PageResidentDashboard() {
   if (loadingData) return <RouteSkeleton />;
 
   return (
-    <div className="min-h-screen h-screen flex flex-col lg:flex-row bg-gradient-to-br from-slate-50 via-blue-50/70 to-indigo-50/50 text-slate-800 overflow-hidden font-sans relative">
+    <div className="page-canvas min-h-screen h-screen flex flex-col lg:flex-row text-slate-800 overflow-hidden font-sans relative">
       {/* Toast Notification */}
       <AnimatePresence>
         {toastMessage && (
@@ -539,7 +549,7 @@ export default function PageResidentDashboard() {
       ]} />
 
 
-      {/* MAIN CONTENT WORKSPACE WITH PERSISTENT PINEVELA GIANT WATERMARK */}
+      {/* Main content workspace */}
       <main className={`dashboard-centered-content flex-1 min-h-0 overflow-y-auto p-5 sm:p-8 mb-[calc(var(--pv-mobile-nav-height,4rem)+4.75rem)] lg:mb-0 lg:pb-8 flex flex-col space-y-6 relative z-10 ${isSidebarTopNav ? 'lg:pt-24 lg:w-[calc(100vw-22rem)] lg:max-w-[calc(100vw-22rem)] lg:mx-auto' : ''}`}>
         
         {/* ROOM TAB */}
@@ -1192,7 +1202,6 @@ export default function PageResidentDashboard() {
 
           </div>
         )}
-
 
 
         {/* ALERTS TAB */}

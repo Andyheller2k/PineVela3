@@ -1,0 +1,2971 @@
+{
+  "note": "Historical source-only contract baseline preserved before removal of the JSON backend. These files and line numbers are historical, not active implementations.",
+  "endpoints": [
+    {
+      "endpoint": "DELETE /api/digital-market/products/:id",
+      "retired": false,
+      "sources": [
+        {
+          "method": "DELETE",
+          "path": "/api/digital-market/products/:id",
+          "source": "server.ts",
+          "line": 5001,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "DELETE /api/hostels/:id",
+      "retired": true,
+      "sources": [
+        {
+          "method": "DELETE",
+          "path": "/api/hostels/:id",
+          "source": "server.ts",
+          "line": 7583,
+          "retired": true
+        }
+      ]
+    },
+    {
+      "endpoint": "DELETE /api/meetings/:id",
+      "retired": false,
+      "sources": [
+        {
+          "method": "DELETE",
+          "path": "/api/meetings/:id",
+          "source": "server.ts",
+          "line": 10395,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "DELETE /api/staff/:id",
+      "retired": false,
+      "sources": [
+        {
+          "method": "DELETE",
+          "path": "/api/staff/:id",
+          "source": "staffManagement.ts",
+          "line": 92,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/activities",
+      "retired": false,
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/activities",
+          "source": "server.ts",
+          "line": 10579,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/admin-messages/pending",
+      "retired": false,
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/admin-messages/pending",
+          "source": "residenceRequests.ts",
+          "line": 208,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/admin/all-users",
+      "retired": false,
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/admin/all-users",
+          "source": "server.ts",
+          "line": 10153,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/admin/digital-market/applications",
+      "retired": false,
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/admin/digital-market/applications",
+          "source": "server.ts",
+          "line": 5024,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/admin/digital-market/stores",
+      "retired": false,
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/admin/digital-market/stores",
+          "source": "server.ts",
+          "line": 5281,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/admin/governance",
+      "retired": false,
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/admin/governance",
+          "source": "adminGovernanceRoutes.ts",
+          "line": 21,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/admin/manager-key-petitions",
+      "retired": false,
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/admin/manager-key-petitions",
+          "source": "residenceRequests.ts",
+          "line": 201,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/admin/manager-request-keys",
+      "retired": false,
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/admin/manager-request-keys",
+          "source": "residenceRequests.ts",
+          "line": 200,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/admin/manager-restrictions",
+      "retired": false,
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/admin/manager-restrictions",
+          "source": "server.ts",
+          "line": 4259,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/admin/messages/accounts",
+      "retired": false,
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/admin/messages/accounts",
+          "source": "adminGovernanceRoutes.ts",
+          "line": 22,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/admin/payments",
+      "retired": false,
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/admin/payments",
+          "source": "paystackPayments.ts",
+          "line": 235,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/admin/payments/receiving-account",
+      "retired": false,
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/admin/payments/receiving-account",
+          "source": "paystackPayments.ts",
+          "line": 211,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/admin/verification-inspections",
+      "retired": false,
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/admin/verification-inspections",
+          "source": "server.ts",
+          "line": 6441,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/auth/account-access",
+      "retired": false,
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/auth/account-access",
+          "source": "server.ts",
+          "line": 2373,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/auth/appearance",
+      "retired": false,
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/auth/appearance",
+          "source": "themePreferences.ts",
+          "line": 18,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/auth/check-username",
+      "retired": false,
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/auth/check-username",
+          "source": "server.ts",
+          "line": 10185,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/auth/google/callback",
+      "retired": false,
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/auth/google/callback",
+          "source": "googleAuth.ts",
+          "line": 99,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/auth/maintenance-notice",
+      "retired": false,
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/auth/maintenance-notice",
+          "source": "maintenanceNotice.ts",
+          "line": 28,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/auth/me",
+      "retired": false,
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/auth/me",
+          "source": "server.ts",
+          "line": 2360,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/board-requests",
+      "retired": false,
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/board-requests",
+          "source": "residenceRequests.ts",
+          "line": 203,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/board-requests/:id/review",
+      "retired": false,
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/board-requests/:id/review",
+          "source": "residenceRequests.ts",
+          "line": 205,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/database/status",
+      "retired": false,
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/database/status",
+          "source": "server.ts",
+          "line": 1155,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/digital-market/messages",
+      "retired": false,
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/digital-market/messages",
+          "source": "marketMessaging.ts",
+          "line": 55,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/digital-market/my-orders",
+      "retired": false,
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/digital-market/my-orders",
+          "source": "server.ts",
+          "line": 5422,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/digital-market/products",
+      "retired": false,
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/digital-market/products",
+          "source": "server.ts",
+          "line": 4731,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/digital-market/ratings",
+      "retired": false,
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/digital-market/ratings",
+          "source": "marketRatingSecurity.ts",
+          "line": 119,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/digital-market/services/:id/reviews",
+      "retired": false,
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/digital-market/services/:id/reviews",
+          "source": "marketRatingSecurity.ts",
+          "line": 120,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/digital-market/status",
+      "retired": false,
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/digital-market/status",
+          "source": "server.ts",
+          "line": 4549,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/digital-market/stores/:storeId",
+      "retired": false,
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/digital-market/stores/:storeId",
+          "source": "server.ts",
+          "line": 4724,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/health",
+      "retired": false,
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/health",
+          "source": "server.ts",
+          "line": 1060,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/hostel-managers",
+      "retired": false,
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/hostel-managers",
+          "source": "server.ts",
+          "line": 6799,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/hostel-verifications",
+      "retired": false,
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/hostel-verifications",
+          "source": "server.ts",
+          "line": 6926,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/hostels",
+      "retired": false,
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/hostels",
+          "source": "server.ts",
+          "line": 7203,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/issue-reports",
+      "retired": false,
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/issue-reports",
+          "source": "server.ts",
+          "line": 7721,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/manager-requests",
+      "retired": false,
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/manager-requests",
+          "source": "server.ts",
+          "line": 2608,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/manager-verifications",
+      "retired": false,
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/manager-verifications",
+          "source": "server.ts",
+          "line": 3551,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/manager/account-settings",
+      "retired": false,
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/manager/account-settings",
+          "source": "server.ts",
+          "line": 10208,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/manager/my-hostel",
+      "retired": false,
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/manager/my-hostel",
+          "source": "server.ts",
+          "line": 7260,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/manager/residence-requests",
+      "retired": false,
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/manager/residence-requests",
+          "source": "residenceRequests.ts",
+          "line": 199,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/manager/secret-key",
+      "retired": false,
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/manager/secret-key",
+          "source": "residenceRequests.ts",
+          "line": 196,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/managers",
+      "retired": false,
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/managers",
+          "source": "server.ts",
+          "line": 6809,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/meetings",
+      "retired": false,
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/meetings",
+          "source": "server.ts",
+          "line": 10246,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/notifications",
+      "retired": false,
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/notifications",
+          "source": "server.ts",
+          "line": 10422,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/payments/paystack/callback",
+      "retired": false,
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/payments/paystack/callback",
+          "source": "paystackPayments.ts",
+          "line": 222,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/public/registered-residents",
+      "retired": false,
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/public/registered-residents",
+          "source": "server.ts",
+          "line": 10140,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/ratings",
+      "retired": false,
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/ratings",
+          "source": "server.ts",
+          "line": 10543,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/registered-residents",
+      "retired": false,
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/registered-residents",
+          "source": "server.ts",
+          "line": 10140,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/room-keys",
+      "retired": false,
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/room-keys",
+          "source": "server.ts",
+          "line": 8904,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/settings",
+      "retired": false,
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/settings",
+          "source": "server.ts",
+          "line": 1188,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/staff",
+      "retired": false,
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/staff",
+          "source": "staffManagement.ts",
+          "line": 24,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/staff-bargains",
+      "retired": false,
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/staff-bargains",
+          "source": "server.ts",
+          "line": 9711,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/staff-reviews",
+      "retired": false,
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/staff-reviews",
+          "source": "staffManagement.ts",
+          "line": 102,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/student/my-profile",
+      "retired": false,
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/student/my-profile",
+          "source": "server.ts",
+          "line": 9003,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/student/my-rooms",
+      "retired": false,
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/student/my-rooms",
+          "source": "server.ts",
+          "line": 9136,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/sync/events",
+      "retired": false,
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/sync/events",
+          "source": "server.ts",
+          "line": 1067,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/user/registered-accounts",
+      "retired": false,
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/user/registered-accounts",
+          "source": "server.ts",
+          "line": 3575,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/users/manager-restriction",
+      "retired": false,
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/users/manager-restriction",
+          "source": "server.ts",
+          "line": 4232,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/users/my-registered-accounts",
+      "retired": false,
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/users/my-registered-accounts",
+          "source": "server.ts",
+          "line": 3575,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/verification-inspections",
+      "retired": false,
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/verification-inspections",
+          "source": "server.ts",
+          "line": 6441,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/verification-team/me",
+      "retired": false,
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/verification-team/me",
+          "source": "server.ts",
+          "line": 6332,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/verification-team/my-inspections",
+      "retired": false,
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/verification-team/my-inspections",
+          "source": "server.ts",
+          "line": 6452,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/verification-teams",
+      "retired": false,
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/verification-teams",
+          "source": "server.ts",
+          "line": 6122,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/verification/audit-logs",
+      "retired": false,
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/verification/audit-logs",
+          "source": "server.ts",
+          "line": 7193,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/verification/test-cards",
+      "retired": false,
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/verification/test-cards",
+          "source": "server.ts",
+          "line": 3245,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /api/verification/test-cards/random",
+      "retired": false,
+      "sources": [
+        {
+          "method": "GET",
+          "path": "/api/verification/test-cards/random",
+          "source": "server.ts",
+          "line": 3256,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/admin-messages/:id/ack",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/admin-messages/:id/ack",
+          "source": "residenceRequests.ts",
+          "line": 215,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/admin/clear-all-registered-accounts",
+      "retired": true,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/clear-all-registered-accounts",
+          "source": "adminGovernanceRoutes.ts",
+          "line": 55,
+          "retired": true
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/admin/digital-market/approve-application",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/digital-market/approve-application",
+          "source": "server.ts",
+          "line": 5036,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/admin/digital-market/reject-application",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/digital-market/reject-application",
+          "source": "server.ts",
+          "line": 5224,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/admin/digital-market/toggle-ban-store",
+      "retired": true,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/digital-market/toggle-ban-store",
+          "source": "server.ts",
+          "line": 5293,
+          "retired": true
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/admin/dispatch-verification-team",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/dispatch-verification-team",
+          "source": "server.ts",
+          "line": 6466,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/admin/governance/accounts",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/governance/accounts",
+          "source": "adminGovernanceRoutes.ts",
+          "line": 37,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/admin/governance/accounts/:id/apply",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/governance/accounts/:id/apply",
+          "source": "adminGovernanceRoutes.ts",
+          "line": 39,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/admin/governance/accounts/:id/final-reject",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/governance/accounts/:id/final-reject",
+          "source": "adminGovernanceRoutes.ts",
+          "line": 40,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/admin/governance/accounts/:id/vote",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/governance/accounts/:id/vote",
+          "source": "adminGovernanceRoutes.ts",
+          "line": 38,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/admin/governance/accounts/preview",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/governance/accounts/preview",
+          "source": "adminGovernanceRoutes.ts",
+          "line": 31,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/admin/governance/changes/:id/confirm-removal",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/governance/changes/:id/confirm-removal",
+          "source": "adminGovernanceRoutes.ts",
+          "line": 50,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/admin/governance/changes/:id/plea",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/governance/changes/:id/plea",
+          "source": "adminGovernanceRoutes.ts",
+          "line": 47,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/admin/governance/changes/:id/plea/acknowledge",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/governance/changes/:id/plea/acknowledge",
+          "source": "adminGovernanceRoutes.ts",
+          "line": 49,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/admin/governance/changes/:id/plea/decision",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/governance/changes/:id/plea/decision",
+          "source": "adminGovernanceRoutes.ts",
+          "line": 48,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/admin/governance/changes/:id/vote",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/governance/changes/:id/vote",
+          "source": "adminGovernanceRoutes.ts",
+          "line": 46,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/admin/governance/invitations",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/governance/invitations",
+          "source": "adminGovernanceRoutes.ts",
+          "line": 41,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/admin/governance/invitations/:id/cancel",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/governance/invitations/:id/cancel",
+          "source": "adminGovernanceRoutes.ts",
+          "line": 42,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/admin/governance/keys/enroll",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/governance/keys/enroll",
+          "source": "adminGovernanceRoutes.ts",
+          "line": 25,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/admin/governance/keys/settings/enroll",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/governance/keys/settings/enroll",
+          "source": "adminGovernanceRoutes.ts",
+          "line": 26,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/admin/governance/members/:id/changes",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/governance/members/:id/changes",
+          "source": "adminGovernanceRoutes.ts",
+          "line": 45,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/admin/governance/members/:id/status",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/governance/members/:id/status",
+          "source": "adminGovernanceRoutes.ts",
+          "line": 44,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/admin/governance/preview",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/governance/preview",
+          "source": "adminGovernanceRoutes.ts",
+          "line": 51,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/admin/governance/pricing",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/governance/pricing",
+          "source": "adminGovernanceRoutes.ts",
+          "line": 28,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/admin/governance/pricing/:id/apply",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/governance/pricing/:id/apply",
+          "source": "adminGovernanceRoutes.ts",
+          "line": 30,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/admin/governance/pricing/:id/vote",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/governance/pricing/:id/vote",
+          "source": "adminGovernanceRoutes.ts",
+          "line": 29,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/admin/governance/proposals",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/governance/proposals",
+          "source": "adminGovernanceRoutes.ts",
+          "line": 52,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/admin/governance/proposals/:id/execute",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/governance/proposals/:id/execute",
+          "source": "adminGovernanceRoutes.ts",
+          "line": 54,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/admin/governance/proposals/:id/vote",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/governance/proposals/:id/vote",
+          "source": "adminGovernanceRoutes.ts",
+          "line": 53,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/admin/governance/residences",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/governance/residences",
+          "source": "adminGovernanceRoutes.ts",
+          "line": 33,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/admin/governance/residences/:id/execute",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/governance/residences/:id/execute",
+          "source": "adminGovernanceRoutes.ts",
+          "line": 35,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/admin/governance/residences/:id/final-reject",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/governance/residences/:id/final-reject",
+          "source": "adminGovernanceRoutes.ts",
+          "line": 36,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/admin/governance/residences/:id/vote",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/governance/residences/:id/vote",
+          "source": "adminGovernanceRoutes.ts",
+          "line": 34,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/admin/governance/residences/preview",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/governance/residences/preview",
+          "source": "adminGovernanceRoutes.ts",
+          "line": 32,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/admin/manager-restrictions/:id/approve",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/manager-restrictions/:id/approve",
+          "source": "server.ts",
+          "line": 4271,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/admin/manager-restrictions/:id/reject",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/manager-restrictions/:id/reject",
+          "source": "server.ts",
+          "line": 4320,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/admin/managers/:id/reset-request-key",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/managers/:id/reset-request-key",
+          "source": "residenceRequests.ts",
+          "line": 202,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/admin/messages",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/messages",
+          "source": "adminGovernanceRoutes.ts",
+          "line": 24,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/admin/messages/preview",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/messages/preview",
+          "source": "adminGovernanceRoutes.ts",
+          "line": 23,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/admin/payments/receiving-account",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/payments/receiving-account",
+          "source": "paystackPayments.ts",
+          "line": 212,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/admin/reset-user-password",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/admin/reset-user-password",
+          "source": "server.ts",
+          "line": 2593,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/auth/admin-invitation/accept",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/auth/admin-invitation/accept",
+          "source": "adminGovernanceRoutes.ts",
+          "line": 43,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/auth/change-password",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/auth/change-password",
+          "source": "server.ts",
+          "line": 10231,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/auth/google/start",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/auth/google/start",
+          "source": "googleAuth.ts",
+          "line": 78,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/auth/login",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/auth/login",
+          "source": "server.ts",
+          "line": 1193,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/auth/logout",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/auth/logout",
+          "source": "server.ts",
+          "line": 2348,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/auth/maintenance-notice/dismiss",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/auth/maintenance-notice/dismiss",
+          "source": "maintenanceNotice.ts",
+          "line": 32,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/auth/profile",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/auth/profile",
+          "source": "server.ts",
+          "line": 2585,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/auth/quick-manager-login",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/auth/quick-manager-login",
+          "source": "server.ts",
+          "line": 1661,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/auth/quick-merchant-login",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/auth/quick-merchant-login",
+          "source": "server.ts",
+          "line": 1657,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/auth/quick-resident-login",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/auth/quick-resident-login",
+          "source": "server.ts",
+          "line": 1653,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/auth/quick-staff-login",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/auth/quick-staff-login",
+          "source": "server.ts",
+          "line": 1665,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/auth/register-manager",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/auth/register-manager",
+          "source": "server.ts",
+          "line": 1716,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/auth/register-manager-account",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/auth/register-manager-account",
+          "source": "server.ts",
+          "line": 1812,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/auth/register-unified",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/auth/register-unified",
+          "source": "server.ts",
+          "line": 1774,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/auth/verification-team-login",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/auth/verification-team-login",
+          "source": "server.ts",
+          "line": 6262,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/auth/verify-unified",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/auth/verify-unified",
+          "source": "server.ts",
+          "line": 1776,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/board-requests",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/board-requests",
+          "source": "residenceRequests.ts",
+          "line": 204,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/board-requests/:id/decision",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/board-requests/:id/decision",
+          "source": "residenceRequests.ts",
+          "line": 206,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/digital-market/create-store",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/digital-market/create-store",
+          "source": "paystackPayments.ts",
+          "line": 217,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/digital-market/login",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/digital-market/login",
+          "source": "server.ts",
+          "line": 4602,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/digital-market/messages",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/digital-market/messages",
+          "source": "marketMessaging.ts",
+          "line": 67,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/digital-market/orders",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/digital-market/orders",
+          "source": "server.ts",
+          "line": 5296,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/digital-market/orders/:id/renew-pin",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/digital-market/orders/:id/renew-pin",
+          "source": "server.ts",
+          "line": 5452,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/digital-market/orders/:id/update-status",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/digital-market/orders/:id/update-status",
+          "source": "server.ts",
+          "line": 5476,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/digital-market/products",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/digital-market/products",
+          "source": "server.ts",
+          "line": 4825,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/digital-market/ratings",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/digital-market/ratings",
+          "source": "marketRatingSecurity.ts",
+          "line": 105,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/digital-market/register",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/digital-market/register",
+          "source": "server.ts",
+          "line": 4439,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/digital-market/services/:id/reviews",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/digital-market/services/:id/reviews",
+          "source": "marketRatingSecurity.ts",
+          "line": 106,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/digital-market/store-setup",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/digital-market/store-setup",
+          "source": "paystackPayments.ts",
+          "line": 217,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/digital-market/subscription",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/digital-market/subscription",
+          "source": "paystackPayments.ts",
+          "line": 218,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/hostel-managers/assign",
+      "retired": true,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/hostel-managers/assign",
+          "source": "server.ts",
+          "line": 6819,
+          "retired": true
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/hostel-verifications/pay-onboarding-fee",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/hostel-verifications/pay-onboarding-fee",
+          "source": "paystackPayments.ts",
+          "line": 220,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/hostel-verifications/submit",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/hostel-verifications/submit",
+          "source": "server.ts",
+          "line": 6900,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/hostel-verifications/validate",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/hostel-verifications/validate",
+          "source": "server.ts",
+          "line": 6822,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/hostels",
+      "retired": true,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/hostels",
+          "source": "server.ts",
+          "line": 7717,
+          "retired": true
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/hostels/:id/generate-room-keys",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/hostels/:id/generate-room-keys",
+          "source": "server.ts",
+          "line": 9575,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/hostels/:id/reshuffle-room-keys",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/hostels/:id/reshuffle-room-keys",
+          "source": "server.ts",
+          "line": 8879,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/hostels/cleanup-placeholders",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/hostels/cleanup-placeholders",
+          "source": "server.ts",
+          "line": 7708,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/hostels/register",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/hostels/register",
+          "source": "server.ts",
+          "line": 7335,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/issue-reports",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/issue-reports",
+          "source": "server.ts",
+          "line": 7843,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/issue-reports/:id/accept-assignment",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/issue-reports/:id/accept-assignment",
+          "source": "server.ts",
+          "line": 8160,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/issue-reports/:id/approve-reschedule",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/issue-reports/:id/approve-reschedule",
+          "source": "server.ts",
+          "line": 8373,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/issue-reports/:id/assign",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/issue-reports/:id/assign",
+          "source": "server.ts",
+          "line": 8030,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/issue-reports/:id/decline-reschedule",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/issue-reports/:id/decline-reschedule",
+          "source": "server.ts",
+          "line": 8475,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/issue-reports/:id/manager-close",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/issue-reports/:id/manager-close",
+          "source": "server.ts",
+          "line": 8747,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/issue-reports/:id/staff-complete",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/issue-reports/:id/staff-complete",
+          "source": "server.ts",
+          "line": 8535,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/issue-reports/:id/staff-decline",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/issue-reports/:id/staff-decline",
+          "source": "server.ts",
+          "line": 8241,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/issue-reports/:id/staff-reschedule",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/issue-reports/:id/staff-reschedule",
+          "source": "server.ts",
+          "line": 8304,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/issue-reports/:id/student-confirm",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/issue-reports/:id/student-confirm",
+          "source": "server.ts",
+          "line": 8622,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/manager-requests",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/manager-requests",
+          "source": "server.ts",
+          "line": 2678,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/manager-verifications/submit",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/manager-verifications/submit",
+          "source": "server.ts",
+          "line": 3291,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/manager/secret-key/issue",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/manager/secret-key/issue",
+          "source": "residenceRequests.ts",
+          "line": 197,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/manager/secret-key/petition",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/manager/secret-key/petition",
+          "source": "residenceRequests.ts",
+          "line": 198,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/meetings",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/meetings",
+          "source": "server.ts",
+          "line": 10256,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/payments/paystack/initialize",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/payments/paystack/initialize",
+          "source": "paystackPayments.ts",
+          "line": 219,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/payments/paystack/verify",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/payments/paystack/verify",
+          "source": "paystackPayments.ts",
+          "line": 221,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/payments/paystack/webhook",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/payments/paystack/webhook",
+          "source": "paystackPayments.ts",
+          "line": 227,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/ratings",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/ratings",
+          "source": "server.ts",
+          "line": 10548,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/residents/onboard",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/residents/onboard",
+          "source": "server.ts",
+          "line": 9222,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/room-keys/:id/release",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/room-keys/:id/release",
+          "source": "server.ts",
+          "line": 8865,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/room-keys/claim",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/room-keys/claim",
+          "source": "server.ts",
+          "line": 9222,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/room-keys/send-digital",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/room-keys/send-digital",
+          "source": "server.ts",
+          "line": 8929,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/room-keys/verify",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/room-keys/verify",
+          "source": "server.ts",
+          "line": 9177,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/settings",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/settings",
+          "source": "adminGovernanceRoutes.ts",
+          "line": 27,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/staff",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/staff",
+          "source": "staffManagement.ts",
+          "line": 31,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/staff-bargains",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/staff-bargains",
+          "source": "server.ts",
+          "line": 9754,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/staff-bargains/:id/manager-response",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/staff-bargains/:id/manager-response",
+          "source": "server.ts",
+          "line": 9939,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/staff-bargains/:id/staff-decision",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/staff-bargains/:id/staff-decision",
+          "source": "server.ts",
+          "line": 10022,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/staff-reviews",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/staff-reviews",
+          "source": "staffManagement.ts",
+          "line": 109,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/staff/quit",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/staff/quit",
+          "source": "server.ts",
+          "line": 9700,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/staff/resign",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/staff/resign",
+          "source": "server.ts",
+          "line": 9595,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/storage/upload-hostel-image",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/storage/upload-hostel-image",
+          "source": "server.ts",
+          "line": 7693,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/student/add-room",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/student/add-room",
+          "source": "server.ts",
+          "line": 9196,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/student/delete-room",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/student/delete-room",
+          "source": "server.ts",
+          "line": 9201,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/users/delete-registered-account",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/users/delete-registered-account",
+          "source": "server.ts",
+          "line": 3838,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/users/register",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/users/register",
+          "source": "server.ts",
+          "line": 1717,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/users/reset-registered-account-password",
+      "retired": true,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/users/reset-registered-account-password",
+          "source": "server.ts",
+          "line": 3816,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/verification-team/inspections/:id/submit-report",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/verification-team/inspections/:id/submit-report",
+          "source": "server.ts",
+          "line": 6592,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/verification-teams",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/verification-teams",
+          "source": "server.ts",
+          "line": 6131,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/verification-teams/login",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/verification-teams/login",
+          "source": "server.ts",
+          "line": 6262,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "POST /api/verification/verify-identity",
+      "retired": false,
+      "sources": [
+        {
+          "method": "POST",
+          "path": "/api/verification/verify-identity",
+          "source": "server.ts",
+          "line": 3266,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "PUT /api/admin/managers/:id/block",
+      "retired": true,
+      "sources": [
+        {
+          "method": "PUT",
+          "path": "/api/admin/managers/:id/block",
+          "source": "server.ts",
+          "line": 3171,
+          "retired": true
+        }
+      ]
+    },
+    {
+      "endpoint": "PUT /api/admin/managers/:id/unblock",
+      "retired": true,
+      "sources": [
+        {
+          "method": "PUT",
+          "path": "/api/admin/managers/:id/unblock",
+          "source": "server.ts",
+          "line": 3174,
+          "retired": true
+        }
+      ]
+    },
+    {
+      "endpoint": "PUT /api/auth/appearance",
+      "retired": false,
+      "sources": [
+        {
+          "method": "PUT",
+          "path": "/api/auth/appearance",
+          "source": "themePreferences.ts",
+          "line": 23,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "PUT /api/auth/profile",
+      "retired": false,
+      "sources": [
+        {
+          "method": "PUT",
+          "path": "/api/auth/profile",
+          "source": "server.ts",
+          "line": 2584,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "PUT /api/board-requests/:id",
+      "retired": true,
+      "sources": [
+        {
+          "method": "PUT",
+          "path": "/api/board-requests/:id",
+          "source": "residenceRequests.ts",
+          "line": 207,
+          "retired": true
+        }
+      ]
+    },
+    {
+      "endpoint": "PUT /api/digital-market/products/:id",
+      "retired": false,
+      "sources": [
+        {
+          "method": "PUT",
+          "path": "/api/digital-market/products/:id",
+          "source": "server.ts",
+          "line": 4924,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "PUT /api/digital-market/store",
+      "retired": false,
+      "sources": [
+        {
+          "method": "PUT",
+          "path": "/api/digital-market/store",
+          "source": "server.ts",
+          "line": 4711,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "PUT /api/hostel-verifications/:id/approve",
+      "retired": false,
+      "sources": [
+        {
+          "method": "PUT",
+          "path": "/api/hostel-verifications/:id/approve",
+          "source": "server.ts",
+          "line": 6937,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "PUT /api/hostel-verifications/:id/flag-investigation",
+      "retired": false,
+      "sources": [
+        {
+          "method": "PUT",
+          "path": "/api/hostel-verifications/:id/flag-investigation",
+          "source": "server.ts",
+          "line": 7105,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "PUT /api/hostel-verifications/:id/reject",
+      "retired": false,
+      "sources": [
+        {
+          "method": "PUT",
+          "path": "/api/hostel-verifications/:id/reject",
+          "source": "server.ts",
+          "line": 7011,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "PUT /api/hostel-verifications/:id/request-info",
+      "retired": false,
+      "sources": [
+        {
+          "method": "PUT",
+          "path": "/api/hostel-verifications/:id/request-info",
+          "source": "server.ts",
+          "line": 7065,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "PUT /api/hostel-verifications/:id/suspend",
+      "retired": false,
+      "sources": [
+        {
+          "method": "PUT",
+          "path": "/api/hostel-verifications/:id/suspend",
+          "source": "server.ts",
+          "line": 7146,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "PUT /api/hostels/:id",
+      "retired": false,
+      "sources": [
+        {
+          "method": "PUT",
+          "path": "/api/hostels/:id",
+          "source": "server.ts",
+          "line": 7718,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "PUT /api/hostels/:id/reject-verification",
+      "retired": false,
+      "sources": [
+        {
+          "method": "PUT",
+          "path": "/api/hostels/:id/reject-verification",
+          "source": "server.ts",
+          "line": 7588,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "PUT /api/hostels/:id/verify",
+      "retired": false,
+      "sources": [
+        {
+          "method": "PUT",
+          "path": "/api/hostels/:id/verify",
+          "source": "server.ts",
+          "line": 7477,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "PUT /api/issue-reports/:id",
+      "retired": false,
+      "sources": [
+        {
+          "method": "PUT",
+          "path": "/api/issue-reports/:id",
+          "source": "server.ts",
+          "line": 8827,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "PUT /api/manager-requests/:id/approve",
+      "retired": false,
+      "sources": [
+        {
+          "method": "PUT",
+          "path": "/api/manager-requests/:id/approve",
+          "source": "server.ts",
+          "line": 2778,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "PUT /api/manager-requests/:id/block",
+      "retired": true,
+      "sources": [
+        {
+          "method": "PUT",
+          "path": "/api/manager-requests/:id/block",
+          "source": "server.ts",
+          "line": 3171,
+          "retired": true
+        }
+      ]
+    },
+    {
+      "endpoint": "PUT /api/manager-requests/:id/reject",
+      "retired": false,
+      "sources": [
+        {
+          "method": "PUT",
+          "path": "/api/manager-requests/:id/reject",
+          "source": "server.ts",
+          "line": 2983,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "PUT /api/manager-requests/:id/unblock",
+      "retired": true,
+      "sources": [
+        {
+          "method": "PUT",
+          "path": "/api/manager-requests/:id/unblock",
+          "source": "server.ts",
+          "line": 3174,
+          "retired": true
+        }
+      ]
+    },
+    {
+      "endpoint": "PUT /api/manager-requests/:id/verify-doc",
+      "retired": false,
+      "sources": [
+        {
+          "method": "PUT",
+          "path": "/api/manager-requests/:id/verify-doc",
+          "source": "server.ts",
+          "line": 3177,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "PUT /api/manager-verifications/:id/approve",
+      "retired": false,
+      "sources": [
+        {
+          "method": "PUT",
+          "path": "/api/manager-verifications/:id/approve",
+          "source": "server.ts",
+          "line": 2778,
+          "retired": false
+        },
+        {
+          "method": "PUT",
+          "path": "/api/manager-verifications/:id/approve",
+          "source": "server.ts",
+          "line": 5634,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "PUT /api/manager-verifications/:id/block",
+      "retired": true,
+      "sources": [
+        {
+          "method": "PUT",
+          "path": "/api/manager-verifications/:id/block",
+          "source": "server.ts",
+          "line": 3171,
+          "retired": true
+        }
+      ]
+    },
+    {
+      "endpoint": "PUT /api/manager-verifications/:id/reject",
+      "retired": false,
+      "sources": [
+        {
+          "method": "PUT",
+          "path": "/api/manager-verifications/:id/reject",
+          "source": "server.ts",
+          "line": 2983,
+          "retired": false
+        },
+        {
+          "method": "PUT",
+          "path": "/api/manager-verifications/:id/reject",
+          "source": "server.ts",
+          "line": 5906,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "PUT /api/manager-verifications/:id/request-info",
+      "retired": false,
+      "sources": [
+        {
+          "method": "PUT",
+          "path": "/api/manager-verifications/:id/request-info",
+          "source": "server.ts",
+          "line": 6078,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "PUT /api/manager-verifications/:id/suspend",
+      "retired": true,
+      "sources": [
+        {
+          "method": "PUT",
+          "path": "/api/manager-verifications/:id/suspend",
+          "source": "server.ts",
+          "line": 3171,
+          "retired": true
+        },
+        {
+          "method": "PUT",
+          "path": "/api/manager-verifications/:id/suspend",
+          "source": "server.ts",
+          "line": 6676,
+          "retired": true
+        }
+      ]
+    },
+    {
+      "endpoint": "PUT /api/manager-verifications/:id/unblock",
+      "retired": true,
+      "sources": [
+        {
+          "method": "PUT",
+          "path": "/api/manager-verifications/:id/unblock",
+          "source": "server.ts",
+          "line": 3174,
+          "retired": true
+        }
+      ]
+    },
+    {
+      "endpoint": "PUT /api/manager-verifications/:id/verify-doc",
+      "retired": false,
+      "sources": [
+        {
+          "method": "PUT",
+          "path": "/api/manager-verifications/:id/verify-doc",
+          "source": "server.ts",
+          "line": 3177,
+          "retired": false
+        },
+        {
+          "method": "PUT",
+          "path": "/api/manager-verifications/:id/verify-doc",
+          "source": "server.ts",
+          "line": 5854,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "PUT /api/manager/account-settings",
+      "retired": false,
+      "sources": [
+        {
+          "method": "PUT",
+          "path": "/api/manager/account-settings",
+          "source": "server.ts",
+          "line": 10219,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "PUT /api/meetings/:id",
+      "retired": false,
+      "sources": [
+        {
+          "method": "PUT",
+          "path": "/api/meetings/:id",
+          "source": "server.ts",
+          "line": 10331,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "PUT /api/notifications/:id/read",
+      "retired": false,
+      "sources": [
+        {
+          "method": "PUT",
+          "path": "/api/notifications/:id/read",
+          "source": "server.ts",
+          "line": 10530,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "PUT /api/notifications/read-all",
+      "retired": false,
+      "sources": [
+        {
+          "method": "PUT",
+          "path": "/api/notifications/read-all",
+          "source": "server.ts",
+          "line": 10517,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "PUT /api/staff/:id",
+      "retired": false,
+      "sources": [
+        {
+          "method": "PUT",
+          "path": "/api/staff/:id",
+          "source": "staffManagement.ts",
+          "line": 76,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "PUT /api/staff/profile",
+      "retired": false,
+      "sources": [
+        {
+          "method": "PUT",
+          "path": "/api/staff/profile",
+          "source": "staffManagement.ts",
+          "line": 58,
+          "retired": false
+        }
+      ]
+    },
+    {
+      "endpoint": "PUT /api/verification-teams/:id/status",
+      "retired": false,
+      "sources": [
+        {
+          "method": "PUT",
+          "path": "/api/verification-teams/:id/status",
+          "source": "server.ts",
+          "line": 6229,
+          "retired": false
+        }
+      ]
+    }
+  ]
+}

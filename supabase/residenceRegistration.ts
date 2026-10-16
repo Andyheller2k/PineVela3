@@ -8,6 +8,7 @@ import { parseResidenceStructure,createResidenceStructure,correctResidenceStruct
 import { ownedMedia } from './media.js';
 import { notify,notifyPrimaryOwner } from './notifications.js';
 import {managerRegistrationRestricted} from './registrationRestrictions.js';
+import {administratorApproval} from './administratorApproval.js';
 const text = (value:unknown,max:number,required=false) => {
   if (typeof value !== 'string' || value.trim().length > max || (required && !value.trim())) throw new ApiError(400,'Check the residence fields and their lengths.');
   return value.trim();
@@ -231,7 +232,10 @@ export function installResidenceRegistration(app:Express,auth:SupabaseAuth) {
     return res.status(result.alreadySubmitted ? 200 : 201).json({success:true,...result});
   }));
   const review = (decision:'approved'|'rejected'|'more_info_required') => route(async (req,res) => {
-      const result = await auth.db.authorizedSystem(req.actor,['admin'],c => decideResidenceRegistration(c,req.actor,uuid(req.params.id),decision,req.body?.adminNotes));
+      const command=(c:PoolClient)=>decideResidenceRegistration(c,req.actor,uuid(req.params.id),decision,req.body?.adminNotes);
+      const result = decision==='approved'
+        ? await administratorApproval(auth,req.actor,req.body?.privateKey,command)
+        : await auth.db.authorizedSystem(req.actor,['admin'],command);
       return res.json({success:true,...result,record:{id:result.id,status:result.status},verification:{id:result.id,status:result.status}});
   });
   app.put('/api/hostel-verifications/:id/approve',auth.require(['admin']),review('approved'));
@@ -241,11 +245,14 @@ export function installResidenceRegistration(app:Express,auth:SupabaseAuth) {
     const values = [req.body?.status,req.body?.approvalStatus].filter(v => v !== undefined).map(v => typeof v === 'string' ? v.toLowerCase() : 'invalid');
     if (req.body?.isApproved !== undefined) values.push(req.body.isApproved === true ? 'approved' : req.body.isApproved === false ? 'rejected' : 'invalid');
     if (!values.length || new Set(values).size !== 1 || !['approved','rejected'].includes(values[0])) throw new ApiError(400,'Choose a consistent approved or rejected residence decision.');
-    const result = await auth.db.authorizedSystem(req.actor,['admin'],async c => {
+    const command=async(c:PoolClient)=>{
       const record = (await c.query("select id from public.verification_cases where residence_id = $1 and kind = 'residence_registration'",[uuid(req.params.id)])).rows[0];
       if (!record) throw new ApiError(404,'Submitted residence registration not found.');
       return decideResidenceRegistration(c,req.actor,record.id,values[0] as 'approved'|'rejected',req.body?.adminNotes ?? req.body?.rejectionReason);
-    });
+    };
+    const result=values[0]==='approved'
+      ? await administratorApproval(auth,req.actor,req.body?.privateKey,command)
+      : await auth.db.authorizedSystem(req.actor,['admin'],command);
     return res.json({success:true,...result});
   }));
   app.get('/api/admin/hostels',auth.require(['admin']),route(async (req,res) => res.json(await auth.db.authorizedRead(req.actor,['admin'],c => adminResidenceRows(c,req.actor)))));

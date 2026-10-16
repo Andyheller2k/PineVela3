@@ -119,11 +119,11 @@ export class SupabaseAdministratorSettings {
   private limit(a: VerifiedActor) { this.budgets.reserve([{ scope: 'admin-receiving-account', identity: a.contextId, maximum: 15, windowMs: 60000 }]); }
   async receivingAccounts(a: VerifiedActor) {
     this.limit(a);
-    await this.auth.db.authorizedSystem(a, ['admin'], c => requireAdministrator(c, a));
+    await this.auth.db.authorizedRead(a, ['admin'], c => requireAdministrator(c, a));
     const { mode } = paystackConfig(), accounts = await paystackRequest('/subaccount?perPage=100');
     if (!Array.isArray(accounts)) throw new ApiError(502, 'Paystack returned invalid receiving accounts.');
     // Recheck the actual session/membership after the external read.
-    return this.auth.db.authorizedSystem(a, ['admin'], async c => {
+    return this.auth.db.authorizedRead(a, ['admin'], async c => {
       await requireAdministrator(c, a);
       const raw = (await c.query("select value from private.platform_settings where key='platform'")).rows[0]?.value;
       return { mode, selected: raw?.paystackSettlement?.code || '', selectedMode: raw?.paystackSettlement?.mode || null,
@@ -150,7 +150,7 @@ export class SupabaseAdministratorSettings {
 export function installAdministratorSettings(app: Express, auth: SupabaseAuth) {
   const settings = new SupabaseAdministratorSettings(auth), budgets = new AttemptBudgets();
   app.get('/api/admin/settings/status', auth.require(['admin']), route(async (req, res) =>
-    res.json(await auth.db.authorizedSystem(req.actor, ['admin'], c => administratorSettingsStatus(c, req.actor)))));
+    res.json(await auth.db.authorizedRead(req.actor, ['admin'], c => administratorSettingsStatus(c, req.actor)))));
   app.post('/api/admin/governance/keys/settings/enroll', auth.require(['admin']), route(async (req, res) => {
     budgets.reserve([{ scope: 'admin-settings-enrollment', identity: req.actor.contextId, maximum: 5, windowMs: 60000 }]);
     res.json(await auth.db.authorizedSystem(req.actor, ['admin'], c => enrollAdministratorSettingsKey(c, req.actor, req.body)));

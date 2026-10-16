@@ -14,8 +14,12 @@ export function maintenanceBoundary(auth: SupabaseAuth): RequestHandler {
     const authEntry=req.method==='POST' && ['/auth/login','/digital-market/login','/auth/verification-team-login',
       '/verification-teams/login','/auth/logout','/auth/google/start'].includes(path)
       || req.method==='GET' && path==='/auth/google/callback';
-    if (publicRead || authEntry) return next();
-    auth.db.system(async c=>(await c.query('select private.platform_available() as available')).rows[0].available)
+    // Without an access-cookie marker authenticate() necessarily denies this
+    // session probe. Let that guard return 401 without a remote maintenance read.
+    const unsignedSessionProbe=['GET','HEAD'].includes(req.method) && path==='/auth/me'
+      && !String(req.headers.cookie || '').includes('pv_sb_access=');
+    if (publicRead || authEntry || unsignedSessionProbe) return next();
+    auth.db.statement('select private.platform_available() as available').then(result=>result.rows[0].available)
       .then(async available=>{
         if (available) return next();
         // Authenticate the actual cookie and current membership; request roles and
