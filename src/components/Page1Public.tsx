@@ -4,6 +4,7 @@ import PublicMarketCatalog from './PublicMarketCatalog';
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import PineLogo from './PineLogo';
+import ThemeEnvironment from './ThemeEnvironment';
 import { Shield, Landmark, ShoppingBag } from 'lucide-react';
 import { useLandingReveal } from '../hooks/useLandingReveal';
 import { useAuth } from '../context/AuthContext';
@@ -55,6 +56,7 @@ export default function Page1Public() {
         <section id="welcome-section"
           className="landing-peak-hero relative z-10 w-full scroll-mt-0"
         >
+          <ThemeEnvironment embedded />
           <div className="landing-peak-landscape" aria-hidden="true">
             <img src={mountainPeak} alt="" fetchPriority="high" />
           </div>

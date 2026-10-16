@@ -11,7 +11,7 @@ html[data-theme="dark"] .unified-login .login-mode-toggle { background: var(--pv
 
 @media (max-width: 1023px) {
   .unified-login { min-height: 100svh; isolation: isolate; }
-  .mobile-login-backdrop { display: block; position: fixed; inset: 0; overflow: hidden; background: var(--pv-canvas); z-index: -2; pointer-events: none; }
+  .mobile-login-backdrop { display: block; position: fixed; inset: 0; overflow: hidden; background: transparent; z-index: -2; pointer-events: none; }
   .mobile-login-backdrop img { position: absolute; width: 100%; height: 100%; object-fit: cover; filter: blur(16px) opacity(.12); transform: scale(1.05); }
   .mobile-login-photo { display: block; position: fixed; inset: 0; width: 100%; height: 100dvh; padding: 0; border: 0; background: transparent; pointer-events: none; z-index: -1; }
   .mobile-login-photo img { position: absolute; inset: 0 0 auto; width: 100%; height: max(340px, 70svh); object-fit: contain; object-position: center 20%; }
@@ -32,7 +32,6 @@ html[data-theme="dark"] .unified-login .login-mode-toggle { background: var(--pv
   .unified-login .login-auth-card input { min-height: 46px; font-size: 16px; }
   .unified-login .login-auth-card button[type="submit"], .login-google-button { min-height: 48px; font-size: 14px; }
   .unified-login .login-footer { position: absolute; inset: auto 0 0; color: var(--pv-muted); padding: 6px 12px; pointer-events: none; }
-  html[data-theme="dark"] .mobile-login-backdrop { background: var(--pv-canvas); }
   html[data-theme="dark"] .mobile-login-backdrop img { filter: blur(24px) brightness(.55) opacity(.12); }
   html[data-theme="dark"] .mobile-login-photo img { filter: brightness(.68); }
   html[data-theme="dark"] .unified-login .login-auth-card { background: var(--pv-glass); border-color: var(--pv-edge); }

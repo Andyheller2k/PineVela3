@@ -48,13 +48,14 @@ html[data-theme] body { background-color: var(--pv-canvas); color: var(--pv-text
 html[data-theme="light"] :is([class~="text-blue-500"], [class~="text-blue-600"], [class~="text-sky-500"], [class~="text-sky-600"], [class~="text-cyan-500"], [class~="text-cyan-600"]) { color: var(--pv-link); }
 html[data-theme="light"] :is(h1, h2, h3, h4, h5, h6):is([class~="text-slate-900"], [class~="text-slate-800"]) { color: var(--pv-heading); }
 .app-canvas { background: var(--pv-canvas); isolation: isolate; }
-/* Route canvases share the login's primary surface in both appearances. */
-.page-canvas { background: var(--pv-canvas); }
+/* The app owns the shared color; routes reveal its animated sky behind content. */
+.page-canvas { background: transparent; }
 /* Switch surfaces in one paint; animate only the small switch and decorative opacity. */
 html.theme-changing :where(#root *, dialog, dialog *):not(.theme-environment, .theme-environment *, .theme-toggle, .theme-toggle *) {
   transition: none !important;
 }
 .theme-environment { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; background: var(--pv-canvas); }
+.theme-environment-embedded { position: absolute; background: transparent; }
 .theme-night { position: absolute; inset: 0; background: var(--pv-canvas); opacity: 0; transition: opacity var(--pv-time) var(--pv-ease); }
 [data-theme="dark"] .theme-night { opacity: 1; }
 .theme-atmosphere { position: absolute; width: min(65vw, 700px); height: min(65vw, 700px); border-radius: 50%; filter: blur(70px); opacity: .24; background: var(--pv-blue-soft); animation: atmosphere-drift 22s ease-in-out infinite alternate; transition: opacity var(--pv-time); }

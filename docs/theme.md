@@ -20,8 +20,11 @@ on ice use the darker `#00679E` tint (5.05:1 contrast).
 and `src/theme.css` provide the atmosphere, switch and existing-surface adaptation.
 Page surfaces switch in one paint; existing utility transitions are suppressed for two
 animation frames. Only the switch and decorative layers use short 180 ms transitions.
-Other pages use the login's primary `--pv-canvas` background through `.page-canvas`:
-`#e0f1fa` in light mode and `#060e29` in dark mode. Decorative PineVela background
+The app supplies the login's primary `--pv-canvas` background: `#e0f1fa` in light
+mode and `#060e29` in dark mode. Route canvases and the mobile login backdrop stay
+transparent so the sun, moon and atmosphere remain visible behind content. The
+landing hero embeds its own sky above its gradient, with one environment per page.
+Decorative PineVela background
 logos are removed; header branding and content photographs remain. The landing
 welcome area retains its original blue gradient and mountain texture from
 `assets/pinepeak.jpg`, with a navy gradient in dark mode. Opaque public headers,

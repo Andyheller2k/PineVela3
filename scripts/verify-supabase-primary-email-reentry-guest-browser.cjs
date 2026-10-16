@@ -67,7 +67,7 @@ async function freePort(){const s=net.createServer();s.listen(0,'127.0.0.1');awa
           const dimensions=await evaluate("(()=>{const b=document.querySelector('.login-auth-card button[type=submit]'),r=b.getBoundingClientRect();return {height:r.height,width:r.width,overflow:document.documentElement.scrollWidth>innerWidth+1};})()");
           check(dimensions.height>0&&dimensions.width>=44&&!dimensions.overflow,'Responsive reachable account action without horizontal overflow');
         }
-        backgrounds[theme]=await evaluate("getComputedStyle(document.querySelector('.unified-login')).backgroundColor");
+        backgrounds[theme]=await evaluate("getComputedStyle(document.querySelector('.app-canvas')).backgroundColor");
       }
     }
     check(backgrounds.light!==backgrounds.dark,'Page canvas changes with the actual PineVela theme');
