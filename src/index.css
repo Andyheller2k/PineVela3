@@ -1,9 +1,10 @@
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap');
 @import "tailwindcss";
 @import "./theme.css";
+@import "./brandSurfaces.css";
 
 @theme {
-  /* Shared blue palette; semantic status and subscription colors stay separate. */
+  /* Shared violet palette; semantic status and subscription colors stay separate. */
   --color-primary: var(--pv-blue-primary);
   --color-primary-hover: var(--pv-primary-hover);
   --color-sidebar: var(--pv-blue-navy);
@@ -16,62 +17,94 @@
   --font-sans: 'Outfit', 'Plus Jakarta Sans', sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, monospace;
 
-  /* Cyan is decorative; action fills use a blue with readable white labels. */
-  --color-blue-50: #f2fbfd;
+  /* Legacy brand utilities all resolve to the new reference palette. */
+  --color-blue-50: #f7f3ff;
   --color-blue-100: var(--pv-blue-ice);
   --color-blue-200: var(--pv-blue-soft);
-  --color-blue-300: #63d0e5;
+  --color-blue-300: #baa2ec;
   --color-blue-400: var(--pv-blue-accent);
   --color-blue-500: var(--pv-blue-primary);
   --color-blue-600: var(--pv-blue-primary);
   --color-blue-700: var(--pv-primary-hover);
-  --color-blue-800: #054982;
-  --color-blue-850: #073374;
-  --color-blue-900: #082463;
+  --color-blue-800: #3c2184;
+  --color-blue-850: #341b70;
+  --color-blue-900: #2c185e;
   --color-blue-950: var(--pv-blue-navy);
-  --color-sky-50: #f2fbfd;
+  --color-sky-50: #f7f3ff;
   --color-sky-100: var(--pv-blue-ice);
   --color-sky-200: var(--pv-blue-soft);
-  --color-sky-300: #63d0e5;
+  --color-sky-300: #baa2ec;
   --color-sky-400: var(--pv-blue-accent);
   --color-sky-500: var(--pv-blue-primary);
   --color-sky-600: var(--pv-blue-primary);
   --color-sky-700: var(--pv-primary-hover);
-  --color-sky-800: #054982;
-  --color-sky-900: #082463;
+  --color-sky-800: #3c2184;
+  --color-sky-900: #2c185e;
   --color-sky-950: var(--pv-blue-navy);
-  --color-cyan-50: #f2fbfd;
+  --color-cyan-50: #f7f3ff;
   --color-cyan-100: var(--pv-blue-ice);
   --color-cyan-200: var(--pv-blue-soft);
-  --color-cyan-300: #63d0e5;
+  --color-cyan-300: #baa2ec;
   --color-cyan-400: var(--pv-blue-accent);
   --color-cyan-500: var(--pv-blue-accent);
   --color-cyan-600: var(--pv-blue-primary);
   --color-cyan-700: var(--pv-primary-hover);
-  --color-cyan-800: #054982;
-  --color-cyan-900: #082463;
+  --color-cyan-800: #3c2184;
+  --color-cyan-900: #2c185e;
   --color-cyan-950: var(--pv-blue-navy);
-  /* Existing blue/indigo brand gradients now finish in the palette's navy. */
-  --color-indigo-50: #f2fbfd;
+  --color-indigo-50: #f7f3ff;
   --color-indigo-100: var(--pv-blue-ice);
   --color-indigo-200: var(--pv-blue-soft);
-  --color-indigo-300: #63d0e5;
-  --color-indigo-400: var(--pv-blue-primary);
-  --color-indigo-500: var(--pv-blue-primary);
-  --color-indigo-600: var(--pv-primary-hover);
-  --color-indigo-700: #054982;
-  --color-indigo-800: #073374;
+  --color-indigo-300: #b5b4f6;
+  --color-indigo-400: #7774e4;
+  --color-indigo-500: #4858df;
+  --color-indigo-600: var(--pv-brand-indigo);
+  --color-indigo-700: #2b37b1;
+  --color-indigo-800: #292b85;
   --color-indigo-900: var(--pv-blue-navy);
   --color-indigo-950: var(--pv-blue-navy);
 
-  /* Amber/yellow overrides for subtle warm touches matching minimalist colors */
+  --color-violet-50: #f7f3ff;
+  --color-violet-100: #eee7ff;
+  --color-violet-200: #d8c7fb;
+  --color-violet-300: #baa2ec;
+  --color-violet-400: #9d77e1;
+  --color-violet-500: #8053d4;
+  --color-violet-600: var(--pv-brand-violet);
+  --color-violet-700: #5c29af;
+  --color-violet-800: #49218a;
+  --color-violet-900: #35195f;
+  --color-purple-50: #fbf3ff;
+  --color-purple-100: #f5e5fd;
+  --color-purple-200: #eac6f7;
+  --color-purple-300: #d69fe9;
+  --color-purple-400: #be73d1;
+  --color-purple-500: #b340c9;
+  --color-purple-600: var(--pv-brand-magenta);
+  --color-purple-700: #8c209e;
+  --color-purple-800: #6c1b7c;
+  --color-purple-900: #4e175b;
+  /* Tinted neutrals keep ordinary labels readable without adding saturation. */
+  --color-slate-50: #faf8fd;
+  --color-slate-100: #f1edf7;
+  --color-slate-200: #e2daec;
+  --color-slate-300: #c5b8d5;
+  --color-slate-400: #776a89;
+  --color-slate-500: #6a5d7c;
+  --color-slate-600: #594b6a;
+  --color-slate-650: #50425f;
+  --color-slate-700: #453651;
+  --color-slate-800: #30223e;
+  --color-slate-900: #21172d;
+  --color-slate-950: #130d20;
+  /* Warnings and subscription ratings keep their distinct warm meaning. */
   --color-amber-50: #fefce8;
   --color-amber-100: #fef9c3;
   --color-amber-200: #fef08a;
   --color-amber-300: #fde047;
   --color-amber-400: #facc15;
-  --color-amber-500: var(--pv-blue-primary); /* Existing blue tab/badge convention. */
-  --color-amber-600: var(--pv-primary-hover);
+  --color-amber-500: #f59e0b;
+  --color-amber-600: #b45309;
 
   /* Border radius adjustments to 12px (rounded-xl) for sleek cards */
   --radius-xl: 12px;
@@ -102,11 +135,11 @@ html, body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: #c5b8d5;
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: #8a7a9c;
 }
 
 /* The public landing page remains scrollable without a visible right-edge scrollbar gutter. */
@@ -137,23 +170,23 @@ html.marketplace-scrollbar-hidden::-webkit-scrollbar {
 
 /* 3D text styling and text outline utilities */
 .text-3d {
-  color: #0f172a;
-  text-shadow: 0 1px 0 #cbd5e1, 0 2px 0 #94a3b8, 0 3px 0 #64748b, 0 4px 6px rgba(0, 0, 0, 0.3);
+  color: #21172d;
+  text-shadow: 0 1px 0 #c5b8d5, 0 2px 0 #8a7a9c, 0 3px 0 #64748b, 0 4px 6px rgba(0, 0, 0, 0.3);
 }
 
 .text-3d-blue {
   color: var(--pv-blue-primary);
-  text-shadow: 0 1px 0 var(--pv-blue-soft), 0 2px 0 var(--pv-blue-accent), 0 3px 2px rgb(0 119 182 / .4);
+  text-shadow: 0 1px 0 var(--pv-blue-soft), 0 2px 0 var(--pv-blue-accent), 0 3px 2px rgb(91 59 196 / .4);
 }
 
 .text-outline-sm {
-  -webkit-text-stroke: 0.5px #1e293b;
-  color: #334155;
+  -webkit-text-stroke: 0.5px #30223e;
+  color: #594b6a;
 }
 
 .text-outline-white {
   -webkit-text-stroke: 0.6px #ffffff;
-  color: #1e293b;
+  color: #30223e;
 }
 
 
@@ -164,10 +197,10 @@ html.marketplace-scrollbar-hidden::-webkit-scrollbar {
 /* Hostel card hover light blue radiant glow */
 @keyframes blue-glow-pulse {
   0%, 100% {
-    box-shadow: 0 0 15px rgba(0, 180, 216, 0.3);
+    box-shadow: 0 0 15px rgba(157, 78, 221, 0.3);
   }
   50% {
-    box-shadow: 0 0 25px rgba(0, 180, 216, 0.6);
+    box-shadow: 0 0 25px rgba(157, 78, 221, 0.6);
   }
 }
 
@@ -176,7 +209,7 @@ html.marketplace-scrollbar-hidden::-webkit-scrollbar {
 }
 
 .hostel-radiant-glow:hover {
-  border-color: rgba(0, 180, 216, 0.5) !important;
+  border-color: rgba(157, 78, 221, 0.5) !important;
   animation: blue-glow-pulse 2s infinite ease-in-out;
   transform: translateY(-3px);
 }
@@ -224,7 +257,7 @@ html.marketplace-scrollbar-hidden::-webkit-scrollbar {
   backdrop-filter: blur(18px) saturate(150%);
   border: 1px solid rgba(255, 255, 255, 0.72) !important;
   border-radius: 1rem !important;
-  box-shadow: 0 -4px 24px rgb(0 119 182 / .1), 0 10px 28px rgba(15, 23, 42, 0.1) !important;
+  box-shadow: 0 -4px 24px rgb(91 59 196 / .1), 0 10px 28px rgba(15, 23, 42, 0.1) !important;
   overflow: hidden;
   padding-bottom: max(0.375rem, env(safe-area-inset-bottom)) !important;
 }
@@ -302,9 +335,9 @@ dialog[data-dashboard-overlay]::backdrop { background: transparent; }
 /* Shared resident-wizard field treatment, scoped to onboarding forms. */
 .onboarding-fields :is(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"]), select, textarea) {
   border-radius: 1rem;
-  border-color: #cbd5e1;
-  background-color: #f8fafc;
-  color: #1e293b;
+  border-color: var(--pv-field-edge);
+  background-color: var(--pv-field);
+  color: var(--pv-text);
 }
 .onboarding-fields :is(input, select, textarea):focus-visible {
   outline: 2px solid var(--pv-blue-primary);

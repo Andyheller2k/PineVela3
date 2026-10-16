@@ -1,0 +1,105 @@
+/* Presentation only: no layout, dimensions, typography or component structure. */
+.app-canvas .theme-environment:not(.theme-environment-embedded),
+.app-canvas .theme-night { background: var(--pv-page-gradient); }
+
+/* Body also covers portals, notices and maintenance screens outside the app canvas.
+   Keeping app-canvas in :is preserves the existing cascade specificity. */
+/* Filled brand actions share one restrained gradient; transparent navigation stays plain. */
+html[data-theme] :is(.app-canvas, body) :is(button, a[href], a[role="button"], input[type="submit"]):is(
+  [class~="bg-blue-500"], [class~="bg-blue-600"], [class~="bg-blue-700"], [class~="bg-blue-800"], [class~="bg-blue-850"], [class~="bg-blue-900"],
+  [class~="bg-indigo-500"], [class~="bg-indigo-600"], [class~="bg-indigo-700"],
+  [class~="bg-violet-500"], [class~="bg-violet-600"], [class~="bg-purple-600"],
+  [class~="bg-sky-500"], [class~="bg-sky-600"], [class~="bg-cyan-600"],
+  [class~="from-blue-500"], [class~="from-blue-600"], [class~="from-blue-700"],
+  [class~="from-indigo-500"], [class~="from-indigo-600"], [class~="from-violet-600"],
+  [class~="bg-primary"], [class~="bg-[var(--pv-blue-primary)]"]
+) {
+  background-color: var(--pv-blue-primary);
+  background-image: var(--pv-action-gradient);
+  color: #ffffff;
+  box-shadow: 0 5px 18px var(--pv-brand-shadow);
+}
+html[data-theme] :is(.app-canvas, body) :is(button, a[href], a[role="button"]):is(
+  [class~="bg-blue-500"], [class~="bg-blue-600"], [class~="bg-blue-700"], [class~="bg-blue-800"], [class~="bg-blue-850"], [class~="bg-blue-900"],
+  [class~="bg-indigo-500"], [class~="bg-indigo-600"], [class~="bg-violet-600"],
+  [class~="from-blue-500"], [class~="from-blue-600"], [class~="from-blue-700"], [class~="from-indigo-600"],
+  [class~="bg-primary"], [class~="bg-[var(--pv-blue-primary)]"]
+):not(:disabled):hover { background-image: var(--pv-action-hover-gradient); }
+
+html[data-theme] :is(.app-canvas, body) :is(nav button, button[data-page-tabs])[aria-current="page"],
+html[data-theme] :is(.app-canvas, body) .login-mode-toggle > button[aria-pressed="true"] {
+  background: var(--pv-action-gradient);
+  color: #ffffff;
+  box-shadow: 0 3px 12px var(--pv-brand-shadow);
+}
+html[data-theme] :is(.app-canvas, body) .mobile-bottom-nav button[aria-current="page"] :is(span, div, svg) { color: #ffffff; }
+
+/* All onboarding flows reuse this progress component, including portaled forms. */
+html[data-theme] :is(.app-canvas, body) section[aria-label$=" progress"] :is([aria-current="step"] > span[class~="bg-blue-900"], [role="progressbar"] > [class~="bg-blue-900"]) {
+  background-image: var(--pv-action-gradient);
+}
+
+/* Opaque field colors make contrast predictable on glass and gradient surfaces. */
+html[data-theme] :is(.app-canvas, body) :is(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="hidden"]):not([type="submit"]), select, textarea) {
+  background-color: var(--pv-field);
+  border-color: var(--pv-field-edge);
+  color: var(--pv-text);
+  caret-color: var(--pv-link);
+  box-shadow: 0 0 0 1px transparent;
+}
+html[data-theme] :is(.app-canvas, body) :is(input, textarea)::placeholder { color: var(--pv-muted); opacity: 1; }
+html[data-theme] :is(.app-canvas, body) :is(input, textarea, select):focus-visible {
+  border-color: var(--pv-link);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--pv-blue-primary) 15%, transparent);
+}
+html[data-theme] :is(.app-canvas, body) :is(input[type="checkbox"], input[type="radio"], input[type="range"]) { accent-color: var(--pv-blue-primary); }
+
+/* White text is reserved for the deeper hero gradient, not pale panels. */
+html[data-theme] .landing-peak-hero .landing-peak-copy :is(h1, h1 span, p, strong),
+html[data-theme] .landing-peak-hero .landing-peak-brand :is(.public-title, .public-title span, [class~="text-slate-500"]) { color: #ffffff; }
+.landing-peak-hero .landing-peak-copy [class~="bg-amber-300"] { background-color: rgb(255 255 255 / .22); }
+.landing-peak-hero .theme-atmosphere { opacity: .08; }
+html[data-theme="dark"] .landing-peak-hero .theme-atmosphere { opacity: .08; }
+html[data-theme] .app-canvas .landing-peak-hero .landing-peak-copy button {
+  background: linear-gradient(115deg, #ffffff, #f5edff);
+  color: #4b279f;
+  box-shadow: 0 6px 22px rgb(22 9 62 / .22);
+}
+html[data-theme] .app-canvas .landing-peak-hero .landing-peak-copy button:not(:disabled):hover { background: #ffffff; color: #3b1d85; }
+
+/* Section fades add depth while preserving existing spacing and image composition. */
+.landing-company-story .company-chapter { background: linear-gradient(160deg, var(--pv-section-from), var(--pv-section-to) 78%); }
+.landing-company-story .company-chapter:nth-child(even) { background: linear-gradient(200deg, var(--pv-section-from), var(--pv-section-to) 78%); }
+.landing-company-story .company-image-card { background: var(--pv-panel); border-color: var(--pv-edge); box-shadow: 0 20px 55px var(--pv-brand-shadow); }
+.landing-company-story .company-contact-row { border-color: var(--pv-edge); }
+.landing-peak-page #footer-section { background: linear-gradient(180deg, var(--pv-section-to), var(--pv-section-from)); }
+
+/* Gentle surface depth applies to existing portals and overlays through their utilities. */
+html[data-theme] :is(.app-canvas, body) :is([class~="bg-white"], [class~="bg-white/90"], [class~="bg-white/95"]) { background-image: var(--pv-panel-gradient); }
+html[data-theme] :is(.app-canvas, body) .login-google-button { background: var(--pv-panel); color: var(--pv-text); }
+html[data-theme] :is(.app-canvas, body) [class~="text-amber-500"] { color: #8a5800; }
+html[data-theme="dark"] :is(.app-canvas, body) [class~="text-amber-500"] { color: #fcd34d; }
+
+/* Semantic fills keep their meaning while making small white labels readable. */
+html[data-theme] :is(.app-canvas, body) [class~="text-white"]:is([class~="bg-emerald-500"], [class~="bg-emerald-600"], [class~="bg-green-500"], [class~="bg-green-600"]) { background-color: #047857; }
+html[data-theme] :is(.app-canvas, body) [class~="text-white"]:is([class~="bg-red-500"], [class~="bg-rose-500"]) { background-color: #be123c; }
+html[data-theme] :is(.app-canvas, body) [class~="text-white"]:is([class~="bg-amber-500"], [class~="bg-yellow-500"], [class~="bg-orange-500"]) { background-color: #b45309; }
+
+/* Legacy inline map/chart paint and custom brand shadows follow the same colors. */
+:is(.app-canvas, body) .leaflet-overlay-pane path[stroke="#2563eb"] { stroke: var(--pv-blue-primary); }
+:is(.app-canvas, body) .leaflet-overlay-pane path[fill="#2563eb"] { fill: var(--pv-blue-primary); }
+:is(.app-canvas, body) .leaflet-popup-content [style*="color:#2563EB"] { color: var(--pv-link) !important; }
+:is(.app-canvas, body) .recharts-cartesian-grid line { stroke: var(--pv-edge); }
+:is(.app-canvas, body) .recharts-cartesian-axis-tick text { fill: var(--pv-muted); }
+:is(.app-canvas, body) .recharts-default-tooltip { background: var(--pv-panel) !important; border-color: var(--pv-field-edge) !important; color: var(--pv-text) !important; }
+:is(.app-canvas, body) :is([class*="rgba(59,130,246"], [class*="rgba(37,99,235"], [class*="rgba(0,119,182"]):not(input) { box-shadow: 0 10px 28px var(--pv-brand-shadow); }
+
+/* The theme has no new motion; high-contrast preferences remain useful. */
+@media (prefers-contrast: more) {
+  :root { --pv-field-edge: #5e4382; --pv-edge: #806898; }
+  :root[data-theme="dark"] { --pv-field-edge: #cdb7ef; --pv-edge: #aa8dce; }
+}
+@media (forced-colors: active) {
+  :is(.app-canvas, body) :is(button, input, select, textarea, a, [role="progressbar"] > div, [aria-current="step"] > span), .landing-peak-hero { background-image: none !important; }
+  .landing-peak-hero .landing-peak-copy :is(h1, h1 span, p, strong) { color: CanvasText !important; }
+}

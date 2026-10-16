@@ -3,7 +3,7 @@ import { needsApprovalKey } from '../lib/administratorApproval';
 import { safeJson } from '../lib/api';
 import { requestKeyedApproval } from '../lib/approvalPrompt';
 import { invalidateAllQueries,queryClient } from '../lib/queryClient';
-import DashboardOverlay from '../components/DashboardOverlay';
+import SignOutProgress from '../components/SignOutProgress';
 import { advanceSessionGeneration,clearLegacySessionStorage,sessionFetch as fetch } from '../lib/session';
 import { SessionCheckUnavailable,SessionRestoration } from '../lib/sessionRestoration';
 
@@ -283,13 +283,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   return (
     <AuthContext.Provider value={{ user, loading, restorationError, retrySession: () => setRetry(value => value + 1), login, setSessionUser, updateUser, logout, apiFetch }}>
       {children}
-      {signingOut&&<DashboardOverlay aria-label="Signing out" onClose={null}
-        className="fixed inset-0 flex items-center justify-center bg-slate-950/40 p-6 backdrop-blur-sm">
-        <div role="status" className="rounded-2xl bg-white p-8 text-center text-slate-900 shadow-xl">
-          <p className="font-semibold">Signing out…</p>
-          <p className="mt-2 text-sm">Closing your session securely.</p>
-        </div>
-      </DashboardOverlay>}
+      {signingOut&&<SignOutProgress />}
     </AuthContext.Provider>
   );
 }

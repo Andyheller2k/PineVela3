@@ -24,6 +24,7 @@ import marketImg from '../../assets/login-market.png';
 import '../login.css';
 import GoogleAuthButton from './GoogleAuthButton';
 import ThemeToggle from './ThemeToggle';
+import WindDust from './WindDust';
 
 const featureImage = marketImg;
 const featureDescription = "PineVela- The unified digital ecosystem connecting Properties, People, and Services into one seamless campus platform.";
@@ -293,9 +294,7 @@ export default function PageUnifiedLogin() {
       <div className="mobile-login-backdrop" aria-hidden="true">
         <img src={featureImage} alt="" />
       </div>
-      <div className="mobile-login-photo" aria-hidden="true">
-        <img src={featureImage} alt="PineVela student marketplace" />
-      </div>
+      <WindDust />
       
       {/* Floating Toast */}
       {toastMessage && (
@@ -347,6 +346,9 @@ export default function PageUnifiedLogin() {
 
         {/* Right Side: Login & Signup Box */}
         <div className="login-form-pane hide-scrollbar lg:col-span-6 flex flex-col items-stretch justify-center w-full max-w-2xl mx-auto lg:max-w-none">
+          <div className="mobile-login-photo" aria-hidden="true">
+            <img src={featureImage} alt="PineVela student marketplace" />
+          </div>
           
           <div className="login-auth-card bg-blue-50/90 backdrop-blur-lg rounded-3xl border border-blue-200/70 shadow-2xl p-8 sm:p-10 space-y-6 relative overflow-hidden flex flex-col justify-between w-full">
             

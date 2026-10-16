@@ -1,7 +1,7 @@
 import DashboardOverlay from './DashboardOverlay';
 import React, {useRef,useState} from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { LoaderCircle, LogOut, X } from 'lucide-react';
+import { LogOut, X } from 'lucide-react';
 import PineLogo from './PineLogo';
 
 interface LogoutConfirmationModalProps {
@@ -26,7 +26,8 @@ export default function LogoutConfirmationModal({
     try{await onConfirm();}
     finally{pendingRef.current=false;setPending(false);}
   };
-  if (!isOpen) return null;
+  // The shared authentication overlay owns feedback while sign-out is pending.
+  if (!isOpen || pending) return null;
 
   return (
     <AnimatePresence>
@@ -58,7 +59,7 @@ export default function LogoutConfirmationModal({
               Confirm Sign Out
             </h3>
             <p aria-live="polite" className="text-sm font-medium text-slate-700 leading-relaxed">
-              {pending?'Signing out and closing your session…':`Are you sure you want to sign out${userName ? `, ${userName}` : ''}? You can sign back in to PineVela at any time.`}
+              {`Are you sure you want to sign out${userName ? `, ${userName}` : ''}? You can sign back in to PineVela at any time.`}
             </p>
           </div>
 
@@ -76,8 +77,8 @@ export default function LogoutConfirmationModal({
               onClick={confirm}
               className="px-6 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-black rounded-xl text-xs shadow-md hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer"
             >
-              {pending?<LoaderCircle className="w-4 h-4 animate-spin"/>:<LogOut className="w-4 h-4" />}
-              <span>{pending?'Signing out…':'Sign Out'}</span>
+              <LogOut className="w-4 h-4" />
+              <span>Sign Out</span>
             </button>
           </div>
         </motion.div>

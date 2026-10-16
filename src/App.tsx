@@ -149,7 +149,7 @@ function AppContent() {
           }
         />
 
-        <Route path="/pineresidence" element={<PageWrapper><PagePublicResidence /></PageWrapper>} />
+        <Route path="/pineresidence" element={<PageWrapper loadingFallback={<p role="status" className="p-8 text-center text-sm text-slate-500">Loading residences…</p>}><PagePublicResidence /></PageWrapper>} />
         <Route path="/pinemarket/stores/:storeId" element={<PageWrapper><PagePublicStore /></PageWrapper>} />
         <Route path="/pinemarket" element={<PageWrapper loadingFallback={<p role="status" className="p-8 text-center text-sm text-slate-500">Loading PineMarket…</p>}><PagePublicMarket /></PageWrapper>} />
 
@@ -160,7 +160,7 @@ function AppContent() {
         <Route
           path="/login"
           element={
-            <PageWrapper smoothEntry>
+            <PageWrapper smoothEntry loadingFallback={<p role="status" className="p-8 text-center text-sm text-slate-500">Loading sign in…</p>}>
               <PageUnifiedLogin />
             </PageWrapper>
           }

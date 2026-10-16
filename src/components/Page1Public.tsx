@@ -5,6 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import PineLogo from './PineLogo';
 import ThemeEnvironment from './ThemeEnvironment';
+import WindDust from './WindDust';
 import { Shield, Landmark, ShoppingBag } from 'lucide-react';
 import { useLandingReveal } from '../hooks/useLandingReveal';
 import { useAuth } from '../context/AuthContext';
@@ -60,6 +61,7 @@ export default function Page1Public() {
           <div className="landing-peak-landscape" aria-hidden="true">
             <img src={mountainPeak} alt="" fetchPriority="high" />
           </div>
+          <WindDust variant="hero" />
           <div className="landing-peak-content max-w-7xl mx-auto w-full relative z-10 grid grid-cols-1 lg:grid-cols-12 items-center gap-8 lg:gap-12">
             <div
               className="landing-peak-copy lg:col-span-7 space-y-6"
@@ -81,7 +83,7 @@ export default function Page1Public() {
             </p>
 
             <div
-              className="flex flex-wrap gap-4 pt-2"
+              className="flex flex-wrap gap-4 pt-6"
             >
               <button
                 id="btn-login"
