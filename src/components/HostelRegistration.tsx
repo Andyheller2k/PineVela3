@@ -569,7 +569,10 @@ export default function HostelRegistration({
         confetti({
           particleCount: 100,
           spread: 70,
-          origin: { y: 0.6 }
+          origin: { y: 0.6 },
+          colors: ['--pv-brand-navy', '--pv-brand-blue', '--pv-brand-yellow', '--pv-brand-cloud']
+            .map(token => getComputedStyle(document.documentElement).getPropertyValue(token).trim()),
+          disableForReducedMotion: true
         });
       } catch (e) {
         // ignore

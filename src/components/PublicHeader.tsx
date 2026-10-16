@@ -2,6 +2,7 @@ import { useLayoutEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, X, LogOut } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import type { CompanySection } from './companyStoryContent';
 import PineLogo from './PineLogo';
 import ThemeToggle from './ThemeToggle';
@@ -16,6 +17,7 @@ interface Props {
 export default function PublicHeader({compact = false, searchQuery, setSearchQuery, onSearch, onHome, onCompanySection, setShowLogoutConfirm}: Props) {
   const navigate = useNavigate();
   const {user} = useAuth();
+  const {publicAppearance} = useTheme();
   const headerRef = useRef<HTMLElement>(null);
   const onNavigate = () => navigate('/login');
   useLayoutEffect(() => {
@@ -78,7 +80,7 @@ export default function PublicHeader({compact = false, searchQuery, setSearchQue
       </form>
 
       <div className="public-header-actions flex flex-wrap items-center justify-center lg:justify-self-end gap-2 text-sm font-medium min-w-0">
-        <ThemeToggle className="company-theme-toggle" />
+        {!publicAppearance && <ThemeToggle className="company-theme-toggle" />}
         {user ? (
           <div className="public-header-account flex items-center gap-2 sm:gap-3">
             <span className="text-xs font-bold text-slate-800 hidden sm:inline">

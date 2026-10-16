@@ -352,9 +352,9 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <ThemeProvider>
-          <PlatformSettingsProvider>
-            <HashRouter>
+        <HashRouter>
+          <ThemeProvider>
+            <PlatformSettingsProvider>
               <PlatformAccessBoundary>
                 <NotificationProvider>
                   <div className="app-canvas min-h-screen flex flex-col relative overflow-hidden">
@@ -371,9 +371,9 @@ export default function App() {
                   </div>
                 </NotificationProvider>
               </PlatformAccessBoundary>
-            </HashRouter>
-          </PlatformSettingsProvider>
-        </ThemeProvider>
+            </PlatformSettingsProvider>
+          </ThemeProvider>
+        </HashRouter>
       </AuthProvider>
     </QueryClientProvider>
   );

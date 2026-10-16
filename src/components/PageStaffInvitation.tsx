@@ -34,7 +34,7 @@ export default function PageStaffInvitation() {
   }
   return <main className="page-canvas min-h-screen flex items-center justify-center p-6">
     <section className="w-full max-w-lg rounded-3xl border border-sky-200 bg-white p-6 sm:p-8 text-slate-900 shadow-xl dark:border-cyan-900 dark:bg-slate-900 dark:text-slate-100">
-      <PineLogo className="h-12 w-12 mb-4" />
+      <PineLogo className="h-12 w-12 mb-4" hideText />
       <h1 className="text-2xl font-bold">Join your residence staff</h1>
       {error && <p role="alert" className="mt-4 text-sm text-rose-700 dark:text-rose-300">{error}</p>}
       {!invitation && !error && <p role="status" className="mt-4">Checking your invitation…</p>}

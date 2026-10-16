@@ -349,10 +349,10 @@ function OfficerWorkspace() {
       <div className="fixed bottom-1/4 -right-48 w-96 h-96 bg-indigo-400/15 rounded-full blur-3xl pointer-events-none" />
 
       {/* Top Navbar */}
-      <header className="w-full max-w-6xl flex items-center justify-between mb-8 z-10 bg-white/85 backdrop-blur-md border border-slate-200/80 rounded-2xl px-5 py-3.5 shadow-xs">
+      <header data-portal-navigation="header" className="w-full max-w-6xl flex items-center justify-between mb-8 z-10 bg-white/85 backdrop-blur-md border border-slate-200/80 rounded-2xl px-5 py-3.5 shadow-xs">
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
-            <PineLogo className="w-7 h-7" />
+            <PineLogo className="w-7 h-7" hideText />
           </div>
           <div className="flex items-center gap-2">
             <span className="text-[11px] uppercase px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-900 font-extrabold tracking-wider border border-blue-200">

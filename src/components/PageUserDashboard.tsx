@@ -83,7 +83,7 @@ import MobileNavigation from './MobileNavigation';
 import NearbyServicesMap from './NearbyServicesMap';
 import OnboardingProgress,{ MARKET_APPLICATION_STEPS,ROOM_ACTIVATION_STEPS } from './OnboardingProgress';
 import PasswordStrengthGauge from './PasswordStrengthGauge';
-import PineLogo from './PineLogo';
+import PineLogo, { PineWordmark } from './PineLogo';
 import RegistrationStatusButton from './RegistrationStatusButton';
 import ResidenceCard from './ResidenceCard';
 import ResidenceDetails from './ResidenceDetails';
@@ -1200,7 +1200,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
       </AnimatePresence>
 
       {/* MOBILE HEADER (lg:hidden) */}
-      <header className="lg:hidden flex items-center justify-between px-5 py-3 bg-white/90 backdrop-blur-xl border-b border-sky-200/50 sticky top-0 z-40 shadow-xs">
+      <header data-portal-navigation="header" className="lg:hidden flex items-center justify-between px-5 py-3 bg-white/90 backdrop-blur-xl border-b border-sky-200/50 sticky top-0 z-40 shadow-xs">
         <div role="button" tabIndex={0} aria-label="Go to home" onKeyDown={activateOnKeyboard} className="flex items-center gap-2 cursor-pointer" onClick={() => { setActiveTab('home'); navigate('/student/dashboard'); }}>
           <PineLogo size={24} />
           <div>
@@ -1232,7 +1232,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
 
       {/* Compact desktop equivalent of the mobile navigation. It stays above the scrolling content. */}
       {isSidebarHidden && (
-        <nav className="hidden lg:block fixed top-3 left-1/2 -translate-x-1/2 z-50 w-[min(860px,calc(100vw-3rem))] bg-white/72 backdrop-blur-xl border border-white/80 rounded-2xl shadow-lg">
+        <nav data-portal-navigation="top" className="hidden lg:block fixed top-3 left-1/2 -translate-x-1/2 z-50 w-[min(860px,calc(100vw-3rem))] bg-white/72 backdrop-blur-xl border border-white/80 rounded-2xl shadow-lg">
           <div className="flex items-center gap-1 px-2 py-1.5">
             {/* Profile avatar button — left end */}
             <button
@@ -1276,7 +1276,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
       )}
 
       {/* Desktop sidebar */}
-      {!isSidebarHidden && <aside className="hidden lg:flex w-72 p-6 my-6 ml-6 h-[calc(100vh-3rem)] bg-gradient-to-br from-sky-100/90 via-blue-100/85 to-amber-50/40 backdrop-blur-3xl border border-sky-200/80 shadow-2xl rounded-3xl flex flex-col justify-between shrink-0 overflow-y-auto z-10 relative">
+      {!isSidebarHidden && <aside data-portal-navigation="sidebar" className="hidden lg:flex w-72 p-6 my-6 ml-6 h-[calc(100vh-3rem)] bg-gradient-to-br from-sky-100/90 via-blue-100/85 to-amber-50/40 backdrop-blur-3xl border border-sky-200/80 shadow-2xl rounded-3xl flex flex-col justify-between shrink-0 overflow-y-auto z-10 relative">
 
         <div className="space-y-6">
           {/* Logo & Header */}
@@ -2310,7 +2310,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                     <h3 className="text-base font-black text-slate-900 break-words">{selectedProductForBuy.title}</h3>
                     {isSelectedService && (
                       <span className="px-2 py-0.5 bg-gradient-to-r from-blue-700 via-blue-600 to-indigo-700 text-white text-[9px] font-black rounded-md shadow-2xs shrink-0 flex items-center gap-1 border border-blue-400/30">
-                        <span className="text-blue-200">PineVela</span>
+                        <PineWordmark />
                         <span>(Service)</span>
                       </span>
                     )}

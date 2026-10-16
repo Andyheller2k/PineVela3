@@ -75,6 +75,7 @@
     "preview": "npm run start",
     "clean": "rm -rf dist dist-supabase dist-supabase-backend",
     "lint": "tsc --noEmit",
+    "test:theme": "node --import tsx --test tests/themePalette.test.ts tests/uiRules.test.ts tests/marketBranding.test.ts",
     "test:google-auth": "node --import tsx --test --test-concurrency=1 tests/googleAuth.test.ts tests/googleAuth.integration.test.ts",
     "test:account-refresh": "node --import tsx --test --test-concurrency=1 tests/accountRefresh.test.ts",
     "test:session-restoration": "node --import tsx --test --test-concurrency=1 tests/sessionRestoration.test.ts",

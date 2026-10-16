@@ -69,8 +69,8 @@ export default function NearbyServicesMap({ products, onClose, onInspect }: Prop
   useEffect(() => {
     positionLayer.current?.clearLayers();
     if (origin) {
-      L.circle([origin.lat, origin.lng], { radius: radius * 1000, color: '#2563eb', weight: 1, fillOpacity: .07 }).addTo(positionLayer.current!);
-      L.circleMarker([origin.lat, origin.lng], { radius: 7, color: '#fff', weight: 2, fillColor: '#2563eb', fillOpacity: 1 }).bindTooltip('Your device location').addTo(positionLayer.current!);
+      L.circle([origin.lat, origin.lng], { radius: radius * 1000, color: 'var(--pv-blue-primary)', weight: 1, fillOpacity: .07 }).addTo(positionLayer.current!);
+      L.circleMarker([origin.lat, origin.lng], { radius: 7, color: 'var(--pv-panel)', weight: 2, fillColor: 'var(--pv-blue-primary)', fillOpacity: 1 }).bindTooltip('Your device location').addTo(positionLayer.current!);
     }
     if (waypoint) L.circleMarker([waypoint.lat, waypoint.lng], { radius: 8, color: '#fff', weight: 2, fillColor: '#e8790c', fillOpacity: 1 }).bindTooltip('Your waypoint').addTo(positionLayer.current!);
   }, [origin, radius, waypoint]);

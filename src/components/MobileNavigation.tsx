@@ -43,7 +43,7 @@ export default function MobileNavigation({ items, activeTab, onSelect, primaryId
   };
   const badge = (count?: number | null) => count && count > 0 ? <span aria-hidden="true" className="ux-nav-badge">{count > 99 ? '99+' : count}</span> : null;
   return <>
-    <nav aria-label={label} data-managed-mobile-navigation className={`mobile-bottom-nav ux-mobile-navigation fixed z-40 ${visibility}`}>
+    <nav data-portal-navigation="mobile" aria-label={label} data-managed-mobile-navigation className={`mobile-bottom-nav ux-mobile-navigation fixed z-40 ${visibility}`}>
       <div data-mobile-nav-items className="flex items-center px-1 py-2">
         {primary.map(item => <button key={item.id} type="button" data-page-tabs data-navigation-id={item.id}
           aria-label={`${item.label}${item.badge ? ` (${item.badge})` : item.hasUpdates ? ' (updates available)' : ''}`} aria-current={activeTab === item.id ? 'page' : undefined}

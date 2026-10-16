@@ -1,0 +1,167 @@
+/* Product screens: white/navy/gold by day, solid navy/gold by night.
+   Public storytelling and authentication keep the stronger advertising palette. */
+html[data-theme][data-appearance="public"],
+html[data-theme] :where(body:has(.landing-peak-page, .unified-login), .pv-feature-card, [data-portal-navigation], #public-header) {
+  --pv-text: #dce7f3;
+  --pv-heading: #ffd60a;
+  --pv-heading-ink: #ffd60a;
+  --pv-heading-default-gradient: var(--pv-heading-inverse-gradient);
+  --pv-heading-gradient: var(--pv-heading-inverse-gradient);
+  --pv-link: #ffd60a;
+  --pv-muted: #b3c9df;
+  --pv-panel: #001d3d;
+  --pv-panel-gradient: linear-gradient(145deg, #003566, #001d3d);
+  --pv-field: #00162e;
+  --pv-field-edge: #6c8dae;
+  --pv-secondary: #0e3459;
+  --pv-secondary-hover: #18466f;
+  --pv-edge: rgb(255 195 0 / .28);
+  --pv-glass: rgb(0 29 61 / .96);
+}
+html[data-theme][data-appearance="public"] {
+  --pv-canvas: #001d3d;
+  --pv-page-gradient: linear-gradient(145deg, #001d3d, #000814);
+  --pv-section-from: #003566;
+  --pv-section-to: #001d3d;
+}
+
+/* Strong sections restore legible text and tinted surfaces in legacy components. */
+html[data-theme] :where(body:has(.landing-peak-page, .unified-login), .pv-feature-card, [data-portal-navigation], #public-header) :is(
+  [class~="text-black"], [class~="text-slate-950"], [class~="text-slate-900"], [class~="text-slate-800"], [class~="text-slate-700"],
+  [class~="text-blue-950"], [class~="text-blue-900"], [class~="text-blue-800"], [class~="text-blue-700"]
+) { color: var(--pv-text); }
+html[data-theme] :where(body:has(.landing-peak-page, .unified-login), .pv-feature-card, [data-portal-navigation], #public-header) :is(
+  [class~="text-slate-650"], [class~="text-slate-600"], [class~="text-slate-500"], [class~="text-slate-400"]
+) { color: var(--pv-muted); }
+html[data-theme] :where(body:has(.landing-peak-page, .unified-login), .pv-feature-card, [data-portal-navigation]) :is(
+  [class~="bg-white"], [class*="bg-white/"], [class~="bg-slate-50"], [class~="bg-slate-100"], [class~="bg-blue-50"], [class*="bg-blue-100"], [class*="bg-blue-200"]
+) { background-color: var(--pv-panel); background-image: var(--pv-panel-gradient); border-color: var(--pv-edge); }
+
+/* A single coherent navigation treatment, without changing destinations or sizes. */
+html[data-theme] :is([data-portal-navigation], [id="public-header"]) {
+  background: linear-gradient(145deg, #001d3d, #003566) !important;
+  color: #dce7f3;
+  border-color: rgb(255 195 0 / .30) !important;
+  box-shadow: 0 8px 28px rgb(0 8 20 / .16);
+}
+html[data-theme] #public-header { border-bottom: 1px solid rgb(255 195 0 / .32); }
+html[data-theme] :is([data-portal-navigation], [id="public-header"]) :is(input, select) { background: #00162e !important; color: #dce7f3 !important; border-color: #6c8dae !important; }
+html[data-theme] :is([data-portal-navigation], [id="public-header"]) input::placeholder { color: #b3c9df !important; }
+html[data-theme] :is([data-portal-navigation], [id="public-header"]) :is(button, a):focus-visible { outline-color: #ffd60a; }
+html[data-theme] #public-header .public-header-link { color: #ffd60a !important; }
+html[data-theme] [data-portal-navigation] button:not(:disabled):not([aria-current="page"]):hover { background-color: #18466f; }
+html[data-theme] :is([data-portal-navigation], .ux-more-panel) button[aria-current="page"] {
+  background: var(--pv-action-gradient);
+  color: #001d3d;
+  border-color: #ffd60a;
+  box-shadow: 0 3px 12px rgb(0 8 20 / .18);
+}
+html[data-theme] :is([data-portal-navigation], .ux-more-panel) button[aria-current="page"] :is(span, div, svg) { color: #001d3d; }
+html[data-theme] [data-portal-navigation] button[aria-current="page"] :is([class*="bg-white/"], [class*="bg-blue-100"], [class*="bg-blue-200"]) { background: rgb(0 29 61 / .08); }
+html[data-theme] [data-portal-navigation] button[aria-current="page"] [class~="bg-blue-600"] { background: #001d3d; color: #ffd60a; }
+html[data-theme] [data-portal-navigation] button :is(.ux-nav-badge, [class~="bg-rose-600"], [class~="bg-red-600"]) { color: #ffffff; }
+html[data-theme] .theme-dock { background: #001d3d; border-color: rgb(255 195 0 / .35); }
+
+/* Feature panels repeat the reference's blue-block/light-card hierarchy. */
+html[data-theme] .pv-feature-card { background: var(--pv-strong-gradient); color: var(--pv-text); border-color: rgb(255 195 0 / .3); box-shadow: 0 12px 30px var(--pv-brand-shadow); }
+html[data-theme="dark"] .pv-feature-card {
+  --pv-text: #001d3d;
+  --pv-heading: #001d3d;
+  --pv-heading-ink: #001d3d;
+  --pv-muted: #193b5e;
+  --pv-link: #001d3d;
+  --pv-heading-default-gradient: linear-gradient(110deg, #000814, #003566);
+  --pv-heading-gradient: var(--pv-heading-default-gradient);
+  --pv-panel: #ffd60a;
+  --pv-panel-gradient: linear-gradient(115deg, #ffc300, #ffd60a);
+  --pv-field: #fff1aa;
+  --pv-field-edge: #34587b;
+  --pv-secondary: #ffe272;
+  --pv-secondary-hover: #ffeb9a;
+  --pv-edge: rgb(0 29 61 / .24);
+  --pv-action-gradient: linear-gradient(#001d3d, #001d3d);
+  --pv-action-hover-gradient: linear-gradient(#001d3d, #001d3d);
+  --pv-on-action: #ffd60a;
+  background: linear-gradient(115deg, #ffc300, #ffd60a);
+}
+
+/* Dark surfaces share one opaque navy. Local gold feature-card roles and the
+   more specific action/selected-state rules retain their yellow treatment.
+   Match complete utility prefixes so hover-only classes do not create fills. */
+html[data-theme="dark"] :is(
+  [class^="bg-white"], [class*=" bg-white"], [class^="bg-black"], [class*=" bg-black"],
+  [class^="bg-gray-"], [class*=" bg-gray-"], [class^="bg-slate-"], [class*=" bg-slate-"],
+  [class^="bg-blue-"], [class*=" bg-blue-"], [class^="bg-sky-"], [class*=" bg-sky-"],
+  [class^="bg-cyan-"], [class*=" bg-cyan-"], [class^="bg-indigo-"], [class*=" bg-indigo-"],
+  [class^="bg-purple-"], [class*=" bg-purple-"], [class^="bg-violet-"], [class*=" bg-violet-"],
+  [class^="bg-pink-"], [class*=" bg-pink-"], [class^="bg-fuchsia-"], [class*=" bg-fuchsia-"],
+  [class^="bg-emerald-"], [class*=" bg-emerald-"], [class^="bg-green-"], [class*=" bg-green-"],
+  [class^="bg-teal-"], [class*=" bg-teal-"], [class^="bg-red-"], [class*=" bg-red-"],
+  [class^="bg-rose-"], [class*=" bg-rose-"],
+  [class~="bg-amber-600"], [class~="bg-orange-600"], [class^="bg-amber-950/"], [class*=" bg-amber-950/"],
+  [class^="bg-gradient-"], [class*=" bg-gradient-"], [class^="bg-linear-"], [class*=" bg-linear-"]
+):not(:where([class~="bg-clip-text"], [class*="from-amber-"], [class*="from-yellow-"], [class*="from-orange-"])) {
+  background-color: var(--pv-panel);
+  background-image: var(--pv-panel-gradient);
+}
+html[data-theme="dark"] :where([data-portal-navigation], #public-header) {
+  --pv-panel-gradient: linear-gradient(#001d3d, #001d3d);
+  --pv-field: #001d3d;
+  --pv-secondary: #001d3d;
+  --pv-secondary-hover: #001d3d;
+  --pv-glass: #001d3d;
+}
+html[data-theme="dark"] :is([data-portal-navigation], [id="public-header"]) { background: #001d3d !important; }
+html[data-theme="dark"] :is([data-portal-navigation], [id="public-header"]) :is(input, select) { background: #001d3d !important; }
+html[data-theme="dark"] [data-portal-navigation] button:not(:disabled):not([aria-current="page"]):hover { background-color: #001d3d; box-shadow: inset 0 0 0 1px var(--pv-edge); }
+html[data-theme="dark"] :is(.app-canvas, body) [class~="text-white"]:is([class~="bg-amber-500"], [class~="bg-yellow-500"], [class~="bg-orange-500"]) { background: var(--pv-accent-gradient); color: #001d3d; }
+
+/* Marketing: large navy and yellow shapes, minimal white interface chrome. */
+html[data-theme] .landing-peak-page { background: var(--pv-page-gradient); }
+html[data-theme] .landing-peak-hero .landing-peak-copy :is(p, strong),
+html[data-theme] .landing-peak-hero .landing-peak-brand [class~="text-slate-500"] { color: #dce7f3; }
+.landing-peak-brand { position: relative; isolation: isolate; }
+.landing-peak-brand::before { content: ''; position: absolute; inset: -5% -2% 0 3%; background: var(--pv-accent-gradient); border-radius: 32px 100px 32px 100px; rotate: -8deg; z-index: -1; }
+.landing-peak-brand > div { background: var(--pv-strong-gradient); border: 1px solid rgb(255 195 0 / .45); border-radius: 30px 30px 76px 30px; box-shadow: 0 16px 40px rgb(0 8 20 / .22); }
+html[data-theme] .landing-peak-hero .landing-peak-copy [class~="bg-amber-300"] { background-color: #ffc300; opacity: .4; }
+html[data-theme] :is(.landing-peak-page #benefits, .landing-company-story .company-chapter:nth-child(even)) {
+  --pv-text: #001d3d;
+  --pv-muted: #193b5e;
+  --pv-link: #001d3d;
+  --pv-heading: #001d3d;
+  --pv-heading-ink: #001d3d;
+  --pv-heading-default-gradient: linear-gradient(110deg, #000814, #003566);
+  --pv-heading-gradient: var(--pv-heading-default-gradient);
+  --pv-section-from: #ffc300;
+  --pv-section-to: #ffd60a;
+  background: linear-gradient(115deg, #ffc300, #ffd60a);
+  color: #001d3d;
+}
+.landing-peak-page #benefits { padding-block: clamp(24px, 4vw, 48px); border-radius: 28px; }
+html[data-theme] .landing-company-story .company-chapter:nth-child(odd) { background: var(--pv-strong-gradient); }
+html[data-theme] .landing-peak-page #footer-section { background: #000814; border-top: 1px solid rgb(255 195 0 / .25); }
+
+/* Login keeps its fitted card geometry and independent illustration. */
+html[data-theme] .unified-login { background: linear-gradient(115deg, #001d3d 0%, #001d3d 58%, #ffc300 58%, #ffd60a 100%); }
+html[data-theme] .unified-login .login-header { background: #001d3d !important; border-color: rgb(255 195 0 / .3) !important; }
+html[data-theme] .unified-login .login-auth-card { background: linear-gradient(145deg, #003566, #001d3d); border-color: rgb(255 195 0 / .45); box-shadow: 0 16px 48px rgb(0 8 20 / .3); }
+html[data-theme] .unified-login .login-mode-toggle { background: #00162e; border-color: #42688c; }
+html[data-theme] .unified-login .login-mode-toggle button:not([aria-pressed="true"]) { color: #b3c9df; }
+html[data-theme] .unified-login .login-mode-toggle button[aria-pressed="true"] { background: var(--pv-action-gradient); color: #001d3d; }
+html[data-theme] .unified-login .login-google-button { background: #00162e; color: #ffd60a; border-color: #6c8dae; }
+html[data-theme] .unified-login .login-feature-description h3 { color: #ffd60a; }
+html[data-theme] body:has(.unified-login) .unified-login .login-footer { width: max-content; max-width: 100%; align-self: center; border-radius: 999px; background: #ffd60a; color: #001d3d; }
+@media (max-width: 1023px) {
+  html[data-theme] .unified-login { background: linear-gradient(155deg, #001d3d 0%, #001d3d 40%, #003566 40%, #003566 76%, #ffc300 76%, #ffd60a 100%); }
+  html[data-theme] .unified-login .mobile-login-photo img { filter: none; }
+}
+
+/* Only light product pages retain a decorative sun. */
+.theme-sun > span { background: radial-gradient(circle at 35% 30%, #ffe792, #ffd60a 65%, #ffc300); }
+@media (prefers-contrast: more) {
+  html[data-theme] :is([data-portal-navigation], .pv-feature-card, .unified-login .login-auth-card) { border-color: currentColor !important; }
+}
+@media (forced-colors: active) {
+  .landing-peak-brand::before { display: none; }
+  html[data-theme] :is([data-portal-navigation], #public-header, .pv-feature-card, .unified-login, .unified-login .login-auth-card) { background: Canvas !important; color: CanvasText !important; }
+}

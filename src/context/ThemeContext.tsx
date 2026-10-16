@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 import { sessionFetch } from '../lib/session';
 
@@ -9,9 +10,12 @@ const read = (key: string): Theme | null => { try { const value = localStorage.g
 const cache = (key: string, value: Theme) => { try { localStorage.setItem(key, value); } catch { /* Appearance remains usable with storage disabled. */ } };
 const remove = (key: string) => { try { localStorage.removeItem(key); } catch {} };
 const initialTheme = (): Theme => read(DEVICE_KEY) || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-const ThemeContext = createContext<{ theme: Theme; toggleTheme: () => void; savePending: boolean } | null>(null);
+const ThemeContext = createContext<{ theme: Theme; publicAppearance: boolean; toggleTheme: () => void; savePending: boolean } | null>(null);
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
+  const { pathname } = useLocation();
+  const route = pathname.replace(/\/+$/, '') || '/';
+  const publicAppearance = route === '/' || route === '/login';
   const { user, loading } = useAuth();
   const contextId = user ? String(user.id) : null;
   const identity = user ? `${user.role}:${user.id}` : null;
@@ -26,6 +30,15 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   account.current = identity;
 
   const apply = useCallback((next: Theme) => {
+    current.current = next;
+    setTheme(next);
+    cache(DEVICE_KEY, next);
+  }, []);
+
+  // Public pages and body portals keep one appearance without changing the
+  // account/device preference. Restore that preference on product routes.
+  useLayoutEffect(() => {
+    const appearance = publicAppearance ? 'light' : theme;
     const root = document.documentElement;
     cancelAnimationFrame(paintFrame.current);
     root.classList.add('theme-changing');
@@ -33,12 +46,10 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     paintFrame.current = requestAnimationFrame(() => {
       paintFrame.current = requestAnimationFrame(() => root.classList.remove('theme-changing'));
     });
-    root.dataset.theme = next;
-    root.style.colorScheme = next;
-    current.current = next;
-    setTheme(next);
-    cache(DEVICE_KEY, next);
-  }, []);
+    root.dataset.appearance = publicAppearance ? 'public' : 'product';
+    root.dataset.theme = appearance;
+    root.style.colorScheme = appearance;
+  }, [publicAppearance, theme]);
 
   // Serialise writes so rapid toggles cannot leave an older preference on the server.
   const flush = useCallback(async () => {
@@ -67,7 +78,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     revision.current++;
     pending.current = null;
     setSavePending(false);
-    if (!identity || !contextId) return; // Public pages retain the last mode used on this device.
+    if (!identity || !contextId) return; // Guests retain the last product mode on this device.
     const key = `${DEVICE_KEY}:${identity}`;
     const unsynced = read(`${key}:unsynced`);
     const cached = read(key);
@@ -122,7 +133,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     }
   }, [contextId, apply, flush]);
 
-  return <ThemeContext.Provider value={{ theme, toggleTheme, savePending }}>{children}</ThemeContext.Provider>;
+  return <ThemeContext.Provider value={{ theme, publicAppearance, toggleTheme, savePending }}>{children}</ThemeContext.Provider>;
 }
 
 export function useTheme() {

@@ -14,16 +14,14 @@ validateEmail,
 validatePhone
 } from '../utils/formValidation';
 import EmailPasswordRecovery from './EmailPasswordRecovery';
-import OnboardingProgress,{ SIGNUP_STEPS } from './OnboardingProgress';
 import PasswordStrengthGauge from './PasswordStrengthGauge';
-import PineLogo from './PineLogo';
+import PineLogo, { PineWordmark } from './PineLogo';
 import SupabaseResidentActivation from './SupabaseResidentActivation';
 
 // Static asset imports
 import marketImg from '../../assets/login-market.png';
 import '../login.css';
 import GoogleAuthButton from './GoogleAuthButton';
-import ThemeToggle from './ThemeToggle';
 import WindDust from './WindDust';
 
 const featureImage = marketImg;
@@ -294,6 +292,9 @@ export default function PageUnifiedLogin() {
       <div className="mobile-login-backdrop" aria-hidden="true">
         <img src={featureImage} alt="" />
       </div>
+      <div className="mobile-login-photo" aria-hidden="true">
+        <img src={featureImage} alt="" />
+      </div>
       <WindDust />
       
       {/* Floating Toast */}
@@ -322,7 +323,6 @@ export default function PageUnifiedLogin() {
             <span>Home</span>
           </button>
         </div>
-        <div className="login-mobile-theme"><ThemeToggle /></div>
       </header>
 
       {/* Main Container */}
@@ -335,7 +335,7 @@ export default function PageUnifiedLogin() {
               <img src={featureImage} alt="PineVela student marketplace" loading="eager" fetchPriority="high" className="absolute inset-0 w-full h-full object-contain" />
             </div>
             <div className="login-feature-description space-y-4 px-1">
-              <h3 className="text-2xl sm:text-3xl font-black tracking-tight leading-tight"><span className="text-slate-950">Pine</span><span className="text-blue-900">Vela</span></h3>
+              <h3 className="text-2xl sm:text-3xl font-black tracking-tight leading-tight"><PineWordmark /></h3>
               <p className="text-slate-650 text-sm sm:text-base leading-relaxed font-semibold">{featureDescription}</p>
             </div>
 
@@ -346,10 +346,6 @@ export default function PageUnifiedLogin() {
 
         {/* Right Side: Login & Signup Box */}
         <div className="login-form-pane hide-scrollbar lg:col-span-6 flex flex-col items-stretch justify-center w-full max-w-2xl mx-auto lg:max-w-none">
-          <div className="mobile-login-photo" aria-hidden="true">
-            <img src={featureImage} alt="PineVela student marketplace" />
-          </div>
-          
           <div className="login-auth-card bg-blue-50/90 backdrop-blur-lg rounded-3xl border border-blue-200/70 shadow-2xl p-8 sm:p-10 space-y-6 relative overflow-hidden flex flex-col justify-between w-full">
             
             <div className="login-card-heading text-center space-y-2 pt-1">
@@ -362,22 +358,12 @@ export default function PageUnifiedLogin() {
                 ) : activeTab === 'login' ? (
                   <span 
                     className="login-brand-heading text-black font-black"
-                    style={{ 
-                      color: '#000000', 
-                      WebkitTextStroke: '1.5px #2563eb', 
-                      paintOrder: 'stroke fill' 
-                    }}
                   >
                     Login
                   </span>
                 ) : (
                   <span 
                     className="login-brand-heading text-black font-black"
-                    style={{ 
-                      color: '#000000', 
-                      WebkitTextStroke: '1.5px #2563eb', 
-                      paintOrder: 'stroke fill' 
-                    }}
                   >
                     Sign Up
                   </span>
@@ -417,8 +403,6 @@ export default function PageUnifiedLogin() {
                 </button>
               </div>
             )}
-
-            {(activeTab === 'register' || verificationPending) && <OnboardingProgress steps={SIGNUP_STEPS} step={verificationPending ? 2 : 1} label="Account signup" />}
 
             {verificationPending ? (
               /* Email Verification Screen */
@@ -492,7 +476,7 @@ export default function PageUnifiedLogin() {
               </form>
             ) : activeTab === 'login' ? (
               /* System Login Form */
-              <form onSubmit={handleLoginSubmit} className="space-y-4 text-left py-1">
+              <form onSubmit={handleLoginSubmit} className="login-credentials-form space-y-4 text-left py-1">
                 
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-slate-700 block">Username or Email Address</label>
@@ -605,7 +589,7 @@ export default function PageUnifiedLogin() {
               </form>
             ) : (
               /* Unified Registration Form */
-              <form onSubmit={handleUnifiedRegisterSubmit} className="onboarding-fields space-y-3.5 text-left py-1">
+              <form onSubmit={handleUnifiedRegisterSubmit} className="login-signup-form onboarding-fields space-y-3.5 text-left py-1">
                 
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-slate-700 block">Your Full Name</label>

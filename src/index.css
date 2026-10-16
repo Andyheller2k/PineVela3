@@ -2,9 +2,10 @@
 @import "tailwindcss";
 @import "./theme.css";
 @import "./brandSurfaces.css";
+@import "./experience.css";
 
 @theme {
-  /* Shared violet palette; semantic status and subscription colors stay separate. */
+  /* Shared navy palette; semantic success and error colors stay separate. */
   --color-primary: var(--pv-blue-primary);
   --color-primary-hover: var(--pv-primary-hover);
   --color-sidebar: var(--pv-blue-navy);
@@ -17,99 +18,184 @@
   --font-sans: 'Outfit', 'Plus Jakarta Sans', sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, monospace;
 
-  /* Legacy brand utilities all resolve to the new reference palette. */
-  --color-blue-50: #f7f3ff;
-  --color-blue-100: var(--pv-blue-ice);
-  --color-blue-200: var(--pv-blue-soft);
-  --color-blue-300: #baa2ec;
-  --color-blue-400: var(--pv-blue-accent);
-  --color-blue-500: var(--pv-blue-primary);
-  --color-blue-600: var(--pv-blue-primary);
-  --color-blue-700: var(--pv-primary-hover);
-  --color-blue-800: #3c2184;
-  --color-blue-850: #341b70;
-  --color-blue-900: #2c185e;
-  --color-blue-950: var(--pv-blue-navy);
-  --color-sky-50: #f7f3ff;
-  --color-sky-100: var(--pv-blue-ice);
-  --color-sky-200: var(--pv-blue-soft);
-  --color-sky-300: #baa2ec;
-  --color-sky-400: var(--pv-blue-accent);
-  --color-sky-500: var(--pv-blue-primary);
-  --color-sky-600: var(--pv-blue-primary);
-  --color-sky-700: var(--pv-primary-hover);
-  --color-sky-800: #3c2184;
-  --color-sky-900: #2c185e;
-  --color-sky-950: var(--pv-blue-navy);
-  --color-cyan-50: #f7f3ff;
-  --color-cyan-100: var(--pv-blue-ice);
-  --color-cyan-200: var(--pv-blue-soft);
-  --color-cyan-300: #baa2ec;
-  --color-cyan-400: var(--pv-blue-accent);
-  --color-cyan-500: var(--pv-blue-accent);
-  --color-cyan-600: var(--pv-blue-primary);
-  --color-cyan-700: var(--pv-primary-hover);
-  --color-cyan-800: #3c2184;
-  --color-cyan-900: #2c185e;
-  --color-cyan-950: var(--pv-blue-navy);
-  --color-indigo-50: #f7f3ff;
-  --color-indigo-100: var(--pv-blue-ice);
-  --color-indigo-200: var(--pv-blue-soft);
-  --color-indigo-300: #b5b4f6;
-  --color-indigo-400: #7774e4;
-  --color-indigo-500: #4858df;
-  --color-indigo-600: var(--pv-brand-indigo);
-  --color-indigo-700: #2b37b1;
-  --color-indigo-800: #292b85;
-  --color-indigo-900: var(--pv-blue-navy);
-  --color-indigo-950: var(--pv-blue-navy);
+  /* Existing utility names share one navy/blue scale across every portal. */
+  --color-blue-50: #f4f6fb;
+  --color-blue-100: #eaf0f7;
+  --color-blue-200: #c5d8ec;
+  --color-blue-300: #86a8c9;
+  --color-blue-400: #336f9d;
+  --color-blue-500: #245780;
+  --color-blue-600: #003566;
+  --color-blue-700: #00305e;
+  --color-blue-800: #00274e;
+  --color-blue-900: #001d3d;
+  --color-blue-950: #000814;
+  --color-blue-850: #002346;
+  --color-sky-50: #f4f6fb;
+  --color-sky-100: #eaf0f7;
+  --color-sky-200: #c5d8ec;
+  --color-sky-300: #86a8c9;
+  --color-sky-400: #336f9d;
+  --color-sky-500: #245780;
+  --color-sky-600: #003566;
+  --color-sky-700: #00305e;
+  --color-sky-800: #00274e;
+  --color-sky-900: #001d3d;
+  --color-sky-950: #000814;
+  --color-cyan-50: #f4f6fb;
+  --color-cyan-100: #eaf0f7;
+  --color-cyan-200: #c5d8ec;
+  --color-cyan-300: #86a8c9;
+  --color-cyan-400: #336f9d;
+  --color-cyan-500: #245780;
+  --color-cyan-600: #003566;
+  --color-cyan-700: #00305e;
+  --color-cyan-800: #00274e;
+  --color-cyan-900: #001d3d;
+  --color-cyan-950: #000814;
+  --color-indigo-50: #f4f6fb;
+  --color-indigo-100: #eaf0f7;
+  --color-indigo-200: #c5d8ec;
+  --color-indigo-300: #86a8c9;
+  --color-indigo-400: #336f9d;
+  --color-indigo-500: #245780;
+  --color-indigo-600: #003566;
+  --color-indigo-700: #00305e;
+  --color-indigo-800: #00274e;
+  --color-indigo-900: #001d3d;
+  --color-indigo-950: #000814;
+  --color-violet-50: #f4f6fb;
+  --color-violet-100: #eaf0f7;
+  --color-violet-200: #c5d8ec;
+  --color-violet-300: #86a8c9;
+  --color-violet-400: #336f9d;
+  --color-violet-500: #245780;
+  --color-violet-600: #003566;
+  --color-violet-700: #00305e;
+  --color-violet-800: #00274e;
+  --color-violet-900: #001d3d;
+  --color-violet-950: #000814;
+  --color-purple-50: #f4f6fb;
+  --color-purple-100: #eaf0f7;
+  --color-purple-200: #c5d8ec;
+  --color-purple-300: #86a8c9;
+  --color-purple-400: #336f9d;
+  --color-purple-500: #245780;
+  --color-purple-600: #003566;
+  --color-purple-700: #00305e;
+  --color-purple-800: #00274e;
+  --color-purple-900: #001d3d;
+  --color-purple-950: #000814;
+  --color-pink-50: #f4f6fb;
+  --color-pink-100: #eaf0f7;
+  --color-pink-200: #c5d8ec;
+  --color-pink-300: #86a8c9;
+  --color-pink-400: #336f9d;
+  --color-pink-500: #245780;
+  --color-pink-600: #003566;
+  --color-pink-700: #00305e;
+  --color-pink-800: #00274e;
+  --color-pink-900: #001d3d;
+  --color-pink-950: #000814;
+  --color-fuchsia-50: #f4f6fb;
+  --color-fuchsia-100: #eaf0f7;
+  --color-fuchsia-200: #c5d8ec;
+  --color-fuchsia-300: #86a8c9;
+  --color-fuchsia-400: #336f9d;
+  --color-fuchsia-500: #245780;
+  --color-fuchsia-600: #003566;
+  --color-fuchsia-700: #00305e;
+  --color-fuchsia-800: #00274e;
+  --color-fuchsia-900: #001d3d;
+  --color-fuchsia-950: #000814;
 
-  --color-violet-50: #f7f3ff;
-  --color-violet-100: #eee7ff;
-  --color-violet-200: #d8c7fb;
-  --color-violet-300: #baa2ec;
-  --color-violet-400: #9d77e1;
-  --color-violet-500: #8053d4;
-  --color-violet-600: var(--pv-brand-violet);
-  --color-violet-700: #5c29af;
-  --color-violet-800: #49218a;
-  --color-violet-900: #35195f;
-  --color-purple-50: #fbf3ff;
-  --color-purple-100: #f5e5fd;
-  --color-purple-200: #eac6f7;
-  --color-purple-300: #d69fe9;
-  --color-purple-400: #be73d1;
-  --color-purple-500: #b340c9;
-  --color-purple-600: var(--pv-brand-magenta);
-  --color-purple-700: #8c209e;
-  --color-purple-800: #6c1b7c;
-  --color-purple-900: #4e175b;
-  /* Tinted neutrals keep ordinary labels readable without adding saturation. */
-  --color-slate-50: #faf8fd;
-  --color-slate-100: #f1edf7;
-  --color-slate-200: #e2daec;
-  --color-slate-300: #c5b8d5;
-  --color-slate-400: #776a89;
-  --color-slate-500: #6a5d7c;
-  --color-slate-600: #594b6a;
-  --color-slate-650: #50425f;
-  --color-slate-700: #453651;
-  --color-slate-800: #30223e;
-  --color-slate-900: #21172d;
-  --color-slate-950: #130d20;
-  /* Warnings and subscription ratings keep their distinct warm meaning. */
-  --color-amber-50: #fefce8;
-  --color-amber-100: #fef9c3;
-  --color-amber-200: #fef08a;
-  --color-amber-300: #fde047;
-  --color-amber-400: #facc15;
-  --color-amber-500: #f59e0b;
-  --color-amber-600: #b45309;
+  /* Warm, low-saturation neutrals carry most of the interface. */
+  --color-slate-50: #f8f8f5;
+  --color-slate-100: #efefed;
+  --color-slate-200: #dfe3e8;
+  --color-slate-300: #bdc6d3;
+  --color-slate-400: #5f6d82;
+  --color-slate-500: #596579;
+  --color-slate-600: #46566f;
+  --color-slate-700: #30425f;
+  --color-slate-800: #1f304c;
+  --color-slate-900: #14233b;
+  --color-slate-950: #081326;
+  --color-gray-50: #f8f8f5;
+  --color-gray-100: #efefed;
+  --color-gray-200: #dfe3e8;
+  --color-gray-300: #bdc6d3;
+  --color-gray-400: #5f6d82;
+  --color-gray-500: #596579;
+  --color-gray-600: #46566f;
+  --color-gray-700: #30425f;
+  --color-gray-800: #1f304c;
+  --color-gray-900: #14233b;
+  --color-gray-950: #081326;
+  --color-zinc-50: #f8f8f5;
+  --color-zinc-100: #efefed;
+  --color-zinc-200: #dfe3e8;
+  --color-zinc-300: #bdc6d3;
+  --color-zinc-400: #5f6d82;
+  --color-zinc-500: #596579;
+  --color-zinc-600: #46566f;
+  --color-zinc-700: #30425f;
+  --color-zinc-800: #1f304c;
+  --color-zinc-900: #14233b;
+  --color-zinc-950: #081326;
+  --color-neutral-50: #f8f8f5;
+  --color-neutral-100: #efefed;
+  --color-neutral-200: #dfe3e8;
+  --color-neutral-300: #bdc6d3;
+  --color-neutral-400: #5f6d82;
+  --color-neutral-500: #596579;
+  --color-neutral-600: #46566f;
+  --color-neutral-700: #30425f;
+  --color-neutral-800: #1f304c;
+  --color-neutral-900: #14233b;
+  --color-neutral-950: #081326;
+  --color-stone-50: #f8f8f5;
+  --color-stone-100: #efefed;
+  --color-stone-200: #dfe3e8;
+  --color-stone-300: #bdc6d3;
+  --color-stone-400: #5f6d82;
+  --color-stone-500: #596579;
+  --color-stone-600: #46566f;
+  --color-stone-700: #30425f;
+  --color-stone-800: #1f304c;
+  --color-stone-900: #14233b;
+  --color-stone-950: #081326;
+  --color-slate-650: #3b4d68;
+  --color-slate-850: #192a44;
+
+  /* Warm accents remain readable; warnings retain their semantic role. */
+  --color-amber-50: #fffaeb;
+  --color-amber-100: #fff0c2;
+  --color-amber-200: #ffe19a;
+  --color-amber-300: #ffd60a;
+  --color-amber-400: #ffc300;
+  --color-amber-500: #d99800;
+  --color-amber-600: #a57100;
+  --color-amber-700: #805800;
+  --color-amber-800: #624500;
+  --color-amber-900: #4c3600;
+  --color-amber-950: #302100;
+  --color-yellow-50: #fffaeb;
+  --color-yellow-100: #fff0c2;
+  --color-yellow-200: #ffe19a;
+  --color-yellow-300: #ffd60a;
+  --color-yellow-400: #ffc300;
+  --color-yellow-500: #d99800;
+  --color-yellow-600: #a57100;
+  --color-yellow-700: #805800;
+  --color-yellow-800: #624500;
+  --color-yellow-900: #4c3600;
+  --color-yellow-950: #302100;
 
   /* Border radius adjustments to 12px (rounded-xl) for sleek cards */
-  --radius-xl: 12px;
-  --radius-2xl: 12px;
-  --radius-3xl: 12px;
+  --radius-xl: 14px;
+  --radius-2xl: 20px;
+  --radius-3xl: 28px;
 
   /* Crisp, subtle minimalist shadows */
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.04);
@@ -135,11 +221,11 @@ html, body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #c5b8d5;
+  background: var(--pv-field-edge);
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #8a7a9c;
+  background: var(--pv-link);
 }
 
 /* The public landing page remains scrollable without a visible right-edge scrollbar gutter. */
@@ -168,25 +254,25 @@ html.marketplace-scrollbar-hidden::-webkit-scrollbar {
   animation: sos-pulse 1.5s infinite ease-in-out;
 }
 
-/* 3D text styling and text outline utilities */
+/* Legacy display classes now use clean, theme-aware ink. */
 .text-3d {
-  color: #21172d;
-  text-shadow: 0 1px 0 #c5b8d5, 0 2px 0 #8a7a9c, 0 3px 0 #64748b, 0 4px 6px rgba(0, 0, 0, 0.3);
+  color: var(--pv-heading);
+  text-shadow: none;
 }
 
 .text-3d-blue {
-  color: var(--pv-blue-primary);
-  text-shadow: 0 1px 0 var(--pv-blue-soft), 0 2px 0 var(--pv-blue-accent), 0 3px 2px rgb(91 59 196 / .4);
+  color: var(--pv-heading);
+  text-shadow: none;
 }
 
 .text-outline-sm {
-  -webkit-text-stroke: 0.5px #30223e;
-  color: #594b6a;
+  -webkit-text-stroke: 0;
+  color: var(--pv-muted);
 }
 
 .text-outline-white {
-  -webkit-text-stroke: 0.6px #ffffff;
-  color: #30223e;
+  -webkit-text-stroke: 0;
+  color: var(--pv-text);
 }
 
 
@@ -194,23 +280,13 @@ html.marketplace-scrollbar-hidden::-webkit-scrollbar {
   animation: text-pulse 1.5s infinite ease-in-out;
 }
 
-/* Hostel card hover light blue radiant glow */
-@keyframes blue-glow-pulse {
-  0%, 100% {
-    box-shadow: 0 0 15px rgba(157, 78, 221, 0.3);
-  }
-  50% {
-    box-shadow: 0 0 25px rgba(157, 78, 221, 0.6);
-  }
-}
-
 .hostel-radiant-glow {
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: border-color .2s ease, box-shadow .2s ease, transform .2s ease;
 }
 
 .hostel-radiant-glow:hover {
-  border-color: rgba(157, 78, 221, 0.5) !important;
-  animation: blue-glow-pulse 2s infinite ease-in-out;
+  border-color: var(--pv-brand-yellow) !important;
+  box-shadow: 0 8px 24px var(--pv-brand-shadow);
   transform: translateY(-3px);
 }
 .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; } .hide-scrollbar::-webkit-scrollbar { display: none; }
@@ -257,7 +333,7 @@ html.marketplace-scrollbar-hidden::-webkit-scrollbar {
   backdrop-filter: blur(18px) saturate(150%);
   border: 1px solid rgba(255, 255, 255, 0.72) !important;
   border-radius: 1rem !important;
-  box-shadow: 0 -4px 24px rgb(91 59 196 / .1), 0 10px 28px rgba(15, 23, 42, 0.1) !important;
+  box-shadow: 0 -4px 24px rgb(0 29 61 / .10), 0 10px 28px rgb(0 8 20 / .10) !important;
   overflow: hidden;
   padding-bottom: max(0.375rem, env(safe-area-inset-bottom)) !important;
 }
@@ -348,4 +424,3 @@ dialog[data-dashboard-overlay]::backdrop { background: transparent; }
 .public-header-compact form { max-width: 390px; }
 .public-header-compact input { font-size: 12px; padding-top: 7px; padding-bottom: 7px; }
 .public-header-compact button:not([role="switch"]) { font-size: 11px; padding-top: 6px; padding-bottom: 6px; }
-.public-header-compact .company-theme-toggle { transform: scale(.88); transform-origin: center; }

@@ -1,5 +1,6 @@
 import {isMarketService,marketListingAvailable} from '../../marketListingAvailability';
 import ListingPlanBadge from './ListingPlanBadge';
+import { PineWordmark } from './PineLogo';
 import type { MarketPlan } from '../../marketPlans';
 import React, { memo } from 'react';
 import { Heart, GraduationCap, Store, ChevronRight, Star, MapPin } from 'lucide-react';
@@ -124,7 +125,7 @@ export const MarketItemCard: React.FC<MarketItemCardProps> = memo(
             {/* Category / PineVela (Service) Tag */}
             {isService ? (
               <div className="absolute top-1.5 left-1.5 sm:top-2 sm:left-2 px-2 py-0.5 bg-gradient-to-r from-blue-700 via-blue-600 to-indigo-700 text-white text-[8px] sm:text-[9.5px] font-black rounded-md shadow-xs flex items-center gap-1 border border-blue-400/30 tracking-wide pointer-events-none">
-                <span className="font-extrabold tracking-tight text-blue-200">PineVela</span>
+                <PineWordmark />
                 <span className="text-white font-black">(Service)</span>
               </div>
             ) : (

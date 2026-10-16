@@ -60,9 +60,23 @@
 
 .landing-company-story .company-chapter {
   min-height: auto;
+  border-radius: clamp(28px, 5vw, 72px);
   scroll-margin-top: calc(var(--pv-public-header-height, 100px) + 24px);
 }
 .landing-company-story .company-image-card { position: relative; top: auto; }
+@media (min-width: 1024px) {
+  .company-chapter-contact .company-eyebrow { font-size: clamp(14px, 1.1vw, 16px); font-weight: 800; }
+  .company-chapter-contact .company-copy h2 {
+    font-family: 'Caviar Dreams', sans-serif !important;
+    font-size: clamp(64px, 5.4vw, 84px);
+    font-weight: 800;
+    letter-spacing: -.035em;
+    line-height: 1.1;
+  }
+  .company-chapter-contact .company-paragraphs .company-lead { font-size: clamp(22px, 1.8vw, 28px); font-weight: 600; line-height: 1.65; }
+  .company-chapter-contact .company-contact-name { font-size: clamp(22px, 1.6vw, 26px); font-weight: 800; }
+  .company-chapter-contact .company-contact-url { font-size: 18px; font-weight: 600; line-height: 1.6; }
+}
 @media (max-width: 900px) {
   .company-chapter { padding: 48px 28px 64px; }
   .company-chapter-grid { gap: 28px; }

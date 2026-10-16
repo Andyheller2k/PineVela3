@@ -115,7 +115,7 @@ export default function WindDust({ variant = 'login' }: { variant?: WindVariant 
     };
     const cache = () => {
       const style = getComputedStyle(element);
-      const colors = ['--pv-wind-violet', '--pv-wind-magenta', '--pv-wind-lilac'].map(name => style.getPropertyValue(name).trim());
+      const colors = ['--pv-wind-blue', '--pv-wind-gold', '--pv-wind-sky'].map(name => style.getPropertyValue(name).trim());
       canvases.forEach((canvas, i) => paint(canvas, width, height, colors, i, variant));
     };
     const resize = new ResizeObserver(([entry]) => {

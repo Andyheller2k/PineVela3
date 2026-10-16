@@ -63,7 +63,7 @@ import ListingPlanBadge from './ListingPlanBadge';
 import MarketPhotoUpload from './MarketPhotoUpload';
 import MarketplaceInbox from './MarketplaceInbox';
 import MobileNavigation from './MobileNavigation';
-import PineLogo from './PineLogo';
+import PineLogo, { PineWordmark } from './PineLogo';
 import '../marketCards.css';
 import PortalPinSettings from './PortalPinSettings';
 import RouteSkeleton from './RouteSkeleton';
@@ -185,7 +185,7 @@ const SellerInventoryCard: React.FC<SellerInventoryCardProps> = memo(
             <ListingPlanBadge plan={plan} />
             {isService ? (
               <div className="absolute top-3 left-3 px-2.5 py-1 bg-gradient-to-r from-blue-700 via-blue-600 to-indigo-700 text-white text-[9px] font-black rounded-lg uppercase flex items-center gap-1 shadow-xs">
-                <span>PineVela</span>
+                <PineWordmark />
                 <span>(Service)</span>
               </div>
             ) : (
@@ -1181,7 +1181,7 @@ export default function PageDigitalMarket() {
       )}
 
       {/* TOPBAR SECURE HEADER WITH FROSTY LIGHT-BLUE GLASS BACKGROUND — FIXED TO TOP */}
-      <header className="fixed top-0 left-0 right-0 z-40 bg-sky-100/90 backdrop-blur-xl border-b border-blue-200 text-slate-800 shadow-sm">
+      <header data-portal-navigation="header" className="fixed top-0 left-0 right-0 z-40 bg-sky-100/90 backdrop-blur-xl border-b border-blue-200 text-slate-800 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center font-black shadow-md border border-blue-400/30 overflow-hidden shrink-0">
@@ -1359,7 +1359,7 @@ export default function PageDigitalMarket() {
         {activeTab === 'dashboard' && (
           <div className="space-y-8">
             {/* Frosty, Transparent and Premium Greeting banner */}
-            <div className="relative overflow-hidden bg-white/40 backdrop-blur-xl text-slate-800 rounded-3xl p-6 sm:p-8 shadow-[0_8px_32px_0_rgba(59,130,246,0.12)] border border-blue-400/25">
+            <div className="pv-feature-card relative overflow-hidden bg-white/40 backdrop-blur-xl text-slate-800 rounded-3xl p-6 sm:p-8 shadow-[0_8px_32px_0_rgba(59,130,246,0.12)] border border-blue-400/25">
               <div className="absolute top-0 right-0 w-80 h-80 bg-blue-400/5 rounded-full blur-3xl pointer-events-none" />
               <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                 <div>
@@ -1915,7 +1915,7 @@ export default function PageDigitalMarket() {
                         <ListingPlanBadge plan={subscriptionPlan} />
                         {/* Written PineVela like text written as (Service) */}
                         <div className="absolute top-2 left-2 px-2 py-0.5 bg-gradient-to-r from-blue-700 via-blue-600 to-indigo-700 text-white text-[9.5px] font-black rounded-md shadow-xs flex items-center gap-1 border border-blue-400/30 tracking-wide pointer-events-none">
-                          <span className="font-extrabold tracking-tight text-blue-200">PineVela</span>
+                          <PineWordmark />
                           <span className="text-white font-black">(Service)</span>
                         </div>
 
@@ -3173,7 +3173,7 @@ export default function PageDigitalMarket() {
                       <div className="relative w-full h-40 rounded-xl overflow-hidden bg-slate-900 border border-slate-200 flex items-center justify-center shadow-xs">
                         <img src={servImageUrl} alt="Service cover" className="w-full h-full object-cover" />
                         <div className="absolute top-2 left-2 px-2 py-0.5 bg-gradient-to-r from-blue-700 via-blue-600 to-indigo-700 text-white text-[9.5px] font-black rounded-md shadow-xs flex items-center gap-1 border border-blue-400/30">
-                          <span className="text-blue-200 font-extrabold">PineVela</span>
+                          <PineWordmark />
                           <span className="text-white font-black">(Service)</span>
                         </div>
                       </div>

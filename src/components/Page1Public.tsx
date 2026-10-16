@@ -3,8 +3,7 @@ import PublicHeader from './PublicHeader';
 import PublicMarketCatalog from './PublicMarketCatalog';
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import PineLogo from './PineLogo';
-import ThemeEnvironment from './ThemeEnvironment';
+import PineLogo, { PineWordmark } from './PineLogo';
 import WindDust from './WindDust';
 import { Shield, Landmark, ShoppingBag } from 'lucide-react';
 import { useLandingReveal } from '../hooks/useLandingReveal';
@@ -12,7 +11,6 @@ import { useAuth } from '../context/AuthContext';
 import LogoutConfirmationModal from './LogoutConfirmationModal';
 import CompanyStory from './CompanyStory';
 import type { CompanySection } from './companyStoryContent';
-import mountainPeak from '../../assets/pinepeak.jpg';
 
 
 export default function Page1Public() {
@@ -57,10 +55,6 @@ export default function Page1Public() {
         <section id="welcome-section"
           className="landing-peak-hero relative z-10 w-full scroll-mt-0"
         >
-          <ThemeEnvironment embedded />
-          <div className="landing-peak-landscape" aria-hidden="true">
-            <img src={mountainPeak} alt="" fetchPriority="high" />
-          </div>
           <WindDust variant="hero" />
           <div className="landing-peak-content max-w-7xl mx-auto w-full relative z-10 grid grid-cols-1 lg:grid-cols-12 items-center gap-8 lg:gap-12">
             <div
@@ -71,7 +65,7 @@ export default function Page1Public() {
             >
               Welcome to <br />
               <span className="text-blue-900 font-black relative">
-                PineVela
+                <PineWordmark />
                 <span className="absolute bottom-1 left-0 w-full h-2 bg-amber-300 -z-10 rounded-sm opacity-60"></span>
               </span>
             </h1>
@@ -107,7 +101,7 @@ export default function Page1Public() {
               <div className="text-center space-y-4">
                 <PineLogo size={140} hideText={true} />
                 <div className="public-title font-extrabold text-2xl tracking-tight text-slate-900">
-                  Pine<span className="text-blue-900">Vela</span>
+                  <PineWordmark />
                 </div>
                 <div className="text-xs text-slate-500 uppercase tracking-widest font-mono">Premium Residences</div>
               </div>

@@ -645,7 +645,7 @@ export default function PageAdminDashboard() {
       </AnimatePresence>
 
       {/* MOBILE HEADER (lg:hidden) */}
-      <header className="lg:hidden flex items-center justify-between px-5 py-3 bg-white/90 backdrop-blur-xl border-b border-sky-200/50 sticky top-0 z-40 shadow-sm">
+      <header data-portal-navigation="header" className="lg:hidden flex items-center justify-between px-5 py-3 bg-white/90 backdrop-blur-xl border-b border-sky-200/50 sticky top-0 z-40 shadow-sm">
         <div className="flex items-center gap-2">
           <PineLogo size={24} />
           <div>
@@ -673,7 +673,7 @@ export default function PageAdminDashboard() {
 
       {/* SIDEBAR: PURELY STATIC / FIXED ICE-BLUE FROSTY BLUE WITH CURVED EDGES & BLUE GLOW */}
 
-      {isSidebarTopNav && <nav className="hidden lg:block fixed top-3 left-1/2 -translate-x-1/2 z-50 w-[min(760px,calc(100vw-3rem))] bg-white/72 backdrop-blur-xl border border-white/80 rounded-2xl shadow-lg"><div className="flex items-center gap-1 px-2 py-1.5">
+      {isSidebarTopNav && <nav data-portal-navigation="top" className="hidden lg:block fixed top-3 left-1/2 -translate-x-1/2 z-50 w-[min(760px,calc(100vw-3rem))] bg-white/72 backdrop-blur-xl border border-white/80 rounded-2xl shadow-lg"><div className="flex items-center gap-1 px-2 py-1.5">
         {/* Profile avatar button — left end */}
         <button onClick={() => setActiveTab('settings')} title="Profile & Settings" className="shrink-0 flex flex-col items-center gap-0.5 py-1 px-1.5 rounded-xl hover:bg-white/70 cursor-pointer">
           {user?.photo || user?.avatar ? <img src={user.photo || user.avatar} alt="Profile" className="w-6 h-6 rounded-full object-cover ring-2 ring-white shadow-sm" /> : <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-blue-900">{user?.name?.slice(0, 1)}</span>}
@@ -683,7 +683,7 @@ export default function PageAdminDashboard() {
         {[
         { id: 'overview', label: 'Overview', icon: ShieldCheck }, { id: 'user_accounts', label: 'Accounts', icon: Users, badge: allUsersData.totalUsers }, { id: 'residences', label: 'Residences', icon: Building2, badge: pendingHostelsCount }, { id: 'managers', label: 'Managers', icon: Users, badge: pendingManagersCount }, { id: 'digital_market', label: 'Market', icon: ShoppingBag, badge: digitalMarketApps.filter(a => a.status === 'pending').length }, { id: 'notifications', label: 'Alerts', icon: Bell, badge: adminAlertCount }, { id: 'messages', label: 'Message Gateway', icon: MessageSquare }, { id: 'governance', label: 'Approvals', icon: ShieldCheck, badge: governanceUnread }, { id: 'settings', label: 'Settings', icon: Edit3, badge: settingsUnread }
       ].map(tab => <button aria-current={activeTab === tab.id ? 'page' : undefined} key={tab.id} onClick={() => setActiveTab(tab.id as any)} aria-label={`${tab.label}${tab.badge ? ` (${tab.badge})` : ''}`} className={`flex-1 min-w-0 flex flex-col items-center gap-0.5 py-1.5 rounded-xl text-[9px] font-bold cursor-pointer ${activeTab === tab.id ? 'text-blue-700 bg-blue-100/65' : 'text-slate-500 hover:bg-white/70'}`}><span className="relative inline-flex"><tab.icon className="w-4 h-4" /><TopNavBadge count={tab.badge} /></span><span className="truncate max-w-full">{tab.label}</span></button>)}<button onClick={() => setShowLogoutConfirm(true)} title="Sign Out" className="shrink-0 flex flex-col items-center gap-0.5 px-2 py-1.5 text-[9px] font-bold text-rose-600 hover:bg-rose-50 rounded-xl cursor-pointer"><LogOutIcon className="w-4 h-4" /><span>Sign Out</span></button><button onClick={() => setIsSidebarTopNav(false)} title="Show sidebar" className="p-2 text-slate-500 hover:text-blue-700 cursor-pointer"><PanelLeftOpen className="w-4 h-4" /></button></div></nav>}
-      {!isSidebarTopNav && <aside className={`hidden lg:flex ${isSidebarCollapsed ? 'w-20 p-4' : 'w-72 p-6'} my-6 ml-6 h-[calc(100vh-3rem)] bg-gradient-to-br from-sky-100/90 via-blue-100/85 to-amber-50/40 backdrop-blur-3xl border border-sky-200/80 shadow-2xl rounded-3xl flex flex-col justify-between shrink-0 overflow-y-auto transition-all duration-300 relative`}>
+      {!isSidebarTopNav && <aside data-portal-navigation="sidebar" className={`hidden lg:flex ${isSidebarCollapsed ? 'w-20 p-4' : 'w-72 p-6'} my-6 ml-6 h-[calc(100vh-3rem)] bg-gradient-to-br from-sky-100/90 via-blue-100/85 to-amber-50/40 backdrop-blur-3xl border border-sky-200/80 shadow-2xl rounded-3xl flex flex-col justify-between shrink-0 overflow-y-auto transition-all duration-300 relative`}>
         <button onClick={() => setIsSidebarTopNav(true)} title="Use top navigation" className="absolute top-3 right-3 p-2 rounded-xl text-slate-500 hover:text-blue-700 hover:bg-white/70 cursor-pointer"><PanelLeftClose className="w-4 h-4" /></button>
 
         <div className="space-y-8">
@@ -782,7 +782,7 @@ export default function PageAdminDashboard() {
         {activeTab === 'overview' && !adminDirectoriesUnavailable && (
           <div className="space-y-8 animate-fadeIn relative z-10">
             {/* Welcome banner */}
-            <div className="bg-sky-50/20 border border-sky-200/50 p-8 rounded-3xl backdrop-blur-2xl shadow-xl relative overflow-hidden">
+            <div className="pv-feature-card bg-sky-50/20 border border-sky-200/50 p-8 rounded-3xl backdrop-blur-2xl shadow-xl relative overflow-hidden">
               <div className="absolute right-0 top-0 w-96 h-96 bg-blue-400/10 rounded-full blur-3xl pointer-events-none" />
               <div className="relative z-10 max-w-2xl">
                 <h2 className="text-3xl lg:text-4xl font-semibold text-black tracking-tight" style={{ textShadow: 'none', WebkitTextStroke: '0' }}>Welcome back, {user?.name}</h2>

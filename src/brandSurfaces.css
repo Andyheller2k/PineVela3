@@ -1,6 +1,5 @@
-/* Presentation only: no layout, dimensions, typography or component structure. */
-.app-canvas .theme-environment:not(.theme-environment-embedded),
-.app-canvas .theme-night { background: var(--pv-page-gradient); }
+/* Shared surface hierarchy: warm neutrals, navy actions, selective golden accents. */
+.app-canvas .theme-environment { background: var(--pv-page-gradient); }
 
 /* Body also covers portals, notices and maintenance screens outside the app canvas.
    Keeping app-canvas in :is preserves the existing cascade specificity. */
@@ -16,7 +15,7 @@ html[data-theme] :is(.app-canvas, body) :is(button, a[href], a[role="button"], i
 ) {
   background-color: var(--pv-blue-primary);
   background-image: var(--pv-action-gradient);
-  color: #ffffff;
+  color: var(--pv-on-action);
   box-shadow: 0 5px 18px var(--pv-brand-shadow);
 }
 html[data-theme] :is(.app-canvas, body) :is(button, a[href], a[role="button"]):is(
@@ -29,14 +28,15 @@ html[data-theme] :is(.app-canvas, body) :is(button, a[href], a[role="button"]):i
 html[data-theme] :is(.app-canvas, body) :is(nav button, button[data-page-tabs])[aria-current="page"],
 html[data-theme] :is(.app-canvas, body) .login-mode-toggle > button[aria-pressed="true"] {
   background: var(--pv-action-gradient);
-  color: #ffffff;
+  color: var(--pv-on-action);
   box-shadow: 0 3px 12px var(--pv-brand-shadow);
 }
-html[data-theme] :is(.app-canvas, body) .mobile-bottom-nav button[aria-current="page"] :is(span, div, svg) { color: #ffffff; }
+html[data-theme] :is(.app-canvas, body) .mobile-bottom-nav button[aria-current="page"] :is(span, div, svg) { color: var(--pv-on-action); }
 
 /* All onboarding flows reuse this progress component, including portaled forms. */
 html[data-theme] :is(.app-canvas, body) section[aria-label$=" progress"] :is([aria-current="step"] > span[class~="bg-blue-900"], [role="progressbar"] > [class~="bg-blue-900"]) {
   background-image: var(--pv-action-gradient);
+  color: var(--pv-on-action);
 }
 
 /* Opaque field colors make contrast predictable on glass and gradient surfaces. */
@@ -54,18 +54,16 @@ html[data-theme] :is(.app-canvas, body) :is(input, textarea, select):focus-visib
 }
 html[data-theme] :is(.app-canvas, body) :is(input[type="checkbox"], input[type="radio"], input[type="range"]) { accent-color: var(--pv-blue-primary); }
 
-/* White text is reserved for the deeper hero gradient, not pale panels. */
-html[data-theme] .landing-peak-hero .landing-peak-copy :is(h1, h1 span, p, strong),
-html[data-theme] .landing-peak-hero .landing-peak-brand :is(.public-title, .public-title span, [class~="text-slate-500"]) { color: #ffffff; }
-.landing-peak-hero .landing-peak-copy [class~="bg-amber-300"] { background-color: rgb(255 255 255 / .22); }
-.landing-peak-hero .theme-atmosphere { opacity: .08; }
-html[data-theme="dark"] .landing-peak-hero .theme-atmosphere { opacity: .08; }
+/* Yellow earns attention on the main public action; routine actions stay navy. */
+html[data-theme] .landing-peak-hero .landing-peak-copy :is(p, strong),
+html[data-theme] .landing-peak-hero .landing-peak-brand [class~="text-slate-500"] { color: #f2f1ef; }
+.landing-peak-hero .landing-peak-copy [class~="bg-amber-300"] { background-color: rgb(247 183 0 / .16); }
 html[data-theme] .app-canvas .landing-peak-hero .landing-peak-copy button {
-  background: linear-gradient(115deg, #ffffff, #f5edff);
-  color: #4b279f;
-  box-shadow: 0 6px 22px rgb(22 9 62 / .22);
+  background: var(--pv-accent-gradient);
+  color: var(--pv-brand-navy);
+  box-shadow: 0 6px 22px rgb(0 8 24 / .18);
 }
-html[data-theme] .app-canvas .landing-peak-hero .landing-peak-copy button:not(:disabled):hover { background: #ffffff; color: #3b1d85; }
+html[data-theme] .app-canvas .landing-peak-hero .landing-peak-copy button:not(:disabled):hover { background: #ffd369; color: var(--pv-brand-navy); }
 
 /* Section fades add depth while preserving existing spacing and image composition. */
 .landing-company-story .company-chapter { background: linear-gradient(160deg, var(--pv-section-from), var(--pv-section-to) 78%); }
@@ -77,8 +75,7 @@ html[data-theme] .app-canvas .landing-peak-hero .landing-peak-copy button:not(:d
 /* Gentle surface depth applies to existing portals and overlays through their utilities. */
 html[data-theme] :is(.app-canvas, body) :is([class~="bg-white"], [class~="bg-white/90"], [class~="bg-white/95"]) { background-image: var(--pv-panel-gradient); }
 html[data-theme] :is(.app-canvas, body) .login-google-button { background: var(--pv-panel); color: var(--pv-text); }
-html[data-theme] :is(.app-canvas, body) [class~="text-amber-500"] { color: #8a5800; }
-html[data-theme="dark"] :is(.app-canvas, body) [class~="text-amber-500"] { color: #fcd34d; }
+html[data-theme] :is(.app-canvas, body) [class~="text-amber-500"] { color: var(--pv-accent-text); }
 
 /* Semantic fills keep their meaning while making small white labels readable. */
 html[data-theme] :is(.app-canvas, body) [class~="text-white"]:is([class~="bg-emerald-500"], [class~="bg-emerald-600"], [class~="bg-green-500"], [class~="bg-green-600"]) { background-color: #047857; }
@@ -88,18 +85,74 @@ html[data-theme] :is(.app-canvas, body) [class~="text-white"]:is([class~="bg-amb
 /* Legacy inline map/chart paint and custom brand shadows follow the same colors. */
 :is(.app-canvas, body) .leaflet-overlay-pane path[stroke="#2563eb"] { stroke: var(--pv-blue-primary); }
 :is(.app-canvas, body) .leaflet-overlay-pane path[fill="#2563eb"] { fill: var(--pv-blue-primary); }
-:is(.app-canvas, body) .leaflet-popup-content [style*="color:#2563EB"] { color: var(--pv-link) !important; }
-:is(.app-canvas, body) .recharts-cartesian-grid line { stroke: var(--pv-edge); }
-:is(.app-canvas, body) .recharts-cartesian-axis-tick text { fill: var(--pv-muted); }
+:is(.app-canvas, body) .leaflet-popup-content { color: var(--pv-text); }
+:is(.app-canvas, body) .leaflet-popup-content-wrapper, :is(.app-canvas, body) .leaflet-popup-tip { background: var(--pv-panel); }
+:is(.app-canvas, body) .recharts-cartesian-grid line { stroke: var(--pv-chart-grid, var(--pv-edge)); }
+:is(.app-canvas, body) .recharts-cartesian-axis-tick text { fill: var(--pv-chart-ink, var(--pv-muted)); }
+.theme-analytics-panel { --pv-chart-ink: #bdccef; --pv-chart-grid: #bdccef33; }
+html[data-theme] .theme-analytics-panel [class~="text-slate-400"] { color: var(--pv-chart-ink); }
 :is(.app-canvas, body) .recharts-default-tooltip { background: var(--pv-panel) !important; border-color: var(--pv-field-edge) !important; color: var(--pv-text) !important; }
 :is(.app-canvas, body) :is([class*="rgba(59,130,246"], [class*="rgba(37,99,235"], [class*="rgba(0,119,182"]):not(input) { box-shadow: 0 10px 28px var(--pv-brand-shadow); }
 
-/* The theme has no new motion; high-contrast preferences remain useful. */
+/* Gradients belong to display headings, never fields or paragraphs. Keep ink
+   as a fallback for browsers/assistive modes that do not clip backgrounds. */
+.landing-peak-copy h1 { width: fit-content; max-width: 100%; }
+html[data-theme] :is(.app-canvas, body) :is(h1, h2, h3, .public-title, .login-brand-heading) { color: var(--pv-heading-ink); }
+@supports (background-clip: text) or (-webkit-background-clip: text) {
+  html[data-theme] :is(.app-canvas, body) :is(h1, h2, h3, .public-title, .login-brand-heading) {
+    background-image: var(--pv-heading-gradient);
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    -webkit-text-stroke: 0;
+    text-shadow: none;
+  }
+}
+/* A pale card inside a dark section restores its own heading contrast. */
+html[data-theme] :is([class~="bg-white"], [class*="bg-white/"], [class~="bg-slate-50"], [class~="bg-blue-50"], [class~="from-white"]) { --pv-heading-gradient: var(--pv-heading-default-gradient); --pv-heading-ink: var(--pv-heading); }
+/* Headings on solid navy retain the inverse ink in both appearances. */
+html[data-theme] :is(.landing-peak-hero, [class~="text-white"], [class~="bg-blue-900"], [class~="bg-blue-950"], [class~="bg-slate-900"], [class~="bg-slate-950"], [class~="from-blue-900"], [class~="from-blue-950"], [class~="from-slate-900"], [class~="from-slate-950"]) { --pv-heading-gradient: var(--pv-heading-inverse-gradient); --pv-heading-ink: var(--pv-on-strong); }
+/* The supplied artwork keeps its original colors. Wordmark labels use the same
+   navy/yellow pair on every surface, including dark headers and gold panels. */
+.pinevela-brand { max-width: 100%; }
+.pinevela-brand-mark { display: block; object-fit: contain; max-width: 100%; max-height: 100%; }
+html[data-theme] .pinevela-wordmark {
+  display: inline-flex;
+  align-items: stretch;
+  font-family: 'Caviar Dreams', sans-serif !important;
+  font-weight: 800;
+  letter-spacing: -.035em;
+  line-height: 1.15;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+html[data-theme] .pinevela-wordmark .pine-label {
+  color: #001d3d;
+  -webkit-text-fill-color: #001d3d;
+  background: #ffd60a;
+  padding: .12em .12em .12em .28em;
+  border-radius: .3em 0 0 .3em;
+}
+html[data-theme] .pinevela-wordmark .vela-label {
+  color: #ffc300;
+  -webkit-text-fill-color: #ffc300;
+  background: #001d3d;
+  padding: .12em .28em .12em .08em;
+  border-radius: 0 .3em .3em 0;
+}
+/* Keyboard users get a clean outline rather than decorative neon glows. */
+html[data-theme] :is(.app-canvas, body) :is(button, a[href], [tabindex="0"]):focus-visible { outline: 2px solid var(--pv-link); outline-offset: 3px; }
+html[data-theme] .landing-peak-hero :is(button, a[href]):focus-visible { outline-color: var(--pv-brand-yellow); }
+
+/* High-contrast preferences retain solid ink and distinct boundaries. */
 @media (prefers-contrast: more) {
-  :root { --pv-field-edge: #5e4382; --pv-edge: #806898; }
-  :root[data-theme="dark"] { --pv-field-edge: #cdb7ef; --pv-edge: #aa8dce; }
+  :root { --pv-field-edge: #405477; --pv-edge: #6a7f9f; }
+  :root[data-theme="dark"] { --pv-field-edge: #bdccef; --pv-edge: #91a6cd; }
+  html[data-theme] :is(.app-canvas, body) :is(h1, h2, h3, .public-title, .login-brand-heading, .pinevela-brand > span) { background-image: none; -webkit-text-fill-color: currentColor; }
 }
 @media (forced-colors: active) {
   :is(.app-canvas, body) :is(button, input, select, textarea, a, [role="progressbar"] > div, [aria-current="step"] > span), .landing-peak-hero { background-image: none !important; }
   .landing-peak-hero .landing-peak-copy :is(h1, h1 span, p, strong) { color: CanvasText !important; }
+  html[data-theme] :is(.app-canvas, body) :is(h1, h2, h3, .public-title, .login-brand-heading, .pinevela-brand > span) { background-image: none; -webkit-text-fill-color: CanvasText; color: CanvasText !important; }
+  html[data-theme] .pinevela-wordmark :is(.pine-label, .vela-label) { background: Canvas; color: CanvasText; -webkit-text-fill-color: CanvasText; }
 }

@@ -115,8 +115,8 @@ export default function MapLocationSelector({
 
       marker.bindPopup(
         `<div style="font-size:12px;font-family:sans-serif;">
-          <strong style="color:#0F172A;">Hostel Location Pin</strong><br/>
-          <span style="color:#64748B;">Drag marker or click anywhere on the map</span>
+          <strong style="color:var(--pv-heading);">Hostel Location Pin</strong><br/>
+          <span style="color:var(--pv-muted);">Drag marker or click anywhere on the map</span>
         </div>`
       );
 
@@ -225,8 +225,8 @@ export default function MapLocationSelector({
           markerRef.current
             .setPopupContent(
               `<div style="font-size:12px;font-family:sans-serif;">
-                <strong style="color:#0F172A;">Hostel Pin (${roundedLat}, ${roundedLng})</strong><br/>
-                <span style="color:#2563EB;">${shortAddress}</span>
+                <strong style="color:var(--pv-heading);">Hostel Pin (${roundedLat}, ${roundedLng})</strong><br/>
+                <span style="color:var(--pv-link);">${shortAddress}</span>
               </div>`
             )
             .openPopup();

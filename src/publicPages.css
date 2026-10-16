@@ -5,21 +5,18 @@
 @font-face { font-family: 'Caviar Dreams'; src: url('../assets/fonts/CaviarDreams_BoldItalic.ttf') format('truetype'); font-style: italic; font-weight: 600 900; font-display: swap; }
 .public-typography, .unified-login { font-family: 'Caviar Dreams', sans-serif !important; }
 :is(.public-typography, .unified-login) :where(*) { font-family: inherit !important; }
-:is(.public-typography, .unified-login) :is(h1,h2,h3,h4,h5,h6,.public-title,.login-brand-heading,.pinevela-brand > span) { font-family: 'Childer', sans-serif !important; font-weight: 400; }
+:is(.public-typography, .unified-login) :is(h1,h2,h3,h4,h5,h6,.public-title,.login-brand-heading) { font-family: 'Childer', sans-serif !important; font-weight: 400; }
 .public-header-card { background: var(--pv-panel-gradient) !important; border-bottom: 1px solid var(--pv-edge) !important; box-shadow: 0 5px 24px var(--pv-brand-shadow) !important; border-radius: 0 0 20px 20px; }
-.public-header-card .pinevela-brand > span { color: var(--pv-heading) !important; }
-.public-header-card .pinevela-brand > span > span { color: var(--pv-blue-primary) !important; }
 .public-header-card input { background: var(--pv-field) !important; color: var(--pv-heading) !important; }
 #public-header .public-header-link { color: var(--pv-link); background: transparent; border: 0; box-shadow: none; padding: 8px; font-size: 12px; font-weight: 800; line-height: 1.5; white-space: nowrap; cursor: pointer; text-underline-offset: 4px; }
 #public-header .public-header-link:hover { text-decoration: underline; }
 #public-header.public-header-compact { padding-block: 6px; }
 #public-header.public-header-compact .public-header-layout { row-gap: 4px; }
 @media (max-width: 1023px) {
-  #public-header.public-header-compact .public-header-layout { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: 'brand theme account' 'search search search' 'sections sections sections'; }
+  #public-header.public-header-compact .public-header-layout { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: 'brand account' 'search search' 'sections sections'; }
   #public-header.public-header-compact .public-header-layout > button { grid-area: brand; }
   #public-header.public-header-compact form { grid-area: search; justify-self: center; }
   #public-header.public-header-compact .public-header-actions { display: contents; }
-  #public-header.public-header-compact .company-theme-toggle { grid-area: theme; justify-self: center; }
   #public-header.public-header-compact .public-header-account { grid-area: account; }
   #public-header.public-header-compact .public-header-sections { grid-area: sections; }
 }
@@ -40,63 +37,46 @@
 
 /* Opaque public headers follow the selected appearance immediately. */
 html[data-theme="dark"] .public-header-card { background: var(--pv-panel) !important; border-bottom-color: var(--pv-edge) !important; box-shadow: 0 5px 24px #02061740 !important; }
-html[data-theme="dark"] .public-header-card .pinevela-brand > span { color: var(--pv-text) !important; }
-html[data-theme="dark"] .public-header-card .pinevela-brand > span > span { color: var(--pv-blue-soft) !important; }
 html[data-theme="dark"] .public-header-card input { background: var(--pv-field) !important; color: var(--pv-text) !important; border-color: var(--pv-field-edge) !important; }
 html[data-theme="dark"] .public-header-card input::placeholder { color: var(--pv-muted) !important; }
 
-/* Reference-inspired indigo/violet surface; the existing curve stays unchanged. */
+/* Navy hero anchors the warm, restrained page palette. */
 .landing-peak-page { background: var(--pv-page-gradient); }
 .landing-peak-hero {
   isolation: isolate;
   min-height: 752px;
   padding: calc(var(--pv-public-header-height, 100px) + 54px) clamp(24px, 6vw, 80px) 222px;
-  background: var(--pv-hero-gradient);
+  background: var(--pv-brand-navy);
   border-radius: 0 0 50% 50% / 0 0 clamp(28px, 4vw, 64px) clamp(28px, 4vw, 64px);
   overflow: hidden;
-}
-.landing-peak-landscape {
-  position: absolute;
-  isolation: auto;
-  mix-blend-mode: screen;
-  inset: auto 0 32px;
-  height: 340px;
-  overflow: hidden;
-  pointer-events: none;
-  background: transparent;
-  mask-image: linear-gradient(180deg, transparent, #000 24%, #000 72%, transparent);
-}
-.landing-peak-landscape img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: 50% 25%;
-  filter: grayscale(1);
-  mix-blend-mode: screen;
-  opacity: .18;
 }
 .landing-peak-content { padding: 0 24px; }
 .landing-peak-copy h1 { font-size: clamp(52px, 5.3vw, 76px); line-height: 1.12; }
 .landing-peak-copy p { font-size: clamp(19px, 1.7vw, 24px); line-height: 1.65; }
 .landing-peak-copy :is(h1, p, strong), .landing-peak-brand .public-title { color: var(--pv-heading); }
 .landing-peak-brand [class~="text-slate-500"] { color: var(--pv-muted); }
-html[data-theme="dark"] .landing-peak-hero { background: var(--pv-hero-gradient); }
-html[data-theme="dark"] .landing-peak-landscape img { mix-blend-mode: screen; filter: grayscale(1) brightness(.9); opacity: .12; }
-@media (min-width: 1024px) {
-  .landing-peak-landscape { height: 460px; bottom: 122px; z-index: 2; }
+.landing-peak-page .landing-benefit h4 {
+  font-family: 'Caviar Dreams', sans-serif !important;
+  font-size: clamp(24px, 2.1vw, 30px);
+  font-weight: 800;
+  line-height: 1.2;
+  letter-spacing: -.025em;
+  text-wrap: balance;
+}
+.landing-peak-page .landing-benefit p {
+  font-size: clamp(18px, 1.4vw, 20px);
+  line-height: 1.7;
 }
 @media (max-width: 1023px) {
   .landing-peak-hero { min-height: 0; padding: calc(var(--pv-public-header-height, 100px) + 36px) 24px 192px; }
   .landing-peak-content { max-width: 680px; padding: 0; gap: 20px; }
   .landing-peak-brand { padding-top: 4px; }
-  .landing-peak-landscape { height: 280px; }
 }
 @media (max-width: 480px) {
   .landing-peak-hero { padding-inline: 24px; padding-bottom: 162px; }
   .landing-peak-content { gap: 12px; }
   .landing-peak-copy h1 { font-size: clamp(44px, 12vw, 54px); }
   .landing-peak-brand > div { width: 210px; height: 210px; }
-  .landing-peak-landscape { height: 245px; }
 }
 
 /* Native scroll, one-time reveals: short movement and a soft fade. */

@@ -4,15 +4,19 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <script>
-      // Apply the last device appearance before rendering, including after logout/reload.
+      // Public pages stay fixed; product pages restore the saved preference before paint.
+      var route = (location.hash.slice(1).split('?')[0] || '/').replace(/\/+$/, '') || '/';
+      var publicAppearance = route === '/' || route === '/login';
+      document.documentElement.dataset.appearance = publicAppearance ? 'public' : 'product';
       try {
         var savedAppearance = localStorage.getItem('pinevela:appearance');
         var appearance = savedAppearance === 'light' || savedAppearance === 'dark' ? savedAppearance : (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-        document.documentElement.dataset.theme = appearance;
-        document.documentElement.style.colorScheme = appearance;
-      } catch (_) { document.documentElement.dataset.theme = 'light'; }
+        document.documentElement.dataset.theme = publicAppearance ? 'light' : appearance;
+        document.documentElement.style.colorScheme = publicAppearance ? 'light' : appearance;
+      } catch (_) { document.documentElement.dataset.theme = 'light'; document.documentElement.style.colorScheme = 'light'; }
     </script>
     <title>PineVela</title>
+    <link rel="icon" type="image/svg+xml" href="/store-covers/pinevela-logo.svg" />
     <meta name="description" content="A universal global dashboard for modern student living, featuring student and manager portals for hostel accommodations." />
     <meta property="og:title" content="PineVela" />
     <meta property="og:description" content="A universal global dashboard for modern student living, featuring student and manager portals for hostel accommodations." />

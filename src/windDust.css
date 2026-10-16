@@ -1,7 +1,7 @@
 .wind-dust {
-  --pv-wind-violet: #8546cc;
-  --pv-wind-magenta: #b15bda;
-  --pv-wind-lilac: #8b65d3;
+  --pv-wind-blue: #003566;
+  --pv-wind-gold: #ffc300;
+  --pv-wind-sky: #ffd60a;
   display: block;
   position: absolute;
   inset: 0;
@@ -9,7 +9,7 @@
   width: 100%;
   height: 100%;
   pointer-events: none;
-  opacity: .9;
+  opacity: .62;
   overflow: hidden;
   contain: layout paint;
 }
@@ -32,10 +32,10 @@
   100% { transform: translate3d(-110%, -2%, 0) rotate(4deg); opacity: 0; }
 }
 html[data-theme="dark"] .wind-dust {
-  --pv-wind-violet: #b281ed;
-  --pv-wind-magenta: #d894eb;
-  --pv-wind-lilac: #a392ef;
-  opacity: .8;
+  --pv-wind-blue: #4f90c0;
+  --pv-wind-gold: #ffc300;
+  --pv-wind-sky: #ffd60a;
+  opacity: .58;
 }
 .unified-login { isolation: isolate; }
 .unified-login > .wind-dust {
@@ -43,11 +43,11 @@ html[data-theme="dark"] .wind-dust {
   z-index: -1;
 }
 .landing-peak-hero > .wind-dust {
-  --pv-wind-violet: #c89bf2;
-  --pv-wind-magenta: #dda6f3;
-  --pv-wind-lilac: #b3a1f0;
+  --pv-wind-blue: #4f90c0;
+  --pv-wind-gold: #ffc300;
+  --pv-wind-sky: #ffd60a;
   z-index: 3;
-  opacity: .6;
+  opacity: .48;
   mask-image: linear-gradient(90deg, transparent, #0003 30%, #000b 65%, #000);
 }
 @media (prefers-reduced-motion: reduce), (forced-colors: active) {

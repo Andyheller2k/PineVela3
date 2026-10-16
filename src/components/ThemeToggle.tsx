@@ -4,7 +4,8 @@ import { useLocation } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 
 export default function ThemeToggle({ className = '' }: { className?: string }) {
-  const { theme, toggleTheme, savePending } = useTheme();
+  const { theme, publicAppearance, toggleTheme, savePending } = useTheme();
+  if (publicAppearance) return null;
   const dark = theme === 'dark';
   return <button type="button" role="switch" aria-checked={dark} aria-label="Dark mode" onClick={toggleTheme}
     title={`${dark ? 'Switch to light mode' : 'Switch to dark mode'}${savePending ? ' · preference saved locally, syncing' : ''}`}
@@ -19,6 +20,7 @@ export default function ThemeToggle({ className = '' }: { className?: string }) 
 /** Public header has its own switch; other routes share this unobtrusive account control. */
 export function ThemeDock() {
   const { pathname } = useLocation();
+  const { publicAppearance } = useTheme();
   const [bar, setBar] = useState<HTMLElement | null>(null);
   const [managed, setManaged] = useState(false);
   useLayoutEffect(() => {
@@ -39,8 +41,9 @@ export function ThemeDock() {
     measure();
     return () => { observer.disconnect(); resize.disconnect(); window.removeEventListener('resize', measure); delete document.documentElement.dataset.mobileNavigation; };
   }, [pathname]);
+  if (publicAppearance) return null;
   if (managed) return <div className="theme-dock managed-mobile-theme"><ThemeToggle /></div>;
   if (bar) return createPortal(<div className="mobile-nav-theme flex shrink-0 flex-col items-center justify-center gap-1 px-2"><ThemeToggle /><span className="text-[9px] font-bold text-slate-500">Theme</span></div>, bar);
-  if (pathname === '/' || pathname === '/pinemarket') return null;
+  if (pathname === '/pinemarket') return null;
   return <div className="theme-dock"><ThemeToggle /></div>;
 }
