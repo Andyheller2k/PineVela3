@@ -1,3 +1,6 @@
+import SupportNotificationLink from './SupportNotificationLink';
+import HelpLink from './HelpLink';
+import AppearanceSettings from './AppearanceSettings';
 import { activateOnKeyboard } from '../lib/keyboardActivation';
 
 import {
@@ -1345,7 +1348,8 @@ export default function PageDigitalMarket() {
 
               <button type="button" data-page-tabs aria-current={activeTab === 'messages' ? 'page' : undefined} onClick={() => setActiveTab('messages')} className={`px-4 py-2.5 rounded-xl text-xs font-black flex items-center gap-2 cursor-pointer ${activeTab === 'messages' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-600 hover:bg-blue-50'}`}><span className="relative inline-flex"><MessageSquare className="w-4 h-4" /><TopNavBadge count={sellerMessageUnreadCount} /></span><span>Messages</span></button>
               <button type="button" title="Upgrade your seller plan" aria-label="Upgrade your seller plan" data-page-tabs aria-current={activeTab === 'upgrade' ? 'page' : undefined} onClick={() => setActiveTab("upgrade")} className={`px-3 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 cursor-pointer ${activeTab === "upgrade" ? "bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 shadow-md" : "text-amber-700 hover:bg-amber-50"}`}><CreditCard className="w-4 h-4" /><span>Subscription</span></button>
-              <button type="button" data-page-tabs aria-current={activeTab === 'profile' ? 'page' : undefined} onClick={() => setActiveTab("profile")} className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 cursor-pointer ${activeTab === "profile" ? "bg-blue-600 text-white shadow-md" : "text-slate-600 hover:bg-slate-100/80 hover:text-slate-900"}`}><ShieldCheck className="w-4 h-4" /><span>Store Profile</span></button>
+              <HelpLink compact className="!px-2" />
+            <button type="button" data-page-tabs aria-current={activeTab === 'profile' ? 'page' : undefined} onClick={() => setActiveTab("profile")} className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 cursor-pointer ${activeTab === "profile" ? "bg-blue-600 text-white shadow-md" : "text-slate-600 hover:bg-slate-100/80 hover:text-slate-900"}`}><ShieldCheck className="w-4 h-4" /><span>Store Profile</span></button>
             </nav>
           </div>
         </div>
@@ -2260,6 +2264,7 @@ export default function PageDigitalMarket() {
                             <p className="text-xs text-slate-600 font-medium leading-relaxed max-w-2xl">
                               {notif.message}
                             </p>
+                      <SupportNotificationLink notification={notif} />
                           </div>
                         </div>
 
@@ -2411,6 +2416,7 @@ export default function PageDigitalMarket() {
         {/* TAB 4: STORE PROFILE EDIT */}
         {activeTab === 'profile' && (
           <div className="space-y-6">
+          <AppearanceSettings />
           <PortalPinSettings />
           {storeData && <StoreProfileSummary store={storeData} />}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

@@ -1,3 +1,4 @@
+import HelpLink from './HelpLink';
 import DashboardOverlay from './DashboardOverlay';
 
 import { AlertCircle,ArrowRight,Building,CheckCircle,CheckCircle2,Clock,Eye,EyeOff,HelpCircle,Home,Info,Key,Lock,LogIn,Mail,Phone,RefreshCw,ShieldAlert,ShieldCheck,User,X } from 'lucide-react';
@@ -116,6 +117,7 @@ export default function PageUnifiedLogin() {
       // Redirect based on role and digital market merchant status
       setTimeout(() => {
         if (authenticatedUser.role === 'user' && continuation) { navigate(continuation, { replace: true }); return; }
+        if (authenticatedUser.role === 'user' && authenticatedUser.customerService) { navigate('/customer-service', { replace: true }); return; }
         // Only direct digital merchant accounts (authenticated via student credentials) go to digital market onboarding or store
         const isDigitalMerchant = authenticatedUser.role === 'merchant' || (authenticatedUser as any).isDigitalMarketOnly === true;
 
@@ -273,7 +275,7 @@ export default function PageUnifiedLogin() {
       setRegConfirmPass('');
 
       setTimeout(() => {
-        navigate(authenticatedUser.role === 'user' && continuation ? continuation : '/student/dashboard', { replace: true });
+        navigate(authenticatedUser.role === 'user' && continuation ? continuation : authenticatedUser.customerService ? '/customer-service' : '/student/dashboard', { replace: true });
       }, 800);
     } catch (err: any) {
       triggerToast(err.message || 'Verification failed.', 'error');
@@ -314,6 +316,7 @@ export default function PageUnifiedLogin() {
         <button type="button" aria-label="PineVela home" className="login-logo-link cursor-pointer" onClick={() => navigate('/')}>
           <PineLogo />
         </button>
+        <div className="flex items-center gap-2"><HelpLink />
         <div className="login-home-link">
           <button 
             onClick={() => navigate('/')}
@@ -323,6 +326,7 @@ export default function PageUnifiedLogin() {
             <span>Home</span>
           </button>
         </div>
+      </div>
       </header>
 
       {/* Main Container */}

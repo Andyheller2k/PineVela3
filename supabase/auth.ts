@@ -278,6 +278,7 @@ export class SupabaseAuth {
         phone: officer?.phone ?? person.phone,accountAccess:person.account_access, photo: person.avatar_path, avatar: person.avatar_path,
         photoUrl:person.avatar_path,avatarUrl:person.avatar_path,profilePicture:person.avatar_path,
         role: roleForKind[actor.kind], token: '', isVerified: true,...seller,
+        customerService: actor.kind === 'primary' && Boolean((await client.query("select 1 from private.support_memberships where context_id=$1 and status='active'", [actor.contextId])).rowCount),
         ...(actor.kind === 'officer' ? {officerId:actor.contextId,assignedZone:officer?.assigned_zone ?? null} : {}),
         ...(room ? { roomId:room.room_id,roomNumber:room.room_number,blockName:room.block_name,hostelId:room.residence_id,hostelName:room.residence_name } : {}) };
     });
@@ -318,7 +319,8 @@ export function installSupabaseAuth(app: Express, auth: SupabaseAuth) {
       if (actor.authUserId !== identity.id) throw new ApiError(401, 'Google identity does not match.');
       return actor.kind==='admin'?{token:session.access_token,redirectTo:'/admin/dashboard' as const}
         :actor.kind==='officer'?{token:session.access_token,redirectTo:'/field-officer' as const}
-        :actor.kind==='manager'?{token:session.access_token,redirectTo:'/manager/dashboard' as const}:session.access_token;
+        :actor.kind==='manager'?{token:session.access_token,redirectTo:'/manager/dashboard' as const}
+        :actor.kind==='primary'&&(await auth.projection(actor)).customerService?{token:session.access_token,redirectTo:'/customer-service' as const}:session.access_token;
     } catch (error) {
       await auth.provider('/logout?scope=local',{},session.access_token).catch(()=>undefined);
       if(error instanceof ApiError && error.code==='google_profile_missing')googleAccountMissing();

@@ -19,6 +19,7 @@ export interface NotificationItem {
   productId?: string;
   scope?: string;
   category?: string;
+  link?: string;
   module?: string;
   marketRatingId?: string;
   title: string;

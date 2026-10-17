@@ -1,3 +1,5 @@
+import HelpLink from './HelpLink';
+import AppearanceSettings from './AppearanceSettings';
 import { activateOnKeyboard } from '../lib/keyboardActivation';
 import { sessionFetch as fetch } from '../lib/session';
 import DashboardOverlay from './DashboardOverlay';
@@ -343,7 +345,7 @@ function OfficerWorkspace() {
   };
 
   return (
-    <div className="page-canvas relative min-h-screen w-full text-slate-800 flex flex-col items-center justify-start p-4 sm:p-6 md:p-10 overflow-x-hidden font-sans">
+    <div className="page-canvas verification-portal relative min-h-screen w-full text-slate-800 flex flex-col items-center justify-start p-4 sm:p-6 md:p-10 overflow-x-hidden font-sans">
       {/* Decorative ambient blurred blobs */}
       <div className="fixed top-1/4 -left-48 w-96 h-96 bg-blue-400/15 rounded-full blur-3xl pointer-events-none" />
       <div className="fixed bottom-1/4 -right-48 w-96 h-96 bg-indigo-400/15 rounded-full blur-3xl pointer-events-none" />
@@ -411,6 +413,7 @@ function OfficerWorkspace() {
               </div>
             </div>
 
+            <HelpLink compact className="!px-2" />
             <button
               onClick={() => setShowSignoutConfirm(true)}
               className="flex items-center gap-1.5 text-xs font-bold text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 px-3 py-1.5 rounded-xl transition-all shadow-xs cursor-pointer"
@@ -455,6 +458,8 @@ function OfficerWorkspace() {
                       <span>Return to Inspections Queue</span>
                     </button>
                   </div>
+
+                  <AppearanceSettings />
 
                   {/* Officer Info Card */}
                   <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl flex items-center gap-4">

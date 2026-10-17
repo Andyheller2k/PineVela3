@@ -8,7 +8,7 @@ import { loadOrderPins } from './supabase/orderPins.js';
 dotenv.config({ quiet: true });
 const db = new SupabaseDatabase();
 // Refuse to serve a partially applied or inaccessible schema.
-await db.pool.query("select version from private.schema_migrations where version = '20261014150839'").then(result => {
+await db.pool.query("select version from private.schema_migrations where version = '20261017133104'").then(result => {
   if (!result.rowCount) throw new Error('Apply all Supabase migrations before starting the server.');
 });
 const pinKey=loadOrderPins();
@@ -41,6 +41,7 @@ async function close() {
   const drained=new Promise<void>(resolve=>server.close(()=>resolve()));
   const deadline=setTimeout(()=>server.closeAllConnections(),45000);deadline.unref();
   try {
+    await app.locals.closeSupport?.();
     await app.locals.closeRealtime();
     await vite?.close();
     // Finish accepted HTTP work before ending its database pool. Vite's own

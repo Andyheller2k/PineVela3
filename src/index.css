@@ -364,24 +364,6 @@ html.marketplace-scrollbar-hidden::-webkit-scrollbar {
   gap: 0;
   justify-content: space-around;
 }
-.mobile-bottom-nav .mobile-nav-theme {
-  flex: 1 1 0;
-  min-width: 0;
-  padding-inline: 2px;
-}
-.mobile-nav-theme .theme-toggle {
-  width: min(54px, 100%);
-}
-.mobile-nav-theme .theme-toggle-orb {
-  left: auto;
-  right: 2px;
-  transform: none;
-}
-.mobile-nav-theme .theme-toggle[data-dark="true"] .theme-toggle-orb {
-  left: 2px;
-  right: auto;
-  transform: none;
-}
 .mobile-bottom-nav > button > span,
 .mobile-bottom-nav > div > button > span {
   display: block;

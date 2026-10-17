@@ -6,14 +6,20 @@
     <script>
       // Public pages stay fixed; product pages restore the saved preference before paint.
       var route = (location.hash.slice(1).split('?')[0] || '/').replace(/\/+$/, '') || '/';
-      var publicAppearance = route === '/' || route === '/login';
+      var fixedAppearance = route === '/' || route === '/login' ? 'light'
+        : route === '/pineresidence' || route === '/pinemarket' || route === '/faq' || route === '/support-invitation' || /^\/pinemarket\/stores\/[^/]+$/.test(route) ? 'dark' : null;
+      if (route === '/help') {
+        var helpFrom = new URLSearchParams(location.hash.slice(1).split('?').slice(1).join('?')).get('from') || '';
+        fixedAppearance = /^\/(?:user\/dashboard|student\/dashboard|resident\/dashboard|manager\/dashboard|staff\/dashboard|admin\/dashboard|digital-market(?:\/onboard)?|market|customer-service|field-officer|officer\/dashboard|verification-team|verification-portal)$/.test(helpFrom) ? null : 'dark';
+      }
+      var publicAppearance = fixedAppearance !== null;
       document.documentElement.dataset.appearance = publicAppearance ? 'public' : 'product';
       try {
         var savedAppearance = localStorage.getItem('pinevela:appearance');
         var appearance = savedAppearance === 'light' || savedAppearance === 'dark' ? savedAppearance : (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-        document.documentElement.dataset.theme = publicAppearance ? 'light' : appearance;
-        document.documentElement.style.colorScheme = publicAppearance ? 'light' : appearance;
-      } catch (_) { document.documentElement.dataset.theme = 'light'; document.documentElement.style.colorScheme = 'light'; }
+        document.documentElement.dataset.theme = fixedAppearance || appearance;
+        document.documentElement.style.colorScheme = fixedAppearance || appearance;
+      } catch (_) { document.documentElement.dataset.theme = fixedAppearance || 'light'; document.documentElement.style.colorScheme = fixedAppearance || 'light'; }
     </script>
     <title>PineVela</title>
     <link rel="icon" type="image/svg+xml" href="/store-covers/pinevela-logo.svg" />

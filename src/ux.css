@@ -30,11 +30,9 @@ html[data-theme="dark"] .ux-more-panel { background: var(--pv-panel); border-col
   input[type="checkbox"], input[type="radio"] { width: 20px; height: 20px; flex-shrink: 0; }
   label:has(> input[type="checkbox"], > input[type="radio"]) { display: flex; min-width: var(--pv-touch-target); min-height: var(--pv-touch-target); }
   label:has(input[type="file"]) { min-width: var(--pv-touch-target); min-height: var(--pv-touch-target); display: inline-flex; align-items: center; }
-  .public-header-compact .company-theme-toggle { transform: none; }
   .leaflet-control-zoom a, .leaflet-control-layers-toggle { min-width: 44px; min-height: 44px; line-height: 44px; }
   .ux-more-overlay { padding-bottom: max(12px, env(safe-area-inset-bottom)); }
   html[data-mobile-navigation="true"] .ux-dashboard-toast { bottom: calc(var(--pv-mobile-nav-height, 72px) + 88px); left: 16px; right: 16px; width: auto; max-width: calc(100vw - 32px); transform: none !important; overflow-wrap: anywhere; animation: none; }
-  .managed-mobile-theme { right: 12px; bottom: calc(var(--pv-mobile-nav-height, 72px) + 16px); }
   html[data-mobile-navigation="true"] .app-canvas main { padding-bottom: calc(var(--pv-mobile-nav-height, 72px) + 88px) !important; scroll-padding-bottom: calc(var(--pv-mobile-nav-height, 72px) + 88px); }
   .ux-action-group > button { flex: 1 1 auto; }
 }

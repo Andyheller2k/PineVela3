@@ -575,3 +575,11 @@ The primary email re-entry route derives identity from Supabase verification, se
 only the primary portal and never creates an Auth user or accepts ownership/role
 selectors. Its receipt records the verified proof method. Positive email-only OTP
 browser acceptance is still pending. See [email primary re-entry](migrations/primary-email-reentry.md).
+## Customer-service access
+
+Customer service uses the existing provider-verified primary sign-in plus a
+private, administrator-invited membership. An account role or browser flag does
+not grant access. Invitation acceptance checks the exact verified email, active
+issuing administrator and current approval-key version. Suspension takes effect
+on subsequent support requests, including requests with an already issued native
+Auth session. See [customer-support.md](customer-support.md).

@@ -1,3 +1,6 @@
+import SupportNotificationLink from './SupportNotificationLink';
+import HelpLink from './HelpLink';
+import AppearanceSettings from './AppearanceSettings';
 import { isMarketService,marketListingAvailable } from '../../marketListingAvailability';
 import { activateOnKeyboard } from '../lib/keyboardActivation';
 
@@ -1216,7 +1219,8 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
           >
             {renderAvatarGraphic(currentUser?.avatar, "w-7 h-7 text-[10px]")}
           </button>
-          <button 
+          <HelpLink compact className="!px-2" />
+          <button
             onClick={() => setShowSignoutConfirmModal(true)} 
             className="flex items-center gap-1.5 px-2 py-1.5 text-rose-600 hover:bg-rose-50 rounded-lg text-[10px] font-bold cursor-pointer"
             title="Sign Out"
@@ -1271,7 +1275,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
             <button onClick={() => setIsSidebarHidden(false)} title="Show sidebar" className="shrink-0 p-2 text-slate-500 hover:text-blue-700 hover:bg-blue-50 rounded-xl transition-colors cursor-pointer">
               <PanelLeftOpen className="w-4 h-4" />
             </button>
-          </div>
+          <HelpLink compact className="!px-2" /></div>
         </nav>
       )}
 
@@ -1354,7 +1358,9 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
             <LogOut className="w-4 h-4 shrink-0" />
             <span>Sign Out</span>
           </button>
+        <div className="flex justify-center pt-3"><HelpLink /></div>
         </div>
+
       </aside>}
 
       {/* MAIN CONTENT AREA */}
@@ -1591,6 +1597,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                       <p className="text-xs text-slate-600 font-medium leading-relaxed">
                         {notif.message}
                       </p>
+                      <SupportNotificationLink notification={notif} />
                     </div>
                   </div>
                 ))}
@@ -2855,6 +2862,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
         {/* TAB 2: OPTIONS TAB */}
         {activeTab === 'options' && (
           <div className="space-y-6 animate-fadeIn relative z-10 max-w-[1400px]">
+            <AppearanceSettings />
             <div className="bg-white/90 border border-slate-200/80 rounded-3xl p-6 sm:p-8 shadow-xl space-y-6 backdrop-blur-md">
               <div className="flex items-center justify-between border-b border-slate-100 pb-4">
                 <div>

@@ -37,7 +37,7 @@ try{
   if(!localBackend||native.users!==0||native.public_tables!==0||native.ledger)throw Error('A fresh empty loopback Supabase project is required.');
   stage='immutable local application migrations';
   const directory=path.resolve('supabase/migrations'),files=fs.readdirSync(directory).filter(n=>/^\d{14}_[a-z0-9_]+\.sql$/.test(n)).sort();
-  if(files.length!==69||!files.at(-1)?.startsWith('20261014150839_'))throw Error('Review changed application migration inventory before preparation.');
+  if(files.length!==70||!files.at(-1)?.startsWith('20261017133104_'))throw Error('Review changed application migration inventory before preparation.');
   await client.query('begin');
   try{
    await client.query("set local lock_timeout='5s';set local statement_timeout='30s';create schema if not exists private;create table private.schema_migrations(version text primary key,digest text not null,applied_at timestamptz not null default now());alter table private.schema_migrations enable row level security;revoke all on private.schema_migrations from public,anon,authenticated;");

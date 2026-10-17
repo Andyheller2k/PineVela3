@@ -1,3 +1,6 @@
+import SupportNotificationLink from './SupportNotificationLink';
+import HelpLink from './HelpLink';
+import AppearanceSettings from './AppearanceSettings';
 
 import {
 AlertCircle,
@@ -62,6 +65,8 @@ interface StaffBargain {
 }
 
 interface NotificationItem {
+  category?: string;
+  link?: string;
   id: string;
   title: string;
   message: string;
@@ -493,6 +498,7 @@ export default function PageStaffDashboard() {
           </div>
         </div>
         <div className="flex items-center gap-3">
+          <HelpLink compact className="!px-2" />
           <button onClick={() => setShowLogoutConfirm(true)} className="flex items-center gap-1.5 px-2 py-1.5 text-[10px] font-bold text-rose-600 hover:bg-rose-50 rounded-lg" title="Sign Out">
             <LogOutIcon className="w-4 h-4" />
             <span>Sign Out</span>
@@ -522,7 +528,7 @@ export default function PageStaffDashboard() {
           <span className="text-[9px] font-bold text-slate-500">Profile</span>
         </button>
         <div className="w-px h-6 bg-slate-200/70 shrink-0" />
-        {[{ id: 'maintenance', label: 'Fixes', icon: Wrench, badge: employment ? assignedIssues.filter(i => !i.withdrawn && i.status !== 'Resolved' && !i.staffCompleted).length : 0 }, { id: 'notifications', label: 'Alerts', icon: Bell, badge: notifications.length }, { id: 'settings', label: 'Settings', icon: Settings }].map(tab => <button aria-current={activeTab === tab.id ? 'page' : undefined} key={tab.id} onClick={() => setActiveTab(tab.id as any)} aria-label={`${tab.label}${tab.badge ? ` (${tab.badge})` : ''}`} className={`flex-1 min-w-0 flex flex-col items-center gap-0.5 py-1.5 rounded-xl text-[9px] font-bold cursor-pointer ${activeTab === tab.id ? 'text-blue-700 bg-blue-100/65' : 'text-slate-500 hover:bg-white/70'}`}><span className="relative inline-flex"><tab.icon className="w-4 h-4" /><TopNavBadge count={tab.badge} /></span><span className="truncate max-w-full">{tab.label}</span></button>)}<button onClick={() => setShowLogoutConfirm(true)} title="Sign Out" className="shrink-0 flex flex-col items-center gap-0.5 px-2 py-1.5 text-[9px] font-bold text-rose-600 hover:bg-rose-50 rounded-xl cursor-pointer"><LogOutIcon className="w-4 h-4" /><span>Sign Out</span></button><button onClick={() => setIsSidebarTopNav(false)} title="Show sidebar" className="p-2 text-slate-500 hover:text-blue-700 cursor-pointer"><PanelLeftOpen className="w-4 h-4" /></button></div></nav>}
+        {[{ id: 'maintenance', label: 'Fixes', icon: Wrench, badge: employment ? assignedIssues.filter(i => !i.withdrawn && i.status !== 'Resolved' && !i.staffCompleted).length : 0 }, { id: 'notifications', label: 'Alerts', icon: Bell, badge: notifications.length }, { id: 'settings', label: 'Settings', icon: Settings }].map(tab => <button aria-current={activeTab === tab.id ? 'page' : undefined} key={tab.id} onClick={() => setActiveTab(tab.id as any)} aria-label={`${tab.label}${tab.badge ? ` (${tab.badge})` : ''}`} className={`flex-1 min-w-0 flex flex-col items-center gap-0.5 py-1.5 rounded-xl text-[9px] font-bold cursor-pointer ${activeTab === tab.id ? 'text-blue-700 bg-blue-100/65' : 'text-slate-500 hover:bg-white/70'}`}><span className="relative inline-flex"><tab.icon className="w-4 h-4" /><TopNavBadge count={tab.badge} /></span><span className="truncate max-w-full">{tab.label}</span></button>)}<button onClick={() => setShowLogoutConfirm(true)} title="Sign Out" className="shrink-0 flex flex-col items-center gap-0.5 px-2 py-1.5 text-[9px] font-bold text-rose-600 hover:bg-rose-50 rounded-xl cursor-pointer"><LogOutIcon className="w-4 h-4" /><span>Sign Out</span></button><button onClick={() => setIsSidebarTopNav(false)} title="Show sidebar" className="p-2 text-slate-500 hover:text-blue-700 cursor-pointer"><PanelLeftOpen className="w-4 h-4" /></button><HelpLink compact className="!px-2" /></div></nav>}
       {!isSidebarTopNav && <aside data-portal-navigation="sidebar" className={`hidden lg:flex ${isSidebarCollapsed ? 'w-20 p-4' : 'w-72 p-6'} my-6 ml-6 h-[calc(100vh-3rem)] bg-gradient-to-br from-sky-100/90 via-blue-100/85 to-amber-50/40 backdrop-blur-3xl border border-sky-200/80 shadow-2xl rounded-3xl flex flex-col justify-between shrink-0 overflow-y-auto z-20 transition-all duration-300 relative`}>
         <button onClick={() => setIsSidebarTopNav(true)} title="Use top navigation" className="absolute top-3 right-3 p-2 rounded-xl text-slate-500 hover:text-blue-700 hover:bg-white/70 cursor-pointer"><PanelLeftClose className="w-4 h-4" /></button>
 
@@ -710,7 +716,9 @@ export default function PageStaffDashboard() {
             <LogOutIcon className="w-4 h-4 shrink-0" />
             {!isSidebarCollapsed && <span>Log Out</span>}
           </button>
+        <div className="flex justify-center pt-3"><HelpLink compact={isSidebarCollapsed} /></div>
         </div>
+
       </aside>}
 
 
@@ -827,6 +835,7 @@ export default function PageStaffDashboard() {
                       <p className="text-xs text-slate-700 font-medium leading-relaxed pl-10">
                         {n.message}
                       </p>
+                      <SupportNotificationLink notification={n} />
                     </div>
                   );
                 })}
@@ -842,6 +851,7 @@ export default function PageStaffDashboard() {
         {/* ========================================================================= */}
         {activeTab === 'settings' && (
           <div className="max-w-2xl bg-sky-50/55 backdrop-blur-xl border border-white/80 rounded-3xl p-6 md:p-8 shadow-sm shadow-blue-950/5 space-y-6">
+            <AppearanceSettings />
             <div className="border-b pb-4">
               <h3 className="text-lg font-black text-slate-900">Staff Account Settings</h3>
               <p className="text-xs text-slate-500 font-medium">

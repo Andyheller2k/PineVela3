@@ -12,7 +12,12 @@ existing brand illustration. Login uses a blue/yellow background, navy card and
 fields, gold headings and actions. Its fitted card geometry and independent
 mobile photograph are preserved. Real photographs retain their original colors.
 
-Other pages use white cards, navy feature panels and gold actions in light mode.
+Public Explore Marketplace (`/pinemarket`), its storefronts, and Explore Residence
+(`/pineresidence`) use fixed dark mode with no theme controls, including their
+dialogs. Direct loads and route navigation preserve this appearance without
+overwriting the saved product preference.
+
+Product pages use white cards, navy feature panels and gold actions in light mode.
 Dark mode uses solid deep blue `#001D3D` for the canvas, cards, fields, navigation,
 dialogs and other non-yellow surfaces, with gold headings and selective gold
 feature panels. It has no stars, moon or atmosphere. Borders, spacing and shadows
@@ -39,7 +44,7 @@ Contrast targets follow [WCAG text contrast](https://www.w3.org/WAI/WCAG22/Under
 and [non-text contrast](https://www.w3.org/WAI/WCAG22/Understanding/non-text-contrast.html).
 
 `ThemeProvider` owns the product preference and applies a separate effective
-appearance for the current route. `data-appearance="public"` fixes landing/login
+appearance for the current route. `data-appearance="public"` fixes public pages
 at document level, including portals, while retaining the saved product mode.
 `ThemeEnvironment`, `ThemeToggle` and `src/theme.css` provide the light-product
 atmosphere, product switch and existing-surface adaptation.
@@ -58,6 +63,10 @@ gradients and responsive rounded section boundaries soften the company transitio
 The landing and login headers, search fields and navigation keep their fixed
 navy/yellow treatment. Reduced-motion users get
 the same theme and readable surfaces without travel, breathing or transition effects.
+
+Mobile product headers sit flush with the page on white surfaces with navy text
+and controls in light mode, without rounded card edges, borders, blur, or shadows.
+Dark product headers and public navigation retain their navy surfaces.
 
 The effective route appearance is applied in the document head before React renders.
 Product pages restore the last device mode. Each
@@ -87,7 +96,7 @@ at desktop/mobile widths in both themes. Isolated source-component checks use
 no accounts or API responses;
 they verify styling, geometry, focus and dismissal rather than full enrollment.
 
-Mobile portals use at most five primary navigation choices and group secondary destinations in a named More dialog. The appearance switch sits above the navigation, opposite the maintenance/seller shortcut, with reserved scrolling space. Selected tabs use gold fills and navy labels in both themes. The measured navigation height, including safe-area padding, reserves room in the scrolling content and raises the seller’s add button above it. Desktop seller navigation includes the Subscription label and selected state.
+Mobile portals use at most five primary navigation choices and group secondary destinations in a named More dialog. Appearance controls live in each portal's Settings, Options, or Profile area, with no floating, navigation, or map/storefront theme switches. Selected tabs use gold fills and navy labels in both themes. The measured navigation height, including safe-area padding, reserves room in the scrolling content and raises the seller’s add button above it. Desktop seller navigation includes the Subscription label and selected state.
 
 About Us, Our Vision, Partner with Us, and Contact continue below the landing
 catalog and benefits. Public company links navigate to `/?section=<section-id>`;

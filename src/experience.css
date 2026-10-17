@@ -60,7 +60,36 @@ html[data-theme] :is([data-portal-navigation], .ux-more-panel) button[aria-curre
 html[data-theme] [data-portal-navigation] button[aria-current="page"] :is([class*="bg-white/"], [class*="bg-blue-100"], [class*="bg-blue-200"]) { background: rgb(0 29 61 / .08); }
 html[data-theme] [data-portal-navigation] button[aria-current="page"] [class~="bg-blue-600"] { background: #001d3d; color: #ffd60a; }
 html[data-theme] [data-portal-navigation] button :is(.ux-nav-badge, [class~="bg-rose-600"], [class~="bg-red-600"]) { color: #ffffff; }
-html[data-theme] .theme-dock { background: #001d3d; border-color: rgb(255 195 0 / .35); }
+
+@media (max-width: 1023px) {
+  html[data-theme="light"][data-appearance="product"] [data-portal-navigation="header"] {
+    --pv-text: #001d3d;
+    --pv-muted: #426080;
+    --pv-heading: #001d3d;
+    --pv-heading-ink: #001d3d;
+    --pv-heading-default-gradient: linear-gradient(120deg, #001d3d, #003566);
+    --pv-heading-gradient: var(--pv-heading-default-gradient);
+    --pv-link: #003566;
+    --pv-panel: #ffffff;
+    --pv-panel-gradient: linear-gradient(#ffffff, #ffffff);
+    --pv-secondary: #f1f5f9;
+    --pv-edge: #dce7f3;
+    background: #ffffff !important;
+    color: #001d3d;
+    border-color: #dce7f3 !important;
+    border-width: 0;
+    border-radius: 0;
+    box-shadow: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  html[data-theme="light"][data-appearance="product"] .verification-portal { padding-top: 0; }
+  html[data-theme="light"][data-appearance="product"] .verification-portal > [data-portal-navigation="header"] { width: 100vw; max-width: none; margin-inline: calc(50% - 50vw); }
+  html[data-theme="light"][data-appearance="product"] [data-portal-navigation="header"] :is(input, select) { background: #ffffff !important; color: #001d3d !important; border-color: #6c8dae !important; }
+  html[data-theme="light"][data-appearance="product"] [data-portal-navigation="header"] input::placeholder { color: #426080 !important; }
+  html[data-theme="light"][data-appearance="product"] [data-portal-navigation="header"] button:not(:disabled):not([aria-current="page"]):hover { background-color: #eef3f8; }
+  html[data-theme="light"][data-appearance="product"] [data-portal-navigation="header"] :is(button, a):focus-visible { outline-color: #003566; }
+}
 
 /* Feature panels repeat the reference's blue-block/light-card hierarchy. */
 html[data-theme] .pv-feature-card { background: var(--pv-strong-gradient); color: var(--pv-text); border-color: rgb(255 195 0 / .3); box-shadow: 0 12px 30px var(--pv-brand-shadow); }
@@ -144,7 +173,14 @@ html[data-theme] .landing-peak-page #footer-section { background: #000814; borde
 /* Login keeps its fitted card geometry and independent illustration. */
 html[data-theme] .unified-login { background: linear-gradient(115deg, #001d3d 0%, #001d3d 58%, #ffc300 58%, #ffd60a 100%); }
 html[data-theme] .unified-login .login-header { background: #001d3d !important; border-color: rgb(255 195 0 / .3) !important; }
-html[data-theme] .unified-login .login-auth-card { background: linear-gradient(145deg, #003566, #001d3d); border-color: rgb(255 195 0 / .45); box-shadow: 0 16px 48px rgb(0 8 20 / .3); }
+html[data-theme] .unified-login .login-auth-card {
+  --pv-muted: #c9d9eb;
+  background: linear-gradient(145deg, rgb(0 8 20 / .7), rgb(0 29 61 / .74));
+  -webkit-backdrop-filter: blur(18px) saturate(1.25);
+  backdrop-filter: blur(18px) saturate(1.25);
+  border-color: rgb(255 195 0 / .45);
+  box-shadow: inset 0 1px 0 rgb(255 214 10 / .28), inset 0 -1px 0 rgb(0 8 20 / .2), 0 16px 48px rgb(0 8 20 / .3);
+}
 html[data-theme] .unified-login .login-mode-toggle { background: #00162e; border-color: #42688c; }
 html[data-theme] .unified-login .login-mode-toggle button:not([aria-pressed="true"]) { color: #b3c9df; }
 html[data-theme] .unified-login .login-mode-toggle button[aria-pressed="true"] { background: var(--pv-action-gradient); color: #001d3d; }
@@ -165,3 +201,20 @@ html[data-theme] body:has(.unified-login) .unified-login .login-footer { width: 
   .landing-peak-brand::before { display: none; }
   html[data-theme] :is([data-portal-navigation], #public-header, .pv-feature-card, .unified-login, .unified-login .login-auth-card) { background: Canvas !important; color: CanvasText !important; }
 }
+.support-surface { color: var(--pv-text); }
+.support-surface h1 {
+  background: var(--pv-heading-gradient);
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+}
+.support-surface :where(h2, h3) { color: var(--pv-heading); }
+.support-surface :where(input, textarea, select) { color: var(--pv-text); background-color: var(--pv-field); }
+.support-surface :where(a, button, input, textarea, select, summary):focus-visible {
+  outline: 2px solid var(--pv-link);
+  outline-offset: 4px;
+}
+.support-surface [aria-current="page"] { border-color: var(--pv-brand-yellow); }
+.support-surface summary::-webkit-details-marker { display: none; }
+.support-surface details[open] summary { color: var(--pv-link); }

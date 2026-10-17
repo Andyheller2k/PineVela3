@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useLayoutEffect, use
 import { useLocation } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 import { sessionFetch } from '../lib/session';
+import { getPublicAppearance } from '../lib/publicAppearance';
 
 export type Theme = 'light' | 'dark';
 const DEVICE_KEY = 'pinevela:appearance';
@@ -13,10 +14,10 @@ const initialTheme = (): Theme => read(DEVICE_KEY) || (matchMedia('(prefers-colo
 const ThemeContext = createContext<{ theme: Theme; publicAppearance: boolean; toggleTheme: () => void; savePending: boolean } | null>(null);
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const { pathname } = useLocation();
-  const route = pathname.replace(/\/+$/, '') || '/';
-  const publicAppearance = route === '/' || route === '/login';
+  const { pathname, search } = useLocation();
   const { user, loading } = useAuth();
+  const fixedAppearance = getPublicAppearance(pathname, search, !!user);
+  const publicAppearance = fixedAppearance !== null;
   const contextId = user ? String(user.id) : null;
   const identity = user ? `${user.role}:${user.id}` : null;
   const [theme, setTheme] = useState<Theme>(initialTheme);
@@ -38,7 +39,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   // Public pages and body portals keep one appearance without changing the
   // account/device preference. Restore that preference on product routes.
   useLayoutEffect(() => {
-    const appearance = publicAppearance ? 'light' : theme;
+    const appearance = fixedAppearance ?? theme;
     const root = document.documentElement;
     cancelAnimationFrame(paintFrame.current);
     root.classList.add('theme-changing');
@@ -49,7 +50,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     root.dataset.appearance = publicAppearance ? 'public' : 'product';
     root.dataset.theme = appearance;
     root.style.colorScheme = appearance;
-  }, [publicAppearance, theme]);
+  }, [fixedAppearance, publicAppearance, theme]);
 
   // Serialise writes so rapid toggles cannot leave an older preference on the server.
   const flush = useCallback(async () => {
@@ -121,6 +122,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   }, [apply, flush]);
 
   const toggleTheme = useCallback(() => {
+    if (publicAppearance) return;
     const next = current.current === 'light' ? 'dark' : 'light';
     apply(next);
     const version = ++revision.current;
@@ -131,7 +133,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       setSavePending(true);
       void flush();
     }
-  }, [contextId, apply, flush]);
+  }, [contextId, apply, flush, publicAppearance]);
 
   return <ThemeContext.Provider value={{ theme, publicAppearance, toggleTheme, savePending }}>{children}</ThemeContext.Provider>;
 }

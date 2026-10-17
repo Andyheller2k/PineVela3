@@ -15,7 +15,7 @@ import { AnimatePresence,motion,useReducedMotion } from 'motion/react';
 import AccountAccessNotice from './components/AccountAccessNotice';
 import RouteSkeleton from './components/RouteSkeleton';
 import ThemeEnvironment from './components/ThemeEnvironment';
-import { ThemeDock } from './components/ThemeToggle';
+import MobileNavigationLayout from './components/MobileNavigationLayout';
 import { ThemeProvider } from './context/ThemeContext';
 import { portalRoles } from './lib/portalRoles';
 
@@ -28,6 +28,10 @@ const PagePaymentReturn = lazy(() => import('./components/PagePaymentReturn'));
 const PageStaffInvitation = lazy(() => import('./components/PageStaffInvitation'));
 const PageOfficerInvitation = lazy(() => import('./components/PageOfficerInvitation'));
 const PageAdminInvitation = lazy(() => import('./components/PageAdminInvitation'));
+const PageFAQ = lazy(() => import('./components/PageFAQ'));
+const PageHelp = lazy(() => import('./components/PageHelp'));
+const PageSupportInvitation = lazy(() => import('./components/PageSupportInvitation'));
+const PageCustomerService = lazy(() => import('./components/PageCustomerService'));
 const PageUnifiedLogin = lazy(() => import('./components/PageUnifiedLogin'));
 const PageManagerOnboarding = lazy(() => import('./components/PageManagerOnboarding'));
 const ManagerGoogleResult = lazy(() => import('./components/ManagerGoogleResult'));
@@ -152,6 +156,10 @@ function AppContent() {
         <Route path="/pineresidence" element={<PageWrapper loadingFallback={<p role="status" className="p-8 text-center text-sm text-slate-500">Loading residences…</p>}><PagePublicResidence /></PageWrapper>} />
         <Route path="/pinemarket/stores/:storeId" element={<PageWrapper><PagePublicStore /></PageWrapper>} />
         <Route path="/pinemarket" element={<PageWrapper loadingFallback={<p role="status" className="p-8 text-center text-sm text-slate-500">Loading PineMarket…</p>}><PagePublicMarket /></PageWrapper>} />
+        <Route path="/faq" element={<PageWrapper><PageFAQ /></PageWrapper>} />
+        <Route path="/help" element={<PageWrapper><PageHelp /></PageWrapper>} />
+        <Route path="/support-invitation" element={<PageWrapper><PageSupportInvitation /></PageWrapper>} />
+        <Route path="/customer-service" element={<ProtectedRoute allowedRoles={['user', 'admin']}><PageWrapper><PageCustomerService key={user?.id} /></PageWrapper></ProtectedRoute>} />
 
         <Route path="/staff-invitation" element={<PageWrapper><PageStaffInvitation /></PageWrapper>} />
         <Route path="/officer-invitation" element={<PageWrapper><PageOfficerInvitation /></PageWrapper>} />
@@ -359,7 +367,7 @@ export default function App() {
                 <NotificationProvider>
                   <div className="app-canvas min-h-screen flex flex-col relative overflow-hidden">
                     <ThemeEnvironment />
-                    <ThemeDock />
+                    <MobileNavigationLayout />
                     <FormFeedback />
                     <ApprovalKeyPrompt />
                     <AdminMessageNotice />

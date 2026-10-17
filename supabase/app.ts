@@ -54,6 +54,7 @@ import { installManagerRegistration } from './managerRegistration.js';
 import { installRegistrationRestrictions } from './registrationRestrictions.js';
 import { installManagerOnboarding } from './managerOnboarding.js';
 import { publicPlatformSettings } from '../platformSettings.js';
+import { installSupport } from './support.js';
 import { AttemptBudgets, ResourceLimitError, trustedProxyAddresses } from '../resourceSecurity.js';
 
 /** Replacement backend is tested independently until all active routes are ported.
@@ -97,6 +98,7 @@ export function createSupabaseApp(db: SupabaseDatabase) {
     }).then(settings => res.json(settings)).catch(next);
   });
   installSupabaseAuth(app, auth); installNotifications(app, auth);
+  installSupport(app, auth);
   installProfiles(app,auth);
   installAppearance(app,auth);
   installPortalSecurity(app,auth);

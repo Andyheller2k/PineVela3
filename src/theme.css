@@ -118,16 +118,12 @@ html.theme-changing :where(#root *, dialog, dialog *):not(.theme-environment, .t
 .theme-toggle[data-dark="true"] .theme-toggle-cloud { opacity: 0; transform: translateX(-25px); }
 .theme-toggle-stars { position: absolute; right: 6px; top: 6px; width: 29px; color: var(--pv-blue-ice); font-size: 13px; line-height: 23px; opacity: 0; transform: translateY(8px); transition: opacity 180ms, transform 180ms; }
 .theme-toggle[data-dark="true"] .theme-toggle-stars { opacity: 1; transform: translateY(0); }
-.theme-dock { position: fixed; right: max(18px, env(safe-area-inset-right)); bottom: max(22px, env(safe-area-inset-bottom)); z-index: 45; padding: 6px; border-radius: 99px; background: var(--pv-glass); border: 1px solid var(--pv-edge); backdrop-filter: blur(14px); box-shadow: 0 6px 24px #011e601a; display: flex; }
 @keyframes atmosphere-drift { to { transform: translate3d(40px, -35px, 0) scale(1.08); } }
 @keyframes celestial-breathe { 50% { transform: scale(1.035); opacity: .82; } }
 @media (max-width: 767px) {
-  .theme-dock { bottom: calc(100px + env(safe-area-inset-bottom)); right: 12px; }
   .theme-toggle { width: 66px; height: 36px; }
   .theme-toggle-orb { width: 28px; height: 28px; transform: translateX(30px); }
   .theme-celestial { right: 24px; opacity: .5; }
-  .company-theme-toggle { width: 54px; height: 30px; }
-  .company-theme-toggle .theme-toggle-orb { width: 22px; height: 22px; transform: translateX(24px); }
 }
 
 /* Compatibility bridge for the existing utility surfaces. Photos and semantic chart series keep their colors. */
@@ -198,10 +194,6 @@ html[data-theme="dark"] :is(nav button, button[data-page-tabs])[aria-current="pa
 
 .mobile-bottom-nav { padding-bottom: env(safe-area-inset-bottom); }
 .mobile-bottom-nav > [data-mobile-nav-items] { padding-bottom: 8px; }
-.mobile-nav-theme { min-height: 48px; }
-.mobile-nav-theme .theme-toggle { width: 54px; height: 28px; }
-.mobile-nav-theme .theme-toggle-orb { width: 22px; height: 22px; top: 2px; left: 2px; transform: translateX(26px); }
-.mobile-nav-theme .theme-toggle[data-dark="true"] .theme-toggle-orb { transform: translateX(0); }
 .mobile-bottom-nav:not(:has([data-mobile-nav-items])) > button { min-height: 48px; border-radius: 12px; }
 html[data-mobile-navigation="true"] .app-canvas main {
   padding-bottom: calc(var(--pv-mobile-nav-height, 72px) + 24px) !important;

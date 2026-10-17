@@ -1088,3 +1088,12 @@ rolls back closure. Re-entry requires an explicit server-verified Google signup,
 the same live subject/session, completed closure receipt and retained policy checks.
 No browser IDs or GUCs provide public authority: lifecycle helpers/tables have no
 anon, authenticated or scoped-backend grants. Live wipe execution remains disabled.
+## Customer support
+
+Migration 70 adds private, RLS-protected support cases and administrator-invited
+customer-service memberships. Requester identity comes from the current verified
+native session, while guest conversations require a private hashed access code.
+All queue actions recheck active membership; requesters never receive internal
+notes. Public replies commit their email outbox and account-scoped notification
+in the same transaction. See [customer-support.md](customer-support.md) for access,
+invitations, email configuration and verification.

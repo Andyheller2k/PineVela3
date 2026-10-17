@@ -1,3 +1,4 @@
+import AppearanceSettings from './AppearanceSettings';
 import { Check,Lock,Upload,User } from 'lucide-react';
 import React,{ useEffect,useRef,useState } from 'react';
 import { uploadProfileImage } from '../lib/profileImages';
@@ -90,6 +91,7 @@ export default function ManagerProfileSettings({
 
   return (
     <section aria-label="Manager Profile Settings" className="relative z-10 mx-auto w-full max-w-3xl animate-fadeIn">
+      <div className="mb-6"><AppearanceSettings /></div>
       <div className="bg-white border border-blue-200/80 rounded-3xl w-full shadow-sm overflow-hidden flex flex-col">
         {/* Settings Header */}
         <div className="p-6 bg-gradient-to-r from-sky-400/25 via-blue-500/20 to-indigo-400/25 backdrop-blur-xl border-b border-sky-200/80 text-slate-900 flex items-center justify-between">

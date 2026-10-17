@@ -1,137 +1,275 @@
-# PineVela Supabase continuation
+r# PineVela Supabase progress and continuation
 
-Cutover checkpoint: 16 October 2026. Workspace: `/home/wyse/Documents/PineVela3`.
+Checkpoint: 2026-10-12. Workspace: `/home/wyse/Documents/PineVela3`.
 
-Latest follow-up: logout and shared authenticated-request latency. Native logout
-now commits one exact binding revocation before replying; bounded provider cleanup
-follows. Session/policy discovery and ordered transaction setup use fewer SQL
-round trips. Immediate pending feedback and cache clearing prevent silent waits
-and logout refetches. The controlled logout comparison was 5,334 → 252 ms;
-15 real local browser logouts took 83–1,685 ms. Verification passed 96 regressions,
-416 browser assertions, 43 native transaction checks, 45 directory HTTP checks,
-11 session-policy checks and 28 logout/maintenance security checks. See
-`docs/operations/latency.md` for exact conditions and hosted timing limits.
+This handoff records the last verified migration round. It is not a declaration
+that cutover is complete. Recheck runtime, browser and database state before work.
+No runtime implementation or data was changed while creating this document.
 
-## Current runtime
+## Objective and current state
 
-Supabase PostgreSQL, Auth and private Storage are now the sole application
-persistence. Default `npm run dev`, `npm run build` and `npm run start` select
-`supabase-server.ts` and the native build. The `:supabase` names are aliases.
-Express remains the API and server-side authorization layer. The two separate
-native workers and their disabled execution gates are preserved.
+Move the current PineVela product to Supabase PostgreSQL, Auth and Storage as its
+sole persistent source. Design from current requirements, rather than copying
+every old JSON entity. Express remains the server-side API and authorization layer.
 
-Forty JSON/custom-session runtime modules are removed, including `server.ts`,
-`localDb.ts`, `persistentDb.ts`, `jsonStoreSafety.ts` and `sessionSecurity.ts`.
-Shared helpers retain only native credential, queue, validation and provider logic.
-Persistence flags and JSON fallback branches are removed from the frontend.
-Unknown API operations return 404. Retired chat, public staff recruitment and
-unrestricted reviews remain absent; buyer–seller messaging remains supported.
+| Area | Last verified checkpoint |
+| --- | --- |
+| Applied migrations | 52; latest `20261012145716_reviewed_residence_changes.sql` |
+| Replacement server | `supabase-server.ts`, local HTTP port 3001 |
+| Default backend | Still legacy JSON; final switch has **not** happened |
+| JSON/data removal | **Not performed**; preserve existing data and backups |
+| Literal endpoint inventory | 195 total: 137 implemented, 13 retired, 45 pending |
+| Founder/admin enrollment | Genuine Google signup, founder setup, invitations and recovery verified |
+| Next reproduced issue | Temporary initial Auth failure sends a valid session to login |
+| Final acceptance/reset | Still pending; native checks do not replace genuine browser journeys |
 
-The owner classified all reviewed legacy records as development data and explicitly
-authorized archival while retaining the current Supabase accounts. Exactly 29
-legacy data/upload files, 32,690,351 bytes, and the old compiled build are moved
-out of active paths into private recovery storage. Every original digest matches
-the independently restored encrypted checkpoint
-`9879d6a8-2d6a-4351-9eaa-3108d6bc5035`. `data/`, `uploads/` and the old
-`dist/server.cjs` are absent. No business record was imported from that archive.
+Endpoint counts are source inventory, not counts of remaining workflows or
+migrations. Review actual callers and mounted aliases before implementing any
+pending entry. Do not reintroduce retired features to increase coverage.
 
-Final hosted READ ONLY retention passed 23 checks: all seven Auth subjects, six
-profiles and ten contexts retain the exact pre-cutover UUID sets. Provider labels
-do not decide retention. No hosted account, business or Storage mutation was made
-by the isolated tests or archival. Paystack is unchanged; the owner reports it
-already tested and explicitly requested leaving it alone.
+## Read first
 
-## Verification and fixes
+- [Agent rules](AGENTS.md), [architecture](ARCHITECTURE.md),
+  [product rules](docs/product-rules.md), [auth](docs/auth.md),
+  [database](docs/database.md), [security](docs/security.md).
+- [Implementation status](docs/migrations/supabase-implementation-status.md):
+  authoritative chronological evidence; newest checkpoint is at the top.
+- [Current application audit](docs/migrations/current-application-audit.md),
+  [schema design](docs/migrations/schema-design.md),
+  [API inventory](docs/migrations/api-cutover-inventory.json).
+- [Fresh-start procedure](docs/migrations/supabase-fresh-start.md),
+  [residence deletion](docs/migrations/residence-deletion.md),
+  [Storage recovery](docs/migrations/storage-recovery.md).
+- Supabase skill: `/home/wyse/.agents/skills/supabase/SKILL.md`.
 
-The production administrator-directory timeout follow-up replaces eight parallel
-HTTP reads with one protected aggregate and two existing authorization scopes.
-Its 39 genuine SQL parity/security checks, 45 actual local HTTP checks and full
-96-test regression suite pass. The 30-second deadline remains; timeout feedback
-is readable and bulk polling is slower. Paystack remains unchanged. See
-[latency evidence](docs/operations/latency.md).
+## User decisions and boundaries to preserve
 
-The rebuilt browser follow-up passed 404 checks, including a genuine successful
-reply held past the deadline and subsequent Retry recovery, with zero runtime
-exceptions. Production is restarted on the existing loopback address.
+- Use the already-configured Supabase project, reference `bivajljcdeofyxzmplxm`.
+  Trusted founder: `andyheller2k@gmail.com`. Public signup must never grant admin.
+- Keep genuine verified Google identities; do not restore disposable test accounts
+  or recreate their linked records in the live app. Final deletion candidates and
+  dependencies still need a current, reviewable plan and backups before execution.
+- Separate verified resident/manager/seller email identities where appropriate.
+  When resident and seller use the same student mailbox, share one Supabase email
+  identity/password and use separate portal access PINs. Supabase cannot assign
+  two passwords to the same email identity.
+- One activation key and one active resident per room. Preserve the housing
+  hierarchy and allocation/occupancy invariants; do not invent multi-resident rooms.
+- Store activation charges only the registration fee. Initial access lasts two
+  calendar months; the two-month fee becomes due afterward. Pro/Star subscriptions
+  are separate monthly upgrades. No public HTTPS deployment URL has been supplied.
+- No mockup or placeholder product data. Existing verifier domain scenarios are
+  confined to disposable local database restores with genuine archived identities.
+- Derive ownership from authenticated sessions and server relationships; retain
+  RLS and non-BYPASSRLS runtime grants. Never trust client IDs as authorization.
+- Only buyer ↔ seller messaging is supported. Do not restore manager/resident,
+  manager/staff, room or generic chat, public staff hiring or public staff reviews.
+- Keep private keys, cookies, passwords, environment values and archives private.
+  Approval/settings keys and Google sign-in stay inside the user's app/browser.
+- Preserve the existing dirty worktree. Do not clean, reset or overwrite unrelated
+  work. No commit or deployment is implied by this continuation.
 
-Separate completed suites, not a cumulative unique-check count:
+## What has been completed
 
-- 27 actual local signup/confirmation/session checks and 30 native
-  administrator/officer invitation/key checks.
-- 32 real-token PostgREST/Storage/RLS checks; 105 account/profile/recovery/inbox
-  checks; 125 immutable migration, RLS, role/grant and function exposure checks.
-- 128 native housing/market workflow assertions, plus 26 pricing-quorum and
-  16 maintenance/recovery assertions. Two full housing journeys cover allocation,
-  staff, reviews and repairs; two stores cover activation, listings, messages,
-  orders, handover PINs, stock and purchase reviews.
-- 14 authentication concurrency checks: nine simultaneous native API reads now
-  share one pending actual GoTrue `/user` request. Later requests verify again,
-  tokens never mix, failures are not cached and logout still revokes access.
-- 89 retained security/unit checks passed, including real Google redirect and
-  cancelled-callback checks with zero created accounts. Frontend/backend
-  TypeScript, native build and built-server public/privacy verification passed.
-- 365 actual browser assertions passed before final source retirement; a separate
-  final run passed 392 after retirement and the real stack restart: eight
-  role contexts, native login/logout/reload, cross-role route/API denial,
-  375/1440px light/dark, actual storefront messages, failed reads/retry, slow-read
-  coalescing and staff account switching. No browser exception or cloud write.
+The status document contains detailed coverage for Auth/PKCE/cookie sessions,
+scoped portal enrollment and access PINs, housing/room claims, staff operations,
+maintenance, meetings, seller/store/inventory, orders, buyer/seller messages,
+pricing/payments and administrator governance. These implementations have
+different levels of native, HTTP and genuine browser verification; do not treat
+this list as full end-to-end acceptance.
 
-Actual workflows exposed approvals accepted without the independent own key.
-Manager, residence and seller approvals now commit the failed-guess check and
-revalidate actor/key version inside the mutation transaction. Missing, incorrect,
-settings and other-administrator keys are rejected; the owner's key succeeds.
-Direct manager/residence UI actions use the existing transient approval prompt.
+Recent completed rounds include:
 
-Further verified fixes coalesce staff/seller polling, share the primary registration
-query, preserve explicit administrator/seller/officer read errors and retry, and
-prevent an old account's response from populating a new portal. Native manager GPS
-and administrator account totals use actual saved values; obsolete synthetic
-identity-card and unreachable JSON onboarding UI are removed.
+- Administrator photo preview/progress and repeated-upload reuse; actual account
+  photograph isolation confirmed. Reviewed reconciliation handled missing,
+  unreferenced upload records. Do not delete additional live files to tidy up.
+- Migration 51, scoped account appearance, plus 46 isolated checks. Genuine browser
+  theme save/reload passed; user confirmed independent light/dark settings across
+  two administrators.
+- Notification refresh coalescing and account-generation isolation, with five
+  Promise/AbortSignal checks. Actual founder inbox/badges were inspected.
+- Guest browser coverage: 58 checks across 375/768/1440 widths, light/dark modes
+  and delayed actual outgoing requests.
+- Owned primary/resident profiles and allocation projections: 64 isolated checks.
+  Canonical profile/photo remains separate from linked room details; stale context,
+  ownership spoofing and wrong-portal access are denied. Supabase does not use the
+  legacy fake occupied-room fallback.
 
-Common entry JavaScript is now 284,896 bytes versus the measured 859,463-byte
-baseline (67% smaller); gzip at level 9 is 91,762 bytes. Local native non-auth
-business HTTP p50/p95/max was 143/319/388 ms. Browser readiness and hosted database
-latency are distinct; these local measurements are not hosted latency guarantees.
-See [latency](docs/operations/latency.md) and
-[isolated acceptance](docs/migrations/isolated-workflow-acceptance.md).
+### Latest round: residence changes and manager-key recovery
 
-## Final runtime verification
+Migration 52 and [residenceChanges.ts](supabase/residenceChanges.ts) provide manager
+request reads/submission and administrator diff review/approval/rejection. Existing
+request tables are reused; no new Auth identities or old requests were imported.
 
-The post-retirement native build and configured-project default server restart
-passed. The server runs at http://127.0.0.1:3001; 22 current public/private/runtime
-checks passed. The final rebuilt browser run passed 392 assertions, 14 native UI
-logins and 504 API requests, with zero exceptions. All 88 durable table fingerprints
-(1,053 rows) and seven Storage objects / 10,484 bytes match across a real local
-stack restart. Temporary test services are stopped; their data/metadata remain.
+- Manager requests require the current assigned manager and operation-key grant.
+  Database guards serialize submissions, enforce one request per 30 days and
+  protect immutable ownership/before/after snapshots.
+- Administrator approval requires its own current approval-key grant. Diff proofs
+  bind the actual administrator, native session, request digest and key version,
+  expire after 30 minutes and cannot authorize a decision by themselves.
+- Approval rechecks the baseline, manager assignment, photo ownership and block
+  dependencies. Existing floor/room/bed/staff IDs and history are preserved.
+- Public manager contact fields are separate from login identity/profile. Catalog,
+  resident projections and notifications reflect approved changes.
+- Request/recovery alerts reach manager, primary owner and actual administrators,
+  with administrator counts/navigation targeting the review section.
+- Administrator manager-key reset requires a separate settings-key grant. It
+  invalidates old grants; only the manager creates the replacement. Cooldown stays.
+- General request editing remains retired with HTTP 410.
+- Server shutdown now closes admission/SSE/Vite, drains accepted requests, then
+  closes the pool. A genuine settings read finished with 200 during shutdown;
+  listeners released and the process exited normally. The 15-second test harness
+  wait was too short; the server's actual drain deadline is 45 seconds.
 
-A final npm audit found and prompted the compatible `source-map-js` 1.2.2 patch.
-Only that transitive lockfile entry changed; audit now reports zero vulnerabilities.
-The rebuild preserves the verified frontend hash. All 89 final unit/security checks pass, including
-three bounded source-map regression cases. See the latency report for its source.
+Verified after the final edits: 61 isolated residence-change checks; 64 resident
+profile regressions; 260 public/denied HTTP checks; TypeScript; frontend/backend
+builds; residual searches and diff checks. Native scenarios used genuine archived
+Google subjects/sessions in disposable local restores, not fabricated Auth rows.
 
-Tests use real local Supabase services and captured SMTP, without external email
-quota or provider/JWT fabrication. The sole local founder fixture is guarded by an
-initially empty, run-owned database; subsequent roles use native invitations and
-onboarding. Local confirmation capacity is raised only in the private test stack.
-Product rate limits, hosted TLS checks, RLS and private-key policies remain intact.
+Actual founder browser checks returned admin Auth 200, request list 200/empty,
+and manager-only reads/submission 403. No real approval/settings key was copied
+or submitted. Genuine occupied manager/residence approval remains untested because
+there is no real operational manager/residence available for that journey.
 
-The source-only native contract inventory is regenerated from the actual import
-graph. Historical route evidence is preserved in `legacy-api-contracts.json`;
-computed URL families still require workflow evidence. The pre-cutover progress
-record is [archived](docs/migrations/history/supabase-pre-cutover-2026-10-15.md).
+## Next task: fix temporary failure during initial Auth restoration
 
-## Recovery and next work
+This is **reproduced and unfinished**, distinct from the fixed server shutdown bug.
+A real reload produced two initial `/api/auth/me` requests: an early 503 after
+about 11 seconds, then 200 after about 24 seconds for the still-valid founder.
+The failed result ended loading while `user` was null, so the protected route
+navigated to login. The later successful restoration did not return to the portal.
 
-Private retirement receipt: `.security/migration-reset/legacy-development-retirement.json`.
-The old development records remain recoverable; the product cannot read them.
-Hosted DB checkpoint `ebd5a53c-e4d5-4be2-8b0d-fd31bbf3c017`, matched Storage
-`c4a45734-f72e-4773-abff-fd98df7d085d` and matching private delivery-PIN key
-remain preserved. The earlier approved Premuim Pine cleanup removed exactly four
-housing rows and retained the real manager/identity/key/history; its 44-check
-post-verification remains separate evidence.
+Inspect together:
 
-Real-user testing is the next product step. These checks do not establish a
-physical property inspection, live SMTP delivery, every nested UI form or a new
-payment-provider acceptance. Preserve genuine Google evidence and current accounts;
-never use dummy accounts in the configured hosted project. Replacing Express is a
-separate future phase requiring its own acceptance, not part of this cutover.
+- [AuthContext.tsx](src/context/AuthContext.tsx): startup `initAuth` effect near
+  line 79 has no cleanup/generation coordination, retry or restoration-error state.
+  Non-success is treated as invalid/expired; completion unconditionally ends loading.
+- [ProtectedRoute.tsx](src/components/ProtectedRoute.tsx): loading skeleton versus
+  null-user redirect.
+- [session.ts](src/lib/session.ts): actual transport and unauthorized broadcasts.
+- [PageUnifiedLogin.tsx](src/components/PageUnifiedLogin.tsx): route continuation.
+- [accountRefresh.ts](src/lib/accountRefresh.ts): existing coalescing mechanism;
+  inspect before reuse. React StrictMode duplication is a possibility, not a proven
+  complete diagnosis.
+
+Required behavior: temporary network/503 failures must not silently classify a
+valid session as signed out. Coordinate startup requests, use bounded retry and
+an honest retry/error state, and prevent old responses overwriting a newly chosen
+identity after login/logout/portal changes. Only server-validated identity grants
+access; cached users must never bypass authorization.
+
+Be careful aborting Auth refreshes: a lost Set-Cookie response can matter when
+tokens rotate. Verify the actual cookie/session protocol. Test genuine restored
+sessions with delayed actual requests, plus invalid-session and identity-change
+cases. Do not replace provider/API replies with mocked successful authentication.
+
+## Remaining sequence before final cutover
+
+1. Fix and verify the startup Auth issue above.
+2. Regenerate/review the inventory against current frontend callers. Port active
+   unfinished workflows only. Known review candidates include manager password
+   change, registered-account reset/deletion, academic-year room/key changes and
+   remaining administrator/account-wipe operations. Recheck each before coding.
+3. Complete genuine verified-email/Google enrollment and manager/resident/staff,
+   maintenance, seller/store/buyer/order/payment journeys, including desktop/mobile,
+   light/dark and continuation/recovery behavior. Local/native checks are supporting
+   evidence, not a substitute. Live payment callbacks need a real HTTPS origin.
+4. Prepare the reviewed reset: exact candidates/dependencies, fresh immutable
+   database **and Storage-byte** backups, restore checks, private-secret recovery,
+   session controls and explicitly authorized execution. Do not casually enable
+   residence deletion/account-wipe release gates.
+5. After required workflows and acceptance pass, switch default dev/build/start
+   to Supabase. Then remove JSON persistence/routes/imports only after verified
+   cutover and preserved backups. Search the entire repo for residual references.
+
+There is no verified number of migrations left. Plan by product workflows and
+add migrations only when a required schema/guard change needs one.
+
+## Backups and private evidence
+
+Artifacts live under `.security/migration-reset/`. Do not commit or share private
+archives, session data, keys or environment files. IDs below identify checkpoints,
+not credentials. Database dumps contain Storage metadata, **not image bytes**.
+
+| Checkpoint | Backup identifier | Evidence |
+| --- | --- | --- |
+| Pre-migration 52 | `65acc9be-ffd0-42dc-be14-f6c0bc1ab46f` | Full encrypted PostgreSQL backup; local restore passed |
+| Post-migration 52 | `61ac6050-fa8b-46b9-a0bf-d42e1a7b0c69` | Full encrypted PostgreSQL backup; local restore passed |
+| Pre-enrollment application | `c0857019-ed75-49ec-8af8-259763368f4f` | 27 migrations, zero app profiles; isolated verifier application checkpoint |
+| Last complete Storage bytes | `ff6a02ce-a67c-45be-b81e-450b0c260e2a` | Six PNGs plus zero-byte folder marker; encryption/local reconstruction checked |
+
+The pre/post-52 database restores retained six Auth subjects, four profiles,
+34 native sessions, three keyed active administrators and seven Storage catalog
+entries, plus private PIN recovery/grants/RLS. These are continuation backups;
+no writer-frozen final cutover, off-host copy or new provider Storage restore is
+claimed. Refresh the evidence before a destructive operation.
+
+Sanitized acceptance artifacts: `.security/migration-reset/browser-acceptance-20261012/`
+contains `residence-change-checks.json`, `resident-profile-checks.json`,
+`authenticated-read-checks.json` and `guest-checks.json`.
+
+## Runtime and browser handoff
+
+Last known server: `node --import tsx supabase-server.ts` at
+`http://127.0.0.1:3001`, Vite HMR port 24678. Recheck listeners/process ownership;
+do not start a duplicate or kill unrelated Node/browser processes.
+
+The user explicitly enabled Chromium remote debugging at `127.0.0.1:9222` and
+signed in with Google. A private driver was attached only to the PineVela tab;
+last view was administrator Alerts with the owned photo, empty request list and
+manager-key recovery controls. Preserve that real session where available.
+
+Previous tool sessions: server `20699`, browser driver `68899`. These may not
+transfer to another agent/thread and are not proof that either process is alive.
+Driver source is saved at
+`.security/migration-reset/browser-acceptance-20261012/authenticated-browser-driver.cjs`;
+the running copy was `/tmp/pv-authenticated-browser-driver.cjs`.
+Its JSON-line interface supports `evaluate`, `reload` and DevTools `command`.
+Output only sanitized statuses/counts; never cookies or key values. The old running
+`suite` function used the wrong `approvalKeyEnrolled` field; actual field is
+`keyEnrolled`. Inspect/reload the saved driver rather than trusting that old suite.
+
+Chromium's protected remote debugging may reject HTTP `/json/version`. The local
+`/home/wyse/snap/chromium/common/chromium/DevToolsActivePort` contains its browser
+WebSocket path. Do not print it or extract unrelated browser data. A new attach
+may require the user's browser connection consent. Keep the PC/browser running;
+the earlier shutdown request is not a current instruction.
+
+## Useful verification commands
+
+Run from this repository. Review each script before execution; older scripts may
+assume a pre-enrollment live database. Never blindly replay them against live data.
+Use `node --import tsx` where the tsx CLI's IPC socket is sandbox-blocke
+
+```bash
+node --import tsx scripts/audit-supabase-cutover.ts
+npx tsc --noEmit
+npm run test:account-refresh
+node --import tsx scripts/verify-supabase-residence-changes.ts 61ac6050-fa8b-46b9-a0bf-d42e1a7b0c69 c0857019-ed75-49ec-8af8-259763368f4f
+node --import tsx scripts/verify-supabase-resident-profiles.ts 61ac6050-fa8b-46b9-a0bf-d42e1a7b0c69 c0857019-ed75-49ec-8af8-259763368f4f
+node --import tsx scripts/verify-supabase-http.ts
+node --import tsx scripts/rehearse-supabase-backup.ts 61ac6050-fa8b-46b9-a0bf-d42e1a7b0c69
+```
+
+For startup only if no existing server is listening:
+`node --import tsx supabase-server.ts`. Dedicated scripts include
+`npm run dev:supabase`, `npm run build:supabase` and `npm run start:supabase`.
+Database/browser network access may require sandbox escalation; do not weaken TLS
+or RLS to make a check pass. Applied migrations and their ledger hashes are immutable.
+
+Already-configured private environment variable names include `DATABASE_URL` or
+`SUPABASE_DB_URL`, `SUPABASE_URL`, `SUPABASE_SECRET_KEY`/`SUPABASE_SERVICE_ROLE_KEY`,
+`SUPABASE_DB_CA_FILE` and `MARKET_ORDER_PIN_KEY_FILE`. Verify presence without
+printing values. Server secrets must never become `VITE_` variables or client code.
+
+## Ready-to-copy continuation instruction
+
+> Read SUPABASE_CONTINUATION.md, AGENTS.md and the latest implementation-status
+> section. Preserve the dirty worktree, real identities, private artifacts and JSON.
+> First fix the reproduced temporary initial Auth restoration failure, inspecting
+> transport, route guards and identity-change races; verify with genuine sessions.
+> Then continue the active pending Supabase workflows from current callers and the
+> inventory. Keep Express authorization/RLS, avoid retired features and fake Auth
+> data, and report native/API/browser evidence separately. Do not perform final
+> reset, enable destructive gates or delete JSON before the reviewed backup and
+> acceptance prerequisites are satisfied.

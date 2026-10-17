@@ -5,7 +5,6 @@ import { MapPin, Navigation, X, LocateFixed } from 'lucide-react';
 import { distanceKm, mappedService, serviceDirections, servicePoint, type MapPoint } from '../../serviceLocation';
 import type { MarketProductItem } from './MarketItemCard';
 import DashboardOverlay from './DashboardOverlay';
-import ThemeToggle from './ThemeToggle';
 import '../nearby-map.css';
 
 type Props = { products: MarketProductItem[]; onClose: () => void; onInspect: (product: MarketProductItem, directions: string) => void };
@@ -78,7 +77,7 @@ export default function NearbyServicesMap({ products, onClose, onInspect }: Prop
   return <DashboardOverlay aria-label="Services near you" onClose={onClose} className="fixed inset-0 bg-white">
     <div className="nearby-services-screen flex h-dvh w-full flex-col bg-white">
       <header className="z-10 shrink-0 border-b border-blue-200 bg-white/95 p-3 sm:p-4 space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-2"><h2 className="flex items-center gap-2 text-lg font-bold text-slate-900"><MapPin size={20} />Services near you</h2><div className="flex items-center gap-3"><ThemeToggle /><button type="button" onClick={onClose} aria-label="Close services map" className="rounded-xl p-2 text-slate-700"><X size={22} /></button></div></div>
+        <div className="flex flex-wrap items-center justify-between gap-2"><h2 className="flex items-center gap-2 text-lg font-bold text-slate-900"><MapPin size={20} />Services near you</h2><div className="flex items-center gap-3"><button type="button" onClick={onClose} aria-label="Close services map" className="rounded-xl p-2 text-slate-700"><X size={22} /></button></div></div>
         <div className="flex flex-wrap gap-2"><input aria-label="Search PineVela services on map" value={query} maxLength={120} onChange={e => { setQuery(e.target.value); setFocusedId(''); }} placeholder="Search any PineVela service or store" className="min-w-0 flex-1 rounded-xl border border-blue-200 bg-white px-3 py-2 text-sm text-slate-900" /><select aria-label="Nearby service radius" value={radius} onChange={e => setRadius(Number(e.target.value))} className="rounded-xl border border-blue-200 bg-white p-2 text-sm text-slate-900">{[5,10,25].map(km => <option key={km} value={km}>{km} km</option>)}</select><button type="button" onClick={locate} disabled={locating} className="flex items-center gap-2 rounded-xl bg-blue-600 px-3 py-2 text-xs font-semibold text-white"><LocateFixed size={16} />{locating ? 'Finding location…' : 'Use my location'}</button></div>
         {error && <p role="alert" className="text-xs text-rose-700">{error}</p>}
         <p role="status" className="text-xs text-slate-600">{search.length >= 2 ? `${shown.length} matching services across all locations` : origin ? `${shown.length} services within ${radius} km · device accuracy about ${Math.round(accuracy || 0)} m` : 'Use your location for nearby services, or enter at least two characters to search.'}</p>

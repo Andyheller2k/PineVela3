@@ -194,7 +194,7 @@ async function openHarness(meta:LocalSupabaseMetadata,credentials:ReturnType<typ
  const db=new SupabaseDatabase({host:'127.0.0.1',port:Number(url.port),database:decodeURIComponent(url.pathname.slice(1)),
   user:decodeURIComponent(url.username),password:decodeURIComponent(url.password),ssl:false,max:8,
   connectionTimeoutMillis:10000,statement_timeout:15000,query_timeout:30000});
- let server:http.Server|undefined,closeRealtime:(()=>Promise<void>)|undefined;
+ let server:http.Server|undefined,closeRealtime:(()=>Promise<void>)|undefined,closeSupport:(()=>Promise<void>)|undefined;
  try{
   const actual=(await db.pool.query('select inet_server_addr()::text as host,inet_server_port() as port,current_database() as database')).rows[0];
   // The native CLI's loopback PostgreSQL gateway forwards to its own Unix
@@ -215,13 +215,13 @@ async function openHarness(meta:LocalSupabaseMetadata,credentials:ReturnType<typ
   const assertOwned=async()=>{const rows=(await db.pool.query('select run_id from pinevela_local_test.run_guard')).rows;
    assert.equal(rows.length,1);assert.equal(rows[0].run_id,meta.runId,'Database belongs to this exact disposable run');};
   await assertOwned();
-  const installed=(await db.pool.query("select version from private.schema_migrations where version='20261014150839'")).rowCount;
+  const installed=(await db.pool.query("select version from private.schema_migrations where version='20261017133104'")).rowCount;
   assert.equal(installed,1,'The current immutable application migrations must be installed');
   const settings=await fetch(providerOrigin+'/auth/v1/settings',{headers:{apikey:meta.anonKey},signal:AbortSignal.timeout(10000)});
   assert.equal(settings.status,200,'Actual local GoTrue responds');const authSettings=await settings.json();
   assert.equal(authSettings.mailer_autoconfirm,false,'Actual local email confirmation remains enabled');
   assert.equal(authSettings.external?.email,true);
-  const created=createSupabaseApp(db);closeRealtime=created.app.locals.closeRealtime;
+  const created=createSupabaseApp(db);closeRealtime=created.app.locals.closeRealtime;closeSupport=created.app.locals.closeSupport;
   if(options.staticFrontend){
    const directory=path.resolve('dist-supabase');assert.ok(fs.statSync(path.join(directory,'index.html')).isFile(),'Build the actual Supabase frontend first');
    created.app.use((req,res,next)=>{let pathname:string;try{pathname=path.posix.normalize(decodeURIComponent(req.path));}catch{return res.sendStatus(400);}
@@ -249,10 +249,10 @@ async function openHarness(meta:LocalSupabaseMetadata,credentials:ReturnType<typ
      return context;
     });
    }};
-  return{harness,close:async()=>{await closeRealtime?.();server!.closeAllConnections();
+  return{harness,close:async()=>{await closeSupport?.();await closeRealtime?.();server!.closeAllConnections();
    await new Promise<void>(resolve=>server!.close(()=>resolve()));await db.close();proxy.closeAllConnections();
    await new Promise<void>(resolve=>proxy.close(()=>resolve()));}};
- }catch(error){await closeRealtime?.();server?.closeAllConnections();server?.close();await db.close();proxy.closeAllConnections();proxy.close();throw error;}
+ }catch(error){await closeSupport?.();await closeRealtime?.();server?.closeAllConnections();server?.close();await db.close();proxy.closeAllConnections();proxy.close();throw error;}
 }
 
 /** Parent process receives no cookies or keys from stdout. All inherited cloud

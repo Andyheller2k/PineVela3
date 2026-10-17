@@ -75,7 +75,7 @@
     "preview": "npm run start",
     "clean": "rm -rf dist dist-supabase dist-supabase-backend",
     "lint": "tsc --noEmit",
-    "test:theme": "node --import tsx --test tests/themePalette.test.ts tests/uiRules.test.ts tests/marketBranding.test.ts",
+    "test:theme": "node --import tsx --test tests/publicAppearance.test.ts tests/themePalette.test.ts tests/uiRules.test.ts tests/marketBranding.test.ts",
     "test:google-auth": "node --import tsx --test --test-concurrency=1 tests/googleAuth.test.ts tests/googleAuth.integration.test.ts",
     "test:account-refresh": "node --import tsx --test --test-concurrency=1 tests/accountRefresh.test.ts",
     "test:session-restoration": "node --import tsx --test --test-concurrency=1 tests/sessionRestoration.test.ts",
@@ -131,7 +131,10 @@
     "db:verify-admin-directories": "node --import tsx scripts/verify-supabase-admin-dashboard-directories.ts",
     "db:local:admin-directories": "node --import tsx scripts/verify-supabase-local-admin-directories.ts",
     "db:local:logout-latency": "node --import tsx scripts/verify-supabase-logout-latency.ts",
-    "db:local:logout-security": "node --import tsx scripts/verify-supabase-logout-security.ts"
+    "db:local:logout-security": "node --import tsx scripts/verify-supabase-logout-security.ts",
+    "db:local:support": "node --import tsx scripts/verify-supabase-local-support.ts",
+    "test:support": "node --import tsx tests/support.test.ts",
+    "db:verify-support": "node --import tsx scripts/verify-supabase-support-installation.ts"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",

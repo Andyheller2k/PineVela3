@@ -1,3 +1,6 @@
+import SupportNotificationLink from './SupportNotificationLink';
+import HelpLink from './HelpLink';
+import AppearanceSettings from './AppearanceSettings';
 import { routePopupFeedback } from '../lib/feedback';
 import { activateOnKeyboard } from '../lib/keyboardActivation';
 import DashboardOverlay from './DashboardOverlay';
@@ -390,7 +393,8 @@ export default function PageResidentDashboard() {
           >
             <Settings className="w-4 h-4" />
           </button>
-          <button 
+          <HelpLink compact className="!px-2" />
+          <button
             onClick={() => setShowSignoutConfirmModal(true)} 
             className="flex items-center gap-1.5 px-2 py-1.5 text-[10px] font-bold text-rose-600 hover:bg-rose-50 rounded-lg cursor-pointer"
             title="Sign Out"
@@ -409,7 +413,7 @@ export default function PageResidentDashboard() {
           <span className="text-[9px] font-bold text-slate-500">Profile</span>
         </button>
         <div className="w-px h-6 bg-slate-200/70 shrink-0" />
-        {[{ id: 'room', label: 'Room', icon: Home }, { id: 'complaints', label: 'Issues', icon: Wrench, badge: unconfirmedIssues.length || activeUpdatedIssues.length }, { id: 'alerts', label: 'Alerts', icon: Bell, badge: unreadCount }, { id: 'settings', label: 'Settings', icon: Settings }].map(tab => <button aria-current={activeTab === tab.id ? 'page' : undefined} key={tab.id} onClick={() => setActiveTab(tab.id as any)} aria-label={`${tab.label}${tab.badge ? ` (${tab.badge})` : ''}`} className={`flex-1 min-w-0 flex flex-col items-center gap-0.5 py-1.5 rounded-xl text-[9px] font-bold cursor-pointer ${activeTab === tab.id ? 'text-blue-700 bg-blue-100/65' : 'text-slate-500 hover:bg-white/70'}`}><span className="relative inline-flex"><tab.icon className="w-4 h-4" /><TopNavBadge count={tab.badge} /></span><span className="truncate max-w-full">{tab.label}</span></button>)}<button onClick={() => setShowSignoutConfirmModal(true)} className="shrink-0 flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-xl text-[9px] font-bold text-rose-600 hover:bg-rose-50 cursor-pointer" title="Sign Out"><LogOut className="w-4 h-4" /><span>Sign Out</span></button><button onClick={() => setIsSidebarTopNav(false)} title="Show sidebar" className="p-2 text-slate-500 hover:text-blue-700 cursor-pointer"><PanelLeftOpen className="w-4 h-4" /></button></div></nav>}
+        {[{ id: 'room', label: 'Room', icon: Home }, { id: 'complaints', label: 'Issues', icon: Wrench, badge: unconfirmedIssues.length || activeUpdatedIssues.length }, { id: 'alerts', label: 'Alerts', icon: Bell, badge: unreadCount }, { id: 'settings', label: 'Settings', icon: Settings }].map(tab => <button aria-current={activeTab === tab.id ? 'page' : undefined} key={tab.id} onClick={() => setActiveTab(tab.id as any)} aria-label={`${tab.label}${tab.badge ? ` (${tab.badge})` : ''}`} className={`flex-1 min-w-0 flex flex-col items-center gap-0.5 py-1.5 rounded-xl text-[9px] font-bold cursor-pointer ${activeTab === tab.id ? 'text-blue-700 bg-blue-100/65' : 'text-slate-500 hover:bg-white/70'}`}><span className="relative inline-flex"><tab.icon className="w-4 h-4" /><TopNavBadge count={tab.badge} /></span><span className="truncate max-w-full">{tab.label}</span></button>)}<button onClick={() => setShowSignoutConfirmModal(true)} className="shrink-0 flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-xl text-[9px] font-bold text-rose-600 hover:bg-rose-50 cursor-pointer" title="Sign Out"><LogOut className="w-4 h-4" /><span>Sign Out</span></button><button onClick={() => setIsSidebarTopNav(false)} title="Show sidebar" className="p-2 text-slate-500 hover:text-blue-700 cursor-pointer"><PanelLeftOpen className="w-4 h-4" /></button><HelpLink compact className="!px-2" /></div></nav>}
       {!isSidebarTopNav && <aside data-portal-navigation="sidebar" className={`hidden lg:flex ${isSidebarCollapsed ? 'w-20 p-4' : 'w-72 p-6'} my-6 ml-6 h-[calc(100vh-3rem)] bg-gradient-to-br from-sky-100/90 via-blue-100/85 to-amber-50/40 backdrop-blur-3xl border border-sky-200/80 shadow-2xl rounded-3xl flex flex-col justify-between shrink-0 overflow-y-auto z-20 transition-all duration-300 relative`}>
         <button onClick={() => setIsSidebarTopNav(true)} title="Use top navigation" className="absolute top-3 right-3 p-2 rounded-xl text-slate-500 hover:text-blue-700 hover:bg-white/70 cursor-pointer"><PanelLeftClose className="w-4 h-4" /></button>
 
@@ -528,6 +532,7 @@ export default function PageResidentDashboard() {
               );
             })}
           </nav>
+        <div className="flex justify-center pt-3"><HelpLink compact={isSidebarCollapsed} /></div>
         </div>
 
         <button
@@ -538,6 +543,7 @@ export default function PageResidentDashboard() {
           <LogOut className="w-4 h-4 shrink-0" />
           {!isSidebarCollapsed && <span>Sign Out</span>}
         </button>
+
       </aside>}
 
       {/* MOBILE BOTTOM NAVIGATION */}
@@ -1231,6 +1237,7 @@ export default function PageResidentDashboard() {
                     <p className="text-xs text-slate-600 font-medium leading-relaxed">
                       {notif.message}
                     </p>
+                      <SupportNotificationLink notification={notif} />
                   </div>
                 ))
               ) : (
@@ -1257,6 +1264,7 @@ export default function PageResidentDashboard() {
               <p className="text-xs text-slate-500 font-medium">Manage your personal information, room credentials, avatar, and settings</p>
             </div>
 
+            <AppearanceSettings />
             <PortalPinSettings />
             <ResidentAccountClosure />
             <div className="grid grid-cols-1 xl:grid-cols-2 items-start gap-6">

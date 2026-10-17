@@ -1,3 +1,6 @@
+import AdminCustomerService from './AdminCustomerService';
+import HelpLink from './HelpLink';
+import AppearanceSettings from './AppearanceSettings';
 import { routePopupFeedback } from '../lib/feedback';
 import { activateOnKeyboard } from '../lib/keyboardActivation';
 import { useActionFeedback } from '../lib/useActionFeedback';
@@ -653,6 +656,7 @@ export default function PageAdminDashboard() {
           </div>
         </div>
         <div className="flex items-center gap-3">
+          <HelpLink compact className="!px-2" />
           <button onClick={() => setShowLogoutConfirm(true)} className="flex items-center gap-1.5 px-2 py-1.5 text-[10px] font-bold text-rose-600 hover:bg-rose-50 rounded-lg" title="Sign Out">
             <LogOutIcon className="w-4 h-4" />
             <span>Sign Out</span>
@@ -682,7 +686,7 @@ export default function PageAdminDashboard() {
         <div className="w-px h-6 bg-slate-200/70 shrink-0" />
         {[
         { id: 'overview', label: 'Overview', icon: ShieldCheck }, { id: 'user_accounts', label: 'Accounts', icon: Users, badge: allUsersData.totalUsers }, { id: 'residences', label: 'Residences', icon: Building2, badge: pendingHostelsCount }, { id: 'managers', label: 'Managers', icon: Users, badge: pendingManagersCount }, { id: 'digital_market', label: 'Market', icon: ShoppingBag, badge: digitalMarketApps.filter(a => a.status === 'pending').length }, { id: 'notifications', label: 'Alerts', icon: Bell, badge: adminAlertCount }, { id: 'messages', label: 'Message Gateway', icon: MessageSquare }, { id: 'governance', label: 'Approvals', icon: ShieldCheck, badge: governanceUnread }, { id: 'settings', label: 'Settings', icon: Edit3, badge: settingsUnread }
-      ].map(tab => <button aria-current={activeTab === tab.id ? 'page' : undefined} key={tab.id} onClick={() => setActiveTab(tab.id as any)} aria-label={`${tab.label}${tab.badge ? ` (${tab.badge})` : ''}`} className={`flex-1 min-w-0 flex flex-col items-center gap-0.5 py-1.5 rounded-xl text-[9px] font-bold cursor-pointer ${activeTab === tab.id ? 'text-blue-700 bg-blue-100/65' : 'text-slate-500 hover:bg-white/70'}`}><span className="relative inline-flex"><tab.icon className="w-4 h-4" /><TopNavBadge count={tab.badge} /></span><span className="truncate max-w-full">{tab.label}</span></button>)}<button onClick={() => setShowLogoutConfirm(true)} title="Sign Out" className="shrink-0 flex flex-col items-center gap-0.5 px-2 py-1.5 text-[9px] font-bold text-rose-600 hover:bg-rose-50 rounded-xl cursor-pointer"><LogOutIcon className="w-4 h-4" /><span>Sign Out</span></button><button onClick={() => setIsSidebarTopNav(false)} title="Show sidebar" className="p-2 text-slate-500 hover:text-blue-700 cursor-pointer"><PanelLeftOpen className="w-4 h-4" /></button></div></nav>}
+      ].map(tab => <button aria-current={activeTab === tab.id ? 'page' : undefined} key={tab.id} onClick={() => setActiveTab(tab.id as any)} aria-label={`${tab.label}${tab.badge ? ` (${tab.badge})` : ''}`} className={`flex-1 min-w-0 flex flex-col items-center gap-0.5 py-1.5 rounded-xl text-[9px] font-bold cursor-pointer ${activeTab === tab.id ? 'text-blue-700 bg-blue-100/65' : 'text-slate-500 hover:bg-white/70'}`}><span className="relative inline-flex"><tab.icon className="w-4 h-4" /><TopNavBadge count={tab.badge} /></span><span className="truncate max-w-full">{tab.label}</span></button>)}<button onClick={() => setShowLogoutConfirm(true)} title="Sign Out" className="shrink-0 flex flex-col items-center gap-0.5 px-2 py-1.5 text-[9px] font-bold text-rose-600 hover:bg-rose-50 rounded-xl cursor-pointer"><LogOutIcon className="w-4 h-4" /><span>Sign Out</span></button><button onClick={() => setIsSidebarTopNav(false)} title="Show sidebar" className="p-2 text-slate-500 hover:text-blue-700 cursor-pointer"><PanelLeftOpen className="w-4 h-4" /></button><HelpLink compact className="!px-2" /></div></nav>}
       {!isSidebarTopNav && <aside data-portal-navigation="sidebar" className={`hidden lg:flex ${isSidebarCollapsed ? 'w-20 p-4' : 'w-72 p-6'} my-6 ml-6 h-[calc(100vh-3rem)] bg-gradient-to-br from-sky-100/90 via-blue-100/85 to-amber-50/40 backdrop-blur-3xl border border-sky-200/80 shadow-2xl rounded-3xl flex flex-col justify-between shrink-0 overflow-y-auto transition-all duration-300 relative`}>
         <button onClick={() => setIsSidebarTopNav(true)} title="Use top navigation" className="absolute top-3 right-3 p-2 rounded-xl text-slate-500 hover:text-blue-700 hover:bg-white/70 cursor-pointer"><PanelLeftClose className="w-4 h-4" /></button>
 
@@ -767,7 +771,9 @@ export default function PageAdminDashboard() {
             <LogOutIcon className="w-4 h-4 shrink-0" />
             {!isSidebarCollapsed && <span>Sign Out</span>}
           </button>
+        <div className="flex justify-center pt-3"><HelpLink compact={isSidebarCollapsed} /></div>
         </div>
+
       </aside>}
 
       {/* MAIN CONTENT AREA */}
@@ -1642,7 +1648,9 @@ export default function PageAdminDashboard() {
         {/* TAB 5: ADMIN SETTINGS */}
         {activeTab === 'settings' && (
           <div className="space-y-6 animate-fadeIn relative z-10 max-w-4xl">
+            <AppearanceSettings />
             <AdminSettingsPanel />
+            <AdminCustomerService key={user?.id} />
 
             <button onClick={() => setActiveTab('governance')} className="w-full rounded-2xl border border-blue-200 bg-blue-50/60 p-5 text-left text-sm font-semibold text-blue-800">Open administrator roster and five-key wipe proposals</button>
           </div>
@@ -1665,7 +1673,7 @@ export default function PageAdminDashboard() {
 
             </div>
 
-            {notifications.length > 0 && <section className="rounded-3xl border border-blue-100 bg-white/75 p-5 shadow-sm backdrop-blur-xl"><div className="mb-3 flex items-center justify-between"><p className="flex items-center gap-2 text-sm font-extrabold text-slate-900"><Bell className="h-4 w-4 text-blue-600" />Live operational alerts {unreadCount > 0 && <span className="rounded-full bg-blue-600 px-2 py-0.5 text-[10px] text-white">{unreadCount} new</span>}</p><button onClick={() => refreshNotifications()} className="text-xs font-bold text-blue-700">Refresh</button></div><div className="space-y-2">{notifications.map((notification: any) => <button key={notification.id} onClick={() => { void markAsRead(notification.id); if (notification.link === 'verification-officers') { setActiveTab('managers'); setManagerSubTab('officers'); } else if (notification.link === 'residence_changes') setActiveTab('notifications'); else if (notification.module === 'admin_governance') setActiveTab('governance'); else if (notification.module === 'admin_settings') setActiveTab('settings'); }} className="block w-full rounded-2xl border border-blue-100 bg-blue-50/60 p-3 text-left"><p className="text-xs font-bold text-slate-900">{notification.title}{!notification.read && <span className="ml-2 text-blue-600">• New</span>}</p><p className="mt-1 text-xs text-slate-600">{notification.message}</p></button>)}</div></section>}
+            {notifications.length > 0 && <section className="rounded-3xl border border-blue-100 bg-white/75 p-5 shadow-sm backdrop-blur-xl"><div className="mb-3 flex items-center justify-between"><p className="flex items-center gap-2 text-sm font-extrabold text-slate-900"><Bell className="h-4 w-4 text-blue-600" />Live operational alerts {unreadCount > 0 && <span className="rounded-full bg-blue-600 px-2 py-0.5 text-[10px] text-white">{unreadCount} new</span>}</p><button onClick={() => refreshNotifications()} className="text-xs font-bold text-blue-700">Refresh</button></div><div className="space-y-2">{notifications.map((notification: any) => <button key={notification.id} onClick={() => { void markAsRead(notification.id); if (notification.category === 'support' && /^\/(?:help\?ticket=[a-f0-9-]{36}|customer-service(?:\?ticket=[a-f0-9-]{36})?)$/.test(notification.link || '')) { navigate(notification.link); return; } if (notification.link === 'verification-officers') { setActiveTab('managers'); setManagerSubTab('officers'); } else if (notification.link === 'residence_changes') setActiveTab('notifications'); else if (notification.module === 'admin_governance') setActiveTab('governance'); else if (notification.module === 'admin_settings') setActiveTab('settings'); }} className="block w-full rounded-2xl border border-blue-100 bg-blue-50/60 p-3 text-left"><p className="text-xs font-bold text-slate-900">{notification.title}{!notification.read && <span className="ml-2 text-blue-600">• New</span>}</p><p className="mt-1 text-xs text-slate-600">{notification.message}</p></button>)}</div></section>}
             {/* PENDING RESIDENCE VERIFICATION ALERTS */}
             {pendingHostelsCount > 0 && (
               <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 p-6 rounded-3xl backdrop-blur-xl shadow-lg space-y-4">

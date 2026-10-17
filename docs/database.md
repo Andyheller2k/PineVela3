@@ -848,3 +848,12 @@ Migration 63 records the verified Google/email proof method on the immutable pri
 primary re-entry receipt. Native eligibility uses confirmed Auth identities and live
 sessions; no editable profile metadata grants access. Primary IDs and history stay
 retained. See [verified email re-entry](migrations/primary-email-reentry.md).
+
+## Customer support
+
+Migration 70 adds private support invitations, memberships, cases, messages,
+case events and the email outbox. All six tables have RLS. Server-derived account
+contexts own signed-in cases; guest cases require a private access-code digest.
+Only administrators and active invited customer-service members can operate the
+queue. Browser table writes and support self-enrollment are not granted. See
+[customer support](customer-support.md) for the invitation and reply workflow.
