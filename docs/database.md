@@ -1,5 +1,21 @@
 # PineVela Database Model
 
+## Message encryption and reports — 17 October 2026
+
+Migrations 71–73 add private, RLS-protected encryption identities and five report
+tables, plus ciphertext fields on existing buyer–seller messages. New sends must
+contain a signed participant-bound ciphertext envelope and an empty plaintext
+body. Historical plaintext is retained and labeled. Private identities and
+message history are immutable; browser roles receive no direct access to key
+backups or report records. Selected-message evidence uses exact UTF-8 bytes so
+authenticated text, including NUL, is retained without alteration.
+
+Report recommendations and keyed administrator decisions preserve the existing
+account-governance boundary. They do not apply sanctions or delete records.
+Report/key/message foreign keys and retention triggers are explicit dependencies
+for future reviewed deletion work. See [encryption](marketplace-encryption.md)
+and [content reports](content-reports.md) for access, recovery and limitations.
+
 ## Runtime checkpoint — 16 October 2026
 
 Supabase PostgreSQL/Storage and Supabase Auth are the sole runtime persistence and
@@ -857,3 +873,17 @@ contexts own signed-in cases; guest cases require a private access-code digest.
 Only administrators and active invited customer-service members can operate the
 queue. Browser table writes and support self-enrollment are not granted. See
 [customer support](customer-support.md) for the invitation and reply workflow.
+
+## Automatic content safety
+
+Migration 74 adds private RLS-protected `content_safety_checks` and
+`content_safety_decisions`, with immutable ownership/evidence and retained
+support-case references. Exact digest approvals gate new market/profile media
+and marketplace text; existing native identity and ownership policies remain.
+See [automatic moderation](content-moderation.md) for deployment status.
+## Personal AI companion
+
+Migration 75 adds private, RLS-protected companion preferences, recent AI turns
+and server-only usage reservations. State belongs to the active primary context;
+browser/catalog roles have no grants. It introduces no public RPC, peer chat or
+approval authority. See [companion behavior and verification](companion.md).

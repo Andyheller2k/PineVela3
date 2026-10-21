@@ -10,6 +10,11 @@ export type VerifiedActor = { authUserId: string; sessionId: string; contextId: 
 export class ApiError extends Error {
   constructor(public status: number, message: string, public code?: string) { super(message); }
 }
+/** Only rejection of the current application session may clear browser identity. */
+export class SessionExpiredError extends ApiError {
+  readonly sessionExpired = true;
+  constructor(message: string, code?: string) { super(401, message, code); }
+}
 export const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export function uuid(value: unknown): string {
   if (typeof value !== 'string' || !UUID.test(value)) throw new ApiError(400, 'Invalid resource ID.');
@@ -101,7 +106,7 @@ export class SupabaseDatabase {
           and (c.kind <> 'resident' or exists (select 1 from public.allocations a where a.resident_context_id = c.id and a.ended_at is null))
           and (c.kind <> 'staff' or exists (select 1 from public.staff_assignments a where a.staff_context_id = c.id and a.status = 'active' and a.ended_at is null))
         for share of s, c`, [actor.sessionId, actor.authUserId, actor.contextId, actor.kind]);
-      if (!binding.rowCount) throw new ApiError(401, 'Your session is no longer active. Please sign in.');
+      if (!binding.rowCount) throw new SessionExpiredError('Your session is no longer active. Please sign in.');
       checkAccountAccess(binding.rows[0].access,actor.requiredFeatures,binding.rows[0].allowed);
       await requireManagerKeyGrant(client,actor);
   }

@@ -5,7 +5,7 @@ import type {AccountFeature} from '../accountFeatures.js';
 /** Only canonical operations and verified server-owned actors determine restrictions. */
 export function accountFeaturesForRequest(method:string,path:string):AccountFeature[] {
  const p=path.toLowerCase().replace(/\/+$/,''),write=['POST','PUT','PATCH','DELETE'].includes(method.toUpperCase());
- if(p==='/api/digital-market/messages')return ['messaging'];
+ if(['/api/digital-market/messages','/api/digital-market/encryption','/api/digital-market/encryption/peer'].includes(p))return ['messaging'];
  if(!write)return [];
  const features:AccountFeature[]=[];
  if(p==='/api/room-keys/send-digital'||/^\/api\/(?:hostels\/[^/]+\/(?:generate-room-keys|reshuffle-room-keys)|room-keys\/[^/]+\/release)$/.test(p))features.push('rooms');

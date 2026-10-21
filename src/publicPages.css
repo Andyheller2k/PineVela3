@@ -20,41 +20,59 @@
   #public-header.public-header-compact .public-header-account { grid-area: account; }
   #public-header.public-header-compact .public-header-sections { grid-area: sections; }
 }
-.app-canvas:has(#public-header) .theme-celestial { top: max(clamp(75px, 13vh, 145px), calc(var(--pv-public-header-height, 0px) + 16px)); }
 @media (min-width: 1024px) {
   #public-header .public-header-layout { display: grid; grid-template-columns: minmax(90px, 1fr) minmax(180px, 320px) minmax(0, auto); }
   #public-header .public-header-actions { justify-content: flex-end; }
   #public-header.public-header-compact .public-header-layout { grid-template-columns: auto minmax(180px, 1fr) minmax(0, auto); }
   #public-header.public-header-compact form { max-width: none; }
 }
-#public-header .theme-toggle { width: 48px; height: 26px; min-height: 26px; transform: none; }
-#public-header .theme-toggle-orb { width: 18px; height: 18px; transform: translateX(22px); }
-#public-header .theme-toggle[data-dark="true"] .theme-toggle-orb { transform: translateX(0); }
-#public-header .theme-toggle-cloud { width: 15px; height: 5px; }
-#public-header .theme-toggle .cloud-one { top: 7px; left: 4px; }
-#public-header .theme-toggle .cloud-two { bottom: 4px; left: -5px; }
-#public-header .theme-toggle-stars { top: 2px; right: 3px; width: 20px; font-size: 10px; line-height: 20px; }
-
 /* Opaque public headers follow the selected appearance immediately. */
 html[data-theme="dark"] .public-header-card { background: var(--pv-panel) !important; border-bottom-color: var(--pv-edge) !important; box-shadow: 0 5px 24px #02061740 !important; }
 html[data-theme="dark"] .public-header-card input { background: var(--pv-field) !important; color: var(--pv-text) !important; border-color: var(--pv-field-edge) !important; }
 html[data-theme="dark"] .public-header-card input::placeholder { color: var(--pv-muted) !important; }
 
-/* Navy hero anchors the warm, restrained page palette. */
+/* The supplied cover stays whole; its yellow canvas belongs only to the hero. */
 .landing-peak-page { background: var(--pv-page-gradient); }
-.landing-peak-hero {
+html[data-theme] .landing-peak-hero {
+  --pv-text: #001d3d;
+  --pv-heading: #001d3d;
+  --pv-heading-ink: #001d3d;
+  --pv-heading-gradient: linear-gradient(115deg, #001d3d, #003566);
+  --pv-link: #001d3d;
   isolation: isolate;
-  min-height: 752px;
-  padding: calc(var(--pv-public-header-height, 100px) + 54px) clamp(24px, 6vw, 80px) 222px;
-  background: var(--pv-brand-navy);
-  border-radius: 0 0 50% 50% / 0 0 clamp(28px, 4vw, 64px) clamp(28px, 4vw, 64px);
+  margin-top: var(--pv-public-header-height, 100px);
+  padding: clamp(28px, 3vw, 52px) clamp(20px, 4vw, 72px) clamp(32px, 4vw, 64px);
+  background: #ffd107;
+  background-image: linear-gradient(110deg, #ffd107, #ffd60a 52%, #ffdb00);
+  color: #001d3d;
+  border-radius: 0 0 clamp(28px, 4vw, 64px) clamp(28px, 4vw, 64px);
   overflow: hidden;
 }
-.landing-peak-content { padding: 0 24px; }
-.landing-peak-copy h1 { font-size: clamp(52px, 5.3vw, 76px); line-height: 1.12; }
-.landing-peak-copy p { font-size: clamp(19px, 1.7vw, 24px); line-height: 1.65; }
-.landing-peak-copy :is(h1, p, strong), .landing-peak-brand .public-title { color: var(--pv-heading); }
-.landing-peak-brand [class~="text-slate-500"] { color: var(--pv-muted); }
+.landing-peak-content { position: relative; display: grid; grid-template-columns: minmax(0, .86fr) minmax(0, 1.45fr); align-items: center; gap: clamp(12px, 2.5vw, 40px); width: 100%; max-width: 1600px; margin-inline: auto; }
+.landing-peak-copy { position: relative; z-index: 1; display: grid; justify-items: start; gap: clamp(18px, 2vw, 28px); min-width: 0; padding-block: 12px; }
+html[data-theme] .landing-peak-hero .landing-peak-copy h1 { margin: 0; color: #001d3d; background: none; -webkit-text-fill-color: #001d3d; font-size: clamp(48px, 4.9vw, 82px); line-height: 1.18; letter-spacing: -.045em; }
+.landing-peak-greeting { display: block; margin-bottom: 8px; }
+html[data-theme] .landing-peak-hero .landing-peak-copy p { max-width: 35ch; margin: 0; color: #173958; font-size: clamp(17px, 1.4vw, 22px); font-weight: 600; line-height: 1.65; text-wrap: pretty; }
+.landing-peak-copy strong { color: #001d3d; font-weight: 800; }
+html[data-theme] .landing-peak-hero .landing-peak-cta { display: inline-flex; align-items: center; justify-content: center; gap: 16px; min-height: 52px; padding: 15px 22px; border: 1px solid #001d3d; border-radius: 16px; background: linear-gradient(115deg, #001d3d, #003566); color: #ffd60a; font-size: 14px; font-weight: 800; line-height: 1.4; box-shadow: 0 10px 24px rgb(0 29 61 / .16), inset 0 1px 0 rgb(255 255 255 / .12); cursor: pointer; transition: transform .2s ease, box-shadow .2s ease; }
+html[data-theme] .landing-peak-hero .landing-peak-cta:hover { background: linear-gradient(115deg, #003566, #001d3d); transform: translateY(-2px); box-shadow: 0 14px 28px rgb(0 29 61 / .23); }
+.landing-peak-cta:active { transform: translateY(0); }
+.landing-peak-cta svg { flex-shrink: 0; transition: transform .2s ease; }
+.landing-peak-cta:hover svg { transform: translate(2px, -2px); }
+.landing-peak-shortcuts { display: flex; align-items: center; flex-wrap: wrap; gap: 14px; }
+.landing-peak-shortcuts button { display: inline-flex; align-items: center; gap: 7px; min-height: 36px; padding: 0; border: 0; background: transparent; color: #001d3d; font-size: 12px; font-weight: 800; cursor: pointer; text-underline-offset: 4px; }
+.landing-peak-shortcuts button:hover { text-decoration: underline; }
+.landing-peak-shortcuts > span { width: 1px; height: 16px; background: rgb(0 29 61 / .25); }
+html[data-theme] .landing-peak-hero :is(button, a[href]):focus-visible { outline: 3px solid #001d3d; outline-offset: 5px; }
+.landing-peak-artwork { position: relative; min-width: 0; width: 100%; align-self: center; }
+.landing-peak-image { display: block; width: 100%; height: auto; aspect-ratio: 1448 / 1086; object-fit: contain; object-position: center; border-radius: 24px; }
+.landing-peak-brand { position: absolute; right: 2%; bottom: 2%; width: 29%; max-width: 224px; }
+.landing-peak-brand-card { display: flex; align-items: center; flex-direction: column; gap: clamp(6px, 1vw, 12px); padding: clamp(10px, 1.8vw, 24px) clamp(8px, 1.4vw, 20px); border: 1px solid rgb(0 29 61 / .22); border-radius: clamp(16px, 2.5vw, 30px); background: linear-gradient(145deg, rgb(255 255 255 / .14), rgb(255 214 10 / .08)); box-shadow: inset 0 1px 0 rgb(255 255 255 / .55), 0 14px 36px rgb(84 58 0 / .13); -webkit-backdrop-filter: blur(8px) saturate(1.1); backdrop-filter: blur(8px) saturate(1.1); }
+.landing-peak-brand-card > .pinevela-brand { justify-content: center; }
+.landing-peak-brand-card .pinevela-brand-mark { width: clamp(40px, 5vw, 76px); height: clamp(40px, 5vw, 76px); }
+.landing-peak-brand-card > .pinevela-wordmark { font-size: clamp(12px, 1.6vw, 25px); }
+.landing-peak-brand-caption { color: #001d3d; font-size: clamp(8px, .7vw, 11px); font-weight: 800; line-height: 1.4; text-align: center; }
+.landing-peak-page :is(#pinemarket-section, #hostels-section) { scroll-margin-top: calc(var(--pv-public-header-height, 100px) + 16px); }
 .landing-peak-page .landing-benefit h4 {
   font-family: 'Caviar Dreams', sans-serif !important;
   font-size: clamp(24px, 2.1vw, 30px);
@@ -68,15 +86,46 @@ html[data-theme="dark"] .public-header-card input::placeholder { color: var(--pv
   line-height: 1.7;
 }
 @media (max-width: 1023px) {
-  .landing-peak-hero { min-height: 0; padding: calc(var(--pv-public-header-height, 100px) + 36px) 24px 192px; }
-  .landing-peak-content { max-width: 680px; padding: 0; gap: 20px; }
-  .landing-peak-brand { padding-top: 4px; }
+  html[data-theme] .landing-peak-hero { padding: 24px 24px 28px; }
+  .landing-peak-content { grid-template-columns: minmax(0, 1fr); max-width: 720px; gap: 16px; }
+  .landing-peak-copy { justify-items: center; text-align: center; gap: 16px; padding-block: 0; }
+  html[data-theme] .landing-peak-hero .landing-peak-copy h1 { font-size: clamp(46px, 7vw, 64px); }
+  .landing-peak-greeting { display: inline; margin-right: .22em; }
+  html[data-theme] .landing-peak-hero .landing-peak-copy p { max-width: 48ch; font-size: 18px; }
+  .landing-peak-shortcuts { display: none; }
 }
 @media (max-width: 480px) {
-  .landing-peak-hero { padding-inline: 24px; padding-bottom: 162px; }
+  html[data-theme] .landing-peak-hero { padding: 20px 18px; }
   .landing-peak-content { gap: 12px; }
-  .landing-peak-copy h1 { font-size: clamp(44px, 12vw, 54px); }
-  .landing-peak-brand > div { width: 210px; height: 210px; }
+  .landing-peak-copy { gap: 10px; }
+  html[data-theme] .landing-peak-hero .landing-peak-copy h1 { font-size: clamp(34px, 10.5vw, 46px); }
+  .landing-peak-greeting { display: block; margin: 0 0 8px; }
+  html[data-theme] .landing-peak-hero .landing-peak-copy p { font-size: 14px; line-height: 1.6; }
+  html[data-theme] .landing-peak-hero .landing-peak-cta { width: 100%; min-height: 50px; gap: 10px; padding: 14px 12px; font-size: 12px; }
+  .landing-peak-shortcuts { gap: 12px; }
+  .landing-peak-shortcuts button { min-height: 32px; font-size: 11px; }
+  .landing-peak-image { border-radius: 16px; }
+  .landing-peak-brand { right: 2%; bottom: 3%; width: 32%; }
+  .landing-peak-brand-card { padding: 10px 6px; gap: 6px; }
+  .landing-peak-brand-card > .pinevela-brand { display: none; }
+  .landing-peak-brand-card > .pinevela-wordmark { font-size: 12px; }
+}
+@media (min-width: 600px) and (max-width: 1023px) and (max-height: 540px) {
+  .landing-peak-content { grid-template-columns: minmax(0, .9fr) minmax(0, 1.2fr); max-width: 100%; gap: 24px; }
+  .landing-peak-copy { justify-items: start; text-align: left; gap: 16px; }
+  html[data-theme] .landing-peak-hero .landing-peak-copy h1 { font-size: 38px; }
+  .landing-peak-greeting { display: block; margin: 0 0 8px; }
+  html[data-theme] .landing-peak-hero .landing-peak-copy p { font-size: 15px; }
+  .landing-peak-artwork { align-self: start; }
+  .landing-peak-image { height: max(120px, calc(100svh - var(--pv-public-header-height, 100px) - 48px)); }
+  .landing-peak-brand-card > .pinevela-brand { display: none; }
+  .landing-peak-brand-card > .pinevela-wordmark { font-size: 13px; }
+}
+@media (forced-colors: active) {
+  html[data-theme] .landing-peak-hero { background: Canvas; color: CanvasText; }
+  html[data-theme] .landing-peak-hero .landing-peak-copy :is(h1, p, strong), .landing-peak-shortcuts button, .landing-peak-brand-caption { color: CanvasText; -webkit-text-fill-color: CanvasText; }
+  html[data-theme] .landing-peak-hero .landing-peak-cta { background: ButtonFace; color: ButtonText; border-color: ButtonText; }
+  .landing-peak-brand-card { background: Canvas; border-color: CanvasText; }
 }
 
 /* Native scroll, one-time reveals: short movement and a soft fade. */

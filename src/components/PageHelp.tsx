@@ -5,9 +5,10 @@ import { useAuth } from '../context/AuthContext';
 import { getPublicAppearance } from '../lib/publicAppearance';
 import { privateSupportCode, supportApi } from '../lib/supportApi';
 import { SUPPORT_CATEGORIES, SUPPORT_STATUSES, SUPPORT_TYPES, type SupportTicket } from '../../supportModel';
-import SupportLayout from './SupportLayout';
+import SupportLayout, { supportHome } from './SupportLayout';
 import SupportThread from './SupportThread';
 import SessionRestorationNotice from './SessionRestorationNotice';
+import MyReports from './MyReports';
 
 const button = 'inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-bold text-white disabled:opacity-50';
 const field = 'mt-2 block w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900';
@@ -63,7 +64,7 @@ function HelpContent() {
   }
   const request = (suffix: string, data: any, method?: string) => supportApi(`${accountId ? '/api/support' : '/api/public/support'}/tickets/${ticket!.id}${suffix}`, accountId, { ...data, ...(!accountId ? { accessToken: guestCode } : {}) }, method);
   return <SupportLayout publicPage={publicPage}>
-    <div className="mb-8 flex flex-wrap items-start justify-between gap-5"><div className="max-w-2xl"><p className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-blue-700"><CircleHelp size={18} />PineVela support</p><h1 className="text-3xl font-extrabold tracking-tight sm:text-5xl">How can we help?</h1><p className="mt-4 text-sm leading-7 text-slate-600">Ask a question, report a problem, or follow up with customer service. For a room repair, use your resident maintenance page so your housing team can act on it.</p><Link to="/faq" className="mt-3 inline-block text-sm font-bold text-blue-700 underline underline-offset-4">Browse frequently asked questions</Link></div>
+    <div className="mb-8 flex flex-wrap items-start justify-between gap-5"><div className="max-w-2xl"><p className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-blue-700"><CircleHelp size={18} />PineVela support</p><h1 className="text-3xl font-extrabold tracking-tight sm:text-5xl">How can we help?</h1><p className="mt-4 text-sm leading-7 text-slate-600">Ask a question, report a problem, or follow up with customer service. For a room repair, use your resident maintenance page so your housing team can act on it.</p><Link to={`/faq?from=${publicPage ? '/faq' : encodeURIComponent(supportHome(user))}`} className="mt-3 inline-block text-sm font-bold text-blue-700 underline underline-offset-4">Browse frequently asked questions</Link></div>
       <button type="button" disabled={busy} className={button} onClick={() => { selection.current++; setCompose(true); setTicket(null); setError(''); setSubject(''); setBody(''); setCopied(false); requestKey.current = crypto.randomUUID(); accessCode.current = privateSupportCode(); setParams(p => { p.delete('ticket'); return p; }, { replace: true }); }}><Plus size={17} />New request</button>
     </div>
     <div className="grid items-start gap-6 lg:grid-cols-[18rem_1fr]">
@@ -71,7 +72,8 @@ function HelpContent() {
         {accountId ? <section className="rounded-3xl border border-slate-200 bg-white p-5"><div className="mb-4 flex items-center justify-between"><h2 className="font-bold">Your requests</h2><button type="button" aria-label="Refresh your requests" onClick={() => setRefresh(x => x + 1)} className="rounded-lg p-2 text-blue-700"><RefreshCw size={16} /></button></div>
           {tickets.length ? <ul className="space-y-2">{tickets.map(t => <li key={t.id}><button type="button" onClick={() => { setCompose(false); setParams(p => { p.set('ticket', t.id); return p; }); }} aria-current={ticket?.id === t.id && !compose ? 'page' : undefined} className="w-full rounded-xl border border-slate-200 p-3 text-left"><span className="text-[11px] font-bold text-blue-700">{t.reference}</span><span className="mt-1 block break-words text-sm font-bold">{t.subject}</span><span className="mt-1 block text-xs text-slate-500">{SUPPORT_STATUSES[t.status]}</span></button></li>)}</ul> : <p className="text-sm leading-6 text-slate-500">Requests from this account will appear here.</p>}</section>
           : <section className="rounded-3xl border border-slate-200 bg-white p-5"><h2 className="font-bold">Track a guest request</h2><p className="mt-2 text-xs leading-6 text-slate-500">Use the case ID and private access code saved when you submitted it. A contact email alone cannot unlock a conversation.</p><form onSubmit={lookup} className="mt-4 space-y-3"><label className="block text-xs font-bold">Case ID<input required value={lookupId} onChange={e => setLookupId(e.target.value)} className={field} autoComplete="off" /></label><label className="block text-xs font-bold">Private access code<input required minLength={43} maxLength={43} value={lookupCode} onChange={e => setLookupCode(e.target.value)} className={field} autoComplete="off" spellCheck={false} /></label><button disabled={busy} className={button}>{busy ? 'Opening…' : 'Open request'}</button></form></section>}
-        <p className="px-2 text-xs leading-6 text-slate-500">Keep your password, room key, payment PIN, and private administrator key out of your message. Include the steps you took and any relevant order or request reference.</p>
+        {accountId && <MyReports key={accountId} accountId={accountId} />}
+        <p className="px-2 text-xs leading-6 text-slate-500">Keep your password, room key, payment PIN, chat recovery phrase, and private administrator key out of your message. Include the steps you took and any relevant order or request reference.</p>
       </aside>
       <div className="min-w-0 space-y-5">
         {error && <div role="alert" className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">{error}<button type="button" onClick={() => accountId ? setRefresh(x => x + 1) : void lookup()} className="ml-3 font-bold underline">Retry loading</button></div>}

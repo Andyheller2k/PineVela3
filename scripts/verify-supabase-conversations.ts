@@ -18,6 +18,9 @@ import {submitSellerApplication,decideSellerApplication} from '../supabase/selle
 import {withIsolatedBackup} from './lib/isolated-postgres.js';
 import {sendMarketMessage,conversationRows,purchaseReview} from '../supabase/marketConversation.js';
 import {publicProducts} from '../supabase/catalog.js';
+import {createChatIdentity,recoveryPhrase} from '../src/lib/marketEncryption.js';
+import {registerEncryptionIdentity} from '../supabase/marketEncryption.js';
+import {encryptedMarketTestRequests} from './lib/encrypted-market-test.js';
 
 dotenv.config({quiet:true});
 const id=process.argv[2];if(!id)throw new Error('Pass an encrypted checkpoint UUID.');
@@ -76,7 +79,10 @@ try{await withIsolatedBackup(id,async config=>{
       return {buyer:foreignOwner,seller:own.actor,other:owner,foreignSeller:foreign.actor,item,draft,store:stores[0].id,foreignStore:stores[1].id,admin,cover};
     });
     const pins=loadOrderPins();
-    const send=(a:VerifiedActor,body:any)=>db.authorizedSystem(a,['primary','seller'],c=>sendMarketMessage(c,a,body));
+    const identities=new Map();
+    for(const a of [f.buyer,f.seller,f.other,f.foreignSeller]){const keys=await createChatIdentity(a.contextId,recoveryPhrase());await db.authorizedSystem(a,['primary','seller'],c=>registerEncryptionIdentity(c,a,{publicIdentity:keys.publicIdentity,backup:keys.backup,proof:keys.proof}));identities.set(a.contextId,keys.identity);}
+    const encryptRequest=encryptedMarketTestRequests(identities);
+    const send=(a:VerifiedActor,body:any)=>db.authorizedSystem(a,['primary','seller'],async c=>sendMarketMessage(c,a,await encryptRequest(c,a,body)));
     const rows=(a:VerifiedActor)=>db.authorizedSystem(a,['primary','seller'],c=>conversationRows(c,a));
     const review=(a:VerifiedActor,body:any,service?:string)=>db.authorizedSystem(a,['primary'],c=>purchaseReview(c,a,body,service));
     async function denied(work:()=>Promise<unknown>,status:number|string,label:string){let error:any;try{await work();}catch(e){error=e;}check(typeof status==='number'?error instanceof ApiError && error.status===status:error?.code===status,`${label} (expected ${status}, actual ${error instanceof ApiError?error.status:error?.code || 'no error'})`);}

@@ -54,8 +54,8 @@ async function privateJson(file) { const s = await fs.lstat(file); assert(s.isFi
     }
     stage = 'public FAQ responsive design';
     for (const [width, height] of [[1440, 1000], [768, 1024], [375, 812]]) {
-      await size(width, height); await go('/#/'); await until(exists('#public-header a[href="#/faq"]'), 'FAQ navigation');
-      await evaluate(`document.querySelector(${JSON.stringify('#public-header a[href="#/faq"]')}).click()`); await until('document.querySelectorAll("details").length>15', 'FAQ content');
+      await size(width, height); await go('/#/'); await until(exists('#public-header a[href^="#/faq"]'), 'FAQ navigation');
+      await evaluate(`document.querySelector(${JSON.stringify('#public-header a[href^="#/faq"]')}).click()`); await until('document.querySelectorAll("details").length>15', 'FAQ content');
       check(await evaluate('document.documentElement.dataset.theme==="dark"&&document.documentElement.scrollWidth<=innerWidth+1'), 'FAQ remains navy without horizontal overflow');
       await click('What are the three seller subscriptions?');
       check(await evaluate('[...document.querySelectorAll("details[open]")].some(d=>/Pine Default/.test(d.textContent)&&/Pine Star/.test(d.textContent)&&/Pine Pro/.test(d.textContent))'), 'Subscription accordion explains all actual plans');

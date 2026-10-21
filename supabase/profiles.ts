@@ -47,6 +47,8 @@ export async function saveProfile(c:PoolClient,a:VerifiedActor,body:any,grant?:S
       const asset=(await c.query(`select id from public.media_assets where id=$1 and owner_auth_user_id=$2 and purpose='avatar'
         and state='ready' for share`,[value.slice('/api/media/'.length),a.authUserId])).rows[0];
       if(!asset)throw new ApiError(403,'Use a ready profile picture uploaded by this verified identity.');
+      if(!(await c.query('select private.media_content_approved($1) as allowed',[asset.id])).rows[0].allowed)
+        throw new ApiError(422,'This profile picture must pass its safety review before it can be saved.','moderation_required');
       fields.avatar_path=value;fields.avatar_asset_id=asset.id;
     }
   }

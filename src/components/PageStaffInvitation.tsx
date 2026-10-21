@@ -25,8 +25,10 @@ export default function PageStaffInvitation() {
     const requestToken = token;
     setBusy(true); setError(''); setNotice('');
     try {
-      await apiFetch(`/api/auth/staff-invitations/${action}`, { method: 'POST', body: JSON.stringify({ invitationToken: token, ...(action === 'signup' ? {password} : action === 'verify' ? {code,password} : {}) }) });
+      const receipt = await apiFetch(`/api/auth/staff-invitations/${action}`, { method: 'POST', body: JSON.stringify({ invitationToken: token, ...(action === 'signup' ? {password} : action === 'verify' ? {code,password} : {}) }) });
       if (activeToken.current !== requestToken) return;
+      if (action === 'verify' ? receipt?.success !== true || receipt?.verified !== true : action === 'signup' ? receipt?.verificationRequired !== true || receipt?.signupStarted !== true : receipt?.success !== true)
+        throw new Error('The server did not confirm this invitation step. Please retry.');
       if (action === 'verify') { setVerified(true); setPassword(''); setCode(''); }
       else { setInvitation((previous:any) => ({ ...previous, signupStarted: true })); setNotice('Check your invited work email for the confirmation message.'); }
     } catch (e:any) { if (activeToken.current === requestToken) setError(e.message || 'The invitation could not be completed.'); }

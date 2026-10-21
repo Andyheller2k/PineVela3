@@ -7,7 +7,7 @@ import { installGoogleAuth, googleAccountMissing, googlePrimaryClosed, googleIde
 import {installGoogleManagerEnrollment} from './googleManagerEnrollment.js';
 import { initializeRetainedGooglePrimary,reopenRetainedPrimary,unavailableAccountError } from './googleSignup.js';
 import { signupProviderConfig, signupChallenge, requireConfirmationSettings } from '../supabaseSignup.js';
-import { ApiError, UUID, uuid, type VerifiedActor, SupabaseDatabase } from './db.js';
+import { ApiError, SessionExpiredError, UUID, uuid, type VerifiedActor, SupabaseDatabase } from './db.js';
 import { WorkPool } from '../resourceSecurity.js';
 import { checkPortalPin } from './portalAccess.js';
 import { maintenanceError } from './platformMaintenance.js';
@@ -175,22 +175,27 @@ export class SupabaseAuth {
     return {identity,accessToken:token};
   }
   async authenticate(req: Request, res: Response): Promise<{ actor: VerifiedActor; accessToken: string }> {
-    const {identity,accessToken}=await this.verifySession(req,res);
-    const binding = await this.db.statement(`select s.active_context_id, c.kind,
-      private.account_access(c.id) as access,private.account_session_allowed(c.id,s.session_id) as allowed
-      from private.account_sessions s
-      join public.account_contexts c on c.id = s.active_context_id and c.auth_user_id = s.auth_user_id
-      join auth.sessions live on live.id = s.session_id and live.user_id = s.auth_user_id
-      where s.session_id = $1 and s.auth_user_id = $2 and c.status = 'active'
-        and (live.not_after is null or live.not_after > now())
-        and private.portal_session_allowed(c.id,s.portal_pin_version)
-        and (c.kind <> 'admin' or private.administrator_session_allowed(c.id,s.session_id) and exists (select 1 from public.admin_memberships m where m.context_id = c.id and m.status = 'active'))
-        and (c.kind <> 'resident' or exists (select 1 from public.allocations a where a.resident_context_id = c.id and a.ended_at is null))
-        and (c.kind <> 'staff' or exists (select 1 from public.staff_assignments a where a.staff_context_id = c.id and a.status = 'active' and a.ended_at is null))`, [identity.sessionId, identity.authUserId]);
-    if (!binding.rowCount) throw new ApiError(401, 'Your session has ended. Please sign in again.');
-    checkAccountAccess(binding.rows[0].access,[],binding.rows[0].allowed);
-    const actor={ ...identity, contextId: binding.rows[0].active_context_id, kind: binding.rows[0].kind };
-    return { actor, accessToken };
+    try {
+      const {identity,accessToken}=await this.verifySession(req,res);
+      const binding = await this.db.statement(`select s.active_context_id, c.kind,
+        private.account_access(c.id) as access,private.account_session_allowed(c.id,s.session_id) as allowed
+        from private.account_sessions s
+        join public.account_contexts c on c.id = s.active_context_id and c.auth_user_id = s.auth_user_id
+        join auth.sessions live on live.id = s.session_id and live.user_id = s.auth_user_id
+        where s.session_id = $1 and s.auth_user_id = $2 and c.status = 'active'
+          and (live.not_after is null or live.not_after > now())
+          and private.portal_session_allowed(c.id,s.portal_pin_version)
+          and (c.kind <> 'admin' or private.administrator_session_allowed(c.id,s.session_id) and exists (select 1 from public.admin_memberships m where m.context_id = c.id and m.status = 'active'))
+          and (c.kind <> 'resident' or exists (select 1 from public.allocations a where a.resident_context_id = c.id and a.ended_at is null))
+          and (c.kind <> 'staff' or exists (select 1 from public.staff_assignments a where a.staff_context_id = c.id and a.status = 'active' and a.ended_at is null))`, [identity.sessionId, identity.authUserId]);
+      if (!binding.rowCount) throw new ApiError(401, 'Your session has ended. Please sign in again.');
+      checkAccountAccess(binding.rows[0].access,[],binding.rows[0].allowed);
+      const actor={ ...identity, contextId: binding.rows[0].active_context_id, kind: binding.rows[0].kind };
+      return { actor, accessToken };
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 401) throw new SessionExpiredError(error.message, error.code);
+      throw error;
+    }
   }
   async logout(req:Request,res:Response) {
     let verified:Awaited<ReturnType<SupabaseAuth['verifySession']>>;

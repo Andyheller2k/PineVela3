@@ -80,7 +80,7 @@
     "test:account-refresh": "node --import tsx --test --test-concurrency=1 tests/accountRefresh.test.ts",
     "test:session-restoration": "node --import tsx --test --test-concurrency=1 tests/sessionRestoration.test.ts",
     "test:registration": "node --import tsx --test --test-concurrency=1 tests/registrationStatus.test.ts",
-    "test:security": "node --import tsx --test --test-concurrency=1 tests/accountSecurity.test.ts tests/accountRefresh.test.ts tests/googleAuth.test.ts tests/googleAuth.integration.test.ts tests/governanceRefresh.test.ts tests/imageUploadSecurity.test.ts tests/inspectionReportSecurity.test.ts tests/internationalPhone.test.ts tests/marketBranding.test.ts tests/portalRoles.test.ts tests/primaryRegistrationRefresh.test.ts tests/publicContinuation.test.ts tests/realtimeLifecycle.test.ts tests/registrationStatus.test.ts tests/resourceSecurity.test.ts tests/serviceLocation.test.ts tests/sessionRestoration.test.ts tests/sessionSecurity.test.ts tests/supabaseAccountAccess.test.ts tests/supabaseDatabaseAvailability.test.ts tests/supabaseStorageBackup.test.ts tests/uiRules.test.ts tests/supabaseOnlyRuntime.test.ts tests/administratorApproval.test.ts tests/sourceMapSecurity.test.ts tests/adminDirectories.test.ts",
+    "test:security": "node --import tsx --test --test-concurrency=1 tests/accountSecurity.test.ts tests/accountRefresh.test.ts tests/dashboardSnapshot.test.ts tests/googleAuth.test.ts tests/googleAuth.integration.test.ts tests/governanceRefresh.test.ts tests/imageUploadSecurity.test.ts tests/inspectionReportSecurity.test.ts tests/internationalPhone.test.ts tests/marketBranding.test.ts tests/portalRoles.test.ts tests/primaryRegistrationRefresh.test.ts tests/publicContinuation.test.ts tests/realtimeLifecycle.test.ts tests/registrationStatus.test.ts tests/resourceSecurity.test.ts tests/serviceLocation.test.ts tests/sessionRestoration.test.ts tests/sessionSecurity.test.ts tests/supabaseAccountAccess.test.ts tests/supabaseDatabaseAvailability.test.ts tests/supabaseStorageBackup.test.ts tests/uiRules.test.ts tests/supabaseOnlyRuntime.test.ts tests/administratorApproval.test.ts tests/sourceMapSecurity.test.ts tests/adminDirectories.test.ts tests/historyPagination.test.ts tests/companionSubmission.test.ts tests/mapLogo.test.ts tests/orderReservationPolicy.test.ts tests/paymentReversalPolicy.test.ts tests/staticFrontendSecurity.test.ts tests/companion.test.ts",
     "check:private-data": "node scripts/check-private-data.cjs",
     "db:prepare-residence-backup": "node --import tsx scripts/prepare-supabase-residence-backup.ts",
     "db:attach-residence-recovery": "node --import tsx scripts/prepare-supabase-residence-backup.ts",
@@ -117,7 +117,7 @@
     "db:verify-primary-email-reentry": "tsx scripts/verify-supabase-primary-email-reentry.ts",
     "db:verify-seller-reenrollment": "tsx scripts/verify-supabase-seller-reenrollment.ts",
     "test": "npm run test:security",
-    "test:unit": "node --import tsx --test --test-concurrency=1 tests/accountSecurity.test.ts tests/accountRefresh.test.ts tests/googleAuth.test.ts tests/googleAuth.integration.test.ts tests/governanceRefresh.test.ts tests/imageUploadSecurity.test.ts tests/inspectionReportSecurity.test.ts tests/internationalPhone.test.ts tests/marketBranding.test.ts tests/portalRoles.test.ts tests/primaryRegistrationRefresh.test.ts tests/publicContinuation.test.ts tests/realtimeLifecycle.test.ts tests/registrationStatus.test.ts tests/resourceSecurity.test.ts tests/serviceLocation.test.ts tests/sessionRestoration.test.ts tests/sessionSecurity.test.ts tests/supabaseAccountAccess.test.ts tests/supabaseDatabaseAvailability.test.ts tests/supabaseStorageBackup.test.ts tests/uiRules.test.ts tests/administratorApproval.test.ts tests/sourceMapSecurity.test.ts tests/adminDirectories.test.ts",
+    "test:unit": "node --import tsx --test --test-concurrency=1 tests/accountSecurity.test.ts tests/accountRefresh.test.ts tests/dashboardSnapshot.test.ts tests/googleAuth.test.ts tests/googleAuth.integration.test.ts tests/governanceRefresh.test.ts tests/imageUploadSecurity.test.ts tests/inspectionReportSecurity.test.ts tests/internationalPhone.test.ts tests/marketBranding.test.ts tests/portalRoles.test.ts tests/primaryRegistrationRefresh.test.ts tests/publicContinuation.test.ts tests/realtimeLifecycle.test.ts tests/registrationStatus.test.ts tests/resourceSecurity.test.ts tests/serviceLocation.test.ts tests/sessionRestoration.test.ts tests/sessionSecurity.test.ts tests/supabaseAccountAccess.test.ts tests/supabaseDatabaseAvailability.test.ts tests/supabaseStorageBackup.test.ts tests/uiRules.test.ts tests/administratorApproval.test.ts tests/sourceMapSecurity.test.ts tests/adminDirectories.test.ts tests/historyPagination.test.ts tests/companionSubmission.test.ts tests/mapLogo.test.ts tests/orderReservationPolicy.test.ts tests/paymentReversalPolicy.test.ts tests/staticFrontendSecurity.test.ts tests/companion.test.ts",
     "test:runtime-retirement": "node --import tsx --test --test-concurrency=1 tests/supabaseOnlyRuntime.test.ts",
     "db:local:prepare": "node --import tsx scripts/prepare-local-supabase-workflow.ts",
     "db:local:serve": "node --import tsx scripts/serve-supabase-local-workflow.ts",
@@ -134,7 +134,13 @@
     "db:local:logout-security": "node --import tsx scripts/verify-supabase-logout-security.ts",
     "db:local:support": "node --import tsx scripts/verify-supabase-local-support.ts",
     "test:support": "node --import tsx tests/support.test.ts",
-    "db:verify-support": "node --import tsx scripts/verify-supabase-support-installation.ts"
+    "db:verify-support": "node --import tsx scripts/verify-supabase-support-installation.ts",
+    "test:encryption": "node --import tsx tests/marketEncryption.test.ts",
+    "db:local:encryption": "node --import tsx scripts/verify-supabase-local-encryption.ts",
+    "db:local:reports": "node --import tsx scripts/verify-supabase-local-moderation.ts",
+    "db:verify-report-encryption": "node --import tsx scripts/verify-supabase-report-encryption-installation.ts",
+    "test:map-routing": "node --import tsx tests/mapRoute.test.ts",
+    "verify:map-routing": "node --import tsx scripts/verify-map-routing.ts"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",

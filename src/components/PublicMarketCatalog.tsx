@@ -11,6 +11,7 @@ import MarketplaceFilters, { type MarketSort } from './MarketplaceFilters';
 import MarketImageGallery from './MarketImageGallery';
 import DashboardOverlay from './DashboardOverlay';
 import PublicCatalogRail from './PublicCatalogRail';
+import ReportButton from './ReportButton';
 
 const NearbyServicesMap = lazy(() => import('./NearbyServicesMap'));
 
@@ -113,6 +114,7 @@ export default function PublicMarketCatalog({ preview = false, searchQuery, cata
         <div className="flex flex-wrap items-center justify-between gap-2"><p className="text-xl font-black text-emerald-600">GHS {priceCategory?.price ?? selected.price}<span className="ml-2 text-[10px] text-slate-500">{priceCategory?.name || (service ? '(starting rate)' : '')}</span></p>{selected.sellerUniversity && <span className="px-2.5 py-1 bg-blue-100 text-blue-800 text-xs font-bold rounded-lg">{selected.sellerUniversity}</span>}</div>
         {!!selected.priceCategories?.length && <div className="p-3 bg-blue-50/70 border border-blue-200 rounded-2xl space-y-2"><p className="text-xs font-black text-slate-900">Choose Price Category:</p><div className="grid grid-cols-2 gap-2">{selected.priceCategories.map((category, index) => <button type="button" key={category.id || index} aria-pressed={selectedPriceIndex === index} onClick={() => setSelectedPriceIndex(index)} className={`p-2.5 rounded-xl border text-left text-xs font-bold ${selectedPriceIndex === index ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-slate-200 text-slate-800'}`}>{category.imageUrl && <img src={category.imageUrl} alt={category.name} className="h-12 w-12 rounded-lg object-cover mb-2" />}<span>{category.name}</span><span className="block mt-1">GHS {category.price}</span></button>)}</div></div>}
         <p className="text-xs text-slate-600 leading-relaxed whitespace-pre-wrap break-words">{selected.description}</p>
+        <ReportButton targetType="listing" targetId={selected.id} targetName={selected.title} />
         {service && (schedule || selected.location || selected.meetingLocation || phone) && <div className="p-3 bg-blue-50/70 border border-blue-200 rounded-xl space-y-2 text-xs font-semibold text-slate-700">
           {schedule && <p>Hours: {schedule}</p>}{(selected.location || selected.meetingLocation) && <p className="flex items-center gap-2"><MapPin size={14} />{selected.location || selected.meetingLocation}</p>}{phone && <a href={`tel:${phone}`} className="flex items-center gap-2 text-emerald-700"><Phone size={14} />Call Provider: {phone}</a>}
         </div>}

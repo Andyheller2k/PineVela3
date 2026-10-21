@@ -72,6 +72,11 @@ export class AttemptBudgets {
 
 const ipOf = (req: Request) => req.ip || req.socket.remoteAddress || 'unknown';
 
+/** Match Express's case-insensitive, optional trailing-slash route spelling. */
+export function canonicalOperationPath(path: string): string {
+  return path.toLowerCase().replace(/\/+$/, '') || '/';
+}
+
 /** Public invalidation streams carry no private records, but still consume bounded sockets. */
 export class EventConnections {
   private clients = new Map<Response, { ip: string; actor: string; close: () => void }>();

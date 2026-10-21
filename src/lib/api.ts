@@ -1,6 +1,10 @@
 import { sessionFetch as fetch } from './session';
 import { invalidateAllQueries } from './queryClient';
 
+export class ApiRequestError extends Error {
+  constructor(public status: number, message: string, public code?: string) { super(message); this.name = 'ApiRequestError'; }
+}
+
 export async function hashPassword(password: string): Promise<string> {
   if (!password) return '';
   try {
@@ -39,11 +43,8 @@ export async function apiFetch(url: string, options: RequestInit = {}): Promise<
     });
 
     if (!res.ok) {
-      if (res.status === 401) {
-        return [];
-      }
       const errData = await safeJson(res);
-      throw new Error(errData.error || `HTTP error ${res.status}`);
+      throw new ApiRequestError(res.status, errData.error || errData.message || `HTTP error ${res.status}`, errData.code);
     }
 
     const data = await safeJson(res);

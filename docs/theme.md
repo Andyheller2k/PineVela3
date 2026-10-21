@@ -33,6 +33,10 @@ in both appearances, with a yellow selected destination and navy selected labels
 Destinations, visibility preferences, badges and access restrictions are preserved.
 Cards and controls use a consistent rounded hierarchy; borders and restrained
 shadows establish elevation without neon glows.
+Dark sign-out confirmations and the shared mobile More dialog keep translucent
+scrims with 12px blur, so the dashboard remains visible behind them. Sign-out,
+cancel and menu controls have distinct gold hover, keyboard-focus and pressed
+states; the More trigger stays highlighted while its dialog is open.
 
 Gold action gradients pair with navy labels through `--pv-on-action`; inverse
 feature-card actions use the navy/gold pair. Headings use blue/navy on white and
@@ -49,7 +53,12 @@ at document level, including portals, while retaining the saved product mode.
 `ThemeEnvironment`, `ThemeToggle` and `src/theme.css` provide the light-product
 atmosphere, product switch and existing-surface adaptation.
 Page surfaces switch in one paint; existing utility transitions are suppressed for two
-animation frames. Only the switch and decorative layers use short 180 ms transitions.
+animation frames. Decorative layers use short 180 ms transitions. The shared
+settings switch uses Lucide sun/moon icons, a yellow thumb and a navy night track.
+Its thumb slides over 380 ms while the icons rotate, scale and cross-fade over
+200–340 ms; rapid changes reverse smoothly without timers or remounting icons.
+The 84 by 44 pixel control keeps keyboard focus, a named switch state and
+reduced-motion/forced-color support across desktop, tablet and mobile settings.
 The app supplies the primary `--pv-canvas` background: fixed navy on login/landing,
 white/blue on light product screens, and solid deep blue on dark product screens.
 Route canvases and the mobile login backdrop stay transparent.
@@ -98,6 +107,16 @@ they verify styling, geometry, focus and dismissal rather than full enrollment.
 
 Mobile portals use at most five primary navigation choices and group secondary destinations in a named More dialog. Appearance controls live in each portal's Settings, Options, or Profile area, with no floating, navigation, or map/storefront theme switches. Selected tabs use gold fills and navy labels in both themes. The measured navigation height, including safe-area padding, reserves room in the scrolling content and raises the seller’s add button above it. Desktop seller navigation includes the Subscription label and selected state.
 
+The primary-user dashboard uses Home, Purchases, Room, Options and Ask AI in its
+mobile/tablet bar; Alerts stays directly accessible through the header bell.
+`UserDashboardNavigation` preserves the desktop sidebar/compact-top preference.
+`src/userDashboard.css` scopes its glass navigation, moving gold indicators,
+typography and brief interaction feedback. Catalog filters and per-view scroll
+positions survive tab switches within the account; account changes clear scroll
+memory. Mobile price filters use a compact native dialog with Escape, focus
+restoration and a close button. Reduced motion removes travel and animation.
+Marketplace item/service dimensions and public-page styles are unchanged.
+
 About Us, Our Vision, Partner with Us, and Contact continue below the landing
 catalog and benefits. Public company links navigate to `/?section=<section-id>`;
 landing links scroll to the same sections with clearance for the fixed header.
@@ -144,8 +163,8 @@ pauses outside the viewport or when the tab is hidden, and is omitted for reduce
 motion and forced colors. Observers, animations and buffers are released on unmount.
 
 Shared public headers use transparent search, account and company-section buttons
-with hover underlines. Product catalogs retain a compact 48 by 26 pixel theme switch;
-the landing header has no switch. About Us,
+with hover underlines. Theme switches remain in product settings; public headers
+have no theme switch. About Us,
 Our Vision, Partner with Us and Contact remain separate section buttons with no
 dropdown. The landing header uses tighter vertical padding; on small screens the
 logo and account actions share a row, followed by search and section
@@ -160,3 +179,27 @@ a dimmed backdrop. Its accessible status label remains available to assistive
 technology; reduced motion stops rotation. The confirmation card disappears while
 the request is pending and returns on failure. Session revocation and navigation
 still follow the existing server-confirmed logout flow.
+
+Product top navigation, sidebars, mobile bottom navigation and its More menu
+share the login/signup card's translucent navy surface, 18px backdrop blur,
+yellow edge and inset highlights. Existing dimensions and active yellow tabs
+stay intact. In light mode, mobile top headers use translucent white with navy
+text and a yellow bottom line, retaining their flat, edge-to-edge layout.
+Public landing headers retain their separate appearance. Forced-colors mode
+uses system surfaces without blur or decorative shadows.
+
+The shared Appearance settings label follows the active light/dark theme, along
+with its status text. Light product pages keep their subtle blue atmosphere
+without a decorative sun. FAQ and Help mark the active link with `aria-current`
+and a yellow fill with navy text; forced colors use the system selection colors.
+
+The primary Home catalog uses one compact Market/Residences switcher with
+44px touch targets and a yellow selected segment in both themes. The redundant
+cross-catalog search is removed; marketplace search and filters remain available.
+
+Mobile marketplace controls keep price filtering, sorting and item count on one
+row beneath search. Price panels use side-by-side sliders and one scrolling row
+of presets; an active range can remain applied while the panel is closed. Sort
+controls use SVG icons rather than emoji. Category selection changes immediately
+without a native tap flash or trailing animated highlight; keyboard focus is
+drawn inside each pill so its horizontal scroll container cannot clip the ring.

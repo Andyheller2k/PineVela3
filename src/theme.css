@@ -93,38 +93,67 @@ html.theme-changing :where(#root *, dialog, dialog *):not(.theme-environment, .t
 .theme-atmosphere { position: absolute; width: min(65vw, 700px); height: min(65vw, 700px); border-radius: 50%; filter: blur(70px); opacity: .24; background: var(--pv-blue-soft); animation: atmosphere-drift 22s ease-in-out infinite alternate; transition: opacity var(--pv-time); }
 .atmosphere-one { left: -12%; top: 25%; }
 .atmosphere-two { right: -10%; top: 48%; background: var(--pv-blue-ice); animation-delay: -11s; }
-.theme-celestial { position: absolute; right: clamp(32px, 9vw, 160px); top: clamp(75px, 13vh, 145px); width: clamp(70px, 9vw, 120px); aspect-ratio: 1; transition: transform var(--pv-time) var(--pv-ease), opacity var(--pv-time) ease; }
-.theme-celestial > span { display: block; width: 100%; height: 100%; border-radius: 50%; animation: celestial-breathe 6s ease-in-out infinite; }
-.theme-sun { opacity: .8; transform: translateY(0); }
-.theme-sun > span { background: radial-gradient(circle at 40% 35%, #fff9e8, #ffdc75 68%, #f7b700); box-shadow: 0 0 38px 14px #f7b70029, 0 0 100px 35px #f7b70012; }
-.theme-toggle-orb i { position: absolute; border-radius: 50%; background: #6a7fc026; width: 22%; height: 22%; left: 22%; top: 28%; box-shadow: inset 2px 2px 4px #6d84a31a; }
-.theme-toggle-orb i:nth-child(2) { width: 15%; height: 15%; top: 62%; left: 53%; }
-.theme-toggle-orb i:nth-child(3) { width: 10%; height: 10%; top: 22%; left: 66%; }
 .pinevela-brand-mark { transition: filter var(--pv-time) ease; }
 [data-theme="dark"] .pinevela-brand-mark { filter: drop-shadow(0 2px 5px #00081840); }
-.theme-toggle { position: relative; isolation: isolate; display: inline-block; flex-shrink: 0; width: 76px; height: 38px; overflow: hidden; border-radius: 999px; border: 1px solid #ffffff70; background: linear-gradient(115deg, #c9d3ed, #e8edf7); box-shadow: inset 0 1px 4px #376b8026, 0 5px 15px #38768c26; cursor: pointer; transition: background-color var(--pv-time), box-shadow var(--pv-time); }
-.theme-toggle::before { content: ''; position: absolute; inset: 0; background: linear-gradient(115deg, #081a3d, #233f71); opacity: 0; transition: opacity var(--pv-time); }
-.theme-toggle[data-dark="true"]::before { opacity: 1; }
-.theme-toggle:focus-visible { outline: 3px solid var(--pv-blue-accent); outline-offset: 4px; }
-.theme-toggle-orb { position: absolute; top: 3px; left: 3px; width: 30px; height: 30px; border-radius: 50%; background: #ffe4a2; box-shadow: 0 1px 5px #011e6026; transform: translateX(38px); transition: transform 180ms var(--pv-ease), background-color var(--pv-time), box-shadow var(--pv-time); }
-.theme-toggle-orb i { opacity: 0; transition: opacity var(--pv-time); }
-.theme-toggle[data-dark="true"] .theme-toggle-orb { transform: translateX(0); background: #e8edf7; box-shadow: 0 1px 5px #00081840; }
-.theme-toggle[data-dark="true"] .theme-toggle-orb i { opacity: 1; }
-.theme-toggle-cloud { position: absolute; width: 20px; height: 7px; border-radius: 12px; background: #ffffffdb; transition: transform 180ms var(--pv-ease), opacity 180ms; }
-.theme-toggle-cloud::before, .theme-toggle-cloud::after { content: ''; position: absolute; width: 9px; height: 9px; border-radius: 50%; background: inherit; left: 4px; bottom: 0; }
-.theme-toggle-cloud::after { left: 10px; width: 7px; height: 7px; }
-.cloud-one { top: 10px; left: 6px; }
-.cloud-two { bottom: 6px; left: -5px; }
-.theme-toggle[data-dark="true"] .theme-toggle-cloud { opacity: 0; transform: translateX(-25px); }
-.theme-toggle-stars { position: absolute; right: 6px; top: 6px; width: 29px; color: var(--pv-blue-ice); font-size: 13px; line-height: 23px; opacity: 0; transform: translateY(8px); transition: opacity 180ms, transform 180ms; }
-.theme-toggle[data-dark="true"] .theme-toggle-stars { opacity: 1; transform: translateY(0); }
-@keyframes atmosphere-drift { to { transform: translate3d(40px, -35px, 0) scale(1.08); } }
-@keyframes celestial-breathe { 50% { transform: scale(1.035); opacity: .82; } }
-@media (max-width: 767px) {
-  .theme-toggle { width: 66px; height: 36px; }
-  .theme-toggle-orb { width: 28px; height: 28px; transform: translateX(30px); }
-  .theme-celestial { right: 24px; opacity: .5; }
+.theme-toggle {
+  --theme-toggle-ease: cubic-bezier(.22, 1, .36, 1);
+  position: relative;
+  isolation: isolate;
+  display: inline-flex;
+  flex-shrink: 0;
+  width: 84px;
+  height: 44px;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid #8293a8;
+  border-radius: 999px;
+  background-color: #edf1f6;
+  box-shadow: inset 0 1px 3px #001d3d0d, 0 2px 6px #001d3d0a;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color 240ms ease, border-color 240ms ease, box-shadow 180ms ease;
 }
+.theme-toggle[data-dark="true"] { background-color: #000f23; border-color: #9d842e; }
+.theme-toggle:focus-visible { outline: 3px solid var(--pv-link); outline-offset: 4px; }
+.theme-toggle-track { position: absolute; inset: 0; color: #52657c; pointer-events: none; transition: color 240ms ease; }
+.theme-toggle-track svg { position: absolute; top: 50%; transform: translateY(-50%); }
+.theme-toggle-track-sun { left: 11px; }
+.theme-toggle-track-moon { right: 11px; }
+.theme-toggle[data-dark="true"] .theme-toggle-track { color: #a5bad0; }
+.theme-toggle-thumb {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  color: #001d3d;
+  background: linear-gradient(135deg, #ffd60a, #ffc300);
+  box-shadow: 0 2px 5px #001d3d26, inset 0 1px 0 #fff6;
+  pointer-events: none;
+  transform: translateX(0);
+  transition: transform 380ms var(--theme-toggle-ease), box-shadow 180ms ease;
+}
+.theme-toggle[data-dark="true"] .theme-toggle-thumb { transform: translateX(40px); }
+.theme-toggle-icon { grid-area: 1 / 1; transform-origin: center; transition: transform 340ms var(--theme-toggle-ease), opacity 200ms ease; }
+.theme-toggle-sun { opacity: 1; transform: rotate(0) scale(1); }
+.theme-toggle-moon { opacity: 0; transform: rotate(-75deg) scale(.45); }
+.theme-toggle[data-dark="true"] .theme-toggle-sun { opacity: 0; transform: rotate(75deg) scale(.45); }
+.theme-toggle[data-dark="true"] .theme-toggle-moon { opacity: 1; transform: rotate(0) scale(1); }
+.theme-toggle:active .theme-toggle-thumb { box-shadow: 0 1px 3px #001d3d33, inset 0 0 0 2px #001d3d1a; }
+@media (hover: hover) {
+  .theme-toggle:hover { border-color: #b28c11; box-shadow: 0 0 0 3px #ffc3001f; }
+}
+@media (forced-colors: active) {
+  .theme-toggle { background: Canvas; border-color: ButtonText; box-shadow: none; }
+  .theme-toggle-track { color: GrayText; }
+  .theme-toggle-thumb { forced-color-adjust: none; background: Highlight; color: HighlightText; border: 1px solid ButtonText; box-shadow: none; }
+  .theme-toggle:focus-visible { outline-color: Highlight; }
+}
+@keyframes atmosphere-drift { to { transform: translate3d(40px, -35px, 0) scale(1.08); } }
 
 /* Compatibility bridge for the existing utility surfaces. Photos and semantic chart series keep their colors. */
 html[data-theme="dark"] :is([class~="bg-white"], [class*="bg-white/"], [class~="bg-slate-50"], [class*="bg-slate-50/"], [class~="bg-gray-50"], [class~="bg-gray-100"], [class~="bg-slate-100"], [class*="bg-slate-100/"], [class~="bg-slate-200"], [class~="bg-blue-50"], [class*="bg-blue-50/"], [class~="bg-blue-100"], [class*="bg-blue-100/"], [class~="bg-sky-50"], [class*="bg-sky-50/"]) {
@@ -242,3 +271,18 @@ html[data-theme="dark"] .store-profile-glass {
   background: var(--pv-glass) !important;
   border-color: var(--pv-edge) !important;
 }
+/* Home registration invitation: a steady golden glow in either product theme. */
+html[data-theme] .app-canvas button.pv-merchant-join,
+html[data-theme] button.pv-merchant-join {
+  background: linear-gradient(135deg, #ffe477, #ffd60a 48%, #ffc300);
+  color: #001d3d;
+  border: 1px solid #ffe58b;
+  font-weight: 850;
+  box-shadow: 0 0 0 3px #ffc30018, 0 0 25px #ffc30052, 0 6px 16px #001d3d1f;
+}
+html[data-theme] button.pv-merchant-join:hover {
+  background: linear-gradient(135deg, #ffedaa, #ffdc35 48%, #ffd015);
+  color: #001d3d;
+  box-shadow: 0 0 0 4px #ffc30022, 0 0 34px #ffc30075, 0 7px 19px #001d3d25;
+}
+html[data-theme] button.pv-merchant-join:focus-visible { outline: 3px solid #5279af; outline-offset: 4px; }

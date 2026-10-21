@@ -10,6 +10,7 @@ import { SupabaseStorage,MAX_MEDIA_BYTES } from './storage.js';
 import { checkProfileContext,profileSettingsGrant } from './profiles.js';
 import { requireSettingsGrant } from './adminSettings.js';
 import {managerRegistrationRestricted} from './registrationRestrictions.js';
+import { moderateContent } from './contentSafety.js';
 export type Purpose = 'hostel'|'market'|'inspection'|'maintenance'|'repair'|'avatar';
 type HousingScope = {residenceId?:string;allocationId?:string;issueId?:string};
 const route = (work:(req:AuthRequest,res:any)=>Promise<unknown>):RequestHandler => (req,res,next) => {work(req as AuthRequest,res).catch(next);};
@@ -114,6 +115,8 @@ export async function ownedMedia(client:PoolClient,actor:VerifiedActor,url:unkno
   const asset = (await client.query(`select * from public.media_assets where id = $1 and owner_context_id = $2 and owner_auth_user_id = $3
     and state = 'ready' and purpose = $4 and inspection_id is not distinct from $5::uuid for share`,[url.slice('/api/media/'.length),actor.contextId,actor.authUserId,purpose,inspectionId || null])).rows[0];
   if (!asset) throw new ApiError(403,'This photograph does not belong to the authorized account and submission.');
+  if (!(await client.query('select private.media_content_approved($1) as allowed',[asset.id])).rows[0].allowed)
+    throw new ApiError(422,'This photograph must pass its safety review before it can be used.','moderation_required');
   return asset;
 }
 /** Install before the ordinary small JSON parser: authorization and bounded
@@ -149,6 +152,10 @@ export function installMedia(app:Express,auth:SupabaseAuth) {
       const housing = {residenceId:req.body?.hostelId === undefined ? undefined : uuid(req.body.hostelId),issueId:purpose === 'repair' ? uuid(req.body?.issueId) : undefined};
       await auth.db.authorizedSystem(req.actor,[req.actor.kind],client => canUploadMedia(client,req.actor,purpose,inspectionId,housing));
       const bytes = await decodeImageUpload(req.body,purpose==='avatar'?512:2048);
+      if (purpose==='market' || purpose==='avatar') {
+        checkProfileContext(req.actor,req.headers['x-pinevela-profile-context']);
+        await moderateContent(auth,req.actor,purpose==='market'?'market_image':'avatar',bytes,typeof req.body?.fileName==='string'?req.body.fileName.slice(0,255):'');
+      }
       const asset = await auth.db.authorizedSystem(req.actor,[req.actor.kind],async client => {
         if(grant)await requireSettingsGrant(client,req.actor,grant);
         return reserveMedia(client,req.actor,purpose,bytes,inspectionId,housing,purpose==='avatar');

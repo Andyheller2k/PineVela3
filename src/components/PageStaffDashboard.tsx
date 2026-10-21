@@ -1,3 +1,4 @@
+import { useNotifications } from '../context/NotificationContext';
 import SupportNotificationLink from './SupportNotificationLink';
 import HelpLink from './HelpLink';
 import AppearanceSettings from './AppearanceSettings';
@@ -64,16 +65,7 @@ interface StaffBargain {
   resolvedAt?: string;
 }
 
-interface NotificationItem {
-  category?: string;
-  link?: string;
-  id: string;
-  title: string;
-  message: string;
-  type?: 'info' | 'success' | 'warning' | 'error';
-  date?: string;
-  read?: boolean;
-}
+
 
 export default function PageStaffDashboard() {
   const { user, logout, updateUser } = useAuth();
@@ -99,7 +91,7 @@ export default function PageStaffDashboard() {
   const [loading, setLoading] = useState(true);
   const [toastMessage, setToastMessage] = useState<{ text: string; type: 'success' | 'error' | 'info' } | null>(null);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
-  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const { notifications, unreadCount } = useNotifications();
 
   // Maintenance Workflow States
   const [assignedIssues, setAssignedIssues] = useState<any[]>([]);
@@ -152,11 +144,11 @@ export default function PageStaffDashboard() {
     const current = () => mounted.current && account.current === accountId && profileReadVersion.current === version;
     setLoading(true);
     try {
-      const [allStaff, notifs, bargains] = await Promise.all([apiFetch('/api/staff'), apiFetch('/api/notifications'),
+      const [allStaff] = await Promise.all([apiFetch('/api/staff'),
         (fetchStaffBargains(true))]);
       if (!current()) return;
       setStaffRecord(Array.isArray(allStaff) ? allStaff.find(s => (s.userId || s.id) === user?.id) || null : null);
-      setNotifications(Array.isArray(notifs) ? notifs : []);
+
 
     } catch (error: any) { if (current()) triggerToast(error.message || 'Could not load your staff account.', 'error'); }
     finally { if (current()) setLoading(false); }
@@ -508,7 +500,7 @@ export default function PageStaffDashboard() {
 
       {/* MOBILE BOTTOM NAV (lg:hidden) */}
       <MobileNavigation label="Staff navigation" activeTab={activeTab} onSelect={id => setActiveTab(id as any)} items={[
-            { id: 'notifications', icon: Bell, label: 'Alerts', badge: notifications.filter(n => !n.read).length },
+            { id: 'notifications', icon: Bell, label: 'Alerts', badge: unreadCount },
             { id: 'settings', icon: Settings, label: 'Settings' },
             ...(employment ? [
               { id: 'maintenance', icon: Wrench, label: 'Orders', badge: assignedIssues.filter(i => !i.withdrawn && i.status !== 'Resolved' && !i.staffCompleted).length }
@@ -528,7 +520,7 @@ export default function PageStaffDashboard() {
           <span className="text-[9px] font-bold text-slate-500">Profile</span>
         </button>
         <div className="w-px h-6 bg-slate-200/70 shrink-0" />
-        {[{ id: 'maintenance', label: 'Fixes', icon: Wrench, badge: employment ? assignedIssues.filter(i => !i.withdrawn && i.status !== 'Resolved' && !i.staffCompleted).length : 0 }, { id: 'notifications', label: 'Alerts', icon: Bell, badge: notifications.length }, { id: 'settings', label: 'Settings', icon: Settings }].map(tab => <button aria-current={activeTab === tab.id ? 'page' : undefined} key={tab.id} onClick={() => setActiveTab(tab.id as any)} aria-label={`${tab.label}${tab.badge ? ` (${tab.badge})` : ''}`} className={`flex-1 min-w-0 flex flex-col items-center gap-0.5 py-1.5 rounded-xl text-[9px] font-bold cursor-pointer ${activeTab === tab.id ? 'text-blue-700 bg-blue-100/65' : 'text-slate-500 hover:bg-white/70'}`}><span className="relative inline-flex"><tab.icon className="w-4 h-4" /><TopNavBadge count={tab.badge} /></span><span className="truncate max-w-full">{tab.label}</span></button>)}<button onClick={() => setShowLogoutConfirm(true)} title="Sign Out" className="shrink-0 flex flex-col items-center gap-0.5 px-2 py-1.5 text-[9px] font-bold text-rose-600 hover:bg-rose-50 rounded-xl cursor-pointer"><LogOutIcon className="w-4 h-4" /><span>Sign Out</span></button><button onClick={() => setIsSidebarTopNav(false)} title="Show sidebar" className="p-2 text-slate-500 hover:text-blue-700 cursor-pointer"><PanelLeftOpen className="w-4 h-4" /></button><HelpLink compact className="!px-2" /></div></nav>}
+        {[{ id: 'maintenance', label: 'Fixes', icon: Wrench, badge: employment ? assignedIssues.filter(i => !i.withdrawn && i.status !== 'Resolved' && !i.staffCompleted).length : 0 }, { id: 'notifications', label: 'Alerts', icon: Bell, badge: unreadCount }, { id: 'settings', label: 'Settings', icon: Settings }].map(tab => <button aria-current={activeTab === tab.id ? 'page' : undefined} key={tab.id} onClick={() => setActiveTab(tab.id as any)} aria-label={`${tab.label}${tab.badge ? ` (${tab.badge})` : ''}`} className={`flex-1 min-w-0 flex flex-col items-center gap-0.5 py-1.5 rounded-xl text-[9px] font-bold cursor-pointer ${activeTab === tab.id ? 'text-blue-700 bg-blue-100/65' : 'text-slate-500 hover:bg-white/70'}`}><span className="relative inline-flex"><tab.icon className="w-4 h-4" /><TopNavBadge count={tab.badge} /></span><span className="truncate max-w-full">{tab.label}</span></button>)}<button onClick={() => setShowLogoutConfirm(true)} title="Sign Out" className="shrink-0 flex flex-col items-center gap-0.5 px-2 py-1.5 text-[9px] font-bold text-rose-600 hover:bg-rose-50 rounded-xl cursor-pointer"><LogOutIcon className="w-4 h-4" /><span>Sign Out</span></button><button onClick={() => setIsSidebarTopNav(false)} title="Show sidebar" className="p-2 text-slate-500 hover:text-blue-700 cursor-pointer"><PanelLeftOpen className="w-4 h-4" /></button><HelpLink compact className="!px-2" /></div></nav>}
       {!isSidebarTopNav && <aside data-portal-navigation="sidebar" className={`hidden lg:flex ${isSidebarCollapsed ? 'w-20 p-4' : 'w-72 p-6'} my-6 ml-6 h-[calc(100vh-3rem)] bg-gradient-to-br from-sky-100/90 via-blue-100/85 to-amber-50/40 backdrop-blur-3xl border border-sky-200/80 shadow-2xl rounded-3xl flex flex-col justify-between shrink-0 overflow-y-auto z-20 transition-all duration-300 relative`}>
         <button onClick={() => setIsSidebarTopNav(true)} title="Use top navigation" className="absolute top-3 right-3 p-2 rounded-xl text-slate-500 hover:text-blue-700 hover:bg-white/70 cursor-pointer"><PanelLeftClose className="w-4 h-4" /></button>
 
@@ -657,11 +649,11 @@ export default function PageStaffDashboard() {
                   </div>
                 )}
               </div>
-              {!isSidebarCollapsed && notifications.length > 0 && (
+              {!isSidebarCollapsed && unreadCount > 0 && (
                 <span className={`px-2 py-0.5 rounded-full text-[9px] font-black shrink-0 ${
                   activeTab === 'notifications' ? 'bg-amber-400 text-slate-950' : 'bg-blue-900 text-white'
                 }`}>
-                  {notifications.length}
+                  {unreadCount}
                 </span>
               )}
             </button>
@@ -815,6 +807,7 @@ export default function PageStaffDashboard() {
                   return (
                     <div
                       key={n.id}
+                      data-notification-id={n.id}
                       className={`p-5 bg-sky-50/55 backdrop-blur-xl border rounded-2xl shadow-xs transition-all space-y-2 ${
                         isSuccess ? 'border-emerald-200 bg-emerald-50/30' : isWarning ? 'border-rose-200 bg-rose-50/20' : 'border-slate-200'
                       }`}

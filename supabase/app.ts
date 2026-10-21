@@ -1,6 +1,6 @@
 import {installSystemWipeReviews} from './systemWipeReviews.js';
 import express, { type ErrorRequestHandler } from 'express';
-import { ApiError, SupabaseDatabase } from './db.js';
+import { ApiError, SessionExpiredError, SupabaseDatabase } from './db.js';
 import { SupabaseAuth, csrfBoundary, installSupabaseAuth, type AuthRequest } from './auth.js';
 import { installCatalog } from './catalog.js';
 import { installNotifications } from './notifications.js';
@@ -55,7 +55,10 @@ import { installRegistrationRestrictions } from './registrationRestrictions.js';
 import { installManagerOnboarding } from './managerOnboarding.js';
 import { publicPlatformSettings } from '../platformSettings.js';
 import { installSupport } from './support.js';
-import { AttemptBudgets, ResourceLimitError, trustedProxyAddresses } from '../resourceSecurity.js';
+import { installModeration } from './moderation.js';
+import { installContentSafety } from './contentSafety.js';
+import { installCompanion } from './companion.js';
+import { AttemptBudgets, canonicalOperationPath, ResourceLimitError, trustedProxyAddresses } from '../resourceSecurity.js';
 
 /** Replacement backend is tested independently until all active routes are ported.
  * It never imports localDb, persistentDb, JSON credentials, or legacy bootstrap. */
@@ -67,14 +70,15 @@ export function createSupabaseApp(db: SupabaseDatabase) {
   app.use('/api', (_req, res, next) => { res.set({ 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' }); next(); });
   app.use('/api', (req, _res, next) => {
     try {
+      const path = canonicalOperationPath(req.path);
       const limits = [
         { scope: 'supabase-api-ip', identity: req.ip || req.socket.remoteAddress || '', maximum: 900, windowMs: 60000 },
         { scope: 'supabase-api-global', identity: 'all', maximum: 3000, windowMs: 60000 },
       ];
-      if(req.method==='POST'&&req.path==='/auth/enrollments/google/start')limits.push({scope:'supabase-auth-ip',identity:req.ip||req.socket.remoteAddress||'',maximum:20,windowMs:60000});
-      if (req.method === 'POST' && ((req.path.startsWith('/auth/staff-invitations/') || req.path.startsWith('/auth/officer-invitation/')) || /^\/auth\/(login|register-unified|verify-unified|primary-reentry(?:\/verify)?|recover(?:\/complete)?|change-password|portal-pin|enrollments(?:\/[^/]+\/(?:verify|resend|reactivate(?:\/send-code)?))?|google\/start)$/.test(req.path) || /\/(login|verification-team-login)$/.test(req.path))) limits.push({ scope: 'supabase-auth-ip', identity: req.ip || req.socket.remoteAddress || '', maximum: 20, windowMs: 60000 });
-      if (req.method === 'POST' && ['/room-keys/claim','/room-keys/verify','/residents/onboard'].includes(req.path)) limits.push({ scope:'supabase-room-key-ip',identity:req.ip || req.socket.remoteAddress || '',maximum:10,windowMs:60000 });
-      if(req.method==='POST' && (['/users/delete-registered-account','/student/delete-room'].includes(req.path) || /^\/(?:manager\/closure-request\/[^/]+\/withdraw|admin\/manager-closure-requests\/[^/]+\/(?:reject|review))$/.test(req.path)))
+      if(req.method==='POST'&&path==='/auth/enrollments/google/start')limits.push({scope:'supabase-auth-ip',identity:req.ip||req.socket.remoteAddress||'',maximum:20,windowMs:60000});
+      if (req.method === 'POST' && ((path.startsWith('/auth/staff-invitations/') || path.startsWith('/auth/officer-invitation/')) || /^\/auth\/(login|register-unified|verify-unified|primary-reentry(?:\/verify)?|recover(?:\/complete)?|change-password|portal-pin|enrollments(?:\/[^/]+\/(?:verify|resend|reactivate(?:\/send-code)?))?|google\/start)$/.test(path) || /\/(login|verification-team-login)$/.test(path))) limits.push({ scope: 'supabase-auth-ip', identity: req.ip || req.socket.remoteAddress || '', maximum: 20, windowMs: 60000 });
+      if (req.method === 'POST' && ['/room-keys/claim','/room-keys/verify','/residents/onboard'].includes(path)) limits.push({ scope:'supabase-room-key-ip',identity:req.ip || req.socket.remoteAddress || '',maximum:10,windowMs:60000 });
+      if(req.method==='POST' && (['/users/delete-registered-account','/student/delete-room'].includes(path) || /^\/(?:manager\/closure-request\/[^/]+\/withdraw|admin\/manager-closure-requests\/[^/]+\/(?:reject|review))$/.test(path)))
         limits.push({scope:'supabase-closure-ip',identity:req.ip || req.socket.remoteAddress || '',maximum:20,windowMs:60000});
       budgets.reserve(limits); next();
     } catch (error) { next(error); }
@@ -99,6 +103,9 @@ export function createSupabaseApp(db: SupabaseDatabase) {
   });
   installSupabaseAuth(app, auth); installNotifications(app, auth);
   installSupport(app, auth);
+  installModeration(app, auth);
+  installContentSafety(app, auth);
+  installCompanion(app, auth);
   installProfiles(app,auth);
   installAppearance(app,auth);
   installPortalSecurity(app,auth);
@@ -161,9 +168,11 @@ export function createSupabaseApp(db: SupabaseDatabase) {
       sqlstate: /^[0-9A-Z]{5}$/.test(error?.code || '') ? error.code : undefined,
     });
     if (error instanceof ApiError && error.code==='platform_maintenance') res.set('Retry-After','30');
+    if (error instanceof ResourceLimitError) res.set('Retry-After', String(error.retryAfter));
     res.status(status).json({ ...(error instanceof ApiError && error.code==='platform_maintenance' ? {maintenanceMode:true} : {}),error: known ? error.message : status === 400 ? 'Invalid JSON request.' : status === 413 ? 'Request body is too large.' :
       status === 415 ? 'Use uncompressed UTF-8 JSON.' : 'The request could not complete.',
       ...(error instanceof ApiError && error.code ? { code:error.code } : {}),
+      ...(error instanceof SessionExpiredError ? {sessionExpired:true} : {}),
       ...(error instanceof ApiError && ['account_banned','account_restricted'].includes(error.code||'') ?
         {accountBanned:error.code==='account_banned',accountRestricted:error.code==='account_restricted',accountAccess:(error as any).accountAccess} : {}),
       ...(error instanceof ApiError && error.code === 'manager_key_required' ? {managerKeyRequired:true} : {}) });

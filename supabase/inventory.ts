@@ -8,6 +8,9 @@ import {notify} from './notifications.js';
 import {PLAN_LIMITS,marketPlanBenefits} from '../marketPlans.js';
 import {internationalPhone} from '../internationalPhone.js';
 import {servicePoint} from '../serviceLocation.js';
+import { moderateContent,requireContentApproval } from './contentSafety.js';
+import { listingSafetyText } from './contentSafetyPolicy.js';
+import { checkProfileContext } from './profiles.js';
 const route=(work:(req:AuthRequest,res:any)=>Promise<unknown>):RequestHandler=>(req,res,next)=>{work(req as AuthRequest,res).catch(next);};
 const allowed=['title','description','price','category','stockQuantity','imageUrl','additionalImages','condition','meetingLocation','location','callLine','isService','serviceCategory','serviceLocationMode','workingDays','openingTime','closingTime','isOpen247','lat','lng','isAvailable','priceCategories'];
 function fields(body:any){if(!body || typeof body!=='object' || Array.isArray(body) || Object.keys(body).some(k=>!allowed.includes(k)))throw new ApiError(400,'Unsupported listing fields.');}
@@ -71,6 +74,8 @@ export async function saveListing(c:PoolClient,a:VerifiedActor,body:any,id?:stri
     const optionId=option.id===undefined?undefined:uuid(option.id);if(optionId && (!old || !source.priceCategories.some((p:any)=>p.id===optionId)))throw new ApiError(400,'Price option does not belong to this service.');
     const label=text(option.name,120),price=money(option.price),image=option.imageUrl || null;if(image)await ownedMedia(c,a,image,'market');validated.push({id:optionId,label,price,image});}
   if(new Set(validated.map(o=>o.label.toLowerCase())).size!==validated.length || new Set(validated.filter(o=>o.id).map(o=>o.id)).size!==validated.filter(o=>o.id).length)throw new ApiError(400,'Use distinct service price options.');
+  await requireContentApproval(c,a,'listing_text',listingSafetyText({title:row.title,description:row.description,category:row.category,
+    serviceCategory:row.service_category,location:row.meeting_location,priceCategories:validated.map(option=>({name:option.label}))}));
   const plan=await storePlan(c,s.id),limits=PLAN_LIMITS[plan];
   const capacity=(await c.query(`select count(*) filter(where kind='product')::integer as items,count(*) filter(where kind='service')::integer as services,
     coalesce(sum(stock_quantity) filter(where kind='product'),0)::integer as units from public.listings where store_id=$1 and retired_at is null and ($2::uuid is null or id<>$2)`,[s.id,id || null])).rows[0];
@@ -91,6 +96,20 @@ export async function removeListing(c:PoolClient,a:VerifiedActor,id:string){cons
   if((await c.query("select id from public.market_orders where listing_id=$1 and status in ('awaiting_seller','pending_meetup') and reserved_until>now() limit 1",[id])).rowCount)throw new ApiError(409,'Resolve active orders before removing this listing.');
   await c.query('update public.listings set retired_at=now(),is_published=false where id=$1',[id]);await audit(c,a,id,'listing_removed');await notify(c,[a.contextId],{category:'market',title:'Listing Removed',message:`${listing.title} was removed from your inventory.`,sender:a.contextId});return {success:true,idempotent:false};}
 export function installInventory(app:Express,auth:SupabaseAuth){app.get('/api/digital-market/inventory',auth.require(['seller']),route(async(req,res)=>res.json(await auth.db.authorizedSystem(req.actor,['seller'],c=>sellerInventory(c,req.actor)))));
-  app.post('/api/digital-market/products',auth.require(['seller']),route(async(req,res)=>res.status(201).json(await auth.db.authorizedSystem(req.actor,['seller'],c=>saveListing(c,req.actor,req.body)))));
-  app.put('/api/digital-market/products/:id',auth.require(['seller']),route(async(req,res)=>res.json(await auth.db.authorizedSystem(req.actor,['seller'],c=>saveListing(c,req.actor,req.body,uuid(req.params.id))))));
+  const save=(update:boolean)=>route(async(req,res)=>{
+    checkProfileContext(req.actor,req.headers['x-pinevela-profile-context']);
+    const id=update?uuid(req.params.id):undefined;
+    const content=await auth.db.authorizedSystem(req.actor,['seller'],async c=>{
+      fields(req.body);const store=await sellerStore(c,req.actor);await paid(c,store);
+      const source:any=id?(await detail(c,store,id))[0]:{};if(id&&!source)throw new ApiError(404,'Listing not found in your store.');
+      const input={...source,...req.body,location:req.body.location??req.body.meetingLocation??source.location??''};
+      const service=id?source.isService:req.body.isService===true;
+      return listingSafetyText({...input,serviceCategory:service?input.serviceCategory:undefined});
+    });
+    await moderateContent(auth,req.actor,'listing_text',content);
+    const result=await auth.db.authorizedSystem(req.actor,['seller'],c=>saveListing(c,req.actor,req.body,id));
+    res.status(update?200:201).json(result);
+  });
+  app.post('/api/digital-market/products',auth.require(['seller']),save(false));
+  app.put('/api/digital-market/products/:id',auth.require(['seller']),save(true));
   app.delete('/api/digital-market/products/:id',auth.require(['seller']),route(async(req,res)=>res.json(await auth.db.authorizedSystem(req.actor,['seller'],c=>removeListing(c,req.actor,uuid(req.params.id))))));}

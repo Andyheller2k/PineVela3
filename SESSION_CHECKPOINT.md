@@ -58,7 +58,7 @@
   * **P2P Resident Marketplace:** Buy/sell/trade textbooks, appliances, and room gear.
   * **B2B Property Supply Hub:** Hostel managers bulk-purchasing maintenance gear and inventory.
   * **Service & Skills Exchange:** Student/staff freelance service dispatch.
-  * **PineVela Pay:** Escrow & PIN verification on delivery.
+  * **PineVela Pay:** Pay on Campus Delivery; the PIN records the physical handover.
 * **Supabase Migration Plan:**
   1. Migrate `pinevela_store.json` to PostgreSQL tables with B-Tree indexes.
   2. Shift Base64 images/PDFs to Supabase Storage Buckets.

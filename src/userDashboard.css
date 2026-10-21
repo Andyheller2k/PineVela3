@@ -1,0 +1,167 @@
+/* Primary-user dashboard only. Existing palette, catalog geometry and other
+   portals keep their own surface rules. */
+.user-dashboard {
+  height: 100dvh;
+  min-height: 0;
+  --user-motion: cubic-bezier(.22, 1, .36, 1);
+}
+.user-dashboard-content { min-width: 0; min-height: 0; scroll-behavior: auto; overscroll-behavior-y: contain; }
+.user-dashboard .user-section-title {
+  font-size: clamp(1.25rem, 1.1rem + .6vw, 1.75rem);
+  font-weight: 800;
+  letter-spacing: -.035em;
+  line-height: 1.25;
+}
+.user-dashboard .user-section-description { font-size: .875rem; font-weight: 500; line-height: 1.65; max-width: 65ch; margin-top: .5rem; }
+.user-dashboard-content > .animate-fadeIn,
+.user-dashboard .user-catalog-panel { animation: user-view-enter .2s var(--user-motion) both; }
+.user-dashboard :is(button, a) { -webkit-tap-highlight-color: transparent; }
+.user-dashboard button:not(:disabled):not([role="switch"]) { transition: transform .15s var(--user-motion), box-shadow .18s, border-color .18s, color .18s, background-color .18s; }
+.user-dashboard button:not(:disabled):not([role="switch"]):active { transform: scale(.975); }
+.user-dashboard :is(button, a, input, select):focus-visible { outline-offset: 3px; }
+
+/* Indicators have their own layer, so only the small gold shape travels. */
+.user-navigation-highlight {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  border: 1px solid rgb(255 214 10 / .7);
+  border-radius: inherit;
+  background: linear-gradient(115deg, #ffc300, #ffd60a);
+  box-shadow: inset 0 1px 0 rgb(255 244 191 / .4), 0 3px 12px rgb(0 8 20 / .12);
+}
+.user-dashboard [data-user-navigation],
+.user-bottom-navigation .ux-mobile-destination,
+.user-dashboard .user-catalog-switcher button { position: relative; isolation: isolate; }
+.user-dashboard [data-user-navigation] > :not(.user-navigation-highlight),
+.user-bottom-navigation .ux-mobile-destination > :not(.user-navigation-highlight),
+.user-dashboard .user-catalog-switcher button > :not(.user-navigation-highlight) { position: relative; z-index: 1; }
+html[data-theme] .user-dashboard [data-user-navigation][aria-current="page"],
+html[data-theme] .user-bottom-navigation[data-animated-navigation] button[aria-current="page"],
+html[data-theme] .user-dashboard .user-catalog-switcher button[aria-pressed="true"] { background: transparent !important; box-shadow: none !important; }
+html[data-theme] .user-dashboard .user-catalog-switcher button[aria-pressed="true"] { border-color: transparent; }
+.user-dashboard .user-catalog-switcher { padding: 4px; gap: 4px; width: 100%; max-width: 28rem; }
+.user-dashboard .user-catalog-switcher button { min-height: 44px; padding-block: 8px; font-size: .875rem; }
+
+/* Five destinations, including the companion, fit within comfortable targets. */
+html[data-theme][data-appearance="product"] .user-bottom-navigation {
+  left: max(10px, env(safe-area-inset-left)) !important;
+  right: max(10px, env(safe-area-inset-right)) !important;
+  bottom: max(8px, env(safe-area-inset-bottom)) !important;
+  border-radius: 24px !important;
+  border: 1px solid rgb(255 195 0 / .45) !important;
+  padding-bottom: 4px !important;
+  box-shadow: 0 8px 28px rgb(0 8 20 / .22), inset 0 1px 0 rgb(255 214 10 / .12) !important;
+}
+.user-bottom-navigation > [data-mobile-nav-items] { gap: 3px; padding: 6px; }
+html[data-theme] .user-bottom-navigation [data-mobile-nav-items] .ux-mobile-destination {
+  flex: 1 1 0;
+  min-height: 52px;
+  min-width: 44px !important;
+  padding: 7px 3px !important;
+  border-radius: 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  color: #dce7f3;
+}
+.user-bottom-navigation [data-mobile-nav-items] .ux-mobile-destination > span:not(.user-navigation-highlight) { overflow: visible; font-size: 10px !important; line-height: 1.15; font-weight: 650; }
+.user-bottom-navigation .ux-mobile-destination .user-navigation-highlight { display: block; max-width: none; overflow: visible; }
+.user-bottom-navigation .ux-mobile-destination > span > svg { width: 20px; height: 20px; stroke-width: 1.8; }
+html[data-theme] .user-bottom-navigation .pv-companion-nav-launcher[aria-expanded="true"] { background: #ffd60a; color: #001d3d; }
+html[data-theme] .user-bottom-navigation .pv-companion-nav-launcher[aria-expanded="true"] :is(span, svg) { color: #001d3d; }
+.user-bottom-navigation .pv-companion-badge { min-width: 15px; height: 15px; top: -6px; right: -9px; font-size: 8px; }
+.user-bottom-navigation .pv-companion-nav-launcher > span:first-child::before {
+  content: ""; position: absolute; inset: -4px; border: 1px solid rgb(255 214 10 / .35); border-radius: 8px;
+}
+.user-dashboard .user-dashboard-header { flex-shrink: 0; gap: 8px; }
+.user-dashboard-header .user-dashboard-brand { min-width: 0; flex: 1; }
+.user-dashboard-header .user-dashboard-brand > div:last-child { min-width: 0; }
+.user-dashboard-header .user-dashboard-brand :is(h1, p) { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.user-dashboard-header > div:last-child { flex-shrink: 0; gap: 3px; }
+.user-dashboard-header :is(button, a) { min-height: 44px; min-width: 44px; }
+.user-dashboard-header .user-header-alerts { color: inherit; }
+.user-dashboard-header .user-header-alerts [data-notification-count] { right: 0; top: 0; }
+
+/* Expanded sidebar and the existing compact-top layout remain available. */
+.user-dashboard-sidebar { transition: width .22s var(--user-motion), padding .22s var(--user-motion), margin .22s var(--user-motion), opacity .16s, border-width .22s; overflow-x: hidden; }
+.user-dashboard-sidebar > div { min-width: 14.875rem; }
+.user-dashboard-sidebar [data-user-navigation] { min-height: 68px; padding: 10px 12px; }
+.user-dashboard-sidebar [data-user-navigation] > div { width: 100%; }
+.user-dashboard-sidebar [data-user-navigation] > div > div:last-child > div:first-child { font-size: 13px; font-weight: 700; letter-spacing: 0; }
+.user-dashboard-sidebar [data-user-navigation] > div > div:last-child > div:last-child { font-size: 11px; margin-top: 3px; line-height: 1.4; }
+.user-dashboard-sidebar [data-user-navigation] .user-navigation-highlight::before {
+  content: ""; position: absolute; top: 17px; bottom: 17px; left: 5px; width: 3px; border-radius: 2px; background: #001d3d;
+}
+.user-dashboard[data-navigation-layout="top"] .user-dashboard-sidebar { width: 0; padding-inline: 0; margin-inline: 0; border-width: 0; opacity: 0; visibility: hidden; pointer-events: none; }
+.user-top-navigation { animation: user-view-enter .2s var(--user-motion) both; }
+.user-top-navigation [data-user-navigation] { min-height: 48px; border-radius: 12px; }
+.user-top-navigation [data-user-navigation] > span:last-child { font-size: 10px; }
+
+/* Content geometry remains unchanged; feedback is confined to the card itself. */
+.user-dashboard :is([data-listing-id], [data-residence-id]) { transition: transform .18s var(--user-motion), box-shadow .18s, border-color .18s; }
+.user-dashboard .market-card-favorite[aria-pressed="true"] svg { animation: user-favorite-pop .24s var(--user-motion); }
+.user-dashboard button.pv-merchant-join { position: relative; overflow: hidden; }
+.user-dashboard button.pv-merchant-join::after {
+  content: ""; position: absolute; inset: -50% -30%; pointer-events: none;
+  background: linear-gradient(110deg, transparent 35%, rgb(255 248 202 / .48) 50%, transparent 65%);
+  transform: translateX(-120%); animation: user-merchant-shine 1s .6s var(--user-motion) both;
+}
+.user-dashboard .marketplace-filter-bar { box-shadow: 0 5px 16px rgb(0 29 61 / .06); }
+.user-dashboard .marketplace-filter-bar input { box-shadow: none; }
+.user-dashboard .marketplace-filter-bar input:focus { box-shadow: 0 0 0 2px rgb(255 195 0 / .24); }
+html[data-theme] .user-dashboard .market-price-toggle { color: var(--pv-text); background: var(--pv-panel); border-color: var(--pv-field-edge); }
+html[data-theme] .user-dashboard .market-price-toggle:is([aria-expanded="true"], [data-filtered="true"]) { color: #001d3d; background: linear-gradient(115deg, #ffc300, #ffd60a); border-color: #ffd60a; }
+.user-dashboard .market-price-toggle:not(:disabled):not([role="switch"]) { transition: transform .15s var(--user-motion), box-shadow .18s, border-color .18s; }
+.user-dashboard .market-categories { scrollbar-width: none; }
+.user-dashboard .market-categories::-webkit-scrollbar { display: none; }
+.user-dashboard .market-categories button { min-height: 36px; flex-shrink: 0; padding-inline: 12px; border: 1px solid var(--pv-edge); border-radius: 999px; }
+.user-dashboard .market-categories button:not(:disabled):not([role="switch"]) { transition: none; }
+.user-dashboard-content > .animate-fadeIn > [class*="rounded-3xl"] { box-shadow: 0 4px 16px rgb(0 8 20 / .05); }
+
+/* Actual native dialogs retain focus trapping, Escape and the visible close control. */
+html[data-theme] .user-price-overlay { display: flex; align-items: flex-end; justify-content: center; padding: 10px; padding-bottom: max(10px, env(safe-area-inset-bottom)); background: rgb(0 8 20 / .35); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+.user-price-sheet { width: min(100%, 480px); max-height: 75dvh; overflow-y: auto; border-radius: 24px; animation: user-sheet-enter .26s cubic-bezier(.22, 1, .36, 1) both; box-shadow: 0 12px 40px rgb(0 8 20 / .22); }
+html[data-theme] .user-price-sheet .market-price-panel { margin: 0; padding: 16px; border-radius: 24px; border: 1px solid rgb(255 195 0 / .5); }
+html[data-theme="light"] .user-price-sheet .market-price-panel { background: #ffffff; }
+html[data-theme="dark"] .user-price-sheet .market-price-panel { background: #001d3d; }
+.user-price-sheet .market-price-heading { margin-bottom: 10px; }
+.user-price-sheet .market-price-presets { padding-bottom: 4px; scrollbar-width: none; }
+.user-price-sheet .market-price-presets::-webkit-scrollbar { display: none; }
+
+@media (hover: hover) and (pointer: fine) {
+  .user-dashboard :is([data-listing-id], [data-residence-id]):hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgb(0 8 20 / .1); }
+}
+@media (max-width: 1023px) {
+  .user-dashboard-content { padding-bottom: calc(var(--pv-mobile-nav-height, 80px) + 24px + env(safe-area-inset-bottom)); }
+}
+@media (max-width: 639px) {
+  .user-dashboard-header { padding: 8px 12px; }
+  .user-dashboard-header .user-header-signout-label { display: none; }
+  .user-dashboard-header .user-dashboard-brand h1 { font-size: 12px; }
+  .user-dashboard .market-categories { gap: 6px; }
+  .user-dashboard .market-categories button { min-height: 40px; }
+  .user-dashboard .user-section-title > [class*="rounded-full"] { font-size: 9px; letter-spacing: .02em; }
+}
+@media (min-width: 640px) and (max-width: 1023px) {
+  html[data-theme][data-appearance="product"] .user-bottom-navigation { max-width: 560px; margin-inline: auto; }
+}
+@keyframes user-view-enter { from { opacity: 0; translate: 0 6px; } to { opacity: 1; translate: 0 0; } }
+@keyframes user-sheet-enter { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes user-favorite-pop { 50% { transform: scale(1.18); } }
+@keyframes user-merchant-shine { to { transform: translateX(120%); } }
+@media (prefers-reduced-motion: reduce) {
+  .user-dashboard *, .user-dashboard *::before, .user-dashboard *::after,
+  .user-price-sheet { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+  .user-dashboard :is([data-listing-id], [data-residence-id]):hover { transform: none; }
+}
+@media (forced-colors: active) {
+  .user-navigation-highlight { background: Highlight !important; background-image: none; border-color: Highlight; box-shadow: none; }
+  html[data-theme] .user-dashboard [data-user-navigation][aria-current="page"] :is(span, div, svg),
+  html[data-theme] .user-bottom-navigation button[aria-current="page"] :is(span, svg),
+  html[data-theme] .user-dashboard .user-catalog-switcher button[aria-pressed="true"] > span:not(.user-navigation-highlight) { color: HighlightText !important; }
+  html[data-theme] .user-price-sheet .market-price-panel { background: Canvas; color: CanvasText; border-color: CanvasText; }
+}

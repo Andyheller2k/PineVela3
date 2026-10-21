@@ -5,11 +5,12 @@ import { SupabaseAuth, type AuthRequest } from './auth.js';
 const route = (work: (req: AuthRequest, res: any) => Promise<unknown>): RequestHandler => (req, res, next) => { work(req as AuthRequest, res).catch(next); };
 
 /** Call within the same authorized transaction that changes the workflow state. */
-export async function notify(client: PoolClient, recipients: string[], notice: { category: string; title: string; message: string; sender?: string; link?: string; adminMessageType?: string }) {
+export async function notify(client: PoolClient, recipients: string[], notice: { category: string; title: string; message: string; sender?: string; link?: string; adminMessageType?: string; orderId?:string }) {
   const ids = [...new Set(recipients)];
   if (!ids.length) return;
   const { rows: [record] } = await client.query(`insert into public.notifications(sender_context_id,category,title,message,link,admin_message_type)
     values ($1,$2,$3,$4,$5,$6) returning id`, [notice.sender || null, notice.category, notice.title, notice.message, notice.link || null, notice.adminMessageType || null]);
+  if(notice.orderId)await client.query('update public.notifications set market_order_id=$2 where id=$1',[record.id,uuid(notice.orderId)]);
   await client.query('insert into public.notification_recipients(notification_id,context_id) select $1,unnest($2::uuid[])', [record.id, ids]);
   await client.query("select pg_notify('pinevela_notifications',id::text) from unnest($1::uuid[]) id", [ids]);
   return record.id;
@@ -27,7 +28,7 @@ export async function readNotifications(client: PoolClient, actor: VerifiedActor
   return rows.map(n => ({ id: n.id, title: n.title, message: n.message, type: n.admin_message_type || n.category, category: n.category,
     date: n.created_at, read: n.read_at !== null, link: n.link, adminMessage: n.category === 'admin_message',
     module: ['admin_settings','admin_governance'].includes(n.category) ? n.category : undefined,
-    marketChat:n.category==='market_message',messageId:n.market_message_id || n.id,marketRatingId:n.market_review_id || undefined }));
+    orderId:n.market_order_id||undefined,marketChat:n.category==='market_message',messageId:n.market_message_id || n.id,marketRatingId:n.market_review_id || undefined }));
 }
 export async function pendingMessages(client: PoolClient, actor: VerifiedActor) {
   return (await client.query(`select n.id,n.title,n.message,n.admin_message_type as type,n.created_at as date from public.notifications n
@@ -42,15 +43,22 @@ export async function acknowledgeMessage(client: PoolClient, actor: VerifiedActo
 }
 export function installNotifications(app: Express, auth: SupabaseAuth) {
   const db = auth.db;
+  const checkContext = (req: AuthRequest) => {
+    const expected = req.headers['x-pinevela-profile-context'];
+    if (expected !== undefined && expected !== req.actor.contextId) throw new ApiError(409, 'Your active account changed. Reopen notifications.');
+  };
   app.get('/api/notifications', auth.require(), route(async (req, res) => {
+    checkContext(req);
     const market = ['market','seller','merchant','ecommerce'].includes(String(req.query.scope || req.query.category || ''));
     return res.json(await db.readActor(req.actor, client => readNotifications(client, req.actor, market)));
   }));
   app.put('/api/notifications/read-all', auth.require(), route(async (req, res) => {
+    checkContext(req);
     await db.actor(req.actor, client => client.query('update public.notification_recipients set read_at = coalesce(read_at,now()) where context_id = $1', [req.actor.contextId]));
     return res.json({ success: true });
   }));
   app.put('/api/notifications/:id/read', auth.require(), route(async (req, res) => {
+    checkContext(req);
     const changed = await db.actor(req.actor, client => client.query('update public.notification_recipients set read_at = coalesce(read_at,now()) where notification_id = $1 and context_id = $2', [uuid(req.params.id), req.actor.contextId]));
     if (!changed.rowCount) throw new ApiError(404, 'Notification not found.'); return res.json({ success: true });
   }));

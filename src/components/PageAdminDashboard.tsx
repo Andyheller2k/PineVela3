@@ -1,4 +1,5 @@
 import AdminCustomerService from './AdminCustomerService';
+import AdminPaymentReversals from './AdminPaymentReversals';
 import HelpLink from './HelpLink';
 import AppearanceSettings from './AppearanceSettings';
 import { routePopupFeedback } from '../lib/feedback';
@@ -622,13 +623,13 @@ export default function PageAdminDashboard() {
   const totalFeesCollected = feesPaid.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
 
   // Revenue is counted once from server-verified live transactions. Test/free payments are excluded.
-  const totalMerchantFeesCollected = (adminData?.paymentRecords || []).filter((p: any) => p.mode === 'live' && p.purpose !== 'housing').reduce((sum: number, p: any) => sum + p.amount, 0);
+  const totalMerchantFeesCollected = (adminData?.paymentRecords || []).filter((p: any) => p.mode === 'live' && p.purpose !== 'housing').reduce((sum: number, p: any) => sum + Number(p.netAmount ?? p.amount), 0);
   const activeMerchantCount = digitalMarketStores.filter((s: any) => (s.isActive)).length;
 
   const pendingHostelsCount = residences.filter(r => (pendingResidenceReview(r))).length;
 
   const pendingBoardRequestsCount = boardRequests.filter(r => r.status === 'Pending').length;
-  const adminAlertCount = pendingBoardRequestsCount + pendingHostelsCount + unreadCount;
+  const adminAlertCount = unreadCount;
 
   return (
     <div onClickCapture={actionFeedback.capture} onSubmitCapture={actionFeedback.capture} className="page-canvas min-h-screen h-screen flex flex-col lg:flex-row text-slate-800 overflow-hidden font-sans">
@@ -1650,7 +1651,7 @@ export default function PageAdminDashboard() {
           <div className="space-y-6 animate-fadeIn relative z-10 max-w-4xl">
             <AppearanceSettings />
             <AdminSettingsPanel />
-            <AdminCustomerService key={user?.id} />
+            <AdminCustomerService key={user?.id} onOpenApprovals={() => setActiveTab('governance')} onReviewAccount={report => { const account = allUsersData.users.find(account => account.id === report.targetContextId); setActiveTab('user_accounts'); if (account) setModerationTarget(account); else triggerToast('Refresh Accounts and select the reported account using its account ID to open the required review.'); }} />
 
             <button onClick={() => setActiveTab('governance')} className="w-full rounded-2xl border border-blue-200 bg-blue-50/60 p-5 text-left text-sm font-semibold text-blue-800">Open administrator roster and five-key wipe proposals</button>
           </div>
@@ -1673,7 +1674,7 @@ export default function PageAdminDashboard() {
 
             </div>
 
-            {notifications.length > 0 && <section className="rounded-3xl border border-blue-100 bg-white/75 p-5 shadow-sm backdrop-blur-xl"><div className="mb-3 flex items-center justify-between"><p className="flex items-center gap-2 text-sm font-extrabold text-slate-900"><Bell className="h-4 w-4 text-blue-600" />Live operational alerts {unreadCount > 0 && <span className="rounded-full bg-blue-600 px-2 py-0.5 text-[10px] text-white">{unreadCount} new</span>}</p><button onClick={() => refreshNotifications()} className="text-xs font-bold text-blue-700">Refresh</button></div><div className="space-y-2">{notifications.map((notification: any) => <button key={notification.id} onClick={() => { void markAsRead(notification.id); if (notification.category === 'support' && /^\/(?:help\?ticket=[a-f0-9-]{36}|customer-service(?:\?ticket=[a-f0-9-]{36})?)$/.test(notification.link || '')) { navigate(notification.link); return; } if (notification.link === 'verification-officers') { setActiveTab('managers'); setManagerSubTab('officers'); } else if (notification.link === 'residence_changes') setActiveTab('notifications'); else if (notification.module === 'admin_governance') setActiveTab('governance'); else if (notification.module === 'admin_settings') setActiveTab('settings'); }} className="block w-full rounded-2xl border border-blue-100 bg-blue-50/60 p-3 text-left"><p className="text-xs font-bold text-slate-900">{notification.title}{!notification.read && <span className="ml-2 text-blue-600">• New</span>}</p><p className="mt-1 text-xs text-slate-600">{notification.message}</p></button>)}</div></section>}
+            {notifications.length > 0 && <section className="rounded-3xl border border-blue-100 bg-white/75 p-5 shadow-sm backdrop-blur-xl"><div className="mb-3 flex items-center justify-between"><p className="flex items-center gap-2 text-sm font-extrabold text-slate-900"><Bell className="h-4 w-4 text-blue-600" />Live operational alerts {unreadCount > 0 && <span className="rounded-full bg-blue-600 px-2 py-0.5 text-[10px] text-white">{unreadCount} new</span>}</p><button onClick={() => refreshNotifications()} className="text-xs font-bold text-blue-700">Refresh</button></div><div className="space-y-2">{notifications.map((notification: any) => <button key={notification.id} data-notification-id={notification.id} onClick={() => { void markAsRead(notification.id); if (notification.category === 'support' && /^\/(?:help\?ticket=[a-f0-9-]{36}|customer-service(?:\?ticket=[a-f0-9-]{36})?)$/.test(notification.link || '')) { navigate(notification.link); return; } if (notification.link === 'verification-officers') { setActiveTab('managers'); setManagerSubTab('officers'); } else if (notification.link === 'residence_changes') setActiveTab('notifications'); else if (notification.module === 'admin_governance') setActiveTab('governance'); else if (notification.module === 'admin_settings') setActiveTab('settings'); }} className="block w-full rounded-2xl border border-blue-100 bg-blue-50/60 p-3 text-left"><p className="text-xs font-bold text-slate-900">{notification.title}{!notification.read && <span className="ml-2 text-blue-600">• New</span>}</p><p className="mt-1 text-xs text-slate-600">{notification.message}</p></button>)}</div></section>}
             {/* PENDING RESIDENCE VERIFICATION ALERTS */}
             {pendingHostelsCount > 0 && (
               <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 p-6 rounded-3xl backdrop-blur-xl shadow-lg space-y-4">
@@ -1918,6 +1919,7 @@ export default function PageAdminDashboard() {
             </div>
 
             {/* SUB TAB 1: APPLICATIONS */}
+            <AdminPaymentReversals key={user.id} />
             {adminMarketSubTab === 'applications' && (
               <div className="bg-white/90 border border-blue-200/80 p-6 rounded-3xl backdrop-blur-xl shadow-xl space-y-4">
                 <h4 className="text-sm font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-2">

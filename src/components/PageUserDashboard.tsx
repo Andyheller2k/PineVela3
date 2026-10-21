@@ -1,6 +1,11 @@
+import OrderTimeline from './OrderTimeline';
+import OrderNotifications from './OrderNotifications';
+import OrderCancelButton from './OrderCancelButton';
+import {readOrderHistoryPage,mergeOrderHistory} from '../lib/orderHistory';
 import SupportNotificationLink from './SupportNotificationLink';
 import HelpLink from './HelpLink';
 import AppearanceSettings from './AppearanceSettings';
+import PineVelaCompanion from './PineVelaCompanion';
 import { isMarketService,marketListingAvailable } from '../../marketListingAvailability';
 import { activateOnKeyboard } from '../lib/keyboardActivation';
 
@@ -32,12 +37,9 @@ Mail,
 MapPin,
 MessageSquare,
 Package,
-PanelLeftClose,
-PanelLeftOpen,
 Phone,
 Plus,
 RefreshCw,
-Search,
 Send,
 Settings,
 ShieldAlert,
@@ -53,7 +55,7 @@ Wrench,
 X
 } from 'lucide-react';
 import { AnimatePresence,motion } from 'motion/react';
-import React,{ useCallback,useEffect,useMemo,useRef,useState } from 'react';
+import React,{ useCallback,useEffect,useId,useMemo,useRef,useState } from 'react';
 import { useNavigate,useSearchParams } from 'react-router-dom';
 import { compareMarketPriority } from '../../marketPlans';
 import { servicePoint } from '../../serviceLocation';
@@ -72,7 +74,7 @@ import { filterResidences } from '../lib/residenceCatalog';
 import { sessionFetch as fetch } from '../lib/session';
 import { DigitalMarketApplication,DigitalMarketOrder,DigitalMarketProduct,DigitalMarketStore,HostelRoomKey,IssueReport } from '../types';
 import AccountStatusDialog from './AccountStatusDialog';
-import CampusMeetupMapPicker from './CampusMeetupMapPicker';
+import CampusMeetupMapPicker from './LazyCampusMeetupMapPicker';
 import DashboardOverlay from './DashboardOverlay';
 import ListingPlanBadge from './ListingPlanBadge';
 import ManagerRegistrationCard from './ManagerRegistrationCard';
@@ -80,10 +82,15 @@ import MarketImageGallery from './MarketImageGallery';
 import MarketItemCard,{ getServiceActionLabel } from './MarketItemCard';
 import MarketplaceFilters from './MarketplaceFilters';
 import MarketplaceInbox from './MarketplaceInbox';
+import ReportButton from './ReportButton';
 import MarketStorefront from './MarketStorefront';
 import MerchantAccountPanel from './MerchantAccountPanel';
-import MobileNavigation from './MobileNavigation';
-import NearbyServicesMap from './NearbyServicesMap';
+import UserDashboardNavigation, { userDashboardDestinations } from './UserDashboardNavigation';
+import NearbyServicesMap from './LazyNearbyServicesMap';
+import { readDashboardSnapshot, saveDashboardSnapshot } from '../lib/dashboardSnapshot';
+import { currentSessionGeneration } from '../lib/session';
+import { useDashboardScroll } from '../hooks/useDashboardScroll';
+import UserCatalogSwitcher from './UserCatalogSwitcher';
 import OnboardingProgress,{ MARKET_APPLICATION_STEPS,ROOM_ACTIVATION_STEPS } from './OnboardingProgress';
 import PasswordStrengthGauge from './PasswordStrengthGauge';
 import PineLogo, { PineWordmark } from './PineLogo';
@@ -93,24 +100,31 @@ import ResidenceDetails from './ResidenceDetails';
 import RouteSkeleton from './RouteSkeleton';
 import SupabaseResidentActivation from './SupabaseResidentActivation';
 import SupabaseSellerRegistration from './SupabaseSellerRegistration';
-import TopNavBadge from './TopNavBadge';
 import UserAvatarSelector,{ renderAvatarGraphic } from './UserAvatarSelector';
+import '../userDashboard.css';
 
 export interface PageUserDashboardProps {
   initialTab?: 'home' | 'notifications' | 'options' | 'overview' | 'issues' | 'announcements' | 'settings' | 'register-resident' | 'login-room' | 'digital-market';
   initialMarketMode?: 'catalog' | 'vendor' | 'orders';
 }
 
+type PrimaryDashboardSnapshot = {
+  profile: { user: any; rooms: any[]; roomKeyDetails?: HostelRoomKey | null };
+  residences: any[];
+  catalog: DigitalMarketProduct[];
+  orders: DigitalMarketOrder[];
+};
+
 export default function PageUserDashboard({ initialTab, initialMarketMode }: PageUserDashboardProps = {}) {
+  const navigationId = useId();
   const { user, logout, apiFetch, updateUser, setSessionUser } = useAuth();
+  const cachedDashboard = readDashboardSnapshot<PrimaryDashboardSnapshot>('primary', user?.id);
   const marketAccount=useRef(user?.id),marketEpoch=useRef(0),marketGeneration=useRef(0),marketMounted=useRef(true);
   if(marketAccount.current!==user?.id){marketAccount.current=user?.id;marketEpoch.current++;marketGeneration.current++;}
   useEffect(()=>{marketMounted.current=true;return()=>{marketMounted.current=false;};},[]);
   const marketAccountCurrent=(id:string|undefined,generation?:number)=>marketMounted.current && marketAccount.current===id && (generation===undefined || generation===marketGeneration.current);
   const orderRequest=useRef<{params:string;id:string}|null>(null);
-  const inquiryRequest=useRef<{params:string;id:string}|null>(null);
-  const inquiryBusy=useRef(false);
-  const [marketOrdersAccount,setMarketOrdersAccount]=useState<string|undefined>();
+  const [marketOrdersAccount,setMarketOrdersAccount]=useState<string|undefined>(cachedDashboard ? user?.id : undefined);
   const [marketReadError,setMarketReadError]=useState('');
   const { notifications, unreadCount, registeredAccounts, markAsRead, pushToast, refreshNotifications } = useNotifications();
   const navigate = useNavigate();
@@ -118,6 +132,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
 
   const requestedTab = searchParams.get('tab');
   const queryTab = ['home', 'notifications', 'options', 'overview', 'issues', 'announcements', 'settings', 'register-resident', 'login-room', 'digital-market'].includes(requestedTab || '') ? requestedTab as any : undefined;
+  const [companionNavigationTarget, setCompanionNavigationTarget] = useState<HTMLDivElement | null>(null);
   const requestedMode = searchParams.get('mode');
   const queryMode = ['catalog', 'vendor', 'orders', 'chats'].includes(requestedMode || '') ? requestedMode as any : undefined;
   const isMerchantUser = user?.role === 'merchant';
@@ -148,34 +163,17 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
   const [showMarketChat, setShowMarketChat] = useState(false);
   const [checkingMerchant, setCheckingMerchant] = useState(false);
   const [checkingManager, setCheckingManager] = useState(false);
-  const [savedMarketOrders, setDigitalMarketOrders] = useState<DigitalMarketOrder[]>([]);
+  const [orderCursor,setOrderCursor]=useState<string|null|undefined>(undefined),[olderOrdersLoading,setOlderOrdersLoading]=useState(false);
+  const [savedMarketOrders, setDigitalMarketOrders] = useState<DigitalMarketOrder[]>(cachedDashboard?.orders || []);
   const digitalMarketOrders=marketOrdersAccount===user?.id ? savedMarketOrders : [];
   const [digitalMarketProducts, setDigitalMarketProducts] = useState<DigitalMarketProduct[]>([]);
-  const [publicCatalog, setPublicCatalog] = useState<DigitalMarketProduct[]>([]);
+  const [publicCatalog, setPublicCatalog] = useState<DigitalMarketProduct[]>(cachedDashboard?.catalog || []);
 
   // Store Rating States for Buyers
   const [ratingOrderTarget, setRatingOrderTarget] = useState<DigitalMarketOrder | null>(null);
   const [ratingStars, setRatingStars] = useState<number>(5);
   const [ratingReview, setRatingReview] = useState<string>('');
   const [isSubmittingRating, setIsSubmittingRating] = useState<boolean>(false);
-
-  // Old registration/chat links open their relocated dialog instead of restoring retired tabs.
-  useEffect(() => {
-    const tab = queryTab || initialTab;
-    const mode = queryMode || (!queryTab ? initialMarketMode : undefined);
-    if (tab === 'register-resident') {
-      setActiveTab('home');
-      setHomeFilterType('hostels');
-      setShowManagerCard(true);
-    } else if (tab === 'digital-market' && mode && mode !== 'orders') {
-      setActiveTab('home');
-      setHomeFilterType('market');
-      if (mode === 'vendor') setShowMerchantCard(true);
-      if (mode === 'chats') setShowMarketChat(true);
-    } else if (tab) {
-      setActiveTab(tab);
-    }
-  }, [initialTab, queryTab, initialMarketMode, queryMode]);
 
   // Keep the user-facing market scrollable while removing the browser's side gutter.
   useEffect(() => {
@@ -214,7 +212,25 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
   const [buyerPhoneInput, setBuyerPhoneInput] = useState<string>('');
   const [submittingOrder, setSubmittingOrder] = useState<boolean>(false);
   const [verifyingOrderTarget, setVerifyingOrderTarget] = useState<DigitalMarketOrder | null>(null);
-  useEffect(()=>{orderRequest.current=null;inquiryRequest.current=null;inquiryBusy.current=false;setDigitalMarketOrders([]);setMarketOrdersAccount(undefined);setMarketReadError('');setSelectedProdForOrder(null);setVerifyingOrderTarget(null);setSubmittingOrder(false);setPinSubmitting(false);setShowMarketChat(false);setActiveChatEmail(null);setActiveChatStore(undefined);setRatingOrderTarget(null);setIsSubmittingRating(false);},[user?.id]);
+  useEffect(()=>{orderRequest.current=null;setDigitalMarketOrders([]);setMarketOrdersAccount(undefined);setMarketReadError('');setSelectedProdForOrder(null);setVerifyingOrderTarget(null);setSubmittingOrder(false);setPinSubmitting(false);setShowMarketChat(false);setActiveChatEmail(null);setActiveChatStore(undefined);setRatingOrderTarget(null);setIsSubmittingRating(false);},[user?.id]);
+  // Old registration/chat links open their relocated dialog instead of restoring retired tabs.
+  useEffect(() => {
+    const tab = queryTab || initialTab;
+    const mode = queryMode || (!queryTab ? initialMarketMode : undefined);
+    if (tab === 'register-resident') {
+      setActiveTab('home');
+      setHomeFilterType('hostels');
+      setShowManagerCard(true);
+    } else if (tab === 'digital-market' && mode && mode !== 'orders') {
+      setActiveTab('home');
+      setHomeFilterType('market');
+      if (mode === 'vendor') setShowMerchantCard(true);
+      if (mode === 'chats') setShowMarketChat(true);
+    } else if (tab) {
+      setActiveTab(tab);
+    }
+  }, [user?.id, initialTab, queryTab, initialMarketMode, queryMode]);
+
   const [inputPinValue, setInputPinValue] = useState<string>('');
   const [renewingPinOrderId, setRenewingPinOrderId] = useState<string | null>(null);
   const [pinSubmitting, setPinSubmitting] = useState<boolean>(false);
@@ -302,14 +318,14 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
 
   // Data states
   const [issueReports, setIssueReports] = useState<IssueReport[]>([]);
-  const [roomKeyDetails, setRoomKeyDetails] = useState<HostelRoomKey | null>(null);
-  const [userRooms, setUserRooms] = useState<any[]>([]);
-  const [studentProfile, setStudentProfile] = useState<any>(null);
-  const [loadingData, setLoadingData] = useState<boolean>(true);
+  const [roomKeyDetails, setRoomKeyDetails] = useState<HostelRoomKey | null>(cachedDashboard?.profile.roomKeyDetails || null);
+  const [userRooms, setUserRooms] = useState<any[]>(cachedDashboard?.profile.rooms || []);
+  const [studentProfile, setStudentProfile] = useState<any>(cachedDashboard?.profile.user || null);
+  const [loadingData, setLoadingData] = useState<boolean>(!cachedDashboard);
   const [dashboardLoadError,setDashboardLoadError]=useState('');
   const [dashboardRefreshing,setDashboardRefreshing]=useState(false);
   const dashboardRead=useRef<{accountId:string|undefined;controller:AbortController}|null>(null);
-  const [availableHostels, setAvailableHostels] = useState<any[]>([]);
+  const [availableHostels, setAvailableHostels] = useState<any[]>(cachedDashboard?.residences || []);
   const [viewingHostelModal, setViewingHostelModal] = useState<any | null>(null);
 
   // Add Room Modal states (Up to 5 rooms)
@@ -328,40 +344,18 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
     id: user?.id || (studentProfile?.id)
   };
 
-  const handleStartChat = async (product: DigitalMarketProduct) => {
+  const handleStartChat = (product: DigitalMarketProduct) => {
     if (!user?.id) {
       triggerToast("Please log in first to message the merchant.");
       return;
     }
 
-    const inquiryText = `Hi ${product.storeName}! I am interested in your item "${product.title}" (GHS ${product.price}). Is it still available for meetup?`;
-    
-    if(inquiryBusy.current)return;
-    inquiryBusy.current=true;
-    const accountId=user?.id,generation=marketGeneration.current;
-    const inquiry={productId:product.id,sellerStoreId:product.storeId,content:inquiryText};
-    {const params=JSON.stringify(inquiry);if(inquiryRequest.current?.params!==params)inquiryRequest.current={params,id:crypto.randomUUID()};}
-    try {
-      const res = await fetch('/api/digital-market/messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${user?.token || ''}` },
-        body: JSON.stringify(({...inquiry,requestId:inquiryRequest.current!.id}))
-      });
-      const data = await res.json();if(!marketAccountCurrent(accountId,generation))return;
-      if (!res.ok) throw new Error(data.error || 'Could not contact the seller.');
-      if (data.success) {
-        inquiryRequest.current=null;
-        setShowMarketChat(true);
-        setActiveChatEmail(data.message?.recipientEmail || product.sellerEmail);
-        setActiveChatStore({id:product.storeId,name:product.storeName});
-        setSelectedProductForBuy(null);
-        triggerToast(`Inquiry sent to ${product.storeName}! Chat is open below.`);
-      }
-    } catch (err) {
-      if(marketAccountCurrent(accountId,generation))triggerToast(err instanceof Error ? err.message : "Could not contact the seller. Please try again.");
-    } finally {
-      if(marketAccountCurrent(accountId,generation))inquiryBusy.current=false;
-    }
+    if (!product.storeId) { triggerToast('This listing does not have an available store to message.'); return; }
+    setShowMarketChat(true);
+    setActiveChatEmail(product.sellerEmail || null);
+    setActiveChatStore({ id: product.storeId, name: product.storeName });
+    setSelectedProductForBuy(null);
+    triggerToast('Write an encrypted message in the inbox.');
   };
   const [showSignoutConfirmModal, setShowSignoutConfirmModal] = useState<boolean>(false);
 
@@ -440,7 +434,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
   }, [searchParams, setSearchParams, publicCatalog, user?.role, showWelcomePopup]);
 
   const [claimHostelId, setClaimHostelId] = useState<string | undefined>();
-  const [residencesLoaded, setResidencesLoaded] = useState(false);
+  const [residencesLoaded, setResidencesLoaded] = useState(!!cachedDashboard);
   function openResidenceActivation(hostel: { id: string }) {
     setViewingHostelModal(null);
     setClaimHostelId(hostel.id);
@@ -484,14 +478,13 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
     saveNavigationLayout(isSidebarHidden);
   }, [isSidebarHidden]);
 
-  // Search & Filter state for the home tab
-  const [homeSearchQuery, setHomeSearchQuery] = useState<string>('');
+  // Catalog selection for the home tab
   const [homeFilterType, setHomeFilterType] = useState<'hostels' | 'market'>('market');
   const [marketVisibleCount, setMarketVisibleCount] = useState<number>(24);
 
   useEffect(() => {
     setMarketVisibleCount(24);
-  }, [catalogCategory, catalogSearch, minPriceFilter, maxPriceFilter, priceSortOption, homeSearchQuery]);
+  }, [catalogCategory, catalogSearch, minPriceFilter, maxPriceFilter, priceSortOption]);
 
   // Persistent wishlist states for market items
   const [wishlist, setWishlist] = useState<string[]>(() => {
@@ -516,11 +509,11 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
   }, [user?.id]);
 
   const mainScrollRef = React.useRef<HTMLDivElement>(null);
+  useDashboardScroll(mainScrollRef, user?.id, activeTab === 'home' ? `home:${homeFilterType}` : activeTab, !loadingData);
 
   // Memoized search and filter results for high performance 60fps scrolling
   const filteredProducts = useMemo(() => {
     const query = catalogSearch.toLowerCase().trim();
-    const mainQ = homeSearchQuery.toLowerCase().trim();
     return publicCatalog
       .filter(p => {
         if (catalogCategory !== 'All') {
@@ -537,15 +530,6 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
             return false;
           }
         }
-        if (mainQ) {
-          const matchTitle = p.title?.toLowerCase().includes(mainQ);
-          const matchDesc = p.description?.toLowerCase().includes(mainQ);
-          const matchStore = p.storeName?.toLowerCase().includes(mainQ);
-          const matchCat = p.category?.toLowerCase().includes(mainQ);
-          if (!matchTitle && !matchDesc && !matchStore && !matchCat) {
-            return false;
-          }
-        }
         const itemPrice = Number(p.price) || 0;
         if (itemPrice < minPriceFilter) return false;
         if (maxPriceFilter < 5000 && itemPrice > maxPriceFilter) return false;
@@ -557,9 +541,9 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
         if (priceSortOption === 'newest') return (b.id || '').localeCompare(a.id || '');
         return compareMarketPriority(a, b);
       });
-  }, [publicCatalog, catalogCategory, catalogSearch, homeSearchQuery, minPriceFilter, maxPriceFilter, priceSortOption]);
+  }, [publicCatalog, catalogCategory, catalogSearch, minPriceFilter, maxPriceFilter, priceSortOption]);
 
-  const filteredHostels = useMemo(() => filterResidences(availableHostels, homeSearchQuery), [availableHostels, homeSearchQuery]);
+  const filteredHostels = useMemo(() => filterResidences(availableHostels, ''), [availableHostels]);
 
   const scrollToSection = (id: string, sectionKey: string) => {
     if (sectionKey === 'market') setHomeFilterType('market');
@@ -590,13 +574,15 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
 
   const loadSupabaseDashboard=async(isSilent=false)=>{
     const accountId=user?.id,generation=marketGeneration.current;
+    const sessionGeneration=currentSessionGeneration();
+    const snapshot:Partial<PrimaryDashboardSnapshot>={};
     if(dashboardRead.current?.accountId===accountId)return;
     dashboardRead.current?.controller.abort();
     const request={accountId,controller:new AbortController()};dashboardRead.current=request;
     const current=()=>dashboardRead.current===request&&!request.controller.signal.aborted&&marketAccountCurrent(accountId,generation);
     const signal=AbortSignal.any([request.controller.signal,AbortSignal.timeout(30000)]);
     setDashboardRefreshing(true);
-    if(!isSilent){setLoadingData(true);setDashboardLoadError('');}
+    if(!isSilent){setLoadingData(!readDashboardSnapshot('primary',accountId));setDashboardLoadError('');}
     const failedMessage='Some account information could not load. Your connection may be slow or temporarily unavailable. Retry to refresh it.';
     const read=async(url:string,save:(data:any)=>void,opensDashboard=false)=>{
       try{
@@ -614,24 +600,29 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
       const results=await Promise.all([
         read('/api/student/my-profile',data=>{
           if(!data||Array.isArray(data)||!data.user||!Array.isArray(data.rooms))throw Error('Could not read your account profile.');
+          snapshot.profile=data;
           setStudentProfile(data.user);setUserRooms(data.rooms);setRoomKeyDetails(data.roomKeyDetails||null);
         },true),
         read('/api/hostels',data=>{
           if(!Array.isArray(data))throw Error('Could not read residences.');
+          snapshot.residences=data;
           setAvailableHostels(data);setResidencesLoaded(true);
         }),
         read('/api/digital-market/products?includeAll=true',data=>{
           if(!Array.isArray(data))throw Error('Could not read market listings.');
+          snapshot.catalog=data.filter(marketListingAvailable);
           setPublicCatalog(data.filter(marketListingAvailable));
           const storeId=merchantRegistration.data?.store?.id,email=user?.email?.toLowerCase();
           setDigitalMarketProducts(data.filter(p=>storeId&&p.storeId===storeId||email&&p.sellerEmail?.toLowerCase()===email));
         }),
-        read('/api/digital-market/my-orders',data=>{
-          if(!Array.isArray(data))throw Error('Could not read your orders.');
-          setDigitalMarketOrders(data);setMarketOrdersAccount(accountId);setMarketReadError('');
+        read('/api/digital-market/my-orders?paged=1',raw=>{
+          const data=readOrderHistoryPage<DigitalMarketOrder>(raw);
+          snapshot.orders=data.orders;
+          setOrderCursor(previous=>previous===undefined?data.nextCursor:previous);
+          setDigitalMarketOrders(previous=>mergeOrderHistory(previous,data.orders));setMarketOrdersAccount(accountId);setMarketReadError('');
         }),
       ]);
-      if(current()&&results.every(Boolean))setDashboardLoadError('');
+      if(current()&&results.every(Boolean)){setDashboardLoadError('');saveDashboardSnapshot('primary',accountId,sessionGeneration,snapshot as PrimaryDashboardSnapshot);}
     }finally{
       if(current()){if(!isSilent)setLoadingData(false);setDashboardRefreshing(false);dashboardRead.current=null;}
     }
@@ -666,20 +657,30 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
         }
       }
 
-      const ordersRes = await apiFetch(('/api/digital-market/my-orders'));
+      const ordersRes = readOrderHistoryPage<DigitalMarketOrder>(await apiFetch('/api/digital-market/my-orders?paged=1'));
       if(!current())return;
       setMarketOrdersAccount(accountId);setMarketReadError('');
-      if (Array.isArray(ordersRes)) {
-        setDigitalMarketOrders(prev => JSON.stringify(prev) === JSON.stringify(ordersRes) ? prev : ordersRes);
-      }
+      setOrderCursor(previous=>previous===undefined?ordersRes.nextCursor:previous);
+      setDigitalMarketOrders(prev=>mergeOrderHistory(prev,ordersRes.orders));
     } catch (e:any) {
       if(current())setMarketReadError(e?.message || 'Could not refresh your market orders.');
     }
   };
 
+  const loadOlderOrders=async()=>{
+    if(!orderCursor||olderOrdersLoading)return;const accountId=user?.id,epoch=marketEpoch.current;setOlderOrdersLoading(true);
+    try{const page=readOrderHistoryPage<DigitalMarketOrder>(await apiFetch('/api/digital-market/my-orders?paged=1&before='+encodeURIComponent(orderCursor)));
+      if(!marketAccountCurrent(accountId)||marketEpoch.current!==epoch)return;setDigitalMarketOrders(previous=>mergeOrderHistory(previous,page.orders));setOrderCursor(page.nextCursor);setMarketReadError('');
+    }catch(e:any){if(marketAccountCurrent(accountId)&&marketEpoch.current===epoch)setMarketReadError(e.message);}
+    finally{if(marketAccountCurrent(accountId)&&marketEpoch.current===epoch)setOlderOrdersLoading(false);}
+  };
   useEffect(() => {
-    {setDashboardLoadError('');setStudentProfile(null);setUserRooms([]);setRoomKeyDetails(null);setAvailableHostels([]);setPublicCatalog([]);setResidencesLoaded(false);}
-    loadStudentData(false);
+    const saved=readDashboardSnapshot<PrimaryDashboardSnapshot>('primary',user?.id);
+    setDashboardLoadError('');setStudentProfile(saved?.profile.user || null);setUserRooms(saved?.profile.rooms || []);
+    setRoomKeyDetails(saved?.profile.roomKeyDetails || null);setAvailableHostels(saved?.residences || []);
+    setPublicCatalog(saved?.catalog || []);setResidencesLoaded(!!saved);setDigitalMarketOrders(saved?.orders || []);
+    setMarketOrdersAccount(saved ? user?.id : undefined);setOrderCursor(undefined);setOlderOrdersLoading(false);setLoadingData(!saved);
+    loadStudentData(!!saved);
     const refreshVisible = () => { if (!document.hidden) void loadStudentData(true); };
     const interval = setInterval(refreshVisible, 8000);
     document.addEventListener('visibilitychange', refreshVisible);
@@ -828,23 +829,10 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
   const marketUnread = notifications.filter(n => !n.read && marketNoticeKind(n) !== null);
   const orderUnreadCount = marketUnread.filter(n => marketNoticeKind(n) === 'order').length;
   const tabUnreadCount = (id: string) => id === 'notifications' ? unreadNotificationsCount : id === 'digital-market' ? orderUnreadCount : 0;
-  useEffect(() => {
-    if (activeTab !== 'digital-market') return;
-    void Promise.all(notifications.filter(n => !n.read && marketNoticeKind(n) === 'order').map(n => markAsRead(n.id)));
-  }, [activeTab, notifications, markAsRead]);
 
-  const navItems = [
-    { id: 'home', label: 'Home Tab', sub: 'Marketplace & residences', icon: Home },
-    { id: 'digital-market', label: 'Purchases & Tracking', sub: 'Orders, Pickup & Delivery', icon: Package },
-    { 
-      id: 'login-room', 
-      label: (roomKeyDetails || currentUser?.roomKey) ? 'Resident Room' : 'Log Into Your Room', 
-      sub: (roomKeyDetails || currentUser?.roomKey) ? `${roomKeyDetails?.blockName || 'Block'} - Room ${roomKeyDetails?.roomNumber || currentUser?.roomNumber || ''}` : 'Activate Digital Room Key', 
-      icon: Key 
-    },
-    { id: 'notifications', label: 'Notifications Tab', sub: `${unreadNotificationsCount > 0 ? `${unreadNotificationsCount} New Alert${unreadNotificationsCount > 1 ? 's' : ''}` : 'Bulletins & Alerts'}`, icon: Bell },
-    { id: 'options', label: 'Options Tab', sub: 'Profile & Settings', icon: Settings },
-  ];
+  const navItems = userDashboardDestinations(Boolean(roomKeyDetails || currentUser?.roomKey),
+    `${roomKeyDetails?.blockName || 'Block'} - Room ${roomKeyDetails?.roomNumber || currentUser?.roomNumber || ''}`,
+    unreadNotificationsCount);
 
   const handleNavClick = (tabId: string) => {
     setActiveTab(tabId as any);
@@ -1185,7 +1173,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
   if (loadingData && issueReports.length === 0) return <RouteSkeleton />;
 
   return (
-    <div className="page-canvas min-h-screen h-screen flex flex-col lg:flex-row text-slate-800 overflow-hidden font-sans relative">
+    <div data-navigation-layout={isSidebarHidden ? 'top' : 'sidebar'} className="user-dashboard page-canvas min-h-screen h-screen flex flex-col lg:flex-row text-slate-800 overflow-hidden font-sans relative">
       {/* Toast Notification */}
       <AnimatePresence>
         {toastMessage && (
@@ -1202,169 +1190,13 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
         )}
       </AnimatePresence>
 
-      {/* MOBILE HEADER (lg:hidden) */}
-      <header data-portal-navigation="header" className="lg:hidden flex items-center justify-between px-5 py-3 bg-white/90 backdrop-blur-xl border-b border-sky-200/50 sticky top-0 z-40 shadow-xs">
-        <div role="button" tabIndex={0} aria-label="Go to home" onKeyDown={activateOnKeyboard} className="flex items-center gap-2 cursor-pointer" onClick={() => { setActiveTab('home'); navigate('/student/dashboard'); }}>
-          <PineLogo size={24} />
-          <div>
-            <h1 className="text-xs font-black tracking-tight text-blue-950 leading-tight">PineVela Portal</h1>
-            <p className="text-[10px] text-slate-500 truncate max-w-[160px]">{user?.hostelName || 'PineVela Resident'}</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setActiveTab('options')}
-            className="flex items-center gap-1.5 p-1 rounded-full hover:bg-slate-100 transition-colors cursor-pointer"
-            title="Account Options & Profile"
-          >
-            {renderAvatarGraphic(currentUser?.avatar, "w-7 h-7 text-[10px]")}
-          </button>
-          <HelpLink compact className="!px-2" />
-          <button
-            onClick={() => setShowSignoutConfirmModal(true)} 
-            className="flex items-center gap-1.5 px-2 py-1.5 text-rose-600 hover:bg-rose-50 rounded-lg text-[10px] font-bold cursor-pointer"
-            title="Sign Out"
-          >
-            <LogOut className="w-4 h-4" />
-            <span>Sign Out</span>
-          </button>
-        </div>
-      </header>
-
-      {/* MOBILE BOTTOM NAV (lg:hidden) */}
-      <MobileNavigation label="User navigation" activeTab={activeTab} onSelect={handleNavClick} items={navItems.map(tab => ({ ...tab, badge: tabUnreadCount(tab.id), label: tab.id === 'home' ? 'Home' : tab.id === 'digital-market' ? 'Purchases' : tab.id === 'login-room' ? 'Room' : tab.id === 'notifications' ? 'Alerts' : 'Options' }))} />
-
-      {/* Compact desktop equivalent of the mobile navigation. It stays above the scrolling content. */}
-      {isSidebarHidden && (
-        <nav data-portal-navigation="top" className="hidden lg:block fixed top-3 left-1/2 -translate-x-1/2 z-50 w-[min(860px,calc(100vw-3rem))] bg-white/72 backdrop-blur-xl border border-white/80 rounded-2xl shadow-lg">
-          <div className="flex items-center gap-1 px-2 py-1.5">
-            {/* Profile avatar button — left end */}
-            <button
-              onClick={() => setActiveTab('options')}
-              title="Profile & Settings"
-              className="shrink-0 flex flex-col items-center gap-0.5 py-1 px-1.5 rounded-xl transition-all cursor-pointer hover:bg-white/70"
-            >
-              {renderAvatarGraphic(currentUser?.avatar, 'w-6 h-6 text-[9px] ring-2 ring-white shadow-sm')}
-              <span className="text-[9px] font-bold text-slate-500">Profile</span>
-            </button>
-            <div className="w-px h-6 bg-slate-200/70 shrink-0" />
-            {navItems.map(tab => {
-              const Icon = tab.icon;
-              const isActive = activeTab === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  aria-current={isActive ? 'page' : undefined}
-                  onClick={() => handleNavClick(tab.id)}
-                  title={tab.label}
-                  className={`flex-1 min-w-0 flex flex-col items-center justify-center gap-0.5 py-1.5 rounded-xl transition-all cursor-pointer ${isActive ? 'text-blue-700 bg-blue-100/65' : 'text-slate-500 hover:text-slate-800 hover:bg-white/70'}`}
-                >
-                  <span className="relative inline-flex"><Icon className="w-4 h-4" /><TopNavBadge color="blue" count={tabUnreadCount(tab.id)} /></span>
-                  <span className="max-w-full truncate text-[9px] font-bold">{tab.id === 'digital-market' ? 'Purchases' : tab.id === 'notifications' ? 'Alerts' : tab.id === 'options' ? 'Options' : tab.label.split(' ')[0]}</span>
-                </button>
-              );
-            })}
-            <button
-              onClick={() => setShowSignoutConfirmModal(true)}
-              title="Sign Out"
-              className="shrink-0 flex flex-col items-center gap-0.5 px-2 py-1.5 text-rose-600 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer"
-            >
-              <LogOut className="w-4 h-4" />
-              <span className="text-[9px] font-bold">Sign Out</span>
-            </button>
-            <button onClick={() => setIsSidebarHidden(false)} title="Show sidebar" className="shrink-0 p-2 text-slate-500 hover:text-blue-700 hover:bg-blue-50 rounded-xl transition-colors cursor-pointer">
-              <PanelLeftOpen className="w-4 h-4" />
-            </button>
-          <HelpLink compact className="!px-2" /></div>
-        </nav>
-      )}
-
-      {/* Desktop sidebar */}
-      {!isSidebarHidden && <aside data-portal-navigation="sidebar" className="hidden lg:flex w-72 p-6 my-6 ml-6 h-[calc(100vh-3rem)] bg-gradient-to-br from-sky-100/90 via-blue-100/85 to-amber-50/40 backdrop-blur-3xl border border-sky-200/80 shadow-2xl rounded-3xl flex flex-col justify-between shrink-0 overflow-y-auto z-10 relative">
-
-        <div className="space-y-6">
-          {/* Logo & Header */}
-          <div className="flex items-center justify-between px-2">
-            <div role="button" tabIndex={0} aria-label="Go to home" onKeyDown={activateOnKeyboard} className="flex items-center space-x-3 cursor-pointer" onClick={() => { setActiveTab('home'); navigate('/student/dashboard'); }}>
-              <PineLogo size={36} />
-              <div>
-                <h1 className="text-sm font-extrabold tracking-tight bg-gradient-to-r from-blue-900 to-cyan-800 bg-clip-text text-transparent">PineVela Resident</h1>
-                <p className="text-[10px] font-medium text-blue-600/70 uppercase tracking-widest">User Account</p>
-              </div>
-            </div>
-            <button onClick={() => setIsSidebarHidden(true)} title="Hide sidebar" className="p-2 text-slate-500 hover:text-blue-700 hover:bg-white/70 rounded-xl transition-colors cursor-pointer"><PanelLeftClose className="w-4 h-4" /></button>
-          </div>
-
-          {/* Student Profile Pill */}
-          <div className="p-3 bg-white/70 border border-blue-200/60 rounded-2xl flex items-center justify-between shadow-xs overflow-hidden">
-            <div className="flex items-center gap-3 overflow-hidden">
-              {renderAvatarGraphic(currentUser?.avatar, "w-10 h-10 text-xs shrink-0")}
-              <div className="overflow-hidden">
-                <div className="text-xs font-bold text-slate-900 truncate">{currentUser?.name || 'PineVela User'}</div>
-                <div className="text-[10px] font-semibold text-emerald-700 flex items-center gap-1">
-                  <CheckCircle2 className="w-3 h-3 text-emerald-600 inline shrink-0" />
-                  <span className="truncate">Verified Account</span>
-                </div>
-              </div>
-            </div>
-            <div className="flex items-center gap-1 shrink-0"><button onClick={() => setActiveTab('options')} title="Account Options" className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-100/50 rounded-lg transition-colors cursor-pointer"><Settings className="w-3.5 h-3.5" /></button></div>
-          </div>
-
-          {/* Navigation Links */}
-          <nav className="space-y-1.5">
-            {navItems.map(tab => {
-              const Icon = tab.icon;
-              const isActive = activeTab === tab.id;
-
-              return (
-                <button
-                  key={tab.id}
-                  aria-current={isActive ? 'page' : undefined}
-                  onClick={() => handleNavClick(tab.id)}
-                  title={tab.label}
-                  className={`w-full flex items-center justify-between px-3.5 py-3 rounded-2xl transition-all duration-150 group cursor-pointer ${
-                    isActive
-                      ? 'bg-blue-600 text-white shadow-md shadow-blue-500/25 ring-1 ring-blue-500'
-                      : 'text-slate-600 hover:bg-white/60 hover:text-slate-900'
-                  }`}
-                >
-                  <div className="flex items-center space-x-3 overflow-hidden">
-                    <div className={`p-2 rounded-xl transition-colors shrink-0 relative ${
-                      isActive ? 'bg-white/20 text-white' : 'bg-blue-200/70 text-blue-700 group-hover:bg-blue-300/80'
-                    }`}>
-                      <Icon className="w-4 h-4" />
-                      <TopNavBadge inset color="blue" count={tabUnreadCount(tab.id)} />
-                    </div>
-                    <div className="text-left overflow-hidden">
-                      <div className="text-xs font-semibold tracking-wide flex items-center gap-1.5 truncate">{tab.label}</div>
-                      <div className={`text-[10px] font-normal truncate ${isActive ? 'text-blue-100' : 'text-slate-500'}`}>
-                        {tab.sub}
-                      </div>
-                    </div>
-                  </div>
-                </button>
-              );
-            })}
-          </nav>
-        </div>
-
-        {/* Sign Out Footer */}
-        <div className="space-y-2 pt-4 border-t border-sky-200/80 mt-4">
-          <button
-            onClick={() => setShowSignoutConfirmModal(true)}
-            title="Sign Out"
-            className="w-full flex items-center justify-center space-x-2 px-4 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 rounded-2xl font-semibold text-xs transition-all shadow-xs cursor-pointer"
-          >
-            <LogOut className="w-4 h-4 shrink-0" />
-            <span>Sign Out</span>
-          </button>
-        <div className="flex justify-center pt-3"><HelpLink /></div>
-        </div>
-
-      </aside>}
+      <UserDashboardNavigation items={navItems} activeTab={activeTab} onSelect={handleNavClick}
+        isSidebarHidden={isSidebarHidden} onLayoutChange={setIsSidebarHidden} profile={currentUser}
+        hostelName={user?.hostelName} unreadCount={unreadNotificationsCount} badgeFor={tabUnreadCount}
+        navigationId={navigationId} onCompanionTarget={setCompanionNavigationTarget} onSignOut={() => setShowSignoutConfirmModal(true)} />
 
       {/* MAIN CONTENT AREA */}
-      <main ref={mainScrollRef} className={`user-dashboard-content hide-scrollbar flex-1 p-6 pb-28 lg:px-10 lg:pb-10 space-y-8 overflow-y-auto h-full relative z-10 ${isSidebarHidden ? 'lg:pt-24 lg:w-[calc(100vw-22rem)] lg:max-w-[calc(100vw-22rem)] lg:mx-auto' : 'lg:pt-10'}`}>
+      <main ref={mainScrollRef} data-dashboard-view={activeTab} className={`user-dashboard-content hide-scrollbar flex-1 p-6 pb-28 lg:px-10 lg:pb-10 space-y-8 overflow-y-auto h-full relative z-10 ${isSidebarHidden ? 'lg:pt-24 lg:w-[calc(100vw-22rem)] lg:max-w-[calc(100vw-22rem)] lg:mx-auto' : 'lg:pt-10'}`}>
 
         {(dashboardLoadError)&&<section role="alert" className="space-y-3 rounded-2xl border border-blue-200 bg-[var(--pv-panel)] p-5 text-[var(--pv-text)]">
           <h2 className="text-lg font-semibold">Could not refresh your dashboard</h2><p className="text-sm">{dashboardLoadError}</p>
@@ -1374,73 +1206,20 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
         {/* TAB 0: HOME TAB (Residents View, Staff View & Gateways) */}
         {activeTab === 'home' && (
           <div className="space-y-8 animate-fadeIn relative z-10">
-            {/* REAL-TIME HOME SEARCH & FILTER COMPONENT */}
-            <div className="bg-white/45 backdrop-blur-xl p-4 rounded-2xl border border-white/70 shadow-[0_10px_30px_rgba(37,99,235,0.10)]">
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
-                {/* Search input field */}
-                <div className="md:col-span-8 relative">
-                  <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                    <Search className="w-4 h-4 text-slate-400" />
-                  </span>
-                  <input aria-label="Search hostels, marketplace items, or managers..."
-                    type="text"
-                    value={homeSearchQuery}
-                    onChange={(e) => setHomeSearchQuery(e.target.value)}
-                    placeholder="Search hostels, marketplace items, or managers..."
-                    className="w-full pl-10 pr-10 py-2.5 bg-white/45 backdrop-blur-md border border-white/75 rounded-xl text-xs font-bold text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-blue-500 focus:bg-white/80 transition-all shadow-xs"
-                  />
-                  {homeSearchQuery && (
-                    <button
-                      type="button"
-                      onClick={() => setHomeSearchQuery('')}
-                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 cursor-pointer"
-                      title="Clear search"
-                    >
-                      <X size={15} />
-                    </button>
-                  )}
-                </div>
-
-                {/* Filter Selector tabs */}
-                <div className="md:col-span-4 flex bg-white/35 backdrop-blur-md p-1 rounded-xl border border-white/70">
-                  <button
-                    type="button"
-                    onClick={() => setHomeFilterType('market')}
-                    className={`flex-1 py-2 text-center text-[11px] font-black rounded-lg transition-all cursor-pointer ${
-                      homeFilterType === 'market'
-                        ? 'bg-white/80 text-slate-950 shadow-xs'
-                        : 'text-slate-500 hover:text-slate-800 hover:bg-white/40'
-                    }`}
-                  >
-                    Market
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setHomeFilterType('hostels')}
-                    className={`flex-1 py-2 text-center text-[11px] font-black rounded-lg transition-all cursor-pointer ${
-                      homeFilterType === 'hostels'
-                        ? 'bg-white/80 text-slate-950 shadow-xs'
-                        : 'text-slate-500 hover:text-slate-800 hover:bg-white/40'
-                    }`}
-                  >
-                    Residences
-                  </button>
-                </div>
-              </div>
-            </div>
+            <UserCatalogSwitcher value={homeFilterType} onChange={setHomeFilterType} />
 
             {/* Pinevela Digital Marketplace Section */}
             {homeFilterType === 'market' && (
-              <div id="home-market-section" className="bg-transparent border-0 rounded-3xl p-0 shadow-none space-y-6 animate-fadeIn">
+              <div key="market" id="home-market-section" className="user-catalog-panel bg-transparent border-0 rounded-3xl p-0 shadow-none space-y-6 animate-fadeIn">
                   {/* Header Title and Subtitle - scrolls up naturally */}
                   <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-3">
                     <div>
-                    <h3 className="text-lg font-black text-slate-900 flex flex-wrap items-center gap-2">
+                    <h3 className="user-section-title text-lg font-black text-slate-900 flex flex-wrap items-center gap-2">
                       <ShoppingBag className="w-5 h-5 text-blue-700" />
                       Digital Student Market
                       <span className="rounded-full border border-blue-200 bg-blue-50 px-2 py-1 text-[9px] font-bold uppercase tracking-wide">PineVela Verified P2P</span>
                     </h3>
-                    <p className="text-xs text-slate-500 font-semibold mt-0.5">
+                    <p className="user-section-description text-xs text-slate-500 font-semibold mt-0.5">
                       Buy, sell, and trade textbooks, electronics, appliances & room gear with verified students.
                     </p>
                     </div>
@@ -1451,7 +1230,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                     </div>
                   </div>
 
-                  <MarketplaceFilters catalogSearch={catalogSearch} setCatalogSearch={setCatalogSearch}
+                  <MarketplaceFilters mobilePriceSheet catalogSearch={catalogSearch} setCatalogSearch={setCatalogSearch}
                     catalogCategory={catalogCategory} setCatalogCategory={setCatalogCategory}
                     minPriceFilter={minPriceFilter} setMinPriceFilter={setMinPriceFilter}
                     maxPriceFilter={maxPriceFilter} setMaxPriceFilter={setMaxPriceFilter}
@@ -1507,10 +1286,10 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
 
             {/* Available Hostels Section */}
             {homeFilterType === 'hostels' && (
-                <div id="home-hostels-section" className="bg-transparent border-0 rounded-3xl p-0 shadow-none space-y-6 animate-fadeIn">
+                <div key="residences" id="home-hostels-section" className="user-catalog-panel bg-transparent border-0 rounded-3xl p-0 shadow-none space-y-6 animate-fadeIn">
                   <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-4">
                     <div>
-                      <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
+                      <h3 className="user-section-title text-lg font-black text-slate-900 flex items-center gap-2">
                         <Building2 className="w-5 h-5 text-blue-700" />
                         Available Residences & Student Accommodations
                       </h3>
@@ -1531,7 +1310,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                     <div className="p-8 text-center bg-slate-50/60 rounded-2xl border border-dashed border-slate-200 space-y-2">
                       <Building2 className="w-8 h-8 text-slate-400 mx-auto animate-bounce-subtle" />
                       <div className="text-sm font-bold text-slate-700">No matching residences found</div>
-                      <p className="text-xs text-slate-500 font-medium">Try refining your search text or clear the filter.</p>
+                      <p className="text-xs text-slate-500 font-medium">Verified residences will appear here when available.</p>
                     </div>
                   ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -1556,11 +1335,11 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
             <div className="bg-white/90 border border-slate-200/80 rounded-3xl p-6 sm:p-8 shadow-xl space-y-6 backdrop-blur-md">
               <div className="flex items-center justify-between border-b border-slate-100 pb-4">
                 <div>
-                  <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
+                  <h3 className="user-section-title text-lg font-black text-slate-900 flex items-center gap-2">
                     <Bell className="w-5 h-5 text-blue-700" />
                     Notifications & Bulletins
                   </h3>
-                  <p className="text-xs text-slate-500 font-semibold mt-0.5">
+                  <p className="user-section-description text-xs text-slate-500 font-semibold mt-0.5">
                     Official notices, digital room key clearances, and maintenance updates.
                   </p>
                 </div>
@@ -1585,7 +1364,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                 </div>
 
                 {notifications.map((notif, index) => (
-                  <div key={`${notif.id}-${index}`} className={`p-4 ${notif.read ? 'bg-slate-50/70' : 'bg-white'} border ${notif.read ? 'border-slate-200/80' : 'border-blue-200/80 shadow-sm'} rounded-2xl flex items-start gap-3.5`}>
+                  <div key={`${notif.id}-${index}`} data-notification-id={notif.id} className={`p-4 ${notif.read ? 'bg-slate-50/70' : 'bg-white'} border ${notif.read ? 'border-slate-200/80' : 'border-blue-200/80 shadow-sm'} rounded-2xl flex items-start gap-3.5`}>
                     <div className={`p-2.5 rounded-xl ${notif.type === 'success' ? 'bg-emerald-600' : notif.type === 'warning' ? 'bg-amber-600' : 'bg-slate-800'} text-white shrink-0`}>
                       <Bell className="w-4 h-4" />
                     </div>
@@ -1618,13 +1397,13 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                   <Key className="w-6 h-6 text-blue-700" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-black text-slate-900 flex items-center gap-2">
+                  <h3 className="user-section-title text-xl font-black text-slate-900 flex flex-wrap items-center gap-2">
                     Resident Room Management
                     <span className="text-xs font-black px-2.5 py-0.5 bg-blue-100 text-blue-900 border border-blue-200 rounded-full">
                       {userRooms.length} / 1 Active Room
                     </span>
                   </h3>
-                  <p className="text-xs text-slate-500 font-medium mt-0.5">
+                  <p className="user-section-description text-xs text-slate-500 font-medium mt-0.5">
                     View your active digital room key and manage your room account (restricted to 1 room per user account).
                   </p>
                 </div>
@@ -1803,8 +1582,8 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
           <div className="space-y-6 animate-fadeIn relative z-10 max-w-6xl">
             <div className="flex items-center gap-3 rounded-3xl border border-slate-200 bg-white/90 p-5 sm:p-6 shadow-xl">
               <div className="rounded-2xl bg-blue-600 p-3 text-white"><Package className="h-6 w-6" /></div>
-              <div><h2 className="text-xl font-black text-slate-900">Purchases & Tracking</h2>
-                <p className="mt-1 text-xs font-medium text-slate-500">View your purchases, follow order updates, and track pickup or delivery.</p>
+              <div><h2 className="user-section-title text-xl font-black text-slate-900">Purchases & Tracking</h2>
+                <p className="user-section-description mt-1 text-xs font-medium text-slate-500">View your purchases, follow order updates, and track pickup or delivery.</p>
               </div>
             </div>
             {/* MODE 3: PURCHASES & ORDER TRACKING */}
@@ -1823,6 +1602,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                     </div>
                   </div>
 
+                  {orderCursor&&<button type="button" onClick={()=>void loadOlderOrders()} disabled={olderOrdersLoading} className="mb-4 rounded-xl border border-blue-200 px-4 py-2 text-sm font-bold text-blue-800 disabled:opacity-50">{olderOrdersLoading?'Loading older orders…':'Load older orders'}</button>}
                   {/* Order History Cards List */}
                   {marketReadError && <p role="status" className="mb-3 text-sm text-red-700">{marketReadError}</p>}
                   {digitalMarketOrders.length > 0 ? (
@@ -1831,6 +1611,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                         const isBuyer = user?.role === 'user' && (currentUser?.id || user?.id) === order.buyerId;
                         return (
                           <div key={order.id} className="bg-slate-50/80 border border-slate-200/90 rounded-2xl p-5 shadow-sm space-y-4">
+                            <OrderNotifications orderId={order.id}/>
                             {/* Order Header */}
                             <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-200/60">
                               <div className="flex items-center gap-3">
@@ -1848,6 +1629,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                               </div>
 
                               <div className="flex items-center gap-2">
+                                <OrderCancelButton order={order} onCancelled={next=>{setDigitalMarketOrders(previous=>previous.map(row=>row.id===next.id?next:row));void loadDigitalMarketData();}}/>
                                 <span className={`px-3 py-1 rounded-full text-xs font-extrabold ${
                                   order.status === 'Completed & Paid' 
                                     ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' 
@@ -1887,11 +1669,11 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                               </div>
 
                               {/* PIN Box / Rate Store Box */}
-                              {!['Completed & Paid', 'Cancelled', 'Location Rejected', 'Rejected by Seller'].includes(order.status) ? (
+                              {!['Completed & Paid', 'Cancelled', 'Location Rejected', 'Rejected by Seller','Expired'].includes(order.status) ? (
                                 <div className="w-full sm:w-auto bg-white border border-slate-200 rounded-2xl p-3.5 text-center shadow-xs">
                                   {isBuyer ? (
                                     <div>
-                                      <div className="text-[10px] font-extrabold uppercase text-slate-400">Escrow Handshake PIN</div>
+                                      <div className="text-[10px] font-extrabold uppercase text-slate-400">Delivery handover PIN</div>
                                       {order.otpPin && order.deliveryPinExpiresAt && Date.parse(order.deliveryPinExpiresAt) > Date.now() ? (
                                         <>
                                           <div className="text-2xl font-black text-blue-700 tracking-widest my-0.5">{order.otpPin}</div>
@@ -1954,6 +1736,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                               ) : null}
                             </div>
 
+                            {order.status==='Expired'&&<div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-blue-950"><p>This reservation has ended. No payment was charged by PineVela. A new request checks current price and availability.</p><button type="button" className="mt-2 font-bold underline" onClick={()=>{const product=publicCatalog.find(item=>item.id===order.productId);if(product)setSelectedProductForBuy(product as DigitalMarketProduct);else{setActiveTab('home');triggerToast('This listing is no longer available. Browse the current market.');}}}>View current listing</button></div>}
                             {/* Seller Location Agreement Action Box / Buyer Status Notice */}
                             {!isBuyer && (order.status === 'Awaiting Seller Confirmation' || !order.sellerConfirmed) && (
                               <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-2xl space-y-2.5">
@@ -2038,20 +1821,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                               </div>
                             )}
 
-                            {/* Chronological Progress Stepper Timeline */}
-                            <div className="pt-3 border-t border-slate-200/60 space-y-2">
-                              <h5 className="text-[11px] font-extrabold text-slate-700 uppercase tracking-wider">Chronological Order Timeline</h5>
-                              <div className="space-y-2 relative pl-4 border-l-2 border-blue-200">
-                                {(order.timeline || []).map((step, idx) => (
-                                  <div key={idx} className="relative text-xs">
-                                    <div className="absolute -left-[21px] top-1 w-2.5 h-2.5 rounded-full bg-blue-600 ring-4 ring-white" />
-                                    <div className="font-bold text-slate-900">{step.title}</div>
-                                    <div className="text-[10px] text-slate-500">{new Date(step.timestamp).toLocaleString()}</div>
-                                    {step.notes && <div className="text-[11px] text-slate-650 mt-0.5 font-medium">{step.notes}</div>}
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
+                            <OrderTimeline order={order}/>
                           </div>
                         );
                       })}
@@ -2329,6 +2099,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
 
                 <div className="space-y-3">
                   {isSelectedService && nearbyDirections && <a href={nearbyDirections} target="_blank" rel="noopener noreferrer" referrerPolicy="no-referrer" className="block text-xs font-bold text-blue-700">Open Google Maps directions</a>}
+                  <ReportButton targetType="listing" targetId={selectedProductForBuy.id} targetName={selectedProductForBuy.title} />
                   <MarketImageGallery title={selectedProductForBuy.title} imageUrl={selectedPriceCategory?.imageUrl || selectedProductForBuy.imageUrl}
                     additionalImages={isSelectedService ? [selectedProductForBuy.imageUrl, ...(selectedProductForBuy.priceCategories || []).map(c => c.imageUrl || '')] : selectedProductForBuy.additionalImages} />
 
@@ -2866,11 +2637,11 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
             <div className="bg-white/90 border border-slate-200/80 rounded-3xl p-6 sm:p-8 shadow-xl space-y-6 backdrop-blur-md">
               <div className="flex items-center justify-between border-b border-slate-100 pb-4">
                 <div>
-                  <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
+                  <h3 className="user-section-title text-lg font-black text-slate-900 flex items-center gap-2">
                     <Settings className="w-5 h-5 text-slate-800" />
                     User Options & Account Preferences
                   </h3>
-                  <p className="text-xs text-slate-500 font-semibold mt-0.5">
+                  <p className="user-section-description text-xs text-slate-500 font-semibold mt-0.5">
                     Manage your resident profile, avatar, registered accounts, security credentials, and session options.
                   </p>
                 </div>
@@ -3092,6 +2863,8 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
 
         {/* TAB 1: NOTIFICATIONS TAB */}
       </main>
+
+      <PineVelaCompanion unreadCount={unreadNotificationsCount} navigationTarget={companionNavigationTarget} />
 
       {/* ========================================================================= */}
       {/* MODAL 1: REPORT MAINTENANCE ISSUE (WITH PICTURE PROOF & GLASSY FINISH) */}
@@ -3606,7 +3379,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
       {/* MODAL 5: SIGN OUT CONFIRMATION MODAL */}
       {/* ========================================================================= */}
       {showSignoutConfirmModal && (
-        <DashboardOverlay aria-label="Sign Out Confirmation" onClose={() => setShowSignoutConfirmModal(false)} className="fixed inset-0 bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-4">
+        <DashboardOverlay aria-label="Sign Out Confirmation" onClose={() => setShowSignoutConfirmModal(false)} className="pv-signout-overlay fixed inset-0 bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-sm w-full p-6 text-center space-y-5 border border-slate-100 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
             <div className="w-16 h-16 rounded-2xl bg-amber-50 border border-amber-200/60 flex items-center justify-center shadow-xs mx-auto">
               <PineLogo size={36} hideText={true} />
@@ -3623,6 +3396,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
               <button
                 type="button"
                 onClick={() => setShowSignoutConfirmModal(false)}
+                data-signout-action="cancel"
                 className="py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-xl transition-all cursor-pointer"
               >
                 Cancel
@@ -3634,6 +3408,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                   if (!await logout()) return;
                   navigate('/login');
                 }}
+                data-signout-action="confirm"
                 className="py-2.5 px-4 bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-xs rounded-xl shadow-md shadow-rose-600/20 transition-all cursor-pointer"
               >
                 Sign Out

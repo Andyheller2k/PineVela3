@@ -10,7 +10,7 @@ try{await runLocalSupabaseVerification(async h=>{
  await h.assertOwned();
  const files=fs.readdirSync('supabase/migrations').filter(f=>/^\d{14}_[a-z0-9_]+\.sql$/.test(f)).sort();
  const ledger=(await h.db.pool.query('select version,digest from private.schema_migrations order by version')).rows;
- check(ledger.length===files.length&&ledger.length===69,'Exactly the current 69 immutable migration versions are installed');
+ check(ledger.length===files.length&&ledger.length===75,'Exactly the current 75 immutable migration versions are installed');
  for(const file of files){const version=file.slice(0,14),digest=crypto.createHash('sha256').update(fs.readFileSync(path.join('supabase/migrations',file))).digest('hex');
   check(ledger.find(r=>r.version===version)?.digest===digest,'Actual migration digest matches its immutable source');}
  const tables=(await h.db.pool.query(`select c.relname,c.relrowsecurity,c.relforcerowsecurity from pg_class c join pg_namespace n on n.oid=c.relnamespace
@@ -58,11 +58,13 @@ try{await runLocalSupabaseVerification(async h=>{
  const policyCounts=(await h.db.pool.query(`select schemaname,count(*)::int as count from pg_policies
   where schemaname in('public','private','storage') group by schemaname order by schemaname`)).rows;
  check(policyCounts.some(p=>p.schemaname==='public'&&p.count>0)&&policyCounts.some(p=>p.schemaname==='storage'&&p.count>0),'Actual public and private Storage RLS policies exist');
- const fixtures=readLocalFixture<{administrators:LocalAccountCredentials[];officer:LocalAccountCredentials}>(h,'administrator-fixtures.json');assert.ok(fixtures);
+ const fixtures=readLocalFixture<{administrators:LocalAccountCredentials[];officer:LocalAccountCredentials}>(h,'administrator-fixtures.json');
+ const support=readLocalFixture<{admin:LocalAccountCredentials;owner:LocalAccountCredentials}>(h,'support-browser.json');
+ assert.ok(fixtures||support,'Use actual administrator and non-administrator credentials from this owned run');
  stage='actual provider-authenticated role projections';
- const admin=await signInLocalAccount(h,fixtures.administrators[0],'admin'),officer=await signInLocalAccount(h,fixtures.officer,'officer');
+ const admin=await signInLocalAccount(h,fixtures?fixtures.administrators[0]:support!.admin,'admin'),officer=await signInLocalAccount(h,fixtures?fixtures.officer:support!.owner,fixtures?'officer':undefined);
  check((await admin.session.request('/api/database/status')).status===200,'Actual provider-authenticated administrator reaches the live native database boundary');
- check((await officer.session.request('/api/database/status')).status===403,'Actual provider-authenticated officer cannot enter the administrator database boundary');
+ check((await officer.session.request('/api/database/status')).status===403,'Actual provider-authenticated non-administrator cannot enter the administrator database boundary');
  check((await h.session().request('/api/database/status')).status===401,'Guest cannot enter the live database boundary');
  const result={passed:true,checks,actualNativeDatabase:true,actualGoTrueRoleChecks:true,migrationVersions:ledger.length,
   immutableMigrationHashes:true,publicTables:tables.length,allPublicTablesRls:true,privateProjectionViews:14,

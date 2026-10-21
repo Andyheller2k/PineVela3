@@ -511,8 +511,14 @@ controls are available only inside that manager account, with server-side enforc
 Services near you displays live Fixed and Hybrid listings with validated seller pins.
 Location permission is requested on opening the map; the default radius is 10 km, adjustable
 to 5 or 25 km. Searching by service or store name includes listings outside that radius.
-The same service inspection and booking flows remain available. Google Maps directions
-can include a selected waypoint. Flexible services remain buyer-selected and are not
+The same service inspection and booking flows remain available. A waypoint is a navigation
+destination with a real walking or driving trail, distance, estimated time and directions.
+Selecting a mapped service sets its destination; its details and booking remain available
+through View service details. Device location or a manually selected starting point can
+preview the route. Start following explicitly enables live GPS, camera recentering,
+progress and throttled rerouting; manual points do not imitate live GPS. Closing the map
+or stopping following clears the watch, and background tabs pause it. Google Maps remains
+an external directions option. Flexible services remain buyer-selected and are not
 assigned invented seller pins. Primary mobile login uses the rotating photographs as a
 full-screen background beneath a rounded frosted card; desktop keeps its separate layout.
 
@@ -628,3 +634,11 @@ Active administrator identities must use the administrator portal and settings k
 profile changes. Personal avatars are private; only active staff directory portraits are
 shared through an authorized housing relationship. Login email, ownership and account roles
 cannot be edited through profile forms. Store branding remains a separate subscription rule.
+
+Notification badges count unread notices. An inbox card becomes read after it is
+visible and uncovered in the active browser tab; off-screen cards, hidden tabs,
+toasts and modal-covered cards do not acknowledge it. Read state persists per
+recipient in Supabase. Pending operational work remains pending after its notice
+is read, with its own workflow status/count rather than the inbox unread badge.
+
+Marketplace reservations last 24 hours. Buyers and sellers may cancel their own active requests before completion. A server worker records overdue requests as expired without attributing the transition to either participant, deletes the obsolete PIN, retains history and notifies both parties. An expired request is terminal; a new request must re-check the current catalog, price and stock. PIN replacement is available only within an active reservation. Goods are paid directly at handover; request cancellation or expiry does not issue a platform refund.

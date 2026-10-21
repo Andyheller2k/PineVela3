@@ -14,7 +14,8 @@ export function managerKeyNeeded(req:Pick<Request,'method'|'path'>) {
   return !['GET','HEAD','OPTIONS'].includes(req.method) &&
     !['/api/manager/secret-key/issue','/api/manager/secret-key/petition','/api/auth/context','/api/auth/logout',
       '/api/auth/appearance','/api/auth/maintenance-notice/dismiss'].includes(path) && !/^\/api\/admin-messages\/[^/]+\/ack$/.test(path)
-    && !/^\/api\/support\/tickets(?:\/[^/]+(?:\/replies)?)?$/.test(path);
+    && !/^\/api\/support\/tickets(?:\/[^/]+(?:\/replies)?)?$/.test(path)
+    && path !== '/api/reports';
 }
 export async function managerBootstrapAllowed(client:PoolClient,actor:VerifiedActor,path:string) {
   if (actor.kind !== 'manager' || !['/api/hostels/register','/api/storage/upload-hostel-image','/api/hostel-verifications/submit'].includes(path.replace(/\/+$/,''))) return false;

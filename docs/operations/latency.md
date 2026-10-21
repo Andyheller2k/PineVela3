@@ -1,5 +1,47 @@
 # PineVela latency evidence
 
+## 17 October 2026: asset delivery and background work
+
+Production frontend delivery now negotiates Brotli/gzip and gives generated
+assets an immutable one-year cache lifetime. HTML revalidates for current release
+hashes. API authentication, no-store responses, event streams and private-path
+denials stay outside this static delivery middleware. Actual HTTP checks compare
+decoded responses byte-for-byte with the build and cover validators, HEAD,
+ranges and forbidden encodings.
+
+Maps in the primary/seller dashboards load on demand with a readable, closable
+loading state. Seller inventory and orders run concurrently after verified store
+status. Seller polling pauses in hidden tabs and refreshes on visibility return.
+Notification read-ID persistence batches new IDs and skips unchanged IDs rather
+than rewriting storage for every read notice on every refresh.
+
+| Measured path | Before | After |
+| --- | --- | --- |
+| Entry JS transfer with accepted compression | 301,638 bytes, identity | 98,020 bytes, Brotli (about 68% smaller) |
+| Current stylesheet delivery | 259,834 raw bytes | 33,214 Brotli bytes (87% smaller, identical decoded bytes) |
+| Three unchanged real inbox refreshes | 42 storage writes | 0 storage writes |
+| Optional map JS requested during primary startup | 179,238 bytes across two chunks | 0 bytes until requested |
+| Seller API cycle with controlled 300ms delivery delay per genuine response | 1,561ms, sequential inventory/orders | 1,003ms, concurrent inventory/orders |
+| Hidden seller API reads during 11.5 seconds | 3 | 0 |
+
+These are local before/after observations, with actual native Auth, database and
+API replies; the seller timing includes an explicit controlled delivery delay,
+not a hosted latency claim. No fabricated account sessions, replies or catalog
+records are used. Public API responses and recipient/account isolation remain
+server-authorized; this adds no private-data cache or database migration.
+
+Verification passed the production build, TypeScript, 30 focused regression
+tests and 107 real native-browser checks covering dashboard returns, themes,
+notification acknowledgements, account isolation and deferred-map controls.
+The 37 HTTP delivery/security checks passed on both the isolated preview and
+the restarted main app at `http://127.0.0.1:3001`.
+
+`scripts/measure-supabase-performance-browser.cjs <private-runtime.json> baseline|after`
+captures the browser comparison on an owned support preview.
+`scripts/verify-static-delivery.cjs <loopback-origin> after-preview|after-main`
+checks actual built asset bytes and delivery/security headers. Raw evidence stays
+in private artifacts. Existing latency evidence follows below.
+
 16 October 2026. Supabase is now the sole runtime persistence; archived development
 JSON is not read by the application. Figures below distinguish local workflow
 measurements from earlier hosted transport observations.
@@ -143,3 +185,5 @@ recovery, concurrent binding locks, genuine keyed maintenance transitions and
 logout during maintenance. Production build and TypeScript checks passed.
 All test mutations stayed in the existing isolated stack; no cloud accounts,
 business records, outgoing email or Paystack calls were created by these tests.
+
+Marketplace order history defaults to 50 orders (maximum 100), with a stable `(created_at,id)` cursor and an explicit older-history control. Timeline, review and buyer-only PIN reads are batched for the authorized page. Each timeline initially includes at most 20 recent events; a participant-scoped cursor endpoint keeps earlier events accessible. Idle chat polls do not decrypt, sort or rebuild unchanged saved history. Seller counts, revenue and five recent customer aggregates are calculated across the authorized store, independently of page size. Chat polls use a newer-than cursor rather than downloading historical ciphertext every five seconds. No account selectors or unbounded caller-defined page sizes are accepted.

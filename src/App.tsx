@@ -156,8 +156,8 @@ function AppContent() {
         <Route path="/pineresidence" element={<PageWrapper loadingFallback={<p role="status" className="p-8 text-center text-sm text-slate-500">Loading residences…</p>}><PagePublicResidence /></PageWrapper>} />
         <Route path="/pinemarket/stores/:storeId" element={<PageWrapper><PagePublicStore /></PageWrapper>} />
         <Route path="/pinemarket" element={<PageWrapper loadingFallback={<p role="status" className="p-8 text-center text-sm text-slate-500">Loading PineMarket…</p>}><PagePublicMarket /></PageWrapper>} />
-        <Route path="/faq" element={<PageWrapper><PageFAQ /></PageWrapper>} />
-        <Route path="/help" element={<PageWrapper><PageHelp /></PageWrapper>} />
+        <Route path="/faq" element={<PageWrapper smoothEntry loadingFallback={<p role="status" className="p-8 text-center text-sm text-slate-500">Loading frequently asked questions…</p>}><PageFAQ /></PageWrapper>} />
+        <Route path="/help" element={<PageWrapper smoothEntry loadingFallback={<p role="status" className="p-8 text-center text-sm text-slate-500">Loading Help…</p>}><PageHelp /></PageWrapper>} />
         <Route path="/support-invitation" element={<PageWrapper><PageSupportInvitation /></PageWrapper>} />
         <Route path="/customer-service" element={<ProtectedRoute allowedRoles={['user', 'admin']}><PageWrapper><PageCustomerService key={user?.id} /></PageWrapper></ProtectedRoute>} />
 

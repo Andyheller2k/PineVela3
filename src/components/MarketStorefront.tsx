@@ -9,6 +9,7 @@ import type { MarketProductItem } from './MarketItemCard';
 import MarketplaceInbox from './MarketplaceInbox';
 import PublicMarketCatalog from './PublicMarketCatalog';
 import StoreProfileSummary,{ type StoreProfile } from './StoreProfileSummary';
+import ReportButton from './ReportButton';
 
 
 type Storefront = { store: StoreProfile; products: MarketProductItem[] };
@@ -34,6 +35,7 @@ export default function MarketStorefront({ storeId, onInspect, initialMessage = 
   const next = `/user/dashboard?${new URLSearchParams({ marketStore: store.id, storeAction: 'message' })}`;
   return <div data-market-storefront={store.id} className="space-y-6">
     <div className="flex items-center justify-end gap-3">
+      <ReportButton targetType="store" targetId={store.id} targetName={store.storeName} />
       <button type="button" aria-label="Message store" onClick={() => user?.role === 'user' ? setShowMessages(true) : setAuthPrompt(true)} className="flex items-center gap-2 rounded-xl border border-blue-200 bg-white/65 px-4 py-2.5 text-xs font-bold text-blue-800 backdrop-blur-xl"><MessageSquare size={18} />Message Store</button>
     </div>
     <StoreProfileSummary store={store} />

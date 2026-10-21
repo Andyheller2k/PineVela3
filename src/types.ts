@@ -802,6 +802,7 @@ export interface DigitalMarketProduct {
 }
 
 export interface DigitalMarketOrderTimeline {
+  id?: string;
   status: string;
   title: string;
   timestamp: string;
@@ -838,9 +839,11 @@ export interface DigitalMarketOrder {
   otpPin?: string; // Present only in the authenticated buyer's active challenge response.
   deliveryPinState?: 'active' | 'expired' | 'locked' | 'unavailable';
   deliveryPinExpiresAt?: string;
-  status: 'Awaiting Seller Confirmation' | 'Pending Meetup' | 'Completed & Paid' | 'Cancelled' | 'Location Rejected' | 'Rejected by Seller';
+  status: 'Awaiting Seller Confirmation' | 'Pending Meetup' | 'Completed & Paid' | 'Cancelled' | 'Location Rejected' | 'Rejected by Seller' | 'Expired';
   paymentMethod: string;
   createdAt: string;
   updatedAt: string;
   timeline: DigitalMarketOrderTimeline[];
+  timelineCursor?:string|null;
+  timelineHasMore?:boolean;
 }

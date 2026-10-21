@@ -31,7 +31,7 @@ export default function LogoutConfirmationModal({
 
   return (
     <AnimatePresence>
-      <DashboardOverlay aria-label="Confirm Sign Out" aria-busy={pending} onClose={pending?null:onClose} className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-blue-950/30 backdrop-blur-xl">
+      <DashboardOverlay aria-label="Confirm Sign Out" aria-busy={pending} onClose={pending?null:onClose} className="pv-signout-overlay fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-blue-950/30 backdrop-blur-xl">
         <motion.div
           initial={{ opacity: 0, scale: 0.95, y: 10 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -45,6 +45,7 @@ export default function LogoutConfirmationModal({
               <PineLogo size={32} hideText={true} />
             </div>
             <button aria-label="Close dialog"
+              data-signout-action="close"
               disabled={pending}
               onClick={onClose}
               className="w-8 h-8 rounded-full bg-slate-900/5 hover:bg-slate-900/10 text-slate-600 hover:text-slate-900 flex items-center justify-center transition-colors cursor-pointer"
@@ -66,6 +67,7 @@ export default function LogoutConfirmationModal({
           {/* Actions */}
           <div className="px-6 pb-6 pt-4 bg-slate-50/70 border-t border-slate-100 flex items-center justify-end gap-3">
             <button
+              data-signout-action="cancel"
               disabled={pending}
               onClick={onClose}
               className="px-5 py-2.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 font-extrabold rounded-xl text-xs transition-all shadow-xs cursor-pointer"
@@ -73,6 +75,7 @@ export default function LogoutConfirmationModal({
               Cancel
             </button>
             <button
+              data-signout-action="confirm"
               disabled={pending}
               onClick={confirm}
               className="px-6 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-black rounded-xl text-xs shadow-md hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer"

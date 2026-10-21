@@ -7,10 +7,10 @@ import path from 'node:path';
 import http from 'node:http';
 import https from 'node:https';
 import {spawn,spawnSync} from 'node:child_process';
-import express from 'express';
 import type {AddressInfo} from 'node:net';
 import {SupabaseDatabase,UUID} from '../../supabase/db.js';
 import {createSupabaseApp} from '../../supabase/app.js';
+import {installStaticFrontend} from '../../supabase/staticFrontend.js';
 
 export type LocalSupabaseMetadata={version:1;runId:string;root:string;apiUrl:string;databaseUrl:string;
  mailUrl:string;anonKey:string;serviceRoleKey:string;databaseOwned:true};
@@ -176,7 +176,7 @@ export async function createLocalPrimary(h:LocalSupabaseHarness,label:string){
  return{credentials:saved,...signed};
 }
 
-async function openHarness(meta:LocalSupabaseMetadata,credentials:ReturnType<typeof prepareCredentials>,options:{staticFrontend?:boolean}){
+async function openHarness(meta:LocalSupabaseMetadata,credentials:ReturnType<typeof prepareCredentials>,options:{staticFrontend?:boolean;moderation?:boolean;frontendDirectory?:string}){
  if(process.env.NODE_EXTRA_CA_CERTS!==credentials.cert||process.env.NODE_ENV!=='test')throw Error('Use the isolated local-test child process.');
  const target=new URL(meta.apiUrl);
  const proxy=https.createServer({cert:privateFile(credentials.cert),key:privateFile(credentials.key)},(req,res)=>{
@@ -215,7 +215,7 @@ async function openHarness(meta:LocalSupabaseMetadata,credentials:ReturnType<typ
   const assertOwned=async()=>{const rows=(await db.pool.query('select run_id from pinevela_local_test.run_guard')).rows;
    assert.equal(rows.length,1);assert.equal(rows[0].run_id,meta.runId,'Database belongs to this exact disposable run');};
   await assertOwned();
-  const installed=(await db.pool.query("select version from private.schema_migrations where version='20261017133104'")).rowCount;
+  const installed=(await db.pool.query("select version from private.schema_migrations where version='20261018140812'")).rowCount;
   assert.equal(installed,1,'The current immutable application migrations must be installed');
   const settings=await fetch(providerOrigin+'/auth/v1/settings',{headers:{apikey:meta.anonKey},signal:AbortSignal.timeout(10000)});
   assert.equal(settings.status,200,'Actual local GoTrue responds');const authSettings=await settings.json();
@@ -223,11 +223,11 @@ async function openHarness(meta:LocalSupabaseMetadata,credentials:ReturnType<typ
   assert.equal(authSettings.external?.email,true);
   const created=createSupabaseApp(db);closeRealtime=created.app.locals.closeRealtime;closeSupport=created.app.locals.closeSupport;
   if(options.staticFrontend){
-   const directory=path.resolve('dist-supabase');assert.ok(fs.statSync(path.join(directory,'index.html')).isFile(),'Build the actual Supabase frontend first');
+   const directory=path.resolve(options.frontendDirectory || 'dist-supabase');assert.ok(fs.statSync(path.join(directory,'index.html')).isFile(),'Build the actual Supabase frontend first');
    created.app.use((req,res,next)=>{let pathname:string;try{pathname=path.posix.normalize(decodeURIComponent(req.path));}catch{return res.sendStatus(400);}
     return /^\/(?:\.security|\.git|data|uploads|\.env|dist-supabase-backend)(?:[/.]|$)/i.test(pathname)
      ||/^\/(?:(?:supabase-server|residence-worker|system-wipe-worker)\.mjs|server\.cjs)(?:\.map)?$/i.test(pathname)?res.sendStatus(404):next();});
-   created.app.use(express.static(directory));created.app.get('*',(_req,res)=>res.sendFile(path.join(directory,'index.html')));
+   installStaticFrontend(created.app,directory);
   }
   server=created.app.listen(0,'127.0.0.1');await new Promise<void>(resolve=>server!.once('listening',resolve));
   const origin='http://127.0.0.1:'+(server.address() as AddressInfo).port;
@@ -255,15 +255,18 @@ async function openHarness(meta:LocalSupabaseMetadata,credentials:ReturnType<typ
  }catch(error){await closeSupport?.();await closeRealtime?.();server?.closeAllConnections();server?.close();await db.close();proxy.closeAllConnections();proxy.close();throw error;}
 }
 
-/** Parent process receives no cookies or keys from stdout. All inherited cloud
- * configuration is omitted from the child environment. */
-export async function runLocalSupabaseVerification(work:(h:LocalSupabaseHarness)=>Promise<unknown>,options:{staticFrontend?:boolean}={}){
+/** Parent process receives no cookies or keys from stdout. Cloud database,
+ * payment and mail configuration is omitted. Genuine moderation tests may
+ * explicitly pass only the authorized OpenAI key in the child environment. */
+export async function runLocalSupabaseVerification(work:(h:LocalSupabaseHarness)=>Promise<unknown>,options:{staticFrontend?:boolean;moderation?:boolean;companion?:boolean;frontendDirectory?:string}={}){
  const worker=process.argv[2]===workerFlag,file=process.argv[worker?3:2];
  if(process.argv.length!==(worker?4:3))throw Error('Pass only a private local-stack metadata path.');
  const meta=readLocalSupabaseMetadata(file),credentials=prepareCredentials(meta);
  if(!worker){
   const env:NodeJS.ProcessEnv={NODE_ENV:'test',NODE_EXTRA_CA_CERTS:credentials.cert,
    PATH:process.env.PATH,LANG:'C.UTF-8',TZ:'UTC',TMPDIR:meta.root};
+  if(options.moderation){if(!process.env.OPENAI_API_KEY)throw Error('The authorized moderation key is required.');env.OPENAI_API_KEY=process.env.OPENAI_API_KEY;}
+  if(options.companion){if(!process.env.GROQ_API_KEY)throw Error('The authorized companion key is required.');env.GROQ_API_KEY=process.env.GROQ_API_KEY;}
   const child=spawn(process.execPath,['--import','tsx',path.resolve(process.argv[1]),workerFlag,file],
    {cwd:path.resolve('.'),env,stdio:['ignore','inherit','pipe']});
   const diagnostics:Buffer[]=[];let bytes=0;

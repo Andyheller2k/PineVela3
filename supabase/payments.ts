@@ -10,6 +10,7 @@ import {publicPlatformSettings} from '../platformSettings.js';
 import {PLAN_LIMITS,validPlan,type MarketPlan} from '../marketPlans.js';
 import {paystackConfig,paymentOrigin,paystackRequest,validPaystackSignature,addMonths,PaymentError} from '../paystackProvider.js';
 import {AttemptBudgets} from '../resourceSecurity.js';
+import {installPaymentReversalRoutes,queuePaymentRecheck,queuePaymentReversal} from './paymentReversals.js';
 const paymentBudgets=new AttemptBudgets();
 const route=(work:(req:AuthRequest,res:any)=>Promise<unknown>):RequestHandler=>(req,res,next)=>{work(req as AuthRequest,res).catch(next);};
 const planName=(p:MarketPlan)=>p==='star'?'pine_star':p==='pro'?'pine_pro':'default';
@@ -35,8 +36,11 @@ export async function paymentLedger(c:PoolClient,a:VerifiedActor){
   if(a.kind!=='admin')throw new ApiError(403,'Administrator account required.');
   return (await c.query(`select p.id,p.store_id as "storeId",p.residence_id as "hostelId",
     p.purpose,
-    p.amount::float8 as amount,p.currency,p.mode,p.fulfilled_at as "paidAt",q.review_required as "reviewRequired"
-    from public.payments p join private.payment_checkouts q on q.payment_id=p.id where p.status='fulfilled' or q.review_required is not null order by p.created_at desc limit 500`)).rows.map(p=>({...p,purpose:clientPurpose(p.purpose)}));
+    p.amount::float8 as amount,p.currency,p.mode,p.fulfilled_at as "paidAt",q.review_required as "reviewRequired",
+    case when r.provider_status='reversed' and r.refunded_minor=0 then 0 else p.amount::float8-coalesce(r.refunded_minor,0)::float8/100 end as "netAmount",
+    coalesce(r.refunded_minor,0)::float8/100 as "refundedAmount"
+    from public.payments p join private.payment_checkouts q on q.payment_id=p.id left join private.payment_reversals r on r.payment_id=p.id
+    where p.status='fulfilled' or q.review_required is not null order by p.created_at desc limit 500`)).rows.map(p=>({...p,purpose:clientPurpose(p.purpose)}));
 }
 async function lockPayment(c:PoolClient,p:any){
   if(p.store_id)await c.query('select id from public.stores where id=$1 for update',[p.store_id]);
@@ -77,10 +81,14 @@ export async function prepareCheckout(c:PoolClient,a:VerifiedActor,body:any,orig
   }else{store=await sellerStore(c,a,true);if(!store.setup_completed_at)throw new ApiError(409,'Save your store details before checkout.');
     const registered=(await c.query("select id from public.payments where store_id=$1 and purpose='store_activation' and private.payment_grants_access(id)",[store.id])).rowCount;
     if(purpose==='store_activation' && registered)throw new ApiError(409,'Registration has already been paid. Renew your plan or two-month fee instead.');
+    if(purpose==='store_activation' && (await c.query("select 1 from public.payments where store_id=$1 and purpose='store_activation' and status='fulfilled'",[store.id])).rowCount)
+      throw new ApiError(409,'This store’s original registration payment was reversed. Contact Help for a reviewed registration recovery before starting another checkout.');
     if(purpose!=='store_activation' && !registered)throw new ApiError(403,'Complete verified market registration first.');
     if(['store_activation','subscription'].includes(purpose))await capacity(c,store.id,selected);
   }
   if(residence && (await c.query("select id from public.payments where residence_id=$1 and purpose='residence_onboarding' and private.payment_grants_access(id)",[residence.id])).rowCount)throw new ApiError(409,'Residence onboarding has already been paid.');
+  if(residence && (await c.query("select 1 from public.payments where residence_id=$1 and purpose='residence_onboarding' and status='fulfilled'",[residence.id])).rowCount)
+    throw new ApiError(409,'This residence’s original onboarding payment was reversed. Contact Help for a reviewed payment recovery before starting another checkout.');
   const payer=(await c.query('select email from public.profiles where id=$1',[a.authUserId])).rows[0]?.email;if(!payer)throw new ApiError(403,'A verified account is required.');
   const charge=purpose==='store_activation'?prices.registrationFee:purpose==='subscription'?prices.subscriptionPrices[selected]:purpose==='semester'?prices.semesterFee:50;
   if(!Number.isFinite(charge) || charge<0 || charge>1000000 || Math.abs(charge*100-Math.round(charge*100))>0.00001)throw new ApiError(503,'Payment pricing requires administrator review.');
@@ -101,8 +109,12 @@ async function result(c:PoolClient,p:any){
   const own=(await c.query('select private.current_context_id() as id')).rows[0].id===p.actor_context_id;
   const currentStore=!p.store_id||!!(await c.query(`select 1 from public.stores s join public.account_contexts x on x.id=s.seller_context_id
     where s.id=$1 and s.registration_generation=x.seller_generation and s.status<>'closed' and x.status='active'`,[p.store_id])).rowCount;
-  return {success:true,paid:p.status==='fulfilled' || !!p.review_required,accessGranted:p.status==='fulfilled'&&currentStore,
-    ...(!currentStore?{historical:true,message:'This payment belongs to a previous store registration. A new store requires its own registration payment.'}:{}),paymentRequired:p.status!=='fulfilled' && !p.review_required,
+  const accessGranted=p.status==='fulfilled'&&currentStore&&(await c.query('select private.payment_grants_access($1) as allowed',[p.id])).rows[0].allowed;
+  const reversal=(await c.query('select provider_status,refunded_minor from private.payment_reversals where payment_id=$1',[p.id])).rows[0];
+  return {success:true,paid:p.status==='fulfilled' || !!p.review_required,accessGranted,
+    ...(reversal?{refundedAmount:Number(reversal.refunded_minor)/100,reversed:(reversal.provider_status==='reversed'&&Number(reversal.refunded_minor)===0)||Number(reversal.refunded_minor)>=Number(p.amount_minor),
+      ...(!accessGranted?{message:'Paid access from this receipt has ended after payment reconciliation. Contact Help if you need a review.'}:{})}:{}),
+    ...(!currentStore?{historical:true,message:'This payment belongs to a previous store registration. A new store requires its own registration payment.'}:{}),paymentRequired:!accessGranted && !p.review_required,
     reference:p.provider_reference,purpose,mode:p.mode,amount:Number(p.amount),currency:p.currency,lines:p.lines,
     ...(p.review_required?{reviewRequired:true,message:p.review_required}:{}),...(p.store_id && own && currentStore?{store:(await sellerStatus(c,{contextId:p.actor_context_id,kind:'seller'} as VerifiedActor)).store}:{})};
 }
@@ -127,12 +139,12 @@ export async function fulfillCheckout(c:PoolClient,id:string,evidence?:unknown){
     const now=(await c.query("select date_trunc('milliseconds',now()) as t")).rows[0].t.getTime();
     await c.query("update public.payments set status='fulfilled',fulfilled_at=date_trunc('milliseconds',now()) where id=$1",[p.id]);
     if(['store_activation','semester'].includes(p.purpose)){
-      const previous=(await c.query('select max(ends_at) as t from public.store_fee_periods where store_id=$1',[p.store_id])).rows[0].t?.getTime() || 0;
+      const previous=(await c.query('select max(ends_at) as t from public.store_fee_periods where store_id=$1 and private.payment_grants_access(payment_id)',[p.store_id])).rows[0].t?.getTime() || 0;
       const end=p.purpose==='store_activation'?addMonths(now,2):Number(p.amount_minor)===0?new Date(Math.max(previous,Date.parse(addMonths(now,2)))).toISOString():addMonths(Math.max(now,previous),2);
       await c.query("insert into public.store_fee_periods(store_id,payment_id,starts_at,ends_at) values($1,$2,date_trunc('milliseconds',now()),$3)",[p.store_id,p.id,end]);
     }
     if(['store_activation','subscription'].includes(p.purpose)){
-      const old=(await c.query("select * from public.store_subscriptions where store_id=$1 and status='active' order by starts_at desc limit 1",[p.store_id])).rows[0];
+      const old=(await c.query("select * from public.store_subscriptions where store_id=$1 and private.payment_grants_access(payment_id) order by period_sequence desc limit 1",[p.store_id])).rows[0];
       const previous=old?.plan===p.plan?Math.max(now,old.ends_at.getTime()):now;
       const end=p.purpose==='store_activation'?addMonths(now,2):Number(p.amount_minor)===0?new Date(Math.max(previous,Date.parse(addMonths(now,1)))).toISOString():addMonths(previous,1);
       await c.query("update public.store_subscriptions set status='cancelled' where store_id=$1 and status='active'",[p.store_id]);
@@ -177,7 +189,10 @@ export class SupabasePayments {
     if(a)paymentBudgets.reserve([{scope:'payment-verify-account',identity:a.contextId,maximum:15,windowMs:60000}]);
     const load=(c:PoolClient)=>payment(c,ref,a || undefined);
     const p=a?await this.auth.db.authorizedSystem(a,['seller','manager'],load):await this.auth.db.system(load);
-    if(p.status==='fulfilled')return a?this.auth.db.authorizedSystem(a,['seller','manager'],c=>result(c,p)):this.auth.db.system(c=>result(c,p));
+    if(p.status==='fulfilled'){
+      const recheck=async(c:PoolClient)=>{if(p.mode==='live'&&p.provider==='paystack')await queuePaymentRecheck(c,p.id);return result(c,p);};
+      return a?this.auth.db.authorizedSystem(a,['seller','manager'],recheck):this.auth.db.system(recheck);
+    }
     if(p.mode==='test')throw new ApiError(403,'Test payments cannot grant access in the Supabase application database.');
     if(p.mode!=='free' && paystackConfig().mode!==p.mode)throw new ApiError(409,'The payment environment changed. Contact support.');
     const evidence=p.mode==='free'?undefined:await paystackRequest(`/transaction/verify/${ref}`);
@@ -193,10 +208,12 @@ export function installPaymentWebhook(app:Express,auth:SupabaseAuth){const payme
       const exists=(await auth.db.pool.query('select 1 from public.payments where provider=$1 and provider_reference=$2',['paystack',event.data.reference])).rowCount;
       if(exists)await payments.verify(null,event.data.reference);
     }
+    await queuePaymentReversal(auth,event,crypto.createHash('sha256').update(req.body).digest('hex'));
     res.json({received:true});
   }));
 }
 export function installPayments(app:Express,auth:SupabaseAuth){const payments=new SupabasePayments(auth);
+  installPaymentReversalRoutes(app,auth);
   app.get('/api/payments/paystack/pending',auth.require(['seller','manager']),route(async(req,res)=>res.json(await auth.db.authorizedSystem(req.actor,['seller','manager'],c=>pendingCheckouts(c,req.actor)))));
   app.post('/api/payments/paystack/initialize',auth.require(['seller','manager']),route(async(req,res)=>res.json(await payments.initialize(req.actor,req.body,req))));
   app.post('/api/digital-market/subscription',auth.require(['seller']),route(async(req,res)=>{fields(req.body,['requestId','plan']);res.json(await payments.initialize(req.actor,{...req.body,purpose:'subscription'},req));}));

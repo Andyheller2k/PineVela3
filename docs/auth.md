@@ -355,6 +355,13 @@ Allow `http://localhost:3001/api/auth/google/callback**` in Supabase Redirect UR
 requires its configured HTTPS origin and matching Supabase redirect allowlist.
 See [Supabase Google setup](https://supabase.com/docs/guides/auth/social-login/auth-google).
 
+Both ordinary Google sign-in and signup always request `prompt=select_account`
+without a `login_hint`, so Google's existing browser session does not silently
+choose the last account. PineVela sign-out revokes the app session and clears its
+cookies; Google's own browser session remains signed in. The next Google action
+still asks for an account choice. Real-provider HTTP checks verify Supabase
+forwards this prompt to Google and preserves callback state/cookie protections.
+
 The server exchanges the code and reads the verified identity from Supabase `/user`.
 The server resolves native profiles and account contexts by the verified Supabase
 subject and live session. Shared email never selects or links a secondary portal.
@@ -583,3 +590,12 @@ not grant access. Invitation acceptance checks the exact verified email, active
 issuing administrator and current approval-key version. Suspension takes effect
 on subsequent support requests, including requests with an already issued native
 Auth session. See [customer-support.md](customer-support.md).
+
+## Client authentication failures
+
+API helpers reject every non-success HTTP response with a typed status/code;
+they never turn a 401 mutation into an empty successful result. Only a rejected
+current native session carries `sessionExpired: true` and clears browser identity.
+A failed password/code proof for a separately invited identity does not clear the
+current primary account. Staff invitation completion and staff removal also
+require explicit server success receipts before updating their visible state.

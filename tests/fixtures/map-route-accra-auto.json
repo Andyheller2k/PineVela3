@@ -1,0 +1,157 @@
+{
+  "source": "https://valhalla1.openstreetmap.de/route",
+  "capturedAt": "2026-10-17T21:35:03.212Z",
+  "origin": {
+    "lat": 5.6037,
+    "lon": -0.187
+  },
+  "destination": {
+    "lat": 5.612,
+    "lon": -0.182
+  },
+  "response": {
+    "trip": {
+      "locations": [
+        {
+          "type": "break",
+          "lat": 5.6037,
+          "lon": -0.187,
+          "side_of_street": "right",
+          "original_index": 0
+        },
+        {
+          "type": "break",
+          "lat": 5.612,
+          "lon": -0.182,
+          "original_index": 1
+        }
+      ],
+      "legs": [
+        {
+          "maneuvers": [
+            {
+              "type": 2,
+              "instruction": "Drive north on Patrice Lumumba Road.",
+              "verbal_succinct_transition_instruction": "Drive north.",
+              "verbal_pre_transition_instruction": "Drive north on Patrice Lumumba Road.",
+              "verbal_post_transition_instruction": "Continue for 900 meters.",
+              "street_names": [
+                "Patrice Lumumba Road"
+              ],
+              "bearing_after": 12,
+              "time": 156.065,
+              "length": 0.85,
+              "cost": 210.522,
+              "begin_shape_index": 0,
+              "end_shape_index": 26,
+              "travel_mode": "drive",
+              "travel_type": "car"
+            },
+            {
+              "type": 15,
+              "instruction": "Turn left onto Volta Road.",
+              "verbal_transition_alert_instruction": "Turn left onto Volta Road.",
+              "verbal_succinct_transition_instruction": "Turn left.",
+              "verbal_pre_transition_instruction": "Turn left onto Volta Road.",
+              "verbal_post_transition_instruction": "Continue for 300 meters.",
+              "street_names": [
+                "Volta Road"
+              ],
+              "bearing_before": 92,
+              "bearing_after": 2,
+              "time": 78.457,
+              "length": 0.324,
+              "cost": 124.29,
+              "begin_shape_index": 26,
+              "end_shape_index": 30,
+              "travel_mode": "drive",
+              "travel_type": "car"
+            },
+            {
+              "type": 10,
+              "instruction": "Turn right onto Dodi Link.",
+              "verbal_transition_alert_instruction": "Turn right onto Dodi Link.",
+              "verbal_succinct_transition_instruction": "Turn right.",
+              "verbal_pre_transition_instruction": "Turn right onto Dodi Link.",
+              "verbal_post_transition_instruction": "Continue for 100 meters.",
+              "street_names": [
+                "Dodi Link"
+              ],
+              "bearing_before": 2,
+              "bearing_after": 93,
+              "time": 31.465,
+              "length": 0.129,
+              "cost": 45.725,
+              "begin_shape_index": 30,
+              "end_shape_index": 32,
+              "travel_mode": "drive",
+              "travel_type": "car"
+            },
+            {
+              "type": 10,
+              "instruction": "Turn right.",
+              "verbal_transition_alert_instruction": "Turn right.",
+              "verbal_succinct_transition_instruction": "Turn right.",
+              "verbal_pre_transition_instruction": "Turn right.",
+              "verbal_post_transition_instruction": "Continue for 40 meters.",
+              "bearing_before": 93,
+              "bearing_after": 178,
+              "time": 14.871,
+              "length": 0.037,
+              "cost": 100.351,
+              "begin_shape_index": 32,
+              "end_shape_index": 35,
+              "travel_mode": "drive",
+              "travel_type": "car"
+            },
+            {
+              "type": 4,
+              "instruction": "You have arrived at your destination.",
+              "verbal_transition_alert_instruction": "You will arrive at your destination.",
+              "verbal_pre_transition_instruction": "You have arrived at your destination.",
+              "bearing_before": 178,
+              "time": 0,
+              "length": 0,
+              "cost": 0,
+              "begin_shape_index": 35,
+              "end_shape_index": 35,
+              "travel_mode": "drive",
+              "travel_type": "car"
+            }
+          ],
+          "summary": {
+            "has_time_restrictions": false,
+            "has_toll": false,
+            "has_highway": false,
+            "has_ferry": false,
+            "min_lat": 5.603728,
+            "min_lon": -0.187131,
+            "max_lat": 5.612619,
+            "max_lon": -0.18162,
+            "time": 280.859,
+            "length": 1.341,
+            "cost": 480.889
+          },
+          "shape": "_x_uItnlJeMaBkV{Egb@mKkMwD}SmJ}HwDo^gTiU{Kc_A{j@wGcDwLkGkOiJcE_CuEmCuH_EqJcGqJoFqJoFsGqEwLaIw@iAoFuHyDsIyCcKMqFTkRucAgAu]q@{h@o@kg@e@r@mb@t@yd@dEGxAAnJK"
+        }
+      ],
+      "summary": {
+        "has_time_restrictions": false,
+        "has_toll": false,
+        "has_highway": false,
+        "has_ferry": false,
+        "min_lat": 5.603728,
+        "min_lon": -0.187131,
+        "max_lat": 5.612619,
+        "max_lon": -0.18162,
+        "time": 280.859,
+        "length": 1.341,
+        "cost": 480.889
+      },
+      "status_message": "Found route between points",
+      "status": 0,
+      "units": "kilometers",
+      "language": "en-US"
+    }
+  }
+}

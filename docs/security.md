@@ -917,8 +917,14 @@ the seller location derive coordinates from the stored listing, ignoring buyer o
 Device location is a discovery hint, not proof of identity, proximity, ownership or authority.
 PineVela neither stores it nor accepts it as an authorization boundary. Browser location
 can be spoofed; authenticated seller coordinates do not attest physical presence.
-OpenStreetMap receives map tile requests; selected directions and waypoint coordinates
-are shared with Google only when opening the external directions link. Profile pin labels
+OpenStreetMap receives map tile requests. Drawing a waypoint trail shares only the selected
+start, destination and travel mode with the configured Valhalla routing provider, without
+account cookies or referrers. Explicit GPS following can reroute from the current location;
+it stops on close/stop and pauses in background tabs. No device location or route is saved
+to PineVela storage. Requests have cancellation, timeout, size/geometry validation and rate
+limits; failures never become invented direct-line routes. Selected points are also shared
+with Google when opening its external directions link. See [navigation](map-navigation.md).
+Profile pin labels
 use DOM text and profile images use permitted local/public-storage URLs.
 
 
@@ -1097,3 +1103,64 @@ All queue actions recheck active membership; requesters never receive internal
 notes. Public replies commit their email outbox and account-scoped notification
 in the same transaction. See [customer-support.md](customer-support.md) for access,
 invitations, email configuration and verification.
+
+## Buyer–seller encryption and content reports
+
+New buyer–seller message content is encrypted in the browser. The server verifies
+the signed envelope against immutable saved participant keys and derives the
+conversation identities from the actual session and store. Plaintext sends and
+client identity overrides are rejected. Recovery uses a generated private phrase;
+private keys and decrypted history stay in memory and clear on lock or account
+change. Earlier plaintext and support conversations remain readable. This Web
+Crypto application protocol has no independent cryptographic audit or forward
+secrecy; see [the protocol and trust boundaries](marketplace-encryption.md).
+
+Reports recheck actual public visibility or saved order/conversation relationships.
+Only an original participant can consent to share a selected message. The API
+decrypts the original ciphertext with that message's disclosed key, stores exact
+verified evidence for operators and discards the supplied key. It never accepts
+supplied plaintext as message evidence. Other messages and the recovery phrase
+remain private. Reporters cannot read private recommendations or administrator
+notes; the reported account receives no reporter identity or report access.
+
+Customer service can recommend an action. A current administrator must use their
+own approval key to dismiss or escalate it, with matching proposal validation
+where linked. No report route bans, deletes, unpublishes or bypasses the existing
+five-member/founder governance or reviewed backup/dependency process. All six new
+private tables retain RLS, no browser writes and immutable history guards. See
+[report controls](content-reports.md).
+
+Notification acknowledgements derive the recipient from the native session and
+retain recipient RLS. Optional profile-context headers reject stale reads/writes
+with 409; they never grant ownership. Confirmed reads are monotonic within the
+current browser session, so a delayed old inbox response cannot restore an unread
+badge. In-flight acknowledgements are deduplicated and isolated across accounts
+and login generations. No notification schema or RLS changes are required.
+
+On an owned native support stack, run
+`node --import tsx scripts/verify-supabase-notification-reads.ts <private-metadata.json>`
+for actual Auth/API/RLS positive and negative checks. After building and starting
+the owned support preview, run
+`node scripts/verify-supabase-notification-browser.cjs <private-runtime.json>`
+for visible/off-screen/modal checks, a delayed genuine response, actual new
+support replies, reload persistence and account isolation. This uses local
+captured mail; production cases and recipients are unchanged.
+
+## Automatic public-content checks
+
+New marketplace/profile photographs and marketplace text require exact
+server-owned moderation decisions before publication. SQL triggers, catalog
+filters and restrictive media/Storage policies enforce the same boundary.
+Review evidence stays private; administrator-key decisions and account-sanction
+approvals remain separate. See [automatic moderation](content-moderation.md)
+for failure handling, child-safety limits and hosted activation verification.
+## Personal AI companion boundary
+
+The primary-only companion uses session-derived ownership, private RLS tables,
+server-defined personalities and bounded Groq inference. Its tools are read-only;
+they accept no identity fields and expose no encrypted chat, PIN or approval
+operation. Completed answers require a freshly validated native session and an
+unchanged conversation generation. AI output renders as plain text, with only
+server-generated internal result cards. See [companion details](companion.md).
+
+Frontend documents and SPA fallbacks enforce `Content-Security-Policy: frame-ancestors 'none'` and `X-Frame-Options: DENY` in static and development delivery. These are HTTP response policies, not meta tags; deployment proxies must preserve them. The CSP framing directive follows the [W3C CSP specification](https://www.w3.org/TR/CSP3/#directive-frame-ancestors).

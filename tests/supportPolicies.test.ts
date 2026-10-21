@@ -15,8 +15,8 @@ test('private support invitations survive sign-in while redirect injection is re
 
 test('Help never asks a manager for an operational secret while business changes still do', () => {
   const id = crypto.randomUUID();
-  for (const [method, path] of [['POST', '/api/support/tickets'], ['POST', `/api/support/tickets/${id}/replies`], ['PATCH', `/api/support/tickets/${id}`]]) assert.equal(managerKeyNeeded({ method, path }), false, path);
-  for (const path of ['/api/hostels', '/api/staff', '/api/support/tickets/forged/ownership', '/api/customer-service/tickets']) assert.equal(managerKeyNeeded({ method: 'POST', path }), true, path);
+  for (const [method, path] of [['POST', '/api/support/tickets'], ['POST', `/api/support/tickets/${id}/replies`], ['PATCH', `/api/support/tickets/${id}`], ['POST', '/api/reports']]) assert.equal(managerKeyNeeded({ method, path }), false, path);
+  for (const path of ['/api/hostels', '/api/staff', '/api/support/tickets/forged/ownership', '/api/customer-service/tickets', '/api/reports/forged/ownership']) assert.equal(managerKeyNeeded({ method: 'POST', path }), true, path);
 });
 
 test('local email capture is explicit, loopback only and disabled in production', () => {

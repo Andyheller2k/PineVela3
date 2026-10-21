@@ -1,0 +1,40 @@
+import assert from 'node:assert/strict';
+import crypto from 'node:crypto';
+import test from 'node:test';
+import {createChatIdentity,recoveryPhrase,recoverChatIdentity,rememberUnlockedIdentity,lockedChatIdentity,clearMarketEncryptionVault} from '../src/lib/marketEncryption';
+import {encryptMarketMessage,decryptMarketMessage,decryptReportedMessage,verifyEncryptedMessage,base64url} from '../marketEncryptionProtocol';
+
+test('only participants decrypt; recovery restores exact nonextractable identity and wrong phrases/accounts fail',async()=>{
+ const senderId=crypto.randomUUID(),recipientId=crypto.randomUUID(),phrase=recoveryPhrase();
+ const [sender,recipient,outsider]=await Promise.all([createChatIdentity(senderId,phrase),createChatIdentity(recipientId,recoveryPhrase()),createChatIdentity(crypto.randomUUID(),recoveryPhrase())]);
+ const binding={requestId:crypto.randomUUID(),buyerId:senderId,storeId:crypto.randomUUID(),senderId,recipientId};
+ const encrypted=await encryptMarketMessage(sender.identity,recipient.publicIdentity,binding,'Private buyer–seller text');
+ assert.equal(JSON.stringify(encrypted).includes('Private buyer'),false);
+ assert.equal((await decryptMarketMessage(sender.identity,binding,encrypted,sender.publicIdentity,recipient.publicIdentity)).content,'Private buyer–seller text');
+ assert.equal((await decryptMarketMessage(recipient.identity,binding,encrypted,sender.publicIdentity,recipient.publicIdentity)).content,'Private buyer–seller text');
+ await assert.rejects(decryptMarketMessage(outsider.identity,binding,encrypted,sender.publicIdentity,recipient.publicIdentity));
+ const recovered=await recoverChatIdentity(senderId,phrase,sender.publicIdentity,sender.backup);
+ assert.equal(recovered.agreement.extractable,false);assert.equal(recovered.signing.extractable,false);
+ assert.equal((await decryptMarketMessage(recovered,binding,encrypted,sender.publicIdentity,recipient.publicIdentity)).content,'Private buyer–seller text');
+ await assert.rejects(recoverChatIdentity(senderId,recoveryPhrase(),sender.publicIdentity,sender.backup));
+ await assert.rejects(recoverChatIdentity(recipientId,phrase,sender.publicIdentity,sender.backup));
+ assert.equal(JSON.stringify(sender.backup).includes('Private'),false);
+ rememberUnlockedIdentity(recovered);assert.equal(lockedChatIdentity(senderId),recovered);clearMarketEncryptionVault();assert.equal(lockedChatIdentity(senderId),undefined);
+});
+test('ciphertext, envelope, sender, context and signatures reject tampering; disclosure decrypts only one stored message',async()=>{
+ const senderId=crypto.randomUUID(),recipientId=crypto.randomUUID();
+ const [sender,recipient]=await Promise.all([createChatIdentity(senderId,recoveryPhrase()),createChatIdentity(recipientId,recoveryPhrase())]);
+ const binding={requestId:crypto.randomUUID(),buyerId:senderId,storeId:crypto.randomUUID(),senderId,recipientId};
+ const encrypted=await encryptMarketMessage(sender.identity,recipient.publicIdentity,binding,'A selected report');
+ await assert.rejects(encryptMarketMessage(sender.identity,{...recipient.publicIdentity,agreementKey:sender.publicIdentity.agreementKey},binding,'Substituted key with a pinned fingerprint'));
+ await assert.rejects(decryptMarketMessage(recipient.identity,binding,encrypted,{...sender.publicIdentity,signingKey:recipient.publicIdentity.signingKey},recipient.publicIdentity));
+ for(const changed of [{...encrypted,iv:base64url(crypto.randomBytes(12))},{...encrypted,ciphertext:base64url(crypto.randomBytes(32))},{...encrypted,signature:base64url(crypto.randomBytes(64))},{...encrypted,boxes:[encrypted.boxes[1],encrypted.boxes[0]]}])await assert.rejects(verifyEncryptedMessage(binding,changed,sender.publicIdentity,recipient.publicIdentity));
+ for(const field of ['requestId','buyerId','storeId','senderId','recipientId'])await assert.rejects(decryptMarketMessage(recipient.identity,{...binding,[field]:crypto.randomUUID()},encrypted,sender.publicIdentity,recipient.publicIdentity));
+ const disclosure=await decryptMarketMessage(recipient.identity,binding,encrypted,sender.publicIdentity,recipient.publicIdentity,true);
+ assert.match(disclosure.key!,/^[A-Za-z0-9_-]{43}$/);
+ const row={encryption_version:1,encrypted_payload:encrypted,request_id:binding.requestId,buyer_context_id:binding.buyerId,store_id:binding.storeId,sender_context_id:binding.senderId,recipient_context_id:binding.recipientId};
+ assert.equal(await decryptReportedMessage(row,disclosure.key!),'A selected report');
+ await assert.rejects(decryptReportedMessage(row,base64url(crypto.randomBytes(32))));
+ const next=await encryptMarketMessage(sender.identity,recipient.publicIdentity,{...binding,requestId:crypto.randomUUID()},'Another message');
+ await assert.rejects(decryptReportedMessage({...row,encrypted_payload:next},disclosure.key!));
+});

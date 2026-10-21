@@ -108,7 +108,7 @@ export default function PublicHeader({compact = false, searchQuery, setSearchQue
           </div>
         )}
         <nav aria-label="About PineVela" className="public-header-sections flex flex-wrap items-center justify-center gap-1">
-          <Link to="/faq" className="public-header-link">FAQ</Link>
+          <Link to="/faq?from=/" className="public-header-link">FAQ</Link>
           <HelpLink className="public-header-link" />
           <button type="button" onClick={() => onCompanySection('about-us')} className="public-header-link">About Us</button>
           <button type="button" onClick={() => onCompanySection('our-vision')} className="public-header-link">Our Vision</button>

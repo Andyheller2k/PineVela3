@@ -1,6 +1,10 @@
 /** Same-origin API authentication lives in an HttpOnly cookie, never browser storage. */
+import {clearCompanionSubmission} from './companionSubmission';
+import { clearMarketEncryptionVault } from './marketEncryption';
+
 let sessionGeneration = 0;
-export function advanceSessionGeneration(): void { sessionGeneration++; }
+export function currentSessionGeneration(): number { return sessionGeneration; }
+export function advanceSessionGeneration(): void { sessionGeneration++;clearCompanionSubmission();clearMarketEncryptionVault(); }
 
 export function clearLegacySessionStorage(): void {
   for (const key of ['pinevela_session_token', 'token', 'pinevela_auth_token', 'pinevela_token', 'pinevela_user', 'pinevela_officer_session']) {
@@ -39,6 +43,11 @@ export async function sessionFetch(input: RequestInfo | URL, options: RequestIni
     const body = await response.clone().json().catch(() => null);
     if (generation === sessionGeneration && body?.maintenanceMode === true) window.dispatchEvent(new Event('pinevela-maintenance'));
   }
-  if (generation === sessionGeneration && response.status === 401 && !/\/(?:login|verification-team-login)$/.test(url.pathname)) window.dispatchEvent(new Event('pinevela-session-expired'));
+  if (generation === sessionGeneration && response.status === 401) {
+    const body = await response.clone().json().catch(() => null);
+    // A failed password/code proof for another invited identity is not expiry
+    // of this account. Only the server's current-session guard sets this flag.
+    if (generation === sessionGeneration && body?.sessionExpired === true) window.dispatchEvent(new Event('pinevela-session-expired'));
+  }
   return response;
 }

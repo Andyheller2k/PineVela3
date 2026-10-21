@@ -1,8 +1,8 @@
 import { createContext,ReactNode,useContext,useEffect,useRef,useState } from 'react';
 import { needsApprovalKey } from '../lib/administratorApproval';
-import { safeJson } from '../lib/api';
+import { apiFetch as requestApi, safeJson } from '../lib/api';
 import { requestKeyedApproval } from '../lib/approvalPrompt';
-import { invalidateAllQueries,queryClient } from '../lib/queryClient';
+import { queryClient } from '../lib/queryClient';
 import SignOutProgress from '../components/SignOutProgress';
 import { advanceSessionGeneration,clearLegacySessionStorage,sessionFetch as fetch } from '../lib/session';
 import { SessionCheckUnavailable,SessionRestoration } from '../lib/sessionRestoration';
@@ -245,39 +245,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (user?.role === 'admin' && needsApprovalKey(options.method || 'GET', url, body) && !body?.privateKey) {
       return requestKeyedApproval(key => apiFetch(url, { ...options, body: JSON.stringify({ ...body, privateKey: key }) }));
     }
-    const headers = {
-      'Content-Type': 'application/json',
-      ...(options.headers || {})
-    };
-
-    try {
-      const res = await fetch(url, {
-        ...options,
-        headers
-      });
-
-      if (!res.ok) {
-        if (res.status === 401) {
-          // Gracefully return empty array on 401 for background fetch queries
-          return [];
-        }
-        const errData = await safeJson(res);
-        throw Object.assign(new Error(errData.error || errData.message || `HTTP error ${res.status}`), { status: res.status });
-      }
-
-      const data = await safeJson(res);
-
-      // Invalidate query caches when data changes through Express API
-      const method = (options.method || 'GET').toUpperCase();
-      if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(method)) {
-        invalidateAllQueries();
-      }
-
-      return data;
-    } catch (err) {
-      console.warn("API fetch warning:", err);
-      throw err;
-    }
+    return requestApi(url, options);
   };
 
   return (

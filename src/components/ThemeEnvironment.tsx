@@ -6,6 +6,5 @@ export default function ThemeEnvironment() {
   if (publicAppearance || theme === 'dark') return null;
   return <div className="theme-environment" aria-hidden="true">
     <div className="theme-atmosphere atmosphere-one" /><div className="theme-atmosphere atmosphere-two" />
-    <div className="theme-celestial theme-sun"><span /></div>
   </div>;
 }

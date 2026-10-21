@@ -59,7 +59,7 @@ export const renderAvatarGraphic = (avatarStr: string | null | undefined, sizeCl
   const pxSize = Math.max(16, Math.min(80, Math.round(sizeNum * 2.6)));
 
   return (
-    <div className={`${sizeClass} rounded-full ${preset.bgColor} ${preset.textColor} flex items-center justify-center border-2 border-white shadow-md shrink-0 overflow-hidden`}>
+    <div data-avatar-preset={preset.id} className={`${sizeClass} rounded-full ${preset.bgColor} ${preset.textColor} flex items-center justify-center border-2 border-white shadow-md shrink-0 overflow-hidden`}>
       <PineLogo size={pxSize} hideText={true} />
     </div>
   );
@@ -275,7 +275,7 @@ export default function UserAvatarSelector({ onAvatarSave }: UserAvatarSelectorP
                       : 'border-slate-150 hover:border-slate-300 bg-slate-50/50 hover:bg-slate-100/50'
                   }`}
                 >
-                  <div className={`w-14 h-14 rounded-full ${preset.bgColor} ${preset.textColor} flex items-center justify-center shadow-xs`}>
+                  <div data-avatar-preset={preset.id} className={`w-14 h-14 rounded-full ${preset.bgColor} ${preset.textColor} flex items-center justify-center shadow-xs`}>
                     {renderPresetIcon(preset.iconName, "w-7 h-7")}
                   </div>
 
@@ -352,7 +352,7 @@ export default function UserAvatarSelector({ onAvatarSave }: UserAvatarSelectorP
                 className="px-5 py-2 bg-blue-900 hover:bg-blue-800 text-white font-black text-xs rounded-xl shadow-md cursor-pointer flex items-center gap-2"
               >
                 <Check className="w-4 h-4" />
-                <span>{saving?'Saving profile photo…':'Save Uploaded Profile Photo'}</span>
+                <span>{saving?'Checking & saving profile photo…':'Save Uploaded Profile Photo'}</span>
               </button>
             </div>
           )}

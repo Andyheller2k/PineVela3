@@ -2,7 +2,8 @@ import { createContext,ReactNode,useCallback,useContext,useEffect,useMemo,useRef
 import { AccountRefreshGate } from '../lib/accountRefresh';
 import { safeJson } from '../lib/api';
 import { queryClient } from '../lib/queryClient';
-import { sessionFetch as fetch } from '../lib/session';
+import { currentSessionGeneration, sessionFetch as fetch } from '../lib/session';
+import NotificationViewportTracker from '../components/NotificationViewportTracker';
 import { useAuth } from './AuthContext';
 
 import { AlertTriangle,Bell,CheckCircle2,X } from 'lucide-react';
@@ -109,9 +110,17 @@ class NotificationDeduplicatorService {
   }
 
   public markNotificationRead(id: string, accountKey: string) {
-    if (!id) return;
-    this.readNotificationIds.add(JSON.stringify([accountKey, id]));
-    this.saveToStorage();
+    this.markNotificationsRead([id], accountKey);
+  }
+
+  public markNotificationsRead(ids: Iterable<string>, accountKey: string) {
+    let changed = false;
+    for (const id of ids) {
+      if (!id) continue;
+      const key = JSON.stringify([accountKey, id]);
+      if (!this.readNotificationIds.has(key)) { this.readNotificationIds.add(key); changed = true; }
+    }
+    if (changed) this.saveToStorage();
   }
 
   public shouldFireNotification(notif: NotificationItem, isPrimaryAccount: boolean, accountKey: string): boolean {
@@ -161,6 +170,8 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   const generationRef = useRef(0);
   const requestRef = useRef(0);
   const refreshGate = useRef(new AccountRefreshGate());
+  const confirmedReads = useRef(new Set<string>());
+  const pendingReads = useRef(new Map<string, Promise<void>>());
   const [stateAccountKey, setStateAccountKey] = useState(notificationAccountKey);
   const isPrimaryAccount = Boolean(
     user && (userRole === 'user' || userRole === '')
@@ -250,19 +261,22 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       let loaded = false;
       try {
         if (!isCurrentAccount()) return;
-        const notifs: NotificationItem[] = await apiFetch('/api/notifications', { signal });
+        const notifs: NotificationItem[] = await apiFetch('/api/notifications', {
+          signal, headers: { 'X-PineVela-Profile-Context': user.id },
+        });
         if (!isCurrentAccount()) return;
         if (Array.isArray(notifs)) {
           // Deduplicate notifications list
           const uniqueNotifs: NotificationItem[] = [];
+          const readIds: string[] = [];
           const seenMap = new Set<string>();
 
           for (const rawNotif of notifs) {
             // Server read state is authoritative and specific to the current account.
-            const isRead = Boolean(rawNotif.read);
+            const isRead = Boolean(rawNotif.read || confirmedReads.current.has(rawNotif.id));
             const notif: NotificationItem = { ...rawNotif, read: isRead };
             if (isRead && rawNotif.id) {
-              notificationServiceSingleton.markNotificationRead(rawNotif.id, notificationAccountKey);
+              readIds.push(rawNotif.id);
             }
 
             const key = `id_${notif.id}_key_${(notif.title || '').toLowerCase()}_${(notif.message || '').toLowerCase()}`;
@@ -277,11 +291,13 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
             }
           }
 
+          notificationServiceSingleton.markNotificationsRead(readIds, notificationAccountKey);
           setNotifications(prev => {
-            if (JSON.stringify(prev) === JSON.stringify(uniqueNotifs)) {
+            const next = uniqueNotifs.map(n => confirmedReads.current.has(n.id) ? { ...n, read: true } : n);
+            if (JSON.stringify(prev) === JSON.stringify(next)) {
               return prev;
             }
-            return uniqueNotifs;
+            return next;
           });
           loaded = true;
         }
@@ -296,33 +312,54 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     });
   };
 
-  const markAsRead = useCallback(async (id: string) => {
-    try {
-      await apiFetch(`/api/notifications/${id}/read`, { method: 'PUT' });
-      if (activeAccountRef.current !== notificationAccountKey) return;
-      notificationServiceSingleton.markNotificationRead(id, notificationAccountKey);
-      setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
-    } catch (e) {
-      console.warn("Failed to mark notification as read:", e);
-    }
-  }, [apiFetch, notificationAccountKey]);
+  const markAsRead = useCallback((id: string): Promise<void> => {
+    if (!user?.id || !id || activeAccountRef.current !== notificationAccountKey || confirmedReads.current.has(id)) return Promise.resolve();
+    const generation = generationRef.current, session = currentSessionGeneration();
+    const key = JSON.stringify([notificationAccountKey, generation, session, id]);
+    const existing = pendingReads.current.get(key);
+    if (existing) return existing;
+    const request = (async () => {
+      try {
+        // Read acknowledgements update only this inbox; they must not refetch every dashboard query.
+        const response = await fetch(`/api/notifications/${encodeURIComponent(id)}/read`, {
+          method: 'PUT', headers: { 'X-PineVela-Profile-Context': user.id }, signal: AbortSignal.timeout(15000),
+        });
+        if (!response.ok || (await safeJson(response))?.success !== true) throw new Error('Read acknowledgement failed.');
+        if (activeAccountRef.current !== notificationAccountKey || generationRef.current !== generation || currentSessionGeneration() !== session) return;
+        confirmedReads.current.add(id);
+        notificationServiceSingleton.markNotificationRead(id, notificationAccountKey);
+        setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+      } catch (e) { console.warn('Failed to mark notification as read:', e); }
+      finally { pendingReads.current.delete(key); }
+    })();
+    pendingReads.current.set(key, request);
+    return request;
+  }, [notificationAccountKey, user?.id]);
 
   const markAllAsRead = useCallback(async () => {
+    const generation = generationRef.current, session = currentSessionGeneration();
+    const ids = new Set(notifications.map(n => n.id));
+    if (!user?.id || activeAccountRef.current !== notificationAccountKey) return;
     try {
-      await apiFetch('/api/notifications/read-all', { method: 'PUT' });
-      if (activeAccountRef.current !== notificationAccountKey) return;
-      notifications.forEach(n => {
-        if (n.id) notificationServiceSingleton.markNotificationRead(n.id, notificationAccountKey);
+      const response = await fetch('/api/notifications/read-all', { method: 'PUT',
+        headers: { 'X-PineVela-Profile-Context': user.id }, signal: AbortSignal.timeout(15000) });
+      if (!response.ok || (await safeJson(response))?.success !== true) throw new Error('Read acknowledgements failed.');
+      if (activeAccountRef.current !== notificationAccountKey || generationRef.current !== generation || currentSessionGeneration() !== session) return;
+      ids.forEach(id => {
+        confirmedReads.current.add(id);
       });
-      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+      notificationServiceSingleton.markNotificationsRead(ids, notificationAccountKey);
+      setNotifications(prev => prev.map(n => ids.has(n.id) ? { ...n, read: true } : n));
     } catch (e) {
       console.warn("Failed to mark all notifications as read:", e);
     }
-  }, [apiFetch, notifications, notificationAccountKey]);
+  }, [notifications, notificationAccountKey, user?.id]);
 
   // Centralized background real-time polling loop (every 6s) & window focus refresh
   useEffect(() => {
     generationRef.current += 1;
+    confirmedReads.current.clear();
+    pendingReads.current.clear();
     setStateAccountKey(notificationAccountKey);
     setNotifications([]);
     setToasts([]);
@@ -373,6 +410,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   return (
     <NotificationContext.Provider value={providerValue}>
       {children}
+      <NotificationViewportTracker scopeKey={`${notificationAccountKey}:${currentSessionGeneration()}`} notifications={currentNotifications} onViewed={markAsRead} />
       <NotificationToastContainer toasts={currentToasts} dismissToast={dismissToast} />
     </NotificationContext.Provider>
   );

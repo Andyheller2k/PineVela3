@@ -78,6 +78,9 @@ export function installGoogleAuth(app: Express, complete: (identity: GoogleIdent
       const url = new URL(`${config.url}/auth/v1/authorize`);
       url.searchParams.set('provider', 'google');
       url.searchParams.set('scopes', 'openid email profile');
+      // App sign-out leaves Google's browser session intact. Ask for an
+      // explicit account choice on every sign-in and signup, including retries.
+      url.searchParams.set('prompt', 'select_account');
       url.searchParams.set('redirect_to', `${origin}/api/auth/google/callback?state=${state}`);
       url.searchParams.set('code_challenge', crypto.createHash('sha256').update(verifier).digest('base64url'));
       url.searchParams.set('code_challenge_method', 's256');

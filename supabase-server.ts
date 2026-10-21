@@ -1,20 +1,24 @@
 import dotenv from 'dotenv';
 import path from 'node:path';
-import express from 'express';
 import { createServer as createViteServer, type ViteDevServer } from 'vite';
 import { SupabaseDatabase } from './supabase/db.js';
 import { createSupabaseApp } from './supabase/app.js';
 import { loadOrderPins } from './supabase/orderPins.js';
+import { installStaticFrontend,frontendFramingProtection } from './supabase/staticFrontend.js';
+import {startOrderExpiry} from './supabase/orderExpiry.js';
+import {startPaymentReconciliation} from './supabase/paymentReversals.js';
 dotenv.config({ quiet: true });
 const db = new SupabaseDatabase();
 // Refuse to serve a partially applied or inaccessible schema.
-await db.pool.query("select version from private.schema_migrations where version = '20261017133104'").then(result => {
+await db.pool.query("select version from private.schema_migrations where version = '20261020221812'").then(result => {
   if (!result.rowCount) throw new Error('Apply all Supabase migrations before starting the server.');
 });
 const pinKey=loadOrderPins();
 if((await db.pool.query('select exists(select 1 from private.market_order_pins where key_id<>$1) as mismatch',[pinKey.keyId])).rows[0].mismatch)
   throw new Error('Restore the matching private delivery PIN key before starting the replacement server.');
-const { app } = createSupabaseApp(db);
+const { app, auth } = createSupabaseApp(db);
+const closePaymentReconciliation=startPaymentReconciliation(auth);
+const closeOrderExpiry=startOrderExpiry(db);
 let vite:ViteDevServer|undefined;
 app.use((req,res,next) => {
   let pathname:string;
@@ -26,9 +30,9 @@ app.use((req,res,next) => {
 // without Vite's module transforms competing with API/authentication requests.
 // This changes asset serving only; it never changes Auth, RLS or release gates.
 if (process.env.NODE_ENV === 'production' || process.env.PINEVELA_MIGRATION_STATIC_PREVIEW === 'true') {
-  app.use(express.static(path.resolve('dist-supabase')));
-  app.get('*', (_req, res) => res.sendFile(path.resolve('dist-supabase/index.html')));
+  installStaticFrontend(app);
 } else {
+  app.use(frontendFramingProtection);
   vite = await createViteServer({ server: { middlewareMode: true, watch: { ignored: ['**/.security/**', '**/data/**', '**/uploads/**', '**/docs/**', '**/scripts/**', '**/tests/**', '**/supabase/migrations/**', '**/supabase/.temp/**', '**/dist-supabase/**', '**/dist-supabase-backend/**', '**/SUPABASE_CONTINUATION.md'] }, fs: { deny: ['.env', '.env.*', '*.{crt,pem}', '**/.git/**', '**/.security/**', '**/data/**', '**/uploads/**'] } }, appType: 'spa' });
   app.use(vite.middlewares);
 }
@@ -42,6 +46,8 @@ async function close() {
   const deadline=setTimeout(()=>server.closeAllConnections(),45000);deadline.unref();
   try {
     await app.locals.closeSupport?.();
+    await closePaymentReconciliation();
+    await closeOrderExpiry();
     await app.locals.closeRealtime();
     await vite?.close();
     // Finish accepted HTTP work before ending its database pool. Vite's own

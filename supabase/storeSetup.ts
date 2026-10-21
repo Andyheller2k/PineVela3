@@ -8,6 +8,11 @@ import {STORE_DELIVERY_METHODS} from '../storeDelivery.js';
 import {internationalPhone,supportedPhoneCountry} from '../internationalPhone.js';
 import {notify} from './notifications.js';
 import {sellerStatus} from './sellerRegistration.js';
+import { moderateContent,requireContentApproval } from './contentSafety.js';
+import { storeSafetyText } from './contentSafetyPolicy.js';
+import { checkProfileContext } from './profiles.js';
+const storeFields=['storeName','username','location','category','deliveryMode','phone','phoneCountry','description','profilePicture','coverPicture'];
+function checkStoreFields(body:any){if(!body || typeof body!=='object' || Array.isArray(body) || Object.keys(body).some(k=>!storeFields.includes(k)))throw new ApiError(400,'Unsupported store profile fields.');}
 const route=(work:(req:AuthRequest,res:any)=>Promise<unknown>):RequestHandler=>(req,res,next)=>{work(req as AuthRequest,res).catch(next);};
 export async function sellerStore(c:PoolClient,a:VerifiedActor,lock=false){
   if(a.kind!=='seller')throw new ApiError(403,'Sign in with your verified seller account.');
@@ -19,7 +24,7 @@ export async function sellerStore(c:PoolClient,a:VerifiedActor,lock=false){
 }
 export async function storePlan(c:PoolClient,id:string){const plan=(await c.query("select plan from public.store_subscriptions where store_id=$1 and status='active' and starts_at<=now() and ends_at>now() order by starts_at desc limit 1",[id])).rows[0]?.plan;return plan==='pine_pro'?'pro':plan==='pine_star'?'star':'default';}
 export async function saveStoreProfile(c:PoolClient,a:VerifiedActor,body:any,setup=false){
-  if(!body || typeof body!=='object' || Array.isArray(body) || Object.keys(body).some(k=>!['storeName','username','location','category','deliveryMode','phone','phoneCountry','description','profilePicture','coverPicture'].includes(k)))throw new ApiError(400,'Unsupported store profile fields.');
+  checkStoreFields(body);
   const s=await sellerStore(c,a,true);
   if(!setup && !s.setup_completed_at)throw new ApiError(409,'Complete initial store setup before editing its profile.');
   const patch:any={};
@@ -43,6 +48,8 @@ export async function saveStoreProfile(c:PoolClient,a:VerifiedActor,body:any,set
     patch[column]=value;
   }
   const unchanged=Object.entries(patch).every(([key,value])=>s[key]===value);
+  await requireContentApproval(c,a,'store_text',storeSafetyText({storeName:patch.name??s.name,username:patch.username??s.username,
+    description:patch.description??s.description,category:patch.primary_category??s.primary_category,location:patch.location??s.location}));
   if(unchanged && s.setup_completed_at)return {success:true,idempotent:true};
   const columns=Object.keys(patch),parameters=[s.id,...Object.values(patch)];
   // Column names are exclusively the server whitelist above, never body keys.
@@ -53,7 +60,15 @@ export async function saveStoreProfile(c:PoolClient,a:VerifiedActor,body:any,set
   return {success:true,idempotent:false};
 }
 export function installStoreSetup(app:Express,auth:SupabaseAuth){
-  const save=(setup:boolean)=>route(async(req,res)=>{const result=await auth.db.authorizedSystem(req.actor,['seller'],async c=>{
+  const save=(setup:boolean)=>route(async(req,res)=>{
+    checkProfileContext(req.actor,req.headers['x-pinevela-profile-context']);
+    checkStoreFields(req.body);
+    const content=await auth.db.authorizedSystem(req.actor,['seller'],async c=>{
+      const s=await sellerStore(c,req.actor);
+      return storeSafetyText({storeName:s.name,username:s.username,description:s.description,category:s.primary_category,location:s.location,...req.body});
+    });
+    await moderateContent(auth,req.actor,'store_text',content);
+    const result=await auth.db.authorizedSystem(req.actor,['seller'],async c=>{
     const saved=await saveStoreProfile(c,req.actor,req.body,setup);return {...saved,store:(await sellerStatus(c,req.actor)).store};
   });res.json(result);});
   app.post(['/api/digital-market/store-setup','/api/digital-market/create-store'],auth.require(['seller']),save(true));

@@ -143,7 +143,7 @@ export const MarketItemCard: React.FC<MarketItemCardProps> = memo(
             <button
               type="button"
               onClick={handleFavoriteClick}
-              className="absolute bottom-1.5 right-1.5 sm:bottom-2 sm:right-2 w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-white flex items-center justify-center text-rose-500 hover:text-rose-600 border border-slate-100 shadow-sm active:scale-90 transition-transform cursor-pointer z-30"
+              className="market-card-favorite absolute bottom-1.5 right-1.5 sm:bottom-2 sm:right-2 w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-white flex items-center justify-center text-rose-500 hover:text-rose-600 border border-slate-100 shadow-sm active:scale-90 transition-transform cursor-pointer z-30"
               title={isFavorite ? "Remove from wishlist" : "Add to wishlist"}
               aria-label={isFavorite ? `Remove ${product.title} from wishlist` : `Add ${product.title} to wishlist`}
             aria-pressed={isFavorite}

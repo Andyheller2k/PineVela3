@@ -1,7 +1,8 @@
 # FAQ and customer support
 
 `/faq` contains searchable answers based on the marketplace and housing flows.
-It shares the fixed navy/yellow public appearance. `/help` accepts questions,
+Public entries use the fixed navy/yellow appearance; product entries preserve
+the user's theme across FAQ and Help navigation. `/help` accepts questions,
 complaints and reports; public entry points keep that appearance, while product
 entry points preserve the product theme. `Help` is available in portal headers,
 desktop navigation and settings, and on the public landing and login pages.
@@ -92,6 +93,24 @@ sending API. Production never enables this local provider.
 
 ## Migration and verification
 
+Returning from FAQ/Help to a primary or seller dashboard reuses its last complete,
+successful server snapshot and immediately refreshes in the background. Snapshots
+live only in the existing memory query cache for up to ten minutes, scoped by
+portal, account context and login generation. Logout clears the cache; a new
+login or late response from an older session cannot reuse it. Initial visits
+and expired snapshots retain their loading state and server authorization.
+
+After building, run `node scripts/verify-supabase-support-return-browser.cjs
+<private-runtime.json>` against an owned support preview for real account,
+theme, navigation and session-isolation checks. API reads are delayed rather
+than replaced during the warm-return verification.
+
+Verified on 2026-10-17: the support-return browser check passed 70 assertions
+with four real native logins, primary/seller returns, light/dark themes and
+375/1440-pixel widths. Logout, a different account and a new login of the same
+account required fresh server data. Snapshot isolation/expiry tests, focused
+theme/refresh/session tests, TypeScript and the production build also passed.
+
 Migration `20261017133104_customer_support_tickets.sql` adds private invitations,
 memberships, tickets, messages, case events and the durable email outbox. Apply
 all migrations with the existing migration runner before starting the new
@@ -117,3 +136,5 @@ project also has migration 70 applied, no pending migrations, and passed the
 read-only installation check. No test accounts or cases were added there.
 Live Resend delivery still requires the server variables described above; actual
 support email sending was verified through the isolated Mailpit service.
+
+Opening Purchases does not mark all order alerts read. New order alerts carry a validated `market_order_id`, appear with their actual title/message on the linked order card and use the shared viewport tracker (including hidden-tab and modal coverage checks). Historical alerts without an exact relationship remain in Notifications, where their own visible notice or the explicit read action acknowledges them.

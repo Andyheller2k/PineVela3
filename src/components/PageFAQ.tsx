@@ -1,14 +1,18 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, ArrowUpRight } from 'lucide-react';
-import SupportLayout from './SupportLayout';
+import SupportLayout, { supportHome } from './SupportLayout';
+import { useTheme } from '../context/ThemeContext';
+import { useAuth } from '../context/AuthContext';
 import { faqSections } from './faqContent';
 
 export default function PageFAQ() {
   const [search, setSearch] = useState('');
+  const { publicAppearance } = useTheme();
+  const { user } = useAuth();
   const term = search.trim().toLowerCase();
   const sections = faqSections.map(section => ({ ...section, questions: section.questions.filter(([q, a]) => `${q} ${a}`.toLowerCase().includes(term)) })).filter(s => s.questions.length);
-  return <SupportLayout publicPage>
+  return <SupportLayout publicPage={publicAppearance}>
     <section className="mb-10 max-w-3xl space-y-5">
       <p className="text-xs font-bold uppercase tracking-[.18em] text-blue-700">A little clarity goes a long way</p>
       <h1 className="text-4xl font-black tracking-tight sm:text-6xl">How can we help?</h1>
@@ -25,6 +29,6 @@ export default function PageFAQ() {
       </details>)}</div>
     </section>)}</div>
     {!sections.length && <p role="status" className="rounded-2xl border border-slate-200 p-6 text-sm text-slate-600">No matching questions. Try another search or send us your question.</p>}
-    <section className="pv-feature-card mt-12 flex flex-wrap items-center justify-between gap-5 rounded-3xl border p-6 sm:p-8"><div><h2 className="text-2xl font-bold">Still need a hand?</h2><p className="mt-2 text-sm text-slate-600">Ask a question or tell us what went wrong. Keep track of every reply.</p></div><Link to="/help?from=/faq" className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-bold text-white">Contact support<ArrowUpRight aria-hidden="true" size={18} /></Link></section>
+    <section className="pv-feature-card mt-12 flex flex-wrap items-center justify-between gap-5 rounded-3xl border p-6 sm:p-8"><div><h2 className="text-2xl font-bold">Still need a hand?</h2><p className="mt-2 text-sm text-slate-600">Ask a question or tell us what went wrong. Keep track of every reply.</p></div><Link to={`/help?from=${publicAppearance ? '/faq' : encodeURIComponent(supportHome(user))}`} className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-bold text-white">Contact support<ArrowUpRight aria-hidden="true" size={18} /></Link></section>
   </SupportLayout>;
 }

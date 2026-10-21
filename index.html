@@ -7,8 +7,8 @@
       // Public pages stay fixed; product pages restore the saved preference before paint.
       var route = (location.hash.slice(1).split('?')[0] || '/').replace(/\/+$/, '') || '/';
       var fixedAppearance = route === '/' || route === '/login' ? 'light'
-        : route === '/pineresidence' || route === '/pinemarket' || route === '/faq' || route === '/support-invitation' || /^\/pinemarket\/stores\/[^/]+$/.test(route) ? 'dark' : null;
-      if (route === '/help') {
+        : route === '/pineresidence' || route === '/pinemarket' || route === '/support-invitation' || /^\/pinemarket\/stores\/[^/]+$/.test(route) ? 'dark' : null;
+      if (route === '/help' || route === '/faq') {
         var helpFrom = new URLSearchParams(location.hash.slice(1).split('?').slice(1).join('?')).get('from') || '';
         fixedAppearance = /^\/(?:user\/dashboard|student\/dashboard|resident\/dashboard|manager\/dashboard|staff\/dashboard|admin\/dashboard|digital-market(?:\/onboard)?|market|customer-service|field-officer|officer\/dashboard|verification-team|verification-portal)$/.test(helpFrom) ? null : 'dark';
       }

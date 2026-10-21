@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { SUPPORT_QUEUE_STATUSES, SUPPORT_STATUSES, supportRequesterLabel, type SupportTicket } from '../../supportModel';
+import ReportReview from './ReportReview';
 
 export default function SupportThread({ ticket, onChange, request, operator = false, members = [] }: {
   ticket: SupportTicket; onChange: (ticket: SupportTicket) => void; request: (suffix: string, body: unknown, method?: string) => Promise<any>;
@@ -20,6 +21,7 @@ export default function SupportThread({ ticket, onChange, request, operator = fa
         <label className="space-y-1 text-xs font-bold">Assigned to<select aria-label="Assigned customer-service member" disabled={busy} value={ticket.assignedTo || ''} onChange={e => void work(() => request('', { assignedTo: e.target.value || null, version: ticket.version }, 'PATCH'))} className="block w-full rounded-xl border border-slate-200 bg-white p-2.5 text-sm"><option value="">Unassigned</option>{ticket.assignedTo && !members.some(m => m.id === ticket.assignedTo) && <option value={ticket.assignedTo} disabled>Inactive team member</option>}{members.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}</select></label>
       </div>
     </div>}
+    {operator && <ReportReview ticketId={ticket.id} />}
     <ol aria-label="Case conversation" className="space-y-4">{ticket.messages?.map(message => <li key={message.id} className={`rounded-2xl border p-4 ${message.internal ? 'border-amber-200 bg-amber-50' : 'border-slate-200 bg-slate-50'}`}>
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2"><p className="text-xs font-bold text-blue-800">{message.authorName}{message.internal ? ' · Internal note' : message.authorRole === 'requester' ? '' : ' · Customer service'}</p><time className="text-[11px] text-slate-500">{new Date(message.createdAt).toLocaleString()}</time></div>
       <p className="whitespace-pre-wrap break-words text-sm leading-7 text-slate-700">{message.body}</p>

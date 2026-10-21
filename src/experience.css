@@ -1,5 +1,11 @@
 /* Product screens: white/navy/gold by day, solid navy/gold by night.
    Public storytelling and authentication keep the stronger advertising palette. */
+:root {
+  --pv-auth-glass-surface: linear-gradient(145deg, rgb(0 8 20 / .7), rgb(0 29 61 / .74));
+  --pv-auth-glass-edge: rgb(255 195 0 / .45);
+  --pv-auth-glass-filter: blur(18px) saturate(1.25);
+  --pv-auth-glass-shadow: inset 0 1px 0 rgb(255 214 10 / .28), inset 0 -1px 0 rgb(0 8 20 / .2), 0 16px 48px rgb(0 8 20 / .3);
+}
 html[data-theme][data-appearance="public"],
 html[data-theme] :where(body:has(.landing-peak-page, .unified-login), .pv-feature-card, [data-portal-navigation], #public-header) {
   --pv-text: #dce7f3;
@@ -44,6 +50,18 @@ html[data-theme] :is([data-portal-navigation], [id="public-header"]) {
   border-color: rgb(255 195 0 / .30) !important;
   box-shadow: 0 8px 28px rgb(0 8 20 / .16);
 }
+/* Match the authentication glass without changing navigation geometry. */
+html[data-theme][data-appearance="product"] [data-portal-navigation] {
+  --pv-panel: rgb(0 29 61 / .18);
+  --pv-panel-gradient: linear-gradient(145deg, rgb(0 53 102 / .18), rgb(0 29 61 / .12));
+  background: var(--pv-auth-glass-surface) !important;
+  border-color: var(--pv-auth-glass-edge) !important;
+  -webkit-backdrop-filter: var(--pv-auth-glass-filter);
+  backdrop-filter: var(--pv-auth-glass-filter);
+  box-shadow: var(--pv-auth-glass-shadow) !important;
+}
+html[data-theme] [data-portal-navigation="top"] button[title="Sign Out"] { color: #fecdd3; }
+html[data-theme] [data-portal-navigation] [class~="text-blue-600/70"] { color: var(--pv-muted); }
 html[data-theme] #public-header { border-bottom: 1px solid rgb(255 195 0 / .32); }
 html[data-theme] :is([data-portal-navigation], [id="public-header"]) :is(input, select) { background: #00162e !important; color: #dce7f3 !important; border-color: #6c8dae !important; }
 html[data-theme] :is([data-portal-navigation], [id="public-header"]) input::placeholder { color: #b3c9df !important; }
@@ -70,18 +88,18 @@ html[data-theme] [data-portal-navigation] button :is(.ux-nav-badge, [class~="bg-
     --pv-heading-default-gradient: linear-gradient(120deg, #001d3d, #003566);
     --pv-heading-gradient: var(--pv-heading-default-gradient);
     --pv-link: #003566;
-    --pv-panel: #ffffff;
-    --pv-panel-gradient: linear-gradient(#ffffff, #ffffff);
+    --pv-panel: rgb(255 255 255 / .18);
+    --pv-panel-gradient: linear-gradient(rgb(255 255 255 / .18), rgb(255 255 255 / .12));
     --pv-secondary: #f1f5f9;
     --pv-edge: #dce7f3;
-    background: #ffffff !important;
+    background: linear-gradient(145deg, rgb(255 255 255 / .72), rgb(255 255 255 / .82)) !important;
     color: #001d3d;
-    border-color: #dce7f3 !important;
-    border-width: 0;
+    border-color: var(--pv-auth-glass-edge) !important;
+    border-width: 0 0 1px;
     border-radius: 0;
-    box-shadow: none;
-    -webkit-backdrop-filter: none;
-    backdrop-filter: none;
+    box-shadow: none !important;
+    -webkit-backdrop-filter: var(--pv-auth-glass-filter);
+    backdrop-filter: var(--pv-auth-glass-filter);
   }
   html[data-theme="light"][data-appearance="product"] .verification-portal { padding-top: 0; }
   html[data-theme="light"][data-appearance="product"] .verification-portal > [data-portal-navigation="header"] { width: 100vw; max-width: none; margin-inline: calc(50% - 50vw); }
@@ -116,6 +134,7 @@ html[data-theme="dark"] .pv-feature-card {
 
 /* Dark surfaces share one opaque navy. Local gold feature-card roles and the
    more specific action/selected-state rules retain their yellow treatment.
+   Avatar presets keep their identifying colors in either theme.
    Match complete utility prefixes so hover-only classes do not create fills. */
 html[data-theme="dark"] :is(
   [class^="bg-white"], [class*=" bg-white"], [class^="bg-black"], [class*=" bg-black"],
@@ -129,7 +148,7 @@ html[data-theme="dark"] :is(
   [class^="bg-rose-"], [class*=" bg-rose-"],
   [class~="bg-amber-600"], [class~="bg-orange-600"], [class^="bg-amber-950/"], [class*=" bg-amber-950/"],
   [class^="bg-gradient-"], [class*=" bg-gradient-"], [class^="bg-linear-"], [class*=" bg-linear-"]
-):not(:where([class~="bg-clip-text"], [class*="from-amber-"], [class*="from-yellow-"], [class*="from-orange-"])) {
+):not(:where([data-avatar-preset], [class~="bg-clip-text"], [class*="from-amber-"], [class*="from-yellow-"], [class*="from-orange-"])) {
   background-color: var(--pv-panel);
   background-image: var(--pv-panel-gradient);
 }
@@ -140,19 +159,66 @@ html[data-theme="dark"] :where([data-portal-navigation], #public-header) {
   --pv-secondary-hover: #001d3d;
   --pv-glass: #001d3d;
 }
-html[data-theme="dark"] :is([data-portal-navigation], [id="public-header"]) { background: #001d3d !important; }
+html[data-theme="dark"][data-appearance="public"] [data-portal-navigation],
+html[data-theme="dark"] #public-header { background: #001d3d !important; }
 html[data-theme="dark"] :is([data-portal-navigation], [id="public-header"]) :is(input, select) { background: #001d3d !important; }
 html[data-theme="dark"] [data-portal-navigation] button:not(:disabled):not([aria-current="page"]):hover { background-color: #001d3d; box-shadow: inset 0 0 0 1px var(--pv-edge); }
+/* These scrims sit over the page; the opaque dark-card bridge must not fill them. */
+html[data-theme="dark"] dialog[data-dashboard-overlay]:is(.pv-signout-overlay, .ux-more-overlay) {
+  --pv-focus: #ffd60a;
+  background: rgb(0 8 20 / .42);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+}
+html[data-theme="dark"] .pv-signout-overlay [data-signout-action="cancel"] {
+  background: #001d3d;
+  color: #dce7f3;
+  border: 1px solid #6c8dae;
+  box-shadow: none;
+}
+html[data-theme="dark"] .pv-signout-overlay [data-signout-action="confirm"] {
+  background: #ffc300;
+  color: #001d3d;
+  border: 1px solid #ffd60a;
+}
+html[data-theme="dark"] .pv-signout-overlay [data-signout-action]:not(:disabled):is(:hover, :focus-visible),
+html[data-theme="dark"] .ux-more-panel button:not(:disabled):not([aria-current="page"]):is(:hover, :focus-visible),
+html[data-theme="dark"] [data-portal-navigation] button:is([title="Sign Out"], [title="Log Out"], [title^="Sign out "], [data-navigation-id="more"]):not(:disabled):is(:hover, :focus-visible) {
+  --pv-focus: #ffd60a;
+  background: rgb(255 195 0 / .16);
+  color: #ffd60a;
+  border-color: #ffc300;
+  box-shadow: inset 0 0 0 1px rgb(255 195 0 / .65);
+}
+html[data-theme="dark"] .pv-signout-overlay [data-signout-action]:not(:disabled):active,
+html[data-theme="dark"] .ux-more-panel button:not(:disabled):not([aria-current="page"]):active,
+html[data-theme="dark"] [data-portal-navigation] button:is([title="Sign Out"], [title="Log Out"], [title^="Sign out "], [data-navigation-id="more"]):not(:disabled):active {
+  background: rgb(255 195 0 / .28);
+  color: #ffd60a;
+  box-shadow: inset 0 0 0 1px #ffd60a;
+}
+html[data-theme="dark"] .pv-signout-overlay [data-signout-action="confirm"]:not(:disabled):is(:hover, :focus-visible),
+html[data-theme="dark"] .ux-more-panel button[aria-current="page"]:not(:disabled):is(:hover, :focus-visible),
+html[data-theme="dark"] [data-portal-navigation="mobile"] button[data-navigation-id="more"][aria-current="page"]:not(:disabled):is(:hover, :focus-visible) {
+  background: #ffe477;
+  color: #001d3d;
+  box-shadow: inset 0 0 0 1px #ffd60a, 0 3px 14px rgb(255 195 0 / .2);
+}
+html[data-theme="dark"] .pv-signout-overlay [data-signout-action="confirm"]:not(:disabled):active,
+html[data-theme="dark"] .ux-more-panel button[aria-current="page"]:not(:disabled):active,
+html[data-theme="dark"] [data-portal-navigation="mobile"] button[data-navigation-id="more"][aria-current="page"]:not(:disabled):active {
+  background: #e9b600;
+  color: #001d3d;
+}
+html[data-theme="dark"] [data-portal-navigation="mobile"] button[data-navigation-id="more"][aria-expanded="true"]:not(:disabled) {
+  background: #ffc300;
+  color: #001d3d;
+  box-shadow: inset 0 0 0 1px #ffd60a;
+}
 html[data-theme="dark"] :is(.app-canvas, body) [class~="text-white"]:is([class~="bg-amber-500"], [class~="bg-yellow-500"], [class~="bg-orange-500"]) { background: var(--pv-accent-gradient); color: #001d3d; }
 
 /* Marketing: large navy and yellow shapes, minimal white interface chrome. */
 html[data-theme] .landing-peak-page { background: var(--pv-page-gradient); }
-html[data-theme] .landing-peak-hero .landing-peak-copy :is(p, strong),
-html[data-theme] .landing-peak-hero .landing-peak-brand [class~="text-slate-500"] { color: #dce7f3; }
-.landing-peak-brand { position: relative; isolation: isolate; }
-.landing-peak-brand::before { content: ''; position: absolute; inset: -5% -2% 0 3%; background: var(--pv-accent-gradient); border-radius: 32px 100px 32px 100px; rotate: -8deg; z-index: -1; }
-.landing-peak-brand > div { background: var(--pv-strong-gradient); border: 1px solid rgb(255 195 0 / .45); border-radius: 30px 30px 76px 30px; box-shadow: 0 16px 40px rgb(0 8 20 / .22); }
-html[data-theme] .landing-peak-hero .landing-peak-copy [class~="bg-amber-300"] { background-color: #ffc300; opacity: .4; }
 html[data-theme] :is(.landing-peak-page #benefits, .landing-company-story .company-chapter:nth-child(even)) {
   --pv-text: #001d3d;
   --pv-muted: #193b5e;
@@ -175,11 +241,11 @@ html[data-theme] .unified-login { background: linear-gradient(115deg, #001d3d 0%
 html[data-theme] .unified-login .login-header { background: #001d3d !important; border-color: rgb(255 195 0 / .3) !important; }
 html[data-theme] .unified-login .login-auth-card {
   --pv-muted: #c9d9eb;
-  background: linear-gradient(145deg, rgb(0 8 20 / .7), rgb(0 29 61 / .74));
-  -webkit-backdrop-filter: blur(18px) saturate(1.25);
-  backdrop-filter: blur(18px) saturate(1.25);
-  border-color: rgb(255 195 0 / .45);
-  box-shadow: inset 0 1px 0 rgb(255 214 10 / .28), inset 0 -1px 0 rgb(0 8 20 / .2), 0 16px 48px rgb(0 8 20 / .3);
+  background: var(--pv-auth-glass-surface);
+  -webkit-backdrop-filter: var(--pv-auth-glass-filter);
+  backdrop-filter: var(--pv-auth-glass-filter);
+  border-color: var(--pv-auth-glass-edge);
+  box-shadow: var(--pv-auth-glass-shadow);
 }
 html[data-theme] .unified-login .login-mode-toggle { background: #00162e; border-color: #42688c; }
 html[data-theme] .unified-login .login-mode-toggle button:not([aria-pressed="true"]) { color: #b3c9df; }
@@ -192,14 +258,39 @@ html[data-theme] body:has(.unified-login) .unified-login .login-footer { width: 
   html[data-theme] .unified-login .mobile-login-photo img { filter: none; }
 }
 
-/* Only light product pages retain a decorative sun. */
-.theme-sun > span { background: radial-gradient(circle at 35% 30%, #ffe792, #ffd60a 65%, #ffc300); }
 @media (prefers-contrast: more) {
   html[data-theme] :is([data-portal-navigation], .pv-feature-card, .unified-login .login-auth-card) { border-color: currentColor !important; }
 }
 @media (forced-colors: active) {
-  .landing-peak-brand::before { display: none; }
-  html[data-theme] :is([data-portal-navigation], #public-header, .pv-feature-card, .unified-login, .unified-login .login-auth-card) { background: Canvas !important; color: CanvasText !important; }
+  html[data-theme] :is([data-portal-navigation], #public-header, .pv-feature-card, .unified-login, .unified-login .login-auth-card) { background: Canvas !important; color: CanvasText !important; -webkit-backdrop-filter: none; backdrop-filter: none; box-shadow: none !important; }
+  html[data-theme][data-appearance="product"] [data-portal-navigation] { background: Canvas !important; color: CanvasText !important; -webkit-backdrop-filter: none; backdrop-filter: none; box-shadow: none !important; }
+  html[data-theme][data-appearance="product"] [data-portal-navigation="header"] { background: Canvas !important; }
+}
+html[data-theme] .home-catalog-switcher {
+  background: var(--pv-panel-gradient);
+  border-color: var(--pv-edge);
+}
+html[data-theme] .home-catalog-switcher button { min-height: 44px; color: var(--pv-muted); }
+html[data-theme] .home-catalog-switcher button[aria-pressed="false"]:hover {
+  color: var(--pv-text);
+  background: rgb(255 195 0 / .1);
+}
+html[data-theme] .home-catalog-switcher button[aria-pressed="true"] {
+  color: #001d3d;
+  background: var(--pv-action-gradient);
+  box-shadow: inset 0 0 0 1px #ffd60a, 0 2px 6px rgb(0 8 20 / .12);
+}
+html[data-theme] .home-catalog-switcher button:focus-visible {
+  outline: 2px solid var(--pv-link);
+  outline-offset: 2px;
+}
+@media (forced-colors: active) {
+  html[data-theme] .home-catalog-switcher button[aria-pressed="true"] {
+    background: Highlight;
+    color: HighlightText;
+    box-shadow: none;
+    outline: 1px solid Highlight;
+  }
 }
 .support-surface { color: var(--pv-text); }
 .support-surface h1 {
@@ -216,5 +307,26 @@ html[data-theme] body:has(.unified-login) .unified-login .login-footer { width: 
   outline-offset: 4px;
 }
 .support-surface [aria-current="page"] { border-color: var(--pv-brand-yellow); }
+html[data-theme] .support-surface nav[aria-label="Help navigation"] .support-nav-link {
+  transition: background-color 150ms ease, color 150ms ease, box-shadow 150ms ease;
+}
+html[data-theme] .support-surface nav[aria-label="Help navigation"] .support-nav-link:not([aria-current="page"]):hover {
+  background: rgb(255 195 0 / .1);
+  box-shadow: inset 0 0 0 1px rgb(255 195 0 / .3);
+}
+html[data-theme] .support-surface nav[aria-label="Help navigation"] .support-nav-link[aria-current="page"] {
+  background: var(--pv-action-gradient);
+  color: #001d3d;
+  box-shadow: inset 0 0 0 1px #ffd60a, 0 2px 8px rgb(0 8 20 / .16);
+}
+html[data-theme] .support-surface nav[aria-label="Help navigation"] .support-nav-link[aria-current="page"] svg { color: currentColor; }
+@media (forced-colors: active) {
+  html[data-theme] .support-surface nav[aria-label="Help navigation"] .support-nav-link[aria-current="page"] {
+    background: Highlight;
+    color: HighlightText;
+    box-shadow: none;
+    outline: 1px solid Highlight;
+  }
+}
 .support-surface summary::-webkit-details-marker { display: none; }
 .support-surface details[open] summary { color: var(--pv-link); }

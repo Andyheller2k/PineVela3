@@ -2,7 +2,7 @@ import HelpLink from './HelpLink';
 import DashboardOverlay from './DashboardOverlay';
 
 import { AlertCircle,ArrowRight,Building,CheckCircle,CheckCircle2,Clock,Eye,EyeOff,HelpCircle,Home,Info,Key,Lock,LogIn,Mail,Phone,RefreshCw,ShieldAlert,ShieldCheck,User,X } from 'lucide-react';
-import React,{ useEffect,useState } from 'react';
+import React,{ useEffect,useRef,useState } from 'react';
 import { useLocation,useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { safeJson } from '../lib/api';
@@ -18,10 +18,14 @@ import EmailPasswordRecovery from './EmailPasswordRecovery';
 import PasswordStrengthGauge from './PasswordStrengthGauge';
 import PineLogo, { PineWordmark } from './PineLogo';
 import SupabaseResidentActivation from './SupabaseResidentActivation';
+import ArtworkLayers from './ArtworkLayers';
+import { useMotionActivity } from '../hooks/useMotionActivity';
+import { useAuthCardFlip } from '../hooks/useAuthCardFlip';
 
 // Static asset imports
-import marketImg from '../../assets/login-market.png';
+import marketImg from '../../assets/login-market-new.png';
 import '../login.css';
+import '../loginMotion.css';
 import GoogleAuthButton from './GoogleAuthButton';
 import WindDust from './WindDust';
 
@@ -33,6 +37,8 @@ export default function PageUnifiedLogin() {
   const navigate = useNavigate();
   const location = useLocation();
   const continuation = loginContinuation(location.search);
+  const motionRef = useRef<HTMLDivElement>(null);
+  useMotionActivity(motionRef);
 
   // Form states
   const [usernameOrEmail, setUsernameOrEmail] = useState('');
@@ -51,6 +57,8 @@ export default function PageUnifiedLogin() {
   const [activeTab, setActiveTab] = useState<'login' | 'register'>(() =>
     new URLSearchParams(location.search).get('mode') === 'register' || (location.state as { mode?: string } | null)?.mode === 'register'
       ? 'register' : 'login');
+  const authCardRef = useRef<HTMLDivElement>(null);
+  const switchAuthTab = useAuthCardFlip(authCardRef, activeTab, setActiveTab);
   const [regName, setRegName] = useState('');
   const [regEmail, setRegEmail] = useState('');
   const [regPass, setRegPass] = useState('');
@@ -289,13 +297,14 @@ export default function PageUnifiedLogin() {
   // Student/Resident Claim Room Key & Complete Onboarding Handler
 
   return (
-    <div className="unified-login page-canvas min-h-screen flex flex-col font-sans justify-between relative overflow-hidden">
+    <div ref={motionRef} data-motion-active="false" className="unified-login page-canvas min-h-screen flex flex-col font-sans justify-between relative overflow-hidden">
       {(showPasswordRecovery) && <EmailPasswordRecovery initialEmail={usernameOrEmail} onClose={() => setShowPasswordRecovery(false)} />}
       <div className="mobile-login-backdrop" aria-hidden="true">
-        <img src={featureImage} alt="" />
+        <img src={featureImage} alt="" width={1122} height={1402} />
       </div>
       <div className="mobile-login-photo" aria-hidden="true">
-        <img src={featureImage} alt="" />
+        <img src={featureImage} alt="" width={1122} height={1402} />
+        <ArtworkLayers variant="login" />
       </div>
       <WindDust />
       
@@ -336,7 +345,8 @@ export default function PageUnifiedLogin() {
         <div className="login-showcase-pane hide-scrollbar lg:col-span-6 hidden lg:flex flex-col items-stretch justify-center w-full lg:sticky lg:top-24 select-none">
           <div className="login-showcase-content space-y-7 flex flex-col justify-between w-full">
             <div className="login-feature-card relative aspect-[5/4] w-full rounded-3xl overflow-hidden">
-              <img src={featureImage} alt="PineVela student marketplace" loading="eager" fetchPriority="high" className="absolute inset-0 w-full h-full object-contain" />
+              <img src={featureImage} alt="PineVela student marketplace" width={1122} height={1402} loading="eager" fetchPriority="high" className="absolute inset-0 w-full h-full object-contain" />
+              <ArtworkLayers variant="login" />
             </div>
             <div className="login-feature-description space-y-4 px-1">
               <h3 className="text-2xl sm:text-3xl font-black tracking-tight leading-tight"><PineWordmark /></h3>
@@ -350,7 +360,7 @@ export default function PageUnifiedLogin() {
 
         {/* Right Side: Login & Signup Box */}
         <div className="login-form-pane hide-scrollbar lg:col-span-6 flex flex-col items-stretch justify-center w-full max-w-2xl mx-auto lg:max-w-none">
-          <div className="login-auth-card bg-blue-50/90 backdrop-blur-lg rounded-3xl border border-blue-200/70 shadow-2xl p-8 sm:p-10 space-y-6 relative overflow-hidden flex flex-col justify-between w-full">
+          <div ref={authCardRef} data-active-tab={verificationPending ? 'verify' : activeTab} className="login-auth-card bg-blue-50/90 backdrop-blur-lg rounded-3xl border border-blue-200/70 shadow-2xl p-8 sm:p-10 space-y-6 relative overflow-hidden flex flex-col justify-between w-full">
             
             <div className="login-card-heading text-center space-y-2 pt-1">
               <div className="login-card-logo flex justify-center">
@@ -384,11 +394,11 @@ export default function PageUnifiedLogin() {
 
             {/* Tab Selector */}
             {!verificationPending && (
-              <div className="login-mode-toggle flex bg-slate-100 p-1.5 rounded-2xl border border-slate-200/60">
+              <div data-active-tab={activeTab} className="login-mode-toggle flex bg-slate-100 p-1.5 rounded-2xl border border-slate-200/60">
                 <button
                   type="button"
                   aria-pressed={activeTab === 'login'}
-                  onClick={() => { setActiveTab('login'); setLoginError(null); }}
+                  onClick={() => { switchAuthTab('login'); setLoginError(null); }}
                   className={`flex-1 py-2 text-xs font-black rounded-xl transition-all cursor-pointer ${
                     activeTab === 'login' ? 'bg-white text-blue-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'
                   }`}
@@ -398,7 +408,7 @@ export default function PageUnifiedLogin() {
                 <button
                   type="button"
                   aria-pressed={activeTab === 'register'}
-                  onClick={() => { setActiveTab('register'); setLoginError(null); }}
+                  onClick={() => { switchAuthTab('register'); setLoginError(null); }}
                   className={`flex-1 py-2 text-xs font-black rounded-xl transition-all cursor-pointer ${
                     activeTab === 'register' ? 'bg-white text-blue-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'
                   }`}
@@ -410,7 +420,7 @@ export default function PageUnifiedLogin() {
 
             {verificationPending ? (
               /* Email Verification Screen */
-              <form onSubmit={handleUnifiedVerifySubmit} className="onboarding-fields space-y-4 text-left py-1">
+              <form onSubmit={handleUnifiedVerifySubmit} className="login-motion-form onboarding-fields space-y-4 text-left py-1">
                 <div className="text-center space-y-1">
                   <div className="mx-auto w-12 h-12 bg-blue-100 text-blue-900 rounded-full flex items-center justify-center font-bold shadow-inner">
                     <ShieldCheck className="w-6 h-6" />
@@ -480,7 +490,7 @@ export default function PageUnifiedLogin() {
               </form>
             ) : activeTab === 'login' ? (
               /* System Login Form */
-              <form onSubmit={handleLoginSubmit} className="login-credentials-form space-y-4 text-left py-1">
+              <form onSubmit={handleLoginSubmit} className="login-motion-form login-credentials-form space-y-4 text-left py-1">
                 
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-slate-700 block">Username or Email Address</label>
@@ -593,7 +603,7 @@ export default function PageUnifiedLogin() {
               </form>
             ) : (
               /* Unified Registration Form */
-              <form onSubmit={handleUnifiedRegisterSubmit} className="login-signup-form onboarding-fields space-y-3.5 text-left py-1">
+              <form onSubmit={handleUnifiedRegisterSubmit} className="login-motion-form login-signup-form onboarding-fields space-y-3.5 text-left py-1">
                 
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-slate-700 block">Your Full Name</label>
@@ -604,7 +614,7 @@ export default function PageUnifiedLogin() {
                     <input aria-label="Your Full Name"
                       type="text"
                       required
-                      placeholder="e.g. Alexander Cole"
+                      placeholder="e.g. Oppong Manu Andy"
                       value={regName}
                       onChange={(e) => setRegName(e.target.value)}
                       className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-900 bg-white text-slate-800 text-xs sm:text-sm font-semibold transition-all"
@@ -621,7 +631,7 @@ export default function PageUnifiedLogin() {
                     <input aria-label="Email Address"
                       type="email"
                       required
-                      placeholder="e.g. alex@example.com"
+                      placeholder="e.g. andy@example.com"
                       value={regEmail}
                       onChange={(e) => setRegEmail(e.target.value)}
                       className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-900 bg-white text-slate-800 text-xs sm:text-sm font-semibold transition-all"
@@ -691,7 +701,7 @@ export default function PageUnifiedLogin() {
                       <span>Sending Code...</span>
                     </>
                   ) : (
-                    <span>Sign Up Now</span>
+                    <span>Create a free account</span>
                   )}
                 </button>
 

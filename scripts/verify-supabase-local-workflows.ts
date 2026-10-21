@@ -8,6 +8,8 @@ import {SupabaseDatabase,UUID,type VerifiedActor} from '../supabase/db.js';
 import {createLocalPrimary,readLocalFixture,saveLocalFixture,signInLocalAccount,runLocalSupabaseVerification,
  type LocalSupabaseHarness,type LocalApiSession,type LocalAccountCredentials} from './lib/local-supabase-harness.js';
 import {verifyLocalPricing,verifyLocalMaintenance} from './lib/local-supabase-pricing.js';
+import {createChatIdentity,recoveryPhrase,recoverChatIdentity} from '../src/lib/marketEncryption.js';
+import {encryptMarketMessage,type UnlockedChatIdentity} from '../marketEncryptionProtocol.js';
 
 type Actor={credentials:LocalAccountCredentials;session:LocalApiSession;user:any;managerKey?:string};
 type Administrator=LocalAccountCredentials&{slot:number;approvalKey:string;settingsKey:string};
@@ -241,6 +243,13 @@ await runLocalSupabaseVerification(async h=>{
   if(!journal.values.pricing){journal.values.pricing=await verifyLocalPricing(h,pricingAdmins,ownerA.session);persist();}
   stage='two native market workflows';console.log(JSON.stringify({stage}));
   const sellerA=await seller(ownerA,'a',admin),sellerB=await seller(ownerB,'b',admin);
+  const chatIdentities=new Map<string,UnlockedChatIdentity>();
+  for(const actor of [ownerA,ownerB,sellerA.actor,sellerB.actor]){
+   const secretKey='chat-recovery-'+actor.user.id;
+   const record=expect(await call(actor,'/api/digital-market/encryption'),200,'Actual account reads own encrypted chat backup');
+   if(record.publicIdentity){assert.equal(typeof journal.values[secretKey],'string','Saved private recovery phrase required for existing local identity');chatIdentities.set(actor.user.id,await recoverChatIdentity(actor.user.id,journal.values[secretKey],record.publicIdentity,record.backup));}
+   else{if(!journal.values[secretKey]){journal.values[secretKey]=recoveryPhrase();persist();}const created=await createChatIdentity(actor.user.id,journal.values[secretKey]);await write('chat-enabled-'+actor.user.id,actor,'/api/digital-market/encryption',{publicIdentity:created.publicIdentity,backup:created.backup,proof:created.proof},201);chatIdentities.set(actor.user.id,created.identity);}
+  }
   expect(await call(sellerA.actor,'/api/digital-market/products/'+sellerB.product.id,{title:'Denied foreign edit'},'PUT'),404,'Seller cannot alter foreign inventory');
   expect(await call(sellerA.actor,'/api/digital-market/products',{...sellerA.product,storeId:sellerB.storeId}),400,'Client cannot select listing ownership');
   const catalog=expect(await call(guest,'/api/digital-market/products'),200,'Guest reads actual public local catalog');
@@ -248,14 +257,15 @@ await runLocalSupabaseVerification(async h=>{
   const inventory=expect(await call(sellerA.actor,'/api/digital-market/inventory'),200,'Seller reads actual owned inventory');
   check(Array.isArray(inventory)&&inventory.every((p:any)=>p.storeId===sellerA.storeId),'Inventory excludes foreign store');
   const nonce=(key:string)=>{if(!journal.values[key]){journal.values[key]=crypto.randomUUID();persist();}return journal.values[key];};
-  const messageBody={requestId:nonce('message-a-request'),sellerStoreId:sellerB.storeId,productId:sellerB.product.id,content:'Local buyer inquiry for actual acceptance.'};
+  async function encryptedBody(key:string,sender:Actor,recipient:Actor,requestId:string,content:string,selectors:Record<string,unknown>){if(!journal.values[key]){const encrypted=await encryptMarketMessage(chatIdentities.get(sender.user.id)!,chatIdentities.get(recipient.user.id)!.publicIdentity,{requestId,buyerId:ownerA.user.id,storeId:sellerB.storeId,senderId:sender.user.id,recipientId:recipient.user.id},content);journal.values[key]={requestId,...selectors,encrypted};persist();}return journal.values[key];}
+  const messageBody=await encryptedBody('message-a-encrypted',ownerA,sellerB.actor,nonce('message-a-request'),'Local buyer inquiry for actual acceptance.',{sellerStoreId:sellerB.storeId,productId:sellerB.product.id});
+  expect(await call(ownerA,'/api/digital-market/messages',{requestId:crypto.randomUUID(),sellerStoreId:sellerB.storeId,content:'Forbidden plaintext legacy send'}),400,'New plaintext messages are rejected');
   expect(await call(ownerA,'/api/digital-market/messages',{...messageBody,buyerId:ownerB.user.id}),400,'Buyer identity spoofing denied');
   const inquiry=await write('buyer-a-inquiry',ownerA,'/api/digital-market/messages',messageBody,201);
   const replay=expect(await call(ownerA,'/api/digital-market/messages',messageBody),201,'Message request can retry');
   eq(replay.message.id,inquiry.message.id,'Message retry does not duplicate');eq(replay.idempotent,true,'Message retry is marked idempotent');
-  await write('seller-b-reply',sellerB.actor,'/api/digital-market/messages',{
-   requestId:nonce('reply-b-request'),sellerStoreId:sellerB.storeId,buyerId:ownerA.user.id,productId:sellerB.product.id,content:'Local seller reply to actual buyer.'},201);
-  expect(await call(sellerA.actor,'/api/digital-market/messages',{requestId:crypto.randomUUID(),sellerStoreId:sellerB.storeId,buyerId:ownerA.user.id,content:'Denied foreign reply.'}),404,'Foreign seller cannot join conversation');
+  await write('seller-b-reply',sellerB.actor,'/api/digital-market/messages',await encryptedBody('reply-b-encrypted',sellerB.actor,ownerA,nonce('reply-b-request'),'Local seller reply to actual buyer.',{sellerStoreId:sellerB.storeId,buyerId:ownerA.user.id,productId:sellerB.product.id}),201);
+  expect(await call(sellerA.actor,'/api/digital-market/messages',{...await encryptedBody('foreign-reply-encrypted',sellerA.actor,ownerA,crypto.randomUUID(),'Denied foreign reply.',{}),sellerStoreId:sellerB.storeId,buyerId:ownerA.user.id}),404,'Foreign seller cannot join conversation');
   expect(await call(ownerB,'/api/digital-market/messages?buyerId='+ownerA.user.id),400,'Caller cannot select another message identity');
   const bMessages=expect(await call(ownerB,'/api/digital-market/messages'),200,'Other buyer reads own messages');
   check(!bMessages.some((m:any)=>m.id===inquiry.message.id),'Buyer conversation remains private');

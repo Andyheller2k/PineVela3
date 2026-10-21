@@ -1559,7 +1559,7 @@ function OfficerWorkspace() {
       {/* SIGNOUT CONFIRMATION MODAL WITH PINVELA LOGO */}
       <AnimatePresence>
         {showSignoutConfirm && (
-          <DashboardOverlay aria-label="Sign out of field portal" onClose={() => setShowSignoutConfirm(false)} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
+          <DashboardOverlay aria-label="Sign out of field portal" onClose={() => setShowSignoutConfirm(false)} className="pv-signout-overlay fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 10 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -1586,6 +1586,7 @@ function OfficerWorkspace() {
                 <button
                   type="button"
                   onClick={() => setShowSignoutConfirm(false)}
+                  data-signout-action="cancel"
                   className="flex-1 py-2.5 px-4 rounded-xl bg-slate-100 hover:bg-slate-200/80 text-slate-700 text-xs font-bold transition-all cursor-pointer"
                 >
                   Stay Signed In
@@ -1596,6 +1597,7 @@ function OfficerWorkspace() {
                     setShowSignoutConfirm(false);
                     handleLogout();
                   }}
+                  data-signout-action="confirm"
                   className="flex-1 py-2.5 px-4 rounded-xl bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-700 hover:to-red-700 text-white text-xs font-black transition-all shadow-md shadow-rose-600/20 flex items-center justify-center gap-1.5 cursor-pointer"
                 >
                   <LogOut className="w-3.5 h-3.5" />

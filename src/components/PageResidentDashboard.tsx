@@ -1222,7 +1222,7 @@ export default function PageResidentDashboard() {
             <div className="space-y-4">
               {notifications && notifications.length > 0 ? (
                 notifications.map((notif: any) => (
-                  <div key={notif.id} className="p-5 bg-white border border-slate-200 rounded-3xl space-y-3">
+                  <div key={notif.id} data-notification-id={notif.id} className="p-5 bg-white border border-slate-200 rounded-3xl space-y-3">
                     <div className="flex items-center justify-between">
                       <span className={`px-2 py-0.5 font-black text-[9px] rounded-full uppercase tracking-wider ${
                         notif.type === 'error' || notif.type === 'danger' ? 'bg-rose-100 text-rose-800' :
@@ -1742,7 +1742,7 @@ export default function PageResidentDashboard() {
 
       {/* SIGN OUT CONFIRMATION MODAL */}
       {showSignoutConfirmModal && (
-        <DashboardOverlay aria-label="Are you sure you want to sign out?" onClose={() => setShowSignoutConfirmModal(false)} className="fixed inset-0 bg-slate-950/40 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+        <DashboardOverlay aria-label="Are you sure you want to sign out?" onClose={() => setShowSignoutConfirmModal(false)} className="pv-signout-overlay fixed inset-0 bg-slate-950/40 backdrop-blur-xs flex items-center justify-center z-50 p-4">
           <div data-popup-card className="bg-white rounded-3xl max-w-sm w-full p-6 space-y-4 text-center border border-slate-100 shadow-2xl">
             <div className="flex items-center justify-center gap-2 pt-1 pb-1">
               <PineLogo size={28} />
@@ -1758,12 +1758,14 @@ export default function PageResidentDashboard() {
             <div className="flex gap-2.5 justify-center">
               <button
                 onClick={() => setShowSignoutConfirmModal(false)}
+                data-signout-action="cancel"
                 className="px-4 py-2 border border-slate-200 text-slate-600 text-xs font-bold rounded-xl hover:bg-slate-50 cursor-pointer"
               >
                 Keep Session
               </button>
               <button
                 onClick={async () => { setShowSignoutConfirmModal(false); if (!await logout()) return; navigate('/', { replace: true }); }}
+                data-signout-action="confirm"
                 className="px-5 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-black rounded-xl cursor-pointer"
               >
                 Sign Out

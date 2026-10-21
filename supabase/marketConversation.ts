@@ -6,23 +6,40 @@ import type {SupabaseAuth,AuthRequest} from './auth.js';
 import {buyer,lockOrder} from './orders.js';
 import {sellerStore} from './storeSetup.js';
 import {notify} from './notifications.js';
+import {ownEncryptionIdentity,registerEncryptionIdentity,peerEncryptionIdentity} from './marketEncryption.js';
+import {verifyEncryptedMessage,parseEncryptedMessage} from '../marketEncryptionProtocol.js';
+import {checkProfileContext} from './profiles.js';
+import {AttemptBudgets} from '../resourceSecurity.js';
+import {historyPage,historyTimestamp,encodeHistoryCursor,type HistoryPage} from './historyPagination.js';
 const route=(work:(req:AuthRequest,res:any)=>Promise<unknown>):RequestHandler=>(req,res,next)=>{work(req as AuthRequest,res).catch(next);};
 function fields(body:any,keys:string[]){if(!body || typeof body!=='object' || Array.isArray(body) || Object.keys(body).some(k=>!keys.includes(k)))throw new ApiError(400,'Unsupported marketplace fields.');}
 async function audit(c:PoolClient,a:VerifiedActor,type:string,id:string){await c.query('insert into private.audit_events(actor_context_id,event_type,resource_type,resource_id) values($1,$2,$3,$4)',[a.contextId,type,type.startsWith('market_message')?'market_message':'market_review',id]);}
 const messageQuery=`select m.*,bp.email as buyer_email,bp.display_name as buyer_name,s.seller_context_id,s.name as store_name,sp.email as seller_email,
-  sender.display_name as sender_name from public.market_messages m join public.stores s on s.id=m.store_id
+  sender.display_name as sender_name,sk.public_identity as sender_identity,rk.public_identity as recipient_identity from public.market_messages m join public.stores s on s.id=m.store_id
   join public.account_contexts b on b.id=m.buyer_context_id join public.profiles bp on bp.id=b.auth_user_id
   join public.account_contexts x on x.id=s.seller_context_id join public.profiles sp on sp.id=x.auth_user_id
-  join public.account_contexts actor on actor.id=m.sender_context_id join public.profiles sender on sender.id=actor.auth_user_id`;
+  join public.account_contexts actor on actor.id=m.sender_context_id join public.profiles sender on sender.id=actor.auth_user_id
+  left join private.market_chat_keys sk on sk.context_id=m.sender_context_id left join private.market_chat_keys rk on rk.context_id=m.recipient_context_id`;
 function messageDto(m:any){const seller=m.sender_context_id===m.seller_context_id;return {id:m.id,buyerId:m.buyer_context_id,sellerStoreId:m.store_id,storeId:m.store_id,
   senderRole:seller?'merchant':'user',senderId:m.sender_context_id,senderEmail:seller?m.seller_email:m.buyer_email,recipientEmail:seller?m.buyer_email:m.seller_email,
-  senderName:m.sender_name,recipientName:seller?m.buyer_name:m.store_name,orderId:m.order_id,productId:m.listing_id,productTitle:m.product_title,content:m.body,createdAt:m.created_at};}
-export async function conversationRows(c:PoolClient,a:VerifiedActor){let condition:string,id:string;if(a.kind==='primary'){await buyer(c,a);condition='m.buyer_context_id=$1';id=a.contextId;}
-  else {const s=await sellerStore(c,a);condition='m.store_id=$1';id=s.id;}return (await c.query(messageQuery+' where '+condition+' order by m.created_at,m.id',[id])).rows.map(messageDto);}
-export async function sendMarketMessage(c:PoolClient,a:VerifiedActor,body:any){fields(body,['requestId','sellerStoreId','buyerId','productId','orderId','content']);
-  if(typeof body.content!=='string' || !body.content.trim() || body.content.length>5000)throw new ApiError(400,'Enter a message of 1–5000 characters.');
+  senderName:m.sender_name,recipientName:seller?m.buyer_name:m.store_name,recipientId:m.recipient_context_id || (seller?m.buyer_context_id:m.seller_context_id),requestId:m.request_id,
+  orderId:m.order_id,productId:m.listing_id,productTitle:m.product_title,content:m.encryption_version===1?'':m.body,encryptionVersion:m.encryption_version,
+  encrypted:m.encrypted_payload,senderIdentity:m.sender_identity,recipientIdentity:m.recipient_identity,createdAt:m.cursor_time||m.created_at};}
+export async function conversationPage(c:PoolClient,a:VerifiedActor,page:HistoryPage=historyPage({})){
+  let condition:string,id:string;if(a.kind==='primary'){await buyer(c,a);condition='m.buyer_context_id=$1';id=a.contextId;}
+  else {const s=await sellerStore(c,a);condition='m.store_id=$1';id=s.id;}
+  const cursor=page.after||page.before,ascending=!!page.after;
+  const rows=(await c.query(messageQuery.replace('select m.*,',`select m.*,${historyTimestamp('m')},`)+` where ${condition}
+    and ($2::timestamptz is null or (m.created_at,m.id) ${ascending?'>':'<'} ($2::timestamptz,$3::uuid))
+    order by m.created_at ${ascending?'asc':'desc'},m.id ${ascending?'asc':'desc'} limit $4`,[id,cursor?.time||null,cursor?.id||null,page.limit+1])).rows;
+  const hasMore=rows.length>page.limit,items=rows.slice(0,page.limit);if(!ascending)items.reverse();
+  return {messages:items.map(messageDto),hasMore,olderCursor:items.length?encodeHistoryCursor(items[0]):null,newestCursor:items.length?encodeHistoryCursor(items.at(-1)!):null};
+}
+export async function conversationRows(c:PoolClient,a:VerifiedActor){return (await conversationPage(c,a)).messages;}
+export async function sendMarketMessage(c:PoolClient,a:VerifiedActor,body:any){fields(body,['requestId','sellerStoreId','buyerId','productId','orderId','encrypted']);
+  let encrypted;try{encrypted=parseEncryptedMessage(body.encrypted);}catch{throw new ApiError(400,'New messages must be encrypted on your device. Unlock encrypted messages and try again.');}
   const requestId=uuid(body.requestId),orderId=body.orderId===undefined?null:uuid(body.orderId),productId=body.productId===undefined?null:uuid(body.productId),selector=body.sellerStoreId===undefined?null:uuid(body.sellerStoreId),buyerSelector=body.buyerId===undefined?null:uuid(body.buyerId);
-  const fingerprint=crypto.createHash('sha256').update(JSON.stringify([selector,buyerSelector,orderId,productId,body.content.trim()])).digest('hex');
+  const fingerprint=crypto.createHash('sha256').update(JSON.stringify([selector,buyerSelector,orderId,productId,encrypted])).digest('hex');
   const retry=async()=>{const m=(await c.query(messageQuery+' where m.sender_context_id=$1 and m.request_id=$2',[a.contextId,requestId])).rows[0];if(!m)return null;if(m.request_fingerprint!==fingerprint)throw new ApiError(409,'This message request already has different contents.');return {success:true,idempotent:true,message:messageDto(m)};};
   if(a.kind==='primary'){await buyer(c,a);if(buyerSelector)throw new ApiError(400,'Buyer identity is derived from your session.');}else if(a.kind!=='seller')throw new ApiError(403,'Buyer or seller account required.');
   const previous=await retry();if(previous)return previous;
@@ -40,9 +57,14 @@ export async function sendMarketMessage(c:PoolClient,a:VerifiedActor,body:any){f
   if(s.status!=='active' || !(await c.query("select 1 from public.account_contexts x join public.seller_applications app on app.seller_context_id=x.id and app.registration_generation=x.seller_generation where x.id=$1 and app.id=$2 and x.status='active' and app.status='approved'",[s.seller_context_id,s.application_id])).rowCount)throw new ApiError(403,'This seller is unavailable.');
   const exists=(await c.query('select 1 from public.market_messages where store_id=$1 and buyer_context_id=$2 limit 1',[s.id,buyerId])).rowCount;
   if(!exists && !o){if(a.kind!=='primary')throw new ApiError(403,'Reply to an existing buyer inquiry or order.');if(!(await c.query('select private.store_is_public($1) as eligible',[s.id])).rows[0].eligible || l && (l.retired_at || !l.is_published))throw new ApiError(409,'This store or listing is unavailable for new inquiries.');}
-  const m=(await c.query(`insert into public.market_messages(buyer_context_id,store_id,order_id,listing_id,product_title,sender_context_id,body,request_id,request_fingerprint)
-    values($1,$2,$3,$4,$5,$6,$7,$8,$9) returning id`,[buyerId,s.id,o?.id || null,o?.listing_id || l?.id || null,o?.snapshot.productTitle || l?.title || '',a.contextId,body.content.trim(),requestId,fingerprint])).rows[0];
-  await audit(c,a,'market_message_sent',m.id);const notice=await notify(c,[a.kind==='primary'?s.seller_context_id:buyerId],{category:'market_message',title:'New marketplace message',message:body.content.trim().slice(0,100),sender:a.contextId});
+  const recipientId=a.kind==='primary'?s.seller_context_id:buyerId;
+  const keys=(await c.query('select context_id,public_identity from private.market_chat_keys where context_id=any($1::uuid[])',[[a.contextId,recipientId]])).rows;
+  const senderKey=keys.find(k=>k.context_id===a.contextId)?.public_identity,recipientKey=keys.find(k=>k.context_id===recipientId)?.public_identity;
+  if(!senderKey || !recipientKey)throw new ApiError(409,'Both participants must enable encrypted messages before sending.');
+  try{await verifyEncryptedMessage({requestId,buyerId,storeId:s.id,senderId:a.contextId,recipientId},encrypted,senderKey,recipientKey);}catch{throw new ApiError(400,'The encrypted message signature or participant keys are invalid.');}
+  const m=(await c.query(`insert into public.market_messages(buyer_context_id,store_id,order_id,listing_id,product_title,sender_context_id,body,request_id,request_fingerprint,encryption_version,recipient_context_id,encrypted_payload)
+    values($1,$2,$3,$4,$5,$6,'',$7,$8,1,$9,$10) returning id`,[buyerId,s.id,o?.id || null,o?.listing_id || l?.id || null,o?.snapshot.productTitle || l?.title || '',a.contextId,requestId,fingerprint,recipientId,JSON.stringify(encrypted)])).rows[0];
+  await audit(c,a,'market_message_sent',m.id);const notice=await notify(c,[recipientId],{category:'market_message',title:'New encrypted marketplace message',message:'Open your marketplace inbox to read this encrypted message.',sender:a.contextId});
   await c.query('update public.notifications set market_message_id=$2 where id=$1',[notice,m.id]);return {success:true,idempotent:false,message:messageDto((await c.query(messageQuery+' where m.id=$1',[m.id])).rows[0])};}
 function ratingDto(r:any){return {id:r.id,storeId:r.store_id,productId:r.listing_id,serviceId:r.listing_id,buyerName:r.buyer_name,rating:r.rating,review:r.review,createdAt:r.created_at,updatedAt:r.updated_at,verifiedPurchase:true};}
 export async function purchaseReview(c:PoolClient,a:VerifiedActor,body:any,serviceId?:string){fields(body,['orderId','rating','review']);await buyer(c,a);const {o}=await lockOrder(c,a,uuid(body.orderId));
@@ -58,8 +80,14 @@ export async function purchaseReview(c:PoolClient,a:VerifiedActor,body:any,servi
   const summary=async(listing:boolean)=>(await c.query(`select coalesce(round(avg(r.rating),1),0)::float8 as "averageRating",count(*)::integer as "ratingCount" from public.market_reviews r join public.market_orders o on o.id=r.order_id where r.store_id=$1 and ($2::uuid is null or o.listing_id=$2)`,[o.store_id,listing?o.listing_id:null])).rows[0];
   const projection={...ratingDto({...r,listing_id:o.listing_id,buyer_name:o.snapshot.buyerName}),orderId:o.id};const result=await summary(!!serviceId);return {success:true,ratingRecord:projection,...result,...(serviceId?{review:projection,reviewCount:result.ratingCount}:{}),message:'Your verified purchase review has been saved.'};}
 export function installMarketConversation(app:Express,auth:SupabaseAuth){
-  app.get('/api/digital-market/messages',auth.require(['primary','seller']),route(async(req,res)=>{if(Object.keys(req.query).length)throw new ApiError(400,'Message identity and scope come from your account.');res.json(await auth.db.authorizedSystem(req.actor,['primary','seller'],c=>conversationRows(c,req.actor)));}));
-  app.post('/api/digital-market/messages',auth.require(['primary','seller']),route(async(req,res)=>res.status(201).json(await auth.db.authorizedSystem(req.actor,['primary','seller'],c=>sendMarketMessage(c,req.actor,req.body)))));
+  const budgets=new AttemptBudgets();
+  const guard:RequestHandler=(req,_res,next)=>{try{checkProfileContext((req as AuthRequest).actor,req.headers['x-pinevela-profile-context']);next();}catch(e){next(e);}};
+  const budget=(req:AuthRequest,scope:string,maximum=60)=>budgets.reserve([{scope,identity:req.actor.contextId,maximum,windowMs:600000}]);
+  app.get('/api/digital-market/encryption',auth.require(['primary','seller']),guard,route(async(req,res)=>{if(Object.keys(req.query).length)throw new ApiError(400,'Encryption identity comes from your active account.');res.json(await auth.db.authorizedRead(req.actor,['primary','seller'],c=>ownEncryptionIdentity(c,req.actor)));}));
+  app.post('/api/digital-market/encryption',auth.require(['primary','seller']),guard,route(async(req,res)=>{budget(req,'chat-key-registration',10);res.status(201).json(await auth.db.authorizedSystem(req.actor,['primary','seller'],c=>registerEncryptionIdentity(c,req.actor,req.body)));}));
+  app.post('/api/digital-market/encryption/peer',auth.require(['primary','seller']),guard,route(async(req,res)=>{budget(req,'chat-key-lookup',180);res.json(await auth.db.authorizedRead(req.actor,['primary','seller'],c=>peerEncryptionIdentity(c,req.actor,req.body)));}));
+  app.get('/api/digital-market/messages',auth.require(['primary','seller']),guard,route(async(req,res)=>{const page=historyPage(req.query,true),result=await auth.db.authorizedRead(req.actor,['primary','seller'],c=>conversationPage(c,req.actor,page));res.json(page.paged?result:result.messages);}));
+  app.post('/api/digital-market/messages',auth.require(['primary','seller']),guard,route(async(req,res)=>{budget(req,'chat-send',100);res.status(201).json(await auth.db.authorizedSystem(req.actor,['primary','seller'],c=>sendMarketMessage(c,req.actor,req.body)));}));
   const submit=(service:boolean)=>route(async(req,res)=>res.status(service?201:200).json(await auth.db.authorizedSystem(req.actor,['primary'],c=>purchaseReview(c,req.actor,req.body,service?uuid(req.params.id):undefined))));
   app.post('/api/digital-market/ratings',auth.require(['primary']),submit(false));app.post('/api/digital-market/services/:id/reviews',auth.require(['primary']),submit(true));
   const list=(service:boolean)=>route(async(req,res)=>{if(Object.keys(req.query).some(k=>!['storeId','serviceId','productId'].includes(k)) || req.query.serviceId && req.query.productId && req.query.serviceId!==req.query.productId)throw new ApiError(400,'Invalid review filter.');

@@ -54,17 +54,6 @@ html[data-theme] :is(.app-canvas, body) :is(input, textarea, select):focus-visib
 }
 html[data-theme] :is(.app-canvas, body) :is(input[type="checkbox"], input[type="radio"], input[type="range"]) { accent-color: var(--pv-blue-primary); }
 
-/* Yellow earns attention on the main public action; routine actions stay navy. */
-html[data-theme] .landing-peak-hero .landing-peak-copy :is(p, strong),
-html[data-theme] .landing-peak-hero .landing-peak-brand [class~="text-slate-500"] { color: #f2f1ef; }
-.landing-peak-hero .landing-peak-copy [class~="bg-amber-300"] { background-color: rgb(247 183 0 / .16); }
-html[data-theme] .app-canvas .landing-peak-hero .landing-peak-copy button {
-  background: var(--pv-accent-gradient);
-  color: var(--pv-brand-navy);
-  box-shadow: 0 6px 22px rgb(0 8 24 / .18);
-}
-html[data-theme] .app-canvas .landing-peak-hero .landing-peak-copy button:not(:disabled):hover { background: #ffd369; color: var(--pv-brand-navy); }
-
 /* Section fades add depth while preserving existing spacing and image composition. */
 .landing-company-story .company-chapter { background: linear-gradient(160deg, var(--pv-section-from), var(--pv-section-to) 78%); }
 .landing-company-story .company-chapter:nth-child(even) { background: linear-gradient(200deg, var(--pv-section-from), var(--pv-section-to) 78%); }
@@ -111,7 +100,7 @@ html[data-theme] :is(.app-canvas, body) :is(h1, h2, h3, .public-title, .login-br
 /* A pale card inside a dark section restores its own heading contrast. */
 html[data-theme] :is([class~="bg-white"], [class*="bg-white/"], [class~="bg-slate-50"], [class~="bg-blue-50"], [class~="from-white"]) { --pv-heading-gradient: var(--pv-heading-default-gradient); --pv-heading-ink: var(--pv-heading); }
 /* Headings on solid navy retain the inverse ink in both appearances. */
-html[data-theme] :is(.landing-peak-hero, [class~="text-white"], [class~="bg-blue-900"], [class~="bg-blue-950"], [class~="bg-slate-900"], [class~="bg-slate-950"], [class~="from-blue-900"], [class~="from-blue-950"], [class~="from-slate-900"], [class~="from-slate-950"]) { --pv-heading-gradient: var(--pv-heading-inverse-gradient); --pv-heading-ink: var(--pv-on-strong); }
+html[data-theme] :is([class~="text-white"], [class~="bg-blue-900"], [class~="bg-blue-950"], [class~="bg-slate-900"], [class~="bg-slate-950"], [class~="from-blue-900"], [class~="from-blue-950"], [class~="from-slate-900"], [class~="from-slate-950"]) { --pv-heading-gradient: var(--pv-heading-inverse-gradient); --pv-heading-ink: var(--pv-on-strong); }
 /* The supplied artwork keeps its original colors. Wordmark labels use the same
    navy/yellow pair on every surface, including dark headers and gold panels. */
 .pinevela-brand { max-width: 100%; }

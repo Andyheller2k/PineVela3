@@ -9,7 +9,10 @@ import dotenv from 'dotenv';
 import {ApiError,SupabaseDatabase,type VerifiedActor} from '../supabase/db.js';
 import {saveListing,removeListing,sellerInventory} from '../supabase/inventory.js';
 import {createOrder,changeOrder} from '../supabase/orders.js';
-import {sendMarketMessage,conversationRows,purchaseReview} from '../supabase/marketConversation.js';
+import {sendMarketMessage as sendRawMarketMessage,conversationRows,purchaseReview} from '../supabase/marketConversation.js';
+import {createChatIdentity,recoveryPhrase} from '../src/lib/marketEncryption.js';
+import {registerEncryptionIdentity} from '../supabase/marketEncryption.js';
+import {encryptedMarketTestRequests} from './lib/encrypted-market-test.js';
 import {OrderPins} from '../supabase/orderPins.js';
 import {reserveMedia,finishMedia,mediaUrl} from '../supabase/media.js';
 import {normalizeRasterImage} from '../imageUploadSecurity.js';
@@ -72,6 +75,10 @@ try{
   // Exercise the actual server zero-fee policy; no provider payment is faked.
   await freeStoreVerification(c,own.actor);
   const pins=new OrderPins(crypto.randomBytes(32)),item=(await saveListing(c,own.actor,draft)).product;
+  const identities=new Map();
+  for(const a of [foreignOwner,owner,own.actor,foreign.actor]){await bind(a);const keys=await createChatIdentity(a.contextId,recoveryPhrase());await registerEncryptionIdentity(c,a,{publicIdentity:keys.publicIdentity,backup:keys.backup,proof:keys.proof});identities.set(a.contextId,keys.identity);}
+  const encryptRequest=encryptedMarketTestRequests(identities);
+  const sendMarketMessage=(client:typeof c,a:VerifiedActor,body:any)=>encryptRequest(client,a,body).then(encrypted=>sendRawMarketMessage(client,a,encrypted));
   const request={requestId:crypto.randomUUID(),sellerStoreId:stores[0].id,productId:item.id,content:'Is this item available?'};
   await bind(foreignOwner);const first=await sendMarketMessage(c,foreignOwner,request);
   check(first.message.buyerId===foreignOwner.contextId && first.message.senderId===foreignOwner.contextId,'Message identities come from saved subjects');

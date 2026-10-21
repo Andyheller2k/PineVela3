@@ -1,3 +1,10 @@
+import OrderTimeline from './OrderTimeline';
+import OrderNotifications from './OrderNotifications';
+import OrderCancelButton from './OrderCancelButton';
+import {readOrderHistoryPage,mergeOrderHistory,type OrderHistoryPage} from '../lib/orderHistory';
+import { useId } from 'react';
+import MarketSortSelect from './MarketSortSelect';
+import MarketPricePanel from './MarketPricePanel';
 import SupportNotificationLink from './SupportNotificationLink';
 import HelpLink from './HelpLink';
 import AppearanceSettings from './AppearanceSettings';
@@ -5,7 +12,6 @@ import { activateOnKeyboard } from '../lib/keyboardActivation';
 
 import {
 ArrowRight,
-ArrowUpDown,
 BadgeCheck,
 Bell,
 CheckCheck,
@@ -26,7 +32,6 @@ Package,
 Phone,
 Plus,
 RefreshCw,
-RotateCcw,
 Search,
 ShieldCheck,
 ShoppingBag,
@@ -57,8 +62,9 @@ import { routePopupFeedback } from '../lib/feedback';
 import { optimizeImageDisplayUrl } from '../lib/imageOptimizer';
 import { marketNoticeKind } from '../lib/marketNotifications';
 import { openPaymentCheckout } from '../lib/payments';
-import { sessionFetch as fetch } from '../lib/session';
-import CampusMeetupMapPicker from './CampusMeetupMapPicker';
+import { currentSessionGeneration, sessionFetch as fetch } from '../lib/session';
+import { readDashboardSnapshot, saveDashboardSnapshot } from '../lib/dashboardSnapshot';
+import CampusMeetupMapPicker from './LazyCampusMeetupMapPicker';
 import DashboardOverlay from './DashboardOverlay';
 import InternationalPhoneInput from './InternationalPhoneInput';
 import ItemImageCropModal from './ItemImageCropModal';
@@ -127,6 +133,9 @@ interface MarketProduct {
   isOpen247?: boolean;
   createdAt: string;
   updatedAt: string;
+  timeline?: import('../types').DigitalMarketOrderTimeline[];
+  timelineCursor?:string|null;
+  timelineHasMore?:boolean;
 }
 
 interface MarketOrder {
@@ -284,15 +293,24 @@ const SellerInventoryCard: React.FC<SellerInventoryCardProps> = memo(
 
 SellerInventoryCard.displayName = 'SellerInventoryCard';
 
+type SellerDashboardSnapshot = {
+  store: any;
+  application: any;
+  products: MarketProduct[];
+  orders: MarketOrder[];
+};
+
 export default function PageDigitalMarket() {
   const navigate = useNavigate();
   const { user, logout, apiFetch } = useAuth();
+  const cachedDashboard = readDashboardSnapshot<SellerDashboardSnapshot>('seller', user?.id);
   const currentAccount=useRef(user?.id),accountEpoch=useRef(0),accountGeneration=useRef(0),mounted=useRef(true);
   if(currentAccount.current!==user?.id){currentAccount.current=user?.id;accountEpoch.current++;accountGeneration.current++;}
-  const [loadedAccount,setLoadedAccount]=useState<string | undefined>();
+  const [loadedAccount,setLoadedAccount]=useState<string | undefined>(cachedDashboard ? user?.id : undefined);
   const accountIsCurrent=(id:string | undefined,generation?:number)=>mounted.current && currentAccount.current===id && (generation===undefined || generation===accountGeneration.current);
   useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;};},[]);
-  const initialLoadCompletedRef = useRef<boolean>(false);
+  const initialLoadCompletedRef = useRef<boolean>(!!cachedDashboard);
+  const profileDraftInitialized = useRef(false);
   const dashboardReads = useRef(new AccountRefreshGate());
 
   useEffect(() => {
@@ -318,15 +336,17 @@ export default function PageDigitalMarket() {
 
   // Navigation
   const [activeTab, setActiveTab] = useState<'dashboard' | 'inventory' | 'services' | 'sales' | 'notifications' | 'profile' | 'upgrade' | 'messages'>('dashboard');
-  const [storeData, setStoreData] = useState<any>(null);
-  const [applicationData, setApplicationData] = useState<any>(null);
-  const [products, setProducts] = useState<MarketProduct[]>([]);
-  const [orders, setOrders] = useState<MarketOrder[]>([]);
+  const [storeData, setStoreData] = useState<any>(cachedDashboard?.store || null);
+  const [applicationData, setApplicationData] = useState<any>(cachedDashboard?.application || null);
+  const [products, setProducts] = useState<MarketProduct[]>(cachedDashboard?.products || []);
+  const [orderCursor,setOrderCursor]=useState<string|null|undefined>(undefined),[olderOrdersLoading,setOlderOrdersLoading]=useState(false);
+  const [orderSummary,setOrderSummary]=useState<OrderHistoryPage<MarketOrder>['summary']|null>(null),[orderCustomers,setOrderCustomers]=useState<any[]>([]);
+  const [orders, setOrders] = useState<MarketOrder[]>(cachedDashboard?.orders || []);
   const { notifications, markAsRead } = useNotifications();
   const sellerNotifications = notifications.filter(n => marketNoticeKind(n) !== null);
   const sellerMessageUnreadCount = sellerNotifications.filter(n => !n.read && marketNoticeKind(n) === 'chat').length;
   const [notifFilter, setNotifFilter] = useState<'all' | 'unread' | 'orders' | 'system'>('all');
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loading, setLoading] = useState<boolean>(!cachedDashboard);
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [loadError, setLoadError] = useState('');
 
@@ -382,6 +402,7 @@ export default function PageDigitalMarket() {
     return false;
   };
   const [maxPriceFilter, setMaxPriceFilter] = useState<number>(5000);
+  const inventoryPricePanelId = useId();
   const [priceSortOption, setPriceSortOption] = useState<'featured' | 'price-asc' | 'price-desc' | 'newest'>('featured');
   const [showPriceFilterPanel, setShowPriceFilterPanel] = useState<boolean>(false);
   const [marketVisibleCount, setMarketVisibleCount] = useState<number>(24);
@@ -475,6 +496,21 @@ export default function PageDigitalMarket() {
   const [editDescription, setEditDescription] = useState('');
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
 
+  const initializeStoreDraft = (store: any) => {
+    if (profileDraftInitialized.current) return;
+    setEditStoreName(store.storeName || '');
+    setEditLocation(store.location || '');
+    setEditDeliveryForm(storeDeliveryMode(store));
+    const phone = phoneDraft(store.phone, store.phoneCountry);
+    setEditPhone(phone.contactPhone); setEditPhoneCountry(phone.contactPhoneCountry);
+    setEditCategory(store.category || '');
+    setEditCoverPicture(store.coverPicture || store.bannerUrl || '');
+    setEditProfilePicture(store.profilePicture || store.logoUrl || '');
+    setEditUsername(store.username || '');
+    setEditDescription(store.description || '');
+    profileDraftInitialized.current = true;
+  };
+
   // Toast State
   const [toastMessage, setToastMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
@@ -517,6 +553,7 @@ export default function PageDigitalMarket() {
 
   const loadDataRead = async (isBackground = false, cancellation?: AbortSignal) => {
     const accountId=user?.id,epoch=accountEpoch.current;
+    const sessionGeneration=currentSessionGeneration();
     const current=()=>mounted.current && currentAccount.current===accountId && accountEpoch.current===epoch && !cancellation?.aborted;
     const nativeOptions = ({
       signal: cancellation ? AbortSignal.any([cancellation, AbortSignal.timeout(30000)]) : AbortSignal.timeout(30000),
@@ -553,23 +590,16 @@ export default function PageDigitalMarket() {
         return;
       } else {
         setStoreData((prev: any) => JSON.stringify(prev) === JSON.stringify(statusRes.store) ? prev : statusRes.store);
-        // Pre-fill profile edit fields ONLY on initial load to preserve unsaved form edits
-        if (!initialLoadCompletedRef.current) {
-          setEditStoreName(statusRes.store.storeName || '');
-          setEditLocation(statusRes.store.location || '');
-          setEditDeliveryForm(storeDeliveryMode(statusRes.store));
-          const phone = phoneDraft(statusRes.store.phone, statusRes.store.phoneCountry); setEditPhone(phone.contactPhone); setEditPhoneCountry(phone.contactPhoneCountry);
-          setEditCategory(statusRes.store.category || '');
-          setEditCoverPicture(statusRes.store.coverPicture || statusRes.store.bannerUrl || '');
-          setEditProfilePicture(statusRes.store.profilePicture || statusRes.store.logoUrl || '');
-          setEditUsername(statusRes.store.username || '');
-          setEditDescription(statusRes.store.description || '');
-        }
+        initializeStoreDraft(statusRes.store);
       }
 
       // 2. Fetch products
-      const allProducts: MarketProduct[] = await apiFetch(('/api/digital-market/inventory'), nativeOptions);
+      const [allProducts, orderData] = await Promise.all([
+        apiFetch('/api/digital-market/inventory', nativeOptions),
+        apiFetch('/api/digital-market/my-orders?paged=1', nativeOptions),
+      ]);
       if(!current())return;
+      if(!Array.isArray(allProducts))throw new Error('Could not read your inventory. Please retry.');
       const currentStoreId = statusRes?.store?.id || (user as any)?.merchantStoreId;
       const currentEmail = (user?.studentEmail || user?.email || '').toLowerCase();
 
@@ -578,9 +608,10 @@ export default function PageDigitalMarket() {
       setProducts(prev => JSON.stringify(prev) === JSON.stringify(myProducts) ? prev : myProducts);
 
       // 3. Fetch orders
-      const ordersRes: MarketOrder[] = await apiFetch(('/api/digital-market/my-orders'), nativeOptions);
-      if(!current())return;
-      setOrders(prev => JSON.stringify(prev) === JSON.stringify(ordersRes || []) ? prev : (ordersRes || []));
+      const page=readOrderHistoryPage<MarketOrder>(orderData),ordersRes=page.orders;
+      setOrderSummary(page.summary);setOrderCustomers(page.customers);setOrderCursor(previous=>previous===undefined?page.nextCursor:previous);
+      setOrders(prev=>mergeOrderHistory(prev,ordersRes));
+      saveDashboardSnapshot('seller',accountId,sessionGeneration,{store:statusRes.store,application:statusRes.application,products:allProducts,orders:ordersRes} satisfies SellerDashboardSnapshot);
       completed = true;
       setLoadError('');
     } catch (err: any) {
@@ -597,6 +628,14 @@ export default function PageDigitalMarket() {
 
   const loadData = (isBackground = false) => (dashboardReads.current.run(user?.id || '', accountEpoch.current, cancellation => loadDataRead(isBackground, cancellation)));
 
+  const loadOlderOrders=async()=>{
+    if(!orderCursor||olderOrdersLoading)return;const accountId=user?.id,epoch=accountEpoch.current;setOlderOrdersLoading(true);
+    try{const page=readOrderHistoryPage<MarketOrder>(await apiFetch('/api/digital-market/my-orders?paged=1&before='+encodeURIComponent(orderCursor),{headers:{'X-PineVela-Profile-Context':accountId||''}}));
+      if(accountId!==currentAccount.current||accountEpoch.current!==epoch)return;
+      setOrders(previous=>mergeOrderHistory(previous,page.orders));setOrderCursor(page.nextCursor);setOrderSummary(page.summary);setOrderCustomers(page.customers);setLoadError('');
+    }catch(e:any){if(accountId===currentAccount.current&&accountEpoch.current===epoch)setLoadError(e.message);}
+    finally{if(accountId===currentAccount.current&&accountEpoch.current===epoch)setOlderOrdersLoading(false);}
+  };
   const handleMarkNotificationRead = markAsRead;
   const handleMarkAllNotificationsRead = async () => {
     await Promise.all(sellerNotifications.filter(n => !n.read).map(n => markAsRead(n.id)));
@@ -604,18 +643,21 @@ export default function PageDigitalMarket() {
   };
 
   useEffect(() => {
-    initialLoadCompletedRef.current=false;setLoadedAccount(undefined);setLoading(true);setLoadError('');
-    setStoreData(null);setApplicationData(null);setProducts([]);setOrders([]);setActiveTab('dashboard');
+    const saved=readDashboardSnapshot<SellerDashboardSnapshot>('seller',user?.id);
+    initialLoadCompletedRef.current=!!saved;setLoadedAccount(saved ? user?.id : undefined);setLoading(!saved);setLoadError('');
+    setStoreData(saved?.store || null);setApplicationData(saved?.application || null);setProducts(saved?.products || []);setOrders(saved?.orders || []);setActiveTab('dashboard');
+    profileDraftInitialized.current=false;if(saved)initializeStoreDraft(saved.store);
+    setOrderCursor(undefined);setOlderOrdersLoading(false);setOrderSummary(null);setOrderCustomers([]);
     setShowAddModal(false);setShowServiceModal(false);setProfileMediaUploads(0);setMediaUploads(0);
     setIsSubmittingProduct(false);setIsSubmittingService(false);setIsUpdatingProfile(false);
     setCropRawImage(null);setIsCropModalOpen(false);setVerifyingOrder(null);setDecliningOrder(null);setPinInput('');setPinSubmitting(false);setConfirmingOrderId(null);
     setProdImageUrl('');setProdAdditionalImages([]);setServImageUrl('');setServPriceCategories([]);
     setProdTitle('');setProdDesc('');setProdPrice('');setServTitle('');setServDesc('');setServPrice('');setEditingServiceId(null);
-    loadData(false);
-    const interval = setInterval(() => {
-      loadData(true);
-    }, 10000);
-    return () => { clearInterval(interval); dashboardReads.current.cancel(); };
+    loadData(!!saved);
+    const refreshVisible = () => { if (!document.hidden) void loadData(true); };
+    const interval = setInterval(refreshVisible, 10000);
+    document.addEventListener('visibilitychange', refreshVisible);
+    return () => { clearInterval(interval); document.removeEventListener('visibilitychange', refreshVisible); dashboardReads.current.cancel(); };
   }, [user?.id, user?.email, user?.studentEmail]);
 
   // Handle Add Product (MANDATORY Description and Image)
@@ -1124,9 +1166,10 @@ export default function PageDigitalMarket() {
   // Stats calculation
   const physicalProductsOnly = products.filter(p => !isMarketService(p));
   const totalStockUnits = physicalProductsOnly.reduce((acc, p) => acc + (p.stockQuantity || 0), 0);
-  const pendingOrders = orders.filter(o => !['Completed & Paid', 'Cancelled', 'Location Rejected', 'Rejected by Seller'].includes(o.status));
+  const pendingOrders = orders.filter(o => ['Awaiting Seller Confirmation','Pending Meetup'].includes(o.status));
   const completedOrders = orders.filter(o => o.status === 'Completed & Paid');
-  const totalRevenue = completedOrders.reduce((acc, o) => acc + (o.totalAmount || (o.productPrice * o.quantity) || 0), 0);
+  const totalRevenue = orderSummary?.revenue ?? completedOrders.reduce((acc, o) => acc + (o.totalAmount || (o.productPrice * o.quantity) || 0), 0);
+  const pendingCount=orderSummary?.pending??pendingOrders.length,completedCount=orderSummary?.completed??completedOrders.length;
 
   const unreadNotifCount = sellerNotifications.filter((n: any) => !n.read).length;
 
@@ -1146,21 +1189,7 @@ export default function PageDigitalMarket() {
   });
 
   // Extract unique customer buyers
-  const uniqueCustomers = Array.from(new Set(orders.map(o => o.buyerEmail))).map(email => {
-    const matchingOrder = orders.find(o => o.buyerEmail === email);
-    const totalSpent = orders
-      .filter(o => o.buyerEmail === email && o.status === 'Completed & Paid')
-      .reduce((acc, o) => acc + (o.totalAmount || (o.productPrice * o.quantity) || 0), 0);
-    const orderCount = orders.filter(o => o.buyerEmail === email).length;
-
-    return {
-      email,
-      name: matchingOrder?.buyerName || 'Student Customer',
-      phone: matchingOrder?.buyerPhone || 'N/A',
-      orderCount,
-      totalSpent
-    };
-  });
+  const uniqueCustomers = orderCustomers;
 
   // Loading Screen
   if (loading || loadedAccount!==user?.id) return <RouteSkeleton />;
@@ -1239,9 +1268,9 @@ export default function PageDigitalMarket() {
                 title={`${unreadNotifCount} unread seller notifications`}
               >
                 <Bell className="w-4 h-4 text-blue-600 group-hover:scale-110 transition-transform" />
-                {(unreadNotifCount > 0 || pendingOrders.length > 0) && (
+                {(unreadNotifCount > 0 || pendingCount > 0) && (
                   <span className="absolute -top-1.5 -right-1.5 min-w-5 h-5 px-1.5 rounded-full bg-red-500 text-white font-extrabold text-[9px] flex items-center justify-center border-2 border-white shadow-sm animate-pulse">
-                    {unreadNotifCount > 0 ? unreadNotifCount : pendingOrders.length}
+                    {unreadNotifCount > 0 ? unreadNotifCount : pendingCount}
                   </span>
                 )}
               </button>
@@ -1251,8 +1280,8 @@ export default function PageDigitalMarket() {
                 <p className="text-[10px] font-black text-slate-800">
                   {unreadNotifCount > 0 
                     ? `🔔 ${unreadNotifCount} Unread Notifications!`
-                    : pendingOrders.length > 0
-                    ? `🛒 ${pendingOrders.length} Active Handovers!`
+                    : pendingCount > 0
+                    ? `🛒 ${pendingCount} Active Handovers!`
                     : "✅ Zero pending notifications"}
                 </p>
                 <p className="text-[9px] text-slate-500 font-bold mt-0.5">
@@ -1325,7 +1354,7 @@ export default function PageDigitalMarket() {
                 }`}
               >
                 <Clock className="w-4 h-4" />
-                <span>Successful Sales ({completedOrders.length})</span>
+                <span>Successful Sales ({completedCount})</span>
               </button>
 
               <button
@@ -1417,7 +1446,7 @@ export default function PageDigitalMarket() {
                     <CheckCircle2 className="w-4 h-4" />
                   </div>
                 </div>
-                <div className="text-2xl font-black text-emerald-700 mt-2">{completedOrders.length}</div>
+                <div className="text-2xl font-black text-emerald-700 mt-2">{completedCount}</div>
                 <div className="text-[10px] text-slate-500 mt-0.5">Completed peer handovers</div>
               </div>
 
@@ -1429,7 +1458,7 @@ export default function PageDigitalMarket() {
                   </div>
                 </div>
                 <div className="text-2xl font-black text-slate-900 mt-2">GH₵ {totalRevenue.toLocaleString()}</div>
-                <div className="text-[10px] text-emerald-600 mt-0.5">Settled through system</div>
+                <div className="text-[10px] text-emerald-600 mt-0.5">PIN-verified handovers · paid directly to seller</div>
               </div>
             </div>
 
@@ -1446,7 +1475,7 @@ export default function PageDigitalMarket() {
                       <p className="text-[11px] text-slate-400">When student buyers order, verify their transaction with their six-digit pickup token.</p>
                     </div>
                     <span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-800 text-[10px] font-black">
-                      {pendingOrders.length} Pending
+                      {pendingCount} Pending
                     </span>
                   </div>
 
@@ -1456,6 +1485,8 @@ export default function PageDigitalMarket() {
                         const needsAgreement = order.status === 'Awaiting Seller Confirmation' || !order.sellerConfirmed;
                         return (
                           <div key={order.id} id={`market-order-${order.id}`} className="py-4 space-y-3 scroll-mt-44">
+                            <OrderNotifications orderId={order.id}/>
+                            <details><summary className="cursor-pointer text-xs font-bold text-blue-800">View order timeline</summary><OrderTimeline order={order}/></details>
                             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                               <div className="space-y-1">
                                 <div className="flex items-center gap-2">
@@ -1489,6 +1520,7 @@ export default function PageDigitalMarket() {
                               </div>
 
                               <div className="flex flex-wrap items-center gap-2">
+                                <OrderCancelButton order={order} onCancelled={next=>{setOrders(previous=>previous.map(row=>row.id===next.id?next:row));void loadData(true);}}/>
                                 {needsAgreement ? (
                                   <div className="flex items-center gap-1.5">
                                     <button
@@ -1545,7 +1577,7 @@ export default function PageDigitalMarket() {
                   ) : (
                     <div className="py-10 text-center text-slate-400 space-y-2">
                       <Clock className="w-8 h-8 mx-auto text-slate-300" />
-                      <p className="text-xs font-bold text-slate-600">No pending pickups right now.</p>
+                      <p className="text-xs font-bold text-slate-600">{pendingCount?'Load older orders to view earlier pending handovers.':'No pending pickups right now.'}</p>
                       <p className="text-[10px] text-slate-400">When students order items, verify them here.</p>
                     </div>
                   )}
@@ -1620,8 +1652,11 @@ export default function PageDigitalMarket() {
                   {/* Price Filter Panel Toggle */}
                   <button
                     type="button"
+                    aria-expanded={showPriceFilterPanel}
+                    aria-controls={showPriceFilterPanel ? inventoryPricePanelId : undefined}
+                    data-filtered={isPriceFiltered}
                     onClick={() => setShowPriceFilterPanel(!showPriceFilterPanel)}
-                    className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer border ${
+                    className={`market-price-toggle px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer border ${
                       showPriceFilterPanel || isPriceFiltered
                         ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
                         : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200'
@@ -1634,20 +1669,7 @@ export default function PageDigitalMarket() {
                     )}
                   </button>
 
-                  {/* Price Sorting Selector */}
-                  <div className="relative inline-flex items-center">
-                    <ArrowUpDown className="w-3.5 h-3.5 text-slate-500 absolute left-2.5 pointer-events-none" />
-                    <select aria-label="Sort store inventory"
-                      value={priceSortOption}
-                      onChange={(e) => setPriceSortOption(e.target.value as any)}
-                      className="pl-8 pr-3 py-2 bg-slate-50 border border-slate-200 text-slate-800 text-xs font-bold rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 cursor-pointer"
-                    >
-                      <option value="featured">Sort: Default</option>
-                      <option value="price-asc">Price: Low to High 📈</option>
-                      <option value="price-desc">Price: High to Low 📉</option>
-                      <option value="newest">Sort: Newest First ⚡</option>
-                    </select>
-                  </div>
+                  <MarketSortSelect inventory value={priceSortOption} onChange={setPriceSortOption} />
 
                   <span className="px-3.5 py-2 bg-blue-100 text-blue-900 font-black text-xs rounded-xl shrink-0">
                     {filteredProducts.length} {filteredProducts.length === 1 ? 'Item' : 'Items'}
@@ -1655,104 +1677,8 @@ export default function PageDigitalMarket() {
                 </div>
               </div>
 
-              {/* Expandable Price Range Slider */}
-              {(showPriceFilterPanel || isPriceFiltered) && (
-                <div className="p-4 bg-gradient-to-r from-blue-50/80 to-indigo-50/60 border border-blue-200/80 rounded-2xl space-y-3.5 animate-fadeIn">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <DollarSign className="w-4 h-4 text-blue-700" />
-                      <span className="text-xs font-black text-slate-900">Inventory Price Filter</span>
-                      <span className="text-[11px] font-bold text-blue-800 bg-white/80 px-2.5 py-0.5 rounded-md border border-blue-200 font-mono">
-                        GHS {minPriceFilter} – GHS {maxPriceFilter >= 5000 ? '5,000+' : maxPriceFilter}
-                      </span>
-                    </div>
-
-                    {isPriceFiltered && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setMinPriceFilter(0);
-                          setMaxPriceFilter(5000);
-                        }}
-                        className="text-[11px] font-bold text-rose-600 hover:text-rose-800 flex items-center gap-1 cursor-pointer"
-                      >
-                        <RotateCcw className="w-3 h-3" />
-                        <span>Reset Price Filter</span>
-                      </button>
-                    )}
-                  </div>
-
-                  {/* Sliders Grid */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* Minimum Price Slider */}
-                    <div className="space-y-1.5">
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="font-bold text-slate-700">Minimum Price:</span>
-                        <span className="font-black text-blue-900 font-mono">GHS {minPriceFilter}</span>
-                      </div>
-                      <input aria-label="Minimum price"
-                        type="range"
-                        min="0"
-                        max={Math.min(maxPriceFilter, 5000)}
-                        step="10"
-                        value={minPriceFilter}
-                        onChange={(e) => setMinPriceFilter(Number(e.target.value))}
-                        className="w-full accent-blue-600 cursor-pointer h-2 bg-slate-200 rounded-lg"
-                      />
-                    </div>
-
-                    {/* Maximum Price Slider */}
-                    <div className="space-y-1.5">
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="font-bold text-slate-700">Maximum Price:</span>
-                        <span className="font-black text-blue-900 font-mono">
-                          GHS {maxPriceFilter >= 5000 ? '5,000+' : maxPriceFilter}
-                        </span>
-                      </div>
-                      <input aria-label="Maximum price"
-                        type="range"
-                        min={minPriceFilter}
-                        max="5000"
-                        step="25"
-                        value={maxPriceFilter}
-                        onChange={(e) => setMaxPriceFilter(Number(e.target.value))}
-                        className="w-full accent-blue-600 cursor-pointer h-2 bg-slate-200 rounded-lg"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Quick Preset Pills */}
-                  <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                    <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 mr-1">Presets:</span>
-                    {[
-                      { label: 'Under GHS 100', min: 0, max: 100 },
-                      { label: 'GHS 100 - 500', min: 100, max: 500 },
-                      { label: 'GHS 500 - 1,500', min: 500, max: 1500 },
-                      { label: 'GHS 1,500 - 5,000', min: 1500, max: 5000 },
-                      { label: 'All Prices', min: 0, max: 5000 }
-                    ].map((preset) => {
-                      const isActive = minPriceFilter === preset.min && maxPriceFilter === preset.max;
-                      return (
-                        <button
-                          key={preset.label}
-                          type="button"
-                          onClick={() => {
-                            setMinPriceFilter(preset.min);
-                            setMaxPriceFilter(preset.max);
-                          }}
-                          className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
-                            isActive
-                              ? 'bg-blue-700 text-white shadow-xs'
-                              : 'bg-white/80 text-slate-700 hover:bg-white border border-blue-100'
-                          }`}
-                        >
-                          {preset.label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
+              {showPriceFilterPanel && <MarketPricePanel id={inventoryPricePanelId} min={minPriceFilter} max={maxPriceFilter}
+                onMinChange={setMinPriceFilter} onMaxChange={setMaxPriceFilter} onClose={() => setShowPriceFilterPanel(false)} />}
 
               {/* Product Category Select Menu */}
               <div className="pt-2 border-t border-slate-100" id="inv-tags">
@@ -2096,6 +2022,7 @@ export default function PageDigitalMarket() {
           </div>
         )}
 
+        {(activeTab==='dashboard'||activeTab==='sales')&&orderCursor&&<button type="button" disabled={olderOrdersLoading} onClick={()=>void loadOlderOrders()} className="mb-4 rounded-xl border border-blue-200 px-4 py-2 text-sm font-bold text-blue-800 disabled:opacity-50">{olderOrdersLoading?'Loading older orders…':'Load older orders'}</button>}
         {/* TAB 3: SUCCESSFUL SALES LOG */}
         {activeTab === 'sales' && (
           <div className="space-y-6">
@@ -2118,9 +2045,9 @@ export default function PageDigitalMarket() {
                       <div className="space-y-1.5">
                         <div className="flex items-center gap-2">
                           <span className="text-[10px] font-mono text-slate-400 bg-slate-200/60 px-1.5 py-0.5 rounded-md uppercase">Order ID: {order.id.slice(-6)}</span>
-                          <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 text-[9px] font-black rounded-full uppercase">Settled Handover</span>
+                          <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 text-[9px] font-black rounded-full uppercase">PIN-verified handover</span>
                         </div>
-                        <h4 className="text-xs font-black text-slate-950">{order.productTitle}</h4>
+                        <h4 className="text-xs font-black text-slate-950">{order.productTitle}</h4><details><summary className="cursor-pointer text-xs font-bold text-blue-800">View order timeline</summary><OrderTimeline order={order}/></details>
                         <div className="text-xs text-slate-600">
                           Buyer Name: <strong className="text-slate-900">{order.buyerName}</strong> • Phone: <strong className="text-slate-800">{order.buyerPhone || 'N/A'}</strong>
                         </div>
@@ -2146,11 +2073,12 @@ export default function PageDigitalMarket() {
               ) : (
                 <div className="py-12 text-center text-slate-400 space-y-2">
                   <CheckCircle2 className="w-10 h-10 mx-auto text-slate-300" />
-                  <p className="text-xs font-bold text-slate-600">No completed sales logged yet.</p>
+                  <p className="text-xs font-bold text-slate-600">{completedCount?'Load older orders to view earlier completed sales.':'No completed sales logged yet.'}</p>
                   <p className="text-[10px] text-slate-400">When handovers are authenticated with OTP PINs, completed logs appear here.</p>
                 </div>
               )}
             </div>
+            {orders.some(order=>['Expired','Cancelled','Location Rejected'].includes(order.status))&&<section className="space-y-3 rounded-3xl border border-blue-100 bg-white/70 p-6"><h3 className="font-black text-blue-950">Closed requests</h3>{orders.filter(order=>['Expired','Cancelled','Location Rejected'].includes(order.status)).map(order=><div key={order.id} className="flex items-center justify-between gap-3 rounded-xl border border-blue-100 p-3 text-sm"><span>{order.productTitle}</span><span className="font-bold">{order.status}</span></div>)}</section>}
           </div>
         )}
 
@@ -2228,7 +2156,8 @@ export default function PageDigitalMarket() {
                     const isBuyRequest = !isMarketChat && ( (notif.title || '').toLowerCase().includes('buy') || (notif.title || '').toLowerCase().includes('order') || (notif.message || '').toLowerCase().includes('purchase'));
                     return (
                       <div
-                        key={notif.id || `notif-${Math.random()}`}
+                        key={notif.id}
+                        data-notification-id={notif.id}
                         className={`p-4 rounded-2xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${
                           !notif.read
                             ? 'bg-blue-50/60 border-blue-200 shadow-2xs'
@@ -3576,10 +3505,10 @@ export default function PageDigitalMarket() {
 
       {/* SECURE SIGNOUT CONFIRMATION MODAL */}
       {showLogoutConfirm && (
-        <DashboardOverlay aria-label="Sign out of market" onClose={() => setShowLogoutConfirm(false)} className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <DashboardOverlay aria-label="Sign out of market" onClose={() => setShowLogoutConfirm(false)} className="pv-signout-overlay fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/40 backdrop-blur-md">
           {/* Backdrop */}
           <div 
-            className="absolute inset-0 bg-slate-950/40 backdrop-blur-md transition-opacity" 
+            className="absolute inset-0"
             onClick={() => setShowLogoutConfirm(false)}
           />
           
@@ -3602,6 +3531,7 @@ export default function PageDigitalMarket() {
               <button
                 type="button"
                 onClick={() => setShowLogoutConfirm(false)}
+                data-signout-action="cancel"
                 className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-black rounded-xl border border-slate-200 transition-all cursor-pointer"
               >
                 Keep Open
@@ -3613,6 +3543,7 @@ export default function PageDigitalMarket() {
                   if (!await logout()) return;
                   navigate('/login');
                 }}
+                data-signout-action="confirm"
                 className="px-4 py-2.5 bg-rose-600 hover:bg-rose-500 text-white text-xs font-black rounded-xl shadow-md shadow-rose-600/20 transition-all cursor-pointer"
               >
                 Sign Out

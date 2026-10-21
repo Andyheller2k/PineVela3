@@ -29,15 +29,19 @@ test('public catalog appearances agree before paint and after navigation without
   }
 });
 
-test('public Help stays navy while product Help restores the saved product theme', () => {
-  assert.equal(getPublicAppearance('/help', '?ticket=owned-case', true), null);
-  assert.equal(getPublicAppearance('/help', '?from=/login', true), 'dark');
-  for (const from of ['/', '/login', '/pinemarket', '/faq', '/user/dashboard', '/manager/dashboard', '/digital-market', '/customer-service']) {
-    const search = `?from=${encodeURIComponent(from)}`, fixed = getPublicAppearance('/help', search);
-    const root = { dataset: {} as Record<string, string>, style: {} as Record<string, string> };
-    runInNewContext(bootstrap, { document: { documentElement: root }, location: { hash: '#/help' + search }, localStorage: { getItem: () => 'light' }, matchMedia: () => ({ matches: false }), URLSearchParams });
-    assert.equal(root.dataset.theme, fixed || 'light');
-    assert.equal(root.dataset.appearance, fixed ? 'public' : 'product');
-    assert.equal(fixed, ['/user/dashboard', '/manager/dashboard', '/digital-market', '/customer-service'].includes(from) ? null : 'dark');
+test('public FAQ and Help stay navy while product entries restore either saved theme', () => {
+  for (const route of ['/help', '/faq']) {
+    assert.equal(getPublicAppearance(route, '', true), null);
+    assert.equal(getPublicAppearance(route, '?from=/login', true), 'dark');
+    for (const from of ['/', '/login', '/pinemarket', '/faq', '/user/dashboard', '/resident/dashboard', '/manager/dashboard', '/staff/dashboard', '/admin/dashboard', '/digital-market', '/customer-service', '/field-officer']) {
+      const search = `?from=${encodeURIComponent(from)}`, fixed = getPublicAppearance(route, search);
+      for (const saved of ['light', 'dark']) {
+        const root = { dataset: {} as Record<string, string>, style: {} as Record<string, string> };
+        runInNewContext(bootstrap, { document: { documentElement: root }, location: { hash: '#' + route + search }, localStorage: { getItem: () => saved }, matchMedia: () => ({ matches: false }), URLSearchParams });
+        assert.equal(root.dataset.theme, fixed || saved);
+        assert.equal(root.dataset.appearance, fixed ? 'public' : 'product');
+        assert.equal(fixed, ['/', '/login', '/pinemarket', '/faq'].includes(from) ? 'dark' : null);
+      }
+    }
   }
 });

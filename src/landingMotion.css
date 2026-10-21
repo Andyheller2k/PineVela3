@@ -1,0 +1,182 @@
+/* Landing-only motion. Existing color, type, artwork bounds and layout rules
+   remain in publicPages.css; these effects animate transforms and opacity. */
+.landing-peak-page[data-landing-motion] .landing-reveal {
+  opacity: 0;
+  translate: 0 24px;
+  transition: none;
+}
+.landing-peak-page[data-landing-motion] .landing-revealed {
+  opacity: 1;
+  translate: 0 0;
+  transition: opacity 520ms cubic-bezier(.22, 1, .36, 1), translate 520ms cubic-bezier(.22, 1, .36, 1), scale 520ms cubic-bezier(.22, 1, .36, 1);
+  transition-delay: var(--landing-reveal-delay, 0ms);
+}
+.landing-peak-page[data-landing-motion] .landing-peak-copy > .landing-revealed {
+  transition-duration: 440ms;
+}
+.landing-peak-page[data-landing-motion] .landing-focus-revealed {
+  opacity: 1 !important;
+  translate: none !important;
+  scale: none !important;
+  transition: none !important;
+}
+.landing-peak-page[data-landing-motion] :is(.landing-benefit, .company-image-card, .public-catalog-track > *).landing-reveal { scale: .98; }
+.landing-peak-page[data-landing-motion] :is(.landing-benefit, .company-image-card, .public-catalog-track > *).landing-revealed { scale: 1; }
+
+/* Reveal a fine gold line along the existing rounded section boundary. */
+.landing-peak-page[data-landing-motion] .company-chapter { position: relative; }
+.landing-peak-page[data-landing-motion] .landing-divider::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  height: calc(clamp(28px, 5vw, 72px) * 2);
+  border: 1px solid rgb(255 214 10 / .7);
+  border-bottom: 0;
+  border-radius: inherit;
+  mask-image: linear-gradient(#000 30%, transparent);
+  clip-path: inset(0 100% 0 0);
+  opacity: 0;
+  pointer-events: none;
+  transition: clip-path 700ms cubic-bezier(.22, 1, .36, 1), opacity 350ms ease;
+}
+.landing-peak-page[data-landing-motion] .landing-divider-drawn::before {
+  clip-path: inset(0);
+  opacity: 1;
+}
+.landing-peak-page[data-landing-motion] .landing-peak-artwork.landing-reveal {
+  translate: 0 14px;
+}
+.landing-peak-page[data-landing-motion] .landing-peak-artwork.landing-revealed {
+  translate: 0 0;
+  transition: opacity 580ms cubic-bezier(.22, 1, .36, 1), translate 580ms cubic-bezier(.22, 1, .36, 1), transform 360ms cubic-bezier(.22, 1, .36, 1);
+  transition-delay: var(--landing-reveal-delay, 0ms), var(--landing-reveal-delay, 0ms), 0ms;
+}
+.landing-peak-page[data-landing-motion] .public-catalog-track > .landing-reveal {
+  translate: 12px 0;
+}
+.landing-peak-page[data-landing-motion] .public-catalog-track > .landing-revealed {
+  translate: 0 0;
+}
+.landing-peak-page .landing-peak-brand-card {
+  transform-origin: 50% 50%;
+}
+.landing-peak-page .landing-peak-brand-card {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+.landing-peak-page .landing-peak-brand-card::after {
+  content: '';
+  position: absolute;
+  z-index: 2;
+  inset: -60% auto -60% -45%;
+  width: 35%;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / .24), transparent);
+  transform: translate3d(-200%, 0, 0) rotate(-18deg);
+  animation: landing-glass-reflection 10s ease-in-out infinite;
+  animation-play-state: paused;
+}
+.landing-peak-page .landing-peak-hero[data-motion-active="true"] .landing-peak-brand-card::after {
+  animation-play-state: running;
+}
+@keyframes landing-glass-reflection {
+  0%, 62% { opacity: 0; transform: translate3d(-200%, 0, 0) rotate(-18deg); }
+  68% { opacity: .65; }
+  86% { opacity: .45; }
+  94%, 100% { opacity: 0; transform: translate3d(560%, 0, 0) rotate(-18deg); }
+}
+.landing-peak-page .landing-peak-hero .landing-peak-cta {
+  transition: transform 220ms cubic-bezier(.22, 1, .36, 1);
+}
+.landing-peak-page[data-landing-motion] .landing-peak-copy > .landing-peak-cta.landing-revealed {
+  transition: opacity 440ms cubic-bezier(.22, 1, .36, 1), translate 440ms cubic-bezier(.22, 1, .36, 1), transform 220ms cubic-bezier(.22, 1, .36, 1);
+  transition-delay: var(--landing-reveal-delay, 0ms), var(--landing-reveal-delay, 0ms), 0ms;
+}
+.landing-peak-page .landing-peak-cta svg {
+  transition: transform 240ms cubic-bezier(.22, 1, .36, 1);
+}
+.landing-peak-page :is(.landing-peak-shortcuts button, #public-header .public-header-link) {
+  transition: transform 200ms cubic-bezier(.22, 1, .36, 1), opacity 200ms ease;
+}
+.landing-peak-page #public-header :is(.public-header-sections, .public-header-account) .public-header-link,
+.landing-peak-page .landing-peak-shortcuts button { position: relative; text-decoration: none; }
+.landing-peak-page #public-header :is(.public-header-sections, .public-header-account) .public-header-link::after,
+.landing-peak-page .landing-peak-shortcuts button::after {
+  content: '';
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 3px;
+  height: 1px;
+  background: currentColor;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 180ms ease;
+  pointer-events: none;
+}
+.landing-peak-page #public-header :is(.public-header-sections, .public-header-account) .public-header-link:is(:hover, :focus-visible)::after,
+.landing-peak-page .landing-peak-shortcuts button:is(:hover, :focus-visible)::after { transform: scaleX(1); }
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .landing-peak-page .landing-peak-hero .landing-peak-cta:hover {
+    transform: translateY(-3px);
+  }
+  .landing-peak-page .landing-peak-cta:hover svg {
+    transform: translate(3px, -3px);
+  }
+  .landing-peak-page :is(.landing-peak-shortcuts button, #public-header .public-header-link):hover {
+    transform: translateY(-1px);
+  }
+}
+.landing-peak-page .landing-peak-hero .landing-peak-cta:active {
+  transform: translateY(0) scale(.985);
+}
+.landing-peak-page :is(.landing-peak-shortcuts button, #public-header .public-header-link):active {
+  transform: translateY(0) scale(.97);
+}
+@media (min-width: 1024px) and (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .landing-peak-page .landing-peak-brand-card {
+    transform: perspective(1400px) rotateX(var(--landing-art-rotate-x, 0deg)) rotateY(var(--landing-art-rotate-y, 0deg));
+    transition: transform 360ms cubic-bezier(.22, 1, .36, 1);
+  }
+  .landing-peak-page .landing-peak-brand-card[data-pointer-engaged="true"] {
+    transition-duration: 180ms;
+  }
+}
+@media (max-width: 767px) {
+  .landing-peak-page[data-landing-motion] .public-catalog-track > .landing-reveal,
+  .landing-peak-page[data-landing-motion] .public-catalog-track > .landing-revealed {
+    translate: none;
+  }
+}
+@media (prefers-reduced-motion: reduce), (forced-colors: active) {
+  .landing-peak-page[data-landing-motion] .landing-reveal,
+  .landing-peak-page[data-landing-motion] .landing-revealed {
+    opacity: 1 !important;
+    translate: none !important;
+    scale: none !important;
+    transition: none !important;
+    transition-delay: 0ms !important;
+  }
+  .landing-peak-page .landing-peak-artwork,
+  .landing-peak-page .landing-peak-brand-card,
+  .landing-peak-page .landing-peak-hero .landing-peak-cta,
+  .landing-peak-page .landing-peak-cta svg,
+  .landing-peak-page :is(.landing-peak-shortcuts button, #public-header .public-header-link) {
+    transform: none !important;
+    transition: none !important;
+  }
+  .landing-peak-page .landing-peak-brand-card::after {
+    display: none;
+    animation: none;
+  }
+  .landing-peak-page[data-landing-motion] .landing-divider::before {
+    clip-path: none;
+    opacity: 1;
+    transition: none;
+  }
+  .landing-peak-page #public-header :is(.public-header-sections, .public-header-account) .public-header-link::after,
+  .landing-peak-page .landing-peak-shortcuts button::after { transition: none; }
+}

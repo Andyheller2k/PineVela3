@@ -1,7 +1,10 @@
-import { Search, X, SlidersHorizontal, ArrowUpDown, DollarSign, RotateCcw } from 'lucide-react';
-import { useId, type Dispatch, type SetStateAction } from 'react';
+import { Search, X, SlidersHorizontal } from 'lucide-react';
+import MarketSortSelect, { type MarketSort } from './MarketSortSelect';
+import MarketPricePanel from './MarketPricePanel';
+import { useEffect, useId, useState, type Dispatch, type SetStateAction } from 'react';
+import DashboardOverlay from './DashboardOverlay';
 
-export type MarketSort = 'featured' | 'price-asc' | 'price-desc' | 'newest';
+export type { MarketSort } from './MarketSortSelect';
 interface Props {
   catalogSearch: string; setCatalogSearch: Dispatch<SetStateAction<string>>;
   catalogCategory: string; setCatalogCategory: Dispatch<SetStateAction<string>>;
@@ -9,20 +12,28 @@ interface Props {
   maxPriceFilter: number; setMaxPriceFilter: Dispatch<SetStateAction<number>>;
   priceSortOption: MarketSort; setPriceSortOption: Dispatch<SetStateAction<MarketSort>>;
   showPriceFilterPanel: boolean; setShowPriceFilterPanel: Dispatch<SetStateAction<boolean>>;
-  itemCount: number; stickyTop?: string | number;
+  itemCount: number; stickyTop?: string | number; mobilePriceSheet?: boolean;
 }
 
 export default function MarketplaceFilters({ catalogSearch, setCatalogSearch, catalogCategory, setCatalogCategory,
   minPriceFilter, setMinPriceFilter, maxPriceFilter, setMaxPriceFilter, priceSortOption, setPriceSortOption,
-  showPriceFilterPanel, setShowPriceFilterPanel, itemCount, stickyTop = 0 }: Props) {
+  showPriceFilterPanel, setShowPriceFilterPanel, itemCount, stickyTop = 0, mobilePriceSheet = false }: Props) {
   const pricePanelId = useId();
+  const [compact, setCompact] = useState(false);
+  useEffect(() => {
+    if (!mobilePriceSheet) return;
+    const query = matchMedia('(max-width: 639px)');
+    const sync = () => setCompact(query.matches);
+    sync(); query.addEventListener('change', sync);
+    return () => query.removeEventListener('change', sync);
+  }, [mobilePriceSheet]);
   const isPriceFiltered = minPriceFilter > 0 || maxPriceFilter < 5000;
   return <>
   {/* STICKY SEARCH & FILTER CONTROL BAR - Stays locked at top while scrolling cards */}
   <div style={{ top: stickyTop }} className="marketplace-filter-bar sticky z-30 py-2.5 px-3.5 bg-white/45 backdrop-blur-xl border border-white/70 rounded-2xl shadow-[0_10px_30px_rgba(37,99,235,0.12)] transition-all flex flex-wrap items-center justify-between gap-2.5">
     {/* Search Bar inside Marketplace */}
     <div className="relative w-full sm:w-64 group">
-      <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
+      <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
       <input
         type="text"
         aria-label="Search marketplace items"
@@ -42,14 +53,15 @@ export default function MarketplaceFilters({ catalogSearch, setCatalogSearch, ca
       )}
     </div>
 
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="marketplace-filter-controls flex flex-wrap items-center gap-2">
       {/* Toggle Price Range Slider Button */}
       <button
         type="button"
-        aria-expanded={showPriceFilterPanel || isPriceFiltered}
-        aria-controls={showPriceFilterPanel || isPriceFiltered ? pricePanelId : undefined}
+        aria-expanded={showPriceFilterPanel}
+        data-filtered={isPriceFiltered}
+        aria-controls={showPriceFilterPanel ? pricePanelId : undefined}
         onClick={() => setShowPriceFilterPanel(!showPriceFilterPanel)}
-        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer border ${
+        className={`market-price-toggle px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer border ${
           showPriceFilterPanel || isPriceFiltered
             ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
             : 'bg-white/55 text-slate-700 border-white/80 hover:bg-white/85'
@@ -58,144 +70,36 @@ export default function MarketplaceFilters({ catalogSearch, setCatalogSearch, ca
         <SlidersHorizontal className="w-3.5 h-3.5" />
         <span>Price Filter</span>
         {isPriceFiltered && (
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span className="sr-only">Price range applied</span>
         )}
       </button>
 
-      {/* Price Sort Dropdown */}
-      <div className="relative inline-flex items-center">
-        <ArrowUpDown className="w-3.5 h-3.5 text-slate-500 absolute left-2.5 pointer-events-none" />
-        <select
-          aria-label="Sort marketplace"
-          value={priceSortOption}
-          onChange={(e) => setPriceSortOption(e.target.value as any)}
-          className="pl-8 pr-3 py-1.5 bg-white/55 border border-white/80 text-slate-800 text-xs font-bold rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 cursor-pointer"
-        >
-          <option value="featured">Sort: Featured</option>
-          <option value="price-asc">Price: Low to High 📈</option>
-          <option value="price-desc">Price: High to Low 📉</option>
-          <option value="newest">Sort: Newest Items ⚡</option>
-        </select>
-      </div>
+      <MarketSortSelect value={priceSortOption} onChange={setPriceSortOption} />
 
-      <span className="px-3 py-1 bg-blue-100/70 text-blue-900 border border-blue-200/70 font-black text-xs rounded-full shrink-0">
+      <span className="market-item-count px-3 py-1 bg-blue-100/70 text-blue-900 border border-blue-200/70 font-black text-xs rounded-full shrink-0">
         {itemCount} {itemCount === 1 ? 'Item' : 'Items'}
       </span>
     </div>
   </div>
 
-  {/* Expandable Price Range Slider Panel */}
-  {(showPriceFilterPanel || isPriceFiltered) && (
-    <div id={pricePanelId} role="group" aria-label="Price filters" className="p-4 bg-gradient-to-r from-blue-50/80 to-indigo-50/60 border border-blue-200/80 rounded-2xl space-y-3.5 animate-fadeIn">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <DollarSign className="w-4 h-4 text-blue-700" />
-          <span className="text-xs font-black text-slate-900">Price Range Slider Filter</span>
-          <span className="text-[11px] font-bold text-blue-800 bg-white/80 px-2.5 py-0.5 rounded-md border border-blue-200 font-mono">
-            GHS {minPriceFilter} – GHS {maxPriceFilter >= 5000 ? '5,000+' : maxPriceFilter}
-          </span>
-        </div>
-
-        {isPriceFiltered && (
-          <button
-            type="button"
-            onClick={() => {
-              setMinPriceFilter(0);
-              setMaxPriceFilter(5000);
-            }}
-            className="text-[11px] font-bold text-rose-600 hover:text-rose-800 flex items-center gap-1 cursor-pointer"
-          >
-            <RotateCcw className="w-3 h-3" />
-            <span>Reset Price Filter</span>
-          </button>
-        )}
-      </div>
-
-      {/* Sliders Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Minimum Price Slider */}
-        <div className="space-y-1.5">
-          <div className="flex items-center justify-between text-xs">
-            <span className="font-bold text-slate-700">Minimum Price:</span>
-            <span className="font-black text-blue-900 font-mono">GHS {minPriceFilter}</span>
-          </div>
-          <input
-            type="range"
-            aria-label="Minimum price"
-            min="0"
-            max={Math.min(maxPriceFilter, 5000)}
-            step="10"
-            value={minPriceFilter}
-            onChange={(e) => setMinPriceFilter(Number(e.target.value))}
-            className="w-full accent-blue-600 cursor-pointer h-2 bg-slate-200 rounded-lg"
-          />
-        </div>
-
-        {/* Maximum Price Slider */}
-        <div className="space-y-1.5">
-          <div className="flex items-center justify-between text-xs">
-            <span className="font-bold text-slate-700">Maximum Price:</span>
-            <span className="font-black text-blue-900 font-mono">
-              GHS {maxPriceFilter >= 5000 ? '5,000+' : maxPriceFilter}
-            </span>
-          </div>
-          <input
-            type="range"
-            aria-label="Maximum price"
-            min={minPriceFilter}
-            max="5000"
-            step="25"
-            value={maxPriceFilter}
-            onChange={(e) => setMaxPriceFilter(Number(e.target.value))}
-            className="w-full accent-blue-600 cursor-pointer h-2 bg-slate-200 rounded-lg"
-          />
-        </div>
-      </div>
-
-      {/* Quick Preset Pills */}
-      <div className="flex flex-wrap items-center gap-1.5 pt-1">
-        <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 mr-1">Quick Presets:</span>
-        {[
-          { label: 'Under GHS 100', min: 0, max: 100 },
-          { label: 'GHS 100 - 500', min: 100, max: 500 },
-          { label: 'GHS 500 - 1,500', min: 500, max: 1500 },
-          { label: 'GHS 1,500 - 5,000', min: 1500, max: 5000 },
-          { label: 'All Prices', min: 0, max: 5000 }
-        ].map((preset) => {
-          const isActive = minPriceFilter === preset.min && maxPriceFilter === preset.max;
-          return (
-            <button
-              key={preset.label}
-              aria-pressed={isActive}
-              type="button"
-              onClick={() => {
-                setMinPriceFilter(preset.min);
-                setMaxPriceFilter(preset.max);
-              }}
-              className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
-                isActive
-                  ? 'bg-blue-700 text-white shadow-xs'
-                  : 'bg-white/80 text-slate-700 hover:bg-white border border-blue-100'
-              }`}
-            >
-              {preset.label}
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  )}
+  {showPriceFilterPanel && (mobilePriceSheet && compact ?
+    <DashboardOverlay aria-label="Filter by price" onClose={() => setShowPriceFilterPanel(false)} className="user-price-overlay"
+      onClick={event => { if (event.target === event.currentTarget) setShowPriceFilterPanel(false); }}>
+      <section className="user-price-sheet"><MarketPricePanel id={pricePanelId} min={minPriceFilter} max={maxPriceFilter}
+        onMinChange={setMinPriceFilter} onMaxChange={setMaxPriceFilter} onClose={() => setShowPriceFilterPanel(false)} /></section>
+    </DashboardOverlay> :
+    <MarketPricePanel id={pricePanelId} min={minPriceFilter} max={maxPriceFilter}
+      onMinChange={setMinPriceFilter} onMaxChange={setMaxPriceFilter} onClose={() => setShowPriceFilterPanel(false)} />)}
 
   {/* Category Pills inside Marketplace */}
-  <div className="flex items-center gap-1.5 overflow-x-auto pb-2 -mx-1 px-1">
+  <div role="group" aria-label="Marketplace categories" className="market-categories flex items-center gap-1.5 overflow-x-auto pb-2 -mx-1 px-1">
     {['All', 'Services','Electronics', 'Textbooks', 'Appliances', 'Fashion', 'Furniture'].map(cat => (
       <button
         key={cat}
+        type="button"
         aria-pressed={catalogCategory === cat}
         onClick={() => setCatalogCategory(cat)}
-        className={`px-3 py-1.5 rounded-xl text-[11px] font-bold transition-all whitespace-nowrap cursor-pointer ${
-          catalogCategory === cat ? 'bg-blue-600 text-white shadow-xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-        }`}
+        className="px-3 py-1.5 rounded-xl text-[11px] font-bold whitespace-nowrap cursor-pointer"
       >
         {cat}
       </button>

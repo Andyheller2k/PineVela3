@@ -1,0 +1,70 @@
+/* Compact marketplace controls; native selects/ranges keep keyboard support. */
+html[data-theme] .market-sort-control { color: var(--pv-muted); }
+html[data-theme] .market-sort-control select {
+  color: var(--pv-text);
+  background: var(--pv-field);
+  border-color: var(--pv-edge);
+  text-overflow: ellipsis;
+}
+html[data-theme] .market-categories button {
+  color: var(--pv-muted);
+  background: var(--pv-secondary);
+  box-shadow: none;
+  transition: none;
+  -webkit-tap-highlight-color: transparent;
+}
+html[data-theme] .market-categories button[aria-pressed="true"] {
+  background: var(--pv-action-gradient);
+  color: #001d3d;
+}
+html[data-theme] .market-categories button:focus:not(:focus-visible) { outline: none; }
+html[data-theme] .market-categories button:focus-visible { outline-offset: -3px !important; }
+html[data-theme] .market-price-panel {
+  padding: 8px 10px;
+  margin-block-start: 8px;
+  background: var(--pv-panel-gradient);
+  border-color: var(--pv-edge);
+  color: var(--pv-text);
+}
+html[data-theme] .market-price-heading button { min-height: 36px; min-width: 36px; }
+html[data-theme] .market-price-panel input[type="range"] { min-height: 36px; accent-color: var(--pv-brand-yellow); }
+html[data-theme] .market-price-presets button {
+  min-height: 36px;
+  color: var(--pv-muted);
+  background: var(--pv-secondary);
+  border-color: var(--pv-edge);
+}
+html[data-theme] .market-price-presets button[aria-pressed="true"],
+html[data-theme] .market-price-toggle[aria-expanded="true"],
+html[data-theme] .market-price-toggle[data-filtered="true"] {
+  background: var(--pv-action-gradient);
+  color: #001d3d;
+  border-color: #ffd60a;
+}
+@media (max-width: 639px) {
+  .marketplace-filter-bar { padding: 8px; gap: 6px; }
+  .marketplace-filter-controls {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 6px;
+    width: 100%;
+    min-width: 0;
+  }
+  .marketplace-filter-controls > .market-price-toggle { padding-inline: 8px; white-space: nowrap; }
+  .marketplace-filter-controls > .market-item-count { padding: 4px 6px; font-size: 10px; }
+  .marketplace-filter-controls .market-sort-control { width: 100%; }
+  .marketplace-filter-controls .market-sort-control select { padding-left: 28px; font-size: 11px; }
+  html[data-theme] .market-price-heading button { min-height: 44px; min-width: 44px; }
+  html[data-theme] .market-price-panel input[type="range"],
+  html[data-theme] .market-price-presets button { min-height: 44px; }
+}
+@media (forced-colors: active) {
+  html[data-theme] .market-price-presets button[aria-pressed="true"],
+  html[data-theme] .market-categories button[aria-pressed="true"],
+  html[data-theme] .market-price-toggle[aria-expanded="true"],
+  html[data-theme] .market-price-toggle[data-filtered="true"] {
+    color: HighlightText;
+    background: Highlight;
+    border-color: Highlight;
+  }
+}

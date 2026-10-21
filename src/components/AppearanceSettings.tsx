@@ -11,7 +11,7 @@ export default function AppearanceSettings() {
     <div><h3 id={headingId} className="text-lg font-bold text-slate-900">Appearance</h3>
       <p className="mt-1 text-sm text-slate-500">Choose your theme for product pages.</p></div>
     <div className="flex items-center justify-between gap-4">
-      <div><p className="text-sm font-bold text-slate-900">Dark mode</p>
+      <div><p className="text-sm font-bold text-slate-900">{theme === 'dark' ? 'Dark mode' : 'Light mode'}</p>
         <p className="mt-1 text-xs text-slate-500" aria-live="polite">{savePending ? 'Saved on this device. Syncing to your account…' : `${theme === 'dark' ? 'Dark' : 'Light'} mode is on.`}</p></div>
       <ThemeToggle />
     </div>

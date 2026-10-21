@@ -1,16 +1,19 @@
 import PublicResidenceCatalog from './PublicResidenceCatalog';
 import PublicHeader from './PublicHeader';
 import PublicMarketCatalog from './PublicMarketCatalog';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import PineLogo, { PineWordmark } from './PineLogo';
-import WindDust from './WindDust';
-import { Shield, Landmark, ShoppingBag } from 'lucide-react';
+import { ArrowUpRight, Shield, Landmark, ShoppingBag } from 'lucide-react';
+import welcomeArtwork from '../../assets/landing-welcome.png';
 import { useLandingReveal } from '../hooks/useLandingReveal';
+import { useMotionActivity } from '../hooks/useMotionActivity';
+import ArtworkLayers from './ArtworkLayers';
 import { useAuth } from '../context/AuthContext';
 import LogoutConfirmationModal from './LogoutConfirmationModal';
 import CompanyStory from './CompanyStory';
 import type { CompanySection } from './companyStoryContent';
+import '../landingMotion.css';
 
 
 export default function Page1Public() {
@@ -20,6 +23,9 @@ export default function Page1Public() {
 
   const { user, logout } = useAuth();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const hero = useRef<HTMLElement>(null);
+  const glassCard = useRef<HTMLDivElement>(null);
+  useMotionActivity(hero);
   useLandingReveal();
   const scrollToSection = (id: string) => {
     const section = document.getElementById(id);
@@ -39,6 +45,47 @@ export default function Page1Public() {
     return () => document.documentElement.classList.remove('landing-page-scrollbar-hidden');
   }, []);
 
+  useEffect(() => {
+    const scene = glassCard.current;
+    if (!scene) return;
+    const pointerMotion = window.matchMedia('(min-width: 1024px) and (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference)');
+    const forcedColors = window.matchMedia('(forced-colors: active)');
+    let bounds: DOMRect | undefined;
+    const reset = () => {
+      bounds = undefined;
+      scene.style.removeProperty('--landing-art-rotate-x');
+      scene.style.removeProperty('--landing-art-rotate-y');
+      scene.removeAttribute('data-pointer-engaged');
+    };
+    const move = (event: PointerEvent) => {
+      if (!pointerMotion.matches || forcedColors.matches || document.hidden || event.pointerType === 'touch') { reset(); return; }
+      bounds ||= scene.getBoundingClientRect();
+      if (!bounds.width || !bounds.height) return;
+      const x = Math.max(-1, Math.min(1, (event.clientX - bounds.left) / bounds.width * 2 - 1));
+      const y = Math.max(-1, Math.min(1, (event.clientY - bounds.top) / bounds.height * 2 - 1));
+      scene.style.setProperty('--landing-art-rotate-x', `${(-y * 1.5).toFixed(2)}deg`);
+      scene.style.setProperty('--landing-art-rotate-y', `${(x * 1.8).toFixed(2)}deg`);
+      scene.setAttribute('data-pointer-engaged', 'true');
+    };
+    scene.addEventListener('pointermove', move, { passive: true });
+    scene.addEventListener('pointerleave', reset);
+    scene.addEventListener('pointercancel', reset);
+    window.addEventListener('resize', reset, { passive: true });
+    document.addEventListener('visibilitychange', reset);
+    pointerMotion.addEventListener('change', reset);
+    forcedColors.addEventListener('change', reset);
+    return () => {
+      reset();
+      scene.removeEventListener('pointermove', move);
+      scene.removeEventListener('pointerleave', reset);
+      scene.removeEventListener('pointercancel', reset);
+      window.removeEventListener('resize', reset);
+      document.removeEventListener('visibilitychange', reset);
+      pointerMotion.removeEventListener('change', reset);
+      forcedColors.removeEventListener('change', reset);
+    };
+  }, []);
+
   return (
     <div className="landing-peak-page public-typography min-h-screen bg-transparent relative overflow-hidden font-sans pb-0">
 
@@ -52,61 +99,47 @@ export default function Page1Public() {
         onCompanySection={goToCompanySection} setShowLogoutConfirm={setShowLogoutConfirm} />
 
         {/* Welcome Section */}
-        <section id="welcome-section"
+        <section id="welcome-section" ref={hero}
           className="landing-peak-hero relative z-10 w-full scroll-mt-0"
+          aria-labelledby="welcome-title"
         >
-          <WindDust variant="hero" />
-          <div className="landing-peak-content max-w-7xl mx-auto w-full relative z-10 grid grid-cols-1 lg:grid-cols-12 items-center gap-8 lg:gap-12">
-            <div
-              className="landing-peak-copy lg:col-span-7 space-y-6"
-            >
-            <h1
-              className="text-4xl md:text-5xl font-extrabold tracking-tight text-slate-900 leading-tight"
-            >
-              Welcome to <br />
-              <span className="text-blue-900 font-black relative">
+          <div className="landing-peak-content">
+            <div className="landing-peak-copy">
+              <h1 id="welcome-title">
+                <span className="landing-peak-greeting">Welcome to</span>
                 <PineWordmark />
-                <span className="absolute bottom-1 left-0 w-full h-2 bg-amber-300 -z-10 rounded-sm opacity-60"></span>
-              </span>
-            </h1>
-
-            <p
-              className="text-base sm:text-lg text-slate-700 font-medium max-w-xl leading-relaxed"
-            >
-              The unified digital ecosystem connecting <strong className="text-blue-900 font-black">Properties</strong>, <strong className="text-blue-900 font-black">People</strong>, and <strong className="text-blue-900 font-black">Services</strong> into one seamless campus platform.
-            </p>
-
-            <div
-              className="flex flex-wrap gap-4 pt-6"
-            >
-              <button
-                id="btn-login"
-                onClick={() => navigate('/login')}
-                className="px-10 py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-extrabold rounded-xl shadow-lg shadow-blue-600/20 transition-all transform hover:-translate-y-1 hover:shadow-xl hover:shadow-blue-600/35 flex items-center gap-2 text-sm cursor-pointer"
-              >
-                <span>Login</span>
+              </h1>
+              <p>
+                The unified digital ecosystem connecting <strong>Properties</strong>, <strong>People</strong>, and <strong>Services</strong> into one seamless campus platform.
+              </p>
+              <button id="btn-login" type="button" className="landing-peak-cta"
+                onClick={() => navigate('/login?mode=register', { state: { mode: 'register' } })}>
+                <span>Create your free account now!</span>
+                <ArrowUpRight size={19} aria-hidden="true" />
               </button>
+              <nav className="landing-peak-shortcuts" aria-label="Explore PineVela">
+                <button type="button" onClick={() => scrollToSection('pinemarket-section')}>
+                  <ShoppingBag size={16} aria-hidden="true" /> PineMarket
+                </button>
+                <span aria-hidden="true" />
+                <button type="button" onClick={() => scrollToSection('hostels-section')}>
+                  <Landmark size={16} aria-hidden="true" /> PineResidence
+                </button>
+              </nav>
             </div>
-
-            <div className="pt-2" />
-          </div>
-
-          <div
-            className="landing-peak-brand lg:col-span-5 flex justify-center"
-          >
-            {/* Visual Pineapple Illustration from Page 1 */}
-            <div
-              className="relative w-60 h-60 lg:w-80 lg:h-80 flex items-center justify-center p-6"
-            >
-              <div className="text-center space-y-4">
-                <PineLogo size={140} hideText={true} />
-                <div className="public-title font-extrabold text-2xl tracking-tight text-slate-900">
+            <div className="landing-peak-artwork">
+              <img className="landing-peak-image" src={welcomeArtwork}
+                width={1448} height={1086} fetchPriority="high" decoding="async"
+                alt="A student connecting with campus life through shopping, conversations, and property management." />
+              <ArtworkLayers variant="landing" />
+              <div className="landing-peak-brand">
+                <div className="landing-peak-brand-card" ref={glassCard}>
+                  <PineLogo size={76} hideText />
                   <PineWordmark />
+                  <span className="landing-peak-brand-caption">Premium Residences</span>
                 </div>
-                <div className="text-xs text-slate-500 uppercase tracking-widest font-mono">Premium Residences</div>
               </div>
             </div>
-          </div>
           </div>
         </section>
 

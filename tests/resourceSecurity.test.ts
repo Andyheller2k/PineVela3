@@ -1,8 +1,15 @@
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import {EventEmitter} from 'node:events';
-import {AttemptBudgets,credentialContext,credentialWork,EventConnections,ResourceLimitError,trustedProxyAddresses,WorkPool} from '../resourceSecurity.js';
+import {AttemptBudgets,canonicalOperationPath,credentialContext,credentialWork,EventConnections,ResourceLimitError,trustedProxyAddresses,WorkPool} from '../resourceSecurity.js';
 import {hashCredentialAsync,verifyCredentialAsync} from '../accountSecurity.js';
+test('equivalent sensitive-route spellings use one canonical operation path',()=>{
+  for(const path of ['/auth/login','/room-keys/claim','/auth/staff-invitations/activate','/auth/enrollments/google/start','/users/delete-registered-account']){
+    for(const alias of [path,path+'/',path.toUpperCase(),path.toUpperCase()+'/'])assert.equal(canonicalOperationPath(alias),path);
+  }
+  assert.equal(canonicalOperationPath('/'),'/');
+  assert.equal(canonicalOperationPath('/auth/%6cogin'),'/auth/%6cogin','Encoded paths are not decoded into a different route');
+});
 test('shared actor/IP budgets reserve atomically, expire and enforce bounded capacity',()=>{
  let now=1000;const budgets=new AttemptBudgets(()=>now,3);
  const actor={scope:'actor',identity:'unit-actor',maximum:2,windowMs:1000},ip={scope:'ip',identity:'127.0.0.1',maximum:1,windowMs:1000};
