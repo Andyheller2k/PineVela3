@@ -2,7 +2,7 @@ import PublicResidenceCatalog from './PublicResidenceCatalog';
 import PublicHeader from './PublicHeader';
 import PublicMarketCatalog from './PublicMarketCatalog';
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import PineLogo, { PineWordmark } from './PineLogo';
 import { ArrowUpRight, Shield, Landmark, ShoppingBag } from 'lucide-react';
 import welcomeArtwork from '../../assets/landing-welcome.png';
@@ -14,6 +14,7 @@ import LogoutConfirmationModal from './LogoutConfirmationModal';
 import CompanyStory from './CompanyStory';
 import type { CompanySection } from './companyStoryContent';
 import '../landingMotion.css';
+import '../whyUs.css';
 
 
 export default function Page1Public() {
@@ -196,6 +197,13 @@ export default function Page1Public() {
         </section>
 
         <CompanyStory />
+        <section className="why-us-preview" aria-labelledby="why-us-preview-title">
+          <div><p className="why-us-eyebrow">Built around your student day</p>
+            <h2 id="why-us-preview-title">Why choose PineVela?</h2>
+            <p>Less chasing. More student life. See how PineVela brings clearer buying, selling and hostel living to campus.</p>
+          </div>
+          <Link to="/why-us" className="why-us-primary">See the difference<ArrowUpRight size={18} aria-hidden="true" /></Link>
+        </section>
       </main>
 
       {/* Footer */}
@@ -214,6 +222,7 @@ export default function Page1Public() {
             <div className="space-y-3 md:col-start-3">
               <h5 className="font-extrabold text-slate-900 text-sm tracking-wide">Company</h5>
               <ul className="space-y-2 text-xs text-slate-600 font-semibold">
+                <li><Link to="/why-us" className="hover:text-blue-900 transition-colors">Why Us?</Link></li>
                 <li><button type="button" onClick={() => goToCompanySection('about-us')} className="hover:text-blue-900 transition-colors cursor-pointer">About Us</button></li>
                 <li><button type="button" onClick={() => goToCompanySection('our-vision')} className="hover:text-blue-900 transition-colors cursor-pointer">Our Vision</button></li>
                 <li><button type="button" onClick={() => goToCompanySection('partner-with-us')} className="hover:text-blue-900 transition-colors cursor-pointer">Partner with Us</button></li>

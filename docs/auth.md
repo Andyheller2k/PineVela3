@@ -208,8 +208,13 @@ returned to the client, and its local provider logout is attempted in `finally`.
 `Forgot Password?` on the native login and the manager's recovery button open
 an email-proof form. `POST /api/auth/recover` requests delivery with the provider's
 non-enumerating successful response; `POST /api/auth/recover/complete` accepts only
-email, recovery code/link and new password. An unopened configured-project recovery
-link is parsed without being followed; signup/invitation/foreign/ambiguous links are
+email, recovery proof and new password. The dialog accepts a six-to-ten
+digit numeric **Recovery code**, followed by new password and confirmation.
+`emails/reset-password.html` provides the branded, code-only `{{ .Token }}`
+template. It must also be saved in the hosted Supabase **Reset password** email
+template; changing the repository file alone does not publish that setting.
+The backend retains compatibility with unopened, previously issued provider
+links, parsed without being followed. Signup/invitation/foreign/ambiguous links are
 rejected. Supabase verifies recovery proof, and its verified mailbox and native
 session must match an already-enrolled identity. Recovery never creates a profile,
 selects a portal, grants roles, or substitutes for a portal PIN. The isolated acceptance
@@ -341,6 +346,48 @@ resident bindings during closure. The closure response never clears provider coo
 The legacy JSON/custom-session implementation is retired.
 
 ## Authentication Provider
+
+Primary email signup rejects already-confirmed Auth mailboxes with HTTP 409
+`email_already_registered`, including Google identities and closed accounts.
+The check uses the normalized email inside the signup delivery lock, before any
+provider signup request or email. Existing unconfirmed signups retain the normal
+verification/resend flow and initial five-minute wait. Masked duplicate provider replies
+(empty identities) and explicit duplicate errors also become 409, so races cannot
+open a verification screen for a code that was never sent. The signup form shows
+an inline error with a Sign in action, preserving the entered email.
+
+Primary signup and **Resend code** share persistent waits of **5, 10, 20, 60,
+120 minutes**, capped at 120 minutes until 24 hours without another request.
+The private hashed-mailbox ledger survives restarts. The native
+`auth.users.confirmation_sent_at` remains a delivery floor and reconciles a send
+whose app transaction response was lost. Early/rejected requests do not extend
+the wait. Server advisory locks serialize app requests without locking
+provider-owned rows or storing a second OTP. The resend API accepts an email delivery selector,
+fixes the operation to signup confirmation, retains CSRF/IP limits and never
+returns a session. The UI shows the remaining wait and respects server
+`Retry-After` responses. Hosted Auth's `smtp_max_frequency` should also be set to
+300 seconds for direct provider API calls. Dynamic escalation applies to PineVela
+API requests; direct Supabase calls require its own CAPTCHA and rate limits.
+
+All server-mediated password exchanges share a rolling failure budget: five
+incorrect proofs per normalized email and trusted client IP, or thirty across
+emails from one IP, pause that source for 15 minutes. A different IP can still
+authenticate the same account. Only native `invalid_credentials` proofs count;
+CAPTCHA errors, outages, unconfirmed accounts and portal PIN errors do not.
+Successful passwords clear the email/IP bucket, retaining the wider IP history.
+Private hashed selectors and bounded timestamps persist across processes.
+CAPTCHA proofs are admitted before workflow transactions using the private
+`auth_captcha_proofs` ledger (migration `20261022214514`). A globally unique
+SHA-256 fingerprint permits one attempt across routes and app instances, even
+when native verification fails or its response is lost. The proof itself is
+never stored. Fingerprints expire after ten minutes, exceeding the native
+five-minute lifetime; cleanup is bounded. Admission is capped at 50,000 entries
+and database lock waits at two seconds, failing closed when busy. Native
+Supabase still validates every first proof; there is no second Siteverify call.
+Only POST authentication workflows accept proof metadata. Direct native Auth
+does not pass through PineVela's ledger; its replay behavior needs separate
+provider verification.
+See [CAPTCHA setup](captcha.md) for the site-key and Supabase dashboard steps.
 
 Google login/signup uses Supabase's Google provider with a server-owned, five-minute,
 single-use PKCE flow and an HttpOnly SameSite=Lax callback cookie. Enable Google in

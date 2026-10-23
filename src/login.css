@@ -3,6 +3,20 @@
 .unified-login .login-brand-heading { color: var(--pv-heading) !important; -webkit-text-stroke: 0 !important; text-shadow: none !important; }
 .unified-login .login-auth-card input { border-radius: 16px; box-shadow: none; }
 .unified-login .login-mode-toggle { background: var(--pv-secondary); border-color: var(--pv-edge); }
+.unified-login .login-verification-actions { display: flex; align-items: stretch; justify-content: center; gap: 12px; }
+.unified-login .login-resend-code { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; flex: 1; padding: 5px 10px; border: 1px solid var(--pv-edge); border-radius: 14px; background: transparent; color: var(--pv-heading); font-size: 12px; font-weight: 800; cursor: pointer; transition: background .2s, border-color .2s; }
+.unified-login .login-resend-code:not(:disabled):hover { background: rgba(255, 214, 10, .14); border-color: #ffd60a; }
+.unified-login .login-resend-code:focus-visible, .unified-login .login-verification-back:focus-visible { outline: 2px solid #ffd60a; outline-offset: 3px; }
+.unified-login .login-resend-code:disabled { cursor: default; }
+.unified-login .login-resend-countdown { display: block; font-size: 11px; font-variant-numeric: tabular-nums; font-weight: 600; }
+.unified-login .login-verification-back { min-height: 44px; padding: 5px 0; }
+.unified-login .login-verification-back:disabled { opacity: .6; cursor: default; }
+.unified-login .login-registration-error { display: flex; align-items: center; gap: 8px; padding: 7px 10px; border: 1px solid rgba(255,214,10,.5); border-radius: 14px; background: rgba(0,29,61,.42); color: #fff0af; }
+.unified-login .login-registration-error > svg { flex-shrink: 0; }
+.unified-login .login-registration-error p { flex: 1; min-width: 0; margin: 0; font-size: 12px; font-weight: 600; line-height: 1.4; }
+.unified-login .login-registration-error button { min-height: 40px; padding: 6px; border-radius: 8px; font-size: 12px; font-weight: 800; color: #ffd60a; text-decoration: underline; text-underline-offset: 3px; white-space: nowrap; cursor: pointer; }
+.unified-login .login-registration-error button:hover { background: rgba(255,214,10,.12); }
+.unified-login .login-registration-error button:focus-visible { outline: 2px solid #ffd60a; outline-offset: 2px; }
 .mobile-login-backdrop, .mobile-login-photo { display: none; }
 
 /* Share the viewport between the header, form and footer without a scrolling pane. */

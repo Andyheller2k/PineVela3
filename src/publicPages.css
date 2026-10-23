@@ -8,24 +8,55 @@
 :is(.public-typography, .unified-login) :is(h1,h2,h3,h4,h5,h6,.public-title,.login-brand-heading) { font-family: 'Childer', sans-serif !important; font-weight: 400; }
 .public-header-card { background: var(--pv-panel-gradient) !important; border-bottom: 1px solid var(--pv-edge) !important; box-shadow: 0 5px 24px var(--pv-brand-shadow) !important; border-radius: 0 0 20px 20px; }
 .public-header-card input { background: var(--pv-field) !important; color: var(--pv-heading) !important; }
-#public-header .public-header-link { color: var(--pv-link); background: transparent; border: 0; box-shadow: none; padding: 8px; font-size: 12px; font-weight: 800; line-height: 1.5; white-space: nowrap; cursor: pointer; text-underline-offset: 4px; }
-#public-header .public-header-link:hover { text-decoration: underline; }
-#public-header.public-header-compact { padding-block: 6px; }
-#public-header.public-header-compact .public-header-layout { row-gap: 4px; }
+#public-header { padding-block: 12px 0; }
+#public-header .public-header-layout { display: grid; grid-template-columns: auto minmax(180px, 1fr) auto auto; grid-template-areas: 'brand search tools account' 'navigation navigation navigation navigation'; align-items: center; column-gap: 20px; row-gap: 10px; }
+#public-header .public-header-brand { grid-area: brand; justify-self: start; background: transparent; border: 0; padding: 0; }
+#public-header .public-header-search { grid-area: search; max-width: 500px; justify-self: center; }
+#public-header .public-header-search input { min-height: 44px; }
+#public-header .public-header-tools { grid-area: tools; display: flex; align-items: center; gap: 8px; }
+#public-header .public-header-panel { display: contents; }
+#public-header .public-header-sections { grid-area: navigation; display: flex; align-items: center; justify-content: center; gap: 20px; min-width: 0; border-top: 1px solid var(--pv-edge); padding: 4px 0; }
+#public-header :is(.public-header-discovery, .public-header-support) { display: flex; align-items: center; gap: 4px; }
+#public-header .public-header-support { padding-left: 16px; border-left: 1px solid var(--pv-edge); }
+#public-header .public-header-discovery:empty { display: none; }
+#public-header .public-header-discovery:empty + .public-header-support { padding-left: 0; border-left: 0; }
+#public-header .public-header-link { display: inline-flex; align-items: center; justify-content: center; gap: 5px; min-height: 44px; color: var(--pv-link); background: transparent; border: 0; border-radius: 10px; box-shadow: none; padding: 8px 12px; font-size: 12px; font-weight: 700; line-height: 1.5; white-space: nowrap; cursor: pointer; text-decoration: none; }
+#public-header .public-header-link:hover { background: color-mix(in srgb, var(--pv-link) 8%, transparent); }
+#public-header .public-header-account { grid-area: account; display: flex; align-items: center; justify-content: flex-end; gap: 10px; min-width: 0; }
+#public-header .public-header-account-name { max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; font-weight: 700; color: var(--pv-link); }
+#public-header .public-header-account-button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; padding: 10px 20px; border: 1px solid transparent; border-radius: 12px; font-size: 12px; line-height: 1.5; font-weight: 800; white-space: nowrap; text-decoration: none; cursor: pointer; transition: background-color .18s ease, border-color .18s ease; }
+html[data-theme] #public-header .public-header-secondary { color: var(--pv-link); background: transparent; border-color: var(--pv-edge); }
+html[data-theme] #public-header .public-header-secondary:hover { background: color-mix(in srgb, var(--pv-link) 8%, transparent); border-color: var(--pv-link); }
+html[data-theme] #public-header .public-header-primary { color: #001d3d; background: #ffd60a; border-color: #ffd60a; box-shadow: 0 3px 12px rgb(255 195 0 / .12); }
+html[data-theme] #public-header .public-header-primary:hover { background: #ffc300; border-color: #ffc300; }
+#public-header .public-header-menu-toggle { display: none; }
+#public-header .pv-install-button { background: transparent; color: var(--pv-link); border-color: var(--pv-edge); box-shadow: none; min-height: 44px; }
+#public-header :is(button, a, input):focus-visible { outline: 2px solid #ffc300; outline-offset: 3px; }
 @media (max-width: 1023px) {
-  #public-header.public-header-compact .public-header-layout { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: 'brand account' 'search search' 'sections sections'; }
-  #public-header.public-header-compact .public-header-layout > button { grid-area: brand; }
-  #public-header.public-header-compact form { grid-area: search; justify-self: center; }
-  #public-header.public-header-compact .public-header-actions { display: contents; }
-  #public-header.public-header-compact .public-header-account { grid-area: account; }
-  #public-header.public-header-compact .public-header-sections { grid-area: sections; }
+  #public-header { padding: 10px 18px 12px; }
+  #public-header .public-header-layout { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: 'brand tools' 'search search' 'panel panel'; column-gap: 12px; row-gap: 10px; }
+  #public-header .public-header-search { max-width: none; }
+  #public-header .public-header-brand .pinevela-brand-mark { width: 32px; height: 32px; }
+  #public-header .public-header-brand .pinevela-wordmark { font-size: 19px; }
+  #public-header .public-header-menu-toggle { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-width: 44px; min-height: 44px; padding: 8px 10px; border: 1px solid var(--pv-edge); border-radius: 12px; color: var(--pv-link); background: transparent; font-size: 12px; font-weight: 700; cursor: pointer; }
+  #public-header .public-header-menu-toggle:hover { background: color-mix(in srgb, var(--pv-link) 8%, transparent); }
+  #public-header .public-header-panel { grid-area: panel; display: none; max-height: calc(100dvh - 140px); overflow-y: auto; overscroll-behavior: contain; }
+  #public-header[data-menu-open="true"] .public-header-panel { display: flex; flex-direction: column; gap: 16px; padding-top: 8px; }
+  #public-header .public-header-sections { flex-direction: column; align-items: stretch; gap: 12px; border-top: 0; padding: 0; }
+  #public-header :is(.public-header-discovery, .public-header-support) { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; }
+  #public-header .public-header-support { border-left: 0; border-top: 1px solid var(--pv-edge); padding: 12px 0 0; }
+  #public-header .public-header-link { justify-content: flex-start; min-width: 0; }
+  #public-header .public-header-account { justify-content: stretch; border-top: 1px solid var(--pv-edge); padding: 14px 0 4px; }
+  #public-header .public-header-account-button { flex: 1; }
+  #public-header .public-header-account-name { flex: 1; align-self: center; }
 }
-@media (min-width: 1024px) {
-  #public-header .public-header-layout { display: grid; grid-template-columns: minmax(90px, 1fr) minmax(180px, 320px) minmax(0, auto); }
-  #public-header .public-header-actions { justify-content: flex-end; }
-  #public-header.public-header-compact .public-header-layout { grid-template-columns: auto minmax(180px, 1fr) minmax(0, auto); }
-  #public-header.public-header-compact form { max-width: none; }
+@media (max-width: 380px) {
+  #public-header { padding-inline: 12px; }
+  #public-header .public-header-brand .pinevela-wordmark { font-size: 16px; }
+  #public-header .public-header-brand .pinevela-brand-mark { width: 28px; height: 28px; }
+  #public-header .public-header-menu-toggle span { display: none; }
 }
+@media (prefers-reduced-motion: reduce) { #public-header .public-header-account-button { transition: none; } }
 /* Opaque public headers follow the selected appearance immediately. */
 html[data-theme="dark"] .public-header-card { background: var(--pv-panel) !important; border-bottom-color: var(--pv-edge) !important; box-shadow: 0 5px 24px #02061740 !important; }
 html[data-theme="dark"] .public-header-card input { background: var(--pv-field) !important; color: var(--pv-text) !important; border-color: var(--pv-field-edge) !important; }
@@ -72,7 +103,7 @@ html[data-theme] .landing-peak-hero :is(button, a[href]):focus-visible { outline
 .landing-peak-brand-card .pinevela-brand-mark { width: clamp(40px, 5vw, 76px); height: clamp(40px, 5vw, 76px); }
 .landing-peak-brand-card > .pinevela-wordmark { font-size: clamp(12px, 1.6vw, 25px); }
 .landing-peak-brand-caption { color: #001d3d; font-size: clamp(8px, .7vw, 11px); font-weight: 800; line-height: 1.4; text-align: center; }
-.landing-peak-page :is(#pinemarket-section, #hostels-section) { scroll-margin-top: calc(var(--pv-public-header-height, 100px) + 16px); }
+.landing-peak-page :is(#catalogs-section, #pinemarket-section, #hostels-section) { scroll-margin-top: calc(var(--pv-public-header-height, 100px) + 16px); }
 .landing-peak-page .landing-benefit h4 {
   font-family: 'Caviar Dreams', sans-serif !important;
   font-size: clamp(24px, 2.1vw, 30px);

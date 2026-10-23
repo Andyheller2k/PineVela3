@@ -196,7 +196,7 @@ async function openHarness(meta:LocalSupabaseMetadata,credentials:ReturnType<typ
   connectionTimeoutMillis:10000,statement_timeout:15000,query_timeout:30000});
  let server:http.Server|undefined,closeRealtime:(()=>Promise<void>)|undefined,closeSupport:(()=>Promise<void>)|undefined;
  try{
-  const actual=(await db.pool.query('select inet_server_addr()::text as host,inet_server_port() as port,current_database() as database')).rows[0];
+  const actual=(await db.pool.query('select host(inet_server_addr()) as host,inet_server_port() as port,current_database() as database')).rows[0];
   // The native CLI's loopback PostgreSQL gateway forwards to its own Unix
   // socket; PostgreSQL then reports both network fields as NULL. The client
   // destination remains the exact literal loopback endpoint validated above.
@@ -215,7 +215,7 @@ async function openHarness(meta:LocalSupabaseMetadata,credentials:ReturnType<typ
   const assertOwned=async()=>{const rows=(await db.pool.query('select run_id from pinevela_local_test.run_guard')).rows;
    assert.equal(rows.length,1);assert.equal(rows[0].run_id,meta.runId,'Database belongs to this exact disposable run');};
   await assertOwned();
-  const installed=(await db.pool.query("select version from private.schema_migrations where version='20261018140812'")).rowCount;
+  const installed=(await db.pool.query("select version from private.schema_migrations where version='20261022214514'")).rowCount;
   assert.equal(installed,1,'The current immutable application migrations must be installed');
   const settings=await fetch(providerOrigin+'/auth/v1/settings',{headers:{apikey:meta.anonKey},signal:AbortSignal.timeout(10000)});
   assert.equal(settings.status,200,'Actual local GoTrue responds');const authSettings=await settings.json();

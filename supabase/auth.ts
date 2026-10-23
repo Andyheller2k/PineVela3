@@ -12,6 +12,9 @@ import { WorkPool } from '../resourceSecurity.js';
 import { checkPortalPin } from './portalAccess.js';
 import { maintenanceError } from './platformMaintenance.js';
 import { takeTransactionAdmission } from './transactionAdmission.js';
+import { registeredSignupEmailError, signupEmail, signupResendEmail, signupVerificationId, withSignupEmailCooldown } from './signupEmails.js';
+import {authRequestContext,captchaProviderBody} from './authProtection.js';
+import {withPasswordLoginLimit} from './loginAttempts.js';
 
 type Session = GoogleSession & { user?: any };
 export type AuthRequest = Request & { actor: VerifiedActor; accessToken: string };
@@ -70,6 +73,12 @@ export class SupabaseAuth {
     finally{if(this.userReads.get(token)===pending)this.userReads.delete(token);}
   }
   private async providerRequest(route: string, body?: unknown, token?: string, method?: string): Promise<any> {
+    const payload=captchaProviderBody(route,body),context=authRequestContext.getStore();
+    if(route==='/token?grant_type=password'&&context)
+      return withPasswordLoginLimit(this.db,{email:(body as any)?.email,ip:context.ip},()=>this.sendProviderRequest(route,payload,token,method));
+    return this.sendProviderRequest(route,payload,token,method);
+  }
+  private async sendProviderRequest(route: string, body?: unknown, token?: string, method?: string): Promise<any> {
     const config = signupProviderConfig();
     let response: globalThis.Response;
     try {
@@ -82,8 +91,13 @@ export class SupabaseAuth {
     } catch { throw new ApiError(503, 'Authentication is temporarily unavailable.'); }
     const data = response.status === 204 ? {} : await response.json().catch(() => ({}));
     if (!response.ok) {
+      if(data?.error_code==='captcha_failed')throw new ApiError(422,'Security verification expired or failed. Please complete it again.','captcha_failed');
+      if(route==='/token?grant_type=password'&&data?.error_code==='invalid_credentials')
+        throw new ApiError(401,'Invalid email or password.','invalid_credentials');
       if (response.status === 429) throw new ApiError(429, 'Too many authentication attempts. Please wait.');
       if (response.status >= 500) throw new ApiError(503, 'Authentication is temporarily unavailable.');
+      if (route === '/signup' && ['user_already_exists', 'email_exists'].includes(data?.error_code))
+        throw registeredSignupEmailError();
       if (route === '/user' && method === 'PUT') {
         const errors: Record<string, [number, string]> = {
           weak_password: [400, 'Choose a stronger password that meets the email provider requirements.'],
@@ -336,14 +350,25 @@ export function installSupabaseAuth(app: Express, auth: SupabaseAuth) {
   installPrimaryEmailReentry(app,auth);
   app.post('/api/auth/register-unified', route(async (req, res) => {
     const name = typeof req.body?.name === 'string' ? req.body.name.trim() : '';
-    const email = typeof req.body?.email === 'string' ? req.body.email.trim().toLowerCase() : '';
+    const email = signupEmail(req.body?.email);
     const password = req.body?.password;
     if (!name || name.length > 120 || !email.includes('@') || typeof password !== 'string' || password.length < 8 || password.length > 256) throw new ApiError(400, 'Enter your name, valid email and a password of at least 8 characters.');
-    requireConfirmationSettings(await auth.provider('/settings'));
     // Deliberately whitelist metadata: signup cannot supply a role or ownership.
-    const data = await auth.provider('/signup', { email, password, data: { name } });
-    if (data.access_token || data.session) throw new ApiError(503, 'Email confirmation must be enabled.');
-    return res.status(202).json({ signupId: (data.user || data).id, verificationRequired: true });
+    const delivery = await withSignupEmailCooldown(auth.db, email, async () => {
+      requireConfirmationSettings(await auth.provider('/settings'));
+      const data = await auth.provider('/signup', { email, password, data: { name } });
+      return signupVerificationId(data, email);
+    }, { registration: true });
+    return res.status(202).json({ signupId:delivery.value, verificationRequired: true, retryAfter: delivery.retryAfter });
+  }));
+  app.post('/api/auth/resend-unified', route(async (req, res) => {
+    const email = signupResendEmail(req.body);
+    requireConfirmationSettings(await auth.provider('/settings'));
+    const delivery=await withSignupEmailCooldown(auth.db, email, () => auth.provider('/resend', { type: 'signup', email }));
+    // Supabase handles unknown/already-confirmed addresses. Never return account
+    // details or a session as proof that an email request was accepted.
+    return res.status(202).json({ success: true, retryAfter: delivery.retryAfter,
+      message: 'If this email is awaiting signup confirmation, a new code has been requested. Check your inbox and spam folder.' });
   }));
   app.post('/api/auth/verify-unified', route(async (req, res) => {
     const config = signupProviderConfig(), email = String(req.body?.email || '').trim().toLowerCase();

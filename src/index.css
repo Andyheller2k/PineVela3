@@ -401,8 +401,3 @@ dialog[data-dashboard-overlay]::backdrop { background: transparent; }
   outline: 2px solid var(--pv-blue-primary);
   outline-offset: 2px;
 }
-
-.public-header-compact > div { gap: 8px; }
-.public-header-compact form { max-width: 390px; }
-.public-header-compact input { font-size: 12px; padding-top: 7px; padding-bottom: 7px; }
-.public-header-compact button:not([role="switch"]) { font-size: 11px; padding-top: 6px; padding-bottom: 6px; }

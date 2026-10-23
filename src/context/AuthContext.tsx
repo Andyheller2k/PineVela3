@@ -68,7 +68,7 @@ interface AuthContextType {
   loading: boolean;
   restorationError: string | null;
   retrySession: () => void;
-  login: (usernameOrEmail: string, password: string, portal?: { accountKind: 'resident' | 'seller'; portalPin: string }) => Promise<AuthenticatedUser>;
+  login: (usernameOrEmail: string, password: string, portal?: { accountKind: 'resident' | 'seller'; portalPin: string }, captchaToken?: string) => Promise<AuthenticatedUser>;
   setSessionUser: (user: AuthenticatedUser,expectedAccountId?:string) => void;
   updateUser?: (updatedFields: Partial<AuthenticatedUser>,expectedAccountId?:string) => void;
   logout: () => Promise<boolean>;
@@ -137,7 +137,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => { active = false; window.clearTimeout(deadline); };
   }, [restoration, retry]);
 
-  const login = async (usernameOrEmail: string, password: string, portal?: { accountKind: 'resident' | 'seller'; portalPin: string }): Promise<AuthenticatedUser> => {
+  const login = async (usernameOrEmail: string, password: string, portal?: { accountKind: 'resident' | 'seller'; portalPin: string }, captchaToken?: string): Promise<AuthenticatedUser> => {
     supersedeRestoration();
     const generation = restoration.generation;
     await restoration.settled();
@@ -147,7 +147,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ usernameOrEmail, password, ...portal })
+      body: JSON.stringify({ usernameOrEmail, password, ...portal, captchaToken })
     });
 
     if (!res.ok) {
@@ -160,6 +160,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       error.managerName = errData.managerName;
       error.managerEmail = errData.managerEmail;
       error.status = res.status;
+      if (res.status === 429) {
+        const retryAfter = Number(res.headers.get('Retry-After'));
+        if (Number.isFinite(retryAfter) && retryAfter > 0) error.retryAfter = Math.ceil(retryAfter);
+      }
       throw error;
     }
 

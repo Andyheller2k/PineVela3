@@ -4,7 +4,7 @@ import type { Theme } from '../context/ThemeContext';
 export function getPublicAppearance(pathname: string, search = '', signedIn = false): Theme | null {
   const route = pathname.replace(/\/+$/, '') || '/';
   if (route === '/' || route === '/login') return 'light';
-  if (route === '/support-invitation') return 'dark';
+  if (route === '/support-invitation' || route === '/why-us') return 'dark';
   if (route === '/help' || route === '/faq') {
     const from = new URLSearchParams(search).get('from') || '';
     if (!from && signedIn) return null;

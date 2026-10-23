@@ -1,4 +1,5 @@
 import HelpLink from './HelpLink';
+import InstallAppButton from './InstallAppButton';
 import DashboardOverlay from './DashboardOverlay';
 
 import { AlertCircle,ArrowRight,Building,CheckCircle,CheckCircle2,Clock,Eye,EyeOff,HelpCircle,Home,Info,Key,Lock,LogIn,Mail,Phone,RefreshCw,ShieldAlert,ShieldCheck,User,X } from 'lucide-react';
@@ -8,13 +9,16 @@ import { useAuth } from '../context/AuthContext';
 import { safeJson } from '../lib/api';
 import { routePopupFeedback } from '../lib/feedback';
 import { loginContinuation } from '../lib/publicContinuation';
+import { useInstalledAppMode } from '../lib/appMode';
 import { sessionFetch as fetch } from '../lib/session';
+import { EMAIL_CODE_RESEND_SECONDS, normalizeEmailOtp } from '../../emailOtp';
 import {
 cleanPhoneNumber,
 validateEmail,
 validatePhone
 } from '../utils/formValidation';
 import EmailPasswordRecovery from './EmailPasswordRecovery';
+import { useAuthCaptcha } from './AuthCaptcha';
 import PasswordStrengthGauge from './PasswordStrengthGauge';
 import PineLogo, { PineWordmark } from './PineLogo';
 import SupabaseResidentActivation from './SupabaseResidentActivation';
@@ -36,6 +40,7 @@ export default function PageUnifiedLogin() {
   const { login, user, setSessionUser } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const installedApp = useInstalledAppMode();
   const continuation = loginContinuation(location.search);
   const motionRef = useRef<HTMLDivElement>(null);
   useMotionActivity(motionRef);
@@ -61,6 +66,9 @@ export default function PageUnifiedLogin() {
   const switchAuthTab = useAuthCardFlip(authCardRef, activeTab, setActiveTab);
   const [regName, setRegName] = useState('');
   const [regEmail, setRegEmail] = useState('');
+  const [registeredEmailError, setRegisteredEmailError] = useState<string | null>(null);
+  const registrationEmailRef = useRef<HTMLInputElement>(null);
+  const showRegisteredEmailError = registeredEmailError === regEmail.trim().toLowerCase();
   const [regPass, setRegPass] = useState('');
   const [regConfirmPass, setRegConfirmPass] = useState('');
   const [showRegPass, setShowRegPass] = useState(false);
@@ -71,6 +79,34 @@ export default function PageUnifiedLogin() {
   const [signupId, setSignupId] = useState('');
   const [developmentSignupCode, setDevelopmentSignupCode] = useState('');
   const [verifyingCode, setVerifyingCode] = useState(false);
+  const [resendingCode, setResendingCode] = useState(false);
+  const [resendAvailableAt, setResendAvailableAt] = useState(0);
+  const [resendSeconds, setResendSeconds] = useState(0);
+  const verificationActionPending = useRef(false);
+  const credentialActionPending = useRef(false);
+  const captcha = useAuthCaptcha(verificationPending ? 'resend' : activeTab, !showPasswordRecovery && (!verificationPending || resendSeconds === 0));
+
+  useEffect(() => {
+    if (!verificationPending || !resendAvailableAt) {
+      setResendSeconds(0);
+      return;
+    }
+    let timer: ReturnType<typeof setInterval> | undefined;
+    const tick = () => {
+      const seconds = Math.max(0, Math.ceil((resendAvailableAt - Date.now()) / 1000));
+      setResendSeconds(seconds);
+      if (seconds === 0 && timer !== undefined) clearInterval(timer);
+    };
+    tick();
+    if (resendAvailableAt > Date.now()) timer = setInterval(tick, 1000);
+    return () => { if (timer !== undefined) clearInterval(timer); };
+  }, [verificationPending, resendAvailableAt]);
+
+  const startResendCountdown = (seconds = EMAIL_CODE_RESEND_SECONDS) => {
+    const wait = Number.isInteger(seconds) && seconds > 0 ? seconds : EMAIL_CODE_RESEND_SECONDS;
+    setResendAvailableAt(Date.now() + wait * 1000);
+    setResendSeconds(wait);
+  };
 
   // Resident Digital Key Onboarding states
   const [showStudentKeyModal, setShowStudentKeyModal] = useState(false);
@@ -112,15 +148,17 @@ export default function PageUnifiedLogin() {
 
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (credentialActionPending.current) return;
     setLoginError(null);
     if (!usernameOrEmail || !password) {
       setLoginError('Please provide both username/email and password.');
       return;
     }
 
+    credentialActionPending.current = true;
     setLoadingLogin(true);
     try {
-      const authenticatedUser = await login(usernameOrEmail, password,needsPortalPin ? { accountKind:loginPortal,portalPin:loginPortalPin } : undefined);
+      const authenticatedUser = await login(usernameOrEmail, password,needsPortalPin ? { accountKind:loginPortal,portalPin:loginPortalPin } : undefined, captcha.requireToken());
 
       // Redirect based on role and digital market merchant status
       setTimeout(() => {
@@ -166,7 +204,9 @@ export default function PageUnifiedLogin() {
         setNeedsPortalPin(true);
         setLoginPortalPin('');
       }
-      const errMsg = err?.message || '';
+      const errMsg = err?.status === 429 && Number.isFinite(err?.retryAfter) && err.retryAfter > 0
+        ? `Too many sign-in attempts. Please try again in ${Math.ceil(err.retryAfter / 60)} ${Math.ceil(err.retryAfter / 60) === 1 ? 'minute' : 'minutes'}.`
+        : err?.message || '';
       if (err?.isBlocked || errMsg.toLowerCase().includes('blocked') || errMsg.toLowerCase().includes('restricted') || errMsg.toLowerCase().includes('freeze')) {
         const rawReason = err?.restrictionReason || errMsg;
         const cleanReason = rawReason.replace(/^.*Reason:\s*/i, '').replace(/\.\s*Please wait.*$/i, '').trim();
@@ -187,12 +227,16 @@ export default function PageUnifiedLogin() {
         setLoginError(errMsg || 'Invalid credentials. Please try again.');
       }
     } finally {
+      credentialActionPending.current = false;
+      captcha.reset();
       setLoadingLogin(false);
     }
   };
 
   const handleUnifiedRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (credentialActionPending.current) return;
+    setRegisteredEmailError(null);
     if (!regName.trim() || !regEmail.trim() || !regPass) {
       triggerToast('All fields are required to create an account.', 'error');
       return;
@@ -211,20 +255,38 @@ export default function PageUnifiedLogin() {
       return;
     }
 
+    credentialActionPending.current = true;
     setLoadingLogin(true);
     try {
+      const captchaToken = captcha.requireToken();
       const res = await fetch('/api/auth/register-unified', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: regName.trim(),
           email: regEmail.trim(),
-          password: regPass
+          password: regPass,
+          captchaToken
         })
       });
 
       const data = await safeJson(res);
       if (!res.ok) {
+        if (res.status === 409 && data.code === 'email_already_registered') {
+          setRegisteredEmailError(regEmail.trim().toLowerCase());
+          setVerificationPending(false);
+          setVerificationEmail('');
+          setVerificationCodeInput('');
+          setSignupId('');
+          setDevelopmentSignupCode('');
+          setResendAvailableAt(0);
+          registrationEmailRef.current?.focus();
+          return;
+        }
+        if (res.status === 429 && verificationEmail === regEmail.trim().toLowerCase() && signupId) {
+          startResendCountdown(Number(res.headers.get('Retry-After')) || EMAIL_CODE_RESEND_SECONDS);
+          setVerificationPending(true);
+        }
         throw new Error(data.error || 'Registration failed.');
       }
 
@@ -232,22 +294,28 @@ export default function PageUnifiedLogin() {
       setDevelopmentSignupCode(data.developmentOnly ? data.developmentCode || '' : '');
       setVerificationCodeInput('');
       setVerificationEmail(regEmail.trim().toLowerCase());
+      startResendCountdown(data.retryAfter);
       setVerificationPending(true);
-      triggerToast(data.developmentOnly ? 'Your temporary development code is ready.' : 'Check your email for your confirmation link or code.', 'success');
+      triggerToast(data.developmentOnly ? 'Your temporary development code is ready.' : 'Check your email for your verification code.', 'success');
     } catch (err: any) {
       triggerToast(err.message || 'An error occurred during sign up.', 'error');
     } finally {
+      credentialActionPending.current = false;
+      captcha.reset();
       setLoadingLogin(false);
     }
   };
 
   const handleUnifiedVerifySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!verificationCodeInput.trim()) {
-      triggerToast('Enter the verification code or paste the confirmation link from your email.', 'error');
+    if (verificationActionPending.current) return;
+    const code = normalizeEmailOtp(verificationCodeInput);
+    if (code === null) {
+      triggerToast('Enter the verification code from your email (6–10 digits).', 'error');
       return;
     }
 
+    verificationActionPending.current = true;
     setVerifyingCode(true);
     try {
       const res = await fetch('/api/auth/verify-unified', {
@@ -256,7 +324,7 @@ export default function PageUnifiedLogin() {
         body: JSON.stringify({
           email: verificationEmail,
           password: regPass,
-          code: verificationCodeInput.trim(),
+          code,
           signupId
         })
       });
@@ -277,6 +345,7 @@ export default function PageUnifiedLogin() {
       setVerificationCodeInput('');
       setSignupId('');
       setDevelopmentSignupCode('');
+      setResendAvailableAt(0);
       setRegName('');
       setRegEmail('');
       setRegPass('');
@@ -288,7 +357,37 @@ export default function PageUnifiedLogin() {
     } catch (err: any) {
       triggerToast(err.message || 'Verification failed.', 'error');
     } finally {
+      verificationActionPending.current = false;
       setVerifyingCode(false);
+    }
+  };
+
+  const handleResendCode = async () => {
+    if (verificationActionPending.current || resendAvailableAt > Date.now()) return;
+    verificationActionPending.current = true;
+    setResendingCode(true);
+    try {
+      const captchaToken = captcha.requireToken();
+      const res = await fetch('/api/auth/resend-unified', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: verificationEmail, captchaToken }),
+        signal: AbortSignal.timeout(30000),
+      });
+      const data = await safeJson(res);
+      if (!res.ok) {
+        if (res.status === 429) startResendCountdown(Number(res.headers.get('Retry-After')) || EMAIL_CODE_RESEND_SECONDS);
+        throw new Error(data.error || 'The code could not be resent. Please try again.');
+      }
+      startResendCountdown(data.retryAfter);
+      setVerificationCodeInput('');
+      triggerToast(data.message || 'A new code has been requested. Check your inbox and spam folder.', 'success');
+    } catch (err: any) {
+      triggerToast(err.name === 'TimeoutError' ? 'The email request took too long. Please try again.' : err.message || 'The code could not be resent. Please try again.', 'error');
+    } finally {
+      captcha.reset();
+      verificationActionPending.current = false;
+      setResendingCode(false);
     }
   };
 
@@ -322,11 +421,11 @@ export default function PageUnifiedLogin() {
 
       {/* Header */}
       <header className="login-header public-header-card bg-transparent px-6 py-4 flex items-center justify-between z-10 sticky top-0">
-        <button type="button" aria-label="PineVela home" className="login-logo-link cursor-pointer" onClick={() => navigate('/')}>
+        {installedApp ? <div className="login-logo-link"><PineLogo /></div> : <button type="button" aria-label="PineVela home" className="login-logo-link cursor-pointer" onClick={() => navigate('/')}>
           <PineLogo />
-        </button>
-        <div className="flex items-center gap-2"><HelpLink />
-        <div className="login-home-link">
+        </button>}
+        <div className="flex items-center gap-2"><InstallAppButton /><HelpLink />
+        {!installedApp && <div className="login-home-link">
           <button 
             onClick={() => navigate('/')}
             className="text-xs font-bold text-blue-700 hover:text-blue-900 hover:bg-blue-50 flex items-center gap-1.5 bg-transparent px-3 py-1.5 rounded-lg transition-all"
@@ -334,7 +433,7 @@ export default function PageUnifiedLogin() {
             <Home size={13} className="text-blue-700" />
             <span>Home</span>
           </button>
-        </div>
+        </div>}
       </div>
       </header>
 
@@ -427,7 +526,7 @@ export default function PageUnifiedLogin() {
                   </div>
                   <h3 className="text-sm font-black text-slate-800">{developmentSignupCode ? 'Development signup code' : 'Verify Your Email'}</h3>
                   <p className="text-[11px] text-slate-500">
-                    {developmentSignupCode ? 'Enter the development code for' : 'Paste the confirmation link or enter the code emailed to'} <span className="font-bold text-blue-900">{verificationEmail}</span>
+                    {developmentSignupCode ? 'Enter the development code for' : 'Enter the verification code emailed to'} <span className="font-bold text-blue-900">{verificationEmail}</span>
                   </p>
                 </div>
 
@@ -439,27 +538,25 @@ export default function PageUnifiedLogin() {
                   </div>
                 )}
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-700 block">{developmentSignupCode ? 'Development code' : 'Email confirmation link or code'}</label>
+                  <label className="text-xs font-bold text-slate-700 block">{developmentSignupCode ? 'Development code' : 'Email verification code'}</label>
                   <input
                     type="text"
                     required
-                    maxLength={4096}
-                    inputMode="text"
+                    maxLength={64}
+                    inputMode="numeric"
                     autoComplete="one-time-code"
-                    aria-label="Email confirmation link or code"
+                    aria-label="Email verification code"
                     value={verificationCodeInput}
                     onChange={(e) => setVerificationCodeInput(e.target.value)}
                     className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-900 bg-white text-slate-800 font-mono text-sm transition-all"
                   />
                 </div>
 
-                {!developmentSignupCode && <p className="text-[11px] text-slate-500 leading-relaxed">
-                  If your email contains a button, copy its link and paste it above without opening it.
-                </p>}
+                {!developmentSignupCode && <p className="text-[11px] text-slate-500 leading-relaxed">Use the full code from your latest verification email.</p>}
 
                 <button
                   type="submit"
-                  disabled={verifyingCode}
+                  disabled={verifyingCode || resendingCode}
                   className="w-full py-3 bg-blue-900 hover:bg-blue-850 text-white font-black text-xs sm:text-sm rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer"
                 >
                   {verifyingCode ? (
@@ -475,14 +572,30 @@ export default function PageUnifiedLogin() {
                   )}
                 </button>
 
-                <div className="text-center">
+                {!developmentSignupCode && captcha.widget}
+                <div className="login-verification-actions">
+                  {!developmentSignupCode && (
+                    <button
+                      type="button"
+                      onClick={handleResendCode}
+                      disabled={resendingCode || verifyingCode || resendSeconds > 0 || !captcha.ready}
+                      className="login-resend-code"
+                    >
+                      <RefreshCw size={14} aria-hidden="true" className={resendingCode ? 'animate-spin' : ''} />
+                      <span>
+                        {resendingCode ? 'Sending code…' : 'Resend code'}
+                        {resendSeconds > 0 && <span className="login-resend-countdown">in {Math.floor(resendSeconds / 60)}:{String(resendSeconds % 60).padStart(2, '0')}</span>}
+                      </span>
+                    </button>
+                  )}
                   <button
                     type="button"
+                    disabled={verifyingCode || resendingCode}
                     onClick={() => {
                       setVerificationPending(false);
                       setActiveTab('register');
                     }}
-                    className="text-xs font-bold text-slate-500 hover:text-slate-800 cursor-pointer"
+                    className="login-verification-back text-xs font-bold text-slate-500 hover:text-slate-800 cursor-pointer"
                   >
                     Back to registration
                   </button>
@@ -571,9 +684,10 @@ export default function PageUnifiedLogin() {
                   </fieldset>
                 )}
 
+                {captcha.widget}
                 <button
                   type="submit"
-                  disabled={loadingLogin}
+                  disabled={loadingLogin || !captcha.ready}
                   className="w-full py-3 bg-blue-900 hover:bg-blue-850 text-white font-black text-xs sm:text-sm rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer mt-2"
                 >
                   {loadingLogin ? (
@@ -629,11 +743,14 @@ export default function PageUnifiedLogin() {
                       <Mail size={16} />
                     </span>
                     <input aria-label="Email Address"
+                      ref={registrationEmailRef}
                       type="email"
                       required
                       placeholder="e.g. andy@example.com"
                       value={regEmail}
-                      onChange={(e) => setRegEmail(e.target.value)}
+                      aria-invalid={showRegisteredEmailError || undefined}
+                      aria-describedby={showRegisteredEmailError ? 'signup-email-error' : undefined}
+                      onChange={(e) => { setRegEmail(e.target.value); setRegisteredEmailError(null); }}
                       className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-900 bg-white text-slate-800 text-xs sm:text-sm font-semibold transition-all"
                     />
                   </div>
@@ -690,9 +807,10 @@ export default function PageUnifiedLogin() {
                   <PasswordStrengthGauge password={regConfirmPass} />
                 </div>
 
+                {captcha.widget}
                 <button
                   type="submit"
-                  disabled={loadingLogin}
+                  disabled={loadingLogin || !captcha.ready}
                   className="w-full py-2.5 bg-blue-900 hover:bg-blue-850 text-white font-black text-xs sm:text-sm rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer mt-1"
                 >
                   {loadingLogin ? (
@@ -704,6 +822,20 @@ export default function PageUnifiedLogin() {
                     <span>Create a free account</span>
                   )}
                 </button>
+
+                {showRegisteredEmailError && (
+                  <div role="alert" className="login-registration-error">
+                    <AlertCircle size={16} aria-hidden="true" />
+                    <p id="signup-email-error">This email is already registered. Please sign in.</p>
+                    <button type="button" onClick={() => {
+                      setUsernameOrEmail(regEmail.trim());
+                      setPassword('');
+                      setLoginError(null);
+                      setRegisteredEmailError(null);
+                      switchAuthTab('login');
+                    }}>Sign in</button>
+                  </div>
+                )}
 
               </form>
             )}

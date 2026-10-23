@@ -71,12 +71,8 @@ html[data-theme] .user-bottom-navigation [data-mobile-nav-items] .ux-mobile-dest
 .user-bottom-navigation [data-mobile-nav-items] .ux-mobile-destination > span:not(.user-navigation-highlight) { overflow: visible; font-size: 10px !important; line-height: 1.15; font-weight: 650; }
 .user-bottom-navigation .ux-mobile-destination .user-navigation-highlight { display: block; max-width: none; overflow: visible; }
 .user-bottom-navigation .ux-mobile-destination > span > svg { width: 20px; height: 20px; stroke-width: 1.8; }
-html[data-theme] .user-bottom-navigation .pv-companion-nav-launcher[aria-expanded="true"] { background: #ffd60a; color: #001d3d; }
-html[data-theme] .user-bottom-navigation .pv-companion-nav-launcher[aria-expanded="true"] :is(span, svg) { color: #001d3d; }
+html[data-theme] .user-bottom-navigation .pv-companion-nav-launcher[aria-expanded="true"] { background: transparent; color: #ffd60a; }
 .user-bottom-navigation .pv-companion-badge { min-width: 15px; height: 15px; top: -6px; right: -9px; font-size: 8px; }
-.user-bottom-navigation .pv-companion-nav-launcher > span:first-child::before {
-  content: ""; position: absolute; inset: -4px; border: 1px solid rgb(255 214 10 / .35); border-radius: 8px;
-}
 .user-dashboard .user-dashboard-header { flex-shrink: 0; gap: 8px; }
 .user-dashboard-header .user-dashboard-brand { min-width: 0; flex: 1; }
 .user-dashboard-header .user-dashboard-brand > div:last-child { min-width: 0; }

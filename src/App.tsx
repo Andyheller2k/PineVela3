@@ -18,6 +18,7 @@ import ThemeEnvironment from './components/ThemeEnvironment';
 import MobileNavigationLayout from './components/MobileNavigationLayout';
 import { ThemeProvider } from './context/ThemeContext';
 import { portalRoles } from './lib/portalRoles';
+import { installedAppRedirect,useInstalledAppMode } from './lib/appMode';
 
 // Component imports
 const Page1Public = lazy(() => import('./components/Page1Public'));
@@ -29,6 +30,7 @@ const PageStaffInvitation = lazy(() => import('./components/PageStaffInvitation'
 const PageOfficerInvitation = lazy(() => import('./components/PageOfficerInvitation'));
 const PageAdminInvitation = lazy(() => import('./components/PageAdminInvitation'));
 const PageFAQ = lazy(() => import('./components/PageFAQ'));
+const PageWhyUs = lazy(() => import('./components/PageWhyUs'));
 const PageHelp = lazy(() => import('./components/PageHelp'));
 const PageSupportInvitation = lazy(() => import('./components/PageSupportInvitation'));
 const PageCustomerService = lazy(() => import('./components/PageCustomerService'));
@@ -117,6 +119,7 @@ function AppContent() {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout, apiFetch } = useAuth();
+  const installedApp = useInstalledAppMode();
 
   // Scroll to top on route change
   useEffect(() => {
@@ -128,17 +131,15 @@ function AppContent() {
     });
   }, [location.pathname]);
 
-  // Ensure fresh page loads/reloads default directly to the Public Landing Page ('/')
-  useEffect(() => {
-    // If not authenticated and on root path, stay on root
-  }, []);
-
   // Verified account changes close the previous event stream and retry timer.
   const realtimeAccount = (user?.id);
   useEffect(() => {
     if (!realtimeAccount) return;
     return setupRealtimeQuerySync();
   }, [realtimeAccount]);
+
+  const appRedirect = installedApp ? installedAppRedirect(location.pathname) : undefined;
+  if (appRedirect) return <Navigate to={appRedirect} replace />;
 
   return (
     <AnimatePresence mode="wait">
@@ -157,6 +158,7 @@ function AppContent() {
         <Route path="/pinemarket/stores/:storeId" element={<PageWrapper><PagePublicStore /></PageWrapper>} />
         <Route path="/pinemarket" element={<PageWrapper loadingFallback={<p role="status" className="p-8 text-center text-sm text-slate-500">Loading PineMarket…</p>}><PagePublicMarket /></PageWrapper>} />
         <Route path="/faq" element={<PageWrapper smoothEntry loadingFallback={<p role="status" className="p-8 text-center text-sm text-slate-500">Loading frequently asked questions…</p>}><PageFAQ /></PageWrapper>} />
+        <Route path="/why-us" element={<PageWrapper smoothEntry loadingFallback={<p role="status" className="p-8 text-center text-sm text-slate-500">Loading Why PineVela…</p>}><PageWhyUs /></PageWrapper>} />
         <Route path="/help" element={<PageWrapper smoothEntry loadingFallback={<p role="status" className="p-8 text-center text-sm text-slate-500">Loading Help…</p>}><PageHelp /></PageWrapper>} />
         <Route path="/support-invitation" element={<PageWrapper><PageSupportInvitation /></PageWrapper>} />
         <Route path="/customer-service" element={<ProtectedRoute allowedRoles={['user', 'admin']}><PageWrapper><PageCustomerService key={user?.id} /></PageWrapper></ProtectedRoute>} />
@@ -350,7 +352,7 @@ function AppContent() {
         {/* FALLBACK REDIRECT */}
         <Route path="/payments/return" element={<PageWrapper><PagePaymentReturn /></PageWrapper>} />
         <Route path="/admin-invitation" element={<PageWrapper><PageAdminInvitation /></PageWrapper>} />
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="*" element={<Navigate to={installedApp ? '/login' : '/'} replace />} />
       </Routes>
     </AnimatePresence>
   );

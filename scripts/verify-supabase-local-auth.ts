@@ -43,6 +43,43 @@ async function verify(h:LocalSupabaseHarness){
   where u.id=$1 and b.active_context_id=$2`,[signup.data.signupId,me.data.id])).rows;
  check(native.length===1&&native[0].email_confirmed_at,'Actual GoTrue Auth/session rows match the live app binding');
 
+ stage='primary password sign-in after sign-out';
+ const firstLogin=h.session();
+ const passwordLogin=await firstLogin.json('/api/auth/login',{usernameOrEmail:email,password});
+ check(passwordLogin.status===200&&passwordLogin.data?.id===me.data.id&&passwordLogin.data?.role==='user',
+  'A freshly confirmed primary can sign in with its saved email and password');
+ check((await firstLogin.request('/api/auth/me')).data?.id===me.data.id,'The password sign-in has its own working cookie session');
+ const firstReplay=firstLogin.copy();
+ const beforeLogout=(await h.db.pool.query('select id,email_confirmed_at,encrypted_password from auth.users where id=$1',[signup.data.signupId])).rows[0];
+ const logout=await firstLogin.json('/api/auth/logout',{});
+ check(logout.status===200&&logout.data?.success===true,'The password session signs out successfully');
+ check(logout.headers.getSetCookie().filter(cookie=>cookie.startsWith('pv_sb_')&&cookie.split(';',1)[0].endsWith('=')
+  &&(/max-age=0/i.test(cookie)||Date.parse(cookie.match(/(?:^|;)\s*expires=([^;]+)/i)?.[1]||'')<Date.now())).length===2,
+  'Sign-out expires both actual application cookies');
+ check((await firstLogin.request('/api/auth/me')).status===401,'The signed-out browser cookie jar cannot authenticate');
+ check((await firstReplay.request('/api/auth/me')).status===401,'Replaying the old password-session cookies cannot authenticate');
+ const afterLogout=(await h.db.pool.query('select id,email_confirmed_at,encrypted_password from auth.users where id=$1',[signup.data.signupId])).rows[0];
+ check(afterLogout?.id===beforeLogout.id&&String(afterLogout.email_confirmed_at)===String(beforeLogout.email_confirmed_at)
+  &&afterLogout.encrypted_password===beforeLogout.encrypted_password,'Sign-out preserves the verified identity and saved password hash');
+ const wrongPassword=await guest.json('/api/auth/login',{usernameOrEmail:email,password:password+'wrong'});
+ check(wrongPassword.status===401&&!wrongPassword.headers.has('set-cookie'),'An incorrect password cannot reopen the signed-out account');
+ const reentry=h.session();
+ const repeatedLogin=await reentry.json('/api/auth/login',{usernameOrEmail:'  '+email.toUpperCase()+'  ',password});
+ check(repeatedLogin.status===200&&repeatedLogin.data?.id===me.data.id&&repeatedLogin.data?.email===email
+  &&repeatedLogin.data?.role==='user','The same email and password sign in again after logout, including email case/whitespace normalization');
+ check(repeatedLogin.headers.getSetCookie().filter(cookie=>cookie.startsWith('pv_sb_')&&/httponly/i.test(cookie)).length===2,
+  'Signing back in issues a new pair of HTTP-only session cookies');
+ check((await reentry.request('/api/auth/me')).data?.id===me.data.id,'The new password session reaches the original primary profile');
+ check((await firstReplay.request('/api/auth/me')).status===401,'The new login does not restore the revoked old cookie session');
+ check((await user.request('/api/auth/me')).status===200,'Signing out one session preserves the independently verified session');
+ const duplicate=await guest.json('/api/auth/register-unified',{name:'Repeated registration',email,password});
+ check(duplicate.status===409&&duplicate.data?.code==='email_already_registered'&&!duplicate.headers.has('set-cookie'),
+  'The duplicate-registration guard remains separate from successful password re-entry');
+ check((await reentry.request('/api/auth/me')).status===200,'Rejected duplicate registration does not disturb the signed-in account');
+ const reentryReplay=reentry.copy();
+ check((await reentry.json('/api/auth/logout',{})).status===200,'The reopened primary account can sign out again');
+ check((await reentryReplay.request('/api/auth/me')).status===401,'Replaying the reopened session after its logout is also denied');
+
  stage='local founder fixture and native role admission';
  const founderId=await h.bootstrapFounder(user),admin=h.session();
  check((await user.request('/api/auth/me')).data?.role==='user','Fixture creation does not mutate the already bound primary session');
@@ -65,6 +102,7 @@ async function verify(h:LocalSupabaseHarness){
  const result={passed:true,checks,actualGoTrue:true,actualCapturedEmail:true,actualHttpCookies:true,
   fabricatedProviderReplies:0,signedTokensInvented:0,productionAuthOverrides:0,cloudRecordsModified:0,
   localDummyAuthUsers:count,positiveAndNegativeRoleGuards:true,immediateLogoutRevocation:true,
+  passwordLoginAfterLogout:true,incorrectPasswordRejected:true,duplicateSignupStillRejected:true,
   googleOAuthTested:false};
  fs.writeFileSync(path.join(h.meta.root,'pinevela-harness','auth-smoke-result.json'),JSON.stringify(result,null,2)+'\n',{mode:0o600});
  console.log(JSON.stringify(result));

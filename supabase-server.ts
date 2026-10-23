@@ -10,7 +10,7 @@ import {startPaymentReconciliation} from './supabase/paymentReversals.js';
 dotenv.config({ quiet: true });
 const db = new SupabaseDatabase();
 // Refuse to serve a partially applied or inaccessible schema.
-await db.pool.query("select version from private.schema_migrations where version = '20261020221812'").then(result => {
+await db.pool.query("select version from private.schema_migrations where version = '20261022214514'").then(result => {
   if (!result.rowCount) throw new Error('Apply all Supabase migrations before starting the server.');
 });
 const pinKey=loadOrderPins();

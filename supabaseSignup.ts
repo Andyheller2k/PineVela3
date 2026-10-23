@@ -1,4 +1,5 @@
 import { normalizeEmail } from './accountSecurity.js';
+import { normalizeEmailOtp } from './emailOtp.js';
 
 export class SignupError extends Error {
   constructor(public status: number, message: string) { super(message); }
@@ -76,7 +77,8 @@ export function confirmedSignupIdentity(user: any, expected: { email: string; su
 export function signupChallenge(value: unknown, providerUrl: string): { token_hash: string; type: 'email' } | { token: string; type: 'email' } {
   if (typeof value !== 'string' || value.length > 4096) throw new SignupError(400, 'Enter the code or confirmation link from your email.');
   const challenge = value.trim();
-  if (/^\d{6}$/.test(challenge)) return { token: challenge, type: 'email' };
+  const token = normalizeEmailOtp(challenge);
+  if (token !== null) return { token, type: 'email' };
   let link: URL;
   try { link = new URL(challenge); } catch { throw new SignupError(400, 'Enter a valid email confirmation code or link.'); }
   const tokenHash = link.searchParams.get('token') || link.searchParams.get('token_hash');

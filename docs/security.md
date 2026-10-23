@@ -1154,6 +1154,17 @@ filters and restrictive media/Storage policies enforce the same boundary.
 Review evidence stays private; administrator-key decisions and account-sanction
 approvals remain separate. See [automatic moderation](content-moderation.md)
 for failure handling, child-safety limits and hosted activation verification.
+
+## Duplicate primary signup
+
+Public primary registration intentionally reveals that a confirmed email is
+already registered, as required by the signup experience. Only a fixed 409 code
+and message are returned; no account IDs, roles, names or access restrictions are
+exposed. Existing authentication IP/global request limits and CSRF checks remain.
+The email lookup is an availability check, never authorization or account linking.
+Native Auth still verifies every successful signup. No public lookup endpoint,
+credential replacement, automatic session or database permission grant is added.
+
 ## Personal AI companion boundary
 
 The primary-only companion uses session-derived ownership, private RLS tables,
@@ -1164,3 +1175,34 @@ unchanged conversation generation. AI output renders as plain text, with only
 server-generated internal result cards. See [companion details](companion.md).
 
 Frontend documents and SPA fallbacks enforce `Content-Security-Policy: frame-ancestors 'none'` and `X-Frame-Options: DENY` in static and development delivery. These are HTTP response policies, not meta tags; deployment proxies must preserve them. The CSP framing directive follows the [W3C CSP specification](https://www.w3.org/TR/CSP3/#directive-frame-ancestors).
+# Authentication abuse protection
+
+Migration `20261022205045` adds private delivery/failure budgets with RLS enabled,
+no client policies or RPCs, and no grants to browser/backend actor roles. Only
+server-owned system transactions write them. Raw emails, IPs, passwords, CAPTCHA
+tokens and OTPs are not stored in these tables. Bounded cleanup removes stale
+state. Password failures commit before a rejection is returned; try-locks stop
+parallel guesses bypassing admission. IPs come from Express's explicit proxy
+allowlist, never caller-supplied forwarding headers.
+
+CAPTCHA uses the public Supabase Auth key, so administrative CAPTCHA bypass is
+not available. Each protected exchange forwards the single-use proof to native
+Auth. Missing proof fails closed when a site key is configured. The actual secret
+and CAPTCHA toggle must be configured in Supabase; the app configuration endpoint
+does not attest to dashboard activation. See [setup](captcha.md).
+
+Migration `20261022214514` adds a separate private replay fingerprint registry.
+RLS and explicit revokes deny every browser/restricted backend role. An atomic
+server-owned transaction commits each SHA-256 proof fingerprint before any
+workflow/provider transaction. Failed authentication, outages and ambiguous
+responses never release the claim. Reuse across accounts, portal aliases,
+processes and simultaneous requests is rejected. Request-local state also
+prevents forwarding a proof twice within the same HTTP request. Raw proofs are
+not stored. Ten-minute retention, cleanup batches of 100, a 50,000-row capacity
+and a two-second admission lock deadline bound the state/work. Direct native
+Auth remains outside this application boundary; see the recorded provider
+replay finding in [the verification report](auth-protection-verification.md).
+
+Local bounded burst/SQL-injection tests validate application defenses only.
+Distributed volumetric protection requires a hosting/CDN/WAF boundary; per-process
+budgets and CAPTCHA do not establish a DDoS availability guarantee.

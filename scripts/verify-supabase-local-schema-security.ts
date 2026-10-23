@@ -10,7 +10,7 @@ try{await runLocalSupabaseVerification(async h=>{
  await h.assertOwned();
  const files=fs.readdirSync('supabase/migrations').filter(f=>/^\d{14}_[a-z0-9_]+\.sql$/.test(f)).sort();
  const ledger=(await h.db.pool.query('select version,digest from private.schema_migrations order by version')).rows;
- check(ledger.length===files.length&&ledger.length===75,'Exactly the current 75 immutable migration versions are installed');
+ check(ledger.length===files.length&&ledger.length===82,'Exactly the current 82 immutable migration versions are installed');
  for(const file of files){const version=file.slice(0,14),digest=crypto.createHash('sha256').update(fs.readFileSync(path.join('supabase/migrations',file))).digest('hex');
   check(ledger.find(r=>r.version===version)?.digest===digest,'Actual migration digest matches its immutable source');}
  const tables=(await h.db.pool.query(`select c.relname,c.relrowsecurity,c.relforcerowsecurity from pg_class c join pg_namespace n on n.oid=c.relnamespace

@@ -17,6 +17,13 @@ Public Explore Marketplace (`/pinemarket`), its storefronts, and Explore Residen
 dialogs. Direct loads and route navigation preserve this appearance without
 overwriting the saved product preference.
 
+Why Us (`/why-us`) has the same fixed public navy/gold appearance. Its fourteen
+student-focused comparisons pair a labeled blue traditional-approach card with
+a yellow PineVela benefit card, side by side on wider screens and stacked on
+phones. Landing header/footer links and a bottom-page introduction open it.
+The route's pre-paint appearance agrees with ThemeProvider; product preferences
+stay intact. The copy lives in `src/components/whyUsContent.ts`.
+
 Product pages use white cards, navy feature panels and gold actions in light mode.
 Dark mode uses solid deep blue `#001D3D` for the canvas, cards, fields, navigation,
 dialogs and other non-yellow surfaces, with gold headings and selective gold
@@ -162,14 +169,15 @@ limited to 900,000 pixels. Motion performs no React updates or layout reads. Ani
 pauses outside the viewport or when the tab is hidden, and is omitted for reduced
 motion and forced colors. Observers, animations and buffers are released on unmount.
 
-Shared public headers use transparent search, account and company-section buttons
-with hover underlines. Theme switches remain in product settings; public headers
-have no theme switch. About Us,
-Our Vision, Partner with Us and Contact remain separate section buttons with no
-dropdown. The landing header uses tighter vertical padding; on small screens the
-logo and account actions share a row, followed by search and section
-links. On desktop the search field expands toward the logo. The measured header
-height still reserves content space without clipping controls.
+Shared public headers keep the fixed navy/yellow appearance with no theme switch.
+Desktop places the logo, search and account actions on its first row. Login is
+outlined and Sign Up is the primary yellow action. The second row groups Why Us,
+About Us, Our Vision, Partner with Us and Contact, followed by separate FAQ/Help
+utilities. On phones/tablets, logo, installation and Menu controls precede search;
+the disclosure contains the same links and account actions. Hidden links leave
+the focus order; Escape closes the menu and restores its toggle focus. Section
+and search actions close it and measure the collapsed height before scrolling.
+All public header variants reserve content space using their measured height.
 Explore Residence uses a text loading state like Explore Market;
 login/signup also use a text loading state with their gentle opacity fade.
 Authenticated page skeletons remain unchanged.
@@ -187,6 +195,10 @@ stay intact. In light mode, mobile top headers use translucent white with navy
 text and a yellow bottom line, retaining their flat, edge-to-edge layout.
 Public landing headers retain their separate appearance. Forced-colors mode
 uses system surfaces without blur or decorative shadows.
+
+The mobile Ask AI destination has no decorative yellow rectangle or filled tile.
+An open chat uses yellow icon/text on a transparent background; keyboard focus,
+the notification badge and other selected navigation destinations are preserved.
 
 The shared Appearance settings label follows the active light/dark theme, along
 with its status text. Light product pages keep their subtle blue atmosphere

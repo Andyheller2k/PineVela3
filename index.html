@@ -7,7 +7,7 @@
       // Public pages stay fixed; product pages restore the saved preference before paint.
       var route = (location.hash.slice(1).split('?')[0] || '/').replace(/\/+$/, '') || '/';
       var fixedAppearance = route === '/' || route === '/login' ? 'light'
-        : route === '/pineresidence' || route === '/pinemarket' || route === '/support-invitation' || /^\/pinemarket\/stores\/[^/]+$/.test(route) ? 'dark' : null;
+        : route === '/pineresidence' || route === '/pinemarket' || route === '/support-invitation' || route === '/why-us' || /^\/pinemarket\/stores\/[^/]+$/.test(route) ? 'dark' : null;
       if (route === '/help' || route === '/faq') {
         var helpFrom = new URLSearchParams(location.hash.slice(1).split('?').slice(1).join('?')).get('from') || '';
         fixedAppearance = /^\/(?:user\/dashboard|student\/dashboard|resident\/dashboard|manager\/dashboard|staff\/dashboard|admin\/dashboard|digital-market(?:\/onboard)?|market|customer-service|field-officer|officer\/dashboard|verification-team|verification-portal)$/.test(helpFrom) ? null : 'dark';
@@ -23,6 +23,12 @@
     </script>
     <title>PineVela</title>
     <link rel="icon" type="image/svg+xml" href="/store-covers/pinevela-logo.svg" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <meta name="theme-color" content="#001d3d" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="PineVela" />
     <meta name="description" content="A universal global dashboard for modern student living, featuring student and manager portals for hostel accommodations." />
     <meta property="og:title" content="PineVela" />
     <meta property="og:description" content="A universal global dashboard for modern student living, featuring student and manager portals for hostel accommodations." />

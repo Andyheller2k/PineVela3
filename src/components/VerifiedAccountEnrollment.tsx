@@ -2,6 +2,7 @@ import React,{ useEffect,useId,useState,useRef } from 'react';
 import { sessionFetch as fetch } from '../lib/session';
 import {useAuth} from '../context/AuthContext';
 import GoogleManagerEnrollment from './GoogleManagerEnrollment';
+import { useAuthCaptcha } from './AuthCaptcha';
 type Kind = 'resident' | 'seller' | 'manager';
 type Enrollment = { id:string;kind:Kind;email:string;status:string;verified_at:string | null;signup_id?:string;expires_at:string;account_status?:string;requires_portal_pin?:boolean;authentication?:string };
 export type ManagerEnrollmentSnapshot={ownerId:string;records:Enrollment[];googleManagerEnrollment:boolean};
@@ -20,7 +21,13 @@ export default function VerifiedAccountEnrollment({ kind,initialName = '',initia
   useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;};},[]);
   const ownRequest=async(url:string,options:RequestInit={})=>{
     const captured=current.current,headers=new Headers(options.headers);if(user?.id)headers.set('X-PineVela-Profile-Context',user.id);
-    const data=await request(url,{...options,headers});if(!mounted.current||current.current!==captured)throw Error('Your active registration account changed.');return data;
+    let body=options.body;
+    if(options.method==='POST'){
+      const fields=typeof body==='string'?JSON.parse(body):{};
+      const usesEmailProof=/(?:verify|reactivate)$/.test(url)&&typeof fields.code==='string'&&Boolean(fields.code.trim());
+      if(!usesEmailProof){headers.set('Content-Type','application/json');body=JSON.stringify({...fields,captchaToken:captcha.requireToken()});}
+    }
+    const data=await request(url,{...options,body,headers});if(!mounted.current||current.current!==captured)throw Error('Your active registration account changed.');return data;
   };
   const [records,setRecords] = useState<Enrollment[]>([]),[ready,setReady] = useState(false);
   const [name,setName] = useState(initialName),[phone,setPhone] = useState(initialPhone),[email,setEmail] = useState(initialEmail);
@@ -32,6 +39,8 @@ export default function VerifiedAccountEnrollment({ kind,initialName = '',initia
   const released = records.find(e=>e.kind===kind&&e.verified_at&&e.account_status==='closed'&&(kind==='resident'?e.status==='completed':['completed','cancelled','expired'].includes(e.status)));
   const [managerProof,setManagerProof]=useState<'email'|'password'>('email');
   const [googleManager,setGoogleManager]=useState(false);
+  const captcha = useAuthCaptcha(`enrollment:${user?.id}:${kind}:${pending?.id || released?.id || 'new'}`,
+    ready && !(googleManager && kind==='manager' && !released && (!pending || pending.authentication==='google')) && !pending?.verified_at);
   const shared = kind !== 'manager' && records.some(e => e.kind === (kind === 'resident' ? 'seller' : 'resident') &&
     e.email.toLowerCase() === email.trim().toLowerCase() && e.verified_at && ['pending_review','completed'].includes(e.status));
   const load = async () => {
@@ -56,7 +65,7 @@ export default function VerifiedAccountEnrollment({ kind,initialName = '',initia
     if(inFlight.current)return;inFlight.current=true;const captured=current.current;setBusy(true);setError('');setNotice('');
     try { await work(); }
     catch (err:any) { if(mounted.current&&current.current===captured){setError(err.message);if (err.enrollmentId) await load().catch(() => undefined);} }
-    finally { inFlight.current=false;if(mounted.current)setBusy(false); }
+    finally { captcha.reset();inFlight.current=false;if(mounted.current)setBusy(false); }
   };
   const begin = (event:React.FormEvent) => { event.preventDefault();void run(async () => {
     if (password !== repeatPassword) throw new Error('The passwords do not match.');
@@ -78,18 +87,19 @@ export default function VerifiedAccountEnrollment({ kind,initialName = '',initia
   return <div className="space-y-4">
     {error && <p role="alert" className="rounded-xl bg-rose-50 p-3 text-sm text-rose-800">{error}</p>}
     {notice && <p role="status" className="rounded-xl bg-blue-50 p-3 text-sm text-blue-950">{notice}</p>}
+    {captcha.widget}
     {!ready && !error && <p role="status" className="text-sm text-slate-600">Checking your account registration…</p>}
     {ready && !pending && released && <form onSubmit={event => { event.preventDefault();void run(async () => {
       await ownRequest(`/api/auth/enrollments/${released.id}/reactivate`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(kind!=='resident'?{...(managerProof==='email'?{code}:{password:confirmationPassword}),...(kind==='seller'?{portalPin:existingPin}:{})}:{password:confirmationPassword,portalPin:existingPin})});
       setCode('');setConfirmationPassword('');setExistingPin('');await load();setNotice(kind==='manager'?'Your retained work identity is confirmed. Continue to submit a new property for inspection.':kind==='seller'?'Your verified seller identity is ready. Submit a new application; approval and a new registration payment are required.':'Your verified resident identity is ready. Continue to activate your new room.');
     }); }} className="space-y-3">
       <p className="text-sm text-slate-700">{kind==='manager'?'Your manager portal was closed. Reuse your verified work email; a new physical property inspection is required.':kind==='seller'?'Your seller portal was closed. Reuse your verified student email; your old store and transactions remain in history.':'Your previous room allocation has ended. Reuse your verified resident email:'} <strong>{released.email}</strong>.</p>
-      {kind!=='resident'&&<><label className="block text-sm font-semibold">Confirm your {kind==='seller'?'student':'work'} identity<select disabled={busy} value={managerProof} onChange={e=>{setManagerProof(e.target.value as 'email'|'password');setCode('');setConfirmationPassword('');}} className={control}><option value="email">Email code (including Google accounts)</option><option value="password">Existing PineVela account password</option></select></label>{managerProof==='email'&&<><button type="button" disabled={busy} onClick={()=>void run(async()=>{const result=await ownRequest(`/api/auth/enrollments/${released.id}/reactivate/send-code`,{method:'POST',headers:{'content-type':'application/json'},body:'{}'});setNotice(result.message);})} className="min-h-11 rounded-xl border border-blue-200 px-4 py-3 text-sm font-semibold">Request verification code</button><label htmlFor={label('reactivate-code')} className="block text-sm font-semibold">Email code or unopened sign-in link<input id={label('reactivate-code')} required autoComplete="one-time-code" maxLength={4096} disabled={busy} value={code} onChange={e=>setCode(e.target.value)} className={control}/></label><p className="text-xs text-slate-600">Copy the code or unopened link into this form. Your primary sign-in and Google password are retained.</p></>}</>}
+      {kind!=='resident'&&<><label className="block text-sm font-semibold">Confirm your {kind==='seller'?'student':'work'} identity<select disabled={busy} value={managerProof} onChange={e=>{setManagerProof(e.target.value as 'email'|'password');setCode('');setConfirmationPassword('');}} className={control}><option value="email">Email code (including Google accounts)</option><option value="password">Existing PineVela account password</option></select></label>{managerProof==='email'&&<><button type="button" disabled={busy || !captcha.ready} onClick={()=>void run(async()=>{const result=await ownRequest(`/api/auth/enrollments/${released.id}/reactivate/send-code`,{method:'POST',headers:{'content-type':'application/json'},body:'{}'});setNotice(result.message);})} className="min-h-11 rounded-xl border border-blue-200 px-4 py-3 text-sm font-semibold">Request verification code</button><label htmlFor={label('reactivate-code')} className="block text-sm font-semibold">Email code or unopened sign-in link<input id={label('reactivate-code')} required autoComplete="one-time-code" maxLength={4096} disabled={busy} value={code} onChange={e=>setCode(e.target.value)} className={control}/></label><p className="text-xs text-slate-600">Copy the code or unopened link into this form. Your primary sign-in and Google password are retained.</p></>}</>}
       {(kind==='resident'||managerProof==='password')&&<div><label htmlFor={label('reactivate-password')} className="mb-1 block text-sm font-semibold">{kind==='manager'?'Work-account password':kind==='seller'?'Student account password':'Resident account password'}</label>
         <input id={label('reactivate-password')} type="password" autoComplete="current-password" required minLength={8} maxLength={256} disabled={busy} value={confirmationPassword} onChange={e => setConfirmationPassword(e.target.value)} className={control} /></div>}
       {kind!=='manager'&&released.requires_portal_pin && <div><label htmlFor={label('reactivate-pin')} className="mb-1 block text-sm font-semibold">{kind==='seller'?'Seller':'Resident'} portal PIN</label>
         <input id={label('reactivate-pin')} type="password" inputMode="numeric" autoComplete="off" required pattern="[0-9]{6,12}" minLength={6} maxLength={12} value={existingPin} onChange={e => setExistingPin(e.target.value)} className={control} /></div>}
-      <button disabled={busy} className="w-full rounded-xl bg-blue-900 px-4 py-3 text-sm font-semibold text-white disabled:opacity-60">{busy ? 'Verifying…' : kind==='manager'?'Confirm work identity and restart registration':kind==='seller'?'Verify seller and restart registration':'Reuse verified resident account'}</button>
+      <button disabled={busy || ((kind==='resident' || managerProof==='password') && !captcha.ready)} className="w-full rounded-xl bg-blue-900 px-4 py-3 text-sm font-semibold text-white disabled:opacity-60">{busy ? 'Verifying…' : kind==='manager'?'Confirm work identity and restart registration':kind==='seller'?'Verify seller and restart registration':'Reuse verified resident account'}</button>
     </form>}
     {ready && !pending && !released && <form onSubmit={begin} className="space-y-3">
       <p className="text-sm text-slate-600">Verify your {kind === 'manager' ? 'work' : 'student'} email before activating this account.</p>
@@ -111,7 +121,7 @@ export default function VerifiedAccountEnrollment({ kind,initialName = '',initia
         <div><label htmlFor={label('new-pin')} className="block text-sm font-semibold mb-1">New {kind} portal PIN</label>
           <input id={label('new-pin')} type="password" inputMode="numeric" autoComplete="off" pattern="[0-9]{6,12}" minLength={6} maxLength={12} required value={newPin} onChange={e => setNewPin(e.target.value)} className={control} /></div>
       </fieldset>}
-      <button disabled={busy} className="w-full rounded-xl bg-blue-900 px-4 py-3 text-sm font-semibold text-white disabled:opacity-60">{busy ? 'Please wait…' : shared ? 'Link verified student account' : 'Send verification email'}</button>
+      <button disabled={busy || !captcha.ready} className="w-full rounded-xl bg-blue-900 px-4 py-3 text-sm font-semibold text-white disabled:opacity-60">{busy ? 'Please wait…' : shared ? 'Link verified student account' : 'Send verification email'}</button>
     </form>}
     {pending && <>
       <p className="text-sm text-slate-700">Account email: <strong>{pending.email}</strong></p>
@@ -122,10 +132,10 @@ export default function VerifiedAccountEnrollment({ kind,initialName = '',initia
           <p className="text-xs text-slate-600">Already opened the confirmation link? Leave the code blank and enter this account's password.</p>
           <div><label htmlFor={label('confirmation-password')} className="block text-sm font-semibold mb-1">Confirmed account password</label>
             <input id={label('confirmation-password')} type="password" autoComplete="current-password" required={!code.trim()} maxLength={256} value={confirmationPassword} onChange={e => setConfirmationPassword(e.target.value)} className={control} /></div>
-          <button disabled={busy} className="w-full rounded-xl bg-blue-900 px-4 py-3 text-sm font-semibold text-white disabled:opacity-60">{busy ? 'Verifying…' : 'Verify email'}</button>
+          <button disabled={busy || (!code.trim() && !captcha.ready)} className="w-full rounded-xl bg-blue-900 px-4 py-3 text-sm font-semibold text-white disabled:opacity-60">{busy ? 'Verifying…' : 'Verify email'}</button>
         </form>}
         <div className="flex flex-wrap gap-3">
-          {pending.signup_id && <button type="button" disabled={busy} onClick={() => void run(async () => {
+          {pending.signup_id && <button type="button" disabled={busy || !captcha.ready} onClick={() => void run(async () => {
             await ownRequest(`/api/auth/enrollments/${pending.id}/resend`,{ method:'POST' });setNotice('A new confirmation email has been requested.');
           })} className="rounded-xl border border-blue-200 px-3 py-2.5 text-sm">Resend email</button>}
           <button type="button" disabled={busy} onClick={() => void run(async () => {

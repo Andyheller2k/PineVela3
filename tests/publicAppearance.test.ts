@@ -11,7 +11,7 @@ test('public catalog appearances agree before paint and after navigation without
     ['/', 'light'], ['/login', 'light'], ['/login/', 'light'],
     ['/pinemarket', 'dark'], ['/pinemarket/', 'dark'], ['/pineresidence', 'dark'],
     ['/pineresidence/', 'dark'], ['/pinemarket/stores/store-id', 'dark'], ['/pinemarket/stores/store-id/', 'dark'],
-    ['/faq', 'dark'], ['/support-invitation', 'dark'], ['/help', 'dark'],
+    ['/faq', 'dark'], ['/support-invitation', 'dark'], ['/help', 'dark'], ['/why-us', 'dark'], ['/why-us/', 'dark'],
     ['/user/dashboard', null], ['/resident/dashboard', null], ['/pinemarket-other', null],
   ] as const) {
     assert.equal(getPublicAppearance(route), fixed, route);

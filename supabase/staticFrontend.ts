@@ -12,6 +12,26 @@ export const frontendFramingProtection:RequestHandler=(_req,res,next)=>{
 export function installStaticFrontend(app: Express, directory = path.resolve('dist-supabase')) {
   app.use(frontendFramingProtection);
   app.use(compression());
+  // Exact public install resources only. A missing worker must return 404,
+  // never the SPA document; updates must bypass stale intermediary caches.
+  for (const [route, file, type] of [
+    ['/manifest.webmanifest', 'manifest.webmanifest', 'application/manifest+json'],
+    ['/sw.js', 'sw.js', 'application/javascript'],
+    ['/icons/pinevela-192.png', 'icons/pinevela-192.png', 'image/png'],
+    ['/icons/pinevela-512.png', 'icons/pinevela-512.png', 'image/png'],
+    ['/icons/pinevela-maskable-512.png', 'icons/pinevela-maskable-512.png', 'image/png'],
+    ['/icons/apple-touch-icon.png', 'icons/apple-touch-icon.png', 'image/png'],
+  ]) {
+    app.get(route, (_req, res, next) => {
+      res.set({ 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', 'Content-Type': type });
+      if (route === '/sw.js') res.setHeader('Service-Worker-Allowed', '/');
+      res.sendFile(path.join(directory, file), error => {
+        if (!error) return;
+        if ((error as NodeJS.ErrnoException).code === 'ENOENT' || (error as {status?:number}).status === 404) res.sendStatus(404);
+        else next(error);
+      });
+    });
+  }
   app.use('/assets', express.static(path.join(directory, 'assets'), {
     immutable: true, maxAge: '1y', index: false,
   }));

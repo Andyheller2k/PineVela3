@@ -1409,29 +1409,12 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                 </div>
               </div>
 
-              <div>
-                {userRooms.length < 1 ? (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowClaimModal(true);
-                      setClaimRoomKeyInput('');
-                      setVerifiedKeyInfo(null);
-                      setClaimError(null);
-                      setClaimStep(1);
-                    }}
-                    className="w-full sm:w-auto px-5 py-3 bg-gradient-to-r from-blue-900 to-indigo-900 hover:from-blue-850 hover:to-indigo-850 text-white font-black text-xs rounded-2xl shadow-lg shadow-blue-900/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
-                  >
-                    <Plus className="w-4 h-4 text-emerald-400" />
-                    <span>Activate Digital Room Key</span>
-                  </button>
-                ) : (
-                  <div className="px-4 py-2 bg-amber-50 border border-amber-200 text-amber-800 text-xs font-bold rounded-xl flex items-center gap-1.5">
-                    <CheckCircle2 className="w-4 h-4 text-amber-600" />
-                    <span>Max Capacity (1 Room Per Account) Reached</span>
-                  </div>
-                )}
-              </div>
+              {userRooms.length > 0 && (
+                <div className="px-4 py-2 bg-amber-50 border border-amber-200 text-amber-800 text-xs font-bold rounded-xl flex items-center gap-1.5">
+                  <CheckCircle2 className="w-4 h-4 text-amber-600" />
+                  <span>Max Capacity (1 Room Per Account) Reached</span>
+                </div>
+              )}
             </div>
 
             {/* ROOM CARDS LIST */}

@@ -1,0 +1,2988 @@
+{
+  "reviewed_date": "2026-10-22",
+  "scope": "Current Express HTTP API source registration inventory. Static frontend paths, middleware-only registrations and /api/* unknown-operation catchall are excluded.",
+  "method": "TypeScript AST walk over app.get/post/put/patch/delete calls in supabase/*.ts except staticFrontend.ts, plus imported googleAuth.ts. Literal path arrays are expanded. Three inspect/accept loops are expanded from their actual constant arrays. Installer reachability was reviewed against supabase/app.ts and auth/payments nested installers.",
+  "counts": {
+    "source_registration_calls": 268,
+    "expanded_registration_entries": 290,
+    "distinct_source_method_path_pairs": 288,
+    "source_files_with_registrations": 59,
+    "confirmed_410_guard_entries": 3
+  },
+  "caveats": [
+    "Counts describe source registrations, not a runtime HTTP probe, end-to-end validation, unique business workflows or migration completion.",
+    "Two method/path pairs have intentional chained registrations: POST /api/auth/google/start and GET /api/auth/google/callback. They are counted once in distinct_source_method_path_pairs.",
+    "Method/path strings containing :parameters remain parameterized patterns, not enumerated concrete URLs.",
+    "Unknown retirement status means no retirement conclusion was drawn, not that the endpoint was tested active.",
+    "Private operator workers and background tasks are outside the HTTP endpoint count and listed separately.",
+    "Supabase already provides sole runtime persistence; this inventory concerns an optional Express runtime replacement, not a pending JSON data migration."
+  ],
+  "duplicate_method_path_registrations": [
+    {
+      "method_path": "POST /api/auth/google/start",
+      "registrations": [
+        {
+          "file": "supabase/auth.ts",
+          "line": 329
+        },
+        {
+          "file": "googleAuth.ts",
+          "line": 67
+        }
+      ]
+    },
+    {
+      "method_path": "GET /api/auth/google/callback",
+      "registrations": [
+        {
+          "file": "supabase/googleManagerEnrollment.ts",
+          "line": 93
+        },
+        {
+          "file": "googleAuth.ts",
+          "line": 91
+        }
+      ]
+    }
+  ],
+  "background_and_operator_work": [
+    {
+      "name": "Notification invalidation SSE",
+      "file": "supabase/realtime.ts",
+      "line": 9,
+      "details": "PostgreSQL LISTEN listener, 25-second heartbeat and live actor recheck; stream ends after 10 minutes. In-memory stream cap is 128 total, 20 per IP, 3 per Auth subject. Supabase Realtime replacement must preserve recipient isolation and revocation."
+    },
+    {
+      "name": "Order reservation expiry",
+      "file": "supabase/orderExpiry.ts",
+      "line": 26,
+      "details": "Startup and 60-second tick, no overlapping local batch, at most 50 candidates per tick; transactional store/listing/order locks, audit, notifications and PIN cleanup."
+    },
+    {
+      "name": "Payment reversal reconciliation",
+      "file": "supabase/paymentReversals.ts",
+      "line": 133,
+      "details": "Startup and 15-second tick, one local pending task; durable leases, provider verification, retries and idempotent access reconciliation must survive process replacement."
+    },
+    {
+      "name": "Support email outbox",
+      "file": "supabase/support.ts",
+      "line": 177,
+      "details": "30-second tick and reply-triggered flush; deliverSupportEmail leases up to 5 emails, allows 8 attempts, uses 15-second provider timeout and stable Resend idempotency key. SMTP authentication mail is a separate hosted Auth configuration."
+    },
+    {
+      "name": "Reviewed residence execution worker",
+      "file": "supabase-residence-worker.ts",
+      "line": 1,
+      "details": "Separate private operator binary, preview default. --execute and optional --watch; 15-second poll. Up to 10 execution requests and 20 storage cleanup jobs per batch. Restores/reverifies saved recovery evidence and exact current founder consent; not a normal HTTP handler."
+    },
+    {
+      "name": "Reviewed system wipe worker",
+      "file": "supabase-system-wipe-worker.ts",
+      "line": 1,
+      "details": "Separate gated private operator binary, preview default. --execute and optional --watch; 15-second poll, up to 10 reviewed requests per batch. Depends on private filesystem recovery material and subprocess restore tooling."
+    }
+  ],
+  "endpoints": [
+    {
+      "method": "GET",
+      "path": "/api/hostels/:id/room-key-reset-preview",
+      "file": "supabase/academicRoomKeys.ts",
+      "line": 87,
+      "source_registration": 1,
+      "expansion": "literal",
+      "source_path_expression": "'/api/hostels/:id/room-key-reset-preview'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/hostels/:id/reshuffle-room-keys",
+      "file": "supabase/academicRoomKeys.ts",
+      "line": 91,
+      "source_registration": 2,
+      "expansion": "literal",
+      "source_path_expression": "'/api/hostels/:id/reshuffle-room-keys'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/all-users",
+      "file": "supabase/accountReviews.ts",
+      "line": 214,
+      "source_registration": 3,
+      "expansion": "literal",
+      "source_path_expression": "'/api/admin/all-users'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/manager-closure-requests/:id/review",
+      "file": "supabase/accountReviews.ts",
+      "line": 215,
+      "source_registration": 4,
+      "expansion": "literal",
+      "source_path_expression": "'/api/admin/manager-closure-requests/:id/review'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/governance/accounts",
+      "file": "supabase/accountReviews.ts",
+      "line": 227,
+      "source_registration": 5,
+      "expansion": "literal",
+      "source_path_expression": "'/api/admin/governance/accounts'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/governance/accounts/:id/vote",
+      "file": "supabase/accountReviews.ts",
+      "line": 228,
+      "source_registration": 6,
+      "expansion": "literal",
+      "source_path_expression": "'/api/admin/governance/accounts/:id/vote'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/governance/accounts/:id/apply",
+      "file": "supabase/accountReviews.ts",
+      "line": 229,
+      "source_registration": 7,
+      "expansion": "literal",
+      "source_path_expression": "'/api/admin/governance/accounts/:id/apply'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/governance/accounts/:id/final-reject",
+      "file": "supabase/accountReviews.ts",
+      "line": 230,
+      "source_registration": 8,
+      "expansion": "literal",
+      "source_path_expression": "'/api/admin/governance/accounts/:id/final-reject'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "GET",
+      "path": "/api/users/my-registered-accounts",
+      "file": "supabase/accountStatus.ts",
+      "line": 61,
+      "source_registration": 9,
+      "expansion": "array_alias",
+      "source_path_expression": "['/api/users/my-registered-accounts','/api/user/registered-accounts']",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "GET",
+      "path": "/api/user/registered-accounts",
+      "file": "supabase/accountStatus.ts",
+      "line": 61,
+      "source_registration": 9,
+      "expansion": "array_alias",
+      "source_path_expression": "['/api/users/my-registered-accounts','/api/user/registered-accounts']",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/dashboard-directories",
+      "file": "supabase/adminDashboardDirectories.ts",
+      "line": 53,
+      "source_registration": 10,
+      "expansion": "literal",
+      "source_path_expression": "'/api/admin/dashboard-directories'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/governance",
+      "file": "supabase/adminGovernance.ts",
+      "line": 188,
+      "source_registration": 11,
+      "expansion": "literal",
+      "source_path_expression": "'/api/admin/governance'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/governance/keys/enroll",
+      "file": "supabase/adminGovernance.ts",
+      "line": 189,
+      "source_registration": 12,
+      "expansion": "literal",
+      "source_path_expression": "'/api/admin/governance/keys/enroll'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/governance/members/:id/changes",
+      "file": "supabase/adminGovernance.ts",
+      "line": 193,
+      "source_registration": 13,
+      "expansion": "literal",
+      "source_path_expression": "'/api/admin/governance/members/:id/changes'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/governance/members/:id/active",
+      "file": "supabase/adminGovernance.ts",
+      "line": 194,
+      "source_registration": 14,
+      "expansion": "literal",
+      "source_path_expression": "'/api/admin/governance/members/:id/active'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/governance/changes/:id/vote",
+      "file": "supabase/adminGovernance.ts",
+      "line": 195,
+      "source_registration": 15,
+      "expansion": "literal",
+      "source_path_expression": "'/api/admin/governance/changes/:id/vote'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/governance/changes/:id/plea",
+      "file": "supabase/adminGovernance.ts",
+      "line": 196,
+      "source_registration": 16,
+      "expansion": "literal",
+      "source_path_expression": "'/api/admin/governance/changes/:id/plea'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/governance/changes/:id/plea/decision",
+      "file": "supabase/adminGovernance.ts",
+      "line": 197,
+      "source_registration": 17,
+      "expansion": "literal",
+      "source_path_expression": "'/api/admin/governance/changes/:id/plea/decision'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/governance/changes/:id/plea/acknowledge",
+      "file": "supabase/adminGovernance.ts",
+      "line": 198,
+      "source_registration": 18,
+      "expansion": "literal",
+      "source_path_expression": "'/api/admin/governance/changes/:id/plea/acknowledge'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/governance/changes/:id/confirm-removal",
+      "file": "supabase/adminGovernance.ts",
+      "line": 199,
+      "source_registration": 19,
+      "expansion": "literal",
+      "source_path_expression": "'/api/admin/governance/changes/:id/confirm-removal'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/governance/invitations",
+      "file": "supabase/adminInvitations.ts",
+      "line": 97,
+      "source_registration": 20,
+      "expansion": "literal",
+      "source_path_expression": "'/api/admin/governance/invitations'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/governance/invitations/:id/cancel",
+      "file": "supabase/adminInvitations.ts",
+      "line": 98,
+      "source_registration": 21,
+      "expansion": "literal",
+      "source_path_expression": "'/api/admin/governance/invitations/:id/cancel'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/admin-invitation/inspect",
+      "file": "supabase/adminInvitations.ts",
+      "line": 99,
+      "source_registration": 22,
+      "expansion": "constant_loop",
+      "source_path_expression": "`/api/auth/admin-invitation/${action}`",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/admin-invitation/accept",
+      "file": "supabase/adminInvitations.ts",
+      "line": 99,
+      "source_registration": 22,
+      "expansion": "constant_loop",
+      "source_path_expression": "`/api/auth/admin-invitation/${action}`",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/messages/accounts",
+      "file": "supabase/adminMessages.ts",
+      "line": 90,
+      "source_registration": 23,
+      "expansion": "literal",
+      "source_path_expression": "'/api/admin/messages/accounts'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/messages/preview",
+      "file": "supabase/adminMessages.ts",
+      "line": 91,
+      "source_registration": 24,
+      "expansion": "literal",
+      "source_path_expression": "'/api/admin/messages/preview'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/messages",
+      "file": "supabase/adminMessages.ts",
+      "line": 92,
+      "source_registration": 25,
+      "expansion": "literal",
+      "source_path_expression": "'/api/admin/messages'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/settings/status",
+      "file": "supabase/adminSettings.ts",
+      "line": 152,
+      "source_registration": 26,
+      "expansion": "literal",
+      "source_path_expression": "'/api/admin/settings/status'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/governance/keys/settings/enroll",
+      "file": "supabase/adminSettings.ts",
+      "line": 154,
+      "source_registration": 27,
+      "expansion": "literal",
+      "source_path_expression": "'/api/admin/governance/keys/settings/enroll'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/payments/receiving-account",
+      "file": "supabase/adminSettings.ts",
+      "line": 158,
+      "source_registration": 28,
+      "expansion": "literal",
+      "source_path_expression": "'/api/admin/payments/receiving-account'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/payments/receiving-account",
+      "file": "supabase/adminSettings.ts",
+      "line": 159,
+      "source_registration": 29,
+      "expansion": "literal",
+      "source_path_expression": "'/api/admin/payments/receiving-account'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/digital-market/stores",
+      "file": "supabase/adminStoreOverview.ts",
+      "line": 74,
+      "source_registration": 30,
+      "expansion": "literal",
+      "source_path_expression": "'/api/admin/digital-market/stores'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/manager-restrictions",
+      "file": "supabase/adminStoreOverview.ts",
+      "line": 75,
+      "source_registration": 31,
+      "expansion": "literal",
+      "source_path_expression": "'/api/admin/manager-restrictions'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "GET",
+      "path": "/api/auth/captcha",
+      "file": "supabase/app.ts",
+      "line": 99,
+      "source_registration": 32,
+      "expansion": "literal",
+      "source_path_expression": "'/api/auth/captcha'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "GET",
+      "path": "/api/health",
+      "file": "supabase/app.ts",
+      "line": 100,
+      "source_registration": 33,
+      "expansion": "literal",
+      "source_path_expression": "'/api/health'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "GET",
+      "path": "/api/settings",
+      "file": "supabase/app.ts",
+      "line": 101,
+      "source_registration": 34,
+      "expansion": "literal",
+      "source_path_expression": "'/api/settings'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "GET",
+      "path": "/api/database/status",
+      "file": "supabase/app.ts",
+      "line": 157,
+      "source_registration": 35,
+      "expansion": "literal",
+      "source_path_expression": "'/api/database/status'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "GET",
+      "path": "/api/auth/appearance",
+      "file": "supabase/appearance.ts",
+      "line": 26,
+      "source_registration": 36,
+      "expansion": "literal",
+      "source_path_expression": "'/api/auth/appearance'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/auth/appearance",
+      "file": "supabase/appearance.ts",
+      "line": 30,
+      "source_registration": 37,
+      "expansion": "literal",
+      "source_path_expression": "'/api/auth/appearance'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "GET",
+      "path": "/api/auth/account-access",
+      "file": "supabase/auth.ts",
+      "line": 309,
+      "source_registration": 38,
+      "expansion": "literal",
+      "source_path_expression": "'/api/auth/account-access'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/login",
+      "file": "supabase/auth.ts",
+      "line": 325,
+      "source_registration": 39,
+      "expansion": "literal",
+      "source_path_expression": "'/api/auth/login'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/digital-market/login",
+      "file": "supabase/auth.ts",
+      "line": 326,
+      "source_registration": 40,
+      "expansion": "literal",
+      "source_path_expression": "'/api/digital-market/login'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/verification-team-login",
+      "file": "supabase/auth.ts",
+      "line": 327,
+      "source_registration": 41,
+      "expansion": "literal",
+      "source_path_expression": "'/api/auth/verification-team-login'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/verification-teams/login",
+      "file": "supabase/auth.ts",
+      "line": 328,
+      "source_registration": 42,
+      "expansion": "literal",
+      "source_path_expression": "'/api/verification-teams/login'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/google/start",
+      "file": "supabase/auth.ts",
+      "line": 329,
+      "source_registration": 43,
+      "expansion": "literal",
+      "source_path_expression": "'/api/auth/google/start'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/register-unified",
+      "file": "supabase/auth.ts",
+      "line": 351,
+      "source_registration": 44,
+      "expansion": "literal",
+      "source_path_expression": "'/api/auth/register-unified'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/resend-unified",
+      "file": "supabase/auth.ts",
+      "line": 364,
+      "source_registration": 45,
+      "expansion": "literal",
+      "source_path_expression": "'/api/auth/resend-unified'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/verify-unified",
+      "file": "supabase/auth.ts",
+      "line": 373,
+      "source_registration": 46,
+      "expansion": "literal",
+      "source_path_expression": "'/api/auth/verify-unified'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "GET",
+      "path": "/api/auth/me",
+      "file": "supabase/auth.ts",
+      "line": 382,
+      "source_registration": 47,
+      "expansion": "literal",
+      "source_path_expression": "'/api/auth/me'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "GET",
+      "path": "/api/auth/contexts",
+      "file": "supabase/auth.ts",
+      "line": 383,
+      "source_registration": 48,
+      "expansion": "literal",
+      "source_path_expression": "'/api/auth/contexts'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/context",
+      "file": "supabase/auth.ts",
+      "line": 387,
+      "source_registration": 49,
+      "expansion": "literal",
+      "source_path_expression": "'/api/auth/context'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/logout",
+      "file": "supabase/auth.ts",
+      "line": 388,
+      "source_registration": 50,
+      "expansion": "literal",
+      "source_path_expression": "'/api/auth/logout'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "GET",
+      "path": "/api/hostels",
+      "file": "supabase/catalog.ts",
+      "line": 46,
+      "source_registration": 51,
+      "expansion": "literal",
+      "source_path_expression": "'/api/hostels'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "GET",
+      "path": "/api/hostels/:id",
+      "file": "supabase/catalog.ts",
+      "line": 47,
+      "source_registration": 52,
+      "expansion": "literal",
+      "source_path_expression": "'/api/hostels/:id'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "GET",
+      "path": "/api/digital-market/products",
+      "file": "supabase/catalog.ts",
+      "line": 51,
+      "source_registration": 53,
+      "expansion": "literal",
+      "source_path_expression": "'/api/digital-market/products'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "GET",
+      "path": "/api/digital-market/stores/:id",
+      "file": "supabase/catalog.ts",
+      "line": 55,
+      "source_registration": 54,
+      "expansion": "literal",
+      "source_path_expression": "'/api/digital-market/stores/:id'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "GET",
+      "path": "/api/companion",
+      "file": "supabase/companion.ts",
+      "line": 192,
+      "source_registration": 55,
+      "expansion": "literal",
+      "source_path_expression": "'/api/companion'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/companion/preferences",
+      "file": "supabase/companion.ts",
+      "line": 196,
+      "source_registration": 56,
+      "expansion": "literal",
+      "source_path_expression": "'/api/companion/preferences'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/companion/history",
+      "file": "supabase/companion.ts",
+      "line": 202,
+      "source_registration": 57,
+      "expansion": "literal",
+      "source_path_expression": "'/api/companion/history'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/companion/turns",
+      "file": "supabase/companion.ts",
+      "line": 207,
+      "source_registration": 58,
+      "expansion": "literal",
+      "source_path_expression": "'/api/companion/turns'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "GET",
+      "path": "/api/customer-service/content-checks",
+      "file": "supabase/contentSafety.ts",
+      "line": 122,
+      "source_registration": 59,
+      "expansion": "literal",
+      "source_path_expression": "'/api/customer-service/content-checks'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "GET",
+      "path": "/api/customer-service/content-checks/:id/image",
+      "file": "supabase/contentSafety.ts",
+      "line": 134,
+      "source_registration": 60,
+      "expansion": "literal",
+      "source_path_expression": "'/api/customer-service/content-checks/:id/image'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/content-checks/:id/decision",
+      "file": "supabase/contentSafety.ts",
+      "line": 143,
+      "source_registration": 61,
+      "expansion": "literal",
+      "source_path_expression": "'/api/admin/content-checks/:id/decision'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "GET",
+      "path": "/api/staff",
+      "file": "supabase/dashboardReads.ts",
+      "line": 49,
+      "source_registration": 62,
+      "expansion": "literal",
+      "source_path_expression": "'/api/staff'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "GET",
+      "path": "/api/issue-reports",
+      "file": "supabase/dashboardReads.ts",
+      "line": 50,
+      "source_registration": 63,
+      "expansion": "literal",
+      "source_path_expression": "'/api/issue-reports'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "GET",
+      "path": "/api/staff-bargains",
+      "file": "supabase/dashboardReads.ts",
+      "line": 51,
+      "source_registration": 64,
+      "expansion": "literal",
+      "source_path_expression": "'/api/staff-bargains'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "GET",
+      "path": "/api/board-requests",
+      "file": "supabase/dashboardReads.ts",
+      "line": 52,
+      "source_registration": 65,
+      "expansion": "literal",
+      "source_path_expression": "'/api/board-requests'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "GET",
+      "path": "/api/activities",
+      "file": "supabase/dashboardReads.ts",
+      "line": 53,
+      "source_registration": 66,
+      "expansion": "literal",
+      "source_path_expression": "'/api/activities'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/enrollments",
+      "file": "supabase/enrollment.ts",
+      "line": 187,
+      "source_registration": 67,
+      "expansion": "literal",
+      "source_path_expression": "'/api/auth/enrollments'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "GET",
+      "path": "/api/auth/enrollments",
+      "file": "supabase/enrollment.ts",
+      "line": 239,
+      "source_registration": 68,
+      "expansion": "literal",
+      "source_path_expression": "'/api/auth/enrollments'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/enrollments/:id/reactivate",
+      "file": "supabase/enrollment.ts",
+      "line": 243,
+      "source_registration": 69,
+      "expansion": "literal",
+      "source_path_expression": "'/api/auth/enrollments/:id/reactivate'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/enrollments/:id/verify",
+      "file": "supabase/enrollment.ts",
+      "line": 265,
+      "source_registration": 70,
+      "expansion": "literal",
+      "source_path_expression": "'/api/auth/enrollments/:id/verify'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/enrollments/:id/resend",
+      "file": "supabase/enrollment.ts",
+      "line": 289,
+      "source_registration": 71,
+      "expansion": "literal",
+      "source_path_expression": "'/api/auth/enrollments/:id/resend'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/auth/enrollments/:id",
+      "file": "supabase/enrollment.ts",
+      "line": 296,
+      "source_registration": 72,
+      "expansion": "literal",
+      "source_path_expression": "'/api/auth/enrollments/:id'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/room-keys/claim",
+      "file": "supabase/enrollment.ts",
+      "line": 311,
+      "source_registration": 73,
+      "expansion": "array_alias",
+      "source_path_expression": "['/api/room-keys/claim','/api/residents/onboard']",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/residents/onboard",
+      "file": "supabase/enrollment.ts",
+      "line": 311,
+      "source_registration": 73,
+      "expansion": "array_alias",
+      "source_path_expression": "['/api/room-keys/claim','/api/residents/onboard']",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/room-keys/verify",
+      "file": "supabase/enrollment.ts",
+      "line": 317,
+      "source_registration": 74,
+      "expansion": "literal",
+      "source_path_expression": "'/api/room-keys/verify'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "GET",
+      "path": "/api/auth/enrollments/policy",
+      "file": "supabase/googleManagerEnrollment.ts",
+      "line": 65,
+      "source_registration": 75,
+      "expansion": "literal",
+      "source_path_expression": "'/api/auth/enrollments/policy'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/enrollments/google/start",
+      "file": "supabase/googleManagerEnrollment.ts",
+      "line": 69,
+      "source_registration": 76,
+      "expansion": "literal",
+      "source_path_expression": "'/api/auth/enrollments/google/start'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "GET",
+      "path": "/api/auth/google/callback",
+      "file": "supabase/googleManagerEnrollment.ts",
+      "line": 93,
+      "source_registration": 77,
+      "expansion": "literal",
+      "source_path_expression": "'/api/auth/google/callback'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "GET",
+      "path": "/api/manager/my-hostel",
+      "file": "supabase/housing.ts",
+      "line": 155,
+      "source_registration": 78,
+      "expansion": "literal",
+      "source_path_expression": "'/api/manager/my-hostel'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "GET",
+      "path": "/api/room-keys",
+      "file": "supabase/housing.ts",
+      "line": 170,
+      "source_registration": 79,
+      "expansion": "literal",
+      "source_path_expression": "'/api/room-keys'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/hostels/:id/generate-room-keys",
+      "file": "supabase/housing.ts",
+      "line": 172,
+      "source_registration": 80,
+      "expansion": "literal",
+      "source_path_expression": "'/api/hostels/:id/generate-room-keys'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/room-keys/:id/release",
+      "file": "supabase/housing.ts",
+      "line": 176,
+      "source_registration": 81,
+      "expansion": "literal",
+      "source_path_expression": "'/api/room-keys/:id/release'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "GET",
+      "path": "/api/manager-verifications",
+      "file": "supabase/inspections.ts",
+      "line": 171,
+      "source_registration": 82,
+      "expansion": "array_alias",
+      "source_path_expression": "['/api/manager-verifications','/api/manager-requests']",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "GET",
+      "path": "/api/manager-requests",
+      "file": "supabase/inspections.ts",
+      "line": 171,
+      "source_registration": 82,
+      "expansion": "array_alias",
+      "source_path_expression": "['/api/manager-verifications','/api/manager-requests']",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/verification-inspections",
+      "file": "supabase/inspections.ts",
+      "line": 179,
+      "source_registration": 83,
+      "expansion": "array_alias",
+      "source_path_expression": "['/api/admin/verification-inspections','/api/verification-inspections']",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "GET",
+      "path": "/api/verification-inspections",
+      "file": "supabase/inspections.ts",
+      "line": 179,
+      "source_registration": 83,
+      "expansion": "array_alias",
+      "source_path_expression": "['/api/admin/verification-inspections','/api/verification-inspections']",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "GET",
+      "path": "/api/verification-team/my-inspections",
+      "file": "supabase/inspections.ts",
+      "line": 180,
+      "source_registration": 84,
+      "expansion": "literal",
+      "source_path_expression": "'/api/verification-team/my-inspections'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "GET",
+      "path": "/api/verification-teams",
+      "file": "supabase/inspections.ts",
+      "line": 181,
+      "source_registration": 85,
+      "expansion": "literal",
+      "source_path_expression": "'/api/verification-teams'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "GET",
+      "path": "/api/verification-team/me",
+      "file": "supabase/inspections.ts",
+      "line": 188,
+      "source_registration": 86,
+      "expansion": "literal",
+      "source_path_expression": "'/api/verification-team/me'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/dispatch-verification-team",
+      "file": "supabase/inspections.ts",
+      "line": 193,
+      "source_registration": 87,
+      "expansion": "literal",
+      "source_path_expression": "'/api/admin/dispatch-verification-team'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/verification-team/inspections/:id/submit-report",
+      "file": "supabase/inspections.ts",
+      "line": 197,
+      "source_registration": 88,
+      "expansion": "literal",
+      "source_path_expression": "'/api/verification-team/inspections/:id/submit-report'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/manager-requests/:id/approve",
+      "file": "supabase/inspections.ts",
+      "line": 199,
+      "source_registration": 89,
+      "expansion": "array_alias",
+      "source_path_expression": "['/api/manager-requests/:id/approve','/api/manager-verifications/:id/approve']",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/manager-verifications/:id/approve",
+      "file": "supabase/inspections.ts",
+      "line": 199,
+      "source_registration": 89,
+      "expansion": "array_alias",
+      "source_path_expression": "['/api/manager-requests/:id/approve','/api/manager-verifications/:id/approve']",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/manager-requests/:id/reject",
+      "file": "supabase/inspections.ts",
+      "line": 201,
+      "source_registration": 90,
+      "expansion": "array_alias",
+      "source_path_expression": "['/api/manager-requests/:id/reject','/api/manager-verifications/:id/reject']",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/manager-verifications/:id/reject",
+      "file": "supabase/inspections.ts",
+      "line": 201,
+      "source_registration": 90,
+      "expansion": "array_alias",
+      "source_path_expression": "['/api/manager-requests/:id/reject','/api/manager-verifications/:id/reject']",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/manager-verifications/:id/request-info",
+      "file": "supabase/inspections.ts",
+      "line": 203,
+      "source_registration": 91,
+      "expansion": "literal",
+      "source_path_expression": "'/api/manager-verifications/:id/request-info'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "GET",
+      "path": "/api/digital-market/inventory",
+      "file": "supabase/inventory.ts",
+      "line": 98,
+      "source_registration": 92,
+      "expansion": "literal",
+      "source_path_expression": "'/api/digital-market/inventory'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/digital-market/products",
+      "file": "supabase/inventory.ts",
+      "line": 113,
+      "source_registration": 93,
+      "expansion": "literal",
+      "source_path_expression": "'/api/digital-market/products'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/digital-market/products/:id",
+      "file": "supabase/inventory.ts",
+      "line": 114,
+      "source_registration": 94,
+      "expansion": "literal",
+      "source_path_expression": "'/api/digital-market/products/:id'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/digital-market/products/:id",
+      "file": "supabase/inventory.ts",
+      "line": 115,
+      "source_registration": 95,
+      "expansion": "literal",
+      "source_path_expression": "'/api/digital-market/products/:id'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/issue-reports",
+      "file": "supabase/maintenance.ts",
+      "line": 208,
+      "source_registration": 96,
+      "expansion": "literal",
+      "source_path_expression": "'/api/issue-reports'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/issue-reports/:id",
+      "file": "supabase/maintenance.ts",
+      "line": 209,
+      "source_registration": 97,
+      "expansion": "literal",
+      "source_path_expression": "'/api/issue-reports/:id'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/issue-reports/:id/assign",
+      "file": "supabase/maintenance.ts",
+      "line": 210,
+      "source_registration": 98,
+      "expansion": "array_alias",
+      "source_path_expression": "['/api/issue-reports/:id/assign','/api/issue-reports/:id/accept-assignment','/api/issue-reports/:id/staff-decline',\n    '/api/issue-reports/:id/staff-reschedule','/api/issue-reports/:id/approve-reschedule','/api/issue-reports/:id/decline-reschedule',\n    '/api/issue-reports/:id/staff-complete','/api/issue-reports/:id/student-confirm','/api/issue-reports/:id/manager-close']",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/issue-reports/:id/accept-assignment",
+      "file": "supabase/maintenance.ts",
+      "line": 210,
+      "source_registration": 98,
+      "expansion": "array_alias",
+      "source_path_expression": "['/api/issue-reports/:id/assign','/api/issue-reports/:id/accept-assignment','/api/issue-reports/:id/staff-decline',\n    '/api/issue-reports/:id/staff-reschedule','/api/issue-reports/:id/approve-reschedule','/api/issue-reports/:id/decline-reschedule',\n    '/api/issue-reports/:id/staff-complete','/api/issue-reports/:id/student-confirm','/api/issue-reports/:id/manager-close']",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/issue-reports/:id/staff-decline",
+      "file": "supabase/maintenance.ts",
+      "line": 210,
+      "source_registration": 98,
+      "expansion": "array_alias",
+      "source_path_expression": "['/api/issue-reports/:id/assign','/api/issue-reports/:id/accept-assignment','/api/issue-reports/:id/staff-decline',\n    '/api/issue-reports/:id/staff-reschedule','/api/issue-reports/:id/approve-reschedule','/api/issue-reports/:id/decline-reschedule',\n    '/api/issue-reports/:id/staff-complete','/api/issue-reports/:id/student-confirm','/api/issue-reports/:id/manager-close']",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/issue-reports/:id/staff-reschedule",
+      "file": "supabase/maintenance.ts",
+      "line": 210,
+      "source_registration": 98,
+      "expansion": "array_alias",
+      "source_path_expression": "['/api/issue-reports/:id/assign','/api/issue-reports/:id/accept-assignment','/api/issue-reports/:id/staff-decline',\n    '/api/issue-reports/:id/staff-reschedule','/api/issue-reports/:id/approve-reschedule','/api/issue-reports/:id/decline-reschedule',\n    '/api/issue-reports/:id/staff-complete','/api/issue-reports/:id/student-confirm','/api/issue-reports/:id/manager-close']",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/issue-reports/:id/approve-reschedule",
+      "file": "supabase/maintenance.ts",
+      "line": 210,
+      "source_registration": 98,
+      "expansion": "array_alias",
+      "source_path_expression": "['/api/issue-reports/:id/assign','/api/issue-reports/:id/accept-assignment','/api/issue-reports/:id/staff-decline',\n    '/api/issue-reports/:id/staff-reschedule','/api/issue-reports/:id/approve-reschedule','/api/issue-reports/:id/decline-reschedule',\n    '/api/issue-reports/:id/staff-complete','/api/issue-reports/:id/student-confirm','/api/issue-reports/:id/manager-close']",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/issue-reports/:id/decline-reschedule",
+      "file": "supabase/maintenance.ts",
+      "line": 210,
+      "source_registration": 98,
+      "expansion": "array_alias",
+      "source_path_expression": "['/api/issue-reports/:id/assign','/api/issue-reports/:id/accept-assignment','/api/issue-reports/:id/staff-decline',\n    '/api/issue-reports/:id/staff-reschedule','/api/issue-reports/:id/approve-reschedule','/api/issue-reports/:id/decline-reschedule',\n    '/api/issue-reports/:id/staff-complete','/api/issue-reports/:id/student-confirm','/api/issue-reports/:id/manager-close']",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/issue-reports/:id/staff-complete",
+      "file": "supabase/maintenance.ts",
+      "line": 210,
+      "source_registration": 98,
+      "expansion": "array_alias",
+      "source_path_expression": "['/api/issue-reports/:id/assign','/api/issue-reports/:id/accept-assignment','/api/issue-reports/:id/staff-decline',\n    '/api/issue-reports/:id/staff-reschedule','/api/issue-reports/:id/approve-reschedule','/api/issue-reports/:id/decline-reschedule',\n    '/api/issue-reports/:id/staff-complete','/api/issue-reports/:id/student-confirm','/api/issue-reports/:id/manager-close']",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/issue-reports/:id/student-confirm",
+      "file": "supabase/maintenance.ts",
+      "line": 210,
+      "source_registration": 98,
+      "expansion": "array_alias",
+      "source_path_expression": "['/api/issue-reports/:id/assign','/api/issue-reports/:id/accept-assignment','/api/issue-reports/:id/staff-decline',\n    '/api/issue-reports/:id/staff-reschedule','/api/issue-reports/:id/approve-reschedule','/api/issue-reports/:id/decline-reschedule',\n    '/api/issue-reports/:id/staff-complete','/api/issue-reports/:id/student-confirm','/api/issue-reports/:id/manager-close']",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/issue-reports/:id/manager-close",
+      "file": "supabase/maintenance.ts",
+      "line": 210,
+      "source_registration": 98,
+      "expansion": "array_alias",
+      "source_path_expression": "['/api/issue-reports/:id/assign','/api/issue-reports/:id/accept-assignment','/api/issue-reports/:id/staff-decline',\n    '/api/issue-reports/:id/staff-reschedule','/api/issue-reports/:id/approve-reschedule','/api/issue-reports/:id/decline-reschedule',\n    '/api/issue-reports/:id/staff-complete','/api/issue-reports/:id/student-confirm','/api/issue-reports/:id/manager-close']",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "GET",
+      "path": "/api/manager/closure-request",
+      "file": "supabase/managerClosureRequests.ts",
+      "line": 154,
+      "source_registration": 99,
+      "expansion": "literal",
+      "source_path_expression": "'/api/manager/closure-request'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/users/delete-registered-account",
+      "file": "supabase/managerClosureRequests.ts",
+      "line": 157,
+      "source_registration": 100,
+      "expansion": "literal",
+      "source_path_expression": "'/api/users/delete-registered-account'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/manager/closure-request/:id/withdraw",
+      "file": "supabase/managerClosureRequests.ts",
+      "line": 162,
+      "source_registration": 101,
+      "expansion": "literal",
+      "source_path_expression": "'/api/manager/closure-request/:id/withdraw'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/manager-closure-requests",
+      "file": "supabase/managerClosureRequests.ts",
+      "line": 166,
+      "source_registration": 102,
+      "expansion": "literal",
+      "source_path_expression": "'/api/admin/manager-closure-requests'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/manager-closure-requests/:id/reject",
+      "file": "supabase/managerClosureRequests.ts",
+      "line": 170,
+      "source_registration": 103,
+      "expansion": "literal",
+      "source_path_expression": "'/api/admin/manager-closure-requests/:id/reject'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/managers/:id/reset-request-key",
+      "file": "supabase/managerKeys.ts",
+      "line": 98,
+      "source_registration": 104,
+      "expansion": "literal",
+      "source_path_expression": "'/api/admin/managers/:id/reset-request-key'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "GET",
+      "path": "/api/manager/secret-key",
+      "file": "supabase/managerKeys.ts",
+      "line": 103,
+      "source_registration": 105,
+      "expansion": "literal",
+      "source_path_expression": "'/api/manager/secret-key'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/manager/secret-key/issue",
+      "file": "supabase/managerKeys.ts",
+      "line": 104,
+      "source_registration": 106,
+      "expansion": "literal",
+      "source_path_expression": "'/api/manager/secret-key/issue'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/manager/secret-key/petition",
+      "file": "supabase/managerKeys.ts",
+      "line": 105,
+      "source_registration": 107,
+      "expansion": "literal",
+      "source_path_expression": "'/api/manager/secret-key/petition'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/manager-key-petitions",
+      "file": "supabase/managerKeys.ts",
+      "line": 109,
+      "source_registration": 108,
+      "expansion": "literal",
+      "source_path_expression": "'/api/admin/manager-key-petitions'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/manager-request-keys",
+      "file": "supabase/managerKeys.ts",
+      "line": 113,
+      "source_registration": 109,
+      "expansion": "literal",
+      "source_path_expression": "'/api/admin/manager-request-keys'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "GET",
+      "path": "/api/users/manager-onboarding",
+      "file": "supabase/managerOnboarding.ts",
+      "line": 31,
+      "source_registration": 110,
+      "expansion": "literal",
+      "source_path_expression": "'/api/users/manager-onboarding'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/enrollments/:id/reactivate/send-code",
+      "file": "supabase/managerReactivation.ts",
+      "line": 67,
+      "source_registration": 111,
+      "expansion": "literal",
+      "source_path_expression": "'/api/auth/enrollments/:id/reactivate/send-code'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/register-manager",
+      "file": "supabase/managerRegistration.ts",
+      "line": 117,
+      "source_registration": 112,
+      "expansion": "array_alias",
+      "source_path_expression": "['/api/auth/register-manager','/api/auth/register-manager-account','/api/manager-verifications/submit']",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/register-manager-account",
+      "file": "supabase/managerRegistration.ts",
+      "line": 117,
+      "source_registration": 112,
+      "expansion": "array_alias",
+      "source_path_expression": "['/api/auth/register-manager','/api/auth/register-manager-account','/api/manager-verifications/submit']",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/manager-verifications/submit",
+      "file": "supabase/managerRegistration.ts",
+      "line": 117,
+      "source_registration": 112,
+      "expansion": "array_alias",
+      "source_path_expression": "['/api/auth/register-manager','/api/auth/register-manager-account','/api/manager-verifications/submit']",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "GET",
+      "path": "/api/digital-market/encryption",
+      "file": "supabase/marketConversation.ts",
+      "line": 86,
+      "source_registration": 113,
+      "expansion": "literal",
+      "source_path_expression": "'/api/digital-market/encryption'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/digital-market/encryption",
+      "file": "supabase/marketConversation.ts",
+      "line": 87,
+      "source_registration": 114,
+      "expansion": "literal",
+      "source_path_expression": "'/api/digital-market/encryption'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/digital-market/encryption/peer",
+      "file": "supabase/marketConversation.ts",
+      "line": 88,
+      "source_registration": 115,
+      "expansion": "literal",
+      "source_path_expression": "'/api/digital-market/encryption/peer'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "GET",
+      "path": "/api/digital-market/messages",
+      "file": "supabase/marketConversation.ts",
+      "line": 89,
+      "source_registration": 116,
+      "expansion": "literal",
+      "source_path_expression": "'/api/digital-market/messages'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/digital-market/messages",
+      "file": "supabase/marketConversation.ts",
+      "line": 90,
+      "source_registration": 117,
+      "expansion": "literal",
+      "source_path_expression": "'/api/digital-market/messages'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/digital-market/ratings",
+      "file": "supabase/marketConversation.ts",
+      "line": 92,
+      "source_registration": 118,
+      "expansion": "literal",
+      "source_path_expression": "'/api/digital-market/ratings'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/digital-market/services/:id/reviews",
+      "file": "supabase/marketConversation.ts",
+      "line": 92,
+      "source_registration": 119,
+      "expansion": "literal",
+      "source_path_expression": "'/api/digital-market/services/:id/reviews'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "GET",
+      "path": "/api/digital-market/ratings",
+      "file": "supabase/marketConversation.ts",
+      "line": 97,
+      "source_registration": 120,
+      "expansion": "literal",
+      "source_path_expression": "'/api/digital-market/ratings'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "GET",
+      "path": "/api/digital-market/services/:id/reviews",
+      "file": "supabase/marketConversation.ts",
+      "line": 97,
+      "source_registration": 121,
+      "expansion": "literal",
+      "source_path_expression": "'/api/digital-market/services/:id/reviews'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/storage/upload-hostel-image",
+      "file": "supabase/media.ts",
+      "line": 197,
+      "source_registration": 122,
+      "expansion": "literal",
+      "source_path_expression": "'/api/storage/upload-hostel-image'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/storage/upload-market-image",
+      "file": "supabase/media.ts",
+      "line": 198,
+      "source_registration": 123,
+      "expansion": "literal",
+      "source_path_expression": "'/api/storage/upload-market-image'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/storage/upload-inspection-image",
+      "file": "supabase/media.ts",
+      "line": 199,
+      "source_registration": 124,
+      "expansion": "literal",
+      "source_path_expression": "'/api/storage/upload-inspection-image'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/storage/upload-maintenance-image",
+      "file": "supabase/media.ts",
+      "line": 200,
+      "source_registration": 125,
+      "expansion": "literal",
+      "source_path_expression": "'/api/storage/upload-maintenance-image'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/storage/upload-repair-image",
+      "file": "supabase/media.ts",
+      "line": 201,
+      "source_registration": 126,
+      "expansion": "literal",
+      "source_path_expression": "'/api/storage/upload-repair-image'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/storage/upload-profile-image",
+      "file": "supabase/media.ts",
+      "line": 203,
+      "source_registration": 127,
+      "expansion": "literal",
+      "source_path_expression": "'/api/storage/upload-profile-image'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/storage/upload-admin-profile",
+      "file": "supabase/media.ts",
+      "line": 204,
+      "source_registration": 128,
+      "expansion": "literal",
+      "source_path_expression": "'/api/storage/upload-admin-profile'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "GET",
+      "path": "/api/media/:id",
+      "file": "supabase/media.ts",
+      "line": 207,
+      "source_registration": 129,
+      "expansion": "literal",
+      "source_path_expression": "'/api/media/:id'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "GET",
+      "path": "/api/meetings",
+      "file": "supabase/meetings.ts",
+      "line": 147,
+      "source_registration": 130,
+      "expansion": "literal",
+      "source_path_expression": "'/api/meetings'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "GET",
+      "path": "/api/meetings/participants",
+      "file": "supabase/meetings.ts",
+      "line": 148,
+      "source_registration": 131,
+      "expansion": "literal",
+      "source_path_expression": "'/api/meetings/participants'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/meetings",
+      "file": "supabase/meetings.ts",
+      "line": 149,
+      "source_registration": 132,
+      "expansion": "literal",
+      "source_path_expression": "'/api/meetings'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/meetings/:id",
+      "file": "supabase/meetings.ts",
+      "line": 150,
+      "source_registration": 133,
+      "expansion": "literal",
+      "source_path_expression": "'/api/meetings/:id'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/meetings/:id",
+      "file": "supabase/meetings.ts",
+      "line": 151,
+      "source_registration": 134,
+      "expansion": "literal",
+      "source_path_expression": "'/api/meetings/:id'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/reports",
+      "file": "supabase/moderation.ts",
+      "line": 193,
+      "source_registration": 135,
+      "expansion": "literal",
+      "source_path_expression": "'/api/reports'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "GET",
+      "path": "/api/reports",
+      "file": "supabase/moderation.ts",
+      "line": 194,
+      "source_registration": 136,
+      "expansion": "literal",
+      "source_path_expression": "'/api/reports'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "GET",
+      "path": "/api/customer-service/reports/:id",
+      "file": "supabase/moderation.ts",
+      "line": 195,
+      "source_registration": 137,
+      "expansion": "literal",
+      "source_path_expression": "'/api/customer-service/reports/:id'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "GET",
+      "path": "/api/customer-service/reports",
+      "file": "supabase/moderation.ts",
+      "line": 196,
+      "source_registration": 138,
+      "expansion": "literal",
+      "source_path_expression": "'/api/customer-service/reports'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/customer-service/reports/:id/recommend",
+      "file": "supabase/moderation.ts",
+      "line": 197,
+      "source_registration": 139,
+      "expansion": "literal",
+      "source_path_expression": "'/api/customer-service/reports/:id/recommend'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/reports",
+      "file": "supabase/moderation.ts",
+      "line": 198,
+      "source_registration": 140,
+      "expansion": "literal",
+      "source_path_expression": "'/api/admin/reports'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/reports/:id/decision",
+      "file": "supabase/moderation.ts",
+      "line": 202,
+      "source_registration": 141,
+      "expansion": "literal",
+      "source_path_expression": "'/api/admin/reports/:id/decision'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "GET",
+      "path": "/api/notifications",
+      "file": "supabase/notifications.ts",
+      "line": 50,
+      "source_registration": 142,
+      "expansion": "literal",
+      "source_path_expression": "'/api/notifications'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/notifications/read-all",
+      "file": "supabase/notifications.ts",
+      "line": 55,
+      "source_registration": 143,
+      "expansion": "literal",
+      "source_path_expression": "'/api/notifications/read-all'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/notifications/:id/read",
+      "file": "supabase/notifications.ts",
+      "line": 60,
+      "source_registration": 144,
+      "expansion": "literal",
+      "source_path_expression": "'/api/notifications/:id/read'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin-messages/pending",
+      "file": "supabase/notifications.ts",
+      "line": 65,
+      "source_registration": 145,
+      "expansion": "literal",
+      "source_path_expression": "'/api/admin-messages/pending'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin-messages/:id/ack",
+      "file": "supabase/notifications.ts",
+      "line": 69,
+      "source_registration": 146,
+      "expansion": "literal",
+      "source_path_expression": "'/api/admin-messages/:id/ack'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "GET",
+      "path": "/api/verification-teams/invitations",
+      "file": "supabase/officerInvitations.ts",
+      "line": 127,
+      "source_registration": 147,
+      "expansion": "literal",
+      "source_path_expression": "'/api/verification-teams/invitations'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/verification-teams",
+      "file": "supabase/officerInvitations.ts",
+      "line": 128,
+      "source_registration": 148,
+      "expansion": "literal",
+      "source_path_expression": "'/api/verification-teams'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/verification-teams/invitations/:id/cancel",
+      "file": "supabase/officerInvitations.ts",
+      "line": 129,
+      "source_registration": 149,
+      "expansion": "literal",
+      "source_path_expression": "'/api/verification-teams/invitations/:id/cancel'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/verification-teams/:id/status",
+      "file": "supabase/officerInvitations.ts",
+      "line": 131,
+      "source_registration": 150,
+      "expansion": "literal",
+      "source_path_expression": "'/api/verification-teams/:id/status'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/officer-invitation/inspect",
+      "file": "supabase/officerInvitations.ts",
+      "line": 132,
+      "source_registration": 151,
+      "expansion": "constant_loop",
+      "source_path_expression": "`/api/auth/officer-invitation/${action}`",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/officer-invitation/accept",
+      "file": "supabase/officerInvitations.ts",
+      "line": 132,
+      "source_registration": 151,
+      "expansion": "constant_loop",
+      "source_path_expression": "`/api/auth/officer-invitation/${action}`",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "GET",
+      "path": "/api/digital-market/orders/:id/events",
+      "file": "supabase/orders.ts",
+      "line": 137,
+      "source_registration": 152,
+      "expansion": "literal",
+      "source_path_expression": "'/api/digital-market/orders/:id/events'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "GET",
+      "path": "/api/digital-market/my-orders",
+      "file": "supabase/orders.ts",
+      "line": 138,
+      "source_registration": 153,
+      "expansion": "literal",
+      "source_path_expression": "'/api/digital-market/my-orders'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/digital-market/orders",
+      "file": "supabase/orders.ts",
+      "line": 139,
+      "source_registration": 154,
+      "expansion": "literal",
+      "source_path_expression": "'/api/digital-market/orders'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/digital-market/orders/:id/renew-pin",
+      "file": "supabase/orders.ts",
+      "line": 140,
+      "source_registration": 155,
+      "expansion": "literal",
+      "source_path_expression": "'/api/digital-market/orders/:id/renew-pin'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/digital-market/orders/:id/update-status",
+      "file": "supabase/orders.ts",
+      "line": 141,
+      "source_registration": 156,
+      "expansion": "literal",
+      "source_path_expression": "'/api/digital-market/orders/:id/update-status'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/change-password",
+      "file": "supabase/passwordSecurity.ts",
+      "line": 106,
+      "source_registration": 157,
+      "expansion": "literal",
+      "source_path_expression": "'/api/auth/change-password'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/recover",
+      "file": "supabase/passwordSecurity.ts",
+      "line": 133,
+      "source_registration": 158,
+      "expansion": "literal",
+      "source_path_expression": "'/api/auth/recover'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/recover/complete",
+      "file": "supabase/passwordSecurity.ts",
+      "line": 140,
+      "source_registration": 159,
+      "expansion": "literal",
+      "source_path_expression": "'/api/auth/recover/complete'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/payments/reversals",
+      "file": "supabase/paymentReversals.ts",
+      "line": 171,
+      "source_registration": 160,
+      "expansion": "literal",
+      "source_path_expression": "'/api/admin/payments/reversals'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/payments/:id/reversal-review",
+      "file": "supabase/paymentReversals.ts",
+      "line": 172,
+      "source_registration": 161,
+      "expansion": "literal",
+      "source_path_expression": "'/api/admin/payments/:id/reversal-review'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/payments/:id/reconcile",
+      "file": "supabase/paymentReversals.ts",
+      "line": 178,
+      "source_registration": 162,
+      "expansion": "literal",
+      "source_path_expression": "'/api/admin/payments/:id/reconcile'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/payments/paystack/webhook",
+      "file": "supabase/payments.ts",
+      "line": 204,
+      "source_registration": 163,
+      "expansion": "literal",
+      "source_path_expression": "'/api/payments/paystack/webhook'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "GET",
+      "path": "/api/payments/paystack/pending",
+      "file": "supabase/payments.ts",
+      "line": 217,
+      "source_registration": 164,
+      "expansion": "literal",
+      "source_path_expression": "'/api/payments/paystack/pending'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/payments/paystack/initialize",
+      "file": "supabase/payments.ts",
+      "line": 218,
+      "source_registration": 165,
+      "expansion": "literal",
+      "source_path_expression": "'/api/payments/paystack/initialize'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/digital-market/subscription",
+      "file": "supabase/payments.ts",
+      "line": 219,
+      "source_registration": 166,
+      "expansion": "literal",
+      "source_path_expression": "'/api/digital-market/subscription'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/hostel-verifications/pay-onboarding-fee",
+      "file": "supabase/payments.ts",
+      "line": 220,
+      "source_registration": 167,
+      "expansion": "literal",
+      "source_path_expression": "'/api/hostel-verifications/pay-onboarding-fee'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/payments/paystack/verify",
+      "file": "supabase/payments.ts",
+      "line": 221,
+      "source_registration": 168,
+      "expansion": "literal",
+      "source_path_expression": "'/api/payments/paystack/verify'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "GET",
+      "path": "/api/payments/paystack/callback",
+      "file": "supabase/payments.ts",
+      "line": 222,
+      "source_registration": 169,
+      "expansion": "literal",
+      "source_path_expression": "'/api/payments/paystack/callback'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/payments",
+      "file": "supabase/payments.ts",
+      "line": 223,
+      "source_registration": 170,
+      "expansion": "literal",
+      "source_path_expression": "'/api/admin/payments'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "GET",
+      "path": "/api/auth/maintenance-notice",
+      "file": "supabase/platformMaintenance.ts",
+      "line": 56,
+      "source_registration": 171,
+      "expansion": "literal",
+      "source_path_expression": "'/api/auth/maintenance-notice'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/maintenance-notice/dismiss",
+      "file": "supabase/platformMaintenance.ts",
+      "line": 57,
+      "source_registration": 172,
+      "expansion": "literal",
+      "source_path_expression": "'/api/auth/maintenance-notice/dismiss'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/users/reset-registered-account-password",
+      "file": "supabase/portalSecurity.ts",
+      "line": 56,
+      "source_registration": 173,
+      "expansion": "literal",
+      "source_path_expression": "'/api/users/reset-registered-account-password'",
+      "retirement_status": "confirmed_410_guard"
+    },
+    {
+      "method": "GET",
+      "path": "/api/auth/portal-security",
+      "file": "supabase/portalSecurity.ts",
+      "line": 60,
+      "source_registration": 174,
+      "expansion": "literal",
+      "source_path_expression": "'/api/auth/portal-security'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/portal-pin",
+      "file": "supabase/portalSecurity.ts",
+      "line": 65,
+      "source_registration": 175,
+      "expansion": "literal",
+      "source_path_expression": "'/api/auth/portal-pin'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/settings/pricing",
+      "file": "supabase/pricing.ts",
+      "line": 108,
+      "source_registration": 176,
+      "expansion": "literal",
+      "source_path_expression": "'/api/admin/settings/pricing'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/governance/pricing",
+      "file": "supabase/pricing.ts",
+      "line": 111,
+      "source_registration": 177,
+      "expansion": "literal",
+      "source_path_expression": "'/api/admin/governance/pricing'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/governance/pricing/:id/vote",
+      "file": "supabase/pricing.ts",
+      "line": 112,
+      "source_registration": 178,
+      "expansion": "literal",
+      "source_path_expression": "'/api/admin/governance/pricing/:id/vote'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/governance/pricing/:id/apply",
+      "file": "supabase/pricing.ts",
+      "line": 113,
+      "source_registration": 179,
+      "expansion": "literal",
+      "source_path_expression": "'/api/admin/governance/pricing/:id/apply'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/primary-reentry",
+      "file": "supabase/primaryEmailReentry.ts",
+      "line": 48,
+      "source_registration": 180,
+      "expansion": "literal",
+      "source_path_expression": "'/api/auth/primary-reentry'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/primary-reentry/verify",
+      "file": "supabase/primaryEmailReentry.ts",
+      "line": 59,
+      "source_registration": 181,
+      "expansion": "literal",
+      "source_path_expression": "'/api/auth/primary-reentry/verify'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/auth/profile",
+      "file": "supabase/profiles.ts",
+      "line": 73,
+      "source_registration": 182,
+      "expansion": "literal",
+      "source_path_expression": "'/api/auth/profile'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/profile",
+      "file": "supabase/profiles.ts",
+      "line": 74,
+      "source_registration": 183,
+      "expansion": "literal",
+      "source_path_expression": "'/api/auth/profile'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/settings",
+      "file": "supabase/publicSettings.ts",
+      "line": 84,
+      "source_registration": 184,
+      "expansion": "literal",
+      "source_path_expression": "'/api/settings'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "GET",
+      "path": "/api/sync/events",
+      "file": "supabase/realtime.ts",
+      "line": 40,
+      "source_registration": 185,
+      "expansion": "literal",
+      "source_path_expression": "'/api/sync/events'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "GET",
+      "path": "/api/users/manager-restriction",
+      "file": "supabase/registrationRestrictions.ts",
+      "line": 76,
+      "source_registration": 186,
+      "expansion": "literal",
+      "source_path_expression": "'/api/users/manager-restriction'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "GET",
+      "path": "/api/manager/residence-requests",
+      "file": "supabase/residenceChanges.ts",
+      "line": 207,
+      "source_registration": 187,
+      "expansion": "literal",
+      "source_path_expression": "'/api/manager/residence-requests'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/board-requests",
+      "file": "supabase/residenceChanges.ts",
+      "line": 208,
+      "source_registration": 188,
+      "expansion": "literal",
+      "source_path_expression": "'/api/board-requests'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "GET",
+      "path": "/api/board-requests/:id/review",
+      "file": "supabase/residenceChanges.ts",
+      "line": 209,
+      "source_registration": 189,
+      "expansion": "literal",
+      "source_path_expression": "'/api/board-requests/:id/review'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/board-requests/:id/decision",
+      "file": "supabase/residenceChanges.ts",
+      "line": 210,
+      "source_registration": 190,
+      "expansion": "literal",
+      "source_path_expression": "'/api/board-requests/:id/decision'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/board-requests/:id",
+      "file": "supabase/residenceChanges.ts",
+      "line": 214,
+      "source_registration": 191,
+      "expansion": "literal",
+      "source_path_expression": "'/api/board-requests/:id'",
+      "retirement_status": "confirmed_410_guard"
+    },
+    {
+      "method": "GET",
+      "path": "/api/manager/residence-registration",
+      "file": "supabase/residenceRegistration.ts",
+      "line": 228,
+      "source_registration": 192,
+      "expansion": "literal",
+      "source_path_expression": "'/api/manager/residence-registration'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/hostels/register",
+      "file": "supabase/residenceRegistration.ts",
+      "line": 229,
+      "source_registration": 193,
+      "expansion": "literal",
+      "source_path_expression": "'/api/hostels/register'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/hostel-verifications/:id/approve",
+      "file": "supabase/residenceRegistration.ts",
+      "line": 241,
+      "source_registration": 194,
+      "expansion": "literal",
+      "source_path_expression": "'/api/hostel-verifications/:id/approve'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/hostel-verifications/:id/reject",
+      "file": "supabase/residenceRegistration.ts",
+      "line": 242,
+      "source_registration": 195,
+      "expansion": "literal",
+      "source_path_expression": "'/api/hostel-verifications/:id/reject'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/hostel-verifications/:id/request-info",
+      "file": "supabase/residenceRegistration.ts",
+      "line": 243,
+      "source_registration": 196,
+      "expansion": "literal",
+      "source_path_expression": "'/api/hostel-verifications/:id/request-info'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/hostels/:id/verify",
+      "file": "supabase/residenceRegistration.ts",
+      "line": 244,
+      "source_registration": 197,
+      "expansion": "literal",
+      "source_path_expression": "'/api/hostels/:id/verify'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/hostels",
+      "file": "supabase/residenceRegistration.ts",
+      "line": 258,
+      "source_registration": 198,
+      "expansion": "literal",
+      "source_path_expression": "'/api/admin/hostels'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "GET",
+      "path": "/api/hostel-verifications",
+      "file": "supabase/residenceRegistration.ts",
+      "line": 259,
+      "source_registration": 199,
+      "expansion": "literal",
+      "source_path_expression": "'/api/hostel-verifications'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/governance/residences/preview",
+      "file": "supabase/residenceReviews.ts",
+      "line": 243,
+      "source_registration": 200,
+      "expansion": "literal",
+      "source_path_expression": "'/api/admin/governance/residences/preview'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/governance/residences",
+      "file": "supabase/residenceReviews.ts",
+      "line": 244,
+      "source_registration": 201,
+      "expansion": "literal",
+      "source_path_expression": "'/api/admin/governance/residences'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/governance/residences/:id/vote",
+      "file": "supabase/residenceReviews.ts",
+      "line": 245,
+      "source_registration": 202,
+      "expansion": "literal",
+      "source_path_expression": "'/api/admin/governance/residences/:id/vote'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/governance/residences/:id/final-reject",
+      "file": "supabase/residenceReviews.ts",
+      "line": 246,
+      "source_registration": 203,
+      "expansion": "literal",
+      "source_path_expression": "'/api/admin/governance/residences/:id/final-reject'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/governance/residences/:id/execute",
+      "file": "supabase/residenceReviews.ts",
+      "line": 247,
+      "source_registration": 204,
+      "expansion": "literal",
+      "source_path_expression": "'/api/admin/governance/residences/:id/execute'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/governance/residences/:id/authorize-execution",
+      "file": "supabase/residenceReviews.ts",
+      "line": 248,
+      "source_registration": 205,
+      "expansion": "literal",
+      "source_path_expression": "'/api/admin/governance/residences/:id/authorize-execution'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/governance/residences/:id/prepare",
+      "file": "supabase/residenceReviews.ts",
+      "line": 249,
+      "source_registration": 206,
+      "expansion": "literal",
+      "source_path_expression": "'/api/admin/governance/residences/:id/prepare'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/governance/residences/:id/cancel-preparation",
+      "file": "supabase/residenceReviews.ts",
+      "line": 250,
+      "source_registration": 207,
+      "expansion": "literal",
+      "source_path_expression": "'/api/admin/governance/residences/:id/cancel-preparation'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "GET",
+      "path": "/api/hostels/:id/structure",
+      "file": "supabase/residenceStructure.ts",
+      "line": 137,
+      "source_registration": 208,
+      "expansion": "literal",
+      "source_path_expression": "'/api/hostels/:id/structure'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/hostels/:id/structure",
+      "file": "supabase/residenceStructure.ts",
+      "line": 139,
+      "source_registration": 209,
+      "expansion": "literal",
+      "source_path_expression": "'/api/hostels/:id/structure'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "GET",
+      "path": "/api/resident/closure-preview",
+      "file": "supabase/residentClosure.ts",
+      "line": 22,
+      "source_registration": 210,
+      "expansion": "literal",
+      "source_path_expression": "'/api/resident/closure-preview'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/student/delete-room",
+      "file": "supabase/residentClosure.ts",
+      "line": 25,
+      "source_registration": 211,
+      "expansion": "literal",
+      "source_path_expression": "'/api/student/delete-room'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "GET",
+      "path": "/api/student/my-profile",
+      "file": "supabase/residentProfiles.ts",
+      "line": 62,
+      "source_registration": 212,
+      "expansion": "array_alias",
+      "source_path_expression": "['/api/student/my-profile', '/api/student/my-rooms']",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "GET",
+      "path": "/api/student/my-rooms",
+      "file": "supabase/residentProfiles.ts",
+      "line": 62,
+      "source_registration": 212,
+      "expansion": "array_alias",
+      "source_path_expression": "['/api/student/my-profile', '/api/student/my-rooms']",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/room-keys/send-digital",
+      "file": "supabase/roomKeyDelivery.ts",
+      "line": 79,
+      "source_registration": 213,
+      "expansion": "literal",
+      "source_path_expression": "'/api/room-keys/send-digital'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "GET",
+      "path": "/api/digital-market/status",
+      "file": "supabase/sellerRegistration.ts",
+      "line": 107,
+      "source_registration": 214,
+      "expansion": "literal",
+      "source_path_expression": "'/api/digital-market/status'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/digital-market/register",
+      "file": "supabase/sellerRegistration.ts",
+      "line": 108,
+      "source_registration": 215,
+      "expansion": "literal",
+      "source_path_expression": "'/api/digital-market/register'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/digital-market/applications",
+      "file": "supabase/sellerRegistration.ts",
+      "line": 109,
+      "source_registration": 216,
+      "expansion": "literal",
+      "source_path_expression": "'/api/admin/digital-market/applications'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/digital-market/approve-application",
+      "file": "supabase/sellerRegistration.ts",
+      "line": 115,
+      "source_registration": 217,
+      "expansion": "literal",
+      "source_path_expression": "'/api/admin/digital-market/approve-application'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/digital-market/reject-application",
+      "file": "supabase/sellerRegistration.ts",
+      "line": 116,
+      "source_registration": 218,
+      "expansion": "literal",
+      "source_path_expression": "'/api/admin/digital-market/reject-application'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/staff",
+      "file": "supabase/staff.ts",
+      "line": 164,
+      "source_registration": 219,
+      "expansion": "literal",
+      "source_path_expression": "'/api/staff'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "GET",
+      "path": "/api/staff/invitations",
+      "file": "supabase/staff.ts",
+      "line": 165,
+      "source_registration": 220,
+      "expansion": "literal",
+      "source_path_expression": "'/api/staff/invitations'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/staff/invitations/:id/rotate",
+      "file": "supabase/staff.ts",
+      "line": 168,
+      "source_registration": 221,
+      "expansion": "literal",
+      "source_path_expression": "'/api/staff/invitations/:id/rotate'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/staff/invitations/:id",
+      "file": "supabase/staff.ts",
+      "line": 173,
+      "source_registration": 222,
+      "expansion": "literal",
+      "source_path_expression": "'/api/staff/invitations/:id'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/staff/profile",
+      "file": "supabase/staff.ts",
+      "line": 176,
+      "source_registration": 223,
+      "expansion": "literal",
+      "source_path_expression": "'/api/staff/profile'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/staff/:id",
+      "file": "supabase/staff.ts",
+      "line": 181,
+      "source_registration": 224,
+      "expansion": "literal",
+      "source_path_expression": "'/api/staff/:id'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/staff/:id",
+      "file": "supabase/staff.ts",
+      "line": 182,
+      "source_registration": 225,
+      "expansion": "literal",
+      "source_path_expression": "'/api/staff/:id'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/staff/resign",
+      "file": "supabase/staff.ts",
+      "line": 183,
+      "source_registration": 226,
+      "expansion": "array_alias",
+      "source_path_expression": "['/api/staff/resign','/api/staff/quit']",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/staff/quit",
+      "file": "supabase/staff.ts",
+      "line": 183,
+      "source_registration": 226,
+      "expansion": "array_alias",
+      "source_path_expression": "['/api/staff/resign','/api/staff/quit']",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/staff-invitations/inspect",
+      "file": "supabase/staff.ts",
+      "line": 187,
+      "source_registration": 227,
+      "expansion": "literal",
+      "source_path_expression": "'/api/auth/staff-invitations/inspect'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/staff-invitations/signup",
+      "file": "supabase/staff.ts",
+      "line": 190,
+      "source_registration": 228,
+      "expansion": "literal",
+      "source_path_expression": "'/api/auth/staff-invitations/signup'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/staff-invitations/resend",
+      "file": "supabase/staff.ts",
+      "line": 202,
+      "source_registration": 229,
+      "expansion": "literal",
+      "source_path_expression": "'/api/auth/staff-invitations/resend'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/staff-invitations/verify",
+      "file": "supabase/staff.ts",
+      "line": 206,
+      "source_registration": 230,
+      "expansion": "literal",
+      "source_path_expression": "'/api/auth/staff-invitations/verify'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/staff-bargains",
+      "file": "supabase/staffRetention.ts",
+      "line": 115,
+      "source_registration": 231,
+      "expansion": "literal",
+      "source_path_expression": "'/api/staff-bargains'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/staff-bargains/:id/manager-response",
+      "file": "supabase/staffRetention.ts",
+      "line": 116,
+      "source_registration": 232,
+      "expansion": "literal",
+      "source_path_expression": "'/api/staff-bargains/:id/manager-response'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/staff-bargains/:id/staff-decision",
+      "file": "supabase/staffRetention.ts",
+      "line": 117,
+      "source_registration": 233,
+      "expansion": "literal",
+      "source_path_expression": "'/api/staff-bargains/:id/staff-decision'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "GET",
+      "path": "/api/staff-reviews",
+      "file": "supabase/staffRetention.ts",
+      "line": 118,
+      "source_registration": 234,
+      "expansion": "literal",
+      "source_path_expression": "'/api/staff-reviews'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/staff-reviews",
+      "file": "supabase/staffRetention.ts",
+      "line": 119,
+      "source_registration": 235,
+      "expansion": "literal",
+      "source_path_expression": "'/api/staff-reviews'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/digital-market/store-setup",
+      "file": "supabase/storeSetup.ts",
+      "line": 74,
+      "source_registration": 236,
+      "expansion": "array_alias",
+      "source_path_expression": "['/api/digital-market/store-setup','/api/digital-market/create-store']",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/digital-market/create-store",
+      "file": "supabase/storeSetup.ts",
+      "line": 74,
+      "source_registration": 236,
+      "expansion": "array_alias",
+      "source_path_expression": "['/api/digital-market/store-setup','/api/digital-market/create-store']",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/digital-market/store",
+      "file": "supabase/storeSetup.ts",
+      "line": 75,
+      "source_registration": 237,
+      "expansion": "literal",
+      "source_path_expression": "'/api/digital-market/store'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/public/support/tickets",
+      "file": "supabase/support.ts",
+      "line": 182,
+      "source_registration": 238,
+      "expansion": "literal",
+      "source_path_expression": "'/api/public/support/tickets'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/public/support/tickets/:id/read",
+      "file": "supabase/support.ts",
+      "line": 183,
+      "source_registration": 239,
+      "expansion": "literal",
+      "source_path_expression": "'/api/public/support/tickets/:id/read'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/public/support/tickets/:id/replies",
+      "file": "supabase/support.ts",
+      "line": 184,
+      "source_registration": 240,
+      "expansion": "literal",
+      "source_path_expression": "'/api/public/support/tickets/:id/replies'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/public/support/tickets/:id",
+      "file": "supabase/support.ts",
+      "line": 185,
+      "source_registration": 241,
+      "expansion": "literal",
+      "source_path_expression": "'/api/public/support/tickets/:id'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "GET",
+      "path": "/api/support/tickets",
+      "file": "supabase/support.ts",
+      "line": 187,
+      "source_registration": 242,
+      "expansion": "literal",
+      "source_path_expression": "'/api/support/tickets'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/support/tickets",
+      "file": "supabase/support.ts",
+      "line": 191,
+      "source_registration": 243,
+      "expansion": "literal",
+      "source_path_expression": "'/api/support/tickets'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "GET",
+      "path": "/api/support/tickets/:id",
+      "file": "supabase/support.ts",
+      "line": 192,
+      "source_registration": 244,
+      "expansion": "literal",
+      "source_path_expression": "'/api/support/tickets/:id'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/support/tickets/:id/replies",
+      "file": "supabase/support.ts",
+      "line": 193,
+      "source_registration": 245,
+      "expansion": "literal",
+      "source_path_expression": "'/api/support/tickets/:id/replies'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/support/tickets/:id",
+      "file": "supabase/support.ts",
+      "line": 194,
+      "source_registration": 246,
+      "expansion": "literal",
+      "source_path_expression": "'/api/support/tickets/:id'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "GET",
+      "path": "/api/customer-service/tickets",
+      "file": "supabase/support.ts",
+      "line": 196,
+      "source_registration": 247,
+      "expansion": "literal",
+      "source_path_expression": "'/api/customer-service/tickets'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "GET",
+      "path": "/api/customer-service/tickets/:id",
+      "file": "supabase/support.ts",
+      "line": 210,
+      "source_registration": 248,
+      "expansion": "literal",
+      "source_path_expression": "'/api/customer-service/tickets/:id'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/customer-service/tickets/:id/replies",
+      "file": "supabase/support.ts",
+      "line": 211,
+      "source_registration": 249,
+      "expansion": "literal",
+      "source_path_expression": "'/api/customer-service/tickets/:id/replies'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/customer-service/tickets/:id",
+      "file": "supabase/support.ts",
+      "line": 212,
+      "source_registration": 250,
+      "expansion": "literal",
+      "source_path_expression": "'/api/customer-service/tickets/:id'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/customer-service/tickets/:id/retry-email",
+      "file": "supabase/support.ts",
+      "line": 213,
+      "source_registration": 251,
+      "expansion": "literal",
+      "source_path_expression": "'/api/customer-service/tickets/:id/retry-email'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/customer-service",
+      "file": "supabase/support.ts",
+      "line": 221,
+      "source_registration": 252,
+      "expansion": "literal",
+      "source_path_expression": "'/api/admin/customer-service'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/customer-service/invitations",
+      "file": "supabase/support.ts",
+      "line": 225,
+      "source_registration": 253,
+      "expansion": "literal",
+      "source_path_expression": "'/api/admin/customer-service/invitations'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/customer-service/invitations/:id/cancel",
+      "file": "supabase/support.ts",
+      "line": 226,
+      "source_registration": 254,
+      "expansion": "literal",
+      "source_path_expression": "'/api/admin/customer-service/invitations/:id/cancel'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/admin/customer-service/members/:id",
+      "file": "supabase/support.ts",
+      "line": 230,
+      "source_registration": 255,
+      "expansion": "literal",
+      "source_path_expression": "'/api/admin/customer-service/members/:id'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/support-invitation/inspect",
+      "file": "supabase/support.ts",
+      "line": 234,
+      "source_registration": 256,
+      "expansion": "constant_loop",
+      "source_path_expression": "`/api/auth/support-invitation/${action}`",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/support-invitation/accept",
+      "file": "supabase/support.ts",
+      "line": 234,
+      "source_registration": 256,
+      "expansion": "constant_loop",
+      "source_path_expression": "`/api/auth/support-invitation/${action}`",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/governance/preview",
+      "file": "supabase/systemWipeReviews.ts",
+      "line": 149,
+      "source_registration": 257,
+      "expansion": "literal",
+      "source_path_expression": "'/api/admin/governance/preview'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/governance/proposals",
+      "file": "supabase/systemWipeReviews.ts",
+      "line": 150,
+      "source_registration": 258,
+      "expansion": "literal",
+      "source_path_expression": "'/api/admin/governance/proposals'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/governance/proposals/:id/vote",
+      "file": "supabase/systemWipeReviews.ts",
+      "line": 151,
+      "source_registration": 259,
+      "expansion": "literal",
+      "source_path_expression": "'/api/admin/governance/proposals/:id/vote'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/governance/proposals/:id/founder-review",
+      "file": "supabase/systemWipeReviews.ts",
+      "line": 152,
+      "source_registration": 260,
+      "expansion": "literal",
+      "source_path_expression": "'/api/admin/governance/proposals/:id/founder-review'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/governance/proposals/:id/prepare",
+      "file": "supabase/systemWipeReviews.ts",
+      "line": 153,
+      "source_registration": 261,
+      "expansion": "literal",
+      "source_path_expression": "'/api/admin/governance/proposals/:id/prepare'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/governance/proposals/:id/cancel-preparation",
+      "file": "supabase/systemWipeReviews.ts",
+      "line": 154,
+      "source_registration": 262,
+      "expansion": "literal",
+      "source_path_expression": "'/api/admin/governance/proposals/:id/cancel-preparation'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/governance/proposals/:id/pause",
+      "file": "supabase/systemWipeReviews.ts",
+      "line": 155,
+      "source_registration": 263,
+      "expansion": "literal",
+      "source_path_expression": "'/api/admin/governance/proposals/:id/pause'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/governance/proposals/:id/authorize-execution",
+      "file": "supabase/systemWipeReviews.ts",
+      "line": 156,
+      "source_registration": 264,
+      "expansion": "literal",
+      "source_path_expression": "'/api/admin/governance/proposals/:id/authorize-execution'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/governance/proposals/:id/execute",
+      "file": "supabase/systemWipeReviews.ts",
+      "line": 157,
+      "source_registration": 265,
+      "expansion": "literal",
+      "source_path_expression": "'/api/admin/governance/proposals/:id/execute'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/clear-all-registered-accounts",
+      "file": "supabase/systemWipeReviews.ts",
+      "line": 158,
+      "source_registration": 266,
+      "expansion": "literal",
+      "source_path_expression": "'/api/admin/clear-all-registered-accounts'",
+      "retirement_status": "confirmed_410_guard"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/google/start",
+      "file": "googleAuth.ts",
+      "line": 67,
+      "source_registration": 267,
+      "expansion": "literal",
+      "source_path_expression": "'/api/auth/google/start'",
+      "retirement_status": "unknown"
+    },
+    {
+      "method": "GET",
+      "path": "/api/auth/google/callback",
+      "file": "googleAuth.ts",
+      "line": 91,
+      "source_registration": 268,
+      "expansion": "literal",
+      "source_path_expression": "'/api/auth/google/callback'",
+      "retirement_status": "unknown"
+    }
+  ]
+}

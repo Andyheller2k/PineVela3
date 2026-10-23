@@ -7,6 +7,7 @@ import PasswordStrengthGauge from './PasswordStrengthGauge';
 
 import EmailPasswordRecovery from './EmailPasswordRecovery';
 import ManagerClosureRequest from './ManagerClosureRequest';
+import { useAuthCaptcha } from './AuthCaptcha';
 
 /** Self-service controls are available only inside the authenticated manager account. */
 export default function ManagerAccountControls({ onClose }: { onClose: () => void }) {
@@ -26,6 +27,7 @@ export default function ManagerAccountControls({ onClose }: { onClose: () => voi
   const account = useRef(user?.id);
   account.current = user?.id;
   const mounted = useRef(true);
+  const captcha = useAuthCaptcha(`manager-password:${user?.id}`, user?.role === 'manager' && action === 'password' && !showRecovery && !completed);
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
   if (user?.role !== 'manager') return null;
 
@@ -41,7 +43,7 @@ export default function ManagerAccountControls({ onClose }: { onClose: () => voi
     const submittedAccount = user.id;
     try {
       const result = (await apiFetch('/api/auth/change-password', {
-        method: 'POST', headers: ({ 'X-PineVela-Profile-Context': submittedAccount }), body: JSON.stringify({ currentPassword, newPassword }),
+        method: 'POST', headers: ({ 'X-PineVela-Profile-Context': submittedAccount }), body: JSON.stringify({ currentPassword, newPassword, captchaToken: captcha.requireToken() }),
       }));
       if (!mounted.current || account.current !== submittedAccount) return;
       if (!result?.success) throw new Error('The account change was not confirmed. Please try again.');
@@ -49,7 +51,7 @@ export default function ManagerAccountControls({ onClose }: { onClose: () => voi
       setCompleted(true);
       await finish();
     } catch (error) { setError(error instanceof Error ? error.message : 'The account change failed.'); }
-    finally { inFlight.current = false; setSaving(false); }
+    finally { captcha.reset(); inFlight.current = false; setSaving(false); }
   };
 
   if (showRecovery) return <EmailPasswordRecovery initialEmail={user.email} onClose={() => setShowRecovery(false)} />;
@@ -77,7 +79,8 @@ export default function ManagerAccountControls({ onClose }: { onClose: () => voi
             </label>
           </>)}
           {error && <p role="alert" className="text-sm font-semibold text-rose-700">{error}</p>}
-          <button type="submit" disabled={saving} className={`rounded-xl px-5 py-3 text-xs font-bold text-white disabled:opacity-60 ${('bg-blue-600')}`}>{saving ? 'Saving…' : ('Update Password')}</button>
+          {captcha.widget}
+          <button type="submit" disabled={saving || !captcha.ready} className={`rounded-xl px-5 py-3 text-xs font-bold text-white disabled:opacity-60 ${('bg-blue-600')}`}>{saving ? 'Saving…' : ('Update Password')}</button>
         </form>
       </div>}
   </AccountStatusDialog>;

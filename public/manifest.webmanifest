@@ -1,0 +1,17 @@
+{
+  "id": "/",
+  "name": "PineVela",
+  "short_name": "PineVela",
+  "description": "Your PineVela home for student living and the student marketplace.",
+  "lang": "en",
+  "start_url": "/#/login",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#001d3d",
+  "theme_color": "#001d3d",
+  "icons": [
+    { "src": "/icons/pinevela-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/pinevela-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/pinevela-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

@@ -79,7 +79,7 @@ export default function UserDashboardNavigation({
 
       {/* Compact desktop equivalent of the mobile navigation. It stays above the scrolling content. */}
       {isSidebarHidden && (
-        <nav data-portal-navigation="top" className="user-top-navigation hidden lg:block fixed top-3 left-1/2 -translate-x-1/2 z-50 w-[min(860px,calc(100vw-3rem))] bg-white/72 backdrop-blur-xl border border-white/80 rounded-2xl shadow-lg">
+        <nav data-portal-navigation="top" className="user-top-navigation hidden lg:block fixed top-3 inset-x-6 mx-auto z-50 max-w-[860px] bg-white/72 backdrop-blur-xl border border-white/80 rounded-2xl shadow-lg">
           <div className="flex items-center gap-1 px-2 py-1.5">
             {/* Profile avatar button — left end */}
             <button

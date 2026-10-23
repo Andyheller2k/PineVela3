@@ -59,6 +59,7 @@ import { installModeration } from './moderation.js';
 import { installContentSafety } from './contentSafety.js';
 import { installCompanion } from './companion.js';
 import { AttemptBudgets, canonicalOperationPath, ResourceLimitError, trustedProxyAddresses } from '../resourceSecurity.js';
+import {authProtectionContext,publicCaptchaConfig} from './authProtection.js';
 
 /** Replacement backend is tested independently until all active routes are ported.
  * It never imports localDb, persistentDb, JSON credentials, or legacy bootstrap. */
@@ -76,7 +77,7 @@ export function createSupabaseApp(db: SupabaseDatabase) {
         { scope: 'supabase-api-global', identity: 'all', maximum: 3000, windowMs: 60000 },
       ];
       if(req.method==='POST'&&path==='/auth/enrollments/google/start')limits.push({scope:'supabase-auth-ip',identity:req.ip||req.socket.remoteAddress||'',maximum:20,windowMs:60000});
-      if (req.method === 'POST' && ((path.startsWith('/auth/staff-invitations/') || path.startsWith('/auth/officer-invitation/')) || /^\/auth\/(login|register-unified|verify-unified|primary-reentry(?:\/verify)?|recover(?:\/complete)?|change-password|portal-pin|enrollments(?:\/[^/]+\/(?:verify|resend|reactivate(?:\/send-code)?))?|google\/start)$/.test(path) || /\/(login|verification-team-login)$/.test(path))) limits.push({ scope: 'supabase-auth-ip', identity: req.ip || req.socket.remoteAddress || '', maximum: 20, windowMs: 60000 });
+      if (req.method === 'POST' && ((path.startsWith('/auth/staff-invitations/') || path.startsWith('/auth/officer-invitation/')) || /^\/auth\/(login|register-unified|verify-unified|resend-unified|primary-reentry(?:\/verify)?|recover(?:\/complete)?|change-password|portal-pin|enrollments(?:\/[^/]+\/(?:verify|resend|reactivate(?:\/send-code)?))?|google\/start)$/.test(path) || /\/(login|verification-team-login)$/.test(path))) limits.push({ scope: 'supabase-auth-ip', identity: req.ip || req.socket.remoteAddress || '', maximum: 20, windowMs: 60000 });
       if (req.method === 'POST' && ['/room-keys/claim','/room-keys/verify','/residents/onboard'].includes(path)) limits.push({ scope:'supabase-room-key-ip',identity:req.ip || req.socket.remoteAddress || '',maximum:10,windowMs:60000 });
       if(req.method==='POST' && (['/users/delete-registered-account','/student/delete-room'].includes(path) || /^\/(?:manager\/closure-request\/[^/]+\/withdraw|admin\/manager-closure-requests\/[^/]+\/(?:reject|review))$/.test(path)))
         limits.push({scope:'supabase-closure-ip',identity:req.ip || req.socket.remoteAddress || '',maximum:20,windowMs:60000});
@@ -94,6 +95,8 @@ export function createSupabaseApp(db: SupabaseDatabase) {
   app.use('/api', maintenanceBoundary(auth));
   installMedia(app,auth);
   app.use(express.json({ limit: '1mb',inflate:false }));
+  app.use('/api',authProtectionContext(db));
+  app.get('/api/auth/captcha',(_req,res,next)=>{try{res.json(publicCaptchaConfig());}catch(error){next(error);}});
   app.get('/api/health', (_req, res) => res.json({ status: 'ok', persistence: 'supabase' }));
   app.get('/api/settings', (_req, res, next) => {
     db.system(async client => {
