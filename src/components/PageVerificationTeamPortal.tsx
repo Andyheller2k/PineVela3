@@ -358,7 +358,7 @@ function OfficerWorkspace() {
           </div>
           <div className="flex items-center gap-2">
             <span className="text-[11px] uppercase px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-900 font-extrabold tracking-wider border border-blue-200">
-              Field Officer Portal
+              Field Officer
             </span>
           </div>
         </div>
@@ -1559,7 +1559,7 @@ function OfficerWorkspace() {
       {/* SIGNOUT CONFIRMATION MODAL WITH PINVELA LOGO */}
       <AnimatePresence>
         {showSignoutConfirm && (
-          <DashboardOverlay aria-label="Sign out of field portal" onClose={() => setShowSignoutConfirm(false)} className="pv-signout-overlay fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
+          <DashboardOverlay aria-label="Sign out of field officer account" onClose={() => setShowSignoutConfirm(false)} className="pv-signout-overlay fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 10 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -1576,7 +1576,7 @@ function OfficerWorkspace() {
               </div>
 
               <div className="space-y-1.5">
-                <h3 className="text-base sm:text-lg font-black text-slate-900">Sign Out of Field Portal?</h3>
+                <h3 className="text-base sm:text-lg font-black text-slate-900">Sign Out?</h3>
                 <p className="text-xs text-slate-500 leading-relaxed font-medium">
                   You are currently logged in as <strong className="text-slate-800">{officerSession?.name || officerSession.email}</strong> ({officerSession?.officerId || officerSession.id}). Any unsaved reports will be discarded.
                 </p>

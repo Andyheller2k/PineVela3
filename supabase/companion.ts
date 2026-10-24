@@ -12,6 +12,7 @@ import { faqSections } from '../src/components/faqContent.js';
 import { registrationStatus } from './accountStatus.js';
 import { sellerStatus } from './sellerRegistration.js';
 import { companionAgent, companionConnectionFailure } from './companionConnection.js';
+import { COMPANION_PROVIDER_HEADERS, companionProviderDiagnostic } from './companionProvider.js';
 import { companionAnswer, companionScopeReply } from './companionScope.js';
 import { companionRecordedStatusAnswer, companionSubmissionResult, isCompanionSubmissionQuestion } from './companionSubmissions.js';
 import { reserveCompanionAllowance, settleCompanionAllowance } from './companionAllowance.js';
@@ -100,7 +101,7 @@ export async function callCompanionModel(messages: any[], allowTools = true, sig
     const connection: Pick<TcpNetConnectOpts, 'autoSelectFamily' | 'autoSelectFamilyAttemptTimeout'> = { autoSelectFamily: true, autoSelectFamilyAttemptTimeout: 300 };
     const req = https.request({ hostname: 'api.groq.com', path: '/openai/v1/chat/completions', method: 'POST', agent: companionAgent,
       ...connection,
-      headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
+      headers: { ...COMPANION_PROVIDER_HEADERS, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
       signal: AbortSignal.any([AbortSignal.timeout(20000), ...(signal ? [signal] : [])]) }, res => {
       let bytes = 0, chunks: Buffer[] = [];
       res.on('data', b => { bytes += b.length; if (bytes > 65536) { res.destroy(); fail(new ApiError(502, 'Your companion returned too much text. Please try a shorter question.')); } else chunks.push(b); });
@@ -110,7 +111,13 @@ export async function callCompanionModel(messages: any[], allowTools = true, sig
         if (settled) return;
         if (res.statusCode === 429) return fail(new ResourceLimitError(429, companionRetryAfter(String(res.headers['retry-after'] || '')),
           'The free AI service needs a pause. Your message is kept.'));
-        if (res.statusCode !== 200) return fail(new ApiError(503, 'Your companion is temporarily unavailable. Please try again later.', `companion_provider_${res.statusCode}`));
+        if (res.statusCode !== 200) {
+          console.warn('[Companion] Provider rejected request.', {
+            ...companionProviderDiagnostic(res.statusCode, res.headers['content-type'], Buffer.concat(chunks)),
+            elapsedMs: Date.now() - started,
+          });
+          return fail(new ApiError(503, 'Your companion is temporarily unavailable. Please try again later.', `companion_provider_${res.statusCode}`));
+        }
         try { const data = JSON.parse(Buffer.concat(chunks).toString('utf8'));
           if (!data.choices?.[0]?.message) throw Error();
           settled = true; resolve(data);

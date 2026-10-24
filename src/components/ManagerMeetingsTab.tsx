@@ -277,7 +277,7 @@ export const ManagerMeetingsTab: React.FC<ManagerMeetingsTabProps> = ({
               </h2>
             </div>
             <p className="text-xs md:text-sm text-slate-600 max-w-2xl font-medium leading-relaxed">
-              Official meeting appointment portal for resident students and duty staff to book consultations, grievance reviews, and operational check-ins with facility management.
+              Book consultations, grievance reviews, and operational check-ins with facility management for resident students and duty staff.
             </p>
           </div>
 

@@ -2,9 +2,9 @@ import type { ReactNode } from 'react';
 import { X } from 'lucide-react';
 import DashboardOverlay from './DashboardOverlay';
 
-export default function AccountStatusDialog({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
+export default function AccountStatusDialog({ title, onClose, children, overlayClassName = '' }: { title: string; onClose: () => void; children: ReactNode; overlayClassName?: string }) {
   return <DashboardOverlay aria-label={title} onClose={onClose}
-    className="fixed inset-0 flex items-center justify-center bg-slate-950/70 p-3 sm:p-6 backdrop-blur-xl">
+    className={`fixed inset-0 flex items-center justify-center bg-slate-950/70 p-3 sm:p-6 backdrop-blur-xl ${overlayClassName}`}>
     <section className="flex max-h-[90dvh] w-full max-w-4xl flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl">
       <header className="flex shrink-0 items-center justify-between gap-4 border-b border-slate-100 px-5 py-4">
         <h2 className="text-sm font-black text-slate-900">{title}</h2>

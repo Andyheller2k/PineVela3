@@ -16,9 +16,13 @@ import AccountAccessNotice from './components/AccountAccessNotice';
 import RouteSkeleton from './components/RouteSkeleton';
 import ThemeEnvironment from './components/ThemeEnvironment';
 import MobileNavigationLayout from './components/MobileNavigationLayout';
+import NavigationIconMotion from './components/NavigationIconMotion';
 import { ThemeProvider } from './context/ThemeContext';
 import { portalRoles } from './lib/portalRoles';
 import { installedAppRedirect,useInstalledAppMode } from './lib/appMode';
+import AppLaunchLoader, { AppLaunchReady } from './components/AppLaunchLoader';
+import RouteLoadingSpinner from './components/RouteLoadingSpinner';
+import { appLaunch } from './lib/appLaunch';
 
 // Component imports
 const Page1Public = lazy(() => import('./components/Page1Public'));
@@ -50,6 +54,7 @@ const PageVerificationTeamPortal = lazy(() => import('./components/PageVerificat
 class RouteLoadBoundary extends React.Component<{ children: React.ReactNode }, { failed: boolean }> {
   state = { failed: false };
   static getDerivedStateFromError() { return { failed: true }; }
+  componentDidCatch() { appLaunch.recoveryVisible(); }
   render() {
     if (this.state.failed) return <div role="alert" className="page-canvas flex min-h-screen flex-col items-center justify-center gap-4 p-6 text-slate-900">
       <p>This page could not load. Check your connection and try again.</p>
@@ -61,6 +66,8 @@ class RouteLoadBoundary extends React.Component<{ children: React.ReactNode }, {
 
 function PageWrapper({ children, noAnimation = false, smoothEntry = false, loadingFallback = <RouteSkeleton /> }: { children: React.ReactNode; noAnimation?: boolean; smoothEntry?: boolean; loadingFallback?: React.ReactNode }) {
   const reducedMotion = useReducedMotion();
+  const installedApp = useInstalledAppMode();
+  const fallback = installedApp ? <RouteLoadingSpinner /> : loadingFallback;
   // AnimatePresence keeps the outgoing page mounted until its fade finishes.
   // Reset public-page scrolling only when the incoming page actually mounts.
   useLayoutEffect(() => {
@@ -69,19 +76,21 @@ function PageWrapper({ children, noAnimation = false, smoothEntry = false, loadi
   if (noAnimation) {
     return (
       <div className="page-canvas flex-1 flex flex-col w-full min-h-screen">
-        <RouteLoadBoundary><Suspense fallback={loadingFallback}>{children}</Suspense></RouteLoadBoundary>
+        <RouteLoadBoundary><Suspense fallback={fallback}>{children}<AppLaunchReady /></Suspense></RouteLoadBoundary>
       </div>
     );
   }
   return (
     <motion.div
-      initial={smoothEntry ? (reducedMotion ? false : { opacity: 0 }) : { opacity: 0, y: 6 }}
-      animate={smoothEntry ? { opacity: 1 } : { opacity: 1, y: 0 }}
-      exit={smoothEntry ? { opacity: reducedMotion ? 1 : 0 } : { opacity: 0, y: -6 }}
-      transition={smoothEntry ? { duration: reducedMotion ? 0 : 0.3, ease: [0.22, 1, 0.36, 1] } : { duration: 0.12, ease: 'easeOut' }}
+      // A transformed ancestor changes the containing block of fixed navigation.
+      // Fade the page without moving its viewport-bound headers or bottom tabs.
+      initial={reducedMotion ? false : { opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: reducedMotion ? 1 : 0 }}
+      transition={smoothEntry ? { duration: reducedMotion ? 0 : 0.3, ease: [0.22, 1, 0.36, 1] } : { duration: reducedMotion ? 0 : 0.12, ease: 'easeOut' }}
       className="page-canvas flex-1 flex flex-col w-full min-h-screen"
     >
-      <RouteLoadBoundary><Suspense fallback={loadingFallback}>{children}</Suspense></RouteLoadBoundary>
+      <RouteLoadBoundary><Suspense fallback={fallback}>{children}<AppLaunchReady /></Suspense></RouteLoadBoundary>
     </motion.div>
   );
 }
@@ -365,11 +374,13 @@ export default function App() {
         <HashRouter>
           <ThemeProvider>
             <PlatformSettingsProvider>
+              <AppLaunchLoader />
               <PlatformAccessBoundary>
                 <NotificationProvider>
                   <div className="app-canvas min-h-screen flex flex-col relative overflow-hidden">
                     <ThemeEnvironment />
                     <MobileNavigationLayout />
+                    <NavigationIconMotion />
                     <FormFeedback />
                     <ApprovalKeyPrompt />
                     <AdminMessageNotice />

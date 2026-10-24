@@ -4,6 +4,7 @@ import { COMPANIONS, DEFAULT_COMPANION_PREFERENCES, validCompanionPreferences, s
 import { companionGuide, companionInstructions, reserveCompanionRate } from '../supabase/companion';
 import { AttemptBudgets, ResourceLimitError } from '../resourceSecurity';
 import { companionAddressLookup, companionConnectionFailure } from '../supabase/companionConnection';
+import { companionProviderDiagnostic } from '../supabase/companionProvider';
 import { companionAnswer, companionScopeReply } from '../supabase/companionScope';
 import { companionRecordedStatusAnswer, companionSubmissionResult, isCompanionSubmissionQuestion } from '../supabase/companionSubmissions';
 
@@ -69,6 +70,31 @@ test('companion DNS refuses arbitrary destinations before attempting resolution'
   await new Promise<void>(resolve => companionAddressLookup('outside.invalid', {}, error => {
     assert.equal(error?.code, 'ENOTFOUND'); resolve();
   }));
+});
+test('provider rejection diagnostics omit arbitrary codes, credentials and echoed chat text', () => {
+  const sensitive = 'private-content-must-never-be-logged';
+  const errorBody = (code: unknown) => Buffer.from(JSON.stringify({ error: { code, message: sensitive }, request: sensitive }));
+  assert.deepEqual(companionProviderDiagnostic(403, 'application/json; charset=utf-8', errorBody('model_permission_blocked_project')),
+    { httpStatus: 403, format: 'json', providerCode: 'model_permission_blocked_project' });
+  for (const code of [sensitive, { key: sensitive }, [sensitive], null]) {
+    assert.deepEqual(companionProviderDiagnostic(403, 'application/json', errorBody(code)), { httpStatus: 403, format: 'json' });
+  }
+  for (const body of [Buffer.from(sensitive), Buffer.from('<html>' + sensitive + '</html>'), Buffer.alloc(65537, 65)]) {
+    assert.deepEqual(companionProviderDiagnostic(403, 'application/json', body), { httpStatus: 403, format: 'json' });
+  }
+  assert.deepEqual(companionProviderDiagnostic(403, 'text/plain', Buffer.from('error code: 1010\n' + sensitive)),
+    { httpStatus: 403, format: 'other', edgeCode: 1010 });
+  assert.deepEqual(companionProviderDiagnostic(403, 'text/html', Buffer.from('error code: 9999\n' + sensitive)),
+    { httpStatus: 403, format: 'html' });
+  assert.deepEqual(companionProviderDiagnostic(undefined, sensitive, errorBody('invalid_api_key')), { httpStatus: 0, format: 'other' });
+  for (const [message, reason] of [['Forbidden', 'forbidden'], ['Access denied. Please check your network settings.', 'network_access_denied']]) {
+    assert.deepEqual(companionProviderDiagnostic(403, 'application/json', Buffer.from(JSON.stringify({ error: { message } }))),
+      { httpStatus: 403, format: 'json', reason });
+    const withPrivateSuffix = Buffer.from(JSON.stringify({ error: { message: message + sensitive, type: sensitive } }));
+    assert.deepEqual(companionProviderDiagnostic(403, 'application/json', withPrivateSuffix), { httpStatus: 403, format: 'json' });
+  }
+  assert.deepEqual(companionProviderDiagnostic(403, 'application/json', Buffer.from(JSON.stringify({ error: { type: 'permissions_error', message: sensitive } }))),
+    { httpStatus: 403, format: 'json', providerType: 'permissions_error' });
 });
 test('companion declines coding, essays and media tasks while keeping actual app support and simple fun', () => {
   for (const question of ['Debug this Python code for me', 'Write a 1000 word essay about PineVela', 'Create a video', 'Edit this file', 'Generate a JavaScript script', 'Write a research paper'])

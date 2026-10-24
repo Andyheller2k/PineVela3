@@ -85,6 +85,16 @@ with Supabase support. Do not share tokens, passwords or the widget secret.
 See [the verification report](auth-protection-verification.md) for current
 results and limits.
 
+The October 23 production-readiness retest reproduced this boundary with genuine
+production-widget proofs: native missing/invented proofs failed, but one genuine
+proof reused after five seconds with different nonexistent credentials reached
+credential checking again. A fresh proof still worked. PineVela's API rejected
+exact and cross-alias reuse. Hosted Auth still reported `v2.197.0`. Sanitized
+request IDs and owner-side configuration/log steps are recorded privately under
+`.security/production-readiness-2026-10-23/captcha/`; no provider setting or support
+message was changed, and no account, email or session was created. Native replay
+rejection remains an open public-launch requirement.
+
 References: [Supabase CAPTCHA protection](https://supabase.com/docs/guides/auth/auth-captcha),
 [Turnstile rendering and lifecycle](https://developers.cloudflare.com/turnstile/get-started/client-side-rendering/),
 [widget configuration](https://developers.cloudflare.com/turnstile/get-started/client-side-rendering/widget-configurations/).

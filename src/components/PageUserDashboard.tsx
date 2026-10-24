@@ -94,6 +94,7 @@ import UserCatalogSwitcher from './UserCatalogSwitcher';
 import OnboardingProgress,{ MARKET_APPLICATION_STEPS,ROOM_ACTIVATION_STEPS } from './OnboardingProgress';
 import PasswordStrengthGauge from './PasswordStrengthGauge';
 import PineLogo, { PineWordmark } from './PineLogo';
+import WelcomePopup from './WelcomePopup';
 import RegistrationStatusButton from './RegistrationStatusButton';
 import ResidenceCard from './ResidenceCard';
 import ResidenceDetails from './ResidenceDetails';
@@ -1173,7 +1174,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
   if (loadingData && issueReports.length === 0) return <RouteSkeleton />;
 
   return (
-    <div data-navigation-layout={isSidebarHidden ? 'top' : 'sidebar'} className="user-dashboard page-canvas min-h-screen h-screen flex flex-col lg:flex-row text-slate-800 overflow-hidden font-sans relative">
+    <div data-dashboard-shell data-navigation-layout={isSidebarHidden ? 'top' : 'sidebar'} className="user-dashboard page-canvas min-h-screen h-screen flex flex-col lg:flex-row text-slate-800 overflow-hidden font-sans relative">
       {/* Toast Notification */}
       <AnimatePresence>
         {toastMessage && (
@@ -1825,7 +1826,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
           </div>
         )}
 
-        {showMerchantCard && <AccountStatusDialog title="Merchant Registration" onClose={() => setShowMerchantCard(false)}>
+        {showMerchantCard && <AccountStatusDialog title="Merchant Registration" overlayClassName="pv-merchant-registration-overlay" onClose={() => setShowMerchantCard(false)}>
           {merchantRegistration.isPending ? <p role="status">Checking registration…</p> : merchantRegistration.isError ?
             <p role="alert">Could not refresh your merchant registration. Close this card and retry the status button.</p> :
             <MerchantAccountPanel digitalMarketApp={digitalMarketApp} digitalMarketStore={digitalMarketStore} marketPrices={marketPrices}
@@ -3162,45 +3163,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
       {/* ========================================================================= */}
       {/* MODAL 2.5: WELCOME POPUP */}
       {/* ========================================================================= */}
-      {showWelcomePopup && (
-        <DashboardOverlay aria-label="Welcome to PineVela" onClose={() => setShowWelcomePopup(false)} className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl border border-blue-100 space-y-6 animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex items-start justify-between gap-3">
-              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 text-white flex items-center justify-center shrink-0 shadow-lg shadow-blue-600/30">
-              </div>
-              <button aria-label="Close dialog"
-                type="button"
-                onClick={() => setShowWelcomePopup(false)}
-                className="w-10 h-10 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 flex items-center justify-center transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            
-            <div className="space-y-3">
-              <h2 className="text-2xl font-black text-slate-900 tracking-tight">
-                Welcome to the PineVela Community!
-              </h2>
-              <p className="text-sm text-slate-600 leading-relaxed font-medium">
-                We're excited to have you here. PineVela is your unified platform to discover available student accommodations, report and track maintenance issues seamlessly, and connect with other residents. 
-              </p>
-              <p className="text-sm text-slate-600 leading-relaxed font-medium">
-                You can also use this same account to list your own properties as a Hostel Manager or offer your professional services as an Artisan or Staff member.
-              </p>
-            </div>
-
-            <div className="pt-4 border-t border-slate-100 flex items-center justify-end">
-              <button
-                type="button"
-                onClick={() => setShowWelcomePopup(false)}
-                className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-black text-sm shadow-md transition-all cursor-pointer"
-              >
-                Got It, Let's Go!
-              </button>
-            </div>
-          </div>
-        </DashboardOverlay>
-      )}
+      {showWelcomePopup && <WelcomePopup onClose={() => setShowWelcomePopup(false)} />}
 
       {/* ========================================================================= */}
       {/* MODAL 3: LINK / CLAIM DIGITAL ROOM KEY */}

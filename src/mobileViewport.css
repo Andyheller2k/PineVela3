@@ -1,0 +1,82 @@
+/* The page stays in its viewport. Tables, catalogs and maps own their scrolling. */
+html[data-mobile-viewport="locked"] {
+  width: 100%;
+  overflow-x: clip;
+  overscroll-behavior: none;
+  touch-action: pan-x pan-y;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+html[data-mobile-viewport="locked"] body {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: clip;
+  overscroll-behavior: none;
+}
+html[data-mobile-viewport="locked"] :is(#root, .app-canvas) { min-width: 0; max-width: 100%; }
+html[data-mobile-viewport="locked"] [data-portal-navigation="header"] {
+  padding-top: max(8px, env(safe-area-inset-top));
+  padding-left: max(12px, env(safe-area-inset-left));
+  padding-right: max(12px, env(safe-area-inset-right));
+}
+html[data-mobile-viewport="locked"] .login-header {
+  padding-left: max(20px, env(safe-area-inset-left));
+  padding-right: max(20px, env(safe-area-inset-right));
+}
+@media (max-width: 380px) {
+  html[data-mobile-viewport="locked"] .login-header {
+    padding-left: max(12px, env(safe-area-inset-left));
+    padding-right: max(12px, env(safe-area-inset-right));
+  }
+}
+/* Small form controls should not trigger mobile browsers' focus zoom. Keep
+   deliberately large code-entry fields at their existing sizes. */
+html[data-mobile-viewport="locked"] :is(input, select, textarea):where(
+  [class~="text-xs"], [class~="text-sm"], [class~="text-[10px]"],
+  [class~="text-[11px]"], [class~="text-[12px]"], [class~="text-[13px]"], [class~="text-[14px]"]
+) { font-size: 16px; }
+@supports not (overflow: clip) {
+  html[data-mobile-viewport="locked"], html[data-mobile-viewport="locked"] body { overflow-x: hidden; }
+}
+
+/* Keep portal chrome outside the only scrolling region. A sticky header inside
+   an overflow-hidden ancestor can leave the screen when iOS scrolls the outer
+   document. Binding the shell to the viewport also handles dynamic toolbar and
+   keyboard height changes without shrinking the header or hiding Sign Out. */
+[data-dashboard-shell] {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100dvh;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+}
+[data-dashboard-shell] > [data-portal-navigation="header"] {
+  position: relative;
+  top: auto;
+  flex: 0 0 auto;
+  min-width: 0;
+  z-index: 40;
+}
+[data-dashboard-shell] > main {
+  flex: 1 1 0;
+  min-height: 0;
+  min-width: 0;
+  height: auto;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+}
+
+/* These portals use ordinary document scrolling. `clip` avoids creating the
+   non-scrolling ancestor that otherwise disables viewport-sticky headers. */
+html[data-appearance="product"] .app-canvas { overflow: clip; }
+.verification-portal { overflow-x: clip; }
+.verification-portal > [data-portal-navigation="header"],
+html[data-appearance="product"] .support-surface > [data-portal-navigation="header"] {
+  position: sticky;
+  top: 0;
+  flex-shrink: 0;
+  z-index: 40;
+}

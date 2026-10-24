@@ -18,27 +18,31 @@
 .unified-login .login-registration-error button:hover { background: rgba(255,214,10,.12); }
 .unified-login .login-registration-error button:focus-visible { outline: 2px solid #ffd60a; outline-offset: 2px; }
 .mobile-login-backdrop, .mobile-login-photo { display: none; }
+.unified-login .login-portrait { transition: opacity 180ms ease; }
+.unified-login[data-portrait-state="loading"] .login-portrait { opacity: 0; }
 
-/* Share the viewport between the header, form and footer without a scrolling pane. */
+/* Keep comfortable form dimensions; shorter viewports scroll inside the card. */
 .app-canvas:has(.unified-login) { min-height: 100dvh; }
-.unified-login { height: 100dvh; min-height: 0; --login-gap: clamp(6px, 1.4dvh, 16px); --login-padding: clamp(12px, 2.4dvh, 24px); }
+.unified-login { height: 100dvh; min-height: 0; --login-gap: 16px; --login-padding: 24px; }
 .unified-login .login-header, .unified-login .login-footer { flex-shrink: 0; }
 .unified-login .login-main { min-height: 0; padding-block: 8px; }
-.unified-login .login-form-pane { min-height: 0; overflow: visible; }
-.unified-login .login-auth-card { flex-shrink: 0; padding: var(--login-padding); gap: var(--login-gap); justify-content: flex-start; }
-.unified-login .login-auth-card > * { margin-block: 0; }
+.unified-login .login-form-pane { height: 100%; max-height: 100%; min-height: 0; min-width: 0; overflow: hidden; }
+.unified-login .login-auth-card { min-height: 0; max-height: 100%; flex-shrink: 1; padding: var(--login-padding); gap: var(--login-gap); justify-content: flex-start; overflow-x: hidden; overflow-y: auto; overscroll-behavior-y: contain; scroll-padding-block: 24px; scrollbar-width: thin; scrollbar-color: var(--pv-field-edge) transparent; scrollbar-gutter: stable; }
+.unified-login .login-auth-card > * { margin-block: 0; flex-shrink: 0; }
 .unified-login .login-auth-card form { display: grid; gap: var(--login-gap); padding-block: 0; }
 .unified-login .login-auth-card form > *, .unified-login .login-google-section > * { margin-block: 0; min-width: 0; }
 .unified-login .login-google-section { display: grid; gap: var(--login-gap); }
 .unified-login .login-card-logo .pinevela-brand-mark { width: 38px; height: 38px; }
 .unified-login .login-card-heading { display: grid; gap: 4px; padding-top: 0; }
 .unified-login .login-card-heading > * { margin-block: 0; }
-.unified-login .login-card-heading h2 { font-size: clamp(22px, 3.6dvh, 30px); line-height: 1.15; }
+.unified-login .login-card-heading h2 { font-size: 30px; line-height: 1.15; }
 .unified-login .login-card-heading p:empty { display: none; }
-.unified-login .login-auth-card input { min-height: 40px; padding-block: 8px; }
-.unified-login .login-auth-card button[type="submit"], .unified-login .login-google-button { min-height: 40px; padding-block: 8px; }
+.unified-login .login-auth-card label { font-size: 14px; line-height: 1.5; }
+.unified-login .login-auth-card :is([role="status"], [role="alert"]) { color: #fff0af; font-size: 13px; font-weight: 600; line-height: 1.5; }
+.unified-login .login-auth-card input { min-height: 44px; padding-block: 10px; }
+.unified-login .login-auth-card button[type="submit"], .unified-login .login-google-button { min-height: 44px; padding-block: 10px; }
 .unified-login .login-mode-toggle { padding: 4px; }
-.unified-login .login-mode-toggle button { min-height: 40px; padding-block: 6px; }
+.unified-login .login-mode-toggle button { min-height: 44px; padding-block: 8px; }
 .unified-login .login-footer { padding: 4px 12px max(4px, env(safe-area-inset-bottom)); }
 
 @media (max-width: 1023px) {
@@ -49,13 +53,16 @@
   .mobile-login-photo { display: block; position: fixed; inset: var(--pv-login-photo-top) 0 auto; width: 100%; height: var(--pv-login-photo-height); padding: 0; border: 0; background: transparent; pointer-events: none; z-index: -1; }
   .mobile-login-photo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; object-position: center; }
   .unified-login .login-header { position: fixed; inset: 0 0 auto; padding: max(16px, env(safe-area-inset-top)) 20px 16px; z-index: 30; }
+  .unified-login .login-header { gap: 8px; }
+  .unified-login .login-header-actions { flex-shrink: 0; }
+  .unified-login .login-header-actions :is(button, a) { min-height: 44px; }
   .login-header .login-logo-link { padding: 6px 0; background: transparent; backdrop-filter: none; }
   .login-home-link, .unified-login > div[class*="-z-10"], .login-card-logo { display: none; }
   .unified-login .login-main { display: flex; align-items: flex-end; padding: max(88px, calc(env(safe-area-inset-top) + 72px)) 12px 8px; gap: 0; pointer-events: none; }
   .unified-login .login-main > * { pointer-events: auto; }
   .unified-login .login-form-pane { isolation: isolate; }
   .unified-login .login-auth-card { border-radius: 32px; background: var(--pv-panel-gradient); border-color: rgba(255,255,255,.65); backdrop-filter: blur(24px) saturate(1.2); box-shadow: 0 16px 48px rgba(15,23,42,.12); }
-  .unified-login .login-auth-card > * { margin-block: 0; }
+  .unified-login .login-auth-card > * { margin-block: 0; flex-shrink: 0; }
   .unified-login .login-mode-toggle { order: -2; border-radius: 18px; }
   .unified-login .login-mode-toggle button { font-size: 14px; border-radius: 13px; }
   .unified-login .login-brand-heading { color: var(--pv-heading) !important; -webkit-text-stroke: 0 !important; }
@@ -63,6 +70,16 @@
   .unified-login .login-auth-card input { font-size: 16px; }
   .unified-login .login-auth-card button[type="submit"], .unified-login .login-google-button { font-size: 14px; }
   .unified-login .login-footer { color: var(--pv-muted); pointer-events: none; }
+}
+
+@media (max-width: 380px) {
+  .unified-login .login-header { padding-inline: 12px; }
+  .unified-login .login-logo-link { flex-shrink: 0; }
+  .unified-login .login-logo-link .pinevela-brand { gap: 6px; }
+  .unified-login .login-logo-link .pinevela-brand-mark { width: 28px; height: 28px; }
+  .unified-login .login-logo-link .pinevela-wordmark { font-size: 16px; }
+  .unified-login .login-header-actions { gap: 6px; }
+  .unified-login .login-header-actions > a { padding-inline: 8px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -77,7 +94,7 @@
   .unified-login .login-header { flex-shrink: 0; }
   .unified-login .login-main { min-height: 0; overflow: hidden; align-items: stretch; padding-top: 12px; padding-bottom: 12px; }
   .unified-login .login-showcase-pane, .unified-login .login-form-pane { height: 100%; min-height: 0; justify-content: center; position: static; }
-  .unified-login .login-showcase-pane > div, .unified-login .login-auth-card { flex-shrink: 0; }
+  .unified-login .login-showcase-pane > div { flex-shrink: 0; }
   .unified-login .login-showcase-pane { overflow: clip; }
   .unified-login .login-showcase-content { display: grid; height: 100%; min-height: 0; flex-shrink: 1; grid-template-rows: minmax(0, 1fr) auto auto; gap: clamp(8px, 2dvh, 24px); }
   .unified-login .login-showcase-content > * { margin-block: 0; }
@@ -86,49 +103,16 @@
   .unified-login .login-feature-description p { margin-top: clamp(4px, 1dvh, 12px); font-size: clamp(12px, 1.8dvh, 16px); line-height: 1.45; }
 }
 
-@media (max-height: 650px) {
-  .unified-login { --login-gap: 6px; --login-padding: 12px; }
-  .unified-login .login-card-logo .pinevela-brand-mark { width: 28px; height: 28px; }
-  .unified-login .login-card-heading h2 { font-size: 22px; }
-  .unified-login .login-auth-card input, .unified-login .login-auth-card button[type="submit"], .unified-login .login-google-button, .unified-login .login-mode-toggle button { min-height: 36px; padding-block: 5px; }
-  .unified-login .login-auth-card [data-password-gauge] { display: flex; align-items: center; gap: 6px; margin-top: 2px; }
-  .unified-login .login-auth-card [data-password-gauge] > * { margin: 0; }
-  .unified-login .login-auth-card [data-password-gauge] > [role="progressbar"] { flex: 1; }
-}
-
-@media (max-height: 740px), (min-width: 600px) and (max-height: 800px) {
-  .unified-login .login-signup-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .unified-login .login-signup-form > button, .unified-login .login-signup-form > [role="alert"] { grid-column: 1 / -1; }
-}
-
-@media (max-width: 1023px) and (max-height: 540px) {
-  .unified-login .login-auth-card { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; }
-  .unified-login .login-card-heading { order: -3; text-align: left; }
-  .unified-login .login-auth-card > form, .unified-login .login-google-section, .unified-login .login-auth-card > [role="alert"] { grid-column: 1 / -1; }
-}
-
 @media (max-width: 1023px) and (max-height: 450px) {
-  .unified-login { --login-gap: 4px; --login-padding: 8px; --pv-login-photo-top: max(56px, calc(env(safe-area-inset-top) + 52px)); }
+  .unified-login { --pv-login-photo-top: max(56px, calc(env(safe-area-inset-top) + 52px)); }
   .unified-login .login-header { padding-block: max(2px, env(safe-area-inset-top)) 2px; }
   .unified-login .login-main { padding-top: max(56px, calc(env(safe-area-inset-top) + 52px)); padding-bottom: 4px; }
   .unified-login .login-auth-card { border-radius: 20px; }
-  .unified-login .login-credentials-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .unified-login .login-credentials-form > button, .unified-login .login-credentials-form > fieldset, .unified-login .login-credentials-form > [role] { grid-column: 1 / -1; }
 }
 
-@media (min-width: 480px) and (max-width: 1023px) and (max-height: 450px) {
-  .unified-login .login-google-section { grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 12px; }
-  .unified-login .login-signup-form > div:has([data-password-gauge]) { position: relative; }
-  .unified-login .login-signup-form [data-password-gauge] { position: absolute; top: 0; right: 0; width: 90px; margin-top: 0; }
-}
-
-@media (min-width: 480px) and (max-width: 1023px) and (max-height: 360px) {
-  .unified-login .login-mode-toggle { padding: 2px; }
-  .unified-login .login-mode-toggle button { min-height: 32px; }
-  .unified-login .login-signup-form { grid-template-columns: repeat(2, minmax(0, 1fr)) minmax(72px, .45fr); }
-  .unified-login .login-signup-form > div:nth-child(odd) { grid-column: 1; }
-  .unified-login .login-signup-form > div:nth-child(even) { grid-column: 2; }
-  .unified-login .login-signup-form > button { grid-column: 3; grid-row: 1 / 3; }
-  .unified-login .login-signup-form [data-password-gauge] { width: 72px; }
-  .unified-login .login-footer { line-height: 12px; }
+/* Examples should read as hints, with entered values retaining their own ink. */
+html[data-theme] .unified-login .login-auth-card input::placeholder {
+  color: #94a3b8;
+  opacity: 1;
+  font-weight: 400;
 }

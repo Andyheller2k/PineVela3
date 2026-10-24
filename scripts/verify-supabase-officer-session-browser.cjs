@@ -99,7 +99,7 @@ const save = async report => {
     console.log(JSON.stringify({stage,checks,guest:guest.status,stale:stale.status,administratorReads:denied.map(r=>r.status)}));
     }
 
-    const portalReady = "location.hash.split('?')[0]==='#/field-officer'&&document.body.textContent.includes('Field Officer Portal')&&document.body.textContent.includes('Dispatched Property Inspections')&&!document.body.textContent.includes('Loading your dispatched assignments...')";
+    const portalReady = "location.hash.split('?')[0]==='#/field-officer'&&document.body.textContent.includes('Field Officer')&&document.body.textContent.includes('Dispatched Property Inspections')&&!document.body.textContent.includes('Loading your dispatched assignments...')";
     stage = 'real officer portal';
     let responseCount = queueResponses.length;
     await navigate('/?officerAcceptance=' + Date.now() + '#/field-officer');
@@ -107,7 +107,7 @@ const save = async report => {
     try { await waitFor(portalReady, 'The real officer portal and queue', 90000); }
     catch (error) {
       lastPageState = await evaluate(`(()=>{const t=document.body.textContent;return{route:location.hash.split('?')[0],
-        portal:t.includes('Field Officer Portal'),queue:t.includes('Dispatched Property Inspections'),
+        portal:t.includes('Field Officer'),queue:t.includes('Dispatched Property Inspections'),
         loading:t.includes('Loading your dispatched assignments...'),retry:!!document.querySelector('#session-retry-title'),
         denied:t.includes('Access Denied'),login:!!document.querySelector('input[type=password]')};})()`).catch(() => null);
       throw error;

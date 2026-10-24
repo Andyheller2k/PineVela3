@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { installedAppRedirect,isInstalledAppMode } from '../src/lib/appMode';
+import { applyBrowserChrome, browserChromeColor } from '../src/lib/browserChrome';
 
 type AppWindow = NonNullable<Parameters<typeof isInstalledAppMode>[0]>;
 
@@ -31,4 +32,43 @@ test('installed routing replaces marketing pages while preserving account, help 
     '/customer-service', '/staff-invitation', '/support-invitation', '/admin-invitation',
     '/manager-google-result', '/payments/return', '/why-us-unrelated', '/invalid%path',
   ]) assert.equal(installedAppRedirect(route), undefined, route);
+});
+
+
+test('status-bar color follows product appearance while public pages retain navy', () => {
+  assert.equal(browserChromeColor('light', false), '#ffffff');
+  assert.equal(browserChromeColor('dark', false), '#001d3d');
+  assert.equal(browserChromeColor('light', true), '#001d3d');
+  assert.equal(browserChromeColor('dark', true), '#001d3d');
+});
+
+test('live appearance changes repaint metadata and both page backing surfaces', () => {
+  const previousDocument = Object.getOwnPropertyDescriptor(globalThis, 'document');
+  const properties = new Map<string, string>();
+  const meta = { setAttribute: (name: string, value: string) => {
+    assert.equal(name, 'content'); properties.set('theme-color', value);
+  } };
+  const root = { style: { backgroundColor: '', setProperty: (name: string, value: string) => properties.set(name, value) } };
+  const body = { style: { backgroundColor: '' } };
+  Object.defineProperty(globalThis, 'document', { configurable: true, value: {
+    documentElement: root, body, querySelector: (selector: string) => {
+      assert.equal(selector, 'meta[name="theme-color"]'); return meta;
+    },
+  } });
+  try {
+    for (const [appearance, publicAppearance, expected] of [
+      ['light', false, '#ffffff'], ['dark', false, '#001d3d'],
+      ['light', false, '#ffffff'], ['light', true, '#001d3d'],
+      ['dark', true, '#001d3d'],
+    ] as const) {
+      applyBrowserChrome(appearance, publicAppearance);
+      assert.equal(properties.get('theme-color'), expected);
+      assert.equal(properties.get('--pv-chrome-color'), expected);
+      assert.equal(root.style.backgroundColor, expected);
+      assert.equal(body.style.backgroundColor, expected);
+    }
+  } finally {
+    if (previousDocument) Object.defineProperty(globalThis, 'document', previousDocument);
+    else Reflect.deleteProperty(globalThis, 'document');
+  }
 });

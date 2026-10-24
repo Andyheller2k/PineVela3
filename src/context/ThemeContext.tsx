@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 import { sessionFetch } from '../lib/session';
 import { getPublicAppearance } from '../lib/publicAppearance';
+import { applyBrowserChrome } from '../lib/browserChrome';
 
 export type Theme = 'light' | 'dark';
 const DEVICE_KEY = 'pinevela:appearance';
@@ -50,6 +51,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     root.dataset.appearance = publicAppearance ? 'public' : 'product';
     root.dataset.theme = appearance;
     root.style.colorScheme = appearance;
+    applyBrowserChrome(appearance, publicAppearance);
   }, [fixedAppearance, publicAppearance, theme]);
 
   // Serialise writes so rapid toggles cannot leave an older preference on the server.

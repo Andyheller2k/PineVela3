@@ -1,0 +1,5 @@
+/* Only the moving glyph receives a centered pivot, for the life of its gesture. */
+svg[data-nav-icon-motion] {
+  transform-box: fill-box;
+  transform-origin: center;
+}

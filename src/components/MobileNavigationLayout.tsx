@@ -11,13 +11,15 @@ export default function MobileNavigationLayout() {
       const visible = [...document.querySelectorAll<HTMLElement>('.mobile-bottom-nav')].find(element => element.getClientRects().length > 0) || null;
       if (visible !== measured) { resize.disconnect(); measured = visible; if (visible) resize.observe(visible); }
       document.documentElement.dataset.mobileNavigation = String(!!visible);
-      document.documentElement.style.setProperty('--pv-mobile-nav-height', `${visible?.getBoundingClientRect().height || 0}px`);
+      const bounds = visible?.getBoundingClientRect();
+      document.documentElement.style.setProperty('--pv-mobile-nav-height', `${bounds?.height || 0}px`);
+      document.documentElement.style.setProperty('--pv-mobile-nav-offset', `${bounds ? Math.max(0, window.innerHeight - bounds.bottom) : 0}px`);
     };
     const observer = new MutationObserver(measure);
     observer.observe(document.getElementById('root')!, { childList: true, subtree: true });
     window.addEventListener('resize', measure);
     measure();
-    return () => { observer.disconnect(); resize.disconnect(); window.removeEventListener('resize', measure); delete document.documentElement.dataset.mobileNavigation; document.documentElement.style.removeProperty('--pv-mobile-nav-height'); };
+    return () => { observer.disconnect(); resize.disconnect(); window.removeEventListener('resize', measure); delete document.documentElement.dataset.mobileNavigation; document.documentElement.style.removeProperty('--pv-mobile-nav-height'); document.documentElement.style.removeProperty('--pv-mobile-nav-offset'); };
   }, [pathname]);
   return null;
 }

@@ -2,7 +2,8 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content" />
+    <meta name="theme-color" content="#001d3d" />
     <script>
       // Public pages stay fixed; product pages restore the saved preference before paint.
       var route = (location.hash.slice(1).split('?')[0] || '/').replace(/\/+$/, '') || '/';
@@ -20,20 +21,63 @@
         document.documentElement.dataset.theme = fixedAppearance || appearance;
         document.documentElement.style.colorScheme = fixedAppearance || appearance;
       } catch (_) { document.documentElement.dataset.theme = fixedAppearance || 'light'; document.documentElement.style.colorScheme = fixedAppearance || 'light'; }
+      var chromeColor = document.documentElement.dataset.theme === 'light' && !publicAppearance ? '#ffffff' : '#001d3d';
+      document.querySelector('meta[name="theme-color"]').content = chromeColor;
+      document.documentElement.style.setProperty('--pv-chrome-color', chromeColor);
+      document.documentElement.style.backgroundColor = chromeColor;
+      document.documentElement.dataset.appMode = navigator.standalone === true || matchMedia('(display-mode: standalone)').matches ? 'installed' : 'browser';
     </script>
+    <style>
+      /* WebKit reads a fixed edge's opaque background only above its 10px
+         thin-border threshold. Smaller strips use a cached pixel sample and
+         can keep the previous theme. Keep this outside transformed routes,
+         with no layout height or tap handling, and update its color in place.
+         Source: WebKit LocalFrameView::fixedContainerEdges. */
+      #pv-browser-chrome { display: none; }
+      html[data-app-mode="installed"] #pv-browser-chrome { display: block; position: fixed; top: 0; left: 0; right: 0; height: max(12px, env(safe-area-inset-top)); z-index: 55; background-color: var(--pv-chrome-color, #001d3d); pointer-events: none; }
+      #pv-app-launch { display: none; }
+      html[data-app-mode="installed"] #pv-app-launch { position: fixed; inset: 0; z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; box-sizing: border-box; padding: max(24px, env(safe-area-inset-top)) 24px max(24px, env(safe-area-inset-bottom)); background: var(--pv-chrome-color, #001d3d); color: #ffd60a; font-family: system-ui, sans-serif; }
+      .pv-app-launch-icon { width: 60px; height: 60px; border-radius: 16px; }
+      .pv-app-launch-name { display: flex; font-size: 18px; font-weight: 800; letter-spacing: -.04em; line-height: 1.2; }
+      .pv-app-launch-name span { padding: 5px 8px; background: #001d3d; color: #ffd60a; border-radius: 0 8px 8px 0; }
+      .pv-app-launch-name span:first-child { background: #ffd60a; color: #001d3d; border-radius: 8px 0 0 8px; }
+      .pv-app-launch-track { width: 64px; height: 3px; overflow: hidden; border-radius: 99px; background: #826f3540; }
+      .pv-app-launch-track::after { content: ''; display: block; width: 50%; height: 100%; background: #d6a700; border-radius: inherit; animation: pv-app-opening 1.15s ease-in-out infinite alternate; }
+      .pv-app-launch-recovery { max-width: 280px; color: #b4c6d9; text-align: center; font-size: 14px; line-height: 1.5; }
+      html[data-theme="light"][data-appearance="product"] .pv-app-launch-recovery { color: #3d526c; }
+      .pv-app-launch-recovery button { min-height: 44px; margin-top: 12px; border: 0; border-radius: 12px; padding: 10px 20px; background: #ffd60a; color: #001d3d; font: inherit; font-weight: 700; cursor: pointer; }
+      .pv-app-launch-recovery button:focus-visible { outline: 2px solid currentColor; outline-offset: 4px; }
+      @keyframes pv-app-opening { from { transform: translateX(0); } to { transform: translateX(100%); } }
+      @media (prefers-reduced-motion: reduce) { .pv-app-launch-track::after { animation: none; transform: translateX(50%); } }
+    </style>
     <title>PineVela</title>
     <link rel="icon" type="image/svg+xml" href="/store-covers/pinevela-logo.svg" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
-    <meta name="theme-color" content="#001d3d" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="PineVela" />
     <meta name="description" content="A universal global dashboard for modern student living, featuring student and manager portals for hostel accommodations." />
     <meta property="og:title" content="PineVela" />
     <meta property="og:description" content="A universal global dashboard for modern student living, featuring student and manager portals for hostel accommodations." />
   </head>
-  <body>
+  <body style="background-color: var(--pv-chrome-color, #001d3d)">
+    <div id="pv-browser-chrome" aria-hidden="true"></div>
+    <div id="pv-app-launch" class="pv-app-launch" role="status" aria-label="Opening PineVela">
+      <img class="pv-app-launch-icon" src="/icons/pinevela-192.png" alt="PineVela" width="60" height="60" />
+      <div class="pv-app-launch-name" aria-hidden="true"><span>Pine</span><span>Vela</span></div>
+      <span class="pv-app-launch-track" aria-hidden="true"></span>
+      <div class="pv-app-launch-recovery" hidden><p>Taking longer than usual. Check your connection.</p><button type="button" onclick="location.reload()">Reload app</button></div>
+    </div>
+    <script>
+      var launchTimer = setTimeout(function () {
+        var launch = document.querySelector('#pv-app-launch .pv-app-launch-recovery');
+        if (launch) launch.hidden = false;
+      }, 20000);
+      window.addEventListener('pinevela:app-ready', function () {
+        clearTimeout(launchTimer);
+        document.getElementById('pv-app-launch')?.remove();
+      }, { once: true });
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

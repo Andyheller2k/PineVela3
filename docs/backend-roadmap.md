@@ -1,6 +1,6 @@
 # Backend architecture and deployment roadmap
 
-Reviewed: 22 October 2026. This is a source-based proposal, not a runtime migration
+Review started: 22 October 2026. This is a source-based proposal, not a runtime migration
 or a new security certification. No application code, database, account, DNS or
 hosting configuration was changed for this review.
 
@@ -62,6 +62,10 @@ new implementations before a complete move. See
 
 ## Recommended launch path with Express retained
 
+The first baseline/recovery review is recorded in the
+[October 23 readiness checkpoint](production-readiness-2026-10-23.md), including
+verified recovery evidence and the remaining public-launch requirements.
+
 | Phase | Work | Evidence required to proceed |
 | --- | --- | --- |
 | 1. Baseline and recovery | Keep the source inventory, identify the release commit/build, review enabled versus intentionally disabled workflows, retain matching database/Storage backups and secret-key recovery material | A restore rehearsal and a documented rollback build; no deletion of existing recovery files |
@@ -70,12 +74,19 @@ new implementations before a complete move. See
 | 4. Abuse and operational limits | Put edge request controls in front of the API, verify proxy/IP behavior, bound requests/uploads and database pools. Process-local API/AI budgets need shared enforcement before horizontally scaling | Independent-instance tests and bounded authorized load tests; existing email/login/CAPTCHA ledgers remain shared. Resolve the outstanding direct-native CAPTCHA replay behavior before public launch |
 | 5. Product acceptance | Exercise real housing, staff, marketplace, payments, encrypted chat, support/moderation and account governance journeys in an isolated staging environment | Positive and forbidden operations pass across roles/accounts/hostels; concurrency/replay/restart/provider-failure checks; no real customer charges or unsolicited mail |
 | 6. Domain and monitored rollout | Connect `pinevela.app` website DNS after the deployment works, preserve Resend email records, configure exact auth redirects/Turnstile hosts and verified payment callbacks | HTTPS journeys, email delivery, PWA manifest/worker scope, private-path denials, alerts and rollback tested on the actual domain |
-| 7. Mobile release | Keep the web/PWA available. Build Capacitor clients against the stable HTTPS API; validate native authentication transport, secure session handling, system-browser OAuth/deep links and resume/logout behavior | Real iOS/Android device acceptance with no broad CORS or cookie-policy relaxation; app-store packaging and payment-policy review as a separate release step |
+| 7. Mobile release | Keep the web/PWA available. Centralize the configured HTTPS API origin for fetch, media, streams and generated invitation/OAuth callbacks. Build a native authentication adapter that preserves session isolation, manager-key handling, system-browser OAuth/deep links and resume/logout behavior | Real iOS/Android device acceptance with no broad CORS or cookie-policy relaxation; app-store packaging and payment-policy review as a separate release step |
 
 Native shell development may proceed in parallel once API contracts are stable.
 Production backend reliability is the release dependency; Express removal is not.
 Phone home-screen installation has already been implemented locally and still
 needs physical-device acceptance on the deployed HTTPS site.
+
+Current [session transport](../src/lib/session.ts) wraps only same-origin `/api`
+requests with `credentials: 'same-origin'`, and the
+[realtime client](../src/lib/queryClient.ts) uses a relative SSE URL. Media and
+generated links also assume the website origin. Changing an API base URL alone
+does not make Strict cookies, portal keys or session-generation checks work in a
+native WebView; the mobile adapter needs its own verified design and device tests.
 
 ## Required behavior in either architecture
 

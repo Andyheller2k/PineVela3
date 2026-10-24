@@ -409,6 +409,14 @@ cookies; Google's own browser session remains signed in. The next Google action
 still asks for an account choice. Real-provider HTTP checks verify Supabase
 forwards this prompt to Google and preserves callback state/cookie protections.
 
+The Google button resets its connecting state when the browser restores the
+login page from back/forward cache, or when the user returns from an external
+handoff. Start requests have a 15-second deadline and a synchronous duplicate-send
+guard. Changing login/signup mode or leaving the component cancels pending
+client work, so an old response cannot start a different flow later. Retrying
+always starts a fresh server-held PKCE/state flow; it does not reuse a callback
+or authenticate a cancelled attempt.
+
 The server exchanges the code and reads the verified identity from Supabase `/user`.
 The server resolves native profiles and account contexts by the verified Supabase
 subject and live session. Shared email never selects or links a secondary portal.

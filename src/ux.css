@@ -32,8 +32,8 @@ html[data-theme="dark"] .ux-more-panel { background: var(--pv-panel); border-col
   label:has(input[type="file"]) { min-width: var(--pv-touch-target); min-height: var(--pv-touch-target); display: inline-flex; align-items: center; }
   .leaflet-control-zoom a, .leaflet-control-layers-toggle { min-width: 44px; min-height: 44px; line-height: 44px; }
   .ux-more-overlay { padding-bottom: max(12px, env(safe-area-inset-bottom)); }
-  html[data-mobile-navigation="true"] .ux-dashboard-toast { bottom: calc(var(--pv-mobile-nav-height, 72px) + 88px); left: 16px; right: 16px; width: auto; max-width: calc(100vw - 32px); transform: none !important; overflow-wrap: anywhere; animation: none; }
-  html[data-mobile-navigation="true"] .app-canvas main { padding-bottom: calc(var(--pv-mobile-nav-height, 72px) + 88px) !important; scroll-padding-bottom: calc(var(--pv-mobile-nav-height, 72px) + 88px); }
+  html[data-mobile-navigation="true"] .ux-dashboard-toast { bottom: calc(var(--pv-mobile-nav-height, 72px) + var(--pv-mobile-nav-offset, 8px) + 16px); left: 16px; right: 16px; width: auto; max-width: calc(100vw - 32px); transform: none !important; overflow-wrap: anywhere; animation: none; }
+  html[data-mobile-navigation="true"] .app-canvas main { padding-bottom: calc(var(--pv-mobile-nav-height, 72px) + var(--pv-mobile-nav-offset, 8px) + 24px) !important; scroll-padding-bottom: calc(var(--pv-mobile-nav-height, 72px) + var(--pv-mobile-nav-offset, 8px) + 24px); }
   .ux-action-group > button { flex: 1 1 auto; }
 }
 @media (prefers-reduced-motion: reduce) {

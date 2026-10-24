@@ -792,7 +792,7 @@ export default function PageManagerDashboard() {
                 Account Access Blocked
               </span>
               <h2 className="text-2xl font-black text-slate-900 mt-2 tracking-tight">
-                Manager Portal Restricted
+                Manager Access Restricted
               </h2>
             </div>
           </div>
@@ -837,7 +837,7 @@ export default function PageManagerDashboard() {
   if (loading && properties.length === 0) return <RouteSkeleton />;
 
   return (
-    <div className="page-canvas min-h-screen h-screen flex flex-col lg:flex-row text-slate-800 overflow-hidden font-sans">
+    <div data-dashboard-shell className="page-canvas min-h-screen h-screen flex flex-col lg:flex-row text-slate-800 overflow-hidden font-sans">
       {managerError && <div role="alert" className="fixed top-2 left-1/2 -translate-x-1/2 z-50 rounded-xl bg-red-50 border border-red-200 px-4 py-2 text-sm text-red-800">Updates unavailable: {managerError.message} <button onClick={() => void retryManagerData()} className="underline">Retry</button></div>}
       {/* Toast Notification */}
       <AnimatePresence>

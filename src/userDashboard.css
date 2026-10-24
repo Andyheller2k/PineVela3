@@ -13,6 +13,7 @@
   line-height: 1.25;
 }
 .user-dashboard .user-section-description { font-size: .875rem; font-weight: 500; line-height: 1.65; max-width: 65ch; margin-top: .5rem; }
+.user-dashboard .user-section-title > [class*="rounded-full"] { color: var(--pv-text); -webkit-text-fill-color: currentColor; font-size: 12px; line-height: 1.5; }
 .user-dashboard-content > .animate-fadeIn,
 .user-dashboard .user-catalog-panel { animation: user-view-enter .2s var(--user-motion) both; }
 .user-dashboard :is(button, a) { -webkit-tap-highlight-color: transparent; }
@@ -132,15 +133,34 @@ html[data-theme="dark"] .user-price-sheet .market-price-panel { background: #001
   .user-dashboard :is([data-listing-id], [data-residence-id]):hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgb(0 8 20 / .1); }
 }
 @media (max-width: 1023px) {
-  .user-dashboard-content { padding-bottom: calc(var(--pv-mobile-nav-height, 80px) + 24px + env(safe-area-inset-bottom)); }
+  :is(.user-dashboard, body:has(.user-dashboard) [data-dashboard-overlay]) { --user-status-success: #065f46; --user-status-error: #9f1239; --user-status-warning: #854d0e; }
+  html[data-theme="dark"] :is(.user-dashboard, body:has(.user-dashboard) [data-dashboard-overlay]) { --user-status-success: #a7f3d0; --user-status-error: #fecdd3; --user-status-warning: #fde68a; }
+  html[data-theme="dark"] :is(.user-dashboard, body:has(.user-dashboard) [data-dashboard-overlay]) .pv-feature-card { --user-status-success: #065f46; --user-status-error: #9f1239; --user-status-warning: #854d0e; }
+  html[data-theme] :is(.user-dashboard, body:has(.user-dashboard) [data-dashboard-overlay]) :is([class^="text-emerald-"], [class*=" text-emerald-"], [class^="text-green-"], [class*=" text-green-"]) { color: var(--user-status-success); }
+  html[data-theme] :is(.user-dashboard, body:has(.user-dashboard) [data-dashboard-overlay]) :is([class^="text-rose-"], [class*=" text-rose-"], [class^="text-red-"], [class*=" text-red-"]) { color: var(--user-status-error); }
+  html[data-theme] :is(.user-dashboard, body:has(.user-dashboard) [data-dashboard-overlay]) :is([class^="text-amber-"], [class*=" text-amber-"], [class^="text-orange-"], [class*=" text-orange-"]) { color: var(--user-status-warning); }
+  .user-dashboard-content { padding: 20px 16px calc(var(--pv-mobile-nav-height, 80px) + 24px + env(safe-area-inset-bottom)); font-size: 16px; line-height: 1.6; }
+  .user-dashboard-content [class~="text-xs"] { font-size: 14px; line-height: 1.6; }
+  .user-dashboard-content [class~="text-sm"] { font-size: 15px; line-height: 1.6; }
+  .user-dashboard :is([class~="text-[7.5px]"], [class~="text-[8px]"], [class~="text-[8.5px]"], [class~="text-[9px]"], [class~="text-[9.5px]"], [class~="text-[10px]"], [class~="text-[11px]"]) { font-size: 12px; line-height: 1.5; }
+  body:has(.user-dashboard) [data-dashboard-overlay] [class~="text-xs"] { font-size: 14px; line-height: 1.6; }
+  body:has(.user-dashboard) [data-dashboard-overlay] [class~="text-sm"] { font-size: 15px; line-height: 1.6; }
+  body:has(.user-dashboard) [data-dashboard-overlay] :is([class~="text-[7.5px]"], [class~="text-[8px]"], [class~="text-[8.5px]"], [class~="text-[9px]"], [class~="text-[9.5px]"], [class~="text-[10px]"], [class~="text-[11px]"]) { font-size: 12px; line-height: 1.5; }
+  :is(.user-dashboard .user-dashboard-content, body:has(.user-dashboard) [data-dashboard-overlay]) :is(input:not([type="checkbox"]):not([type="radio"]), select, textarea) { font-size: 16px; line-height: 1.5; }
+  .user-dashboard .user-section-description { font-size: 15px; font-weight: 600; line-height: 1.65; }
+  html[data-theme="light"] .user-dashboard-content { --pv-muted: #3d526c; }
+  html[data-theme="dark"] .user-dashboard-content { --pv-muted: #c1d2e5; }
+  html[data-theme] .user-dashboard-content :is([class~="text-slate-300"], [class~="text-slate-400"], [class~="text-slate-500"], [class~="text-gray-400"], [class~="text-gray-500"]) { color: var(--pv-muted); }
+  .user-bottom-navigation [data-mobile-nav-items] .ux-mobile-destination > span:not(.user-navigation-highlight) { font-size: 12px !important; font-weight: 700; }
 }
 @media (max-width: 639px) {
   .user-dashboard-header { padding: 8px 12px; }
   .user-dashboard-header .user-header-signout-label { display: none; }
-  .user-dashboard-header .user-dashboard-brand h1 { font-size: 12px; }
+  .user-dashboard-header .user-dashboard-brand h1 { font-size: 14px; }
+  .user-dashboard-header .user-dashboard-brand p { font-size: 12px; font-weight: 600; }
   .user-dashboard .market-categories { gap: 6px; }
   .user-dashboard .market-categories button { min-height: 40px; }
-  .user-dashboard .user-section-title > [class*="rounded-full"] { font-size: 9px; letter-spacing: .02em; }
+  .user-dashboard .user-section-title > [class*="rounded-full"] { font-size: 12px; line-height: 1.5; letter-spacing: .02em; }
 }
 @media (min-width: 640px) and (max-width: 1023px) {
   html[data-theme][data-appearance="product"] .user-bottom-navigation { max-width: 560px; margin-inline: auto; }

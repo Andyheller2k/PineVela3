@@ -46,7 +46,9 @@ new reservations use the private, server-only `companion_usage_windows` table.
 Groq's independent shared rate and daily token limits can still stop replies
 earlier or require a longer provider pause; PineVela cannot shorten those waits.
 
-Provider connections use bounded keep-alive and TTL-limited DNS results for the
+Provider requests explicitly accept JSON and identify themselves as
+`PineVela-Companion/1.0`; they do not impersonate browsers. Provider connections
+use bounded keep-alive and TTL-limited DNS results for the
 fixed Groq hostname, with an OS-resolver fallback and a six-second DNS deadline;
 TLS verification is unchanged. Alternate resolved IPv4
 addresses may be attempted before the request is sent; inference calls are not
@@ -56,7 +58,9 @@ appears after eight seconds. Cancel reply restores the draft and aborts the
 browser request; a disconnected response cancels provider work, and the server
 checks cancellation before starting lookups or committing a reply. Failed work
 releases its active lease. Safe diagnostics record only failure category and
-elapsed time, never message text or upstream error contents.
+elapsed time, never message text or upstream error contents. HTTP rejections also
+log the HTTP status, a fixed response-format category and allowlisted provider
+or edge error codes. Unknown codes, raw bodies and response headers are omitted.
 
 Read-only functions search the real, moderated public catalog, summarize unread
 notifications, and read the user's actual manager/resident/seller registrations.

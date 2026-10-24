@@ -44,7 +44,7 @@ export default function UserDashboardNavigation({
         <div role="button" tabIndex={0} aria-label="Go to home" onKeyDown={activateOnKeyboard} className="user-dashboard-brand flex items-center gap-2 cursor-pointer" onClick={() => handleNavClick('home')}>
           <PineLogo size={28} hideText />
           <div>
-            <h1 className="text-xs font-black tracking-tight text-blue-950 leading-tight">PineVela Portal</h1>
+            <h1 className="text-xs font-black tracking-tight text-blue-950 leading-tight">PineVela</h1>
             <p className="text-[10px] text-slate-500 truncate max-w-[160px]">{hostelName || 'PineVela Resident'}</p>
           </div>
         </div>

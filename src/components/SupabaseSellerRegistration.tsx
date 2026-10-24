@@ -15,7 +15,7 @@ export default function SupabaseSellerRegistration({name,phone,categories,onClos
     await request('/api/digital-market/register',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({enrollmentId:enrollment,university:campus,categoryToSell:category,idNumber:studentId,storeName,certified})});
     onSubmitted();onClose();
   }catch(err:any){setError(err.message);}finally{setBusy(false);}};
-  return <DashboardOverlay aria-label="Verified seller registration" onClose={onClose} className="fixed inset-0 z-[99999] flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
+  return <DashboardOverlay aria-label="Verified seller registration" onClose={onClose} className="pv-merchant-registration-overlay fixed inset-0 z-[99999] flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
     <section className="max-h-[90dvh] w-full max-w-xl space-y-4 overflow-y-auto rounded-3xl border border-blue-200 bg-white p-6 shadow-xl">
       <div className="flex items-center justify-between gap-4"><h2 className="text-xl font-bold text-blue-950">Seller registration</h2><button type="button" aria-label="Close seller registration" onClick={onClose} className="rounded-xl border border-blue-200 px-3 py-2">Close</button></div>
       {error && <p role="alert" className="rounded-xl bg-rose-50 p-3 text-sm text-rose-800">{error}</p>}

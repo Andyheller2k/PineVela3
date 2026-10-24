@@ -87,11 +87,11 @@ export default function PageResidentDashboard() {
       const request = async (path: string) => {
         const response = await sessionFetch(path, { signal: AbortSignal.any([signal, AbortSignal.timeout(15000)]) });
         const data = await response.json();
-        if (!response.ok) throw new Error(data.error || 'Your resident portal could not load.');
+        if (!response.ok) throw new Error(data.error || 'Your resident dashboard could not load.');
         return data;
       };
       const [issues, rooms] = await Promise.all([request('/api/issue-reports'), request('/api/student/my-rooms')]);
-      if (!Array.isArray(issues) || !Array.isArray(rooms.rooms)) throw new Error('Your resident portal received an invalid response. Please try again.');
+      if (!Array.isArray(issues) || !Array.isArray(rooms.rooms)) throw new Error('Your resident dashboard received an invalid response. Please try again.');
       return { issues: issues as IssueReport[], rooms: rooms.rooms as HostelRoomKey[] };
     }
   });
@@ -353,14 +353,14 @@ export default function PageResidentDashboard() {
 
   if (residentError && !residentData) return <main role="alert" className="page-canvas flex min-h-screen flex-col items-center justify-center gap-4 p-6 text-center text-blue-950">
     <PineLogo size={60} />
-    <p>Your resident portal could not load. Please try again.</p>
-    <button type="button" onClick={() => void retryResidentData()} className="rounded-xl bg-blue-900 px-5 py-3 font-semibold text-white">Retry resident portal</button>
+    <p>Your resident dashboard could not load. Please try again.</p>
+    <button type="button" onClick={() => void retryResidentData()} className="rounded-xl bg-blue-900 px-5 py-3 font-semibold text-white">Retry resident dashboard</button>
   </main>;
 
   if (loadingData) return <RouteSkeleton />;
 
   return (
-    <div className="page-canvas min-h-screen h-screen flex flex-col lg:flex-row text-slate-800 overflow-hidden font-sans relative">
+    <div data-dashboard-shell className="page-canvas min-h-screen h-screen flex flex-col lg:flex-row text-slate-800 overflow-hidden font-sans relative">
       {/* Toast Notification */}
       <AnimatePresence>
         {toastMessage && (
@@ -426,7 +426,7 @@ export default function PageResidentDashboard() {
                 <h1 className="text-sm font-extrabold tracking-tight bg-gradient-to-r from-blue-900 to-cyan-800 bg-clip-text text-transparent">
                   PineVela Resident
                 </h1>
-                <p className="text-[10px] font-medium text-blue-600/70 uppercase tracking-widest">Resident Portal</p>
+                <p className="text-[10px] font-medium text-blue-600/70 uppercase tracking-widest">Resident Dashboard</p>
               </div>
             )}
           </div>

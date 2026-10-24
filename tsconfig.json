@@ -22,5 +22,14 @@
     },
     "allowImportingTsExtensions": true,
     "noEmit": true
-  }
+  },
+  "exclude": [
+    "node_modules",
+    ".security",
+    "dist",
+    "dist-supabase",
+    "dist-supabase-backend",
+    "build",
+    "coverage"
+  ]
 }

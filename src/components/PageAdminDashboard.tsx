@@ -75,6 +75,7 @@ import PineLogo from './PineLogo';
 import { AdminResidenceRequests } from './ResidenceChangeRequests';
 import SupabaseOfficerInvitationControls from './SupabaseOfficerInvitationControls';
 import TopNavBadge from './TopNavBadge';
+import '../adminDashboard.css';
 
 export default function PageAdminDashboard() {
   const [moderationTarget, setModerationTarget] = useState<any>(null);
@@ -632,7 +633,7 @@ export default function PageAdminDashboard() {
   const adminAlertCount = unreadCount;
 
   return (
-    <div onClickCapture={actionFeedback.capture} onSubmitCapture={actionFeedback.capture} className="page-canvas min-h-screen h-screen flex flex-col lg:flex-row text-slate-800 overflow-hidden font-sans">
+    <div data-dashboard-shell data-navigation-layout={isSidebarTopNav ? 'top' : 'sidebar'} data-sidebar-collapsed={isSidebarCollapsed} onClickCapture={actionFeedback.capture} onSubmitCapture={actionFeedback.capture} className="admin-dashboard page-canvas min-h-screen h-screen flex flex-col lg:flex-row text-slate-800 overflow-hidden font-sans">
       <AdminRemovalNotice />
       {/* Toast Notification */}
       <AnimatePresence>
@@ -650,17 +651,17 @@ export default function PageAdminDashboard() {
 
       {/* MOBILE HEADER (lg:hidden) */}
       <header data-portal-navigation="header" className="lg:hidden flex items-center justify-between px-5 py-3 bg-white/90 backdrop-blur-xl border-b border-sky-200/50 sticky top-0 z-40 shadow-sm">
-        <div className="flex items-center gap-2">
-          <PineLogo size={24} />
-          <div>
-            <h1 className="text-xs font-black tracking-tight text-blue-950 leading-tight">PineVela Admin {adminSlot ? `#${adminSlot}` : ''}</h1>
+        <div className="flex min-w-0 flex-1 items-center gap-2">
+          <PineLogo size={28} hideText />
+          <div className="min-w-0">
+            <h1 className="truncate text-sm font-black tracking-tight text-blue-950 leading-tight">PineVela Admin {adminSlot ? `#${adminSlot}` : ''}</h1>
           </div>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex shrink-0 items-center gap-1">
           <HelpLink compact className="!px-2" />
           <button onClick={() => setShowLogoutConfirm(true)} className="flex items-center gap-1.5 px-2 py-1.5 text-[10px] font-bold text-rose-600 hover:bg-rose-50 rounded-lg" title="Sign Out">
             <LogOutIcon className="w-4 h-4" />
-            <span>Sign Out</span>
+            <span className="hidden sm:inline">Sign Out</span>
           </button>
         </div>
       </header>
@@ -778,7 +779,7 @@ export default function PageAdminDashboard() {
       </aside>}
 
       {/* MAIN CONTENT AREA */}
-      <main className={`dashboard-centered-content flex-1 p-6 lg:p-10 space-y-8 overflow-y-auto h-full relative ${isSidebarTopNav ? 'lg:pt-24 lg:w-[calc(100vw-22rem)] lg:max-w-[calc(100vw-22rem)] lg:mx-auto' : ''}`}>
+      <main className={`admin-dashboard-content dashboard-centered-content flex-1 p-6 lg:p-10 space-y-8 overflow-y-auto relative ${isSidebarTopNav ? 'lg:pt-24' : ''}`}>
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-blue-200 bg-white/65 p-4 text-sm backdrop-blur-xl"><span className="flex min-w-0 items-center gap-3 font-semibold text-blue-950">{(user?.photo || user?.avatar) && <img src={user.photo || user.avatar} alt="Administrator profile" className="h-9 w-9 shrink-0 rounded-full object-cover" />}<AdministratorLabel slot={adminSlot} name={user?.name} /></span><button onClick={() => setActiveTab('governance')} className="rounded-xl bg-blue-600 px-4 py-2 font-semibold text-white">Shared approvals{pendingGovernance ? ` (${pendingGovernance})` : ''}</button></div>
         {(adminDataPending) && <p role="status" className="rounded-2xl border border-blue-200 bg-white/70 p-5 text-sm text-slate-700 dark:border-cyan-900 dark:bg-slate-900 dark:text-slate-100">Loading administrator directories…</p>}
         {(adminDataError) && <div role="alert" className="rounded-2xl border border-rose-200 bg-rose-50 p-5 text-sm text-rose-900 dark:border-rose-900 dark:bg-rose-950 dark:text-rose-100"><p>{adminDataError.message}</p>{adminData && <p className="mt-2">Showing the last successfully loaded directory information.</p>}<button type="button" disabled={adminDataFetching} onClick={() => void retryAdminData()} className="mt-2 min-h-11 font-semibold underline disabled:opacity-50">Retry administrator directories</button></div>}
@@ -1199,7 +1200,7 @@ export default function PageAdminDashboard() {
               </div>
 
               {/* Sub Navigation */}
-              <div className="flex items-center gap-1.5 p-1 bg-white/80 rounded-2xl border border-sky-200/70 shadow-xs">
+              <div className="flex w-full min-w-0 flex-wrap items-center gap-1.5 p-1 bg-white/80 rounded-2xl border border-sky-200/70 shadow-xs md:w-auto">
                 <button
                   type="button"
                   onClick={() => setManagerSubTab('inspections')}

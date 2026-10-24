@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState, type CSSProperties } from 'react';
 import landing from '../../assets/landing-welcome.png';
-import login from '../../assets/login-market-new.png';
+import login from '../../assets/marketing-artwork/login-market.webp';
 import cleanPlate from '../../assets/marketing-artwork/landing-cleanplate.png';
 import { useMotionActivity } from '../hooks/useMotionActivity';
 import '../artworkLayers.css';
@@ -33,12 +33,12 @@ const centers: Record<Variant, Record<string, [number, number]>> = {
 };
 
 /** Progressive enhancement: the ordinary image remains the accessible fallback. */
-export default function ArtworkLayers({ variant }: { variant: Variant }) {
+export default function ArtworkLayers({ variant, sourceUrl }: { variant: Variant; sourceUrl?: string }) {
   const ref = useRef<SVGSVGElement>(null);
   const id = 'art-' + useId().replace(/[^a-zA-Z0-9_-]/g, '');
   const [ready, setReady] = useState(false);
   const [allowed, setAllowed] = useState(() => typeof window !== 'undefined' && !window.matchMedia('(prefers-reduced-motion: reduce), (forced-colors: active)').matches);
-  const source = variant === 'landing' ? landing : login;
+  const source = sourceUrl || (variant === 'landing' ? landing : login);
   const width = variant === 'landing' ? 1448 : 1122;
   const height = variant === 'landing' ? 1086 : 1402;
   useMotionActivity(ref);
@@ -57,7 +57,13 @@ export default function ArtworkLayers({ variant }: { variant: Variant }) {
     if (!allowed) return;
     const images = (variant === 'landing' ? [source, cleanPlate] : [source]).map(url => {
       const image = new Image();
-      const promise = new Promise<void>((resolve, reject) => { image.onload = () => resolve(); image.onerror = () => reject(); });
+      const promise = new Promise<void>((resolve, reject) => {
+        image.onload = () => {
+          if (typeof image.decode === 'function') void image.decode().then(() => resolve(), reject);
+          else resolve();
+        };
+        image.onerror = () => reject();
+      });
       image.src = url;
       return { image, promise };
     });

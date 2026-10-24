@@ -1,7 +1,7 @@
 import {companionSubmission} from '../lib/companionSubmission';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { createPortal } from 'react-dom';
-import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
+import { motion, useReducedMotion } from 'motion/react';
 import { ArrowUp, ArrowUpRight, Bell, Check, ChevronLeft, LoaderCircle, Settings2, ShieldCheck, Sparkles, Trash2, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -149,9 +149,9 @@ function CompanionSession({ accountId, unreadCount, navigationTarget }: { accoun
       {notificationBadge}
     </button>
     {navigationTarget && createPortal(<CompanionNavigationButton open={open} onLaunch={launch} badge={notificationBadge} />, navigationTarget)}
-    <AnimatePresence>{open && <DashboardOverlay aria-label="PineVela companion" onClose={close} className="pv-companion-overlay" onClick={e => { if (e.target === e.currentTarget) close(); }}>
+    {open && <DashboardOverlay aria-label="PineVela companion" onClose={close} className="pv-companion-overlay" onClick={e => { if (e.target === e.currentTarget) close(); }}>
       <motion.section initial={{ opacity: 0, y: reduceMotion ? 0 : 18, scale: reduceMotion ? 1 : .985 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: reduceMotion ? 0 : 10, scale: reduceMotion ? 1 : .99 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ duration: reduceMotion ? 0 : .24, ease: [.22, 1, .36, 1] }}
         className={`pv-companion-panel ${customize ? 'pv-companion-is-customizing' : ''}`} style={{ '--companion-accent': (customize ? active : character).accent } as React.CSSProperties}>
         <header className="pv-companion-header">
@@ -208,6 +208,6 @@ function CompanionSession({ accountId, unreadCount, navigationTarget }: { accoun
           <footer className="pv-companion-chat-footer"><span>AI can make mistakes. Check important details.</span><button type="button" onClick={() => visit('/help?from=/user/dashboard')}>Need a person?</button></footer>
         </>}
       </motion.section>
-    </DashboardOverlay>}</AnimatePresence>
+    </DashboardOverlay>}
   </>;
 }

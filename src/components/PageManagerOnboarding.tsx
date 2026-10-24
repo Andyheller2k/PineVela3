@@ -1053,7 +1053,7 @@ export default function PageManagerOnboarding() {
         <span>© 2026 PineVela Platform Inc.</span>
         <span>•</span>
         <button onClick={() => navigate('/verification-team')} className="text-slate-500 hover:text-blue-900 underline transition-colors">
-          PineVela Verification Team Portal
+          PineVela Verification Team
         </button>
       </footer>
 

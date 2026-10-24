@@ -1,0 +1,18 @@
+/* The viewport owns the shell; directories and tables scroll inside its content. */
+.admin-dashboard { width: 100%; min-width: 0; height: 100dvh; min-height: 0; }
+.admin-dashboard-content { flex: 1 1 0; min-width: 0; min-height: 0; max-width: 100%; height: auto; overscroll-behavior-y: contain; scroll-padding-block: 24px; }
+.admin-dashboard-content > :not(dialog):not([data-dashboard-overlay]) { min-width: 0; max-width: 100%; }
+.admin-dashboard-content :is(input, select, textarea) { max-width: 100%; }
+.admin-dashboard-content .overflow-x-auto { max-width: 100%; overscroll-behavior-x: contain; }
+.admin-dashboard > [data-portal-navigation="header"] { min-width: 0; flex-shrink: 0; gap: 8px; }
+.admin-dashboard > [data-portal-navigation="header"] :is(button, a) { min-width: 44px; min-height: 44px; }
+.admin-dashboard > [data-portal-navigation="sidebar"] { height: calc(100dvh - 3rem); }
+@media (max-width: 1023px) {
+  .admin-dashboard-content { padding: 20px 16px calc(var(--pv-mobile-nav-height, 80px) + 24px + env(safe-area-inset-bottom)); }
+  .admin-dashboard-content > * + * { margin-top: 24px; }
+  .admin-dashboard-content .pv-feature-card { padding: 24px; }
+  .admin-dashboard > [data-portal-navigation="header"] { padding: max(8px, env(safe-area-inset-top)) 12px 8px; }
+}
+@media (min-width: 1024px) and (max-width: 1279px) {
+  .admin-dashboard[data-navigation-layout="sidebar"]:not([data-sidebar-collapsed="true"]) .admin-dashboard-content [class~="lg:grid-cols-3"] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

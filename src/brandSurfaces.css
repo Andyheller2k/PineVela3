@@ -97,6 +97,25 @@ html[data-theme] :is(.app-canvas, body) :is(h1, h2, h3, .public-title, .login-br
     text-shadow: none;
   }
 }
+/* Product titles use solid, substantial ink so small dashboard headings stay
+   crisp in both themes, including dialogs rendered outside the app canvas. */
+html[data-theme][data-appearance="product"] :is(.app-canvas, body) :is(h1, h2, h3, h4, h5, h6, [role="heading"]) {
+  background-image: none;
+  background-clip: border-box;
+  -webkit-background-clip: border-box;
+  -webkit-text-fill-color: currentColor;
+  -webkit-text-stroke: 0;
+  font-weight: 800;
+  text-shadow: none;
+}
+html[data-theme][data-appearance="product"] :is(.app-canvas, body) :is(label, legend, th),
+html[data-theme][data-appearance="product"] [data-portal-navigation] :is(button, a[href]) {
+  font-weight: 700;
+}
+/* FAQ/help reuse a public layout, but product headings keep the app typeface. */
+html[data-theme][data-appearance="product"] .public-typography :is(h1, h2, h3, h4, h5, h6) {
+  font-family: var(--font-sans, system-ui, sans-serif) !important;
+}
 /* A pale card inside a dark section restores its own heading contrast. */
 html[data-theme] :is([class~="bg-white"], [class*="bg-white/"], [class~="bg-slate-50"], [class~="bg-blue-50"], [class~="from-white"]) { --pv-heading-gradient: var(--pv-heading-default-gradient); --pv-heading-ink: var(--pv-heading); }
 /* Headings on solid navy retain the inverse ink in both appearances. */

@@ -221,14 +221,12 @@ html[data-theme="dark"] :is(nav button, button[data-page-tabs]):not(:disabled):i
 }
 html[data-theme="dark"] :is(nav button, button[data-page-tabs])[aria-current="page"]:hover { background: var(--pv-primary-hover); color: #fff; }
 
-.mobile-bottom-nav { padding-bottom: env(safe-area-inset-bottom); }
-.mobile-bottom-nav > [data-mobile-nav-items] { padding-bottom: 8px; }
 .mobile-bottom-nav:not(:has([data-mobile-nav-items])) > button { min-height: 48px; border-radius: 12px; }
 html[data-mobile-navigation="true"] .app-canvas main {
-  padding-bottom: calc(var(--pv-mobile-nav-height, 72px) + 24px) !important;
-  scroll-padding-bottom: calc(var(--pv-mobile-nav-height, 72px) + 24px);
+  padding-bottom: calc(var(--pv-mobile-nav-height, 72px) + var(--pv-mobile-nav-offset, 8px) + 24px) !important;
+  scroll-padding-bottom: calc(var(--pv-mobile-nav-height, 72px) + var(--pv-mobile-nav-offset, 8px) + 24px);
 }
-html[data-mobile-navigation="true"] [data-seller-add] { bottom: calc(var(--pv-mobile-nav-height, 72px) + 16px); }
+html[data-mobile-navigation="true"] [data-seller-add] { bottom: calc(var(--pv-mobile-nav-height, 72px) + var(--pv-mobile-nav-offset, 8px) + 16px); }
 html[data-theme="dark"] .mobile-bottom-nav button[aria-current="page"] {
   background: var(--pv-blue-primary);
   box-shadow: inset 0 0 0 1px var(--pv-blue-soft);

@@ -16,6 +16,20 @@ on an asset failure, with reduced motion, and in forced colors. SVG layers are
 decorative and ignore pointer events. Motion pauses while the scene is outside
 the viewport or the document is hidden.
 
+## Login delivery
+
+Run `node scripts/optimize-login-artwork.mjs` to reproduce the lossless WebP
+login assets and the logo's embedded image. The supplied login PNG stays
+unchanged. The original PNG extracted from the logo SVG is retained as
+`pinevela-logo-source.png`; its framing and SVG dimensions are unchanged.
+The generator verifies every decoded channel, including alpha, against its
+source (or the deliberately resized 768px mobile source).
+
+The login page uses one responsive image candidate for the ordinary image and
+its SVG animation layers. It reveals the portrait after decoding, so incomplete
+scanlines never paint over the fitted layout. Failed image delivery does not
+block the login form. Reduced-motion preferences still disable the layers.
+
 ## Generation prompt
 
 Use case: precise-object-edit. Edit target: the supplied PineVela yellow artwork.

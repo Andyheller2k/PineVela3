@@ -5,6 +5,14 @@ import { runInNewContext } from 'node:vm';
 import { getPublicAppearance } from '../src/lib/publicAppearance';
 
 const bootstrap = readFileSync(new URL('../index.html', import.meta.url), 'utf8').match(/<script>([\s\S]*?)<\/script>/)![1];
+function bootstrapDocument() {
+  const properties = new Map<string, string>();
+  const root = { dataset: {} as Record<string, string>, style: { colorScheme: '', backgroundColor: '', setProperty: (name: string, value: string) => properties.set(name, value) } };
+  const chrome = { content: '' };
+  return { root, chrome, document: { documentElement: root, querySelector: (selector: string) => {
+    assert.equal(selector, 'meta[name="theme-color"]'); return chrome;
+  } } };
+}
 
 test('public catalog appearances agree before paint and after navigation without changing product preferences', () => {
   for (const [route, fixed] of [
@@ -16,15 +24,18 @@ test('public catalog appearances agree before paint and after navigation without
   ] as const) {
     assert.equal(getPublicAppearance(route), fixed, route);
     for (const saved of ['light', 'dark', 'blocked']) {
-      const root = { dataset: {} as Record<string, string>, style: {} as Record<string, string> };
+      const { root, chrome, document } = bootstrapDocument();
       runInNewContext(bootstrap, {
-        document: { documentElement: root }, location: { hash: `#${route}?search=books` },
+        document, navigator: {}, location: { hash: `#${route}?search=books` },
         localStorage: { getItem: () => { if (saved === 'blocked') throw Error('Storage blocked'); return saved; } },
         matchMedia: () => ({ matches: false }), URLSearchParams,
       });
       assert.equal(root.dataset.theme, fixed ?? (saved === 'blocked' ? 'light' : saved), `${route}: ${saved}`);
       assert.equal(root.style.colorScheme, root.dataset.theme);
       assert.equal(root.dataset.appearance, fixed ? 'public' : 'product');
+      assert.equal(chrome.content, !fixed && root.dataset.theme === 'light' ? '#ffffff' : '#001d3d');
+      assert.equal(root.style.backgroundColor, chrome.content);
+      assert.equal(root.dataset.appMode, 'browser');
     }
   }
 });
@@ -36,11 +47,13 @@ test('public FAQ and Help stay navy while product entries restore either saved t
     for (const from of ['/', '/login', '/pinemarket', '/faq', '/user/dashboard', '/resident/dashboard', '/manager/dashboard', '/staff/dashboard', '/admin/dashboard', '/digital-market', '/customer-service', '/field-officer']) {
       const search = `?from=${encodeURIComponent(from)}`, fixed = getPublicAppearance(route, search);
       for (const saved of ['light', 'dark']) {
-        const root = { dataset: {} as Record<string, string>, style: {} as Record<string, string> };
-        runInNewContext(bootstrap, { document: { documentElement: root }, location: { hash: '#' + route + search }, localStorage: { getItem: () => saved }, matchMedia: () => ({ matches: false }), URLSearchParams });
+        const { root, chrome, document } = bootstrapDocument();
+        runInNewContext(bootstrap, { document, navigator: { standalone: true }, location: { hash: '#' + route + search }, localStorage: { getItem: () => saved }, matchMedia: () => ({ matches: false }), URLSearchParams });
         assert.equal(root.dataset.theme, fixed || saved);
         assert.equal(root.dataset.appearance, fixed ? 'public' : 'product');
         assert.equal(fixed, ['/', '/login', '/pinemarket', '/faq'].includes(from) ? 'dark' : null);
+        assert.equal(chrome.content, !fixed && saved === 'light' ? '#ffffff' : '#001d3d');
+        assert.equal(root.dataset.appMode, 'installed');
       }
     }
   }

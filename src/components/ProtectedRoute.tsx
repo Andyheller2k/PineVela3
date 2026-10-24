@@ -4,6 +4,9 @@ import { useAuth } from '../context/AuthContext';
 import RouteSkeleton from './RouteSkeleton';
 import SessionRestorationNotice from './SessionRestorationNotice';
 import LogoutConfirmationModal from './LogoutConfirmationModal';
+import { useInstalledAppMode } from '../lib/appMode';
+import RouteLoadingSpinner from './RouteLoadingSpinner';
+import { AppLaunchReady } from './AppLaunchLoader';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -13,11 +16,12 @@ interface ProtectedRouteProps {
 export default function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
   const { user, loading, restorationError, logout } = useAuth();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const installedApp = useInstalledAppMode();
 
   if (loading && restorationError) return <SessionRestorationNotice />;
 
   if (loading) {
-    return <RouteSkeleton />;
+    return installedApp ? <RouteLoadingSpinner /> : <RouteSkeleton />;
   }
 
   if (!user) {
@@ -32,6 +36,7 @@ export default function ProtectedRoute({ children, allowedRoles }: ProtectedRout
       // Show a high-fidelity "Access Denied" view
     return (
       <div className="page-canvas min-h-screen flex flex-col items-center justify-center font-sans p-6 text-left">
+        <AppLaunchReady />
         <div className="max-w-md w-full bg-white rounded-3xl border border-slate-100 shadow-2xl p-8 space-y-6 text-center relative overflow-hidden">
           <div className="absolute top-0 left-0 right-0 h-1.5 bg-rose-600" />
           
@@ -88,11 +93,11 @@ export default function ProtectedRoute({ children, allowedRoles }: ProtectedRout
 // Small helper component to direct users back to their corresponding dashboards
 function NavigateToRoleDashboard({ role }: { role: string }) {
   let path = '/';
-  let label = 'Return to Portal';
+  let label = 'Return to Dashboard';
 
   if (role === 'verification_team' || role === 'officer' || role === 'field_officer') {
     path = '/field-officer';
-    label = 'Go to Field Officer Verification Portal';
+    label = 'Go to Field Officer Dashboard';
   } else if (role === 'merchant') {
     path = '/digital-market';
     label = 'Go to Digital Market Platform';

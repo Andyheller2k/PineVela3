@@ -453,7 +453,7 @@ export default function PageStaffDashboard() {
   };
 
   return (
-    <div className="page-canvas min-h-screen flex flex-col lg:flex-row relative text-slate-900" data-staff-dashboard>
+    <div data-dashboard-shell className="page-canvas min-h-screen flex flex-col lg:flex-row relative text-slate-900" data-staff-dashboard>
       {/* Toast Notification */}
       {toastMessage && (
         <div role="status" className="ux-dashboard-toast fixed bottom-24 left-1/2 -translate-x-1/2 z-50">
@@ -588,7 +588,7 @@ export default function PageStaffDashboard() {
           {/* Navigation Links */}
           <nav className="space-y-2">
             {!isSidebarCollapsed && (
-              <p className="px-3 text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Staff Portal</p>
+              <p className="px-3 text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Staff Dashboard</p>
             )}
             
             {/* Tab TOP: Assigned Maintenance Work Orders (Highlighted First) */}
