@@ -45,7 +45,7 @@ export const companionAddressLookup: LookupFunction = (hostname, options, callba
 export const companionAgent = new https.Agent({ keepAlive: true, maxSockets: 2, maxFreeSockets: 2, lookup: companionAddressLookup });
 export function companionConnectionFailure(error: unknown): ApiError {
   const code = (error as NodeJS.ErrnoException)?.code;
-  return code === 'ABORT_ERR' || code === 'ETIMEDOUT'
+  return code === 'ABORT_ERR' || code === 'ETIMEDOUT' || code === 'ETIMEOUT'
     ? new ApiError(504, 'The AI reply timed out. Your message is kept. Please try again.', 'companion_timeout')
     : new ApiError(503, 'Could not reach the AI service. Your message is kept. Please try again.', 'companion_connection');
 }

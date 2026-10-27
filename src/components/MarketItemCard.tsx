@@ -149,6 +149,7 @@ export const MarketItemCard: React.FC<MarketItemCardProps> = memo(
             aria-pressed={isFavorite}
             >
               <Heart
+                data-semantic-icon="favorite"
                 className="w-3 h-3 sm:w-3.5 sm:h-3.5"
                 fill={isFavorite ? "#f43f5e" : "none"}
                 strokeWidth={isFavorite ? 0 : 2}

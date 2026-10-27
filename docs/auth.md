@@ -172,8 +172,15 @@ native session's active portal and uses the scoped backend role under RLS. The
 browser sends its captured `X-PineVela-Profile-Context` only as a consistency check;
 a mismatch returns 409 and never selects an account. Delayed writes whose native
 portal binding has changed are rejected inside the transaction. Shared Auth
-identities keep separate portal themes. Public mode remains a device preference;
-account caches support offline changes, and confirmed saves persist in PostgreSQL.
+identities keep separate portal themes. Product appearance is cached per device
+and portal; account caches support offline changes, and confirmed saves persist
+in PostgreSQL. Light, Dark and System are saved choices. System resolves the
+current device theme live without saving its resolved color; manual choices
+ignore OS changes. Login/signup use the same saved choice at every width,
+including after logout and before first paint. Fixed marketing routes retain
+their separate appearance without overwriting this preference. Light auth keeps
+blue controls and translucent light glass; dark auth keeps navy/yellow. See
+[appearance rules](theme.md).
 
 Resident/seller portal PIN changes use `GET /api/auth/portal-security` and
 `POST /api/auth/portal-pin` from the currently authenticated portal. The server

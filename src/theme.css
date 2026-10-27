@@ -25,6 +25,9 @@
   --pv-field-edge: #8293a8;
   --pv-secondary: #edf1f6;
   --pv-secondary-hover: #e0e8f2;
+  --pv-dialog-scrim: rgb(0 8 20 / .28);
+  --pv-dialog-glass: linear-gradient(145deg, rgb(255 255 255 / .88), rgb(244 248 253 / .84));
+  --pv-dialog-edge: rgb(0 53 102 / .22);
   --pv-gradient-from: #001d3de8;
   --pv-gradient-via: #003566e0;
   --pv-gradient-to: #000814e8;
@@ -59,8 +62,11 @@
   --pv-panel: #001d3d;
   --pv-field: #001d3d;
   --pv-field-edge: #607d9d;
-  --pv-secondary: #001d3d;
-  --pv-secondary-hover: #001d3d;
+  --pv-secondary: #0e3459;
+  --pv-secondary-hover: #18466f;
+  --pv-dialog-scrim: rgb(0 8 20 / .42);
+  --pv-dialog-glass: linear-gradient(145deg, rgb(10 42 76 / .82), rgb(0 29 61 / .78));
+  --pv-dialog-edge: rgb(140 176 211 / .62);
   --pv-gradient-from: #001d3d;
   --pv-gradient-via: #001d3d;
   --pv-gradient-to: #001d3d;
@@ -85,8 +91,8 @@ html[data-theme="light"] :is(h1, h2, h3, h4, h5, h6):is([class~="text-slate-900"
 .app-canvas { background: var(--pv-canvas); isolation: isolate; }
 /* The app owns the shared color; light product routes may reveal an atmosphere. */
 .page-canvas { background: transparent; }
-/* Switch surfaces in one paint; animate only the small switch and decorative opacity. */
-html.theme-changing :where(#root *, dialog, dialog *):not(.theme-environment, .theme-environment *, .theme-toggle, .theme-toggle *) {
+/* Switch surfaces in one paint; animate only the choices and decorative opacity. */
+html.theme-changing :where(#root *, dialog, dialog *):not(.theme-environment, .theme-environment *, .theme-preference, .theme-preference *) {
   transition: none !important;
 }
 .theme-environment { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; background: var(--pv-canvas); }
@@ -95,63 +101,37 @@ html.theme-changing :where(#root *, dialog, dialog *):not(.theme-environment, .t
 .atmosphere-two { right: -10%; top: 48%; background: var(--pv-blue-ice); animation-delay: -11s; }
 .pinevela-brand-mark { transition: filter var(--pv-time) ease; }
 [data-theme="dark"] .pinevela-brand-mark { filter: drop-shadow(0 2px 5px #00081840); }
-.theme-toggle {
-  --theme-toggle-ease: cubic-bezier(.22, 1, .36, 1);
-  position: relative;
-  isolation: isolate;
-  display: inline-flex;
-  flex-shrink: 0;
-  width: 84px;
-  height: 44px;
-  padding: 0;
-  overflow: hidden;
-  border: 1px solid #8293a8;
-  border-radius: 999px;
-  background-color: #edf1f6;
-  box-shadow: inset 0 1px 3px #001d3d0d, 0 2px 6px #001d3d0a;
-  cursor: pointer;
-  touch-action: manipulation;
-  -webkit-tap-highlight-color: transparent;
-  transition: background-color 240ms ease, border-color 240ms ease, box-shadow 180ms ease;
+.theme-preference { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.theme-preference-choice { position: relative; min-width: 0; cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+.theme-preference-input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.theme-preference-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 92px;
+  padding: 12px 6px;
+  border: 1px solid var(--pv-field-edge);
+  border-radius: 14px;
+  background: var(--pv-secondary);
+  color: var(--pv-text);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.4;
+  text-align: center;
+  transition: background-color 160ms ease, border-color 160ms ease;
 }
-.theme-toggle[data-dark="true"] { background-color: #000f23; border-color: #9d842e; }
-.theme-toggle:focus-visible { outline: 3px solid var(--pv-link); outline-offset: 4px; }
-.theme-toggle-track { position: absolute; inset: 0; color: #52657c; pointer-events: none; transition: color 240ms ease; }
-.theme-toggle-track svg { position: absolute; top: 50%; transform: translateY(-50%); }
-.theme-toggle-track-sun { left: 11px; }
-.theme-toggle-track-moon { right: 11px; }
-.theme-toggle[data-dark="true"] .theme-toggle-track { color: #a5bad0; }
-.theme-toggle-thumb {
-  position: absolute;
-  top: 4px;
-  left: 4px;
-  display: grid;
-  place-items: center;
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  color: #001d3d;
-  background: linear-gradient(135deg, #ffd60a, #ffc300);
-  box-shadow: 0 2px 5px #001d3d26, inset 0 1px 0 #fff6;
-  pointer-events: none;
-  transform: translateX(0);
-  transition: transform 380ms var(--theme-toggle-ease), box-shadow 180ms ease;
-}
-.theme-toggle[data-dark="true"] .theme-toggle-thumb { transform: translateX(40px); }
-.theme-toggle-icon { grid-area: 1 / 1; transform-origin: center; transition: transform 340ms var(--theme-toggle-ease), opacity 200ms ease; }
-.theme-toggle-sun { opacity: 1; transform: rotate(0) scale(1); }
-.theme-toggle-moon { opacity: 0; transform: rotate(-75deg) scale(.45); }
-.theme-toggle[data-dark="true"] .theme-toggle-sun { opacity: 0; transform: rotate(75deg) scale(.45); }
-.theme-toggle[data-dark="true"] .theme-toggle-moon { opacity: 1; transform: rotate(0) scale(1); }
-.theme-toggle:active .theme-toggle-thumb { box-shadow: 0 1px 3px #001d3d33, inset 0 0 0 2px #001d3d1a; }
+.theme-preference-content > svg { flex-shrink: 0; }
+.theme-preference-input:checked + .theme-preference-content { background: var(--pv-action-gradient); color: var(--pv-on-action); border-color: var(--pv-link); box-shadow: inset 0 0 0 1px var(--pv-link); }
+.theme-preference-input:focus-visible + .theme-preference-content { outline: 3px solid var(--pv-link); outline-offset: 3px; }
 @media (hover: hover) {
-  .theme-toggle:hover { border-color: #b28c11; box-shadow: 0 0 0 3px #ffc3001f; }
+  .theme-preference-choice:hover .theme-preference-input:not(:checked) + .theme-preference-content { background: var(--pv-secondary-hover); border-color: var(--pv-link); }
 }
 @media (forced-colors: active) {
-  .theme-toggle { background: Canvas; border-color: ButtonText; box-shadow: none; }
-  .theme-toggle-track { color: GrayText; }
-  .theme-toggle-thumb { forced-color-adjust: none; background: Highlight; color: HighlightText; border: 1px solid ButtonText; box-shadow: none; }
-  .theme-toggle:focus-visible { outline-color: Highlight; }
+  .theme-preference-content { background: Canvas; color: CanvasText; border-color: ButtonText; }
+  .theme-preference-input:checked + .theme-preference-content { forced-color-adjust: none; background: Highlight; color: HighlightText; border-color: Highlight; box-shadow: none; }
+  .theme-preference-input:focus-visible + .theme-preference-content { outline-color: Highlight; }
 }
 @keyframes atmosphere-drift { to { transform: translate3d(40px, -35px, 0) scale(1.08); } }
 
@@ -205,7 +185,7 @@ html[data-theme="dark"] :is([class~="text-amber-700"], [class~="text-amber-800"]
 html[data-theme="dark"] :is([class~="text-amber-900"], [class~="text-amber-950"], [class~="text-orange-800"], [class~="text-orange-900"], [class~="text-yellow-800"], [class~="text-yellow-900"]) { color: #fcd34d; }
 @media (prefers-reduced-motion: reduce) {
   html.theme-changing body, html.theme-changing :where(#root *, dialog, dialog *) { transition-duration: 0ms !important; }
-  .theme-environment *, .theme-toggle *, .theme-toggle, .theme-toggle::before { animation: none !important; transition: none !important; }
+  .theme-environment *, .theme-preference *, .theme-preference { animation: none !important; transition: none !important; }
 }
 
 /* Explicit navigation state must win over utility surface adaptation. */

@@ -22,12 +22,27 @@ try{await withIsolatedBackup(checkpoint,async config=>{
   let db=new SupabaseDatabase(config);
   try{
     stage='migration';
+    const appearanceBoundary=async(c:any)=>(await c.query(`select jsonb_build_object(
+      'rls',t.relrowsecurity,'forced',t.relforcerowsecurity,'grants',t.relacl,
+      'columns',(select jsonb_agg(jsonb_build_object('name',a.attname,'grants',a.attacl) order by a.attnum)
+        from pg_attribute a where a.attrelid=t.oid and a.attnum>0 and not a.attisdropped),
+      'policies',(select jsonb_agg(to_jsonb(p) order by p.policyname) from pg_policies p
+        where p.schemaname='private' and p.tablename='account_appearance'),
+      'preferences',(select jsonb_agg(to_jsonb(a) order by context_id) from private.account_appearance a)) as boundary
+      from pg_class t where t.oid='private.account_appearance'::regclass`)).rows[0].boundary;
     await db.system(async c=>{
       const applied=new Map((await c.query('select version,digest from private.schema_migrations')).rows.map(r=>[r.version,r.digest]));
       for(const file of fs.readdirSync('supabase/migrations').filter(f=>/^\d{14}_[a-z0-9_]+\.sql$/.test(f)).sort()){
         const sql=fs.readFileSync('supabase/migrations/'+file,'utf8'),digest=crypto.createHash('sha256').update(sql).digest('hex'),version=file.slice(0,14);
         if(applied.has(version))assert.equal(applied.get(version),digest,'Historical migrations stay immutable');
-        else{await c.query(sql);await c.query('insert into private.schema_migrations(version,digest) values($1,$2)',[version,digest]);}
+        else{
+          const boundary=file.endsWith('_system_account_appearance.sql')?await appearanceBoundary(c):undefined;
+          await c.query(sql);
+          if(boundary!==undefined){
+            assert.deepEqual(await appearanceBoundary(c),boundary,'The System migration preserves saved preferences, RLS, policies and grants');checks++;
+          }
+          await c.query('insert into private.schema_migrations(version,digest) values($1,$2)',[version,digest]);
+        }
       }
     });
     const fingerprint=async()=>(await db.pool.query(`select md5(jsonb_build_object(
@@ -57,17 +72,21 @@ try{await withIsolatedBackup(checkpoint,async config=>{
     check(owner&&other,'A genuine administrator and another separate identity are available');
     const read=(a:VerifiedActor)=>db.actor(a,c=>readAppearance(c,a));
     const save=(a:VerifiedActor,body:unknown)=>db.actor(a,c=>saveAppearance(c,a,body));
+    const timestamp=async()=>(await db.pool.query('select updated_at::text from private.account_appearance where context_id=$1',[owner.contextId])).rows[0].updated_at;
     stage='own preferences';
-    check((await read(owner)).theme===null,'An account with no saved preference returns null');
-    check((await save(owner,{theme:'dark'})).theme==='dark','Own authenticated theme save succeeds without changing profile or keys');
-    check((await read(owner)).theme==='dark','Own saved theme is readable');
-    check((await read(other)).theme===null,'Another account has no inherited preference');
+    const initialOther=(await read(other)).theme;
+    check([null,'light','dark','system'].includes((await read(owner)).theme),'Existing preferences stay readable, including a portal with no saved choice');
+    for(const theme of ['light','dark','system'] as const){
+      check((await save(owner,{theme})).theme===theme,'The authenticated owner can save '+theme);
+      check((await read(owner)).theme===theme,'The authenticated owner can reload '+theme);
+      check((await read(other)).theme===initialOther,'Saving '+theme+' never changes another identity’s preference');
+      const first=await timestamp();await save(owner,{theme});
+      check(await timestamp()===first,'Identical '+theme+' retries do not churn the saved timestamp');
+    }
+    await save(owner,{theme:'dark'});
     await save(other,{theme:'light'});
     check((await read(other)).theme==='light'&&(await read(owner)).theme==='dark','Separate identities retain independent modes');
-    const timestamp=async()=>(await db.pool.query('select updated_at::text from private.account_appearance where context_id=$1',[owner.contextId])).rows[0].updated_at;
-    const first=await timestamp();await save(owner,{theme:'dark'});
-    check(await timestamp()===first,'Identical retries do not churn the saved timestamp');
-    for(const body of [null,[],{}, {theme:'system'},{theme:0},{theme:'light',userId:other.authUserId},
+    for(const body of [null,[],{}, {theme:'auto'},{theme:'SYSTEM'},{theme:null},{theme:0},{theme:'light',userId:other.authUserId},
       {theme:'light',contextId:other.contextId},{theme:'light',profileId:other.authUserId},{theme:'light',role:'admin'}])
       await denied(()=>save(owner,body),400,'Invalid input or ownership spoofing is rejected');
     check((await read(owner)).theme==='dark','Rejected updates leave the saved theme unchanged');
@@ -80,7 +99,10 @@ try{await withIsolatedBackup(checkpoint,async config=>{
     check((await db.actor(owner,c=>c.query("update private.account_appearance set theme='dark' where context_id=$1",[other.contextId]))).rowCount===0,'Cross-account UPDATE changes zero rows');
     await denied(()=>db.actor(owner,c=>c.query("insert into private.account_appearance(context_id,theme) values($1,'dark') on conflict(context_id) do update set theme=excluded.theme",[other.contextId])),'42501','Cross-account INSERT or UPSERT fails RLS');
     await denied(()=>db.actor(owner,c=>c.query('update private.account_appearance set context_id=$2 where context_id=$1',[owner.contextId,other.contextId])),'42501','The backend cannot reassign preference ownership');
-    await denied(()=>db.actor(owner,c=>c.query("update private.account_appearance set theme='system' where context_id=$1",[owner.contextId])),'23514','PostgreSQL independently rejects unsupported modes');
+    await db.actor(owner,c=>c.query("update private.account_appearance set theme='system' where context_id=$1",[owner.contextId]));
+    check((await read(owner)).theme==='system','PostgreSQL accepts System without changing the owner boundary');
+    await denied(()=>db.actor(owner,c=>c.query("update private.account_appearance set theme='auto' where context_id=$1",[owner.contextId])),'23514','PostgreSQL independently rejects unsupported modes');
+    await save(owner,{theme:'dark'});
     for(const role of ['anon','authenticated'])for(const sql of [
       'select theme from private.account_appearance',
       "insert into private.account_appearance(context_id,theme) values($1,'dark')",
@@ -97,17 +119,18 @@ try{await withIsolatedBackup(checkpoint,async config=>{
     await bind(same);
     await denied(()=>save(owner,{theme:'light'}),401,'An in-flight old portal write is refused after switching');
     check((await read(same)).theme===null,'Shared Auth identity still starts with a separate portal preference');
-    await save(same,{theme:'light'});await bind(owner);
+    await save(same,{theme:'system'});await bind(owner);
     check((await read(owner)).theme==='dark','Switching back restores the administrator portal mode');
-    await bind(same);check((await read(same)).theme==='light','The same identity primary portal retains its separate mode');await bind(owner);
+    await bind(same);check((await read(same)).theme==='system','The same identity primary portal retains its separate System choice');await bind(owner);
     stage='restart and revocation';
     await db.close();db=new SupabaseDatabase(config);
     check((await read(owner)).theme==='dark'&&(await read(other)).theme==='light','Fresh database connections reload each saved preference');
+    await bind(same);check((await read(same)).theme==='system','System remains a saved choice after fresh database connections');await bind(owner);
     check(await fingerprint()===before,'No profiles, context ownership, credentials, media or genuine Auth records changed');
     await db.system(c=>c.query('delete from private.account_sessions where session_id=$1',[owner.sessionId]));
     await denied(()=>read(owner),401,'A revoked portal session cannot read preferences');
     await denied(()=>save(owner,{theme:'light'}),401,'A revoked portal session cannot change preferences');
-    console.log(JSON.stringify({passed:true,checks,isolated:true,genuineGoogleIdentities:actors.length,
+    console.log(JSON.stringify({passed:true,checks,isolated:true,genuineGoogleIdentities:actors.length,choices:['light','dark','system'],
       independentIdentityAndPortalThemes:true,restartPersistence:true,cloudRecordsModified:0,authAccountsCreated:0}));
   }finally{await db.close();}
 });}catch(error){

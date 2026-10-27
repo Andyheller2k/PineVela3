@@ -1,88 +1,124 @@
-import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 import { sessionFetch } from '../lib/session';
 import { getPublicAppearance } from '../lib/publicAppearance';
 import { applyBrowserChrome } from '../lib/browserChrome';
+import { isAuthPage, isPhoneAuth, subscribePhoneAuthViewport } from '../lib/mobileAuthAppearance';
+import { DEVICE_THEME_KEY, isThemePreference, readSystemTheme, resolveTheme, subscribeSystemTheme, type Theme, type ThemePreference } from '../lib/themePreference';
 
-export type Theme = 'light' | 'dark';
-const DEVICE_KEY = 'pinevela:appearance';
-const valid = (value: unknown): value is Theme => value === 'light' || value === 'dark';
-const read = (key: string): Theme | null => { try { const value = localStorage.getItem(key); return valid(value) ? value : null; } catch { return null; } };
-const cache = (key: string, value: Theme) => { try { localStorage.setItem(key, value); } catch { /* Appearance remains usable with storage disabled. */ } };
+export type { Theme, ThemePreference } from '../lib/themePreference';
+const read = (key: string): ThemePreference | null => { try { const value = localStorage.getItem(key); return isThemePreference(value) ? value : null; } catch { return null; } };
+const cache = (key: string, value: ThemePreference) => { try { localStorage.setItem(key, value); } catch { /* Theme selection still works when storage is unavailable. */ } };
 const remove = (key: string) => { try { localStorage.removeItem(key); } catch {} };
-const initialTheme = (): Theme => read(DEVICE_KEY) || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-const ThemeContext = createContext<{ theme: Theme; publicAppearance: boolean; toggleTheme: () => void; savePending: boolean } | null>(null);
+const initialPreference = (): ThemePreference => read(DEVICE_THEME_KEY) ?? 'system';
+type Change = { identity: string; contextId: string; theme: ThemePreference; revision: number };
+const sameChange = (a: Change | null, b: Change) => a?.identity === b.identity && a.contextId === b.contextId && a.revision === b.revision;
+const ThemeContext = createContext<{
+  theme: Theme; preference: ThemePreference; publicAppearance: boolean;
+  setPreference: (next: ThemePreference) => void; toggleTheme: () => void; savePending: boolean;
+} | null>(null);
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const { pathname, search } = useLocation();
   const { user, loading } = useAuth();
   const fixedAppearance = getPublicAppearance(pathname, search, !!user);
-  const publicAppearance = fixedAppearance !== null;
+  const authPage = isAuthPage(pathname);
+  const publicAppearance = authPage || fixedAppearance !== null;
+  const [preference, updatePreference] = useState<ThemePreference>(initialPreference);
+  const systemTheme = useSyncExternalStore(
+    useCallback(notify => preference === 'system' ? subscribeSystemTheme(notify) : () => {}, [preference]),
+    readSystemTheme,
+    () => 'light' as Theme,
+  );
+  const theme = resolveTheme(preference, systemTheme);
+  const mobileAuth = useSyncExternalStore(
+    useCallback(notify => subscribePhoneAuthViewport(pathname, notify), [pathname]),
+    useCallback(() => isPhoneAuth(pathname), [pathname]),
+    () => false,
+  );
   const contextId = user ? String(user.id) : null;
   const identity = user ? `${user.role}:${user.id}` : null;
-  const [theme, setTheme] = useState<Theme>(initialTheme);
   const [savePending, setSavePending] = useState(false);
-  const current = useRef(theme);
+  const current = useRef(preference);
   const paintFrame = useRef(0);
   const account = useRef(identity);
   const revision = useRef(0);
-  const pending = useRef<{ identity: string; contextId: string; theme: Theme; revision: number } | null>(null);
-  const writing = useRef(false);
+  const pending = useRef<Change | null>(null);
+  const writing = useRef<Change | null>(null);
+  const mounted = useRef(false);
   account.current = identity;
 
-  const apply = useCallback((next: Theme) => {
+  useLayoutEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
+
+  const apply = useCallback((next: ThemePreference) => {
     current.current = next;
-    setTheme(next);
-    cache(DEVICE_KEY, next);
+    updatePreference(next);
+    cache(DEVICE_THEME_KEY, next);
   }, []);
 
-  // Public pages and body portals keep one appearance without changing the
-  // account/device preference. Restore that preference on product routes.
+  // Marketing retains its fixed appearance. Product and auth routes resolve the
+  // same saved choice; OS changes never overwrite a saved System preference.
   useLayoutEffect(() => {
     const appearance = fixedAppearance ?? theme;
     const root = document.documentElement;
     cancelAnimationFrame(paintFrame.current);
     root.classList.add('theme-changing');
-    // Existing transition-all utilities must not animate thousands of surfaces.
     paintFrame.current = requestAnimationFrame(() => {
       paintFrame.current = requestAnimationFrame(() => root.classList.remove('theme-changing'));
     });
     root.dataset.appearance = publicAppearance ? 'public' : 'product';
+    root.dataset.authPage = String(authPage);
+    root.dataset.mobileAuth = String(mobileAuth);
+    root.dataset.themePreference = preference;
     root.dataset.theme = appearance;
     root.style.colorScheme = appearance;
     applyBrowserChrome(appearance, publicAppearance);
-  }, [fixedAppearance, publicAppearance, theme]);
+  }, [fixedAppearance, publicAppearance, authPage, mobileAuth, preference, theme]);
 
-  // Serialise writes so rapid toggles cannot leave an older preference on the server.
+  // Only one write is active. A response may acknowledge its own account and
+  // revision, never clear a newer account's pending selection.
   const flush = useCallback(async () => {
-    if (writing.current || !pending.current) return;
+    if (!mounted.current || writing.current || !pending.current) return;
     const change = pending.current;
     if (account.current !== change.identity) { pending.current = null; return; }
-    writing.current = true;
+    writing.current = change;
     try {
       const response = await sessionFetch('/api/auth/appearance', {
         method: 'PUT', headers: { 'Content-Type': 'application/json', 'X-PineVela-Profile-Context': change.contextId }, body: JSON.stringify({ theme: change.theme }),
       });
-      if (response.ok && pending.current?.revision === change.revision) {
+      if (mounted.current && response.ok && account.current === change.identity && sameChange(pending.current, change)) {
         pending.current = null;
-        remove(`${DEVICE_KEY}:${change.identity}:unsynced`);
-        if (account.current === change.identity) setSavePending(false);
+        remove(`${DEVICE_THEME_KEY}:${change.identity}:unsynced`);
+        setSavePending(false);
       }
-    } catch { /* Keep the local preference and retry on reconnect. */ }
+    } catch { /* Preserve the choice locally and retry after reconnecting. */ }
     finally {
-      writing.current = false;
-      if (pending.current && pending.current.revision !== change.revision) void flush();
+      writing.current = null;
+      if (mounted.current && pending.current && !sameChange(pending.current, change)) void flush();
     }
   }, []);
+
+  const remember = useCallback((next: ThemePreference, fromStorage = false) => {
+    apply(next);
+    const version = ++revision.current;
+    if (account.current && contextId) {
+      const key = `${DEVICE_THEME_KEY}:${account.current}`;
+      if (!fromStorage) cache(key, next);
+      cache(`${key}:unsynced`, next);
+      pending.current = { identity: account.current, contextId, theme: next, revision: version };
+      setSavePending(true);
+      void flush();
+    }
+  }, [apply, contextId, flush]);
 
   useLayoutEffect(() => {
     if (loading) return;
     revision.current++;
     pending.current = null;
     setSavePending(false);
-    if (!identity || !contextId) return; // Guests retain the last product mode on this device.
-    const key = `${DEVICE_KEY}:${identity}`;
+    if (!identity || !contextId) return; // Logout retains the last device choice for login/signup.
+    const key = `${DEVICE_THEME_KEY}:${identity}`;
     const unsynced = read(`${key}:unsynced`);
     const cached = read(key);
     if (cached) apply(cached);
@@ -98,10 +134,10 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     void sessionFetch('/api/auth/appearance', { signal: controller.signal, headers: { 'X-PineVela-Profile-Context': contextId } }).then(async response => {
       if (!response.ok) return;
       const data = await response.json();
-      if (controller.signal.aborted || account.current !== identity || revision.current !== version) return;
-      if (valid(data.theme)) { cache(key, data.theme); apply(data.theme); }
+      if (!mounted.current || controller.signal.aborted || account.current !== identity || revision.current !== version) return;
+      if (isThemePreference(data.theme)) { cache(key, data.theme); apply(data.theme); }
       else {
-        // A new account inherits this device's current mode once; other accounts are untouched.
+        // New portals inherit this device's choice once, including System.
         pending.current = { identity, contextId, theme: current.current, revision: ++revision.current };
         setSavePending(true);
         cache(key, current.current);
@@ -115,29 +151,23 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const reconnect = () => void flush();
     const sync = (event: StorageEvent) => {
-      const key = account.current ? `${DEVICE_KEY}:${account.current}` : DEVICE_KEY;
-      if (event.key === key && valid(event.newValue)) apply(event.newValue);
+      const key = account.current ? `${DEVICE_THEME_KEY}:${account.current}` : DEVICE_THEME_KEY;
+      if (event.key === key && isThemePreference(event.newValue)) remember(event.newValue, true);
     };
     window.addEventListener('online', reconnect);
     window.addEventListener('storage', sync);
     return () => { window.removeEventListener('online', reconnect); window.removeEventListener('storage', sync); cancelAnimationFrame(paintFrame.current); document.documentElement.classList.remove('theme-changing'); };
-  }, [apply, flush]);
+  }, [remember, flush]);
 
+  const setPreference = useCallback((next: ThemePreference) => {
+    if (publicAppearance || !isThemePreference(next) || current.current === next) return;
+    remember(next);
+  }, [publicAppearance, remember]);
   const toggleTheme = useCallback(() => {
-    if (publicAppearance) return;
-    const next = current.current === 'light' ? 'dark' : 'light';
-    apply(next);
-    const version = ++revision.current;
-    if (account.current && contextId) {
-      cache(`${DEVICE_KEY}:${account.current}`, next);
-      cache(`${DEVICE_KEY}:${account.current}:unsynced`, next);
-      pending.current = { identity: account.current, contextId, theme: next, revision: version };
-      setSavePending(true);
-      void flush();
-    }
-  }, [contextId, apply, flush, publicAppearance]);
+    setPreference(theme === 'light' ? 'dark' : 'light');
+  }, [setPreference, theme]);
 
-  return <ThemeContext.Provider value={{ theme, publicAppearance, toggleTheme, savePending }}>{children}</ThemeContext.Provider>;
+  return <ThemeContext.Provider value={{ theme, preference, publicAppearance, setPreference, toggleTheme, savePending }}>{children}</ThemeContext.Provider>;
 }
 
 export function useTheme() {

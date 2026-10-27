@@ -71,6 +71,50 @@ html[data-theme] :is(.app-canvas, body) [class~="text-white"]:is([class~="bg-eme
 html[data-theme] :is(.app-canvas, body) [class~="text-white"]:is([class~="bg-red-500"], [class~="bg-rose-500"]) { background-color: #be123c; }
 html[data-theme] :is(.app-canvas, body) [class~="text-white"]:is([class~="bg-amber-500"], [class~="bg-yellow-500"], [class~="bg-orange-500"]) { background-color: #b45309; }
 
+/* Explicit action roles survive legacy gradient/background adapters. Selected
+   segments share the primary fill, while both idle choices keep a boundary. */
+html[data-appearance="product"] :is(.pv-primary-action, .pv-secondary-action) { min-height: var(--pv-touch-target, 44px); }
+html[data-theme][data-appearance="product"] :is(.pv-primary-action, .pv-secondary-action[aria-pressed="true"]),
+html[data-theme][data-appearance="product"] :is(button, a[href], a[role="button"]):is(
+  [class~="from-blue-800"], [class~="from-blue-850"], [class~="from-blue-900"], [class~="from-blue-950"],
+  [class~="from-indigo-800"], [class~="from-indigo-900"], [class~="from-indigo-950"]
+) {
+  background: var(--pv-action-gradient);
+  color: var(--pv-on-action);
+  border: 1px solid var(--pv-brand-yellow);
+  box-shadow: 0 4px 14px var(--pv-brand-shadow);
+}
+html[data-theme][data-appearance="product"] :is(.pv-primary-action, .pv-secondary-action[aria-pressed="true"]) :is(svg, span),
+html[data-theme][data-appearance="product"] :is(button, a[href], a[role="button"]):is(
+  [class~="from-blue-800"], [class~="from-blue-850"], [class~="from-blue-900"], [class~="from-blue-950"],
+  [class~="from-indigo-800"], [class~="from-indigo-900"], [class~="from-indigo-950"]
+) :is(svg, span):not([data-semantic-icon]) { color: inherit; }
+html[data-theme][data-appearance="product"] :is(.pv-primary-action, .pv-secondary-action[aria-pressed="true"]):not(:disabled):hover,
+html[data-theme][data-appearance="product"] :is(button, a[href], a[role="button"]):is(
+  [class~="from-blue-800"], [class~="from-blue-850"], [class~="from-blue-900"], [class~="from-blue-950"],
+  [class~="from-indigo-800"], [class~="from-indigo-900"], [class~="from-indigo-950"]
+):not(:disabled):hover { background: var(--pv-action-hover-gradient); }
+html[data-theme][data-appearance="product"] .pv-secondary-action:not([aria-pressed="true"]),
+html[data-theme="dark"][data-appearance="product"] :is(button, a[href], a[role="button"]):is(
+  [class~="bg-white"], [class*="bg-white/"], [class~="bg-slate-50"], [class~="bg-slate-100"], [class~="bg-slate-200"],
+  [class~="bg-blue-50"], [class~="bg-blue-100"]
+):not(:where([data-avatar-preset], [aria-current="page"], [aria-pressed="true"], .pv-primary-action, .pv-merchant-join)) {
+  background: var(--pv-secondary);
+  color: var(--pv-text);
+  border-color: var(--pv-field-edge);
+  box-shadow: inset 0 0 0 1px var(--pv-field-edge);
+}
+html[data-theme][data-appearance="product"] .pv-secondary-action:not([aria-pressed="true"]):not(:disabled):hover,
+html[data-theme="dark"][data-appearance="product"] :is(button, a[href], a[role="button"]):is(
+  [class~="bg-white"], [class*="bg-white/"], [class~="bg-slate-50"], [class~="bg-slate-100"], [class~="bg-slate-200"],
+  [class~="bg-blue-50"], [class~="bg-blue-100"]
+):not(:where([data-avatar-preset], [aria-current="page"], [aria-pressed="true"], .pv-primary-action, .pv-merchant-join)):not(:disabled):hover { background: var(--pv-secondary-hover); }
+html[data-theme][data-appearance="product"] [data-semantic-icon="favorite"] {
+  color: #e11d48;
+  -webkit-text-fill-color: currentColor;
+}
+html[data-theme="dark"][data-appearance="product"] [data-semantic-icon="favorite"] { color: #f43f5e; }
+
 /* Legacy inline map/chart paint and custom brand shadows follow the same colors. */
 :is(.app-canvas, body) .leaflet-overlay-pane path[stroke="#2563eb"] { stroke: var(--pv-blue-primary); }
 :is(.app-canvas, body) .leaflet-overlay-pane path[fill="#2563eb"] { fill: var(--pv-blue-primary); }

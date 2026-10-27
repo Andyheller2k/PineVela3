@@ -35,11 +35,13 @@ test('installed routing replaces marketing pages while preserving account, help 
 });
 
 
-test('status-bar color follows product appearance while public pages retain navy', () => {
+test('status-bar color follows product and phone auth appearance while other public pages retain navy', () => {
   assert.equal(browserChromeColor('light', false), '#ffffff');
   assert.equal(browserChromeColor('dark', false), '#001d3d');
   assert.equal(browserChromeColor('light', true), '#001d3d');
   assert.equal(browserChromeColor('dark', true), '#001d3d');
+  assert.equal(browserChromeColor('light', true, true), '#ffffff');
+  assert.equal(browserChromeColor('dark', true, true), '#001d3d');
 });
 
 test('live appearance changes repaint metadata and both page backing surfaces', () => {
@@ -48,7 +50,7 @@ test('live appearance changes repaint metadata and both page backing surfaces', 
   const meta = { setAttribute: (name: string, value: string) => {
     assert.equal(name, 'content'); properties.set('theme-color', value);
   } };
-  const root = { style: { backgroundColor: '', setProperty: (name: string, value: string) => properties.set(name, value) } };
+  const root = { dataset: { mobileAuth: 'false' }, style: { backgroundColor: '', setProperty: (name: string, value: string) => properties.set(name, value) } };
   const body = { style: { backgroundColor: '' } };
   Object.defineProperty(globalThis, 'document', { configurable: true, value: {
     documentElement: root, body, querySelector: (selector: string) => {
@@ -56,11 +58,13 @@ test('live appearance changes repaint metadata and both page backing surfaces', 
     },
   } });
   try {
-    for (const [appearance, publicAppearance, expected] of [
-      ['light', false, '#ffffff'], ['dark', false, '#001d3d'],
-      ['light', false, '#ffffff'], ['light', true, '#001d3d'],
-      ['dark', true, '#001d3d'],
+    for (const [appearance, publicAppearance, mobileAuth, expected] of [
+      ['light', false, false, '#ffffff'], ['dark', false, false, '#001d3d'],
+      ['light', false, false, '#ffffff'], ['light', true, false, '#001d3d'],
+      ['dark', true, false, '#001d3d'], ['light', true, true, '#ffffff'],
+      ['dark', true, true, '#001d3d'], ['light', true, false, '#001d3d'],
     ] as const) {
+      root.dataset.mobileAuth = String(mobileAuth);
       applyBrowserChrome(appearance, publicAppearance);
       assert.equal(properties.get('theme-color'), expected);
       assert.equal(properties.get('--pv-chrome-color'), expected);

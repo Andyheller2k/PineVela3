@@ -227,6 +227,8 @@ export default function Page1Public() {
                 <li><button type="button" onClick={() => goToCompanySection('our-vision')} className="hover:text-blue-900 transition-colors cursor-pointer">Our Vision</button></li>
                 <li><button type="button" onClick={() => goToCompanySection('partner-with-us')} className="hover:text-blue-900 transition-colors cursor-pointer">Partner with Us</button></li>
                 <li><button type="button" onClick={() => goToCompanySection('contact-us')} className="hover:text-blue-900 transition-colors cursor-pointer">Contact</button></li>
+                <li><a href="/privacy.html" className="hover:text-blue-900 transition-colors">Privacy policy</a></li>
+                <li><a href="/terms.html" className="hover:text-blue-900 transition-colors">Terms of service</a></li>
               </ul>
             </div>
 

@@ -3,6 +3,12 @@ import type {PoolClient} from 'pg';
 import {ApiError,type VerifiedActor} from './db.js';
 import type {SupabaseAuth,AuthRequest} from './auth.js';
 
+export type AppearanceTheme='light'|'dark'|'system';
+export function parseAppearanceTheme(body:unknown):AppearanceTheme {
+  if(!body||typeof body!=='object'||Array.isArray(body)||Object.keys(body).length!==1||Object.keys(body)[0]!=='theme'
+    || !['light','dark','system'].includes((body as any).theme))throw new ApiError(400,'Supply only theme: light, dark or system.');
+  return (body as {theme:AppearanceTheme}).theme;
+}
 export function checkAppearanceContext(actor:VerifiedActor,expected:unknown) {
   // A stale-request guard, never authorization supplied by the browser.
   if(expected!==undefined&&expected!==actor.contextId)
@@ -13,9 +19,7 @@ export async function readAppearance(client:PoolClient,actor:VerifiedActor) {
   return {theme:row?.theme??null};
 }
 export async function saveAppearance(client:PoolClient,actor:VerifiedActor,body:unknown) {
-  if(!body||typeof body!=='object'||Array.isArray(body)||Object.keys(body).length!==1||Object.keys(body)[0]!=='theme'
-    || !['light','dark'].includes((body as any).theme))throw new ApiError(400,'Supply only theme: light or dark.');
-  const theme=(body as {theme:'light'|'dark'}).theme;
+  const theme=parseAppearanceTheme(body);
   await client.query(`insert into private.account_appearance as a(context_id,theme) values($1,$2)
     on conflict(context_id) do update set theme=excluded.theme,updated_at=clock_timestamp()
     where a.theme is distinct from excluded.theme`,[actor.contextId,theme]);

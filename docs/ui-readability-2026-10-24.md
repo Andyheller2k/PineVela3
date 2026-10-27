@@ -1,14 +1,13 @@
 # Glass and product typography — 24 October 2026
 
-Phone/tablet login and signup cards (below 1024px) use a 5–9% navy tint with
-1.5px backdrop blur, saturation and backdrop-only brightness of .445. This exposes
-more of the original fixed portrait without fading text, buttons or the entire card.
-Fields and actions retain stronger navy surfaces. Desktop cards use a
-34–40% navy tint, 6px blur and backdrop-only brightness of .63; shared navigation
-keeps its existing material.
+Login and signup cards use a translucent 62–68% navy tint that protects normal
+text contrast even if the browser cannot paint backdrop filters. Phone/tablet
+cards (below 1024px) use 1.5px optional blur; desktop uses 6px. The fixed portrait
+remains visible without fading text, buttons or the entire card. Fields and
+actions retain stronger navy surfaces; shared navigation keeps its material.
 Yellow edges, scrollable card geometry and instant form switching are preserved.
 
-The backdrop dimming bounds light text contrast even over the portrait's white
+The background tint bounds light text contrast even over the portrait's white
 shirt. Browsers without backdrop-filter support, reduced-transparency settings
 and higher-contrast preferences receive a stronger card. Placeholders alone use
 muted slate (#94a3b8) and regular weight; entered text and labels retain their
@@ -20,7 +19,7 @@ serif typeface. Public display gradients and brand wordmarks are unchanged.
 
 ## Verification and update
 
-The current candidate passed 257 guest browser checks across 55 scenes. Both forms
+The preceding navigation candidate passed 257 guest browser checks across 55 scenes. Both forms
 were checked at seven viewport sizes for distinct computed placeholder styles,
 reachable controls, bright-backdrop status-text contrast, stable scrolling and
 fixed portrait position. Reduced-transparency fallback also passed. No signup
@@ -31,6 +30,8 @@ theme/scroll checks, and actual user companion-close checks passed within their
 reported scopes. See the [earlier follow-up report](ios-chrome-glass-followup-2026-10-24.md)
 for that evidence and iOS limitations.
 
-Use the [consolidated merchant and navigation report](merchant-navigation-ui-2026-10-24.md)
-for the latest upload package and its verification scope.
+The [browser-rendering investigation](auth-browser-rendering-2026-10-24.md)
+contains the 207-check auth audit, including filter-disabled contrast tests,
+display-mode parity and font findings. The [product mobile-layout update](product-mobile-layout-2026-10-24.md)
+contains the latest upload package and subsequent product/header checks.
 Remote installation has not been performed by the agent.

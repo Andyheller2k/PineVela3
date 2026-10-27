@@ -1663,11 +1663,11 @@ export default function PageAdminDashboard() {
           <div className="space-y-6 animate-fadeIn relative z-10">
             {/* Header */}
             <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-white/80 border border-blue-200/80 p-6 rounded-3xl backdrop-blur-xl shadow-xl">
-              <div className="flex items-center space-x-3">
-                <div className="w-12 h-12 rounded-2xl bg-blue-600 text-white flex items-center justify-center font-bold shadow-lg shadow-blue-500/30">
+              <div className="flex w-full min-w-0 items-center gap-3">
+                <div className="w-12 h-12 shrink-0 aspect-square rounded-2xl bg-blue-600 text-white flex items-center justify-center font-bold shadow-lg shadow-blue-500/30">
                   <Bell className="w-6 h-6" />
                 </div>
-                <div>
+                <div className="min-w-0 flex-1">
                   <h3 className="text-xl font-bold text-slate-900">Notifications & Admin Board Desk</h3>
                   <p className="text-xs text-slate-500">Review manager requests, process operational notices, and manage property verification alerts.</p>
                 </div>
@@ -1675,17 +1675,17 @@ export default function PageAdminDashboard() {
 
             </div>
 
-            {notifications.length > 0 && <section className="rounded-3xl border border-blue-100 bg-white/75 p-5 shadow-sm backdrop-blur-xl"><div className="mb-3 flex items-center justify-between"><p className="flex items-center gap-2 text-sm font-extrabold text-slate-900"><Bell className="h-4 w-4 text-blue-600" />Live operational alerts {unreadCount > 0 && <span className="rounded-full bg-blue-600 px-2 py-0.5 text-[10px] text-white">{unreadCount} new</span>}</p><button onClick={() => refreshNotifications()} className="text-xs font-bold text-blue-700">Refresh</button></div><div className="space-y-2">{notifications.map((notification: any) => <button key={notification.id} data-notification-id={notification.id} onClick={() => { void markAsRead(notification.id); if (notification.category === 'support' && /^\/(?:help\?ticket=[a-f0-9-]{36}|customer-service(?:\?ticket=[a-f0-9-]{36})?)$/.test(notification.link || '')) { navigate(notification.link); return; } if (notification.link === 'verification-officers') { setActiveTab('managers'); setManagerSubTab('officers'); } else if (notification.link === 'residence_changes') setActiveTab('notifications'); else if (notification.module === 'admin_governance') setActiveTab('governance'); else if (notification.module === 'admin_settings') setActiveTab('settings'); }} className="block w-full rounded-2xl border border-blue-100 bg-blue-50/60 p-3 text-left"><p className="text-xs font-bold text-slate-900">{notification.title}{!notification.read && <span className="ml-2 text-blue-600">• New</span>}</p><p className="mt-1 text-xs text-slate-600">{notification.message}</p></button>)}</div></section>}
+            {notifications.length > 0 && <section className="rounded-3xl border border-blue-100 bg-white/75 p-5 shadow-sm backdrop-blur-xl"><div className="mb-3 flex flex-wrap items-center justify-between gap-3"><p className="flex min-w-0 flex-wrap items-center gap-2 text-sm font-extrabold text-slate-900"><Bell className="h-4 w-4 text-blue-600" />Live operational alerts {unreadCount > 0 && <span className="rounded-full bg-blue-600 px-2 py-0.5 text-[10px] text-white">{unreadCount} new</span>}</p><button onClick={() => refreshNotifications()} className="text-xs font-bold text-blue-700">Refresh</button></div><div className="space-y-2">{notifications.map((notification: any) => <button key={notification.id} data-notification-id={notification.id} onClick={() => { void markAsRead(notification.id); if (notification.category === 'support' && /^\/(?:help\?ticket=[a-f0-9-]{36}|customer-service(?:\?ticket=[a-f0-9-]{36})?)$/.test(notification.link || '')) { navigate(notification.link); return; } if (notification.link === 'verification-officers') { setActiveTab('managers'); setManagerSubTab('officers'); } else if (notification.link === 'residence_changes') setActiveTab('notifications'); else if (notification.module === 'admin_governance') setActiveTab('governance'); else if (notification.module === 'admin_settings') setActiveTab('settings'); }} className="block w-full rounded-2xl border border-blue-100 bg-blue-50/60 p-3 text-left"><p className="text-xs font-bold text-slate-900">{notification.title}{!notification.read && <span className="ml-2 text-blue-600">• New</span>}</p><p className="mt-1 text-xs text-slate-600">{notification.message}</p></button>)}</div></section>}
             {/* PENDING RESIDENCE VERIFICATION ALERTS */}
             {pendingHostelsCount > 0 && (
               <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 p-6 rounded-3xl backdrop-blur-xl shadow-lg space-y-4">
-                <div className="flex items-center justify-between border-b border-amber-200/60 pb-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-2xl bg-amber-500 text-white flex items-center justify-center font-bold shadow-md shadow-amber-500/30">
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-amber-200/60 pb-3">
+                  <div className="flex min-w-0 flex-1 items-center gap-3">
+                    <div className="w-10 h-10 shrink-0 aspect-square rounded-2xl bg-amber-500 text-white flex items-center justify-center font-bold shadow-md shadow-amber-500/30">
                       <Clock className="w-5 h-5 animate-spin" />
                     </div>
-                    <div>
-                      <h4 className="text-base font-extrabold text-slate-900 flex items-center gap-2">
+                    <div className="min-w-0 flex-1">
+                      <h4 className="text-base font-extrabold text-slate-900 flex flex-wrap items-center gap-2">
                         <span>Property Verification Requests</span>
                         <span className="px-2.5 py-0.5 rounded-full text-xs font-black bg-amber-500 text-white">
                           {pendingHostelsCount} Pending
@@ -1844,12 +1844,12 @@ export default function PageAdminDashboard() {
             {/* Header Card */}
             <div className="bg-white/90 border border-blue-200/80 p-6 rounded-3xl backdrop-blur-xl shadow-xl space-y-4">
               <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b border-slate-100 pb-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-600 to-teal-700 text-white flex items-center justify-center font-bold shadow-md shadow-emerald-500/25">
+                <div className="flex min-w-0 flex-1 items-center gap-3">
+                  <div className="w-12 h-12 shrink-0 aspect-square rounded-2xl bg-gradient-to-br from-emerald-600 to-teal-700 text-white flex items-center justify-center font-bold shadow-md shadow-emerald-500/25">
                     <ShoppingBag className="w-6 h-6" />
                   </div>
-                  <div>
-                    <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
+                  <div className="min-w-0 flex-1">
+                    <h3 className="text-lg font-black text-slate-900 flex flex-wrap items-center gap-2">
                       Student Digital Market Control Desk
                       <span className="px-2.5 py-0.5 bg-emerald-100 text-emerald-800 text-[10px] font-extrabold rounded-full uppercase">
                         PineVela P2P

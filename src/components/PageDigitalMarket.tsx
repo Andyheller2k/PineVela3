@@ -1200,7 +1200,7 @@ export default function PageDigitalMarket() {
 
   // REDESIGNED MERCHANT MANAGEMENT WORKBENCH (GLOSSY LIGHT-BLUE VIBE)
   return (
-    <div className="page-canvas min-h-screen text-slate-800 pb-24 relative">
+    <div data-product-screen="market" className="page-canvas min-h-screen text-slate-800 pb-24 relative">
 
       {/* Toast */}
       {toastMessage && (
@@ -3327,7 +3327,7 @@ export default function PageDigitalMarket() {
       {/* VIEW ORDER PINNED MEETUP SPOT MODAL */}
       {viewingOrderMap && (
         <DashboardOverlay aria-label="Order meetup location" onClose={() => setViewingOrderMap(null)} className="fixed inset-0 z-[200] bg-slate-950/75 backdrop-blur-xl flex items-center justify-center p-3 sm:p-6 animate-fadeIn">
-          <div data-popup-card className="max-w-[calc(100vw-1rem)] sm:max-w-2xl w-full">
+          <div className="max-w-[calc(100vw-1rem)] sm:max-w-2xl w-full">
             <CampusMeetupMapPicker
               latitude={viewingOrderMap.meetingLatitude ?? 6.6745}
               longitude={viewingOrderMap.meetingLongitude ?? -1.5716}
@@ -3371,7 +3371,7 @@ export default function PageDigitalMarket() {
       {/* SELECT SERVICE LOCATION ON MAP MODAL */}
       {isMapLocationPickerOpen && (
         <DashboardOverlay aria-label="Choose service location" onClose={() => setIsMapLocationPickerOpen(false)} className="fixed inset-0 z-[200] bg-slate-950/75 backdrop-blur-xl flex items-center justify-center p-3 sm:p-6 animate-fadeIn">
-          <div data-popup-card className="max-w-[calc(100vw-1rem)] sm:max-w-2xl w-full">
+          <div className="max-w-[calc(100vw-1rem)] sm:max-w-2xl w-full">
             <CampusMeetupMapPicker
               latitude={servLat}
               longitude={servLng}
@@ -3395,7 +3395,7 @@ export default function PageDigitalMarket() {
       {/* VIEW EXACT SERVICE LOCATION PIN MODAL */}
       {viewingServiceMap && (
         <DashboardOverlay aria-label="Service location" onClose={() => setViewingServiceMap(null)} className="fixed inset-0 z-[200] bg-slate-950/75 backdrop-blur-xl flex items-center justify-center p-3 sm:p-6 animate-fadeIn">
-          <div data-popup-card className="max-w-[calc(100vw-1rem)] sm:max-w-2xl w-full">
+          <div className="max-w-[calc(100vw-1rem)] sm:max-w-2xl w-full">
             <CampusMeetupMapPicker
               latitude={viewingServiceMap.lat || viewingServiceMap.latitude || 6.6745}
               longitude={viewingServiceMap.lng || viewingServiceMap.longitude || -1.5716}

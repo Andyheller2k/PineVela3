@@ -33,7 +33,7 @@ try {
   const files = fs.readdirSync('dist-supabase/assets').filter(f => f.endsWith('.js'));
   const bundle = files.map(f => fs.readFileSync('dist-supabase/assets/' + f, 'utf8')).join('\n');
   check(bundle.includes('Make it yours.') && bundle.includes('Nova') && bundle.includes('Mabel') && bundle.includes('Axel') && bundle.includes('Ziggy'), 'Released frontend includes all four companions');
-  for (const name of ['GROQ_API_KEY', 'OPENAI_API_KEY', 'SUPABASE_SERVICE_ROLE_KEY']) {
+  for (const name of ['GROQ_API_KEY', 'CLOUDFLARE_API_TOKEN', 'OPENAI_API_KEY', 'SUPABASE_SERVICE_ROLE_KEY']) {
     const value = process.env[name]; check(!value || !bundle.includes(value), 'Provider/server secrets are absent from frontend assets');
   }
   const result = { passed: true, checks, readOnly: true, privateRoutesRequireAuth: true, clientSecretsFound: 0 };

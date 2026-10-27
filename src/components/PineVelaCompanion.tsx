@@ -1,4 +1,6 @@
-import {companionSubmission} from '../lib/companionSubmission';
+import {companionSubmission,confirmedCompanionProviderRejection,releaseRejectedCompanionSubmission,type ConfirmedCompanionProviderRejection} from '../lib/companionSubmission';
+import { CompanionLoadGate } from '../lib/companionLoad';
+import { companionProvider, companionProviderAccepted, companionConsentHeaders, type CompanionProvider } from '../lib/companionConsent';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, useReducedMotion } from 'motion/react';
@@ -14,9 +16,10 @@ import CompanionNavigationButton from './CompanionNavigationButton';
 import { renderAvatarGraphic } from './UserAvatarSelector';
 import '../companion.css';
 
-type State = { preferences: CompanionPreferences; firstName: string; turns: CompanionTurn[]; available: boolean };
+type State = { preferences: CompanionPreferences; firstName: string; turns: CompanionTurn[]; available: boolean;
+  provider?: CompanionProvider; providerName?: string };
 class CompanionRequestError extends Error {
-  constructor(message: string, public retryAt = 0) { super(message); }
+  constructor(message: string, public retryAt = 0, public providerRejection?:ConfirmedCompanionProviderRejection) { super(message); }
 }
 export default function PineVelaCompanion({ unreadCount = 0, navigationTarget }: { unreadCount?: number; navigationTarget?: HTMLElement | null }) {
   const { user } = useAuth();
@@ -26,8 +29,18 @@ export default function PineVelaCompanion({ unreadCount = 0, navigationTarget }:
 function CompanionSession({ accountId, unreadCount, navigationTarget }: { accountId: string; unreadCount: number; navigationTarget?: HTMLElement | null }) {
   const reduceMotion = useReducedMotion();
   const { user } = useAuth(), navigate = useNavigate();
-  const submission=useRef(companionSubmission(JSON.stringify([accountId,currentSessionGeneration()]))).current;
+  const submissionScope=useRef(JSON.stringify([accountId,currentSessionGeneration()])).current;
+  const submission=useRef(companionSubmission(submissionScope)).current;
   const [state, setState] = useState<State | null>(null), [open, setOpen] = useState(false), [customize, setCustomize] = useState(false);
+  // A saved Groq preference is not consent to send data to another provider.
+  const [acknowledgedProvider, setAcknowledgedProvider] = useState<CompanionProvider | null>(null);
+  const provider = companionProvider(state?.provider);
+  const providerName = state?.providerName || (provider === 'cloudflare' ? 'Cloudflare Workers AI' : provider === 'groq' ? 'Groq' : 'the AI provider');
+  const providerAccepted = companionProviderAccepted(provider, acknowledgedProvider);
+  const previousProvider = useRef(provider);
+  useEffect(() => { if (previousProvider.current !== provider) { previousProvider.current = provider; setAcknowledgedProvider(null); } }, [provider]);
+  const [loading, setLoading] = useState(true);
+  const [loadGate] = useState(() => new CompanionLoadGate());
   const [draft, setDraft] = useState<CompanionPreferences>(DEFAULT_COMPANION_PREFERENCES), [message, setMessage] = useState(submission.unresolved?.text||'');
   const [error, setError] = useState(''), [busy, setBusy] = useState(false), [saving, setSaving] = useState(false), [clearing, setClearing] = useState(false);
   const [pending, setPending] = useState(''), [clearConfirm, setClearConfirm] = useState(false);
@@ -37,16 +50,20 @@ function CompanionSession({ accountId, unreadCount, navigationTarget }: { accoun
   const action = useRef(false);
   const alive = useRef(true), requests = useRef(new Set<AbortController>()), bottom = useRef<HTMLDivElement>(null), input = useRef<HTMLTextAreaElement>(null);
   const character = companionById(state?.preferences.companion), active = companionById(draft.companion);
-  useEffect(() => { alive.current = true; return () => { alive.current = false; requests.current.forEach(c => c.abort()); requests.current.clear(); }; }, []);
+  useEffect(() => { alive.current = true; return () => { alive.current = false; loadGate.invalidate(); requests.current.forEach(c => c.abort()); requests.current.clear(); }; }, [loadGate]);
   async function request(path: string, options: RequestInit = {}) {
     const controller = new AbortController(); requests.current.add(controller);
     try {
+      const headers = new Headers(options.headers);
+      headers.set('Content-Type', 'application/json');
+      headers.set('X-PineVela-Profile-Context', accountId);
       const response = await sessionFetch('/api/companion' + path, { ...options,
-        headers: { 'Content-Type': 'application/json', 'X-PineVela-Profile-Context': accountId },
+        headers,
         signal: AbortSignal.any([controller.signal, AbortSignal.timeout(55000), ...(options.signal ? [options.signal] : [])]) });
       const data = await response.json().catch(error => { if (controller.signal.aborted || options.signal?.aborted) throw error; return null; });
       if (!response.ok) throw new CompanionRequestError(data?.error || 'Your companion could not connect. Please try again.',
-        response.status === 429 || response.headers.has('Retry-After') ? Date.now() + companionRetryAfter(response.headers.get('Retry-After')) * 1000 : 0);
+        response.status === 429 || response.headers.has('Retry-After') ? Date.now() + companionRetryAfter(response.headers.get('Retry-After')) * 1000 : 0,
+        path==='/turns'&&options.method==='POST'?confirmedCompanionProviderRejection(response.status,data):undefined);
       if (!alive.current) throw new DOMException('Account changed', 'AbortError');
       if (!data || typeof data !== 'object') throw new CompanionRequestError('The reply was interrupted. Your message is kept. Please try again.');
       return data;
@@ -57,14 +74,19 @@ function CompanionSession({ accountId, unreadCount, navigationTarget }: { accoun
     } finally { requests.current.delete(controller); }
   }
   async function load() {
-    setError('');
-    try { const data = await request(''); if (alive.current) {
-      const unresolved=submission.unresolved,record=unresolved&&data.turns?.find((turn:CompanionTurn)=>turn.id===unresolved.id&&turn.user===unresolved.text);
-      if(record&&submission.receipt(record.id,record.user))setMessage(current=>current.trim()===record.user?'':current);
-      setState(data); setDraft(data.preferences);
-    } }
-    catch (e) { if (alive.current && (e as Error).name !== 'AbortError') setError((e as Error).message); }
+    if (action.current) return;
+    await loadGate.run<State>(signal => request('', { signal }), {
+      start: () => { setLoading(true); setError(''); },
+      success: data => {
+        const unresolved=submission.unresolved,record=unresolved&&data.turns?.find((turn:CompanionTurn)=>turn.id===unresolved.id&&turn.user===unresolved.text);
+        if(record&&submission.receipt(record.id,record.user))setMessage(current=>current.trim()===record.user?'':current);
+        setState(data); setDraft(data.preferences);
+      },
+      failure: error => setError(error instanceof Error && error.message || 'Your companion could not connect. Please try again.'),
+      settled: () => setLoading(false),
+    });
   }
+  const invalidateLoad = () => { loadGate.invalidate(); setLoading(false); };
   useEffect(() => { void load(); }, []);
   useEffect(() => {
     setSlowReply(false);
@@ -85,25 +107,32 @@ function CompanionSession({ accountId, unreadCount, navigationTarget }: { accoun
   }, [retryAt]);
   useEffect(() => { if (open && !customize) bottom.current?.scrollIntoView({ block: 'end', behavior: 'instant' }); }, [open, customize, state?.turns.length, pending]);
   async function save() {
-    if (action.current) return;
+    if (action.current || !provider) return;
+    invalidateLoad();
     action.current = true;
     setSaving(true); setError('');
-    try { const data = await request('/preferences', { method: 'PUT', body: JSON.stringify(draft) });
-      if (alive.current) { setState(s => s ? { ...s, preferences: data.preferences } : s); setCustomize(false); setClearConfirm(false); }
+    try { const data = await request('/preferences', { method: 'PUT', body: JSON.stringify(draft),
+      headers: draft.aiEnabled ? companionConsentHeaders(provider, acknowledgedProvider, true) : {} });
+      if (alive.current) { setState(s => s ? { ...s, preferences: data.preferences } : s); setAcknowledgedProvider(data.preferences.aiEnabled ? provider : null); setCustomize(false); setClearConfirm(false); }
     } catch (e) { if (alive.current && (e as Error).name !== 'AbortError') setError((e as Error).message); }
     finally { action.current = false; if (alive.current) setSaving(false); }
   }
   async function send(text = message, enableAI = false) {
-    if (action.current || retryAt > Date.now() || !state?.available || (!text.trim() && !enableAI) || (!state.preferences.aiEnabled && !enableAI)) return;
+    if (action.current || retryAt > Date.now() || !state?.available || !provider || (!text.trim() && !enableAI)
+      || ((!state.preferences.aiEnabled || !providerAccepted) && !enableAI)) return;
     // The ref closes the gap before React renders disabled buttons after a rapid double tap.
+    invalidateLoad();
     action.current = true; setError('');
     const controller = new AbortController(); replyRequest.current = controller;
+    let logical:{id:string;text:string}|undefined;
+    const consentHeaders = companionConsentHeaders(provider, acknowledgedProvider, enableAI);
     try {
       if (!state.preferences.aiEnabled) {
         setSaving(true);
-        const data = await request('/preferences', { method: 'PUT', body: JSON.stringify({ ...state.preferences, aiEnabled: true }), signal: controller.signal });
+        const data = await request('/preferences', { method: 'PUT', body: JSON.stringify({ ...state.preferences, aiEnabled: true }), headers: consentHeaders, signal: controller.signal });
         setState(s => s ? { ...s, preferences: data.preferences } : s); setDraft(data.preferences); setSaving(false);
       }
+      if (enableAI && alive.current) setAcknowledgedProvider(provider);
       if (!text.trim()) return;
       // Reconcile only an interrupted send; ordinary new sends avoid an extra read.
       if(submission.unresolved){
@@ -111,14 +140,16 @@ function CompanionSession({ accountId, unreadCount, navigationTarget }: { accoun
         const record=history.turns?.find((turn:CompanionTurn)=>turn.id===submission.unresolved?.id&&turn.user===submission.unresolved.text);
         if(record){const same=text.trim()===record.user;submission.receipt(record.id,record.user);setState(history);if(same){setMessage(current=>current.trim()===record.user?'':current);return;}}
       }
-      const logical=submission.begin(text);
+      logical=submission.begin(text);
       setBusy(true); setPending(logical.text); setMessage(current => current === text ? '' : current);
-      const data = await request('/turns', { method: 'POST', body: JSON.stringify({ message: logical.text, requestId: logical.id }), signal: controller.signal });
+      const data = await request('/turns', { method: 'POST', body: JSON.stringify({ message: logical.text, requestId: logical.id }), headers: consentHeaders, signal: controller.signal });
       if(!data.turn||data.turn.id!==logical.id||data.turn.user!==logical.text)throw new CompanionRequestError('The reply could not be confirmed. Check saved replies or retry your message.');
       if (alive.current) {submission.receipt(data.turn.id,data.turn.user);setState(s => s ? { ...s, turns: [...s.turns.filter(t => t.id !== data.turn.id), data.turn].slice(-30) } : s);}
 
     } catch (e) {
       if (alive.current && ((e as Error).name !== 'AbortError' || controller.signal.aborted)) {
+        if(logical&&e instanceof CompanionRequestError&&e.providerRejection)
+          releaseRejectedCompanionSubmission(submissionScope,submission,logical.id,logical.text,e.providerRejection);
         setError(controller.signal.aborted ? 'Reply cancelled. Your message is kept.' : (e as Error).message); setMessage(current => current || text);
         if (e instanceof CompanionRequestError && e.retryAt) { setRetryAt(e.retryAt); setRemaining(Math.max(0, Math.ceil((e.retryAt - Date.now()) / 1000))); }
       }
@@ -126,6 +157,7 @@ function CompanionSession({ accountId, unreadCount, navigationTarget }: { accoun
   }
   async function clear() {
     if (action.current) return;
+    invalidateLoad();
     action.current = true;
     setClearing(true); setError('');
     try { await request('/history', { method: 'DELETE', body: '{}' }); if (alive.current) { setState(s => s ? { ...s, turns: [] } : s);submission.clear();setMessage('');setClearConfirm(false); } }
@@ -136,9 +168,10 @@ function CompanionSession({ accountId, unreadCount, navigationTarget }: { accoun
   const visit = (href: string) => { if (safeCompanionHref(href)) { close(); navigate(href); } };
   const edit = () => { if (state) setDraft(state.preferences); setCustomize(true); setError(''); };
   const firstName = state?.firstName || user?.name?.split(/\s+/)[0] || '';
-  const canAct = Boolean(state?.available && !busy && !saving && !clearing && !remaining);
-  const canSend = Boolean(canAct && state?.preferences.aiEnabled);
-  const suggest = (text: string) => { if (state?.preferences.aiEnabled) void send(text); else { setMessage(text); input.current?.focus(); } };
+  const canAct = Boolean(state?.available && provider && !loading && !busy && !saving && !clearing && !remaining);
+  const needsEnable = !state?.preferences.aiEnabled || !providerAccepted;
+  const canSend = Boolean(canAct && !needsEnable);
+  const suggest = (text: string) => { if (canSend) void send(text); else { setMessage(text); input.current?.focus(); } };
   const launch = () => { setOpen(true); if (!state) void load(); };
   const notificationBadge = state?.preferences.reminders && unreadCount > 0 ? <span className="pv-companion-badge" aria-label={`${unreadCount} unread notifications`}>{unreadCount > 9 ? '9+' : unreadCount}</span> : null;
   return <>
@@ -157,10 +190,10 @@ function CompanionSession({ accountId, unreadCount, navigationTarget }: { accoun
         <header className="pv-companion-header">
           {customize ? <button type="button" className="pv-companion-icon-button" aria-label="Back to chat" onClick={() => { setCustomize(false); setError(''); }} disabled={saving}><ChevronLeft size={20} /></button> : <CompanionAvatar companion={character.id} />}
           <div className="pv-companion-heading"><span className="pv-companion-eyebrow">PINEVELA COMPANION <span>AI</span></span><h2>{customize ? 'Make it yours.' : character.name}</h2><p>{customize ? 'A familiar face. Your kind of company.' : character.title}</p></div>
-          {!customize && <button type="button" className="pv-companion-icon-button" aria-label="Customize companion" onClick={edit} disabled={!state || busy}><Settings2 size={18} /></button>}
+          {!customize && <button type="button" className="pv-companion-icon-button" aria-label="Customize companion" onClick={edit} disabled={!state || loading || busy}><Settings2 size={18} /></button>}
           <button type="button" className="pv-companion-icon-button" aria-label="Close companion" onClick={close}><X size={21} /></button>
         </header>
-        {!state ? <div className="pv-companion-connect"><LoaderCircle className="pv-companion-spin" size={22} /><p>Opening your companion…</p>{error && <><p role="alert">{error}</p><button type="button" onClick={() => void load()}>Try again</button></>}</div> : customize ? <>
+        {!state ? <div className="pv-companion-connect">{loading ? <><LoaderCircle className="pv-companion-spin" size={22} /><p>Opening your companion…</p></> : <><p role="alert">{error || 'Your companion could not connect. Please try again.'}</p><button type="button" onClick={() => void load()}>Try again</button></>}</div> : customize ? <>
           <div className="pv-companion-customize">
             <div className="pv-companion-section-label"><span>01 / CHOOSE YOUR COMPANY</span><span>2 FEMALE · 2 MALE</span></div>
             <div className="pv-companion-choices" role="group" aria-label="Choose your companion">
@@ -174,7 +207,7 @@ function CompanionSession({ accountId, unreadCount, navigationTarget }: { accoun
             <label className="pv-companion-field">Reply style<select value={draft.responseStyle} onChange={e => setDraft(p => ({ ...p, responseStyle: e.target.value as CompanionPreferences['responseStyle'] }))}><option value="balanced">A little of everything</option><option value="brief">Short and to the point</option><option value="detailed">Talk me through it</option></select></label>
             <label className="pv-companion-field">Things you like <span className="pv-companion-optional">Optional</span><input maxLength={200} value={draft.interests} onChange={e => setDraft(p => ({ ...p, interests: e.target.value }))} placeholder="Books, tech, a good word game…" /><span className="pv-companion-field-note">Saved for your companion. You can change this anytime.</span></label>
             <label className="pv-companion-toggle"><span><strong>Missed notification reminder</strong><small>A quiet badge on your companion icon.</small></span><input type="checkbox" checked={draft.reminders} onChange={e => setDraft(p => ({ ...p, reminders: e.target.checked }))} /></label>
-            <label className="pv-companion-toggle"><span><strong>Enable AI replies</strong><small>Your messages, first name, preferences and relevant app information are sent to Groq. Private notification text stays in PineVela.</small></span><input type="checkbox" checked={draft.aiEnabled} onChange={e => setDraft(p => ({ ...p, aiEnabled: e.target.checked }))} /></label>
+            <label className="pv-companion-toggle"><span><strong>Enable AI replies</strong><small>Your messages, first name, preferences and relevant app information are sent to {providerName}. Private notification text stays in PineVela.</small></span><input type="checkbox" checked={draft.aiEnabled} onChange={e => setDraft(p => ({ ...p, aiEnabled: e.target.checked }))} /></label>
             <div className="pv-companion-privacy"><ShieldCheck size={17} /><p>Your name comes from your profile. Recent chat is saved to your account. Your companion cannot buy items, approve forms or read private buyer–seller chats.</p></div>
             <button type="button" className="pv-companion-clear" disabled={busy || clearing || saving} onClick={() => clearConfirm ? void clear() : setClearConfirm(true)}><Trash2 size={15} />{clearing ? 'Clearing…' : clearConfirm ? 'Confirm: clear my conversation' : 'Clear my conversation'}</button>
             {clearConfirm && <button type="button" className="pv-companion-text-button" onClick={() => setClearConfirm(false)}>Keep conversation</button>}
@@ -198,11 +231,12 @@ function CompanionSession({ accountId, unreadCount, navigationTarget }: { accoun
             {busy && <div className="pv-companion-thinking" role="status"><CompanionAvatar companion={character.id} /><span>{slowReply ? 'Taking longer than usual' : `${character.name} is thinking`}<span className="pv-companion-dots">…</span></span><button type="button" className="pv-companion-text-button" onClick={() => replyRequest.current?.abort()}>Cancel reply</button></div>}
             <div ref={bottom} />
           </div>
-          {!state.preferences.aiEnabled && <div className="pv-companion-enable"><p id="pv-companion-consent">Enable replies to send your messages, first name, preferences and relevant app information to Groq. Private notification text stays in PineVela.</p><button type="button" className="pv-companion-primary" aria-describedby="pv-companion-consent" disabled={!canAct} onClick={() => void send(message, true)}>{saving ? 'Enabling…' : message.trim() ? 'Enable AI & send' : 'Enable AI replies'}<ArrowUpRight size={16} /></button></div>}
+          {needsEnable && <div className="pv-companion-enable"><p id="pv-companion-consent">Enable replies to send your messages, first name, preferences and relevant app information to {providerName}. Private notification text stays in PineVela.</p><button type="button" className="pv-companion-primary" aria-describedby="pv-companion-consent" disabled={!canAct} onClick={() => void send(message, true)}>{saving ? 'Enabling…' : message.trim() ? 'Enable AI & send' : 'Enable AI replies'}<ArrowUpRight size={16} /></button></div>}
           {!state.available && <p className="pv-companion-error" role="status">AI replies are temporarily unavailable. <button type="button" onClick={() => visit('/help?from=/user/dashboard')}>Open Help</button></p>}
-          {(error || remaining > 0) && <p className="pv-companion-error" role={remaining ? 'status' : 'alert'}>{error || 'Your companion needs a pause. Your message is kept.'}{submission.unresolved&&<button type="button" className="pv-companion-text-button" disabled={busy||saving} onClick={()=>void load()}>Check saved replies</button>}{remaining > 0 && <span className="pv-companion-retry">Try again in {remaining >= 3600 ? `${Math.ceil(remaining / 3600)}h` : remaining >= 60 ? `${Math.floor(remaining / 60)}m ${remaining % 60}s` : `${remaining}s`}.</span>}</p>}
+          {loading && <p className="pv-companion-error" role="status">Checking your saved replies…</p>}
+          {(error || remaining > 0) && <p className="pv-companion-error" role={remaining ? 'status' : 'alert'}>{error || 'Your companion needs a pause. Your message is kept.'}{submission.unresolved&&<button type="button" className="pv-companion-text-button" disabled={loading||busy||saving} onClick={()=>void load()}>Check saved replies</button>}{remaining > 0 && <span className="pv-companion-retry">Try again in {remaining >= 3600 ? `${Math.ceil(remaining / 3600)}h` : remaining >= 60 ? `${Math.floor(remaining / 60)}m ${remaining % 60}s` : `${remaining}s`}.</span>}</p>}
           <form className="pv-companion-composer" onSubmit={(e: FormEvent) => { e.preventDefault(); void send(); }}>
-            <label className="sr-only" htmlFor="pv-companion-message">Message your companion</label><textarea id="pv-companion-message" ref={input} rows={1} maxLength={1000} value={message} aria-describedby={!state.preferences.aiEnabled ? 'pv-companion-consent' : undefined} onChange={e => setMessage(e.target.value)} placeholder={`Ask ${character.name} anything…`} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing && !window.matchMedia('(pointer: coarse)').matches) { e.preventDefault(); void send(); } }} />
+            <label className="sr-only" htmlFor="pv-companion-message">Message your companion</label><textarea id="pv-companion-message" ref={input} rows={1} maxLength={1000} value={message} aria-describedby={needsEnable ? 'pv-companion-consent' : undefined} onChange={e => setMessage(e.target.value)} placeholder={`Ask ${character.name} anything…`} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing && !window.matchMedia('(pointer: coarse)').matches) { e.preventDefault(); void send(); } }} />
             <button type="submit" aria-label="Send message" disabled={!canSend || !message.trim()}>{busy ? <LoaderCircle className="pv-companion-spin" size={18} /> : <ArrowUp size={20} />}</button>
           </form>
           <footer className="pv-companion-chat-footer"><span>AI can make mistakes. Check important details.</span><button type="button" onClick={() => visit('/help?from=/user/dashboard')}>Need a person?</button></footer>

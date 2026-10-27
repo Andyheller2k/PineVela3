@@ -43,7 +43,10 @@
 .unified-login .login-auth-card button[type="submit"], .unified-login .login-google-button { min-height: 44px; padding-block: 10px; }
 .unified-login .login-mode-toggle { padding: 4px; }
 .unified-login .login-mode-toggle button { min-height: 44px; padding-block: 8px; }
-.unified-login .login-footer { padding: 4px 12px max(4px, env(safe-area-inset-bottom)); }
+.unified-login .login-footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; column-gap: 12px; padding: 4px 12px max(4px, env(safe-area-inset-bottom)); }
+.unified-login .login-footer a { display: inline-flex; align-items: center; min-height: 24px; color: inherit; text-decoration: underline; text-underline-offset: 3px; pointer-events: auto; }
+.unified-login .login-footer a:hover { text-decoration-thickness: 2px; }
+.unified-login .login-footer a:focus-visible { outline: 2px solid var(--pv-focus, #ffd60a); outline-offset: 3px; border-radius: 2px; }
 
 @media (max-width: 1023px) {
   .unified-login { --pv-login-photo-top: 96px; --pv-login-photo-height: min(calc(100vw * 1402 / 1122), max(340px, 70svh), max(0px, calc(100svh - var(--pv-login-photo-top) - max(8px, env(safe-area-inset-bottom))))); isolation: isolate; }

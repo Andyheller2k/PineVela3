@@ -1,23 +1,20 @@
 import crypto from 'node:crypto';
-import https from 'node:https';
-import type { TcpNetConnectOpts } from 'node:net';
 import type { Express, RequestHandler } from 'express';
 import type { PoolClient } from 'pg';
 import type { SupabaseAuth, AuthRequest } from './auth.js';
 import { ApiError, uuid, type VerifiedActor } from './db.js';
 import { AttemptBudgets, ResourceLimitError, WorkPool } from '../resourceSecurity.js';
-import { DEFAULT_COMPANION_PREFERENCES, companionById, companionRetryAfter, validCompanionPreferences,
+import { DEFAULT_COMPANION_PREFERENCES, companionById, validCompanionPreferences,
   type CompanionPreferences, type CompanionCard, type CompanionTurn } from '../companionModel.js';
 import { faqSections } from '../src/components/faqContent.js';
 import { registrationStatus } from './accountStatus.js';
 import { sellerStatus } from './sellerRegistration.js';
-import { companionAgent, companionConnectionFailure } from './companionConnection.js';
-import { COMPANION_PROVIDER_HEADERS, companionProviderDiagnostic } from './companionProvider.js';
+import { callCompanionInference, companionProviderReady } from './companionInference.js';
+import { assertCompanionProviderConsent, companionProviderDisclosure } from './companionConsent.js';
 import { companionAnswer, companionScopeReply } from './companionScope.js';
 import { companionRecordedStatusAnswer, companionSubmissionResult, isCompanionSubmissionQuestion } from './companionSubmissions.js';
 import { reserveCompanionAllowance, settleCompanionAllowance } from './companionAllowance.js';
 
-const MODEL = 'openai/gpt-oss-20b';
 const pool = new WorkPool(2, 2);
 const limits = new AttemptBudgets();
 export function reserveCompanionRate(budgets: AttemptBudgets, identity: string) {
@@ -52,7 +49,8 @@ export async function companionState(c: PoolClient, actor: VerifiedActor) {
   const prefs = (await c.query('select * from private.companion_preferences where context_id=$1', [actor.contextId])).rows[0];
   const rows = (await c.query(`select * from private.companion_turns where context_id=$1 and created_at>now()-interval '30 days'
     order by created_at desc,request_id desc limit 30`, [actor.contextId])).rows.reverse();
-  return { preferences: settings(prefs), firstName: String(person?.display_name || '').trim().split(/\s+/)[0].slice(0, 60), turns: rows.map(turn), available: Boolean(process.env.GROQ_API_KEY) };
+  return { preferences: settings(prefs), firstName: String(person?.display_name || '').trim().split(/\s+/)[0].slice(0, 60), turns: rows.map(turn),
+    available: companionProviderReady(), ...companionProviderDisclosure() };
 }
 export async function saveCompanionPreferences(c: PoolClient, actor: VerifiedActor, value: unknown) {
   if (!validCompanionPreferences(value)) throw new ApiError(400, 'Choose a companion, response style and valid preferences.');
@@ -87,53 +85,11 @@ const tools = [
   { type: 'function', function: { name: 'get_my_notifications', description: 'Read a summary of the signed-in user’s unread notifications. Does not mark them read.', parameters: { type: 'object', properties: {}, additionalProperties: false } } },
   { type: 'function', function: { name: 'get_my_submission_status', description: 'Read actual manager, resident and seller registration/enrollment status belonging to the signed-in user.', parameters: { type: 'object', properties: {}, additionalProperties: false } } },
 ];
-/** Fixed HTTPS destination, certificate verification, bounded response/time, no provider error/key disclosure. */
+/** Provider transport stays separate from scoped app tools and account data. */
 export async function callCompanionModel(messages: any[], allowTools = true, signal?: AbortSignal): Promise<any> {
-  const key = process.env.GROQ_API_KEY;
-  if (!key) throw new ApiError(503, 'Your companion is not connected yet. Please try again later.');
-  const body = JSON.stringify({ model: MODEL, messages, max_completion_tokens: 900, temperature: 0.4,
-    ...(allowTools ? { tools, tool_choice: 'auto', parallel_tool_calls: false } : {}) });
-  if (Buffer.byteLength(body) > 48000) throw new ApiError(400, 'This conversation is too long. Start a fresh conversation.');
-  return new Promise((resolve, reject) => {
-    let settled = false;
-    const fail = (error: Error) => { if (!settled) { settled = true; reject(error); } };
-    const started = Date.now();
-    const connection: Pick<TcpNetConnectOpts, 'autoSelectFamily' | 'autoSelectFamilyAttemptTimeout'> = { autoSelectFamily: true, autoSelectFamilyAttemptTimeout: 300 };
-    const req = https.request({ hostname: 'api.groq.com', path: '/openai/v1/chat/completions', method: 'POST', agent: companionAgent,
-      ...connection,
-      headers: { ...COMPANION_PROVIDER_HEADERS, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
-      signal: AbortSignal.any([AbortSignal.timeout(20000), ...(signal ? [signal] : [])]) }, res => {
-      let bytes = 0, chunks: Buffer[] = [];
-      res.on('data', b => { bytes += b.length; if (bytes > 65536) { res.destroy(); fail(new ApiError(502, 'Your companion returned too much text. Please try a shorter question.')); } else chunks.push(b); });
-      res.on('error', () => fail(new ApiError(503, 'Your companion could not finish. Please try again.')));
-      res.on('aborted', () => fail(new ApiError(503, 'The AI connection was interrupted. Your message is kept. Please try again.', 'companion_connection')));
-      res.on('end', () => {
-        if (settled) return;
-        if (res.statusCode === 429) return fail(new ResourceLimitError(429, companionRetryAfter(String(res.headers['retry-after'] || '')),
-          'The free AI service needs a pause. Your message is kept.'));
-        if (res.statusCode !== 200) {
-          console.warn('[Companion] Provider rejected request.', {
-            ...companionProviderDiagnostic(res.statusCode, res.headers['content-type'], Buffer.concat(chunks)),
-            elapsedMs: Date.now() - started,
-          });
-          return fail(new ApiError(503, 'Your companion is temporarily unavailable. Please try again later.', `companion_provider_${res.statusCode}`));
-        }
-        try { const data = JSON.parse(Buffer.concat(chunks).toString('utf8'));
-          if (!data.choices?.[0]?.message) throw Error();
-          settled = true; resolve(data);
-        } catch { fail(new ApiError(502, 'Your companion could not finish that reply. Please try again.')); }
-      });
-    });
-    req.on('error', error => {
-      const failure = companionConnectionFailure(error);
-      // No request text, profile information, URLs, provider bodies or keys.
-      const reasons = ['EAI_AGAIN', 'ENOTFOUND', 'ETIMEOUT', 'ETIMEDOUT', 'ECONNRESET', 'ECONNREFUSED', 'ENETUNREACH', 'EHOSTUNREACH', 'ABORT_ERR', 'ERR_TLS_CERT_ALTNAME_INVALID', 'CERT_HAS_EXPIRED', 'UNABLE_TO_VERIFY_LEAF_SIGNATURE'];
-      console.warn('[Companion] Provider connection failed.', { code: failure.code, reason: reasons.includes((error as NodeJS.ErrnoException).code || '') ? (error as NodeJS.ErrnoException).code : 'OTHER', elapsedMs: Date.now() - started });
-      fail(failure);
-    });
-    req.end(body);
-  });
+  return callCompanionInference(messages, tools, signal, allowTools);
 }
+
 function toolArgs(call: any) {
   if (!call?.function || typeof call.id !== 'string' || call.id.length > 160 || typeof call.function.arguments !== 'string' || call.function.arguments.length > 1000)
     throw new ApiError(502, 'Your companion could not complete that lookup.');
@@ -195,6 +151,21 @@ export async function reserveCompanionTurn(auth: SupabaseAuth, actor: VerifiedAc
     return { state, generation: prefs.generation, allowanceWindow };
   });
 }
+/** Release only this generation's lease. An exact first-call provider rejection
+ * generated no tokens; settle that reservation once, retaining the attempt.
+ * Unknown failures and work that already used a provider response stay held. */
+export async function cleanupFailedCompanionTurn(auth: SupabaseAuth, actor: VerifiedActor,
+  request: { id: string; generation: number; allowanceWindow: Date; used: number; error: unknown }) {
+  return auth.db.authorizedSystem(actor, primary, async c => {
+    const released = await c.query(`update private.companion_preferences set active_request_id=null,active_until=null
+      where context_id=$1 and active_request_id=$2 and generation=$3 returning context_id`,
+    [actor.contextId, request.id, request.generation]);
+    const tokensReleased = !!released.rowCount && request.used === 0 && request.error instanceof ApiError
+      && request.error.status === 503 && request.error.code === 'companion_provider_403';
+    if (tokensReleased) await settleCompanionAllowance(c, actor.authUserId, request.allowanceWindow, 0);
+    return { released: !!released.rowCount, tokensReleased };
+  });
+}
 export function installCompanion(app: Express, auth: SupabaseAuth) {
   app.get('/api/companion', auth.require(primary), route(async (req, res) => {
     profileHeaders(req);
@@ -203,6 +174,7 @@ export function installCompanion(app: Express, auth: SupabaseAuth) {
   app.put('/api/companion/preferences', auth.require(primary), route(async (req, res) => {
     profileHeaders(req);
     if (!validCompanionPreferences(req.body)) throw new ApiError(400, 'Choose a companion, response style and valid preferences.');
+    if (req.body.aiEnabled) assertCompanionProviderConsent(req.headers['x-pinevela-ai-provider']);
     const preferences = await auth.db.actor(req.actor, c => saveCompanionPreferences(c, req.actor, req.body));
     res.json({ preferences });
   }));
@@ -216,7 +188,8 @@ export function installCompanion(app: Express, auth: SupabaseAuth) {
     if (typeof req.body.message !== 'string' || req.body.message.trim().length < 1 || req.body.message.length > 1000 || /[\u0000-\u0008\u000b-\u001f]/.test(req.body.message))
       throw new ApiError(400, 'Enter a message of up to 1,000 characters.');
     const id = uuid(req.body.requestId), text = req.body.message.trim();
-    if (!process.env.GROQ_API_KEY) throw new ApiError(503, 'Your companion is not connected yet.');
+    if (!companionProviderReady()) throw new ApiError(503, 'Your companion is not connected yet.');
+    assertCompanionProviderConsent(req.headers['x-pinevela-ai-provider']);
     reserveCompanionRate(limits, req.actor.authUserId);
     if (res.destroyed) return;
     const disconnected = new AbortController();
@@ -232,7 +205,7 @@ export function installCompanion(app: Express, auth: SupabaseAuth) {
           return reserved.cached;
         }
         const { state, generation, allowanceWindow } = reserved;
-        let used = 0, completed = false;
+        let used = 0, completed = false, failure: unknown;
         try {
           signal.throwIfAborted();
           let content = companionScopeReply(text, state!.preferences.companion), cards: CompanionCard[] = [];
@@ -283,8 +256,12 @@ export function installCompanion(app: Express, auth: SupabaseAuth) {
             return turn(row);
           });
           completed = true; return saved;
+        } catch (error) {
+          failure = error;
+          throw error;
         } finally {
-          if (!completed) await auth.db.authorizedSystem(req.actor, primary, c => c.query(`update private.companion_preferences set active_request_id=null,active_until=null where context_id=$1 and active_request_id=$2`, [req.actor.contextId, id])).catch(() => undefined);
+          if (!completed) await cleanupFailedCompanionTurn(auth, req.actor,
+            { id, generation, allowanceWindow: allowanceWindow!, used, error: failure }).catch(() => undefined);
         }
       });
       if (!disconnected.signal.aborted) res.json({ turn: result });

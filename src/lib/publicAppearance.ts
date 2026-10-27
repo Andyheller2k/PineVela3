@@ -1,9 +1,9 @@
-import type { Theme } from '../context/ThemeContext';
+import type { Theme } from './themePreference';
 
 /** Fixed public appearances never replace the saved product preference. */
 export function getPublicAppearance(pathname: string, search = '', signedIn = false): Theme | null {
   const route = pathname.replace(/\/+$/, '') || '/';
-  if (route === '/' || route === '/login') return 'light';
+  if (route === '/') return 'light';
   if (route === '/support-invitation' || route === '/why-us') return 'dark';
   if (route === '/help' || route === '/faq') {
     const from = new URLSearchParams(search).get('from') || '';

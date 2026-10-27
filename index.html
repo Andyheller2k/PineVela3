@@ -5,36 +5,53 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content" />
     <meta name="theme-color" content="#001d3d" />
     <script>
-      // Public pages stay fixed; product pages restore the saved preference before paint.
+      // Login/signup and product pages share the saved Light/Dark/System choice.
+      // Marketing keeps its fixed appearance without replacing that preference.
       var route = (location.hash.slice(1).split('?')[0] || '/').replace(/\/+$/, '') || '/';
-      var fixedAppearance = route === '/' || route === '/login' ? 'light'
+      var authPage = route === '/login';
+      var fixedAppearance = route === '/' ? 'light'
         : route === '/pineresidence' || route === '/pinemarket' || route === '/support-invitation' || route === '/why-us' || /^\/pinemarket\/stores\/[^/]+$/.test(route) ? 'dark' : null;
       if (route === '/help' || route === '/faq') {
         var helpFrom = new URLSearchParams(location.hash.slice(1).split('?').slice(1).join('?')).get('from') || '';
         fixedAppearance = /^\/(?:user\/dashboard|student\/dashboard|resident\/dashboard|manager\/dashboard|staff\/dashboard|admin\/dashboard|digital-market(?:\/onboard)?|market|customer-service|field-officer|officer\/dashboard|verification-team|verification-portal)$/.test(helpFrom) ? null : 'dark';
       }
-      var publicAppearance = fixedAppearance !== null;
+      var publicAppearance = authPage || fixedAppearance !== null;
       document.documentElement.dataset.appearance = publicAppearance ? 'public' : 'product';
+      document.documentElement.dataset.authPage = String(authPage);
+      // Keep this query in sync with PHONE_AUTH_MEDIA in mobileAuthAppearance.ts.
+      var mobileAuth = false;
+      try { mobileAuth = authPage && matchMedia('(max-width: 639px), (pointer: coarse) and (max-width: 1023px) and (max-height: 500px)').matches; } catch (_) {}
+      document.documentElement.dataset.mobileAuth = mobileAuth ? 'true' : 'false';
+      var preference = 'system';
       try {
         var savedAppearance = localStorage.getItem('pinevela:appearance');
-        var appearance = savedAppearance === 'light' || savedAppearance === 'dark' ? savedAppearance : (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-        document.documentElement.dataset.theme = fixedAppearance || appearance;
-        document.documentElement.style.colorScheme = fixedAppearance || appearance;
-      } catch (_) { document.documentElement.dataset.theme = fixedAppearance || 'light'; document.documentElement.style.colorScheme = fixedAppearance || 'light'; }
-      var chromeColor = document.documentElement.dataset.theme === 'light' && !publicAppearance ? '#ffffff' : '#001d3d';
+        if (savedAppearance === 'light' || savedAppearance === 'dark' || savedAppearance === 'system') preference = savedAppearance;
+      } catch (_) {}
+      var systemAppearance = 'light';
+      try { systemAppearance = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'; } catch (_) {}
+      var appearance = fixedAppearance || (preference === 'system' ? systemAppearance : preference);
+      document.documentElement.dataset.themePreference = preference;
+      document.documentElement.dataset.theme = appearance;
+      document.documentElement.style.colorScheme = appearance;
+      var chromeColor = appearance === 'light' && (!publicAppearance || authPage) ? '#ffffff' : '#001d3d';
       document.querySelector('meta[name="theme-color"]').content = chromeColor;
       document.documentElement.style.setProperty('--pv-chrome-color', chromeColor);
       document.documentElement.style.backgroundColor = chromeColor;
-      document.documentElement.dataset.appMode = navigator.standalone === true || matchMedia('(display-mode: standalone)').matches ? 'installed' : 'browser';
+      var installedApp = navigator.standalone === true;
+      try { installedApp = installedApp || matchMedia('(display-mode: standalone)').matches; } catch (_) {}
+      document.documentElement.dataset.appMode = installedApp ? 'installed' : 'browser';
     </script>
     <style>
       /* WebKit reads a fixed edge's opaque background only above its 10px
          thin-border threshold. Smaller strips use a cached pixel sample and
          can keep the previous theme. Keep this outside transformed routes,
          with no layout height or tap handling, and update its color in place.
+         Mobile product headers reserve this edge's height before their controls;
+         the sampler must see it above the full-screen dashboard, not behind it.
          Source: WebKit LocalFrameView::fixedContainerEdges. */
       #pv-browser-chrome { display: none; }
-      html[data-app-mode="installed"] #pv-browser-chrome { display: block; position: fixed; top: 0; left: 0; right: 0; height: max(12px, env(safe-area-inset-top)); z-index: 55; background-color: var(--pv-chrome-color, #001d3d); pointer-events: none; }
+      html[data-app-mode="installed"] { --pv-browser-chrome-height: max(12px, env(safe-area-inset-top)); }
+      html[data-app-mode="installed"] #pv-browser-chrome { display: block; position: fixed; top: 0; left: 0; right: 0; height: var(--pv-browser-chrome-height); z-index: 0; background-color: var(--pv-chrome-color, #001d3d); pointer-events: none; }
       #pv-app-launch { display: none; }
       html[data-app-mode="installed"] #pv-app-launch { position: fixed; inset: 0; z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; box-sizing: border-box; padding: max(24px, env(safe-area-inset-top)) 24px max(24px, env(safe-area-inset-bottom)); background: var(--pv-chrome-color, #001d3d); color: #ffd60a; font-family: system-ui, sans-serif; }
       .pv-app-launch-icon { width: 60px; height: 60px; border-radius: 16px; }

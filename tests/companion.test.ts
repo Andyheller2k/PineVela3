@@ -56,8 +56,8 @@ test('conversational bursts allow six turns, enforce shared protection and resum
   reserveCompanionRate(budgets, 'first');
   reserveCompanionRate(budgets, 'third');
 });
-test('provider failures distinguish deadlines without exposing raw network or credential details', () => {
-  for (const code of ['ABORT_ERR', 'ETIMEDOUT']) {
+test('provider failures distinguish request and DNS deadlines without exposing raw network or credential details', () => {
+  for (const code of ['ABORT_ERR', 'ETIMEDOUT', 'ETIMEOUT']) {
     const error = companionConnectionFailure({ code, message: 'private upstream details' });
     assert.equal(error.status, 504); assert.equal(error.code, 'companion_timeout');
     assert.ok(!error.message.includes('private'));

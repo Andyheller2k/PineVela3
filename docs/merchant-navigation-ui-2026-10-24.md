@@ -1,5 +1,9 @@
 # Merchant backdrop, navigation and clearer glass — 24 October 2026
 
+The [browser-rendering correction](auth-browser-rendering-2026-10-24.md) contains
+the latest auth-card material and upload package. The checkpoint below precedes
+that correction.
+
 Dark-mode merchant registration now uses a translucent navy scrim with 12px
 backdrop blur. A broad dark utility override previously made that scrim opaque.
 The scoped correction covers both the registration-status dialog and the actual

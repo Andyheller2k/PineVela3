@@ -1,0 +1,128 @@
+/* Login and signup share the chosen light appearance at every width. Keep
+   the original portrait, fitted layout and separate dark treatment. */
+html[data-auth-page="true"][data-theme="light"],
+html[data-auth-page="true"][data-theme="light"] body:has(.unified-login),
+html[data-auth-page="true"][data-theme="light"] .unified-login .login-auth-card {
+  --pv-canvas: #ffffff;
+  --pv-panel: #ffffff;
+  --pv-panel-gradient: linear-gradient(#ffffff, #ffffff);
+  --pv-text: #003566;
+  --pv-muted: #46566f;
+  --pv-heading: #003566;
+  --pv-heading-ink: #003566;
+  --pv-heading-default-gradient: linear-gradient(#003566, #001d3d);
+  --pv-heading-gradient: var(--pv-heading-default-gradient);
+  --pv-link: #003566;
+  --pv-focus: #003566;
+  --pv-blue-primary: #003566;
+  --pv-primary-hover: #00274e;
+  --pv-field: #ffffff;
+  --pv-field-edge: #8293a8;
+  --pv-secondary: #eaf0f7;
+  --pv-secondary-hover: #dce7f3;
+  --pv-edge: #8293a8;
+  --pv-action-gradient: linear-gradient(115deg, #003566, #001d3d);
+  --pv-action-hover-gradient: linear-gradient(115deg, #00274e, #000814);
+  --pv-on-action: #ffffff;
+}
+html[data-auth-page="true"][data-theme="light"] .unified-login {
+  --pv-login-diagonal-top: #ffffff;
+  --pv-login-diagonal-middle: #eaf0f7;
+  --pv-login-diagonal-from: #003566;
+  --pv-login-diagonal-to: #001d3d;
+}
+html[data-auth-page="true"][data-theme="light"] .unified-login .login-header {
+  --pv-panel: #ffffff;
+  --pv-text: #003566;
+  --pv-muted: #46566f;
+  --pv-heading: #003566;
+  --pv-heading-ink: #003566;
+  --pv-link: #003566;
+  background: #ffffff !important;
+  border-color: rgb(0 53 102 / .25) !important;
+}
+html[data-auth-page="true"][data-theme="light"] .unified-login .login-header .pinevela-wordmark .pine-label { color: #191919; -webkit-text-fill-color: #191919; }
+html[data-auth-page="true"][data-theme="light"] .unified-login .login-header .pinevela-wordmark .vela-label { background: transparent; color: #191919; -webkit-text-fill-color: #191919; }
+html[data-auth-page="true"][data-theme="light"] .unified-login .login-header .pv-install-button { color: #ffffff; background: #003566; border-color: #003566; }
+html[data-auth-page="true"][data-theme="light"] .unified-login .login-header .pv-install-button:hover { background: #00274e; border-color: #00274e; box-shadow: 0 4px 16px rgb(0 53 102 / .18); }
+html[data-auth-page="true"][data-theme="light"] .unified-login .wind-dust { --pv-wind-blue: #c5d8ec; --pv-wind-gold: #003566; --pv-wind-sky: #86a8c9; }
+html[data-auth-page="true"][data-theme="light"] .unified-login .mobile-login-backdrop img { opacity: 0; }
+html[data-auth-page="true"][data-theme="light"] .unified-login .login-auth-card {
+  --pv-login-glass-surface: linear-gradient(145deg, rgb(255 255 255 / .62), rgb(255 255 255 / .68));
+  --pv-login-glass-filter: blur(6px) saturate(1.12);
+  --pv-muted: #152e49;
+  background: var(--pv-login-glass-surface);
+  border-color: var(--pv-field-edge);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / .85), 0 16px 48px rgb(0 29 61 / .18);
+  color: var(--pv-text);
+}
+html[data-auth-page="true"][data-theme="light"] .unified-login .login-card-heading :is(h2, .login-brand-heading) {
+  background: none;
+  color: var(--pv-heading) !important;
+  -webkit-text-fill-color: currentColor;
+}
+html[data-auth-page="true"][data-theme="light"] .unified-login .login-mode-toggle { background: var(--pv-secondary); border-color: var(--pv-field-edge); }
+html[data-auth-page="true"][data-theme="light"] .unified-login .login-mode-toggle button:not([aria-pressed="true"]) { color: var(--pv-text); }
+html[data-auth-page="true"][data-theme="light"] .unified-login .login-mode-toggle button[aria-pressed="true"] { color: #ffffff; }
+html[data-auth-page="true"][data-theme="light"] .unified-login .login-google-button { background: var(--pv-blue-primary); color: #ffffff; border-color: var(--pv-blue-primary); }
+html[data-auth-page="true"][data-theme="light"] .unified-login .login-auth-card :is(input, select) { background: #ffffff; color: #152e49; border-color: var(--pv-field-edge); }
+html[data-auth-page="true"][data-theme="light"] .unified-login .login-auth-card input::placeholder { color: #52657c; }
+html[data-auth-page="true"][data-theme="light"] .unified-login .login-auth-card label { color: var(--pv-blue-primary); }
+html[data-auth-page="true"][data-theme="light"] .unified-login .login-auth-card :is(input, select):focus { border-color: var(--pv-focus) !important; box-shadow: 0 0 0 2px rgb(0 53 102 / .18) !important; }
+html[data-auth-page="true"][data-theme="light"] .unified-login .login-auth-card :is(button[type="submit"], .login-google-button):not(:disabled):hover { background: var(--pv-action-hover-gradient); box-shadow: 0 7px 22px rgb(0 53 102 / .18); }
+html[data-auth-page="true"][data-theme="light"] .unified-login .login-auth-card [role="status"] { color: var(--pv-muted); }
+html[data-auth-page="true"][data-theme="light"] .unified-login .login-auth-card [role="alert"] { color: #600b25; }
+html[data-auth-page="true"][data-theme="light"] .unified-login .login-registration-error { background: var(--pv-secondary); color: var(--pv-text); border-color: var(--pv-field-edge); }
+html[data-auth-page="true"][data-theme="light"] .unified-login .login-registration-error button { color: var(--pv-link); }
+html[data-auth-page="true"][data-theme="light"] .unified-login .login-resend-code { color: var(--pv-link); }
+html[data-auth-page="true"][data-theme="light"] .unified-login :is(.login-resend-code, .login-registration-error button):not(:disabled):hover { background: var(--pv-secondary-hover); border-color: var(--pv-link); }
+html[data-auth-page="true"][data-theme="light"] .unified-login .login-verification-back { color: var(--pv-muted); }
+html[data-auth-page="true"][data-theme="light"] body:has(.unified-login) .unified-login .login-footer { background: #ffffff; color: #003566; }
+
+@media (max-width: 1023px) {
+  html[data-auth-page="true"][data-theme="light"] .unified-login .login-auth-card { --pv-login-glass-filter: blur(1.5px) saturate(1.15); }
+}
+
+/* Strength remains visible when the broad dark utility adapter is active. */
+html[data-auth-page="true"] .unified-login [data-password-gauge] {
+  --login-strength-track: #284765;
+  --login-strength-weak: #fb7185;
+  --login-strength-okay: #fbbf24;
+  --login-strength-good: #60a5fa;
+  --login-strength-strong: #34d399;
+}
+html[data-auth-page="true"][data-theme="light"] .unified-login [data-password-gauge] {
+  --login-strength-track: #dfe3e8;
+  --login-strength-weak: #be123c;
+  --login-strength-okay: #946200;
+  --login-strength-good: #003566;
+  --login-strength-strong: #047857;
+}
+html[data-auth-page="true"] .unified-login [data-password-gauge] [role="progressbar"] { background: var(--login-strength-track); }
+html[data-auth-page="true"] .unified-login [data-password-gauge] [class~="bg-rose-500"] { background: var(--login-strength-weak); }
+html[data-auth-page="true"] .unified-login [data-password-gauge] [class~="bg-amber-500"] { background: var(--login-strength-okay); }
+html[data-auth-page="true"] .unified-login [data-password-gauge] [class~="bg-blue-600"] { background: var(--login-strength-good); }
+html[data-auth-page="true"] .unified-login [data-password-gauge] [class~="bg-emerald-600"] { background: var(--login-strength-strong); }
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  html[data-auth-page="true"][data-theme="light"] .unified-login .login-auth-card { --pv-login-glass-surface: #ffffff; }
+}
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
+  html[data-auth-page="true"][data-theme="light"] .unified-login .login-auth-card { --pv-login-glass-surface: #ffffff; --pv-login-glass-filter: none; --pv-field-edge: #405477; }
+}
+@media (forced-colors: active) {
+  html[data-auth-page="true"] .unified-login .login-auth-card {
+    --pv-panel: Canvas;
+    --pv-panel-gradient: none;
+    --pv-text: CanvasText;
+    --pv-muted: CanvasText;
+    --pv-heading: CanvasText;
+    --pv-link: LinkText;
+    --pv-field: Canvas;
+    --pv-field-edge: CanvasText;
+  }
+  html[data-auth-page="true"][data-theme] .unified-login .login-auth-card :is(input, select, .login-google-button) { background: Canvas; color: CanvasText; border-color: CanvasText; }
+  html[data-auth-page="true"][data-theme] .unified-login .login-auth-card input::placeholder { color: GrayText; }
+  html[data-auth-page="true"][data-theme] .unified-login [data-password-gauge] [role="progressbar"] { background: Canvas; border: 1px solid CanvasText; }
+  html[data-auth-page="true"][data-theme] .unified-login [data-password-gauge] [role="progressbar"] > div { background: Highlight; }
+}

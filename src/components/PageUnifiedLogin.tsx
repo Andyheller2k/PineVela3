@@ -867,7 +867,9 @@ export default function PageUnifiedLogin() {
 
       {/* Footer - Fixed Clean Base */}
       <footer className="login-footer text-center py-4 text-[10px] text-slate-400 bg-transparent shrink-0 z-20">
-        &copy; 2026 PineVela Residence Solutions.
+        <span>&copy; 2026 PineVela Residence Solutions.</span>
+        <a href="/privacy.html">Privacy policy</a>
+        <a href="/terms.html">Terms of service</a>
       </footer>
 
       {/* HOSTEL MANAGER REGISTRATION WIZARD */}

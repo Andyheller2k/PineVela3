@@ -209,12 +209,14 @@ editing remains retired.
 
 ## Account appearance
 
-Migration 51 stores light/dark preferences in `private.account_appearance`, keyed
+Migration 51 stores account preferences in `private.account_appearance`, keyed
 by the existing account context with a cascading foreign key. Portals sharing one
 verified Auth identity retain independent preferences. The verified backend session
 binding supplies the context; RLS restricts SELECT/INSERT/UPDATE to that context.
 Browser roles have no table grants, and the backend cannot update ownership.
-Identical saves preserve the timestamp. A new portal returns `theme: null` until
+The System-mode migration extends only the existing CHECK to accept
+`light`, `dark` and `system`, preserving rows, grants and RLS policies. Identical
+saves preserve the timestamp. A new portal returns `theme: null` until
 its first save; no legacy appearance data or accounts are imported.
 
 ## Reviewed deletion requests

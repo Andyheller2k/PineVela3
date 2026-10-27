@@ -132,9 +132,8 @@ html[data-theme="dark"] .pv-feature-card {
   background: linear-gradient(115deg, #ffc300, #ffd60a);
 }
 
-/* Dark surfaces share one opaque navy. Local gold feature-card roles and the
-   more specific action/selected-state rules retain their yellow treatment.
-   Avatar presets keep their identifying colors in either theme.
+/* Ordinary dark cards keep their navy base. Dialog scrims, explicit actions
+   and avatar presets retain their own surface and state treatments.
    Match complete utility prefixes so hover-only classes do not create fills. */
 html[data-theme="dark"] :is(
   [class^="bg-white"], [class*=" bg-white"], [class^="bg-black"], [class*=" bg-black"],
@@ -148,7 +147,7 @@ html[data-theme="dark"] :is(
   [class^="bg-rose-"], [class*=" bg-rose-"],
   [class~="bg-amber-600"], [class~="bg-orange-600"], [class^="bg-amber-950/"], [class*=" bg-amber-950/"],
   [class^="bg-gradient-"], [class*=" bg-gradient-"], [class^="bg-linear-"], [class*=" bg-linear-"]
-):not(:where([data-avatar-preset], [class~="bg-clip-text"], [class*="from-amber-"], [class*="from-yellow-"], [class*="from-orange-"])) {
+):not(:where(html[data-appearance="product"] [data-dashboard-overlay], [data-avatar-preset], .pv-primary-action, .pv-secondary-action, [class~="bg-clip-text"], [class*="from-amber-"], [class*="from-yellow-"], [class*="from-orange-"])) {
   background-color: var(--pv-panel);
   background-image: var(--pv-panel-gradient);
 }
@@ -180,6 +179,60 @@ html[data-theme="dark"] dialog[data-dashboard-overlay].pv-merchant-registration-
   background: rgb(0 8 20 / .42);
   -webkit-backdrop-filter: blur(12px);
   backdrop-filter: blur(12px);
+}
+/* Every product dialog uses a translucent scrim. A utility background on a new
+   dialog must never turn the whole viewport into an opaque navy sheet. */
+html[data-theme="dark"][data-appearance="product"] dialog[data-dashboard-overlay]:not(.pv-companion-overlay) {
+  background: var(--pv-dialog-scrim);
+  -webkit-backdrop-filter: var(--pv-dialog-scrim-filter, blur(12px));
+  backdrop-filter: var(--pv-dialog-scrim-filter, blur(12px));
+}
+/* Keep photographs, map canvases and the signing-out spinner untouched; only
+   the outer form/notice card receives glass. Explicit markers also cover
+   components whose card is rendered below a wrapper. */
+html[data-theme="dark"][data-appearance="product"] :is(
+  dialog[data-dashboard-overlay] [data-popup-card],
+  dialog[data-dashboard-overlay]:not(.pv-companion-overlay) > :is(.pv-install-card, .user-price-sheet, [class~="bg-white"], [class*="bg-white/"], [class~="bg-blue-50"], [class*="bg-blue-50/"]),
+  .maintenance-return-dialog
+) {
+  background: var(--pv-dialog-glass);
+  border-color: var(--pv-dialog-edge);
+  -webkit-backdrop-filter: var(--pv-dialog-panel-filter, blur(18px) saturate(1.12));
+  backdrop-filter: var(--pv-dialog-panel-filter, blur(18px) saturate(1.12));
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / .12), 0 18px 50px rgb(0 8 20 / .35);
+}
+html[data-theme="dark"][data-appearance="product"] dialog[data-dashboard-overlay] > [data-portal-navigation="menu"] {
+  background: var(--pv-dialog-glass) !important;
+  border-color: var(--pv-dialog-edge) !important;
+}
+html[data-theme="dark"][data-appearance="product"] dialog[data-dashboard-overlay] .user-price-sheet .market-price-panel {
+  background: transparent;
+}
+html[data-theme="dark"][data-appearance="product"] .maintenance-return-dialog::backdrop {
+  background: var(--pv-dialog-scrim);
+  -webkit-backdrop-filter: var(--pv-dialog-scrim-filter, blur(12px));
+  backdrop-filter: var(--pv-dialog-scrim-filter, blur(12px));
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  html[data-theme="dark"][data-appearance="product"] {
+    --pv-dialog-glass: linear-gradient(#0a2a4c, #001d3d);
+  }
+}
+@media (forced-colors: active) {
+  html[data-theme="dark"][data-appearance="product"] :is(dialog[data-dashboard-overlay], .maintenance-return-dialog) {
+    --pv-dialog-glass: Canvas;
+    --pv-dialog-edge: CanvasText;
+    --pv-dialog-scrim: transparent;
+    --pv-dialog-scrim-filter: none;
+    --pv-dialog-panel-filter: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  html[data-theme="dark"][data-appearance="product"] dialog[data-dashboard-overlay] [data-popup-card] {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    box-shadow: none;
+  }
 }
 html[data-theme="dark"] .pv-signout-overlay [data-signout-action="cancel"] {
   background: #001d3d;
@@ -248,14 +301,21 @@ html[data-theme] .landing-company-story .company-chapter:nth-child(odd) { backgr
 html[data-theme] .landing-peak-page #footer-section { background: #000814; border-top: 1px solid rgb(255 195 0 / .25); }
 
 /* Login keeps its fitted card geometry and independent illustration. */
-html[data-theme] .unified-login { background: linear-gradient(115deg, #001d3d 0%, #001d3d 58%, #ffc300 58%, #ffd60a 100%); }
+html[data-theme] .unified-login {
+  --pv-login-diagonal-top: #001d3d;
+  --pv-login-diagonal-middle: #003566;
+  --pv-login-diagonal-from: #ffc300;
+  --pv-login-diagonal-to: #ffd60a;
+  background: linear-gradient(115deg, var(--pv-login-diagonal-top) 0%, var(--pv-login-diagonal-top) 58%, var(--pv-login-diagonal-from) 58%, var(--pv-login-diagonal-to) 100%);
+}
 html[data-theme] .unified-login .login-header { background: #001d3d !important; border-color: rgb(255 195 0 / .3) !important; }
 html[data-theme] .unified-login .login-auth-card {
   --pv-muted: #eaf1fa;
   --pv-text: #f5f8fc;
-  /* Keep the navigation tint independent from the more transparent auth glass. */
-  --pv-login-glass-surface: linear-gradient(145deg, rgb(0 8 20 / .34), rgb(0 29 61 / .4));
-  --pv-login-glass-filter: blur(6px) saturate(1.12) brightness(.63);
+  /* The tint itself protects text contrast, including when a browser accepts
+     backdrop-filter but cannot paint it. Blur is only a visual enhancement. */
+  --pv-login-glass-surface: linear-gradient(145deg, rgb(0 8 20 / .62), rgb(0 29 61 / .68));
+  --pv-login-glass-filter: blur(6px) saturate(1.12);
   background: var(--pv-login-glass-surface);
   -webkit-backdrop-filter: var(--pv-login-glass-filter);
   backdrop-filter: var(--pv-login-glass-filter);
@@ -269,13 +329,15 @@ html[data-theme] .unified-login .login-google-button { background: #00162e; colo
 html[data-theme] .unified-login .login-feature-description h3 { color: #ffd60a; }
 html[data-theme] body:has(.unified-login) .unified-login .login-footer { width: max-content; max-width: 100%; align-self: center; border-radius: 999px; background: #ffd60a; color: #001d3d; }
 @media (max-width: 1023px) {
-  html[data-theme] .unified-login { background: linear-gradient(155deg, #001d3d 0%, #001d3d 40%, #003566 40%, #003566 76%, #ffc300 76%, #ffd60a 100%); }
+  /* Both narrow-screen themes share the same diagonal geometry. */
+  html[data-theme] .unified-login {
+    background: linear-gradient(155deg, var(--pv-login-diagonal-top) 0%, var(--pv-login-diagonal-top) 40%, var(--pv-login-diagonal-middle) 40%, var(--pv-login-diagonal-middle) 76%, var(--pv-login-diagonal-from) 76%, var(--pv-login-diagonal-to) 100%);
+  }
   html[data-theme] .unified-login .mobile-login-photo img { filter: none; }
   html[data-theme] .unified-login .login-auth-card {
-    /* Less navy pigment and a lighter blur reveal the portrait's detail.
-       Dim only the backdrop; labels keep contrast even over the white shirt. */
-    --pv-login-glass-surface: linear-gradient(145deg, rgb(0 8 20 / .05), rgb(0 29 61 / .09));
-    --pv-login-glass-filter: blur(1.5px) saturate(1.15) brightness(.445);
+    /* Share the contrast-safe tint with desktop and installed mode. The fixed
+       portrait stays visible through the card even when blur is unavailable. */
+    --pv-login-glass-filter: blur(1.5px) saturate(1.15);
     --pv-field: rgb(0 22 46 / .84);
     box-shadow: inset 0 1px 0 rgb(255 255 255 / .28), inset 0 -1px 0 rgb(255 214 10 / .16), 0 12px 36px rgb(0 8 20 / .24);
   }

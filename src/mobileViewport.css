@@ -68,6 +68,10 @@ html[data-mobile-viewport="locked"] :is(input, select, textarea):where(
   overflow-y: auto;
   overscroll-behavior-y: contain;
 }
+html[data-mobile-viewport="locked"][data-appearance="product"] [data-dashboard-shell] > main {
+  overflow-x: hidden;
+  overscroll-behavior-x: none;
+}
 
 /* These portals use ordinary document scrolling. `clip` avoids creating the
    non-scrolling ancestor that otherwise disables viewport-sticky headers. */
@@ -79,4 +83,62 @@ html[data-appearance="product"] .support-surface > [data-portal-navigation="head
   top: 0;
   flex-shrink: 0;
   z-index: 40;
+}
+
+/* Intrinsic icon sizes must survive narrow flex rows. Text can wrap; charts,
+   maps and photographs retain their own sizing rules. */
+html[data-appearance="product"] svg.lucide { flex-shrink: 0; }
+/* Protect the tile around an icon as well as the SVG itself. Otherwise a
+   heading's intrinsic text width can squeeze a square badge into a pill. */
+html[data-appearance="product"] :is(
+  [class~="w-5"][class~="h-5"], [class~="w-6"][class~="h-6"],
+  [class~="w-8"][class~="h-8"], [class~="w-9"][class~="h-9"],
+  [class~="w-10"][class~="h-10"], [class~="w-11"][class~="h-11"],
+  [class~="w-12"][class~="h-12"], [class~="w-14"][class~="h-14"],
+  [class~="w-16"][class~="h-16"], [class~="w-20"][class~="h-20"],
+  [class~="aspect-square"]
+):has(> :is(svg.lucide, .pinevela-brand)) {
+  flex-shrink: 0;
+  aspect-ratio: 1;
+}
+/* Flexible text columns must be allowed to wrap inside the available space.
+   Explicit horizontal scrollers still own the width of tables and catalogs. */
+html[data-appearance="product"] :is(.flex, .inline-flex) > :is(.flex-1, .grow) { min-width: 0; }
+html[data-appearance="product"] :is(h1, h2, h3, h4, h5, h6, p, label, dt, dd) { overflow-wrap: anywhere; }
+html[data-appearance="product"] :is(input, select, textarea) { min-width: 0; max-width: 100%; }
+
+@media (max-width: 1023px) {
+  /* WebKit samples the topmost fixed edge for native status-area color. Keep
+     this opaque, unfiltered edge above the viewport shell and reserve its
+     exact height so it cannot paint over the logo or any header controls. */
+  html[data-app-mode="installed"][data-appearance="product"] #pv-browser-chrome { z-index: 80; }
+  html[data-app-mode="installed"][data-appearance="product"] [data-portal-navigation="header"] {
+    padding-top: calc(var(--pv-browser-chrome-height) + 8px);
+  }
+  html[data-app-mode="installed"][data-appearance="product"] [data-product-screen="market"] > main {
+    padding-top: calc(96px + var(--pv-browser-chrome-height));
+  }
+  html[data-mobile-viewport="locked"][data-appearance="product"] :is(.overflow-x-auto, .overflow-x-scroll) {
+    overscroll-behavior-x: contain;
+  }
+  html[data-appearance="product"] [data-dashboard-shell] > main,
+  html[data-appearance="product"] [data-product-screen="market"] > main,
+  html[data-appearance="product"] .support-surface:not(.support-public-page) > main {
+    padding-left: max(12px, env(safe-area-inset-left));
+    padding-right: max(12px, env(safe-area-inset-right));
+  }
+  html[data-appearance="product"] [data-dashboard-shell] > main > :not(dialog) {
+    min-width: 0;
+    max-width: 100%;
+  }
+  html[data-appearance="product"] [data-staff-dashboard] > main { margin-inline: 8px; }
+  html[data-appearance="product"] .verification-portal {
+    padding-left: max(12px, env(safe-area-inset-left));
+    padding-right: max(12px, env(safe-area-inset-right));
+  }
+}
+@media (min-width: 640px) and (max-width: 1023px) {
+  html[data-app-mode="installed"][data-appearance="product"] [data-product-screen="market"] > main {
+    padding-top: calc(154px + var(--pv-browser-chrome-height));
+  }
 }

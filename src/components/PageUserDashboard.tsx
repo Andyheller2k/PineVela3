@@ -1206,26 +1206,26 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
 
         {/* TAB 0: HOME TAB (Residents View, Staff View & Gateways) */}
         {activeTab === 'home' && (
-          <div className="space-y-8 animate-fadeIn relative z-10">
+          <div className="user-home-content space-y-8 animate-fadeIn relative z-10">
             <UserCatalogSwitcher value={homeFilterType} onChange={setHomeFilterType} />
 
             {/* Pinevela Digital Marketplace Section */}
             {homeFilterType === 'market' && (
-              <div key="market" id="home-market-section" className="user-catalog-panel bg-transparent border-0 rounded-3xl p-0 shadow-none space-y-6 animate-fadeIn">
+              <div key="market" id="home-market-section" className="user-market-panel user-catalog-panel bg-transparent border-0 rounded-3xl p-0 shadow-none space-y-6 animate-fadeIn">
                   {/* Header Title and Subtitle - scrolls up naturally */}
-                  <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-3">
-                    <div>
+                  <div className="user-market-header flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-3">
+                    <div className="user-market-intro min-w-0">
                     <h3 className="user-section-title text-lg font-black text-slate-900 flex flex-wrap items-center gap-2">
-                      <ShoppingBag className="w-5 h-5 text-blue-700" />
+                      <ShoppingBag className="w-5 h-5 shrink-0 text-blue-700" />
                       Digital Student Market
                       <span className="rounded-full border border-blue-200 bg-blue-50 px-2 py-1 text-[9px] font-bold uppercase tracking-wide">PineVela Verified P2P</span>
                     </h3>
-                    <p className="user-section-description text-xs text-slate-500 font-semibold mt-0.5">
+                    <p className="user-market-description user-section-description text-xs text-slate-500 font-semibold mt-0.5">
                       Buy, sell, and trade textbooks, electronics, appliances & room gear with verified students.
                     </p>
                     </div>
-                    <div className="flex flex-wrap gap-2">
-                      <button type="button" onClick={() => setShowNearbyServices(true)} className="flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-4 py-2.5 text-xs font-bold text-blue-700"><MapPin size={16} />Services near you</button>
+                    <div className="user-market-actions flex flex-wrap gap-2">
+                      <button type="button" onClick={() => setShowNearbyServices(true)} className="user-nearby-services flex items-center justify-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-4 py-2.5 text-xs font-bold text-blue-700"><MapPin size={16} className="shrink-0" /><span>Services near you</span></button>
                       <RegistrationStatusButton kind="merchant" status={merchantStatus} loading={merchantRegistration.isPending || checkingMerchant}
                         error={merchantRegistration.isError} onClick={() => void openMerchantRegistration()} />
                     </div>
@@ -1393,11 +1393,11 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
           <div className="space-y-6 animate-fadeIn relative z-10 max-w-5xl">
             {/* TOP BAR / ACTION HEADER */}
             <div className="bg-white/95 border border-slate-200/80 rounded-3xl p-6 shadow-xl backdrop-blur-md flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-2xl bg-blue-100 text-blue-900 flex items-center justify-center font-bold shadow-xs">
+              <div className="flex min-w-0 items-center gap-4">
+                <div className="w-12 h-12 shrink-0 aspect-square rounded-full bg-blue-100 text-blue-900 flex items-center justify-center font-bold shadow-xs">
                   <Key className="w-6 h-6 text-blue-700" />
                 </div>
-                <div>
+                <div className="min-w-0 flex-1">
                   <h3 className="user-section-title text-xl font-black text-slate-900 flex flex-wrap items-center gap-2">
                     Resident Room Management
                     <span className="text-xs font-black px-2.5 py-0.5 bg-blue-100 text-blue-900 border border-blue-200 rounded-full">
@@ -1538,12 +1538,13 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                   <h3 className="text-xl font-black text-slate-900">
                     Have a Digital Room Key?
                   </h3>
-                  <p className="text-xs text-slate-650 leading-relaxed font-semibold">
+                  <p className="text-xs text-slate-600 leading-relaxed font-semibold">
                     If your hostel manager issued you a Digital Room Key, click below to verify your room and complete your resident account setup.
                   </p>
                 </div>
                 <button
                   type="button"
+                  aria-label="Verify room key and start resident onboarding"
                   onClick={() => {
                     setShowClaimModal(true);
                     setClaimRoomKeyInput('');
@@ -1551,10 +1552,11 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                     setClaimError(null);
                     setClaimStep(1);
                   }}
-                  className="px-8 py-3.5 bg-gradient-to-r from-blue-900 to-indigo-900 hover:from-blue-850 hover:to-indigo-850 text-white font-black text-xs rounded-xl shadow-lg shadow-blue-900/20 transition-all inline-flex items-center gap-2 cursor-pointer"
+                  className="user-room-key-action pv-primary-action min-w-0 min-h-11 w-full sm:w-auto px-4 sm:px-8 py-3.5 bg-gradient-to-r from-blue-900 to-indigo-900 hover:from-blue-850 hover:to-indigo-850 text-white font-black text-xs rounded-xl shadow-lg shadow-blue-900/20 transition-all inline-flex items-center justify-center gap-2 cursor-pointer"
                 >
-                  <ShieldCheck size={14} className="text-emerald-400" />
-                  <span>Verify Room Key & Start Onboarding</span>
+                  <ShieldCheck size={16} className="shrink-0" />
+                  <span className="user-room-key-label-full min-w-0">Verify Room Key &amp; Start Onboarding</span>
+                  <span className="user-room-key-label-compact min-w-0">Verify Room Key</span>
                 </button>
               </div>
             )}
@@ -2618,7 +2620,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
         {activeTab === 'options' && (
           <div className="space-y-6 animate-fadeIn relative z-10 max-w-[1400px]">
             <AppearanceSettings />
-            <div className="bg-white/90 border border-slate-200/80 rounded-3xl p-6 sm:p-8 shadow-xl space-y-6 backdrop-blur-md">
+            <div className="user-options-card bg-white/90 border border-slate-200/80 rounded-3xl p-6 sm:p-8 shadow-xl space-y-6 backdrop-blur-md">
               <div className="flex items-center justify-between border-b border-slate-100 pb-4">
                 <div>
                   <h3 className="user-section-title text-lg font-black text-slate-900 flex items-center gap-2">
@@ -2752,12 +2754,12 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                 {/* MY SAVED WISHLIST CARD */}
                 <div className="mt-6 pt-6 border-t border-slate-100">
                   <div className="p-5 bg-gradient-to-br from-rose-50/70 to-amber-50/50 border border-rose-100 rounded-2xl space-y-4">
-                    <div className="flex items-center justify-between border-b border-rose-100 pb-3">
-                      <div className="flex items-center gap-2.5">
-                        <div className="p-2 rounded-xl bg-rose-500 text-white shadow-md shadow-rose-500/20">
-                          <Heart className="w-4 h-4" fill="#ffffff" />
+                    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-rose-100 pb-3">
+                      <div className="flex min-w-0 flex-1 items-center gap-2.5">
+                        <div className="shrink-0 p-2 rounded-xl bg-rose-50 text-rose-600 shadow-md shadow-rose-500/20">
+                          <Heart data-semantic-icon="favorite" className="w-4 h-4" fill="currentColor" />
                         </div>
-                        <div>
+                        <div className="min-w-0">
                           <h4 className="text-xs font-black text-slate-900">My Saved Wishlist</h4>
                           <p className="text-[10px] text-slate-500">
                             Your saved marketplace products and room gear.
@@ -2771,7 +2773,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
 
                     {wishlist.length === 0 ? (
                       <div className="p-6 text-center bg-white/70 rounded-xl border border-dashed border-rose-200/60 space-y-2">
-                        <Heart className="w-6 h-6 text-slate-300 mx-auto animate-pulse" />
+                        <Heart data-semantic-icon="favorite" className="w-6 h-6 text-rose-600 mx-auto" />
                         <div className="text-xs font-bold text-slate-700">Your wishlist is empty</div>
                         <p className="text-[11px] text-slate-500 font-medium">
                           Browse the Student Digital Market on the Home tab and tap the heart icon to save products!
@@ -2809,7 +2811,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                                 className="absolute top-1.5 right-1.5 p-1.5 rounded-full bg-white/90 text-rose-500 border border-rose-100 hover:scale-110 shadow-xs transition-transform cursor-pointer"
                                 title="Remove item"
                               >
-                                <Heart className="w-3 h-3" fill="#f43f5e" strokeWidth={0} />
+                                <Heart data-semantic-icon="favorite" className="w-3 h-3" fill="currentColor" strokeWidth={0} />
                               </button>
                               <div className="absolute bottom-1.5 left-1.5 px-1.5 py-0.5 bg-emerald-600 text-white text-[9px] font-black rounded-md shadow-xs">
                                 GHS {product.price}

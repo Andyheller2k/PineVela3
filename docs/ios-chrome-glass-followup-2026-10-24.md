@@ -1,5 +1,9 @@
 # iOS chrome, companion closing and clearer glass — 24 October 2026
 
+The later [chrome and gesture update](product-chrome-and-swipe-2026-10-24.md)
+supersedes the strip layering described here and reserves its height above
+header controls. The physical iPhone result remains a device check.
+
 The [merchant, navigation and glass update](merchant-navigation-ui-2026-10-24.md)
 contains the latest upload package and slightly clearer auth-card styling.
 The evidence and archive below describe the preceding checkpoint.
