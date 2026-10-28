@@ -18,6 +18,7 @@ const NearbyServicesMap = lazy(() => import('./NearbyServicesMap'));
 type PublicListing = MarketProductItem & { sellerPhone?: string; sellerName?: string };
 
 export default function PublicMarketCatalog({ preview = false, searchQuery, catalogOverride, hideHeading = false, onInspect }: { preview?: boolean; searchQuery?: string; catalogOverride?: MarketProductItem[]; hideHeading?: boolean; onInspect?: (product: MarketProductItem) => void }) {
+  const Heading = preview ? 'h2' : 'h1';
   const navigate = useNavigate();
   const { user } = useAuth();
   const { data: remoteCatalog = [], isPending, isError, refetch } = useQuery<PublicListing[]>({
@@ -85,7 +86,7 @@ export default function PublicMarketCatalog({ preview = false, searchQuery, cata
   return <div className="space-y-6" data-public-market={preview ? 'preview' : 'catalog'}>
     {!hideHeading && <div className="public-catalog-heading flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-3">
       <div>
-        <h2 className={`${preview ? 'text-3xl' : 'text-lg'} font-black text-slate-900 flex items-center gap-2`}><ShoppingBag className="w-5 h-5 text-blue-700" />PineMarket</h2>
+        <Heading className={`${preview ? 'text-3xl' : 'text-lg'} font-black text-slate-900 flex items-center gap-2`}><ShoppingBag className="w-5 h-5 text-blue-700" />PineMarket</Heading>
         <p className="text-xs text-slate-500 font-semibold mt-1">Discover items and services from campus sellers.</p>
       </div>
       <div className="flex flex-wrap gap-2"><button type="button" onClick={() => { setDirections(''); setShowNearby(true); }} className="px-4 py-2.5 border border-blue-200 bg-blue-50 text-blue-700 text-xs font-bold rounded-xl flex items-center gap-2"><MapPin size={16} />Services near you</button>{preview && <button type="button" onClick={() => navigate('/pinemarket')} className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-black rounded-xl flex items-center gap-2">Explore Market <ArrowRight size={16} /></button>}</div>

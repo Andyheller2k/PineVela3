@@ -147,12 +147,12 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
   const merchantRegistration = useQuery<{ application: DigitalMarketApplication | null; store: DigitalMarketStore | null }>({
     queryKey: ['digital-market', 'registration', user?.id],
     queryFn: async ({signal}) => { const data = await apiFetch('/api/digital-market/status',{signal:AbortSignal.any([signal,AbortSignal.timeout(30000)])}); if (!data || !('application' in data) || !('store' in data)) throw new Error('Could not check merchant registration.'); return data; },
-    enabled: Boolean(user), refetchInterval: 6000, refetchOnWindowFocus: true,
+    enabled: Boolean(user), staleTime: 15000, refetchInterval: 30000, refetchOnWindowFocus: true,
   });
   const managerRegistration = useQuery<{ managerAccount: ManagerRegistration | null }>({
     queryKey: ['userData', 'registration', user?.id],
     queryFn: async ({signal}) => { const data = await apiFetch('/api/users/my-registered-accounts',{signal:AbortSignal.any([signal,AbortSignal.timeout(30000)])}); if (!data || !('managerAccount' in data)) throw new Error('Could not check manager registration.'); return data; },
-    enabled: Boolean(user), refetchInterval: 6000, refetchOnWindowFocus: true,
+    enabled: Boolean(user), staleTime: 15000, refetchInterval: 30000, refetchOnWindowFocus: true,
   });
   const digitalMarketApp = merchantRegistration.data?.application || null;
   const digitalMarketStore = merchantRegistration.data?.store || null;
@@ -577,7 +577,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
     const accountId=user?.id,generation=marketGeneration.current;
     const sessionGeneration=currentSessionGeneration();
     const snapshot:Partial<PrimaryDashboardSnapshot>={};
-    if(dashboardRead.current?.accountId===accountId)return;
+    if(dashboardRead.current?.accountId===accountId&&!dashboardRead.current.controller.signal.aborted)return;
     dashboardRead.current?.controller.abort();
     const request={accountId,controller:new AbortController()};dashboardRead.current=request;
     const current=()=>dashboardRead.current===request&&!request.controller.signal.aborted&&marketAccountCurrent(accountId,generation);
@@ -625,7 +625,10 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
       ]);
       if(current()&&results.every(Boolean)){setDashboardLoadError('');saveDashboardSnapshot('primary',accountId,sessionGeneration,snapshot as PrimaryDashboardSnapshot);}
     }finally{
-      if(current()){if(!isSilent)setLoadingData(false);setDashboardRefreshing(false);dashboardRead.current=null;}
+      if(dashboardRead.current===request){
+        dashboardRead.current=null;
+        if(marketAccountCurrent(accountId,generation)){if(!isSilent)setLoadingData(false);setDashboardRefreshing(false);}
+      }
     }
   };
 
@@ -683,9 +686,19 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
     setMarketOrdersAccount(saved ? user?.id : undefined);setOrderCursor(undefined);setOlderOrdersLoading(false);setLoadingData(!saved);
     loadStudentData(!!saved);
     const refreshVisible = () => { if (!document.hidden) void loadStudentData(true); };
-    const interval = setInterval(refreshVisible, 8000);
-    document.addEventListener('visibilitychange', refreshVisible);
-    return () => {clearInterval(interval);document.removeEventListener('visibilitychange',refreshVisible);dashboardRead.current?.controller.abort();dashboardRead.current=null;};
+    let interval: ReturnType<typeof setInterval> | undefined;
+    const stopPolling = () => { clearInterval(interval); interval = undefined; };
+    const startPolling = () => { if (!document.hidden && interval === undefined) interval = setInterval(refreshVisible, 30000); };
+    const refreshVisibility = () => {
+      if (document.hidden) { stopPolling(); dashboardRead.current?.controller.abort(); }
+      else { startPolling(); refreshVisible(); }
+    };
+    startPolling();
+    let changeTimer: ReturnType<typeof setTimeout> | undefined;
+    const refreshChanged = () => { clearTimeout(changeTimer); changeTimer = setTimeout(refreshVisible, 250); };
+    document.addEventListener('visibilitychange', refreshVisibility);
+    window.addEventListener('pinevela-data-change', refreshChanged);
+    return () => {stopPolling();clearTimeout(changeTimer);window.removeEventListener('pinevela-data-change',refreshChanged);document.removeEventListener('visibilitychange',refreshVisibility);dashboardRead.current?.controller.abort();dashboardRead.current=null;};
   }, [user?.id, user?.email]);
 
   // Handle Photo Upload (Base64)
@@ -1206,32 +1219,13 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
 
         {/* TAB 0: HOME TAB (Residents View, Staff View & Gateways) */}
         {activeTab === 'home' && (
-          <div className="user-home-content space-y-8 animate-fadeIn relative z-10">
+          <div data-home-catalog={homeFilterType} className="user-home-content space-y-8 animate-fadeIn relative z-10">
             <UserCatalogSwitcher value={homeFilterType} onChange={setHomeFilterType} />
 
             {/* Pinevela Digital Marketplace Section */}
             {homeFilterType === 'market' && (
               <div key="market" id="home-market-section" className="user-market-panel user-catalog-panel bg-transparent border-0 rounded-3xl p-0 shadow-none space-y-6 animate-fadeIn">
-                  {/* Header Title and Subtitle - scrolls up naturally */}
-                  <div className="user-market-header flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-3">
-                    <div className="user-market-intro min-w-0">
-                    <h3 className="user-section-title text-lg font-black text-slate-900 flex flex-wrap items-center gap-2">
-                      <ShoppingBag className="w-5 h-5 shrink-0 text-blue-700" />
-                      Digital Student Market
-                      <span className="rounded-full border border-blue-200 bg-blue-50 px-2 py-1 text-[9px] font-bold uppercase tracking-wide">PineVela Verified P2P</span>
-                    </h3>
-                    <p className="user-market-description user-section-description text-xs text-slate-500 font-semibold mt-0.5">
-                      Buy, sell, and trade textbooks, electronics, appliances & room gear with verified students.
-                    </p>
-                    </div>
-                    <div className="user-market-actions flex flex-wrap gap-2">
-                      <button type="button" onClick={() => setShowNearbyServices(true)} className="user-nearby-services flex items-center justify-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-4 py-2.5 text-xs font-bold text-blue-700"><MapPin size={16} className="shrink-0" /><span>Services near you</span></button>
-                      <RegistrationStatusButton kind="merchant" status={merchantStatus} loading={merchantRegistration.isPending || checkingMerchant}
-                        error={merchantRegistration.isError} onClick={() => void openMerchantRegistration()} />
-                    </div>
-                  </div>
-
-                  <MarketplaceFilters mobilePriceSheet catalogSearch={catalogSearch} setCatalogSearch={setCatalogSearch}
+                  <MarketplaceFilters compactCatalog onNearbyServices={() => setShowNearbyServices(true)} catalogSearch={catalogSearch} setCatalogSearch={setCatalogSearch}
                     catalogCategory={catalogCategory} setCatalogCategory={setCatalogCategory}
                     minPriceFilter={minPriceFilter} setMinPriceFilter={setMinPriceFilter}
                     maxPriceFilter={maxPriceFilter} setMaxPriceFilter={setMaxPriceFilter}
@@ -2620,6 +2614,12 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
         {activeTab === 'options' && (
           <div className="space-y-6 animate-fadeIn relative z-10 max-w-[1400px]">
             <AppearanceSettings />
+            <section className="user-merchant-settings rounded-2xl border border-blue-200 bg-white p-4 space-y-3" aria-labelledby="merchant-settings-title">
+              <div><h3 id="merchant-settings-title" className="font-bold text-slate-900">Merchant account</h3>
+                <p className="mt-1 text-sm text-slate-600">Apply, track your registration or open your store.</p></div>
+              <RegistrationStatusButton kind="merchant" status={merchantStatus} loading={merchantRegistration.isPending || checkingMerchant}
+                error={merchantRegistration.isError} onClick={() => void openMerchantRegistration()} />
+            </section>
             <div className="user-options-card bg-white/90 border border-slate-200/80 rounded-3xl p-6 sm:p-8 shadow-xl space-y-6 backdrop-blur-md">
               <div className="flex items-center justify-between border-b border-slate-100 pb-4">
                 <div>

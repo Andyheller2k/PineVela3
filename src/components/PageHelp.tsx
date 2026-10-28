@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { CircleHelp, Copy, Plus, RefreshCw } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { getPublicAppearance } from '../lib/publicAppearance';
+import { isPublicAppearance } from '../lib/publicAppearance';
 import { privateSupportCode, supportApi } from '../lib/supportApi';
 import { SUPPORT_CATEGORIES, SUPPORT_STATUSES, SUPPORT_TYPES, type SupportTicket } from '../../supportModel';
 import SupportLayout, { supportHome } from './SupportLayout';
@@ -21,7 +21,7 @@ export default function PageHelp() {
 function HelpContent() {
   const { user } = useAuth(), location = useLocation(), [params, setParams] = useSearchParams();
   const source = params.get('from') || '/', accountId = user?.id;
-  const publicPage = getPublicAppearance('/help', location.search, !!user) !== null;
+  const publicPage = isPublicAppearance('/help', location.search, !!user);
   const [tickets, setTickets] = useState<SupportTicket[]>([]), [ticket, setTicket] = useState<SupportTicket | null>(null);
   const [compose, setCompose] = useState(!params.get('ticket')), [busy, setBusy] = useState(false), [loading, setLoading] = useState(false), [error, setError] = useState('');
   const [subject, setSubject] = useState(''), [body, setBody] = useState(''), [category, setCategory] = useState('account'), [type, setType] = useState('question');

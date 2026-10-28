@@ -173,7 +173,7 @@ export default function PageUnifiedLogin() {
     credentialActionPending.current = true;
     setLoadingLogin(true);
     try {
-      const authenticatedUser = await login(usernameOrEmail, password,needsPortalPin ? { accountKind:loginPortal,portalPin:loginPortalPin } : undefined, captcha.requireToken());
+      const authenticatedUser = await login(usernameOrEmail, password,needsPortalPin ? { accountKind:loginPortal,portalPin:loginPortalPin } : undefined, await captcha.requireToken());
 
       // Redirect based on role and digital market merchant status
       setTimeout(() => {
@@ -273,7 +273,7 @@ export default function PageUnifiedLogin() {
     credentialActionPending.current = true;
     setLoadingLogin(true);
     try {
-      const captchaToken = captcha.requireToken();
+      const captchaToken = await captcha.requireToken();
       const res = await fetch('/api/auth/register-unified', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -382,7 +382,7 @@ export default function PageUnifiedLogin() {
     verificationActionPending.current = true;
     setResendingCode(true);
     try {
-      const captchaToken = captcha.requireToken();
+      const captchaToken = await captcha.requireToken();
       const res = await fetch('/api/auth/resend-unified', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -618,7 +618,7 @@ export default function PageUnifiedLogin() {
               </form>
             ) : activeTab === 'login' ? (
               /* System Login Form */
-              <form onSubmit={handleLoginSubmit} className="login-motion-form login-credentials-form space-y-4 text-left py-1">
+              <form key="login" onSubmit={handleLoginSubmit} className="login-motion-form login-credentials-form space-y-4 text-left py-1">
                 
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-slate-700 block">Username or Email Address</label>
@@ -733,7 +733,7 @@ export default function PageUnifiedLogin() {
               </form>
             ) : (
               /* Unified Registration Form */
-              <form onSubmit={handleUnifiedRegisterSubmit} className="login-motion-form login-signup-form onboarding-fields space-y-3.5 text-left py-1">
+              <form key="register" onSubmit={handleUnifiedRegisterSubmit} className="login-motion-form login-signup-form onboarding-fields space-y-3.5 text-left py-1">
                 
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-slate-700 block">Your Full Name</label>

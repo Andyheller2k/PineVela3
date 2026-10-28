@@ -8,6 +8,7 @@ import './index.css';
 import './publicPages.css';
 import './ux.css';
 import './mobileViewport.css';
+import './publicAppearance.css';
 
 installMobileViewport();
 

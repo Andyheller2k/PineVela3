@@ -12,7 +12,7 @@ const PlatformSettingsContext = createContext<{ settings?: Settings }>({});
 export const usePlatformSettings = () => useContext(PlatformSettingsContext);
 export function PlatformSettingsProvider({ children }: { children: React.ReactNode }) {
   const [blocked, setBlocked] = useState(false);
-  const { data, refetch } = useQuery<Settings>({ queryKey: ['settings'], refetchInterval: 5000, queryFn: async ({signal}) => {
+  const { data, refetch } = useQuery<Settings>({ queryKey: ['settings'], staleTime: 15000, refetchInterval: 30000, refetchOnWindowFocus: true, queryFn: async ({signal}) => {
     const response = await sessionFetch('/api/settings', {signal:AbortSignal.any([signal,AbortSignal.timeout(30000)])});
     if (!response.ok) throw new Error('Platform settings could not load.');
     return response.json();

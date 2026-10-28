@@ -1,0 +1,238 @@
+/* Public pages use the login palette; product portals share their saved theme.
+   Light and dark share all geometry. */
+html[data-public-theme="adaptive"] {
+  --pv-public-canvas: #001d3d;
+  --pv-public-panel: #072849;
+  --pv-public-soft: #0b3054;
+  --pv-public-text: #dce7f3;
+  --pv-public-heading: #ffd60a;
+  --pv-public-muted: #b3c9df;
+  --pv-public-edge: #426487;
+  --pv-public-field: #001d3d;
+  --pv-public-field-edge: #6c8dae;
+  --pv-public-action: linear-gradient(115deg, #ffc300, #ffd60a);
+  --pv-public-action-hover: linear-gradient(115deg, #ffd60a, #ffe272);
+  --pv-public-on-action: #001d3d;
+}
+html[data-theme="light"][data-public-theme="adaptive"] {
+  --pv-public-canvas: #ffffff;
+  --pv-public-panel: #ffffff;
+  --pv-public-soft: #f1f6fc;
+  --pv-public-text: #173958;
+  --pv-public-heading: #001d3d;
+  --pv-public-muted: #426080;
+  --pv-public-edge: #d5e1ef;
+  --pv-public-field: #ffffff;
+  --pv-public-field-edge: #8293a8;
+  --pv-public-action: linear-gradient(115deg, #003566, #001d3d);
+  --pv-public-action-hover: linear-gradient(115deg, #00274e, #000814);
+  --pv-public-on-action: #ffffff;
+}
+html[data-theme][data-appearance="public"][data-public-theme="adaptive"],
+html[data-theme][data-appearance="public"][data-public-theme="adaptive"] :where(body, #public-header, [data-support-header], .pv-feature-card) {
+  --pv-canvas: var(--pv-public-canvas);
+  --pv-panel: var(--pv-public-panel);
+  --pv-panel-gradient: linear-gradient(var(--pv-public-panel), var(--pv-public-panel));
+  --pv-page-gradient: linear-gradient(var(--pv-public-canvas), var(--pv-public-canvas));
+  --pv-section-from: var(--pv-public-soft);
+  --pv-section-to: var(--pv-public-canvas);
+  --pv-text: var(--pv-public-text);
+  --pv-heading: var(--pv-public-heading);
+  --pv-heading-ink: var(--pv-public-heading);
+  --pv-heading-default-gradient: linear-gradient(var(--pv-public-heading), var(--pv-public-heading));
+  --pv-heading-gradient: var(--pv-heading-default-gradient);
+  --pv-link: var(--pv-public-heading);
+  --pv-muted: var(--pv-public-muted);
+  --pv-edge: var(--pv-public-edge);
+  --pv-field: var(--pv-public-field);
+  --pv-field-edge: var(--pv-public-field-edge);
+  --pv-secondary: var(--pv-public-soft);
+  --pv-secondary-hover: var(--pv-public-soft);
+  --pv-glass: var(--pv-public-panel);
+  --pv-action-gradient: var(--pv-public-action);
+  --pv-action-hover-gradient: var(--pv-public-action-hover);
+  --pv-on-action: var(--pv-public-on-action);
+}
+.public-skip-link { position: fixed; top: -100px; left: 16px; z-index: 300; padding: 12px 18px; border-radius: 10px; background: var(--pv-panel); color: var(--pv-link); border: 2px solid currentColor; font-weight: 700; }
+.public-skip-link:focus { top: 12px; }
+:is(#landing-main, #support-main):focus { outline: none; }
+html[data-public-theme="adaptive"] :is(.landing-peak-page, .support-surface, .public-catalog-page) :where(a, button, input, textarea, select, summary):focus-visible { outline: 3px solid var(--pv-link); outline-offset: 4px; }
+html[data-public-theme="adaptive"] :is(.landing-peak-page, .support-surface, .public-catalog-page) :is(h1, h2, h3, h4, h5, h6) { background-image: none; color: var(--pv-heading); -webkit-text-fill-color: currentColor; text-wrap: balance; }
+html[data-public-theme="adaptive"] .landing-peak-page { font-family: 'Outfit', 'Plus Jakarta Sans', sans-serif !important; background: var(--pv-canvas); }
+html[data-public-theme="adaptive"] .landing-peak-page :is(h1, h2, h3, h4, h5, h6) { font-family: 'Outfit', 'Plus Jakarta Sans', sans-serif !important; font-weight: 750; letter-spacing: -.035em; }
+html[data-public-theme="adaptive"] .landing-peak-page .pinevela-wordmark { font-family: 'Caviar Dreams', sans-serif !important; }
+html[data-public-theme="adaptive"] #public-header { background: var(--pv-panel) !important; color: var(--pv-text); border-color: var(--pv-edge) !important; border-radius: 0; box-shadow: 0 4px 20px rgb(0 29 61 / .04) !important; }
+html[data-public-theme="adaptive"] #public-header .public-header-sections { flex-wrap: wrap; gap: 8px 20px; }
+html[data-public-theme="adaptive"] #public-header .public-header-link { color: var(--pv-link) !important; }
+html[data-public-theme="adaptive"] #public-header :is(input, select) { background: var(--pv-field) !important; color: var(--pv-text) !important; border-color: var(--pv-field-edge) !important; box-shadow: none; }
+html[data-public-theme="adaptive"] #public-header input::placeholder { color: var(--pv-muted) !important; }
+html[data-public-theme="adaptive"] #public-header :is(button, a):focus-visible { outline-color: var(--pv-link); }
+html[data-public-theme="adaptive"] #public-header .public-header-primary { background: var(--pv-action-gradient); color: var(--pv-on-action); border-color: var(--pv-link); box-shadow: none; }
+html[data-public-theme="adaptive"] #public-header .public-header-primary:hover { background: var(--pv-action-hover-gradient); }
+#public-header .public-header-appearance { margin-left: 8px; }
+html[data-public-theme="adaptive"] .landing-peak-hero {
+  --pv-text: var(--pv-public-text);
+  --pv-heading: var(--pv-public-heading);
+  --pv-heading-ink: var(--pv-public-heading);
+  --pv-link: var(--pv-public-heading);
+  padding-block: clamp(40px, 5vw, 80px);
+  background: var(--pv-public-soft);
+  color: var(--pv-text);
+  border-bottom: 1px solid var(--pv-edge);
+  border-radius: 0 0 clamp(24px, 4vw, 56px) clamp(24px, 4vw, 56px);
+}
+html[data-theme="light"][data-public-theme="adaptive"] .landing-peak-hero { background: linear-gradient(125deg, #ffffff 12%, #f1f6fc 100%); }
+html[data-public-theme="adaptive"] .landing-peak-content { max-width: 1280px; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: clamp(32px, 4vw, 64px); }
+html[data-public-theme="adaptive"] .landing-peak-copy { gap: 24px; }
+html[data-public-theme="adaptive"] .landing-peak-hero .landing-peak-copy h1 { color: var(--pv-heading); -webkit-text-fill-color: currentColor; font-size: clamp(48px, 5vw, 76px); line-height: 1.08; letter-spacing: -.055em; }
+html[data-public-theme="adaptive"] .landing-peak-hero .landing-peak-copy p { color: var(--pv-muted); font-size: clamp(17px, 1.4vw, 20px); font-weight: 400; line-height: 1.8; max-width: 40ch; }
+html[data-public-theme="adaptive"] .landing-peak-copy strong { color: var(--pv-text); font-weight: 650; }
+html[data-public-theme="adaptive"] .landing-peak-hero .landing-peak-cta { background: var(--pv-action-gradient); color: var(--pv-on-action); border-color: var(--pv-link); border-radius: 14px; box-shadow: 0 8px 20px rgb(0 29 61 / .10); }
+html[data-public-theme="adaptive"] .landing-peak-hero .landing-peak-cta:hover { background: var(--pv-action-hover-gradient); }
+html[data-public-theme="adaptive"] .landing-peak-hero :is(button, a[href]):focus-visible { outline-color: var(--pv-link); }
+html[data-public-theme="adaptive"] .landing-peak-shortcuts button { color: var(--pv-link); min-height: 44px; }
+html[data-public-theme="adaptive"] .landing-peak-shortcuts > span { background: var(--pv-edge); }
+html[data-public-theme="adaptive"] .landing-peak-image { border-radius: 28px; }
+html[data-public-theme="adaptive"] .landing-peak-brand-card {
+  --brand-card-rim: #234e7b;
+  --brand-card-depth: #00152e;
+  background: linear-gradient(145deg, rgb(255 255 255 / .16), transparent 58%), var(--pv-panel);
+  border-color: #6688ae;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / .4), inset 0 -1px 0 rgb(0 8 20 / .12),
+    1px 1px 0 var(--brand-card-rim), 2px 2px 0 var(--brand-card-rim), 3px 3px 0 var(--brand-card-depth),
+    4px 4px 0 var(--brand-card-depth), 5px 5px 0 var(--brand-card-depth), 6px 6px 0 var(--brand-card-depth),
+    14px 20px 28px rgb(0 8 20 / .24);
+  transform: perspective(900px) rotateX(6deg) rotateY(-14deg) rotateZ(3deg);
+  transform-style: preserve-3d;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+html[data-theme="light"][data-public-theme="adaptive"] .landing-peak-brand-card { --brand-card-rim: #d5e3f2; --brand-card-depth: #9bb4cf; border-color: #b4cbe3; }
+html[data-public-theme="adaptive"] .landing-peak-brand-caption { color: var(--pv-muted); }
+html[data-public-theme="adaptive"] .landing-sections { padding-top: 48px; }
+html[data-public-theme="adaptive"] .public-catalog-heading { border-color: var(--pv-edge); padding-bottom: 20px; }
+html[data-public-theme="adaptive"] .landing-section-intro { max-width: 640px; margin-bottom: 28px; }
+html[data-public-theme="adaptive"] .landing-section-intro h2 { font-size: clamp(28px, 3vw, 42px); line-height: 1.2; }
+html[data-public-theme="adaptive"] .landing-section-intro .company-eyebrow { margin-bottom: 12px; font-size: 11px; }
+html[data-theme] .landing-peak-page #benefits {
+  --benefits-glass: linear-gradient(145deg, rgb(34 68 104 / .46), rgb(0 29 61 / .3));
+  --benefits-edge: rgb(140 176 211 / .4);
+  --benefits-card: rgb(0 29 61 / .18);
+  --benefits-highlight: rgb(255 255 255 / .12);
+  background: var(--benefits-glass);
+  color: var(--pv-text);
+  border: 1px solid var(--benefits-edge);
+  box-shadow: inset 0 1px 0 var(--benefits-highlight), 0 14px 36px rgb(0 29 61 / .06);
+  -webkit-backdrop-filter: blur(8px) saturate(1.12);
+  backdrop-filter: blur(8px) saturate(1.12);
+}
+html[data-theme="light"] .landing-peak-page #benefits {
+  --benefits-glass: linear-gradient(145deg, rgb(255 255 255 / .68), rgb(234 240 247 / .34));
+  --benefits-edge: rgb(130 147 168 / .4);
+  --benefits-card: rgb(255 255 255 / .2);
+  --benefits-highlight: rgb(255 255 255 / .85);
+}
+html[data-public-theme="adaptive"] #benefits .landing-benefit { padding: clamp(22px, 2.5vw, 32px); background: var(--benefits-card); border: 1px solid var(--benefits-edge); border-radius: 22px; box-shadow: inset 0 1px 0 var(--benefits-highlight); }
+html[data-public-theme="adaptive"] .landing-benefit > div { border: 1px solid var(--pv-edge); border-radius: 12px; color: var(--pv-link); background: var(--pv-secondary); width: 44px; height: 44px; margin-bottom: 22px; }
+html[data-public-theme="adaptive"] .landing-benefit h3 { font-size: 22px; font-weight: 700; line-height: 1.3; }
+html[data-public-theme="adaptive"] .landing-benefit p { font-size: 15px; font-weight: 400; line-height: 1.85; color: var(--pv-muted); }
+html[data-public-theme="adaptive"] .landing-company-story .company-chapter { border-radius: 0; padding-block: clamp(48px, 6vw, 88px); }
+html[data-public-theme="adaptive"] .landing-company-story .company-chapter:nth-child(even) { background: var(--pv-canvas); }
+html[data-theme="light"][data-public-theme="adaptive"] .landing-company-story .company-chapter:nth-child(odd) {
+  --pv-text: #ffffff;
+  --pv-heading: #ffffff;
+  --pv-heading-ink: #ffffff;
+  --pv-heading-default-gradient: linear-gradient(#ffffff, #ffffff);
+  --pv-heading-gradient: var(--pv-heading-default-gradient);
+  --pv-link: #ffffff;
+  --pv-muted: #dce7f3;
+  color: #ffffff;
+}
+html[data-public-theme="adaptive"] .company-copy h2 { font-size: clamp(32px, 4vw, 52px); line-height: 1.15; letter-spacing: -.04em; }
+html[data-public-theme="adaptive"] .company-chapter-contact .company-copy h2 { font-family: 'Outfit', sans-serif !important; font-size: clamp(36px, 4vw, 56px); }
+html[data-public-theme="adaptive"] .company-chapter-contact .company-contact-name { font-size: 18px; }
+html[data-public-theme="adaptive"] .company-chapter-contact .company-contact-url { font-size: 14px; }
+html[data-public-theme="adaptive"] .company-chapter-contact .company-paragraphs .company-lead { font-size: 20px; }
+html[data-public-theme="adaptive"] .why-us-preview { background: var(--pv-secondary); border-color: var(--pv-edge); color: var(--pv-text); padding: clamp(24px, 4vw, 48px); }
+html[data-public-theme="adaptive"] .why-us-preview :is(.why-us-eyebrow, h2) { color: var(--pv-heading); }
+html[data-public-theme="adaptive"] .why-us-preview > div > p:last-child { color: var(--pv-muted); }
+html[data-public-theme="adaptive"] .why-us-preview .why-us-primary { background: var(--pv-action-gradient); color: var(--pv-on-action); border-color: var(--pv-link); }
+html[data-public-theme="adaptive"] #footer-section { border-color: var(--pv-edge); background: var(--pv-secondary); -webkit-backdrop-filter: none; backdrop-filter: none; }
+html[data-public-theme="adaptive"] #footer-section :is(a, button) { display: inline-flex; align-items: center; min-height: 44px; }
+
+/* Support keeps its existing forms and native, searchable FAQ disclosures. */
+.support-surface { background: var(--pv-canvas); }
+html[data-theme="light"] .support-surface {
+  --pv-text: #173958;
+  --pv-heading: #001d3d;
+  --pv-link: #003566;
+  --pv-muted: #426080;
+  --pv-canvas: #ffffff;
+  --pv-panel: #ffffff;
+  --pv-panel-gradient: linear-gradient(#ffffff, #ffffff);
+  --pv-field: #ffffff;
+  --pv-field-edge: #8293a8;
+  --pv-secondary: #f1f6fc;
+  --pv-edge: #d5e1ef;
+  --pv-action-gradient: linear-gradient(115deg, #003566, #001d3d);
+  --pv-action-hover-gradient: linear-gradient(115deg, #00274e, #000814);
+  --pv-on-action: #ffffff;
+}
+html[data-theme] .support-surface > [data-support-header] { background: var(--pv-panel) !important; color: var(--pv-text); border-color: var(--pv-edge) !important; box-shadow: none !important; backdrop-filter: none; -webkit-backdrop-filter: none; }
+html[data-theme="light"] .support-surface > [data-support-header] { --pv-text: #173958; --pv-heading: #001d3d; --pv-heading-ink: #001d3d; --pv-link: #003566; --pv-muted: #426080; --pv-panel: #ffffff; --pv-edge: #d5e1ef; }
+html[data-theme] .support-surface nav[aria-label="Help navigation"] .support-nav-link[aria-current="page"] { background: var(--pv-action-gradient); color: var(--pv-on-action); box-shadow: none; }
+html[data-theme] .support-surface nav[aria-label="Help navigation"] .support-nav-link:not([aria-current="page"]):hover { background: var(--pv-secondary); box-shadow: none; }
+html[data-theme] .support-surface h1 { background: none; color: var(--pv-heading); -webkit-text-fill-color: currentColor; line-height: 1.12; letter-spacing: -.045em; }
+.support-intro { padding-bottom: 20px; }
+.support-surface .faq-search input { min-height: 56px; border-radius: 16px; box-shadow: 0 4px 20px rgb(0 29 61 / .04); }
+.support-surface .faq-topics a { display: inline-flex; align-items: center; min-height: 44px; color: var(--pv-link); border-color: var(--pv-edge); background: var(--pv-secondary); }
+.support-surface .faq-topics a:hover { border-color: var(--pv-link); }
+.support-surface details { background: var(--pv-panel); }
+.support-surface details + details { border-top: 1px solid var(--pv-edge); }
+.support-surface details[open] { background: var(--pv-secondary); }
+.support-surface details summary { min-height: 64px; align-items: center; }
+.support-surface details summary > span[aria-hidden] { color: var(--pv-link); transition: transform .18s ease; }
+.support-surface details p { max-width: 76ch; }
+.support-surface .support-contact-card { background: var(--pv-secondary); border-color: var(--pv-edge); }
+.support-surface [aria-current="page"] { border-color: var(--pv-link); }
+.support-surface .support-footer { border-top: 1px solid var(--pv-edge); color: var(--pv-muted); }
+.support-surface .support-footer a { color: var(--pv-link); text-decoration: underline; text-underline-offset: 4px; }
+@media (max-width: 1023px) {
+  html[data-public-theme="adaptive"] .landing-peak-content { grid-template-columns: minmax(0, 1fr); max-width: 720px; gap: 28px; }
+  html[data-public-theme="adaptive"] .landing-peak-copy { gap: 20px; }
+  html[data-public-theme="adaptive"] .landing-peak-hero .landing-peak-copy h1 { font-size: clamp(42px, 7vw, 64px); }
+  html[data-public-theme="adaptive"] #public-header .public-header-sections { align-items: stretch; }
+  #public-header .public-header-appearance { margin: 0; padding-top: 8px; border-top: 1px solid var(--pv-edge); }
+}
+@media (max-width: 639px) {
+  html[data-public-theme="adaptive"] .landing-peak-hero { padding: 32px 20px; }
+  html[data-public-theme="adaptive"] .landing-peak-hero .landing-peak-copy h1 { font-size: clamp(38px, 10vw, 54px); }
+  html[data-public-theme="adaptive"] .landing-peak-hero .landing-peak-copy p { font-size: 15px; line-height: 1.8; }
+  html[data-public-theme="adaptive"] .landing-sections { padding-top: 32px; }
+  html[data-public-theme="adaptive"] .company-copy { padding-inline: 4px; }
+  html[data-public-theme="adaptive"] .company-chapter-contact .company-copy { padding: 8px 4px; }
+  .support-surface > [data-support-header] .theme-preference { margin-left: auto; }
+  html[data-theme] .landing-peak-page #benefits { -webkit-backdrop-filter: blur(4px) saturate(1.12); backdrop-filter: blur(4px) saturate(1.12); }
+}
+@media (min-width: 1024px) and (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  html[data-public-theme="adaptive"] .landing-peak-brand-card { transform: perspective(900px) rotateX(calc(6deg + var(--landing-art-rotate-x, 0deg))) rotateY(calc(-14deg + var(--landing-art-rotate-y, 0deg))) rotateZ(3deg); }
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  html[data-theme] .landing-peak-page #benefits { background: var(--pv-panel); }
+}
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
+  html[data-theme] .landing-peak-page #benefits { background: var(--pv-panel); -webkit-backdrop-filter: none; backdrop-filter: none; }
+  html[data-theme] #benefits .landing-benefit { background: transparent; border-color: currentColor; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .support-surface details summary > span[aria-hidden] { transition: none; }
+}
+@media (forced-colors: active) {
+  html[data-public-theme="adaptive"] { --pv-public-canvas: Canvas; --pv-public-panel: Canvas; --pv-public-soft: Canvas; --pv-public-text: CanvasText; --pv-public-heading: LinkText; --pv-public-muted: CanvasText; --pv-public-edge: CanvasText; --pv-public-field: Field; --pv-public-field-edge: FieldText; --pv-public-action: ButtonFace; --pv-public-action-hover: Highlight; --pv-public-on-action: ButtonText; }
+  html[data-public-theme="adaptive"] .landing-peak-hero { background: Canvas; }
+  html[data-theme] .landing-peak-page #benefits { background: Canvas; color: CanvasText; border-color: CanvasText; -webkit-backdrop-filter: none; backdrop-filter: none; box-shadow: none; }
+  html[data-theme] #benefits .landing-benefit { border-color: CanvasText; box-shadow: none; }
+  html[data-public-theme="adaptive"] .landing-peak-brand-card { background: Canvas; color: CanvasText; border-color: CanvasText; box-shadow: none; transform: none; }
+  html[data-theme] .support-surface { --pv-canvas: Canvas; --pv-panel: Canvas; --pv-text: CanvasText; --pv-heading: CanvasText; --pv-muted: CanvasText; --pv-link: LinkText; --pv-edge: CanvasText; --pv-secondary: Canvas; --pv-action-gradient: ButtonFace; --pv-on-action: ButtonText; }
+  html[data-theme] .support-surface > [data-support-header] { --pv-text: CanvasText; --pv-link: LinkText; --pv-panel: Canvas; --pv-edge: CanvasText; }
+}

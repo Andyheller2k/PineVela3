@@ -1,5 +1,10 @@
 # Light, Dark and System preferences — 27 October 2026
 
+The latest control styling restores the Light/Dark slider and renames the third
+option **System default**; see [the UI follow-up](theme-slider-merchant-2026-10-27.md)
+and its frontend-only package. The original three-mode rollout below remains the
+record of the provider, migration and persistence work.
+
 Appearance settings now offer three choices. Light and Dark are explicit;
 System settings follows the current device theme live. With no valid saved
 choice, System is the default. Existing saved Light/Dark preferences remain
@@ -8,7 +13,9 @@ explicit rather than being converted.
 Product pages and login/signup resolve the same preference at every width.
 Logout and reload preserve the choice. System changes update the effective
 appearance without replacing `system` in the saved account/device preference.
-Fixed marketing appearance remains separate. Theme changes retain the existing
+Landing, catalogs, storefronts, Why Us, FAQ, Help and static policies now share
+the preference too (28 October 2026). Public headers
+show the Light/Dark slider without System default. Theme changes retain the existing
 responsive layouts, glass cards and diagonal geometry.
 
 Preferences remain private to the native session's active portal. The API

@@ -26,7 +26,7 @@ export default function EmailPasswordRecovery({ onClose, initialEmail = '' }: { 
     try {
       const response = await sessionFetch(sent ? '/api/auth/recover/complete' : '/api/auth/recover', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(sent ? { email: email.trim(), code: code.trim(), newPassword: password } : { email: email.trim(), captchaToken: captcha.requireToken() }),
+        body: JSON.stringify(sent ? { email: email.trim(), code: code.trim(), newPassword: password } : { email: email.trim(), captchaToken: await captcha.requireToken() }),
       });
       const result = await response.json();
       if (!response.ok || !result.success) throw new Error(result.error || 'Email recovery could not complete.');

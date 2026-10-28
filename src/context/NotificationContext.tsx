@@ -221,6 +221,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         try {
           const regData = (await queryClient.fetchQuery({
               queryKey: ['userData', 'registration', user.id],
+              staleTime: 30000,
               queryFn: async ({ signal: querySignal }) => {
                 const response = await fetch('/api/users/my-registered-accounts', {
                   signal: AbortSignal.any([querySignal, AbortSignal.timeout(30000)]),
@@ -355,7 +356,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     }
   }, [notifications, notificationAccountKey, user?.id]);
 
-  // Centralized background real-time polling loop (every 6s) & window focus refresh
+  // Poll notifications only while a signed-in app is visible; refresh on return.
   useEffect(() => {
     generationRef.current += 1;
     confirmedReads.current.clear();
@@ -367,13 +368,17 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     isFirstLoadRef.current = true;
     refreshNotifications();
 
-    const interval = setInterval(() => {
-      refreshNotifications();
-    }, 6000);
+    let interval: ReturnType<typeof setInterval> | undefined;
+    const stopPolling = () => { clearInterval(interval); interval = undefined; };
+    const startPolling = () => {
+      if (!user || document.hidden || interval !== undefined) return;
+      interval = setInterval(() => { void refreshNotifications(); }, 6000);
+    };
+    startPolling();
 
     const handleFocus = () => {
-      if (document.hidden) refreshGate.current.cancel();
-      else void refreshNotifications();
+      if (document.hidden) { stopPolling(); refreshGate.current.cancel(); }
+      else { startPolling(); void refreshNotifications(); }
     };
 
     window.addEventListener('focus', handleFocus);
@@ -383,7 +388,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     return () => {
       generationRef.current += 1;
       refreshGate.current.cancel();
-      clearInterval(interval);
+      stopPolling();
       window.removeEventListener('focus', handleFocus);
       window.removeEventListener('pinevela-data-change', handleFocus);
       document.removeEventListener('visibilitychange', handleFocus);

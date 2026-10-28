@@ -5,7 +5,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import PineLogo, { PineWordmark } from './PineLogo';
 import { ArrowUpRight, Shield, Landmark, ShoppingBag } from 'lucide-react';
-import welcomeArtwork from '../../assets/landing-welcome.png';
+import welcomeArtwork from '../../assets/landing-welcome-transparent.png';
 import { useLandingReveal } from '../hooks/useLandingReveal';
 import { useMotionActivity } from '../hooks/useMotionActivity';
 import ArtworkLayers from './ArtworkLayers';
@@ -89,17 +89,14 @@ export default function Page1Public() {
 
   return (
     <div className="landing-peak-page public-typography min-h-screen bg-transparent relative overflow-hidden font-sans pb-0">
-
-      {/* Decorative background shapes */}
-      <div className="absolute top-0 right-0 w-96 h-96 bg-amber-100 rounded-full blur-3xl opacity-30 -z-10" />
-      <div className="absolute top-1/2 left-0 w-80 h-80 bg-blue-100 rounded-full blur-3xl opacity-30 -z-10" />
+      <a className="public-skip-link" href="#landing-main" onClick={event => { event.preventDefault(); document.getElementById('landing-main')?.focus(); }}>Skip to content</a>
 
       <PublicHeader compact searchQuery={searchQuery} setSearchQuery={setSearchQuery}
         onSearch={() => scrollToSection('catalogs-section')}
         onHome={() => scrollToSection('welcome-section')}
         onCompanySection={goToCompanySection} setShowLogoutConfirm={setShowLogoutConfirm} />
 
-        {/* Welcome Section */}
+      <main id="landing-main" tabIndex={-1}>
         <section id="welcome-section" ref={hero}
           className="landing-peak-hero relative z-10 w-full scroll-mt-0"
           aria-labelledby="welcome-title"
@@ -111,11 +108,11 @@ export default function Page1Public() {
                 <PineWordmark />
               </h1>
               <p>
-                The unified digital ecosystem connecting <strong>Properties</strong>, <strong>People</strong>, and <strong>Services</strong> into one seamless campus platform.
+                Find your place. Discover campus sellers. Bring <strong>properties</strong>, <strong>people</strong> and <strong>services</strong> together with PineVela.
               </p>
               <button id="btn-login" type="button" className="landing-peak-cta"
                 onClick={() => navigate('/login?mode=register', { state: { mode: 'register' } })}>
-                <span>Create your free account now!</span>
+                <span>Create your free account</span>
                 <ArrowUpRight size={19} aria-hidden="true" />
               </button>
               <nav className="landing-peak-shortcuts" aria-label="Explore PineVela">
@@ -145,7 +142,7 @@ export default function Page1Public() {
         </section>
 
       {/* Main Container */}
-      <main className="w-full pt-0 space-y-16">
+      <div className="landing-sections w-full pt-0 space-y-16">
 
         <section id="catalogs-section" className="relative max-w-7xl mx-auto px-4 sm:px-6 md:px-12 w-full mt-4 scroll-mt-32 grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-0">
           <div id="pinemarket-section" className="min-w-0 lg:pr-8"><PublicMarketCatalog preview searchQuery={searchQuery} /></div>
@@ -155,16 +152,17 @@ export default function Page1Public() {
         {/* Benefits Badges Section */}
         <section
           id="benefits"
-          className="relative max-w-7xl mx-auto px-6 md:px-12 w-full mt-16 bg-transparent border-none shadow-none pb-10"
+          className="relative max-w-7xl mx-auto px-6 md:px-12 w-full mt-16 pb-10"
         >
-          <div className="relative z-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 w-full">
+          <div className="landing-section-intro"><p className="company-eyebrow">A little less effort. A lot more campus life.</p><h2>Everything feels closer.</h2></div>
+          <div className="relative z-10 grid grid-cols-1 md:grid-cols-3 gap-5 w-full">
           <div
             className="landing-benefit bg-transparent p-6 space-y-3"
           >
             <div className="w-10 h-10 flex items-center justify-center text-blue-900">
               <Shield size={20} />
             </div>
-            <h4 className="font-extrabold text-slate-900 text-lg">Verified Properties</h4>
+            <h3 className="font-extrabold text-slate-900 text-lg">Verified Properties</h3>
             <p className="text-sm text-slate-700 font-medium leading-relaxed">
               Every hostel on PineVela is physically inspected for safety, hygiene, and amenity compliance.
             </p>
@@ -176,7 +174,7 @@ export default function Page1Public() {
             <div className="w-10 h-10 flex items-center justify-center text-rose-500">
               <Landmark size={20} />
             </div>
-            <h4 className="font-extrabold text-slate-900 text-lg">Easy Management</h4>
+            <h3 className="font-extrabold text-slate-900 text-lg">Easy Management</h3>
             <p className="text-sm text-slate-700 font-medium leading-relaxed">
               Property owners can track occupancy, maintenance requests, and room access from a single powerful dashboard.
             </p>
@@ -188,7 +186,7 @@ export default function Page1Public() {
             <div className="w-10 h-10 flex items-center justify-center text-blue-600">
               <ShoppingBag size={20} />
             </div>
-            <h4 className="font-extrabold text-slate-900 text-lg">Student Digital Market</h4>
+            <h3 className="font-extrabold text-slate-900 text-lg">Student Digital Market</h3>
             <p className="text-sm text-slate-700 font-medium leading-relaxed">
               Buy, sell, and trade accredited textbooks, electronics, appliances, dorm accessories, and campus services safely with fellow students on PineVela.
             </p>
@@ -204,6 +202,7 @@ export default function Page1Public() {
           </div>
           <Link to="/why-us" className="why-us-primary">See the difference<ArrowUpRight size={18} aria-hidden="true" /></Link>
         </section>
+      </div>
       </main>
 
       {/* Footer */}

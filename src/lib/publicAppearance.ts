@@ -1,15 +1,12 @@
-import type { Theme } from './themePreference';
+const productSource = /^\/(?:user\/dashboard|student\/dashboard|resident\/dashboard|manager\/dashboard|staff\/dashboard|admin\/dashboard|digital-market(?:\/onboard)?|market|customer-service|field-officer|officer\/dashboard|verification-team|verification-portal)$/;
 
-/** Fixed public appearances never replace the saved product preference. */
-export function getPublicAppearance(pathname: string, search = '', signedIn = false): Theme | null {
+/** Layout classification never overrides the user's or browser's theme. */
+export function isPublicAppearance(pathname: string, search = '', signedIn = false): boolean {
   const route = pathname.replace(/\/+$/, '') || '/';
-  if (route === '/') return 'light';
-  if (route === '/support-invitation' || route === '/why-us') return 'dark';
+  if (['/', '/login', '/why-us', '/support-invitation', '/pinemarket', '/pineresidence'].includes(route) || /^\/pinemarket\/stores\/[^/]+$/.test(route)) return true;
   if (route === '/help' || route === '/faq') {
     const from = new URLSearchParams(search).get('from') || '';
-    if (!from && signedIn) return null;
-    return /^\/(?:user\/dashboard|student\/dashboard|resident\/dashboard|manager\/dashboard|staff\/dashboard|admin\/dashboard|digital-market(?:\/onboard)?|market|customer-service|field-officer|officer\/dashboard|verification-team|verification-portal)$/.test(from) ? null : 'dark';
+    return from ? !productSource.test(from) : !signedIn;
   }
-  if (route === '/pineresidence' || route === '/pinemarket' || /^\/pinemarket\/stores\/[^/]+$/.test(route)) return 'dark';
-  return null;
+  return false;
 }

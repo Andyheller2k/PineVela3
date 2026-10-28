@@ -42,8 +42,10 @@ export default function ManagerAccountControls({ onClose }: { onClose: () => voi
     inFlight.current = true; setSaving(true);
     const submittedAccount = user.id;
     try {
+      const captchaToken = await captcha.requireToken();
+      if (!mounted.current || account.current !== submittedAccount) return;
       const result = (await apiFetch('/api/auth/change-password', {
-        method: 'POST', headers: ({ 'X-PineVela-Profile-Context': submittedAccount }), body: JSON.stringify({ currentPassword, newPassword, captchaToken: captcha.requireToken() }),
+        method: 'POST', headers: ({ 'X-PineVela-Profile-Context': submittedAccount }), body: JSON.stringify({ currentPassword, newPassword, captchaToken }),
       }));
       if (!mounted.current || account.current !== submittedAccount) return;
       if (!result?.success) throw new Error('The account change was not confirmed. Please try again.');

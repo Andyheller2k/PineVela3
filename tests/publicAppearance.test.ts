@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import { runInNewContext } from 'node:vm';
-import { getPublicAppearance } from '../src/lib/publicAppearance';
+import { isPublicAppearance } from '../src/lib/publicAppearance';
 import { isAuthPage, isPhoneAuth, PHONE_AUTH_MEDIA, subscribePhoneAuthViewport } from '../src/lib/mobileAuthAppearance';
 import { browserChromeColor } from '../src/lib/browserChrome';
 import { DEVICE_THEME_KEY, isThemePreference, readSystemTheme, resolveTheme, subscribeSystemTheme, SYSTEM_THEME_MEDIA, type ThemePreference } from '../src/lib/themePreference';
@@ -43,7 +43,6 @@ test('Light and Dark remain explicit choices; only System follows the device the
 test('product and all login/signup widths resolve the same saved choice before paint', () => {
   for (const route of ['/login', '/login/', '/login?mode=register', '/login/?mode=register', '/user/dashboard', '/resident/dashboard', '/manager/dashboard', '/digital-market']) {
     const pathname = route.split('?')[0];
-    assert.equal(getPublicAppearance(pathname), null, route);
     for (const saved of ['light', 'dark', 'system', null, 'invalid', 'blocked']) {
       for (const dark of [false, true]) for (const phone of [false, true]) {
         const { root, meta } = boot(route, saved, dark, phone);
@@ -62,37 +61,49 @@ test('product and all login/signup widths resolve the same saved choice before p
   }
 });
 
-test('marketing/catalog routes retain their fixed appearance without replacing saved preference', () => {
-  for (const [route, fixed] of [
-    ['/', 'light'], ['/why-us', 'dark'], ['/why-us/', 'dark'], ['/pinemarket', 'dark'],
-    ['/pinemarket/', 'dark'], ['/pineresidence', 'dark'], ['/pineresidence/', 'dark'],
-    ['/pinemarket/stores/store-id', 'dark'], ['/support-invitation', 'dark'], ['/faq', 'dark'], ['/help', 'dark'],
-  ] as const) {
-    assert.equal(getPublicAppearance(route), fixed);
-    for (const preference of ['light', 'dark', 'system']) for (const dark of [false, true]) {
-      const { root, meta } = boot(route, preference, dark, true);
-      assert.equal(root.dataset.theme, fixed, route);
-      assert.equal(root.dataset.themePreference, preference);
-      assert.equal(root.dataset.authPage, 'false');
-      assert.equal(root.dataset.mobileAuth, 'false');
-      assert.equal(root.dataset.appearance, 'public');
-      assert.equal(meta.content, '#001d3d');
-    }
+test('every registered app route resolves the shared preference before paint', () => {
+  const app = readFileSync(new URL('../src/App.tsx', import.meta.url), 'utf8');
+  const routes = [...app.matchAll(/\bpath="([^"]+)"/g)].map(match => match[1]).filter(route => route !== '*').map(route => route.replace(/:storeId/g, 'store-id'));
+  assert(routes.length >= 30, 'The real router defines the route inventory');
+  for (const route of [...new Set(routes)]) for (const saved of ['light', 'dark', 'system', null, 'blocked']) for (const dark of [false, true]) {
+    const { root, meta } = boot(route, saved, dark, false);
+    const preference = isThemePreference(saved) ? saved : 'system';
+    const expected = resolveTheme(preference, dark ? 'dark' : 'light');
+    assert.equal(root.dataset.theme, expected, `${route}: ${saved}, browser dark=${dark}`);
+    assert.equal(root.dataset.themePreference, preference);
+    assert.equal(meta.content, expected === 'light' ? '#ffffff' : '#001d3d');
   }
-  assert.equal(getPublicAppearance('/login-other'), null);
+  assert.equal(isPublicAppearance('/login-other'), false);
   assert.equal(isAuthPage('/login-other'), false);
 });
 
-test('FAQ and Help preserve product-origin and public-origin rules', () => {
+test('all public pages follow the saved choice or browser from the first paint', () => {
+  for (const route of ['/', '/faq', '/faq/', '/help', '/help/', '/faq?from=/login', '/help?from=/', '/why-us', '/why-us/', '/pinemarket', '/pinemarket/', '/pineresidence', '/pineresidence/', '/pinemarket/stores/store-id', '/support-invitation']) {
+    assert.equal(isPublicAppearance(route.split('?')[0], route.includes('?') ? route.slice(route.indexOf('?')) : ''), true);
+    for (const saved of [null, 'light', 'dark', 'system', 'invalid', 'blocked']) for (const dark of [false, true]) {
+      const { root, meta } = boot(route, saved, dark, false);
+      const preference = isThemePreference(saved) ? saved : 'system';
+      const expected = resolveTheme(preference, dark ? 'dark' : 'light');
+      assert.equal(root.dataset.theme, expected, `${route}: ${saved}, browser dark=${dark}`);
+      assert.equal(root.dataset.themePreference, preference);
+      assert.equal(root.dataset.appearance, 'public');
+      assert.equal(root.dataset.publicTheme, 'adaptive');
+      assert.equal(meta.content, expected === 'light' ? '#ffffff' : '#001d3d');
+    }
+  }
+});
+
+test('FAQ and Help retain navigation context while sharing theme resolution', () => {
   for (const route of ['/help', '/faq']) {
-    assert.equal(getPublicAppearance(route, '', true), null);
+    assert.equal(isPublicAppearance(route, '', true), false);
     for (const from of ['/', '/login', '/pinemarket', '/faq', '/user/dashboard', '/resident/dashboard', '/manager/dashboard', '/staff/dashboard', '/admin/dashboard', '/digital-market', '/customer-service', '/field-officer']) {
       const query = '?from=' + encodeURIComponent(from);
-      const fixed = getPublicAppearance(route, query);
-      assert.equal(fixed, ['/', '/login', '/pinemarket', '/faq'].includes(from) ? 'dark' : null);
+      const publicPage = ['/', '/login', '/pinemarket', '/faq'].includes(from);
+      assert.equal(isPublicAppearance(route, query), publicPage);
       for (const saved of ['light', 'dark', 'system'] as const) for (const systemDark of [false, true]) {
         const { root } = boot(route + query, saved, systemDark, false, true);
-        assert.equal(root.dataset.theme, fixed ?? resolveTheme(saved, systemDark ? 'dark' : 'light'));
+        assert.equal(root.dataset.theme, resolveTheme(saved, systemDark ? 'dark' : 'light'));
+        assert.equal(root.dataset.appearance, publicPage ? 'public' : 'product');
       }
     }
   }

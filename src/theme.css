@@ -99,39 +99,96 @@ html.theme-changing :where(#root *, dialog, dialog *):not(.theme-environment, .t
 .theme-atmosphere { position: absolute; width: min(65vw, 700px); height: min(65vw, 700px); border-radius: 50%; filter: blur(70px); opacity: .24; background: var(--pv-blue-soft); animation: atmosphere-drift 22s ease-in-out infinite alternate; transition: opacity var(--pv-time); }
 .atmosphere-one { left: -12%; top: 25%; }
 .atmosphere-two { right: -10%; top: 48%; background: var(--pv-blue-ice); animation-delay: -11s; }
+.theme-environment[data-active="false"] .theme-atmosphere { animation-play-state: paused; }
+@media (pointer: coarse), (max-width: 639px) {
+  .theme-atmosphere { animation: none; }
+}
 .pinevela-brand-mark { transition: filter var(--pv-time) ease; }
 [data-theme="dark"] .pinevela-brand-mark { filter: drop-shadow(0 2px 5px #00081840); }
-.theme-preference { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
-.theme-preference-choice { position: relative; min-width: 0; cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
-.theme-preference-input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.theme-preference { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.theme-preference-choice { position: relative; display: inline-flex; min-width: 0; padding: 0; border: 0; background: transparent; color: inherit; font: inherit; cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+.theme-toggle {
+  --theme-toggle-ease: cubic-bezier(.22, 1, .36, 1);
+  position: relative;
+  isolation: isolate;
+  display: inline-flex;
+  flex-shrink: 0;
+  width: 90px;
+  height: 46px;
+  padding: 0;
+  border: 1px solid #8293a8;
+  border-radius: 999px;
+  background-color: #edf1f6;
+  box-shadow: inset 0 1px 3px #001d3d0d, 0 2px 6px #001d3d0a;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color 240ms ease, border-color 240ms ease, box-shadow 180ms ease;
+}
+.theme-toggle[data-dark="true"] { background-color: #000f23; border-color: #9d842e; }
+.theme-toggle:focus-visible { outline: 3px solid var(--pv-link); outline-offset: 4px; }
+.theme-toggle-track { position: absolute; inset: 0; color: #52657c; pointer-events: none; transition: color 240ms ease; }
+.theme-toggle-track svg { position: absolute; top: 50%; transform: translateY(-50%); }
+.theme-toggle-track-sun { left: 13px; }
+.theme-toggle-track-moon { right: 13px; }
+.theme-toggle[data-dark="true"] .theme-toggle-track { color: #a5bad0; }
+.theme-toggle-thumb {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  color: #001d3d;
+  background: linear-gradient(135deg, #ffd60a, #ffc300);
+  box-shadow: 0 2px 5px #001d3d26, inset 0 1px 0 #fff6;
+  pointer-events: none;
+  transform: translateX(0);
+  transition: transform 380ms var(--theme-toggle-ease), box-shadow 180ms ease;
+}
+.theme-toggle[data-dark="true"] .theme-toggle-thumb { transform: translateX(44px); }
+.theme-toggle-icon { grid-area: 1 / 1; transform-origin: center; transition: transform 340ms var(--theme-toggle-ease), opacity 200ms ease; }
+.theme-toggle-sun { opacity: 1; transform: rotate(0) scale(1); }
+.theme-toggle-moon { opacity: 0; transform: rotate(-75deg) scale(.45); }
+.theme-toggle[data-dark="true"] .theme-toggle-sun { opacity: 0; transform: rotate(75deg) scale(.45); }
+.theme-toggle[data-dark="true"] .theme-toggle-moon { opacity: 1; transform: rotate(0) scale(1); }
+.theme-toggle:active .theme-toggle-thumb { box-shadow: 0 1px 3px #001d3d33, inset 0 0 0 2px #001d3d1a; }
 .theme-preference-content {
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  min-height: 92px;
-  padding: 12px 6px;
+  min-height: 46px;
+  padding: 10px 12px;
   border: 1px solid var(--pv-field-edge);
-  border-radius: 14px;
+  border-radius: 999px;
   background: var(--pv-secondary);
   color: var(--pv-text);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
-  line-height: 1.4;
+  line-height: 1.2;
   text-align: center;
+  white-space: nowrap;
   transition: background-color 160ms ease, border-color 160ms ease;
 }
 .theme-preference-content > svg { flex-shrink: 0; }
-.theme-preference-input:checked + .theme-preference-content { background: var(--pv-action-gradient); color: var(--pv-on-action); border-color: var(--pv-link); box-shadow: inset 0 0 0 1px var(--pv-link); }
-.theme-preference-input:focus-visible + .theme-preference-content { outline: 3px solid var(--pv-link); outline-offset: 3px; }
+.theme-preference-choice[aria-pressed="true"] .theme-preference-content { background: var(--pv-action-gradient); color: var(--pv-on-action); border-color: var(--pv-link); box-shadow: inset 0 0 0 1px var(--pv-link); }
+.theme-preference-choice:focus-visible { outline: none; }
+.theme-preference-choice:focus-visible .theme-preference-content { outline: 3px solid var(--pv-link); outline-offset: 3px; }
 @media (hover: hover) {
-  .theme-preference-choice:hover .theme-preference-input:not(:checked) + .theme-preference-content { background: var(--pv-secondary-hover); border-color: var(--pv-link); }
+  .theme-toggle:hover { border-color: #b28c11; box-shadow: 0 0 0 3px #ffc3001f; }
+  .theme-preference-choice:not([aria-pressed="true"]):hover .theme-preference-content { background: var(--pv-secondary-hover); border-color: var(--pv-link); }
 }
 @media (forced-colors: active) {
+  .theme-toggle { background: Canvas; border-color: ButtonText; box-shadow: none; }
+  .theme-toggle-track { color: GrayText; }
+  .theme-toggle-thumb { forced-color-adjust: none; background: Highlight; color: HighlightText; border: 1px solid ButtonText; box-shadow: none; }
+  .theme-toggle:focus-visible { outline-color: Highlight; }
   .theme-preference-content { background: Canvas; color: CanvasText; border-color: ButtonText; }
-  .theme-preference-input:checked + .theme-preference-content { forced-color-adjust: none; background: Highlight; color: HighlightText; border-color: Highlight; box-shadow: none; }
-  .theme-preference-input:focus-visible + .theme-preference-content { outline-color: Highlight; }
+  .theme-preference-choice[aria-pressed="true"] .theme-preference-content { forced-color-adjust: none; background: Highlight; color: HighlightText; border-color: Highlight; box-shadow: none; }
+  .theme-preference-choice:focus-visible .theme-preference-content { outline-color: Highlight; }
 }
 @keyframes atmosphere-drift { to { transform: translate3d(40px, -35px, 0) scale(1.08); } }
 

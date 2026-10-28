@@ -1,21 +1,20 @@
 import { useEffect, useId, useRef, useState, type CSSProperties } from 'react';
-import landing from '../../assets/landing-welcome.png';
+import landing from '../../assets/landing-welcome-transparent.png';
 import login from '../../assets/marketing-artwork/login-market.webp';
-import cleanPlate from '../../assets/marketing-artwork/landing-cleanplate.png';
 import { useMotionActivity } from '../hooks/useMotionActivity';
 import '../artworkLayers.css';
 
 type Variant = 'landing' | 'login';
-type Piece = { name: string; path: string; duration: number; phase: number; dx: number; dy: number; turn: number; repairY?: number };
+type Piece = { name: string; path: string; duration: number; phase: number; dx: number; dy: number; turn: number };
 
 // These paths select pixels from the supplied PNGs, including their original
-// wording. The subject is never regenerated, translated, or scaled separately.
+// wording. The subject is never translated or scaled separately.
 const pieces: Record<Variant, Piece[]> = {
   landing: [
     { name: 'heart', path: 'M936 113 Q975 103 990 123 L1008 170 Q1012 186 995 191 L984 197 L981 211 L968 200 L938 205 Q921 208 915 190 L906 147 Q902 130 919 123 Z', duration: 5.7, phase: -1.3, dx: 2, dy: -8, turn: -1.8 },
-    { name: 'parcel', path: 'M1059 110 L1184 139 L1190 149 L1166 236 L1151 241 L1032 205 L1025 195 L1050 122 Z', duration: 7.1, phase: -2.4, dx: -2, dy: -6, turn: 1.1, repairY: -640 },
+    { name: 'parcel', path: 'M1059 110 L1184 139 L1190 149 L1166 236 L1151 241 L1032 205 L1025 195 L1050 122 Z', duration: 7.1, phase: -2.4, dx: -2, dy: -6, turn: 1.1 },
     { name: 'growth', path: 'M1208 142 Q1262 133 1295 99 L1291 90 L1325 78 L1328 112 L1317 107 L1306 121 L1334 129 L1310 222 L1282 237 L1254 226 L1223 217 L1203 204 L1215 169 L1244 176 L1254 149 L1265 154 L1274 127 L1284 132 Q1251 151 1211 156 Z', duration: 6.6, phase: -.8, dx: 1, dy: -7, turn: .6 },
-    { name: 'coin', path: 'M1356 217 C1396 221 1391 263 1359 291 C1326 320 1290 306 1292 275 C1294 244 1324 217 1356 217 Z', duration: 5.4, phase: -2.7, dx: 3, dy: -6, turn: 2.4, repairY: -600 },
+    { name: 'coin', path: 'M1356 217 C1396 221 1391 263 1359 291 C1326 320 1290 306 1292 275 C1294 244 1324 217 1356 217 Z', duration: 5.4, phase: -2.7, dx: 3, dy: -6, turn: 2.4 },
     { name: 'availability', path: 'M900 289 L1170 246 Q1198 241 1206 269 L1217 319 Q1223 345 1194 353 L929 394 L890 401 L902 381 Q883 379 879 356 L871 328 Q864 302 900 289 Z', duration: 6.4, phase: -.5, dx: 0, dy: -4, turn: .3 },
     { name: 'maintenance', path: 'M900 394 L1159 409 Q1186 408 1190 438 L1192 475 Q1192 511 1156 509 L903 496 L873 507 L880 484 Q862 479 863 456 L864 428 Q863 395 900 394 Z', duration: 7.4, phase: -2.9, dx: 1, dy: -4, turn: -.3 },
     { name: 'sale', path: 'M944 505 L1183 530 Q1212 533 1210 562 L1207 603 Q1207 637 1175 635 L939 610 L909 624 L917 597 Q903 592 903 570 L907 535 Q907 504 944 505 Z', duration: 7.8, phase: -4.2, dx: -1, dy: -4, turn: .25 },
@@ -55,7 +54,7 @@ export default function ArtworkLayers({ variant, sourceUrl }: { variant: Variant
     let active = true;
     setReady(false);
     if (!allowed) return;
-    const images = (variant === 'landing' ? [source, cleanPlate] : [source]).map(url => {
+    const images = [source].map(url => {
       const image = new Image();
       const promise = new Promise<void>((resolve, reject) => {
         image.onload = () => {
@@ -85,16 +84,8 @@ export default function ArtworkLayers({ variant, sourceUrl }: { variant: Variant
         <rect width={width} height={height} fill="white" />
         {pieces[variant].map(piece => <path key={piece.name} d={piece.path} fill="black" />)}
       </mask>
-      <clipPath id={id + '-repair'} clipPathUnits="userSpaceOnUse">
-        {pieces[variant].map(piece => <path key={piece.name} d={piece.path} />)}
-      </clipPath>
       {pieces[variant].map(piece => <clipPath key={piece.name} id={id + '-' + piece.name} clipPathUnits="userSpaceOnUse"><path d={piece.path} /></clipPath>)}
     </defs>
-    {variant === 'landing' && <>
-      <image href={allowed ? cleanPlate : undefined} width={width} height={height} preserveAspectRatio="none" clipPath={`url(#${id}-repair)`} />
-      {pieces.landing.filter(piece => piece.repairY).map(piece => <image key={piece.name} href={allowed ? cleanPlate : undefined}
-        y={piece.repairY} width={width} height={height} preserveAspectRatio="none" clipPath={`url(#${id}-${piece.name})`} />)}
-    </>}
     <image data-artwork-base="true" href={allowed ? source : undefined} width={width} height={height} mask={`url(#${id}-base)`} />
     {pieces[variant].map(piece => <g key={piece.name} className="artwork-layer" data-artwork-layer={piece.name}
       style={{ '--art-dx': `${piece.dx * 2.5}px`, '--art-dy': `${piece.dy * 2.5}px`, '--art-turn': `${piece.turn * 1.5}deg`, transformOrigin: centers[variant][piece.name].map(value => `${value}px`).join(' '), animationDuration: `${piece.duration}s`, animationDelay: `${piece.phase}s` } as CSSProperties}>

@@ -1,10 +1,10 @@
 # FAQ and customer support
 
 `/faq` contains searchable answers based on the marketplace and housing flows.
-Public entries use the fixed navy/yellow appearance; product entries preserve
-the user's theme across FAQ and Help navigation. `/help` accepts questions,
-complaints and reports; public entry points keep that appearance, while product
-entry points preserve the product theme. `Help` is available in portal headers,
+Public and product entries share the saved/browser appearance across FAQ and
+Help navigation. Public headers offer the Light/Dark slider; app settings also
+offer System default. `/help` accepts questions, complaints and reports.
+`Help` is available in portal headers,
 desktop navigation and settings, and on the public landing and login pages.
 
 Signed-in requests use the current server-verified context, display name and

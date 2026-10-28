@@ -11,7 +11,7 @@ export default function PagePublicResidence() {
   const [params] = useSearchParams();
   const [searchQuery, setSearchQuery] = useState(params.get('search') || '');
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
-  return <div className="page-canvas h-dvh flex flex-col overflow-hidden font-sans">
+  return <div className="public-catalog-page page-canvas h-dvh flex flex-col overflow-hidden font-sans">
     <PublicHeader searchQuery={searchQuery} setSearchQuery={setSearchQuery} onHome={() => navigate('/')}
       onSearch={() => document.querySelector('main')?.scrollTo({ top: 0, behavior: 'smooth' })}
       onCompanySection={section => navigate(`/?section=${section}`)} setShowLogoutConfirm={setShowLogoutConfirm} />

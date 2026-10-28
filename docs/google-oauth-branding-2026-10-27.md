@@ -1,5 +1,11 @@
 # Google branding and public policies — 27 October 2026
 
+The owner subsequently confirmed Google branding verification. The authorized
+move replacing WordPress with the app at **pinevela.app** is now complete. The
+values and preparation checks below record the original preview setup. See the
+[completed cutover record](pinevela-main-domain-cutover-2026-10-27.md) for current
+URLs, hosting backups, verification and remaining provider checks.
+
 Owner-confirmed details: operator **Oppong Manu Andy**, country **Ghana**,
 minimum age **16**, contact **andyheller2k@gmail.com**. The owner selected the
 application at **preview.pinevela.app** and will upload their own Google logo.

@@ -7,6 +7,7 @@ import { useAuth } from '../context/AuthContext';
 import type { CompanySection } from './companyStoryContent';
 import PineLogo from './PineLogo';
 import { useInstalledAppMode } from '../lib/appMode';
+import ThemeToggle from './ThemeToggle';
 
 interface Props {
   compact?: boolean;
@@ -134,6 +135,7 @@ export default function PublicHeader({compact = false, searchQuery, setSearchQue
             <Link to={installedApp ? '/faq?from=/login' : '/faq?from=/'} onClick={() => setMenuOpen(false)} className="public-header-link">FAQ</Link>
             <HelpLink className="public-header-link" />
           </div>
+          <ThemeToggle className="public-header-appearance" showSystemDefault={false} />
         </nav>
         {user ? (
           <div className="public-header-account">

@@ -35,10 +35,10 @@ test('installed routing replaces marketing pages while preserving account, help 
 });
 
 
-test('status-bar color follows product and phone auth appearance while other public pages retain navy', () => {
+test('status-bar color follows light and dark appearance on product, auth and public pages', () => {
   assert.equal(browserChromeColor('light', false), '#ffffff');
   assert.equal(browserChromeColor('dark', false), '#001d3d');
-  assert.equal(browserChromeColor('light', true), '#001d3d');
+  assert.equal(browserChromeColor('light', true), '#ffffff');
   assert.equal(browserChromeColor('dark', true), '#001d3d');
   assert.equal(browserChromeColor('light', true, true), '#ffffff');
   assert.equal(browserChromeColor('dark', true, true), '#001d3d');
@@ -60,9 +60,9 @@ test('live appearance changes repaint metadata and both page backing surfaces', 
   try {
     for (const [appearance, publicAppearance, mobileAuth, expected] of [
       ['light', false, false, '#ffffff'], ['dark', false, false, '#001d3d'],
-      ['light', false, false, '#ffffff'], ['light', true, false, '#001d3d'],
+      ['light', false, false, '#ffffff'], ['light', true, false, '#ffffff'],
       ['dark', true, false, '#001d3d'], ['light', true, true, '#ffffff'],
-      ['dark', true, true, '#001d3d'], ['light', true, false, '#001d3d'],
+      ['dark', true, true, '#001d3d'], ['light', true, false, '#ffffff'],
     ] as const) {
       root.dataset.mobileAuth = String(mobileAuth);
       applyBrowserChrome(appearance, publicAppearance);

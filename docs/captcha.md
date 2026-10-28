@@ -28,14 +28,20 @@ Never paste either an API credential or the CAPTCHA secret into chat.
 
 ## Integration behavior
 
-The widget loads only on active authentication forms when configured. It runs in
-the background and asks for interaction when necessary. Narrow forms use the
-compact widget. Failure displays a retry action and keeps submission closed.
-An issued proof shows **Security check complete**. A pending check offers a
-retry after 45 seconds; a later genuine completion still enables the form.
-Tokens stay in memory, are passed as `captchaToken` in the request JSON, and reset
-after every attempt. Switching form/account discards the earlier token. No secret
-key is bundled into the frontend.
+Verification starts only when a protected form is submitted. Opening login,
+signup, registration or password forms does not fetch CAPTCHA settings, load its
+SDK, or mount a challenge. A submission first reads public configuration, then
+waits for a fresh proof before sending the protected request. Narrow forms use
+the compact widget; interaction appears when the provider requires it.
+
+Completed, failed and cancelled widgets are removed. Automatic retries and
+expiry/timeout refreshes are disabled. Leaving the form, switching account or
+backgrounding the app cancels pending verification; returning stays idle until
+the next submission. A 45-second deadline releases a stalled check. Errors keep
+the protected request from being sent and let the user submit again. Tokens go
+directly into request JSON and are never cached for a later submission. Existing
+OTP and Google OAuth proof paths are preserved. No secret key is bundled into
+the frontend.
 
 Protection covers password sign-in, signup/resend, password recovery, shared
 identity enrollment, retained-account reactivation, staff invitation signup and

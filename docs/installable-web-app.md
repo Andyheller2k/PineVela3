@@ -67,3 +67,8 @@ check did not sign into an authenticated dashboard.
 References: [web app installation](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps/Guides/Making_PWAs_installable),
 [browser install prompt](https://developer.mozilla.org/en-US/docs/Web/API/Window/beforeinstallprompt_event),
 [Apple home-screen instructions](https://support.apple.com/en-euro/guide/iphone/iph42ab2f3a7/ios).
+
+The 27 October update removes idle CAPTCHA work, reduces repeated dashboard and
+status reads, and stops moving blurred atmosphere shapes on phones. See
+[the performance check](mobile-performance-2026-10-27.md) for validation and
+physical-device limits.

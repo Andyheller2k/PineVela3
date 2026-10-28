@@ -133,6 +133,45 @@ html[data-theme="dark"] .user-price-sheet .market-price-panel { background: #001
 .user-price-sheet .market-price-presets { padding-bottom: 4px; scrollbar-width: none; }
 .user-price-sheet .market-price-presets::-webkit-scrollbar { display: none; }
 
+/* The primary marketplace uses the same compact controls at every width.
+   Public catalogs and other account pages retain their own toolbar layouts. */
+.user-dashboard-content[data-dashboard-view="home"]:has([data-home-catalog="market"]) { padding-top: 24px; }
+.user-dashboard .user-home-content[data-home-catalog="market"] { --user-home-gap: 12px; }
+.user-dashboard .user-home-content[data-home-catalog="market"] > :not(:last-child) { margin-block-end: var(--user-home-gap); }
+.user-dashboard .user-market-panel > :not(:last-child) { margin-block-end: 8px; }
+.user-dashboard .marketplace-filter-bar[data-compact-catalog] {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  max-width: 720px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+.user-dashboard .marketplace-filter-bar[data-compact-catalog] .market-search-field { width: auto; min-width: 0; }
+.user-dashboard .marketplace-filter-bar[data-compact-catalog] input { min-height: 44px; box-shadow: none; }
+.user-dashboard .marketplace-filter-bar[data-compact-catalog] .marketplace-filter-controls { display: flex; width: auto; gap: 0; }
+.user-dashboard .marketplace-filter-bar[data-compact-catalog] .market-price-toggle { min-height: 44px; padding: 6px 10px; font-size: 13px; }
+.user-dashboard .marketplace-filter-bar[data-compact-catalog] :is(.market-sort-control, .market-item-count) { display: none; }
+.user-dashboard .user-market-panel .market-categories { margin-inline: 0; padding: 0; }
+.user-dashboard .user-market-panel .market-categories button { padding-inline: 10px; }
+.user-dashboard .market-categories .market-nearby-shortcut { display: inline-flex; align-items: center; gap: 5px; border-style: dashed; color: var(--pv-link); background: var(--pv-field); }
+
+html[data-theme] .user-market-filters-overlay { align-items: center; padding: 24px; }
+html[data-theme] .user-market-filter-sheet { padding: 16px; display: flex; flex-direction: column; gap: 12px; background: var(--pv-panel); color: var(--pv-text); border: 1px solid var(--pv-dialog-edge); }
+.market-filter-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+html[data-theme] .market-filter-heading h2 { margin: 0; font-size: 22px; font-weight: 800; color: var(--pv-heading); background: none; -webkit-text-fill-color: currentColor; }
+.market-filter-heading button { min-width: 44px; min-height: 44px; display: grid; place-items: center; border-radius: 12px; color: var(--pv-text); background: var(--pv-secondary); }
+.market-sort-setting > p { margin-bottom: 6px; font-size: 14px; font-weight: 700; color: var(--pv-text); }
+.market-sort-setting .market-sort-control { width: 100%; }
+.market-sort-setting select { min-height: 44px; font-size: 16px; }
+.market-filter-footer { display: grid; gap: 8px; }
+.market-filter-footer p { margin: 0; font-size: 14px; text-align: center; color: var(--pv-muted); }
+.market-filter-footer button { min-height: 44px; width: 100%; border-radius: 12px; font-size: 14px; font-weight: 800; }
+
 @media (hover: hover) and (pointer: fine) {
   .user-dashboard :is([data-listing-id], [data-residence-id]):hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgb(0 8 20 / .1); }
 }
@@ -141,27 +180,6 @@ html[data-theme="dark"] .user-price-sheet .market-price-panel { background: #001
   .user-dashboard .user-options-card { padding: 16px; }
   .user-dashboard .user-home-content { --user-home-gap: 16px; }
   .user-dashboard .user-home-content > :not(:last-child) { margin-block-end: var(--user-home-gap); }
-  .user-dashboard .user-market-panel > :not(:last-child) { margin-block-end: 12px; }
-  .user-dashboard .user-market-header { gap: 12px; padding-bottom: 12px; }
-  .user-dashboard .user-market-intro { width: 100%; min-width: 0; }
-  .user-dashboard .user-market-description { margin-top: 6px; }
-  .user-dashboard .user-market-actions {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
-    width: 100%;
-  }
-  .user-dashboard .user-market-actions > button {
-    width: 100%;
-    min-width: 0;
-    min-height: 44px;
-    padding: 6px 8px;
-    gap: 6px;
-    font-size: 13px;
-    line-height: 1.35;
-    border-radius: 14px;
-  }
-  .user-dashboard .user-market-actions > button > span { min-width: 0; white-space: normal; overflow-wrap: anywhere; }
   .user-dashboard .user-catalog-switcher { padding: 2px; gap: 2px; }
   .user-dashboard .user-catalog-switcher button {
     height: 44px;
@@ -197,6 +215,9 @@ html[data-theme="dark"] .user-price-sheet .market-price-panel { background: #001
   .user-dashboard .market-categories { gap: 6px; }
   .user-dashboard .market-categories button { min-height: 40px; }
   .user-dashboard .user-section-title > [class*="rounded-full"] { font-size: 12px; line-height: 1.5; letter-spacing: .02em; }
+
+  .user-dashboard-content[data-dashboard-view="home"]:has([data-home-catalog="market"]) { padding-top: 12px; }
+  html[data-theme] .user-market-filters-overlay { align-items: flex-end; padding: 10px; padding-bottom: max(10px, env(safe-area-inset-bottom)); }
 }
 @media (min-width: 640px) and (max-width: 1023px) {
   html[data-theme][data-appearance="product"] .user-bottom-navigation { max-width: 560px; margin-inline: auto; }

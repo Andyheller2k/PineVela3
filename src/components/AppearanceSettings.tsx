@@ -16,7 +16,7 @@ export default function AppearanceSettings() {
       <ThemeToggle describedBy={statusId} />
       <p id={statusId} className="text-xs text-slate-500" role="status" aria-live="polite">{savePending
         ? 'Saved on this device. Syncing to your account…'
-        : preference === 'system' ? `Following system settings. ${themeLabel} mode is on.` : `${themeLabel} mode is on.`}</p>
+        : preference === 'system' ? `Following system default. ${themeLabel} mode is on.` : `${themeLabel} mode is on.`}</p>
     </div>
     <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 pt-4"><p className="text-sm text-slate-500">Have a question or need to report a problem?</p><HelpLink /></div>
   </section>;

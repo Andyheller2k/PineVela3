@@ -5,18 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content" />
     <meta name="theme-color" content="#001d3d" />
     <script>
-      // Login/signup and product pages share the saved Light/Dark/System choice.
-      // Marketing keeps its fixed appearance without replacing that preference.
+      // Every public, auth and product route shares the saved/browser theme.
       var route = (location.hash.slice(1).split('?')[0] || '/').replace(/\/+$/, '') || '/';
       var authPage = route === '/login';
-      var fixedAppearance = route === '/' ? 'light'
-        : route === '/pineresidence' || route === '/pinemarket' || route === '/support-invitation' || route === '/why-us' || /^\/pinemarket\/stores\/[^/]+$/.test(route) ? 'dark' : null;
+      var publicAppearance = authPage || route === '/' || route === '/why-us' || route === '/support-invitation' || route === '/pinemarket' || route === '/pineresidence' || /^\/pinemarket\/stores\/[^/]+$/.test(route);
       if (route === '/help' || route === '/faq') {
         var helpFrom = new URLSearchParams(location.hash.slice(1).split('?').slice(1).join('?')).get('from') || '';
-        fixedAppearance = /^\/(?:user\/dashboard|student\/dashboard|resident\/dashboard|manager\/dashboard|staff\/dashboard|admin\/dashboard|digital-market(?:\/onboard)?|market|customer-service|field-officer|officer\/dashboard|verification-team|verification-portal)$/.test(helpFrom) ? null : 'dark';
+        publicAppearance = !/^\/(?:user\/dashboard|student\/dashboard|resident\/dashboard|manager\/dashboard|staff\/dashboard|admin\/dashboard|digital-market(?:\/onboard)?|market|customer-service|field-officer|officer\/dashboard|verification-team|verification-portal)$/.test(helpFrom);
       }
-      var publicAppearance = authPage || fixedAppearance !== null;
       document.documentElement.dataset.appearance = publicAppearance ? 'public' : 'product';
+      document.documentElement.dataset.publicTheme = publicAppearance && !authPage ? 'adaptive' : 'none';
       document.documentElement.dataset.authPage = String(authPage);
       // Keep this query in sync with PHONE_AUTH_MEDIA in mobileAuthAppearance.ts.
       var mobileAuth = false;
@@ -29,11 +27,11 @@
       } catch (_) {}
       var systemAppearance = 'light';
       try { systemAppearance = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'; } catch (_) {}
-      var appearance = fixedAppearance || (preference === 'system' ? systemAppearance : preference);
+      var appearance = preference === 'system' ? systemAppearance : preference;
       document.documentElement.dataset.themePreference = preference;
       document.documentElement.dataset.theme = appearance;
       document.documentElement.style.colorScheme = appearance;
-      var chromeColor = appearance === 'light' && (!publicAppearance || authPage) ? '#ffffff' : '#001d3d';
+      var chromeColor = appearance === 'light' ? '#ffffff' : '#001d3d';
       document.querySelector('meta[name="theme-color"]').content = chromeColor;
       document.documentElement.style.setProperty('--pv-chrome-color', chromeColor);
       document.documentElement.style.backgroundColor = chromeColor;
@@ -61,14 +59,14 @@
       .pv-app-launch-track { width: 64px; height: 3px; overflow: hidden; border-radius: 99px; background: #826f3540; }
       .pv-app-launch-track::after { content: ''; display: block; width: 50%; height: 100%; background: #d6a700; border-radius: inherit; animation: pv-app-opening 1.15s ease-in-out infinite alternate; }
       .pv-app-launch-recovery { max-width: 280px; color: #b4c6d9; text-align: center; font-size: 14px; line-height: 1.5; }
-      html[data-theme="light"][data-appearance="product"] .pv-app-launch-recovery { color: #3d526c; }
+      html[data-theme="light"] .pv-app-launch-recovery { color: #3d526c; }
       .pv-app-launch-recovery button { min-height: 44px; margin-top: 12px; border: 0; border-radius: 12px; padding: 10px 20px; background: #ffd60a; color: #001d3d; font: inherit; font-weight: 700; cursor: pointer; }
       .pv-app-launch-recovery button:focus-visible { outline: 2px solid currentColor; outline-offset: 4px; }
       @keyframes pv-app-opening { from { transform: translateX(0); } to { transform: translateX(100%); } }
       @media (prefers-reduced-motion: reduce) { .pv-app-launch-track::after { animation: none; transform: translateX(50%); } }
     </style>
     <title>PineVela</title>
-    <link rel="icon" type="image/svg+xml" href="/store-covers/pinevela-logo.svg" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icons/pinevela-192.png" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
     <meta name="apple-mobile-web-app-capable" content="yes" />

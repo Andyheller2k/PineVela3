@@ -25,7 +25,11 @@ export default function VerifiedAccountEnrollment({ kind,initialName = '',initia
     if(options.method==='POST'){
       const fields=typeof body==='string'?JSON.parse(body):{};
       const usesEmailProof=/(?:verify|reactivate)$/.test(url)&&typeof fields.code==='string'&&Boolean(fields.code.trim());
-      if(!usesEmailProof){headers.set('Content-Type','application/json');body=JSON.stringify({...fields,captchaToken:captcha.requireToken()});}
+      if(!usesEmailProof){
+        const captchaToken=await captcha.requireToken();
+        if(!mounted.current||current.current!==captured)throw Error('Your active registration account changed.');
+        headers.set('Content-Type','application/json');body=JSON.stringify({...fields,captchaToken});
+      }
     }
     const data=await request(url,{...options,body,headers});if(!mounted.current||current.current!==captured)throw Error('Your active registration account changed.');return data;
   };

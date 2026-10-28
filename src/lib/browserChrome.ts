@@ -1,6 +1,6 @@
 /** Browser/status-bar chrome follows the visible page, not the system theme. */
-export function browserChromeColor(appearance: 'light' | 'dark', publicAppearance: boolean, authPage = false) {
-  return appearance === 'light' && (!publicAppearance || authPage) ? '#ffffff' : '#001d3d';
+export function browserChromeColor(appearance: 'light' | 'dark', _publicAppearance = false, _authPage = false) {
+  return appearance === 'light' ? '#ffffff' : '#001d3d';
 }
 
 export function applyBrowserChrome(appearance: 'light' | 'dark', publicAppearance: boolean) {

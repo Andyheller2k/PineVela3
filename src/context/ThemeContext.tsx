@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useLayoutEffect, use
 import { useLocation } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 import { sessionFetch } from '../lib/session';
-import { getPublicAppearance } from '../lib/publicAppearance';
+import { isPublicAppearance } from '../lib/publicAppearance';
 import { applyBrowserChrome } from '../lib/browserChrome';
 import { isAuthPage, isPhoneAuth, subscribePhoneAuthViewport } from '../lib/mobileAuthAppearance';
 import { DEVICE_THEME_KEY, isThemePreference, readSystemTheme, resolveTheme, subscribeSystemTheme, type Theme, type ThemePreference } from '../lib/themePreference';
@@ -15,16 +15,16 @@ const initialPreference = (): ThemePreference => read(DEVICE_THEME_KEY) ?? 'syst
 type Change = { identity: string; contextId: string; theme: ThemePreference; revision: number };
 const sameChange = (a: Change | null, b: Change) => a?.identity === b.identity && a.contextId === b.contextId && a.revision === b.revision;
 const ThemeContext = createContext<{
-  theme: Theme; preference: ThemePreference; publicAppearance: boolean;
+  theme: Theme; preference: ThemePreference; publicAppearance: boolean; appearanceLocked: boolean;
   setPreference: (next: ThemePreference) => void; toggleTheme: () => void; savePending: boolean;
 } | null>(null);
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const { pathname, search } = useLocation();
   const { user, loading } = useAuth();
-  const fixedAppearance = getPublicAppearance(pathname, search, !!user);
   const authPage = isAuthPage(pathname);
-  const publicAppearance = authPage || fixedAppearance !== null;
+  const publicAppearance = isPublicAppearance(pathname, search, !!user);
+  const appearanceLocked = authPage;
   const [preference, updatePreference] = useState<ThemePreference>(initialPreference);
   const systemTheme = useSyncExternalStore(
     useCallback(notify => preference === 'system' ? subscribeSystemTheme(notify) : () => {}, [preference]),
@@ -57,10 +57,10 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     cache(DEVICE_THEME_KEY, next);
   }, []);
 
-  // Marketing retains its fixed appearance. Product and auth routes resolve the
-  // same saved choice; OS changes never overwrite a saved System preference.
+  // Every route resolves the same saved choice. Public layout and responsive
+  // auth styling do not select a theme; System remains a saved preference.
   useLayoutEffect(() => {
-    const appearance = fixedAppearance ?? theme;
+    const appearance = theme;
     const root = document.documentElement;
     cancelAnimationFrame(paintFrame.current);
     root.classList.add('theme-changing');
@@ -68,13 +68,14 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       paintFrame.current = requestAnimationFrame(() => root.classList.remove('theme-changing'));
     });
     root.dataset.appearance = publicAppearance ? 'public' : 'product';
+    root.dataset.publicTheme = publicAppearance && !authPage ? 'adaptive' : 'none';
     root.dataset.authPage = String(authPage);
     root.dataset.mobileAuth = String(mobileAuth);
     root.dataset.themePreference = preference;
     root.dataset.theme = appearance;
     root.style.colorScheme = appearance;
     applyBrowserChrome(appearance, publicAppearance);
-  }, [fixedAppearance, publicAppearance, authPage, mobileAuth, preference, theme]);
+  }, [publicAppearance, authPage, mobileAuth, preference, theme]);
 
   // Only one write is active. A response may acknowledge its own account and
   // revision, never clear a newer account's pending selection.
@@ -160,14 +161,14 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   }, [remember, flush]);
 
   const setPreference = useCallback((next: ThemePreference) => {
-    if (publicAppearance || !isThemePreference(next) || current.current === next) return;
+    if (appearanceLocked || !isThemePreference(next) || current.current === next) return;
     remember(next);
-  }, [publicAppearance, remember]);
+  }, [appearanceLocked, remember]);
   const toggleTheme = useCallback(() => {
     setPreference(theme === 'light' ? 'dark' : 'light');
   }, [setPreference, theme]);
 
-  return <ThemeContext.Provider value={{ theme, preference, publicAppearance, setPreference, toggleTheme, savePending }}>{children}</ThemeContext.Provider>;
+  return <ThemeContext.Provider value={{ theme, preference, publicAppearance, appearanceLocked, setPreference, toggleTheme, savePending }}>{children}</ThemeContext.Provider>;
 }
 
 export function useTheme() {

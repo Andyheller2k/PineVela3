@@ -17,7 +17,7 @@ export default function PrimaryEmailReentry({ initialEmail = '', onClose, onReop
     try {
       const response = await fetch(sent ? '/api/auth/primary-reentry/verify' : '/api/auth/primary-reentry', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(sent ? { email: email.trim(), code: code.trim() } : { email: email.trim(), captchaToken: captcha.requireToken() }),
+        body: JSON.stringify(sent ? { email: email.trim(), code: code.trim() } : { email: email.trim(), captchaToken: await captcha.requireToken() }),
       });
       const result = await response.json();
       if (!response.ok || !result.success) throw new Error(result.error || 'Your primary account could not reopen.');

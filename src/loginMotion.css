@@ -50,6 +50,14 @@ html[data-theme] .unified-login .login-mode-toggle[data-active-tab] button[aria-
   animation: pv-login-verify-in 220ms ease-out backwards;
 }
 
+/* Only the newly selected fields move; the glass card and portrait stay still. */
+.unified-login .login-credentials-form {
+  animation: pv-login-signin-in 190ms cubic-bezier(.2, .7, .2, 1) backwards;
+}
+.unified-login .login-signup-form {
+  animation: pv-login-signup-in 190ms cubic-bezier(.2, .7, .2, 1) backwards;
+}
+
 .unified-login .login-auth-card:focus-within,
 .unified-login .login-motion-form:focus-within {
   opacity: 1 !important;
@@ -92,11 +100,9 @@ html[data-theme] .unified-login .login-auth-card :is(input, select):focus {
   .unified-login .login-mode-toggle[data-active-tab] { --login-toggle-inset: 2px; }
 }
 
-/* Swapping forms must not animate or repeatedly composite the mobile glass card. */
+/* Keep the mobile glass still while the short form/selector transition runs. */
 @media (max-width: 1023px) {
   .unified-login .login-auth-card { animation: none; }
-  .unified-login .login-mode-toggle[data-active-tab]::before,
-  .unified-login .login-mode-toggle[data-active-tab] button { transition: none; }
 }
 
 @keyframes pv-login-portrait-in {
@@ -115,6 +121,14 @@ html[data-theme] .unified-login .login-auth-card :is(input, select):focus {
 }
 
 @keyframes pv-login-verify-in { from { opacity: .75; } to { opacity: 1; } }
+@keyframes pv-login-signin-in {
+  from { opacity: .55; transform: translateX(-6px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes pv-login-signup-in {
+  from { opacity: .55; transform: translateX(6px); }
+  to { opacity: 1; transform: translateX(0); }
+}
 
 @media (prefers-reduced-motion: reduce), (forced-colors: active) {
   .unified-login *, .unified-login *::before, .unified-login *::after {

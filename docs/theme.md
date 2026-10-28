@@ -4,7 +4,9 @@ The current references are `color.jpeg`, `the prototype.jpg`, `lightmode .jpg`
 and `dark mode.jpg`. The core palette is ink `#000814`, deep navy `#001D3D`,
 blue `#003566`, yellow `#FFC300`, and gold `#FFD60A`.
 
-Appearance settings offer **Light**, **Dark**, and **System settings**. Existing
+Appearance settings offer **Light**, **Dark**, and **System default**. Light/Dark
+share the original rounded slider with a moving gold thumb; System default is
+a separate rounded button beside it. Existing
 saved Light/Dark choices remain explicit. With no saved choice, System is the
 default. System follows `prefers-color-scheme` live; manual choices ignore OS
 changes. The preference stays `system` when the effective color changes.
@@ -12,7 +14,11 @@ changes. The preference stays `system` when the effective color changes.
 Product pages and login/signup share the same device/account choice at every
 screen size. Logout retains the last selected preference for the guest login
 screen, and reload applies it before React paints. OS changes do not save a new
-account preference. Marketing keeps its fixed navy/yellow appearance.
+account preference. Landing, FAQ, Help and the standalone privacy/terms pages
+also follow that choice; fresh visits follow the browser, with light as the
+fallback. Their light treatment uses the login palette: white surfaces, blue
+ink and blue actions. The landing and support headers reuse the sliding
+Light/Dark switch without a System default button. Full app settings retain it.
 
 Login keeps its original responsive layout, portrait, component order and form
 spacing across themes. Light mode uses white surfaces and translucent light
@@ -30,17 +36,15 @@ colors use system surfaces. Browser/status chrome follows the effective auth
 appearance. Login light-theme roles ship in the shared stylesheet so the canvas
 paints correctly before its lazy-loaded form mounts.
 
-Public Explore Marketplace (`/pinemarket`), its storefronts, and Explore Residence
-(`/pineresidence`) use fixed dark mode with no theme controls, including their
-dialogs. Direct loads and route navigation preserve this appearance without
-overwriting the saved product preference.
+Public Explore Marketplace (`/pinemarket`), its storefronts, Explore Residence
+(`/pineresidence`) and Why Us (`/why-us`) follow the same saved/browser preference
+as the landing page and product pages. Their headers expose the Light/Dark
+slider without a System default button. Open dialogs inherit the effective theme.
 
-Why Us (`/why-us`) has the same fixed public navy/gold appearance. Its fourteen
-student-focused comparisons pair a labeled blue traditional-approach card with
-a yellow PineVela benefit card, side by side on wider screens and stacked on
-phones. Landing header/footer links and a bottom-page introduction open it.
-The route's pre-paint appearance agrees with ThemeProvider; product preferences
-stay intact. The copy lives in `src/components/whyUsContent.ts`.
+Why Us keeps its fourteen student-focused comparisons and existing responsive
+layout. The benefit panel is blue/white in light mode and yellow/navy in dark
+mode. Prepaint and ThemeProvider agree on all routes. The copy lives in
+`src/components/whyUsContent.ts`.
 
 Product pages use white cards, navy feature panels and gold actions in light mode.
 Dark mode uses deep blue `#001D3D` for the canvas, cards and fields, with gold
@@ -81,25 +85,30 @@ Contrast targets follow [WCAG text contrast](https://www.w3.org/WAI/WCAG22/Under
 and [non-text contrast](https://www.w3.org/WAI/WCAG22/Understanding/non-text-contrast.html).
 
 `ThemeProvider` owns the saved preference and resolves its effective Light/Dark
-color through `src/lib/themePreference.ts`. Fixed marketing appearance remains
-separate. `data-auth-page` marks login/signup at all widths; `data-mobile-auth`
+color through `src/lib/themePreference.ts`. Public layout classification does
+not choose a color; `data-public-theme="adaptive"` marks landing, catalogs,
+storefronts, Why Us and public support. `data-auth-page` marks login/signup at all widths; `data-mobile-auth`
 only marks responsive phone styling and never selects an appearance.
-`ThemeEnvironment` provides the light-product atmosphere. Settings use three
-native radio choices with named labels, native keyboard navigation, a visible
-focus indicator and effective-mode status for System. Reduced motion and forced
+`ThemeEnvironment` provides the light-product atmosphere. Its large blurred
+shapes stay static on coarse-pointer devices and screens below 640px; desktop
+motion pauses while the app is hidden. The Light/Dark slider
+is a single native button switch: clicking anywhere, Space or Enter flips the
+effective mode and selects that manual preference. The adjacent System default
+button reports its selected state with `aria-pressed`. Both retain named labels,
+native keyboard activation, a visible focus indicator and effective-mode status
+for System. Reduced motion and forced
 colors remain supported.
 Page surfaces switch in one paint; utility transitions are suppressed for two
 animation frames. The primary canvas follows product/auth preference while
-marketing retains its fixed treatment.
+adaptive public pages share the same preference and browser chrome.
 Ordinary route canvases and the mobile login backdrop stay transparent.
 Decorative PineVela background
 logos are removed; header branding and content photographs remain. The landing
-welcome area uses a solid deep-blue `#001D3D` background. A shallow curved bottom
-edge separates it from the catalogs without changing their layout. The welcome
-heading and supporting copy use larger responsive sizes, with extra space above
-the hero Login action. Navy/gold
-gradients and responsive rounded section boundaries soften the company transitions.
-The landing header keeps its fixed navy/yellow treatment. Login headers follow
+welcome area uses a white/soft-blue surface in light and a navy surface in dark.
+The same curved bottom edge, artwork and responsive layout apply to both.
+Readable type, a single primary signup action, outlined benefit cards and
+alternating company sections establish hierarchy. The landing header follows
+the selected appearance. Login headers follow
 the selected light white/blue or dark navy/yellow appearance. Reduced-motion users get
 the same theme and readable surfaces without travel, breathing or transition effects.
 
@@ -144,7 +153,7 @@ Alerts stays directly accessible through the header bell.
 `src/userDashboard.css` scopes its glass navigation, moving gold indicators,
 typography and brief interaction feedback. Catalog filters and per-view scroll
 positions survive tab switches within the account; account changes clear scroll
-memory. Mobile price filters use a compact native dialog with Escape, focus
+memory. Market price/sort filters use a compact native dialog with Escape, focus
 restoration and a close button. Reduced motion removes travel and animation.
 Marketplace item/service dimensions and public-page styles are unchanged.
 
@@ -194,9 +203,11 @@ limited to 900,000 pixels. Motion performs no React updates or layout reads. Ani
 pauses outside the viewport or when the tab is hidden, and is omitted for reduced
 motion and forced colors. Observers, animations and buffers are released on unmount.
 
-Shared landing/catalog headers keep the fixed navy/yellow appearance with no theme switch.
+The landing header follows the saved/browser theme and shows a compact sliding
+Light/Dark switch. Its mobile menu and public catalog/Why Us headers contain
+the same control.
 Desktop places the logo, search and account actions on its first row. Login is
-outlined and Sign Up is the primary yellow action. The second row groups Why Us,
+outlined and Sign Up uses blue/white in light and yellow/navy in dark. The second row groups Why Us,
 About Us, Our Vision, Partner with Us and Contact, followed by separate FAQ/Help
 utilities. On phones/tablets, logo, installation and Menu controls precede search;
 the disclosure contains the same links and account actions. Hidden links leave
@@ -234,9 +245,28 @@ The primary Home catalog uses one compact Market/Residences switcher with
 44px touch targets and a yellow selected segment in both themes. The redundant
 cross-catalog search is removed; marketplace search and filters remain available.
 
-Mobile marketplace controls keep price filtering, sorting and item count on one
-row beneath search. Price panels use side-by-side sliders and one scrolling row
+At every width, Home keeps Market/Residences, a single search/Filters row
+and one category strip above the cards; the strip scrolls when needed. The
+repeated market intro and large action row have been removed. Merchant registration/status moves to
+Options with its existing gold styling; Services exposes a compact Nearby map
+action. Price, sort and result count share a centered desktop dialog or a phone
+bottom sheet. See [the market/login follow-up](market-and-login-update-2026-10-28.md).
+Price panels use side-by-side sliders and one scrolling row
 of presets; an active range can remain applied while the panel is closed. Sort
 controls use SVG icons rather than emoji. Category selection changes immediately
 without a native tap flash or trailing animated highlight; keyboard focus is
 drawn inside each pill so its horizontal scroll container cannot clip the ring.
+
+Login/Signup field groups fade and slide 6px over 190ms when their form changes;
+the selector thumb keeps its short slide on phones too. Form keys restart only
+the entering group's animation, retaining drafts in the page state. The phone
+glass card stays still. Reduced motion and forced colors disable these effects.
+
+## App-wide audit follow-up
+
+See [the 28 October app-wide follow-up](app-wide-theme-audit-2026-10-28.md) for
+the cumulative package and exact local verification scope. All routes share
+the effective theme; Tailwind dark variants follow `data-theme`, not a separate
+OS media query. Install popups and photo viewers use shared color roles. The
+landing About Us and Partner with Us labels and headings are white on their
+blue light-mode panels.

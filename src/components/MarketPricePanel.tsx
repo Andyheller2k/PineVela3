@@ -5,9 +5,10 @@ interface Props {
   min: number; max: number;
   onMinChange: (value: number) => void; onMaxChange: (value: number) => void;
   onClose: () => void;
+  showClose?: boolean;
 }
 
-export default function MarketPricePanel({ id, min, max, onMinChange, onMaxChange, onClose }: Props) {
+export default function MarketPricePanel({ id, min, max, onMinChange, onMaxChange, onClose, showClose = true }: Props) {
   const filtered = min > 0 || max < 5000;
   const maximum = max >= 5000 ? '5,000+' : max.toLocaleString();
   return <div id={id} role="group" aria-label="Price filters" className="market-price-panel rounded-2xl border">
@@ -22,9 +23,9 @@ export default function MarketPricePanel({ id, min, max, onMinChange, onMaxChang
           className="inline-flex items-center justify-center gap-1 rounded-lg px-2 text-xs font-bold disabled:opacity-40">
           <RotateCcw size={14} aria-hidden="true" /><span>Reset</span>
         </button>
-        <button type="button" aria-label="Close price filters" onClick={onClose} className="inline-flex items-center justify-center rounded-lg">
+        {showClose && <button type="button" aria-label="Close price filters" onClick={onClose} className="inline-flex items-center justify-center rounded-lg">
           <X size={17} aria-hidden="true" />
-        </button>
+        </button>}
       </div>
     </div>
     <div className="grid grid-cols-2 gap-3">

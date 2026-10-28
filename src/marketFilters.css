@@ -15,7 +15,7 @@ html[data-theme] .market-categories button {
 }
 html[data-theme] .market-categories button[aria-pressed="true"] {
   background: var(--pv-action-gradient);
-  color: #001d3d;
+  color: var(--pv-on-action);
 }
 html[data-theme] .market-categories button:focus:not(:focus-visible) { outline: none; }
 html[data-theme] .market-categories button:focus-visible { outline-offset: -3px !important; }
@@ -38,8 +38,8 @@ html[data-theme] .market-price-presets button[aria-pressed="true"],
 html[data-theme] .market-price-toggle[aria-expanded="true"],
 html[data-theme] .market-price-toggle[data-filtered="true"] {
   background: var(--pv-action-gradient);
-  color: #001d3d;
-  border-color: #ffd60a;
+  color: var(--pv-on-action);
+  border-color: var(--pv-link);
 }
 @media (max-width: 639px) {
   .marketplace-filter-bar { padding: 8px; gap: 6px; }

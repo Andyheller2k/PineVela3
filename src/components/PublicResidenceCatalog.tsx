@@ -11,6 +11,7 @@ import DashboardOverlay from './DashboardOverlay';
 import PublicCatalogRail from './PublicCatalogRail';
 
 export default function PublicResidenceCatalog({ preview = false, searchQuery = '' }: { preview?: boolean; searchQuery?: string }) {
+  const Heading = preview ? 'h2' : 'h1';
   const navigate = useNavigate();
   const { user } = useAuth();
   const { data: hostels = [], isPending, isError, refetch } = useQuery<Residence[]>({
@@ -37,7 +38,7 @@ export default function PublicResidenceCatalog({ preview = false, searchQuery = 
   const cards = shown.map(hostel => <ResidenceCard key={hostel.id} hostel={hostel} onInspect={setSelected} onActivate={activate} />);
   return <div className="space-y-6" data-public-residence={preview ? 'preview' : 'catalog'}>
     <div className="public-catalog-heading flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-3">
-      <div><h2 className={`${preview ? 'text-3xl' : 'text-lg'} font-black text-slate-900 flex items-center gap-2`}><Building2 className="w-5 h-5 text-blue-700" />PineResidence</h2><p className="text-xs text-slate-500 font-semibold mt-1">Explore verified residences and accommodations.</p></div>
+      <div><Heading className={`${preview ? 'text-3xl' : 'text-lg'} font-black text-slate-900 flex items-center gap-2`}><Building2 className="w-5 h-5 text-blue-700" />PineResidence</Heading><p className="text-xs text-slate-500 font-semibold mt-1">Explore verified residences and accommodations.</p></div>
       {preview && <button type="button" onClick={() => navigate(`/pineresidence${searchQuery ? `?search=${encodeURIComponent(searchQuery)}` : ''}`)} className="flex items-center gap-2 rounded-xl bg-blue-900 hover:bg-blue-800 px-4 py-2.5 text-xs font-black text-white">Explore Residence <ArrowRight size={16} /></button>}
     </div>
     {isPending ? <p role="status" className="p-8 text-center text-sm font-semibold text-slate-500">Loading residences…</p>

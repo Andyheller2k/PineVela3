@@ -5,6 +5,9 @@
 @import "./experience.css";
 @import "./loginPhoneTheme.css";
 
+/* The saved app choice owns every dark utility; System is resolved by ThemeProvider. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
 @theme {
   /* Shared navy palette; semantic success and error colors stay separate. */
   --color-primary: var(--pv-blue-primary);

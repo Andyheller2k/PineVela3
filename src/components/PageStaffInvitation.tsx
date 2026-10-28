@@ -28,7 +28,8 @@ export default function PageStaffInvitation() {
     const requestToken = token;
     inFlight.current = true; setBusy(true); setError(''); setNotice('');
     try {
-      const captchaToken = action === 'verify' && code.trim() ? undefined : captcha.requireToken();
+      const captchaToken = action === 'verify' && code.trim() ? undefined : await captcha.requireToken();
+      if (activeToken.current !== requestToken) return;
       const receipt = await apiFetch(`/api/auth/staff-invitations/${action}`, { method: 'POST', body: JSON.stringify({ invitationToken: token, captchaToken, ...(action === 'signup' ? {password} : action === 'verify' ? {code,password} : {}) }) });
       if (activeToken.current !== requestToken) return;
       if (action === 'verify' ? receipt?.success !== true || receipt?.verified !== true : action === 'signup' ? receipt?.verificationRequired !== true || receipt?.signupStarted !== true : receipt?.success !== true)

@@ -105,25 +105,34 @@ const accountKey = id => `${deviceKey}:user:${id}`;
       await choose('light'); await expectState('light', 'light', 'Manual light'); await os(false); await os(true); await expectState('light', 'light', 'Manual light ignores OS');
       await choose('dark'); await expectState('dark', 'dark', 'Manual dark'); await os(false); await expectState('dark', 'dark', 'Manual dark ignores OS');
       await act("window.themeProviderHarness.navigate('/login?mode=register')"); await expectState('dark', 'dark', 'Auth inherits explicit choice');
-      await act("window.themeProviderHarness.navigate('/user/dashboard')"); await choose('system'); await act("window.themeProviderHarness.navigate('/login')"); await expectState('system', 'light', 'Auth System resolves OS'); await os(true); await expectState('system', 'dark', 'Open auth follows System');
+      await act("window.themeProviderHarness.navigate('/user/dashboard')");
+      await until("window.themeProviderHarness.state().path==='/user/dashboard'&&!window.themeProviderHarness.state().publicAppearance", 'Product controls mount after leaving auth');
+      await choose('system'); await expectState('system', 'light', 'Product System resolves OS');
+      await act("window.themeProviderHarness.navigate('/login')"); await expectState('system', 'light', 'Auth System resolves OS'); await os(true); await expectState('system', 'dark', 'Open auth follows System');
       assert.equal((await state()).storage[deviceKey], 'system', 'Persist the preference rather than the resolved OS color');
       await act("window.themeProviderHarness.navigate('/user/dashboard')"); await act('window.themeProviderHarness.toggle()'); await expectState('light', 'light', 'Compatibility toggle leaves System opposite effective color');
       assert.equal((await requests()).length, 0, 'Guest choices have no account writes');
     });
-    await test('Actual AppearanceSettings radios work with keyboard at 320px and hide on auth routes', async () => {
+    await test('Actual AppearanceSettings slider and System default work with keyboard at 320px and hide on auth routes', async () => {
       await command('Emulation.setDeviceMetricsOverride', { width: 320, height: 844, deviceScaleFactor: 1, mobile: true });
       await load(); await expectState('system', 'light', 'Default settings mode');
-      assert.equal(await evaluate("document.querySelectorAll('[role=radiogroup] input[type=radio]').length"), 3);
-      await act("document.querySelector('input[value=system]').focus()");
-      for (const [key, expected] of [['ArrowLeft', 'dark'], ['ArrowLeft', 'light'], ['ArrowRight', 'dark']]) {
-        await command('Input.dispatchKeyEvent', { type: 'keyDown', key, code: key, windowsVirtualKeyCode: key === 'ArrowLeft' ? 37 : 39 });
-        await command('Input.dispatchKeyEvent', { type: 'keyUp', key, code: key, windowsVirtualKeyCode: key === 'ArrowLeft' ? 37 : 39 });
-        await expectState(expected, expected, 'Keyboard radio selection');
-        assert.equal(await evaluate('document.querySelectorAll("input[type=radio]:checked").length'), 1);
-        assert.equal(await evaluate('document.activeElement.value'), expected);
+      assert.equal(await evaluate("document.querySelectorAll('.theme-preference button').length"), 2);
+      assert.equal(await evaluate("document.querySelector('.theme-system-choice').textContent.trim()"), 'System default');
+      await act("document.querySelector('[role=switch]').focus()");
+      for (const [key, code, expected] of [[' ', 'Space', 'dark'], ['Enter', 'Enter', 'light']]) {
+        const windowsVirtualKeyCode = code === 'Space' ? 32 : 13;
+        await command('Input.dispatchKeyEvent', { type: 'keyDown', key, code, windowsVirtualKeyCode, ...(code === 'Enter' ? { text: '\r' } : {}) });
+        await command('Input.dispatchKeyEvent', { type: 'keyUp', key, code, windowsVirtualKeyCode });
+        await expectState(expected, expected, 'Keyboard slider selection');
+        assert.equal(await evaluate("document.querySelector('[role=switch]').getAttribute('aria-checked')"), String(expected === 'dark'));
       }
+      await act("document.querySelector('.theme-system-choice').focus()");
+      await command('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13, text: '\r' });
+      await command('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13 });
+      await expectState('system', 'light', 'Keyboard System default selection');
+      assert.equal(await evaluate("document.querySelector('.theme-system-choice').getAttribute('aria-pressed')"), 'true');
       assert(await evaluate('document.documentElement.scrollWidth<=innerWidth'), 'Appearance controls fit 320px');
-      await act("window.themeProviderHarness.navigate('/login')"); await until("!document.querySelector('[role=radiogroup]')", 'Auth hides product appearance settings');
+      await act("window.themeProviderHarness.navigate('/login')"); await until("!document.querySelector('.theme-preference')", 'Auth hides product appearance settings');
     });
     await test('Legacy explicit modes and prepaint agree with mounted provider and refresh on both viewport widths', async () => {
       for (const width of [390, 1440]) {
@@ -135,6 +144,18 @@ const accountKey = id => `${deviceKey}:user:${id}`;
           await command('Page.reload'); await until('window.themeProviderHarness?.ready===true', 'Provider remount after refresh'); await expectState(saved, expected, 'Refresh preserves selection');
           assert.equal((await state()).prepaint.theme, expected);
         }
+      }
+    });
+    await test('Every public route follows System, accepts manual choices and shares them with login', async () => {
+      for (const route of ['/', '/faq?from=/', '/help?from=/login', '/why-us', '/pinemarket', '/pineresidence', '/pinemarket/stores/theme-fixture', '/support-invitation']) {
+        await load({ route, dark: false }); await expectState('system', 'light', 'Public default follows light browser');
+        assert.equal((await state()).dataset.publicTheme, 'adaptive');
+        assert.equal((await state()).prepaint.theme, 'light');
+        await os(true); await expectState('system', 'dark', 'Public System follows browser changes');
+        await choose('light'); await expectState('light', 'light', 'Public manual choice is enabled');
+        await os(false); await os(true); await expectState('light', 'light', 'Public choice ignores OS');
+        await act("window.themeProviderHarness.navigate('/login')"); await expectState('light', 'light', 'Login shares public choice');
+        assert.equal((await requests()).length, 0, 'Guest public choices never write an account');
       }
     });
     await test('Storage events synchronize explicit and System choices while invalid values are ignored', async () => {
@@ -217,6 +238,6 @@ const accountKey = id => `${deviceKey}:user:${id}`;
     for (const pending of waiting.values()) clearTimeout(pending.timer);
     if (chrome.exitCode === null) { chrome.kill('SIGTERM'); await Promise.race([once(chrome, 'exit'), pause(3000)]); }
     server.closeAllConnections(); await new Promise(resolve => server.close(resolve));
-    if (chrome.exitCode !== null) await fs.rm(profile, { recursive: true, force: true });
+    if (chrome.exitCode !== null) await fs.rm(profile, { recursive: true, force: true, maxRetries: 5, retryDelay: 150 });
   }
 })().catch(error => { console.error(JSON.stringify({ passed: false, stage: 'setup', error: error.message })); process.exitCode = 1; });
