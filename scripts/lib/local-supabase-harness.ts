@@ -1,3 +1,4 @@
+import {termsAcceptance} from '../../legalPolicy.js';
 /** Test-only real GoTrue/SMTP/HTTP harness. Never imported by product code.
  * The stack is started separately; this module refuses every remote endpoint. */
 import assert from 'node:assert/strict';
@@ -146,6 +147,14 @@ export async function signInLocalAccount(h:LocalSupabaseHarness,credentials:Loca
   ...(accountKind?{accountKind}:{}),...(credentials.portalPin?{portalPin:credentials.portalPin}:{})});
  assert.equal(response.status,200,'Native local account sign-in succeeds');
  if(credentials.contextId)assert.equal(response.data?.id,credentials.contextId,'Sign-in returns this exact owned context');
+ // Positive workflow fixtures explicitly accept only inside this owned local
+ // stack. Negative consent tests call the HTTP session directly instead.
+ if(response.data?.legal?.accepted!==true){
+  await h.assertOwned();
+  const accepted=await session.json('/api/legal/accept',{termsAcceptance:termsAcceptance(true)});
+  assert.equal(accepted.status,200,'Owned positive fixture explicitly accepts current Terms');
+  return{session,user:accepted.data};
+ }
  return{session,user:response.data};
 }
 /** Reconciles actual Auth state before continuing a saved signup. A lost signup
@@ -160,7 +169,7 @@ export async function createLocalPrimary(h:LocalSupabaseHarness,label:string){
  if(!person){
   if(saved.signupAttempted)throw Error('Previous local signup outcome needs review before retrying.');
   saved.signupAttempted=true;saveLocalFixture(h,file,saved);
-  const response=await h.session().json('/api/auth/register-unified',{name:saved.name,email:saved.email,password:saved.password});
+  const response=await h.session().json('/api/auth/register-unified',{termsAcceptance:termsAcceptance(true),name:saved.name,email:saved.email,password:saved.password});
   assert.equal(response.status,202,'Actual local primary signup requires confirmation');saved.signupId=response.data?.signupId;
   assert.ok(UUID.test(saved.signupId||''));saveLocalFixture(h,file,saved);
   person=(await h.db.pool.query('select id,email_confirmed_at from auth.users where id=$1',[saved.signupId])).rows[0];
@@ -168,7 +177,7 @@ export async function createLocalPrimary(h:LocalSupabaseHarness,label:string){
  assert.ok(person,'Actual local Auth subject exists');saved.signupId=person.id;
  if(!person.email_confirmed_at){
   const proof=await h.mail.confirmation(saved.email,saved.startedAt);
-  const response=await h.session().json('/api/auth/verify-unified',{email:saved.email,signupId:person.id,code:h.providerOrigin+proof});
+  const response=await h.session().json('/api/auth/verify-unified',{termsAcceptance:termsAcceptance(true),email:saved.email,signupId:person.id,code:h.providerOrigin+proof});
   assert.equal(response.status,200,'Actual local captured mail confirms the primary');
  }
  const signed=await signInLocalAccount(h,saved,'primary');
@@ -215,7 +224,7 @@ async function openHarness(meta:LocalSupabaseMetadata,credentials:ReturnType<typ
   const assertOwned=async()=>{const rows=(await db.pool.query('select run_id from pinevela_local_test.run_guard')).rows;
    assert.equal(rows.length,1);assert.equal(rows[0].run_id,meta.runId,'Database belongs to this exact disposable run');};
   await assertOwned();
-  const installed=(await db.pool.query("select version from private.schema_migrations where version='20261022214514'")).rowCount;
+  const installed=(await db.pool.query("select version from private.schema_migrations where version='20261028120000'")).rowCount;
   assert.equal(installed,1,'The current immutable application migrations must be installed');
   const settings=await fetch(providerOrigin+'/auth/v1/settings',{headers:{apikey:meta.anonKey},signal:AbortSignal.timeout(10000)});
   assert.equal(settings.status,200,'Actual local GoTrue responds');const authSettings=await settings.json();

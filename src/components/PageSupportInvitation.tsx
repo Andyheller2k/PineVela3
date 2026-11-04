@@ -38,7 +38,7 @@ function Invitation({ token }: { token: string }) {
     finally { working.current = false; if (mounted.current) setBusy(false); }
   }
   if (loading && restorationError) return <SessionRestorationNotice />;
-  return <SupportLayout publicPage><section className="mx-auto max-w-xl space-y-5 rounded-3xl border border-slate-200 bg-white p-6 sm:p-9"><p className="text-xs font-bold uppercase tracking-widest text-blue-700">Private invitation</p><h1 className="text-2xl font-extrabold sm:text-3xl">Join PineVela customer service</h1>
+  return <SupportLayout publicPage><section data-pv-onboarding className="mx-auto max-w-xl space-y-5 rounded-3xl border border-slate-200 bg-white p-6 sm:p-9"><p className="text-xs font-bold uppercase tracking-widest text-blue-700">Private invitation</p><h1 className="text-2xl font-extrabold sm:text-3xl">Join PineVela customer service</h1>
     {error && <p role="alert" className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">{error}</p>}
     {loading ? <p role="status">Checking your sign-in…</p> : !valid ? <p className="text-sm leading-7 text-slate-600">Open the complete private invitation link shared by your administrator.</p>
       : !user ? <><p className="text-sm leading-7 text-slate-600">Sign in or create a primary account with the exact email named in your invitation. Verify that email before accepting. Customer-service access is available only through an administrator invitation.</p><div className="flex flex-wrap gap-3"><Link to={login} className={button}>Sign in</Link><Link to={`${login}&mode=register`} className={button}>Create account</Link></div></>

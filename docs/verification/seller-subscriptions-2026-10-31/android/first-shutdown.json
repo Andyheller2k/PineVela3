@@ -1,0 +1,16 @@
+{
+  "taskStartedPid": 60241,
+  "normalSnapshotSaveEnabled": true,
+  "correctAvdVerified": true,
+  "shutdownReturnCode": 0,
+  "processStopped": true,
+  "safeQuickBootLifecycleLog": [
+    "INFO         | Loading snapshot 'default_boot'...",
+    "WARNING      | Failed to load snapshot 'default_boot'",
+    "INFO         | Saving snapshot 'default_boot' took 8271 ms"
+  ],
+  "originalAppearanceRestored": true,
+  "temporaryProbeCount": 0,
+  "dataCleared": false,
+  "snapshotsDeleted": false
+}

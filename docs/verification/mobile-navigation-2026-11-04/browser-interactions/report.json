@@ -1,0 +1,49 @@
+{
+  "passed": true,
+  "scenes": 13,
+  "checks": [
+    "curved mobile navigation switches at the existing role breakpoints",
+    "390px light curved mobile navigation smooth slide and icon handoff",
+    "390px dark curved mobile navigation smooth slide and icon handoff",
+    "390px curved mobile navigation pointer and keyboard activation",
+    "390px curved mobile navigation reduced motion settles without sliding",
+    "390px light curved mobile navigation fills the safe area",
+    "390px dark curved mobile navigation fills the safe area",
+    "390px light curved mobile navigation seller More retains Services",
+    "390px dark curved mobile navigation seller More retains Services",
+    "390px light curved mobile navigation seller dashboard center action",
+    "390px light curved mobile navigation resident dashboard center action",
+    "390px dark curved mobile navigation seller dashboard center action",
+    "390px dark curved mobile navigation resident dashboard center action"
+  ],
+  "screenshots": [
+    "docs/verification/mobile-navigation-2026-11-04/browser-interactions/390-light-curved-selected-purchases.png",
+    "docs/verification/mobile-navigation-2026-11-04/browser-interactions/390-dark-curved-selected-purchases.png",
+    "docs/verification/mobile-navigation-2026-11-04/browser-interactions/390-light-curved-safe-area.png",
+    "docs/verification/mobile-navigation-2026-11-04/browser-interactions/390-dark-curved-safe-area.png"
+  ],
+  "navigationClearance": [],
+  "buildDirectory": "dist-supabase",
+  "syntheticGuestCatalog": true,
+  "syntheticRoleVisualFixtures": [
+    "primary dashboard",
+    "manager dashboard",
+    "staff dashboard",
+    "resident dashboard",
+    "administrator dashboard",
+    "seller dashboard",
+    "field officer",
+    "customer service",
+    "manager onboarding",
+    "store onboarding"
+  ],
+  "hostedOrAccountWrites": 0,
+  "realAuthenticationTested": false,
+  "runtimeExceptions": 0,
+  "syntheticSellerWrites": 0,
+  "syntheticSignupResumeWrites": 0,
+  "syntheticAppearanceWrites": 0,
+  "syntheticSubscriptionCheckouts": 0,
+  "syntheticProfileSaves": 0,
+  "exceptionDetails": []
+}

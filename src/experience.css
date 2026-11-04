@@ -52,6 +52,9 @@ html[data-theme] :is([data-portal-navigation], [id="public-header"]) {
 }
 /* Match the authentication glass without changing navigation geometry. */
 html[data-theme][data-appearance="product"] [data-portal-navigation] {
+  --pv-action-gradient: var(--pv-navigation-gradient);
+  --pv-action-hover-gradient: var(--pv-navigation-hover-gradient);
+  --pv-on-action: #001d3d;
   --pv-panel: rgb(0 29 61 / .18);
   --pv-panel-gradient: linear-gradient(145deg, rgb(0 53 102 / .18), rgb(0 29 61 / .12));
   background: var(--pv-auth-glass-surface) !important;
@@ -102,7 +105,14 @@ html[data-theme] [data-portal-navigation] button :is(.ux-nav-badge, [class~="bg-
     backdrop-filter: var(--pv-auth-glass-filter);
   }
   html[data-theme="light"][data-appearance="product"] .verification-portal { padding-top: 0; }
-  html[data-theme="light"][data-appearance="product"] .verification-portal > [data-portal-navigation="header"] { width: 100vw; max-width: none; margin-inline: calc(50% - 50vw); }
+  /* Stretch within the available width; 100vw also includes a side scrollbar. */
+  html[data-theme="light"][data-appearance="product"] .verification-portal > [data-portal-navigation="header"] {
+    width: auto;
+    max-width: none;
+    align-self: stretch;
+    margin-left: calc(-1 * max(12px, env(safe-area-inset-left)));
+    margin-right: calc(-1 * max(12px, env(safe-area-inset-right)));
+  }
   html[data-theme="light"][data-appearance="product"] [data-portal-navigation="header"] :is(input, select) { background: #ffffff !important; color: #001d3d !important; border-color: #6c8dae !important; }
   html[data-theme="light"][data-appearance="product"] [data-portal-navigation="header"] input::placeholder { color: #426080 !important; }
   html[data-theme="light"][data-appearance="product"] [data-portal-navigation="header"] button:not(:disabled):not([aria-current="page"]):hover { background-color: #eef3f8; }
@@ -126,11 +136,9 @@ html[data-theme="dark"] .pv-feature-card {
   --pv-secondary: #ffe272;
   --pv-secondary-hover: #ffeb9a;
   --pv-edge: rgb(0 29 61 / .24);
-  --pv-action-gradient: linear-gradient(#001d3d, #001d3d);
-  --pv-action-hover-gradient: linear-gradient(#001d3d, #001d3d);
-  --pv-on-action: #ffd60a;
   background: linear-gradient(115deg, #ffc300, #ffd60a);
 }
+html[data-theme="dark"][data-appearance="product"] .pv-feature-card :is(.pv-primary-action, button[class~="bg-blue-600"], button[class~="bg-blue-900"]) { border: 1px solid #001d3d; }
 
 /* Ordinary dark cards keep their navy base. Dialog scrims, explicit actions
    and avatar presets retain their own surface and state treatments.
@@ -373,9 +381,9 @@ html[data-theme] .home-catalog-switcher button[aria-pressed="false"]:hover {
   background: rgb(255 195 0 / .1);
 }
 html[data-theme] .home-catalog-switcher button[aria-pressed="true"] {
-  color: #001d3d;
+  color: var(--pv-on-action);
   background: var(--pv-action-gradient);
-  box-shadow: inset 0 0 0 1px #ffd60a, 0 2px 6px rgb(0 8 20 / .12);
+  box-shadow: inset 0 0 0 1px var(--pv-selection), 0 2px 6px rgb(0 8 20 / .12);
 }
 html[data-theme] .home-catalog-switcher button:focus-visible {
   outline: 2px solid var(--pv-link);

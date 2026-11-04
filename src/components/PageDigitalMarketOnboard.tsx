@@ -1,3 +1,5 @@
+import StoreLocationInput from './StoreLocationInput';
+import { validateStoreStep, type StoreFieldErrors } from '../../storeSetupValidation';
 import React,{ useEffect,useRef,useState } from 'react';
 import { internationalPhone,phoneDraft,type CountryCode } from '../../internationalPhone';
 import { MARKET_DEFAULT_COVERS,MARKET_DEFAULT_LOGO } from '../../marketBranding';
@@ -19,7 +21,7 @@ import { motion } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { safeJson } from '../lib/api';
-import PineLogo from './PineLogo';
+import PineLogo, { PineWordmark } from './PineLogo';
 
 const DIGITAL_MARKET_CATEGORIES = [
   "Electronics, Gadgets & Accessories",
@@ -71,6 +73,10 @@ export default function PageDigitalMarketOnboard() {
   const [loading, setLoading] = useState<boolean>(true);
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [fieldErrors,setFieldErrors]=useState<StoreFieldErrors>({});
+  const formRef=useRef<HTMLFormElement>(null);
+  const fieldMessage=(field:keyof StoreFieldErrors)=>fieldErrors[field]?<p id={`store-${field}-error`} role="alert" className="mt-1 text-xs text-rose-700 dark:text-rose-200">{fieldErrors[field]}</p>:null;
+  const clearField=(field:keyof StoreFieldErrors)=>setFieldErrors(previous=>({...previous,[field]:undefined}));
 
   // Prefilled / fetched app details
   const [appData, setAppData] = useState<any>(null);
@@ -95,7 +101,7 @@ export default function PageDigitalMarketOnboard() {
 
   useEffect(() => {
     const controller = new AbortController(); let live = true;
-    setLoading(true);setAppData(null);setStoreData(null);setErrorMessage(null);setPhase(1);setSubmitting(false);
+    setLoading(true);setAppData(null);setStoreData(null);setErrorMessage(null);setFieldErrors({});setPhase(1);setSubmitting(false);
     const fetchStatus = async () => {
       try {
         if ((user?.role !== 'merchant')) return;
@@ -141,9 +147,17 @@ export default function PageDigitalMarketOnboard() {
     return () => {live=false;controller.abort();};
   }, [user?.id, user?.email, user?.role, navigate]);
 
+  const validatePhase=(step:1|2)=>{
+    const errors=validateStoreStep({storeName,username,description,location,deliveryMode,phone,phoneCountry},step);
+    setFieldErrors(errors);
+    if(Object.keys(errors).length){setPhase(step);requestAnimationFrame(()=>formRef.current?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus());return false;}
+    return true;
+  };
+
   const handleCompleteSetup = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (loading || loadedAccount !== user?.id || ((!storeData || user?.role !== 'merchant'))) return;
+    if (loading || loadedAccount !== user?.id || ((!storeData || user?.role !== 'merchant')) || submitting) return;
+    if(!validatePhase(1)||!validatePhase(2))return;
     const accountId = user?.id,generation=accountGeneration.current;
     setSubmitting(true);
     setErrorMessage(null);
@@ -179,7 +193,12 @@ export default function PageDigitalMarketOnboard() {
         setErrorMessage(res?.error || "Failed to complete store onboarding.");
       }
     } catch (err: any) {
-      if (mounted.current && currentAccount.current === accountId && accountGeneration.current===generation) setErrorMessage(err.message || "Failed to complete store onboarding.");
+      if (mounted.current && currentAccount.current === accountId && accountGeneration.current===generation) {
+        const field=String(err.code||'').replace(/^store_field_/,'') as keyof StoreFieldErrors;
+        if(['storeName','username','description','location','phone','deliveryMode'].includes(field)){
+          setFieldErrors({[field]:err.message});setPhase(['storeName','username','description'].includes(field)?1:2);
+        }else setErrorMessage(err.message || "Failed to complete store onboarding.");
+      }
     } finally {
       if (mounted.current && currentAccount.current === accountId && accountGeneration.current===generation) setSubmitting(false);
     }
@@ -190,17 +209,15 @@ export default function PageDigitalMarketOnboard() {
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ duration: 0.3 }}
-      className="page-canvas min-h-screen text-slate-900 flex flex-col justify-center gap-8 p-4 sm:p-8"
+      data-pv-onboarding className="page-canvas min-h-screen text-slate-900 flex flex-col justify-center gap-8 p-4 sm:p-8"
     >
       {/* Top Bar */}
       <div className="max-w-4xl mx-auto w-full flex items-center justify-between pb-6 border-b border-blue-100">
         <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-2xl bg-blue-900 text-white flex items-center justify-center shadow-md">
-            <PineLogo className="w-6 h-6" hideText={true} />
-          </div>
+          <PineLogo size={36} hideText />
           <div>
-            <h1 className="text-base sm:text-lg font-black tracking-tight text-slate-900">PineVela Digital Market</h1>
-            <p className="text-xs text-slate-500 font-semibold">Mandatory First-Time Store Activation & Onboarding</p>
+            <h1 className="text-base sm:text-lg font-black tracking-tight text-slate-900"><PineWordmark /></h1>
+            <p className="text-xs text-slate-500 font-semibold">Digital Market · Store Activation & Onboarding</p>
           </div>
         </div>
 
@@ -220,13 +237,7 @@ export default function PageDigitalMarketOnboard() {
         <OnboardingProgress steps={STORE_SETUP_STEPS} step={phase} label="Store activation" />
         {(loading || loadedAccount !== user?.id) && <p className="text-sm text-slate-600" role="status">Loading your store registration…</p>}
 
-        {errorMessage && (
-          <div className="p-4 bg-rose-50 border border-rose-200 rounded-2xl text-xs font-semibold text-rose-800">
-            {errorMessage}
-          </div>
-        )}
-
-        <form onSubmit={handleCompleteSetup} className="space-y-6">
+        <form ref={formRef} noValidate onSubmit={handleCompleteSetup} className="space-y-6">
           <fieldset disabled={loading || loadedAccount !== user?.id || submitting || (!storeData)} className="space-y-6">
           {phase === 1 && (
             <div className="space-y-5 animate-fadeIn">
@@ -239,38 +250,41 @@ export default function PageDigitalMarketOnboard() {
 
               <div>
                 <label className="block text-xs font-black text-slate-800 uppercase tracking-wider mb-1.5">Store / Market Name *</label>
-                <input aria-label="Store / Market Name"
+                <input aria-invalid={!!fieldErrors.storeName} aria-describedby={fieldErrors.storeName?"store-storeName-error":undefined} aria-label="Store / Market Name"
                   type="text"
                   required
                   value={storeName}
-                  onChange={(e) => setStoreName(e.target.value)}
+                  onChange={(e) => {setStoreName(e.target.value);clearField('storeName');}}
                   placeholder="e.g. Ellie Gody's Campus Store"
                   className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-600"
                 />
+                {fieldMessage('storeName')}
               </div>
 
               <div>
                 <label className="block text-xs font-black text-slate-800 uppercase tracking-wider mb-1.5">Merchant Username / Handle *</label>
-                <input aria-label="Merchant Username / Handle"
+                <input aria-invalid={!!fieldErrors.username} aria-describedby={fieldErrors.username?"store-username-error":undefined} aria-label="Merchant Username / Handle"
                   type="text"
                   required
                   value={username}
-                  onChange={(e) => setUsername(e.target.value)}
+                  onChange={(e) => {setUsername(e.target.value);clearField('username');}}
                   placeholder="e.g. elliegodystore"
                   className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-600"
                 />
+                {fieldMessage('username')}
               </div>
 
               <div>
                 <label className="block text-xs font-black text-slate-800 uppercase tracking-wider mb-1.5">Store Description / About *</label>
-                <textarea aria-label="Store Description / About"
+                <textarea aria-invalid={!!fieldErrors.description} aria-describedby={fieldErrors.description?"store-description-error":undefined} aria-label="Store Description / About"
                   rows={3}
                   required
                   value={description}
-                  onChange={(e) => setDescription(e.target.value)}
+                  onChange={(e) => {setDescription(e.target.value);clearField('description');}}
                   placeholder="Official student digital market store..."
                   className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-600"
                 />
+                {fieldMessage('description')}
               </div>
 
               <StoreBrandingEditor customBranding={customBranding} logo={profilePicture} cover={coverPicture} onLogo={setProfilePicture} onCover={setCoverPicture} onBusy={onMediaBusy} />
@@ -279,12 +293,8 @@ export default function PageDigitalMarketOnboard() {
                   type="button"
                   disabled={mediaUploads > 0}
                   onClick={() => {
-                    if (!storeName.trim() || !username.trim()) {
-                      setErrorMessage("Please fill in store name and username.");
-                      return;
-                    }
-                    setErrorMessage(null);
-                    setPhase(2);
+                    if(!validatePhase(1))return;
+                    setErrorMessage(null);setPhase(2);
                   }}
                   className="px-8 py-3.5 bg-blue-600 hover:bg-blue-500 text-white font-black text-xs rounded-xl shadow-lg shadow-blue-600/30 flex items-center gap-2 cursor-pointer transition-all"
                 >
@@ -304,17 +314,7 @@ export default function PageDigitalMarketOnboard() {
                 </p>
               </div>
 
-              <div>
-                <label className="block text-xs font-black text-slate-800 uppercase tracking-wider mb-1.5">Campus Location / Residence *</label>
-                <input aria-label="Campus Location / Residence"
-                  type="text"
-                  required
-                  value={location}
-                  onChange={(e) => setLocation(e.target.value)}
-                  placeholder="e.g. KNUST Campus, Hall 6"
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-600"
-                />
-              </div>
+              <StoreLocationInput value={location} onChange={value=>{setLocation(value);clearField('location');}} error={fieldErrors.location} />
 
               <div>
                 <label className="block text-xs font-black text-slate-800 uppercase tracking-wider mb-1.5">Primary Category *</label>
@@ -337,7 +337,7 @@ export default function PageDigitalMarketOnboard() {
                 </select>
               </div>
 
-              <InternationalPhoneInput label="Store Primary Contact Number" value={phone} country={phoneCountry} onChange={(value, country) => { setPhone(value); setPhoneCountry(country); }} />
+              <InternationalPhoneInput label="Store Primary Contact Number" value={phone} country={phoneCountry} error={fieldErrors.phone} onChange={(value, country) => { setPhone(value); setPhoneCountry(country); clearField('phone'); }} />
               <div className="pt-4 flex items-center justify-between">
                 <button
                   type="button"
@@ -350,12 +350,8 @@ export default function PageDigitalMarketOnboard() {
                 <button
                   type="button"
                   onClick={() => {
-                    if (!location.trim()) {
-                      setErrorMessage("Please specify your campus location.");
-                      return;
-                    }
-                    setErrorMessage(null);
-                    setPhase(3);
+                    if(!validatePhase(2))return;
+                    setErrorMessage(null);setPhase(3);
                   }}
                   className="px-8 py-3.5 bg-blue-600 hover:bg-blue-500 text-white font-black text-xs rounded-xl shadow-lg shadow-blue-600/30 flex items-center gap-2 cursor-pointer transition-all"
                 >
@@ -424,6 +420,7 @@ export default function PageDigitalMarketOnboard() {
             </div>
           )}
           </fieldset>
+          {errorMessage&&<p role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs leading-relaxed text-rose-800 dark:border-rose-800 dark:bg-rose-950 dark:text-rose-100">{errorMessage}</p>}
         </form>
       </div>
     </motion.div>

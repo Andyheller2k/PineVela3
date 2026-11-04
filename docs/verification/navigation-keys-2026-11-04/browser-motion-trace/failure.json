@@ -1,0 +1,50 @@
+{
+  "scenario": "390px light curved mobile navigation unread manager selection motion",
+  "completed": 0,
+  "error": "At least one drawable frame captures the actual in-progress slide: {\"before\":{\"ms\":0.19999999925494194,\"indicator\":45.3984375,\"previousIcon\":756,\"targetIcon\":784,\"unread\":true},\"frames\":[{\"ms\":647.5,\"indicator\":45.3984375,\"previousIcon\":756,\"targetIcon\":784,\"unread\":false},{\"ms\":652,\"indicator\":195.0078125,\"previousIcon\":784,\"targetIcon\":756,\"unread\":false},{\"ms\":655.6999999992549,\"indicator\":195.0078125,\"previousIcon\":784,\"targetIcon\":756,\"unread\":false},{\"ms\":670.5999999996275,\"indicator\":195.0078125,\"previousIcon\":784,\"targetIcon\":756,\"unread\":false}],\"trace\":[{\"ms\":647.5999999996275,\"ts\":2696.2,\"before\":\"translate3d(16.3984px, 0px, 0px)\",\"after\":\"translate3d(166.008px, 0px, 0px)\",\"fn\":\"()=>{const ee=performance.now();v??(v=ee);const M=Math.min(1,(ee-v)/le),oe=M*M*(3-2*M);K(n+(g-n)*oe),M<1?p=requestAnimationFrame(Y):p=0}\"}],\"info\":{\"reduced\":false,\"duration\":\".25s\",\"transition\":\"0.25s, 0.2s\",\"width\":390,\"count\":5},\"after\":{\"ms\":682.3000000007451,\"indicator\":195.0078125,\"previousIcon\":784,\"targetIcon\":756,\"unread\":false},\"mainPaintingIsolated\":true,\"samplesAtAnimationFrames\":true}",
+  "exceptions": [],
+  "apiRequests": [
+    "/api/settings",
+    "/api/auth/me",
+    "/api/auth/appearance",
+    "/api/manager/secret-key",
+    "/api/auth/maintenance-notice",
+    "/api/admin-messages/pending",
+    "/api/auth/account-access",
+    "/api/notifications",
+    "/api/sync/events",
+    "/api/manager/my-hostel",
+    "/api/manager/welcome/ensure",
+    "/api/issue-reports",
+    "/api/room-keys",
+    "/api/staff",
+    "/api/staff/invitations",
+    "/api/staff-bargains",
+    "/api/board-requests",
+    "/api/activities",
+    "/api/settings",
+    "/api/auth/maintenance-notice",
+    "/api/notifications"
+  ],
+  "debug": {
+    "url": "http://127.0.0.1:44711/?visual_nav_urgency=primary&scene=1793802346173-0.8335344086521081&visual_role=manager&visual_theme=light#/manager/dashboard",
+    "title": "PineVela",
+    "text": "Pine\nVela\nManager Dashboard\nHelp\nSign Out\nOverview\nProperties\nFixes\nAlerts\nMore\n0%",
+    "root": true,
+    "scripts": [
+      "http://127.0.0.1:44711/analytics.js",
+      "http://127.0.0.1:44711/assets/index-B1w084LA.js"
+    ],
+    "dataset": {
+      "appearance": "product",
+      "publicTheme": "none",
+      "authPage": "false",
+      "mobileAuth": "false",
+      "themePreference": "light",
+      "theme": "light",
+      "appMode": "browser",
+      "mobileViewport": "locked",
+      "mobileNavigation": "true"
+    }
+  }
+}

@@ -1,3 +1,4 @@
+import {termsAcceptance} from '../legalPolicy.js';
 /** Real isolated GoTrue, SMTP capture, application routes and PostgreSQL.
  * Only this run's own delivery timestamps are aged to exercise hours-long
  * cooldowns without waiting. No provider responses, credentials or JWTs are
@@ -101,7 +102,7 @@ async function verify(h: LocalSupabaseHarness) {
 
   try {
     stage = 'real pending signup and initial five-minute limit'; latestMailAt = Date.now();
-    const signup = await guest.request('/api/auth/register-unified', { name: 'Local Auth Protection', email, password });
+    const signup = await guest.request('/api/auth/register-unified', { termsAcceptance: termsAcceptance(true), name: 'Local Auth Protection', email, password });
     check(signup.status === 202 && signup.data?.verificationRequired === true, 'Actual native signup requires email confirmation');
     authId = signup.data.signupId;
     check(typeof authId === 'string' && /^[0-9a-f-]{36}$/.test(authId), 'Actual native signup subject exists');
@@ -153,7 +154,7 @@ async function verify(h: LocalSupabaseHarness) {
 
     stage = 'real latest-email confirmation and password login';
     const proof = await h.mail.confirmation(email, latestMailAt);
-    const verified = await guest.request('/api/auth/verify-unified', { email, signupId: authId, code: h.providerOrigin + proof });
+    const verified = await guest.request('/api/auth/verify-unified', { termsAcceptance: termsAcceptance(true), email, signupId: authId, code: h.providerOrigin + proof });
     check(verified.status === 200 && verified.data?.verified === true && verified.data?.user?.role === 'user',
       'Latest genuine captured email still activates the original primary');
     const contextId = verified.data.user.id;

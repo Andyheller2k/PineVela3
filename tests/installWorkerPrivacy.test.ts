@@ -34,16 +34,20 @@ test('actual worker never intercepts APIs, media or subresources and never persi
     ['https://pinevela.app/api/auth/session','navigate'],['https://pinevela.app/api/media/private','navigate'],
     ['https://pinevela.app/api/notifications','cors'],['https://pinevela.app/assets/app.js','cors'],
     ['https://pinevela.app/?query=public','cors'],['https://elsewhere.invalid/','navigate'],
+    ['https://pinevela.app/','navigate'],['https://pinevela.app/index.html','navigate'],
+    ['https://pinevela.app/manifest.webmanifest','navigate'],
   ]){
-    let intercepted=false;handlers.get('fetch')!({request:{url,mode},respondWith:()=>{intercepted=true;}});assert.equal(intercepted,false,url);
+    let intercepted=false;handlers.get('fetch')!({request:{url,mode,method:'GET'},respondWith:()=>{intercepted=true;}});assert.equal(intercepted,false,url);
   }
   assert.equal(fetchCount,0);
   let delivered:Promise<Response>|undefined;
-  const navigation={request:{url:'https://pinevela.app/',mode:'navigate'},respondWith:(response:Promise<Response>)=>delivered=response};
-  handlers.get('fetch')!(navigation);assert.equal((await delivered!).status,200);assert.equal(fetchCount,1);
-  online=false;delivered=undefined;handlers.get('fetch')!(navigation);
-  const offline=await delivered!;assert.equal(offline.status,503);assert.equal(offline.headers.get('Cache-Control'),'no-store');
-  assert.match(offline.headers.get('Content-Security-Policy')||'',/default-src 'none'/);
-  const html=await offline.text();assert.match(html,/You’re offline/);assert.doesNotMatch(html,/PineVela application document/);
+  const manifest={request:{url:'https://pinevela.app/manifest.webmanifest',mode:'cors',method:'GET'},respondWith:(response:Promise<Response>)=>delivered=response};
+  handlers.get('fetch')!(manifest);assert.equal((await delivered!).status,200);assert.equal(fetchCount,1);
+  online=false;delivered=undefined;handlers.get('fetch')!(manifest);
+  await assert.rejects(delivered!, /offline/, 'The public manifest is never replaced by cached content or offline HTML');
   assert.equal(fetchCount,2);
+  for(const url of ['https://pinevela.app/','https://pinevela.app/index.html']){
+    delivered=undefined;handlers.get('fetch')!({request:{url,mode:'navigate',method:'GET'},respondWith:(response:Promise<Response>)=>delivered=response});
+    assert.equal(delivered,undefined,'Offline documents use the browser network stack and default error screen');
+  }
 });

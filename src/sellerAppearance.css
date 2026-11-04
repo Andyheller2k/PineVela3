@@ -1,0 +1,39 @@
+/* Include portal dialogs and mobile overflow navigation in the seller theme. */
+html[data-theme="light"] :is([data-product-screen="market"], [data-market-dialog], [data-pv-onboarding]) {
+  --pv-action-gradient: linear-gradient(115deg, #003566, #001d3d);
+  --pv-action-hover-gradient: linear-gradient(115deg, #00274e, #000814);
+  --pv-on-action: #ffffff;
+  --pv-selection: #003566;
+  --pv-selection-soft: #eaf0f7;
+}
+html[data-theme="dark"] :is([data-product-screen="market"], [data-market-dialog], [data-pv-onboarding]) {
+  --pv-action-gradient: linear-gradient(115deg, #ffc300, #ffd60a);
+  --pv-action-hover-gradient: linear-gradient(115deg, #ffd60a, #ffe272);
+  --pv-on-action: #001d3d;
+  --pv-selection: #ffd60a;
+  --pv-selection-soft: #243e53;
+}
+html[data-theme][data-appearance] :is([data-product-screen="market"], [data-market-dialog], [data-pv-onboarding]) :is(button[aria-pressed="true"]:not([data-plan-card], [data-password-toggle], .theme-preference-choice), [data-market-primary]) {
+  background: var(--pv-action-gradient);
+  color: var(--pv-on-action);
+  border-color: var(--pv-selection);
+}
+html[data-theme][data-appearance] :is([data-product-screen="market"], [data-market-dialog], [data-pv-onboarding]) :is(button[aria-pressed="true"]:not([data-plan-card], [data-password-toggle], .theme-preference-choice), [data-market-primary]) :is(svg, span) { color: inherit; }
+html[data-theme][data-appearance] :is([data-product-screen="market"], [data-market-dialog], [data-pv-onboarding]) label:has(> input[type="radio"]:checked) {
+  background: var(--pv-action-gradient);
+  color: var(--pv-on-action);
+  border-color: var(--pv-selection);
+  box-shadow: inset 0 0 0 1px var(--pv-selection);
+}
+html[data-theme][data-appearance] :is([data-product-screen="market"], [data-market-dialog], [data-pv-onboarding]) label:has(> input[type="radio"]:checked) span { color: inherit; }
+html[data-theme][data-appearance] :is([data-product-screen="market"], [data-market-dialog], [data-pv-onboarding]) :is(input[type="radio"], input[type="checkbox"], input[type="range"]) { accent-color: var(--pv-selection); }
+html[data-theme][data-appearance] :is([data-product-screen="market"], [data-market-dialog]) :is(select, option:checked) { accent-color: var(--pv-selection); }
+html[data-theme][data-appearance] :is([data-product-screen="market"], [data-market-dialog]) option:checked { background-color: var(--pv-selection); color: var(--pv-on-action); }
+html[data-theme="dark"] [data-form-feedback] > [role="alert"] { background: #3a1928; color: #ffd9df; border-color: #a45d70; }
+html [data-product-screen="market"] [hidden] { display: none !important; }
+html[data-theme][data-appearance] [data-store-location] [role="option"][aria-selected="true"] > button { background: var(--pv-action-gradient); color: var(--pv-on-action); }
+@media (forced-colors: active) {
+  html[data-theme][data-appearance] :is([data-product-screen="market"], [data-market-dialog], [data-pv-onboarding]) :is(button[aria-pressed="true"]:not([data-plan-card], [data-password-toggle], .theme-preference-choice), [data-market-primary], label:has(> input[type="radio"]:checked)) { background: Highlight; color: HighlightText; border-color: Highlight; }
+}
+
+html[data-theme][data-appearance] [data-product-screen="market"] [data-plan-card][aria-pressed="true"] { border-color: var(--pv-selection); outline: 2px solid var(--pv-selection); outline-offset: 2px; }

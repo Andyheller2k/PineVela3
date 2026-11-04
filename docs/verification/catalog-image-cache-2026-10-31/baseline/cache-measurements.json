@@ -1,0 +1,49 @@
+{
+  "baseline": true,
+  "measurements": [
+    {
+      "width": 390,
+      "theme": "light",
+      "marketSame": false,
+      "residenceSame": false,
+      "homeSame": false,
+      "initialMarketRequests": 3,
+      "initialBothRequests": 6,
+      "navigationRequests": [],
+      "navigationDownloadedBytes": 0
+    },
+    {
+      "width": 390,
+      "theme": "dark",
+      "marketSame": false,
+      "residenceSame": false,
+      "homeSame": false,
+      "initialMarketRequests": 3,
+      "initialBothRequests": 6,
+      "navigationRequests": [],
+      "navigationDownloadedBytes": 0
+    },
+    {
+      "width": 1440,
+      "theme": "light",
+      "marketSame": false,
+      "residenceSame": false,
+      "homeSame": false,
+      "initialMarketRequests": 3,
+      "initialBothRequests": 6,
+      "navigationRequests": [],
+      "navigationDownloadedBytes": 0
+    },
+    {
+      "width": 1440,
+      "theme": "dark",
+      "marketSame": false,
+      "residenceSame": false,
+      "homeSame": false,
+      "initialMarketRequests": 3,
+      "initialBothRequests": 6,
+      "navigationRequests": [],
+      "navigationDownloadedBytes": 0
+    }
+  ]
+}

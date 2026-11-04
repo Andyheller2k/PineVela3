@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="en">
   <head>
+    <script defer src="/analytics.js"></script>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content" />
     <meta name="theme-color" content="#001d3d" />
@@ -52,10 +53,8 @@
       html[data-app-mode="installed"] #pv-browser-chrome { display: block; position: fixed; top: 0; left: 0; right: 0; height: var(--pv-browser-chrome-height); z-index: 0; background-color: var(--pv-chrome-color, #001d3d); pointer-events: none; }
       #pv-app-launch { display: none; }
       html[data-app-mode="installed"] #pv-app-launch { position: fixed; inset: 0; z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; box-sizing: border-box; padding: max(24px, env(safe-area-inset-top)) 24px max(24px, env(safe-area-inset-bottom)); background: var(--pv-chrome-color, #001d3d); color: #ffd60a; font-family: system-ui, sans-serif; }
-      .pv-app-launch-icon { width: 60px; height: 60px; border-radius: 16px; }
+      .pv-app-launch-icon { width: 60px; height: 60px; background: transparent; }
       .pv-app-launch-name { display: flex; font-size: 18px; font-weight: 800; letter-spacing: -.04em; line-height: 1.2; }
-      .pv-app-launch-name span { padding: 5px 8px; background: #001d3d; color: #ffd60a; border-radius: 0 8px 8px 0; }
-      .pv-app-launch-name span:first-child { background: #ffd60a; color: #001d3d; border-radius: 8px 0 0 8px; }
       .pv-app-launch-track { width: 64px; height: 3px; overflow: hidden; border-radius: 99px; background: #826f3540; }
       .pv-app-launch-track::after { content: ''; display: block; width: 50%; height: 100%; background: #d6a700; border-radius: inherit; animation: pv-app-opening 1.15s ease-in-out infinite alternate; }
       .pv-app-launch-recovery { max-width: 280px; color: #b4c6d9; text-align: center; font-size: 14px; line-height: 1.5; }
@@ -78,8 +77,8 @@
   <body style="background-color: var(--pv-chrome-color, #001d3d)">
     <div id="pv-browser-chrome" aria-hidden="true"></div>
     <div id="pv-app-launch" class="pv-app-launch" role="status" aria-label="Opening PineVela">
-      <img class="pv-app-launch-icon" src="/icons/pinevela-192.png" alt="PineVela" width="60" height="60" />
-      <div class="pv-app-launch-name" aria-hidden="true"><span>Pine</span><span>Vela</span></div>
+      <img class="pv-app-launch-icon" src="/store-covers/pinevela-logo.svg" alt="" width="60" height="60" />
+      <div class="pv-app-launch-name pinevela-wordmark" aria-hidden="true"><span class="pine-label">Pine</span><span class="vela-label">Vela</span></div>
       <span class="pv-app-launch-track" aria-hidden="true"></span>
       <div class="pv-app-launch-recovery" hidden><p>Taking longer than usual. Check your connection.</p><button type="button" onclick="location.reload()">Reload app</button></div>
     </div>

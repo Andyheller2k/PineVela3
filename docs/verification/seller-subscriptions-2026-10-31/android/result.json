@@ -1,0 +1,77 @@
+{
+  "date": "2026-10-31T15:54:03.352285+00:00",
+  "scope": "Real installed Android APK startup and persistence, plus separate isolated actual-component SSR/bundled-CSS subscription probes",
+  "passed": true,
+  "installedApkSha256": "ee7ea453416fbe7c4fc9abb2a31a5d54079e4168fd8ee188c478edc1ac091dbb",
+  "actualAndroidWebView": true,
+  "localStartupPassed": true,
+  "styleProbesPassed": true,
+  "styleProbeCases": 6,
+  "styleChecksPerCase": 12,
+  "styleProbeMarkup": "SSR of actual SellerSubscriptionPlans component, inert and not hydrated; no authenticated seller context",
+  "syntheticProbePrices": {
+    "default": 7.25,
+    "star": 127.35,
+    "pro": 211.5
+  },
+  "normalReopenPreservedApk": true,
+  "normalQuickBootSuccessfullyLoaded": true,
+  "originalAppearanceRestored": true,
+  "accountFormsSubmitted": false,
+  "paymentActionsSubmitted": false,
+  "authenticatedSellerFlowTested": false,
+  "authenticatedCheckoutTested": false,
+  "privateAccountFieldsInspected": false,
+  "appDataCleared": false,
+  "appUninstalled": false,
+  "snapshotsDeleted": false,
+  "avdsDeleted": false,
+  "globalEmulatorSettingsChanged": false,
+  "emulatorShutdown": true,
+  "taskEmulatorPids": [
+    60241,
+    61410
+  ],
+  "physicalPhoneTested": false,
+  "iosBuildTested": false,
+  "sourceHashes": [
+    {
+      "file": "src/components/SellerSubscriptionPlans.tsx",
+      "sha256": "1a02e4614268b3ce8771726943b082a4ef4e8fac97782a42686668db20451ff1"
+    },
+    {
+      "file": "src/sellerSubscriptions.css",
+      "sha256": "6a93236c714f3cab847ce60892aaa48387d63e26b0544a4f01c801c137691aeb"
+    },
+    {
+      "file": "src/lib/sellerPlanComparison.ts",
+      "sha256": "91ffa048855b4cd843226b921cdffef47915f124af0e6869a1e88cbe0bc2aaf4"
+    },
+    {
+      "file": "marketPlans.ts",
+      "sha256": "c2fb254dc9c8a0548b0fa9516a0554dcf1b1e6aff4d3f0aaff349c3876c31fec"
+    }
+  ],
+  "bundledCssVerified": [
+    {
+      "href": "/assets/PageDigitalMarket-CSEeWEtB.css",
+      "sha256": "9166f39035ee370b1f6f581fd43253131d285a8103148c3adb81117ba48c542b",
+      "matchesFinalBuild": true
+    }
+  ],
+  "evidence": {
+    "startup": "startup.json",
+    "styleProbes": "style-probes.json",
+    "cleanup": "probe-cleanup.json",
+    "normalReopenHash": "normal-reopen-installed-check.json",
+    "normalReopenUi": "normal-reopen-ui-state.json",
+    "normalShutdown": "final-shutdown.json",
+    "screenshot": "real-local-welcome.png"
+  },
+  "limitations": [
+    "Subscription styling/layout probes use actual-component SSR with explicit synthetic prices, not an authenticated seller workflow or live administrator prices.",
+    "No real checkout, account form, payment, physical phone or iOS flow was exercised.",
+    "Initial Quick Boot snapshot failed to load and Android cold booted; normal save and subsequent successful plain-command Quick Boot reopen were verified.",
+    "The prior native login/signup hierarchy suite was not repeated for this scoped task."
+  ]
+}

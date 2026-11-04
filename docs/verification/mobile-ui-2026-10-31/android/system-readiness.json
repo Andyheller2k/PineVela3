@@ -1,0 +1,12 @@
+{
+  "at": "2026-10-31T10:09:48Z",
+  "focus": [
+    "mInputRestricted=false",
+    "mCurrentFocus=Window{3058db6 u0 Application Not Responding: com.android.systemui}",
+    "mFocusedApp=ActivityRecord{93724085 u0 com.google.android.apps.nexuslauncher/.NexusLauncherActivity t2}",
+    "mShowingDream=false mDreamingLockscreen=false",
+    "mFocusedWindow=Window{3058db6 u0 Application Not Responding: com.android.systemui}"
+  ],
+  "hierarchyAvailable": true,
+  "appLaunched": false
+}

@@ -1,0 +1,7 @@
+{
+  "systemUiStartupAnrObserved": true,
+  "action": "Tapped the visible Wait option",
+  "dataCleared": false,
+  "appRestarted": false,
+  "evidence": "system-ui-anr-before-wait.png"
+}

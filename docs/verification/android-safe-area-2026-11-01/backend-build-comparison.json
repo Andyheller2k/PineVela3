@@ -1,0 +1,25 @@
+{
+  "previousRelease": "pinevela-catalog-image-cache-20261031.zip",
+  "bundles": [
+    {
+      "name": "supabase-server.mjs",
+      "changed": true,
+      "beforeSha256": "d0be22c0141c0e5c19b51b672fe920bf97d30c214037222a8debcea1a4934157",
+      "currentSha256": "3e2eeca9119e607b0cf0502a47a3ea4356f89e6343fcd3dc1d1b3f58422f8070"
+    },
+    {
+      "name": "residence-worker.mjs",
+      "changed": false,
+      "beforeSha256": "c8d1b04343ddfde13ac156f7eaba4ee0a21d48b89a28ff25736dc9ba5b0cba25",
+      "currentSha256": "c8d1b04343ddfde13ac156f7eaba4ee0a21d48b89a28ff25736dc9ba5b0cba25"
+    },
+    {
+      "name": "system-wipe-worker.mjs",
+      "changed": false,
+      "beforeSha256": "559aeb0cff5ea7e5715df2051203791eefda8f1c1b0e3e177a8435a755e40945",
+      "currentSha256": "559aeb0cff5ea7e5715df2051203791eefda8f1c1b0e3e177a8435a755e40945"
+    }
+  ],
+  "dependencyChangesForThisUpdate": false,
+  "schemaChangesForThisUpdate": false
+}

@@ -1,4 +1,3 @@
-import crypto from 'node:crypto';
 import type { Express,Request,RequestHandler } from 'express';
 import type { PoolClient } from 'pg';
 import { ApiError,uuid,type VerifiedActor } from './db.js';
@@ -7,13 +6,25 @@ import { hashCredentialAsync,verifyCredentialAsync } from '../accountSecurity.js
 import { notify } from './notifications.js';
 import { checkAdministratorSettingsKey, deniedKey, requireSettingsGrant, settingsEvent, type SettingsGrant } from './adminSettings.js';
 import { notifyPrimaryOwner } from './notifications.js';
+import { managerAuthorizationCode } from './activationCodes.js';
 const route = (work:(req:AuthRequest,res:any)=>Promise<unknown>):RequestHandler => (req,res,next) => { work(req as AuthRequest,res).catch(next); };
 export const managerKeyError = () => new ApiError(403,'Enter your current manager secret key to authorize this action.','manager_key_required');
 export function managerKeyNeeded(req:Pick<Request,'method'|'path'>) {
   const path = req.path.replace(/\/+$/,'');
   return !['GET','HEAD','OPTIONS'].includes(req.method) &&
     !['/api/manager/secret-key/issue','/api/manager/secret-key/petition','/api/auth/context','/api/auth/logout',
-      '/api/auth/appearance','/api/auth/maintenance-notice/dismiss'].includes(path) && !/^\/api\/admin-messages\/[^/]+\/ack$/.test(path)
+      '/api/auth/appearance','/api/auth/maintenance-notice/dismiss',
+      // This endpoint can record only the live account's own current agreement.
+      // It must be available before the manager dashboard/key prompt mounts.
+      '/api/legal/accept',
+      // Avatar media and the manager-only avatar save stay bound to the live
+      // Auth identity. The general profile route still protects contact edits.
+      '/api/storage/upload-profile-image','/api/auth/profile/avatar',
+      // Inbox read receipts are scoped to the authenticated recipient. Visible
+      // alerts mark themselves read, so challenging them queues key dialogs.
+      '/api/notifications/read-all'].includes(path) && !/^\/api\/admin-messages\/[^/]+\/ack$/.test(path)
+    && !/^\/api\/notifications\/[^/]+\/read$/.test(path)
+    && !['/api/manager/welcome/ensure','/api/manager/welcome/ack'].includes(path)
     && !/^\/api\/support\/tickets(?:\/[^/]+(?:\/replies)?)?$/.test(path)
     && path !== '/api/reports';
 }
@@ -34,10 +45,30 @@ export async function issueManagerKey(client:PoolClient,actor:VerifiedActor) {
   await client.query('insert into private.manager_operation_keys(manager_context_id) values ($1) on conflict do nothing',[actor.contextId]);
   const current = (await client.query('select key_hash from private.manager_operation_keys where manager_context_id = $1 for update',[actor.contextId])).rows[0];
   if (current.key_hash) throw new ApiError(409,'Your key has already been shown. Petition the admin board if it was lost.');
-  const key = crypto.randomBytes(32).toString('base64url');
+  const key = managerAuthorizationCode();
   await client.query('update private.manager_operation_keys set key_hash = $2,issued_at = now() where manager_context_id = $1',[actor.contextId,await hashCredentialAsync(key)]);
   await client.query(`insert into private.audit_events(actor_context_id,event_type,resource_type,resource_id)
     values ($1,'manager_secret_key_issued','account_context',$1)`,[actor.contextId]);
+  return {key};
+}
+/** Self-service rotation requires a live proof of this manager's existing key.
+ * The native hash/version trigger invalidates stale proofs atomically. */
+export async function rotateManagerKey(client:PoolClient,actor:VerifiedActor) {
+  if (actor.kind !== 'manager' || actor.managerKeyVersion === undefined) throw managerKeyError();
+  // A concurrent request may already hold the shared version proof. Refuse a
+  // second rotation rather than deadlocking while both upgrade that row lock.
+  if (!(await client.query("select pg_try_advisory_xact_lock(hashtextextended('pinevela-manager-code-rotation:' || $1::text,0)) as allowed",[actor.contextId])).rows[0].allowed)
+    throw new ApiError(409,'A manager code change is already in progress. Please retry.');
+  await requireManagerKeyGrant(client,actor);
+  const current=(await client.query('select key_hash from private.manager_operation_keys where manager_context_id=$1 for update',[actor.contextId])).rows[0];
+  if (!current?.key_hash) throw managerKeyError();
+  let key: string;
+  do { key=managerAuthorizationCode(); } while (await verifyCredentialAsync(key,current.key_hash));
+  await client.query('update private.manager_operation_keys set key_hash=$2,issued_at=clock_timestamp() where manager_context_id=$1',[actor.contextId,await hashCredentialAsync(key)]);
+  await client.query(`insert into private.audit_events(actor_context_id,event_type,resource_type,resource_id)
+    values($1,'manager_secret_key_rotated','account_context',$1)`,[actor.contextId]);
+  await notify(client,[actor.contextId],{category:'verification',title:'Manager authorization code changed',
+    message:'Your previous manager key no longer works. Keep your new six-digit authorization code private.',sender:actor.contextId,link:'settings'});
   return {key};
 }
 /** A denial returns rather than throws so failed guesses commit before the HTTP
@@ -102,6 +133,10 @@ export function installManagerKeys(app:Express,auth:SupabaseAuth) {
   }));
   app.get('/api/manager/secret-key',auth.require(['manager']),route(async (req,res) => res.json(await auth.db.authorizedSystem(req.actor,['manager'],c => managerKeyStatus(c,req.actor)))));
   app.post('/api/manager/secret-key/issue',auth.require(['manager']),route(async (req,res) => res.json(await auth.db.authorizedSystem(req.actor,['manager'],c => issueManagerKey(c,req.actor)))));
+  app.post('/api/manager/secret-key/rotate',auth.require(['manager']),route(async (req,res) => {
+    if(req.body && (Array.isArray(req.body) || Object.keys(req.body).length)) throw new ApiError(400,'No manager identity or code may be supplied in the request body.');
+    return res.json(await auth.db.authorizedSystem(req.actor,['manager'],c => rotateManagerKey(c,req.actor)));
+  }));
   app.post('/api/manager/secret-key/petition',auth.require(['manager']),route(async (req,res) => {
     try { return res.status(201).json(await auth.db.authorizedSystem(req.actor,['manager'],c => petitionManagerKey(c,req.actor,req.body?.reason))); }
     catch (error) { if ((error as any)?.code === '23505') throw new ApiError(409,'A key-reset petition is already pending.'); throw error; }

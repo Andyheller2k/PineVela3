@@ -1,5 +1,46 @@
 # PineVela Authentication and Authorization
 
+## Resuming an unfinished primary signup — 30 October 2026
+
+A repeated signup for an unconfirmed email does not replace its original name or
+password. Eligible pending primary identities now use confirmation resend with
+an explicit `resumed` response. Web/native OTP pages explain retained credentials
+and clear unused replacement passwords. Pending child identities cannot become
+primary accounts; confirmed duplicates remain 409. Only provider email proof
+establishes a session. Forgotten credentials use email recovery. Signup never
+rewrites Auth passwords or roles through SQL. See the
+[seller/signup update](seller-market-update-2026-10-30.md).
+
+## Published Terms acceptance — 28 October 2026
+
+The app enforces explicit acceptance of approved Platform Terms version
+`2026-10-27`. Email signup/verification and Google signup reject missing or stale
+acceptance. The Google choice is retained with the one-time server OAuth state;
+receipts are written only after verified session/context binding. Existing users
+and Google Login users without a receipt encounter the authenticated agreement
+screen. No existing user is automatically marked accepted.
+
+`SupabaseAuth.authenticate()` reads the current document receipt with its native
+session query. `require()` checks that server result before protected product
+operations; role, ownership, session, feature and RLS checks still apply. Identity,
+appearance, maintenance status, support, supported self-closure and sign-out paths
+remain available without accepting. Private media reads also check agreement.
+
+`GET /api/legal/status` and `POST /api/legal/accept` use live authorized
+transactions. Acceptance input contains only `{accepted:true,version}` inside
+`termsAcceptance`; identities, hashes, dates, source and resource keys are chosen
+by the server. The database supplies acceptance time. A merchant application
+requires its own explicit confirmation and an atomic receipt keyed to the
+server-selected application ID/submission version, alongside the existing
+verified-enrollment and student declaration checks.
+
+Migration `20261028120000` adds private document/receipt tables with RLS and no
+browser or scoped-backend-role grants. The server registry stores the published
+article and SHA-256; `/legal/terms-2026-10-27.html` preserves an accessible copy.
+Change `legalPolicy.ts` only with approved versioned contractual wording. Draft
+merchant and other agreements are not automatically included. See
+[acceptance requirements](documentation-drafts-2026-10-28/internal/13-terms-acceptance-requirements.md).
+
 ## Runtime checkpoint — 16 October 2026
 
 Supabase PostgreSQL/Storage and Supabase Auth are the sole runtime persistence and
@@ -354,6 +395,21 @@ The legacy JSON/custom-session implementation is retired.
 
 ## Authentication Provider
 
+Primary email signup uses the same password validator in the browser and server:
+8–256 characters, with ASCII uppercase and lowercase letters, a number, and a
+symbol from the hosted Supabase policy. The form displays these requirements
+and rejects incomplete passwords before starting CAPTCHA. This signup policy
+does not reject existing passwords during sign-in. Supabase remains authoritative,
+including additional password checks configured on the provider.
+
+Known provider password, email and delivery errors receive fixed safe explanations.
+Unknown responses never expose raw provider messages. Signup/settings/resend/recovery
+failures emit bounded server diagnostics containing only the fixed operation,
+HTTP status, allowlisted category and an optional UUID request ID. These logs contain
+no email addresses, passwords, CAPTCHA proofs, verification codes or credentials.
+Auth confirmation mail uses Supabase's separately configured SMTP; the application's
+`RESEND_API_KEY` is for support replies and does not configure Auth SMTP.
+
 Primary email signup rejects already-confirmed Auth mailboxes with HTTP 409
 `email_already_registered`, including Google identities and closed accounts.
 The check uses the normalized email inside the signup delivery lock, before any
@@ -408,6 +464,18 @@ Allow `http://localhost:3001/api/auth/google/callback**` in Supabase Redirect UR
 (and the equivalent `127.0.0.1` URL if using that address). A deployed site still
 requires its configured HTTPS origin and matching Supabase redirect allowlist.
 See [Supabase Google setup](https://supabase.com/docs/guides/auth/social-login/auth-google).
+
+Current Android builds use Credential Manager's Google account chooser. The
+native client sends its ID token directly to PineVela's server with a one-use
+server nonce and S256 verifier; it is never passed to the WebView. The server
+has Supabase verify the ID token and Google identity, then checks the live app
+actor and current Terms for signup before issuing the existing private cookies.
+The chooser's public server client ID is the existing Google Web OAuth client
+from the same project as the Android OAuth client. Register each Android package
+and signing SHA-1, including a separate Play signing SHA-1 for store releases.
+See [Android authentication handoff](android-auth-handoff.md) for the native and
+legacy contracts. This native flow does not change website Google login or old
+APK handoffs.
 
 Both ordinary Google sign-in and signup always request `prompt=select_account`
 without a `login_hint`, so Google's existing browser session does not silently

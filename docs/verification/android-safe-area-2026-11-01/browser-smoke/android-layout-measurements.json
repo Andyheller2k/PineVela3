@@ -1,0 +1,50 @@
+{
+  "actualNativeBundle": true,
+  "syntheticBridgeAndApi": true,
+  "measurements": [
+    {
+      "label": "Welcome",
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "w": 390,
+      "h": 780,
+      "overflow": false,
+      "fixed": []
+    },
+    {
+      "label": "Login",
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "w": 390,
+      "h": 780,
+      "overflow": false,
+      "fixed": [
+        {
+          "tag": "HEADER",
+          "x": 0,
+          "y": 0,
+          "right": 390,
+          "bottom": 79,
+          "w": 390,
+          "h": 79
+        }
+      ]
+    },
+    {
+      "label": "Signup",
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "w": 390,
+      "h": 780,
+      "overflow": false,
+      "fixed": [
+        {
+          "tag": "HEADER",
+          "x": 0,
+          "y": 0,
+          "right": 390,
+          "bottom": 79,
+          "w": 390,
+          "h": 79
+        }
+      ]
+    }
+  ]
+}

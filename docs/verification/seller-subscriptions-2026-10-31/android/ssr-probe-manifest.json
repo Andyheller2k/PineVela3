@@ -1,0 +1,47 @@
+{
+  "isolatedServerRenderedComponentMarkup": true,
+  "actualComponent": "src/components/SellerSubscriptionPlans.tsx",
+  "syntheticPrices": {
+    "default": 7.25,
+    "star": 127.35,
+    "pro": 211.5
+  },
+  "authenticatedStateFabricated": false,
+  "accountActionsSubmitted": false,
+  "renderingOnlyNoReactHydration": true,
+  "sourceHashes": [
+    {
+      "file": "src/components/SellerSubscriptionPlans.tsx",
+      "sha256": "1a02e4614268b3ce8771726943b082a4ef4e8fac97782a42686668db20451ff1"
+    },
+    {
+      "file": "src/sellerSubscriptions.css",
+      "sha256": "6a93236c714f3cab847ce60892aaa48387d63e26b0544a4f01c801c137691aeb"
+    },
+    {
+      "file": "src/lib/sellerPlanComparison.ts",
+      "sha256": "91ffa048855b4cd843226b921cdffef47915f124af0e6869a1e88cbe0bc2aaf4"
+    },
+    {
+      "file": "marketPlans.ts",
+      "sha256": "c2fb254dc9c8a0548b0fa9516a0554dcf1b1e6aff4d3f0aaff349c3876c31fec"
+    }
+  ],
+  "plans": [
+    {
+      "currentPlan": "default",
+      "file": "plan-default.html",
+      "markupSha256": "eda660325df02e6c528f8151323e6a3af13bfac9ad615ac8c7bd1d781f440dbf"
+    },
+    {
+      "currentPlan": "star",
+      "file": "plan-star.html",
+      "markupSha256": "5b80c6f0d1b19acdd923ac555b49997e5d74c39798e427625d1a2e2c43235e5f"
+    },
+    {
+      "currentPlan": "pro",
+      "file": "plan-pro.html",
+      "markupSha256": "c89b8d79cba10b68024c7f787f571bb37b339a2351b5a2d76bebbed377c9be01"
+    }
+  ]
+}

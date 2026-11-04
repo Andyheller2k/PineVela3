@@ -1,0 +1,12 @@
+{
+  "systemApp": "com.android.systemui",
+  "beforePineVelaLaunch": true,
+  "hierarchyWaitBounds": "[71,1276][1009,1408]",
+  "physicalWaitTap": [
+    540,
+    1342
+  ],
+  "tapReturnCode": 0,
+  "appSourceChanged": false,
+  "appDataCleared": false
+}

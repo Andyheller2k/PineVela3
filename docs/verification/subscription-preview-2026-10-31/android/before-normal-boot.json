@@ -1,0 +1,48 @@
+{
+  "correctAvd": "PineVela_Pixel_4a_API_36",
+  "correctAvdConfigExists": true,
+  "stalePixel4aIniExists": true,
+  "stalePixel4aConfigExists": false,
+  "lastRecordedStartupArgs": [
+    "/home/wyse",
+    "/home/wyse/Android/Sdk/emulator/emulator",
+    "3",
+    "/home/wyse/Android/Sdk/emulator/emulator",
+    "-avd",
+    "PineVela_Pixel_4a_API_36"
+  ],
+  "snapshotMetadataBeforeBoot": [
+    {
+      "file": "compatible.pb",
+      "bytes": 0,
+      "modifiedUtc": "2026-10-31T11:13:29.541296+00:00"
+    },
+    {
+      "file": "hardware.ini",
+      "bytes": 4235,
+      "modifiedUtc": "2026-10-31T11:13:29.389292+00:00"
+    },
+    {
+      "file": "ram.bin",
+      "bytes": 1323925766,
+      "modifiedUtc": "2026-10-31T11:15:48.791226+00:00"
+    },
+    {
+      "file": "screenshot.png",
+      "bytes": 1940131,
+      "modifiedUtc": "2026-10-31T11:13:29.540296+00:00"
+    },
+    {
+      "file": "snapshot.pb",
+      "bytes": 936,
+      "modifiedUtc": "2026-10-31T11:13:58.118899+00:00"
+    },
+    {
+      "file": "textures.bin",
+      "bytes": 0,
+      "modifiedUtc": "2026-10-31T11:15:28.887809+00:00"
+    }
+  ],
+  "configurationModifiedByTask": false,
+  "dataCleared": false
+}

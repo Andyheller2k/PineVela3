@@ -1,0 +1,22 @@
+TAP version 13
+# Subtest: actual install manifest launches sign-in with branded, opaque home screen icons
+ok 1 - actual install manifest launches sign-in with branded, opaque home screen icons
+  ---
+  duration_ms: 29.802653
+  type: 'test'
+  ...
+# Subtest: actual worker never intercepts APIs, media or subresources and never persists responses
+ok 2 - actual worker never intercepts APIs, media or subresources and never persists responses
+  ---
+  duration_ms: 86.8572
+  type: 'test'
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 2
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 143.0169

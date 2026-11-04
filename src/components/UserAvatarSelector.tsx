@@ -145,14 +145,14 @@ export default function UserAvatarSelector({ onAvatarSave }: UserAvatarSelectorP
       if(activeAccountRef.current!==accountKey)return;
       const token = user?.token;
       if (user) {
-        const res = await fetch('/api/auth/profile', {
+        const res = await fetch(user.role === 'manager' ? '/api/auth/profile/avatar' : '/api/auth/profile', {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
             'X-PineVela-Profile-Context':String(user.id),
             'Authorization': `Bearer ${token}`
           },
-          body: JSON.stringify({
+          body: JSON.stringify(user.role === 'manager' ? { photo: newAvatarVal } : {
             avatar: newAvatarVal,
             avatarUrl: newAvatarVal,
             photo: newAvatarVal,

@@ -1,0 +1,21 @@
+{
+  "bootCompleted": true,
+  "readinessChecks": [
+    {
+      "boot": "",
+      "returnCode": 1
+    },
+    {
+      "boot": "",
+      "returnCode": 1
+    },
+    {
+      "boot": "1",
+      "returnCode": 0
+    }
+  ],
+  "safeQuickBootLogLines": [
+    "INFO         | Loading snapshot 'default_boot'...",
+    "INFO         | Successfully loaded snapshot 'default_boot' using 14617 ms"
+  ]
+}

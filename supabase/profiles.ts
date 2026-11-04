@@ -6,6 +6,12 @@ import { checkAdministratorSettingsKey,deniedKey,requireSettingsGrant,type Setti
 
 export const AVATAR_PRESETS = ['pine-classic','pine-emerald','pine-amber','pine-rose','pine-violet','pine-dark','pine-cyan','pine-golden','pine-crimson','pine-forest'];
 const aliases = ['avatar','avatarUrl','photo','photoUrl','profilePicture'];
+export function managerAvatarOnlyBody(body:unknown):{photo:string} {
+  if(!body || typeof body!=='object' || Array.isArray(body) ||
+    Object.keys(body).length!==1 || typeof (body as any).photo!=='string')
+    throw new ApiError(400,'Only your profile picture can be changed here.');
+  return {photo:(body as any).photo};
+}
 export function checkProfileContext(actor:VerifiedActor,expected:unknown) {
   // This is a stale-request check, never proof of identity or ownership.
   if (expected !== undefined && expected !== actor.contextId) throw new ApiError(409,'Your active account changed. Reopen the profile editor.');
@@ -72,4 +78,12 @@ export function installProfiles(app:Express,auth:SupabaseAuth) {
   })().catch(next);};
   app.put('/api/auth/profile',auth.require(),handler);
   app.post('/api/auth/profile',auth.require(),handler);
+  app.put('/api/auth/profile/avatar',auth.require(['manager']),(req,res,next)=>{(async()=>{
+    const request=req as AuthRequest;
+    const body=managerAvatarOnlyBody(request.body);
+    checkProfileContext(request.actor,request.headers['x-pinevela-profile-context']);
+    const grant=await profileSettingsGrant(auth,request.actor,undefined);
+    await auth.db.authorizedSystem(request.actor,['manager'],c=>saveProfile(c,request.actor,body,grant));
+    res.json({success:true,user:await auth.projection(request.actor)});
+  })().catch(next);});
 }

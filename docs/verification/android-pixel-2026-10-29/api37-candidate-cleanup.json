@@ -1,0 +1,10 @@
+{
+  "deletedCandidate": "PineVela_Pixel_4a_API_37",
+  "deletedUnusedImage": "system-images;android-37.0;google_apis;x86_64",
+  "deletedOwnZip": "/home/wyse/.cache/pinevela-android-setup/emulator-packages/x86_64-37.0_r08.zip",
+  "protectedHashes": {
+    "/home/wyse/.android/avd/PineVela_Lite_API_35.avd/config.ini": "3cf20c40d9475239aeb9276fa0cfc687ab295c2b8b7e734f8a34b00467e8d3f0",
+    "/home/wyse/.android/avd/Pixel_4a.ini": "5cee530823de42c5bf436623f5c32283105e8e89017b46391ae072465f929703"
+  },
+  "protectedFilesUnchanged": true
+}

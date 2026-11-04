@@ -8,7 +8,7 @@ export default function ManagerRegistrationCard({ managerAccount, onRegister, on
 }) {
   const status = managerRegistrationStatus(managerAccount);
   return (
-          <div className="space-y-6 animate-fadeIn relative z-10 max-w-4xl [overflow-wrap:anywhere]">
+          <div data-pv-onboarding className="space-y-6 animate-fadeIn relative z-10 max-w-4xl [overflow-wrap:anywhere]">
             {managerAccount ? (
               <div className="bg-white/95 border border-emerald-300 rounded-3xl p-6 sm:p-8 shadow-xl space-y-6 backdrop-blur-md">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-emerald-100">
@@ -131,7 +131,7 @@ export default function ManagerRegistrationCard({ managerAccount, onRegister, on
                 <div className="pt-4 border-t border-slate-100 flex items-center justify-end">
                   <button
                     onClick={onRegister}
-                    className="px-8 py-3 bg-emerald-700 hover:bg-emerald-800 text-white font-black text-sm rounded-xl shadow-md transition-all flex items-center gap-2 cursor-pointer"
+                    className="pv-onboarding-action px-8 py-3 bg-emerald-700 hover:bg-emerald-800 text-white font-black text-sm rounded-xl shadow-md transition-all flex items-center gap-2 cursor-pointer"
                   >
                     <span>Start Registration Process</span>
                     <ArrowRight className="w-4 h-4" />

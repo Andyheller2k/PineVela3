@@ -1,0 +1,82 @@
+TAP version 13
+# Subtest: product background blocks left/right page drags after intentional movement
+ok 1 - product background blocks left/right page drags after intentional movement
+  ---
+  duration_ms: 25.246947
+  type: 'test'
+  ...
+# Subtest: vertical scrolling stays native and keeps its intent during diagonal drift
+ok 2 - vertical scrolling stays native and keeps its intent during diagonal drift
+  ---
+  duration_ms: 1.018092
+  type: 'test'
+  ...
+# Subtest: horizontal rails consume both directions and cannot chain past either edge
+ok 3 - horizontal rails consume both directions and cannot chain past either edge
+  ---
+  duration_ms: 5.439165
+  type: 'test'
+  ...
+# Subtest: RTL rails normalize negative scrollLeft and contain Safari rubber-band values
+ok 4 - RTL rails normalize negative scrollLeft and contain Safari rubber-band values
+  ---
+  duration_ms: 6.272161
+  type: 'test'
+  ...
+# Subtest: a nested rail can delegate to a consumable horizontal parent
+ok 5 - a nested rail can delegate to a consumable horizontal parent
+  ---
+  duration_ms: 2.190212
+  type: 'test'
+  ...
+# Subtest: blank narrow edge starts are canceled while edge buttons and real rails remain usable
+ok 6 - blank narrow edge starts are canceled while edge buttons and real rails remain usable
+  ---
+  duration_ms: 2.278085
+  type: 'test'
+  ...
+# Subtest: map, editable, native form and explicit gallery surfaces keep horizontal interaction
+ok 7 - map, editable, native form and explicit gallery surfaces keep horizontal interaction
+  ---
+  duration_ms: 0.757307
+  type: 'test'
+  ...
+# Subtest: public/mobile and product/desktop keep their existing one-finger browser behavior
+ok 8 - public/mobile and product/desktop keep their existing one-finger browser behavior
+  ---
+  duration_ms: 1.238531
+  type: 'test'
+  ...
+# Subtest: end, cancellation, changed touch identity and route/media updates discard stale pans
+ok 9 - end, cancellation, changed touch identity and route/media updates discard stale pans
+  ---
+  duration_ms: 1.800255
+  type: 'test'
+  ...
+# Subtest: existing pinch prevention remains mobile-only and exempts maps
+ok 10 - existing pinch prevention remains mobile-only and exempts maps
+  ---
+  duration_ms: 1.484445
+  type: 'test'
+  ...
+# Subtest: cleanup removes every listener and restores the original viewport
+ok 11 - cleanup removes every listener and restores the original viewport
+  ---
+  duration_ms: 1.039814
+  type: 'test'
+  ...
+# Subtest: native containment survives pageshow and mobile/desktop resizing without changing website cover mode
+ok 12 - native containment survives pageshow and mobile/desktop resizing without changing website cover mode
+  ---
+  duration_ms: 1.132038
+  type: 'test'
+  ...
+1..12
+# tests 12
+# suites 0
+# pass 12
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 118.862267

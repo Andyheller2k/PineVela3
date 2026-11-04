@@ -1,3 +1,4 @@
+import {termsAcceptance} from '../legalPolicy.js';
 import {freeStoreVerification} from './lib/free-store-verification.js';
 /** Real PostgreSQL/RLS checks using existing verified Auth subjects. Application
  * rows roll back. After migration is applied, real attached image bytes also
@@ -66,7 +67,7 @@ try {
   const enrollment=(await client.query(`insert into private.account_enrollments(initiator_context_id,primary_owner_id,kind,invited_email,token_digest,enrollment_fields,expires_at,auth_user_id,linked_context_id,status,verified_at)
     values($1,$2,'seller',$3,$4,'{}',now()+interval '24 hours',$5,$6,'pending_review',now()) returning id`,[primary.contextId,root1.id,child1.email.toLowerCase(),crypto.createHash('sha256').update(crypto.randomBytes(32)).digest('hex'),child1.id,seller.contextId])).rows[0].id;
   await asActor(primary,async()=>{});
-  const merchant=await submitSellerApplication(client,primary,{enrollmentId:enrollment,university:'Kwame Nkrumah University of Science and Technology (KNUST)',categoryToSell:'General Campus Essentials',idNumber:'PV-MEDIA-CHECK',storeName:child1.raw_user_meta_data?.full_name || child1.email,certified:true});
+  const merchant=await submitSellerApplication(client,primary,{enrollmentId:enrollment,university:'Kwame Nkrumah University of Science and Technology (KNUST)',categoryToSell:'General Campus Essentials',idNumber:'PV-MEDIA-CHECK',storeName:child1.raw_user_meta_data?.full_name || child1.email,certified:true,termsAcceptance:termsAcceptance(true)});
   const admin=await context(root2,'admin');await client.query('insert into public.admin_memberships(context_id,slot) values($1,1)',[admin.contextId]);
   await asActor(admin,async()=>{});await decideSellerApplication(client,admin,{id:merchant.application.id},true);
   const store=(await client.query('select id from public.stores where seller_context_id=$1',[seller.contextId])).rows[0].id;

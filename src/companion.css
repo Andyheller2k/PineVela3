@@ -61,13 +61,13 @@ html[data-theme] .pv-companion-result { width: 100%; display: flex; align-items:
 /* Replace the global solid field and forced blue outline with the rounded outer focus ring. */
 html[data-theme] .pv-companion-composer #pv-companion-message { flex: 1; min-width: 0; background: transparent; color: var(--cc-text); padding: 10px; border: 0; border-radius: 10px; outline: none !important; outline-offset: 0 !important; resize: none; min-height: 40px; max-height: 100px; font: inherit; font-size: 13px; box-shadow: none; }
 .pv-companion-composer textarea::placeholder { color: var(--cc-muted); opacity: .8; }
-html[data-theme] .pv-companion-composer > button { height: 39px; width: 39px; flex-shrink: 0; border: 0; border-radius: 12px; display: grid; place-items: center; background: #ffd60a; color: #001d3d; cursor: pointer; }
+html[data-theme] .pv-companion-composer > button { height: 39px; width: 39px; flex-shrink: 0; border: 0; border-radius: 12px; display: grid; place-items: center; background: var(--pv-action-gradient); color: var(--pv-on-action); cursor: pointer; }
 .pv-companion-chat-footer { display: flex; justify-content: space-between; gap: 10px; padding: 12px 26px 17px; font-size: 9px; color: var(--cc-muted); }
 html[data-theme] .pv-companion-chat-footer button, html[data-theme] .pv-companion-text-button { color: var(--cc-text); background: transparent; border: 0; text-decoration: underline; text-underline-offset: 3px; font-size: 10px; cursor: pointer; }
 .pv-companion-section-label { display: flex; justify-content: space-between; gap: 9px; color: var(--cc-muted); font-size: 8px; font-weight: 700; letter-spacing: .1em; margin-bottom: 12px; }
 .pv-companion-choices { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 28px; }
 html[data-theme] .pv-companion-choice { position: relative; display: flex; align-items: start; gap: 12px; text-align: left; padding: 15px; border: 1px solid var(--cc-line); border-radius: 17px; background: var(--cc-surface); color: var(--cc-text); cursor: pointer; transition: border-color 150ms, background 150ms; }
-html[data-theme] .pv-companion-choice.is-selected { border-color: #ffc300b3; background: #ffc30009; box-shadow: inset 0 0 0 1px #ffc30025; }
+html[data-theme] .pv-companion-choice.is-selected { border-color: var(--pv-selection); background: color-mix(in srgb, var(--pv-selection) 8%, transparent); box-shadow: inset 0 0 0 1px var(--pv-selection); }
 .pv-companion-choice .pv-companion-avatar { width: 51px; height: 51px; }
 .pv-companion-choice-copy { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .pv-companion-choice-taste { font-size: 8px; color: var(--cc-muted); }
@@ -83,14 +83,14 @@ html[data-theme='dark'] .pv-companion-field select option { background: #001d3d;
 .pv-companion-toggle { display: flex; gap: 20px; align-items: center; justify-content: space-between; padding-block: 15px; border-top: 1px solid var(--cc-line); cursor: pointer; }
 .pv-companion-toggle strong { display: block; color: var(--cc-text); font-size: 12px; font-weight: 650; }
 .pv-companion-toggle small { display: block; color: var(--cc-muted); font-size: 10px; line-height: 1.7; margin-top: 4px; }
-.pv-companion-toggle input { accent-color: #b58b00; width: 18px; height: 18px; flex: none; }
+.pv-companion-toggle input { accent-color: var(--pv-selection); width: 18px; height: 18px; flex: none; }
 .pv-companion-privacy { display: flex; gap: 9px; margin: 8px 0 20px; color: var(--cc-muted); }
 .pv-companion-privacy svg { flex-shrink: 0; margin-top: 3px; }
 .pv-companion-privacy p { font-size: 10px; line-height: 1.7; margin: 0; }
 html[data-theme] .pv-companion-clear { display: inline-flex; align-items: center; gap: 8px; background: transparent; border: 1px solid var(--cc-line); color: var(--cc-text); padding: 9px 12px; border-radius: 10px; font-size: 10px; cursor: pointer; }
 .pv-companion-settings-footer { padding: 16px 25px; display: flex; gap: 10px; align-items: center; justify-content: space-between; border-top: 1px solid var(--cc-line); }
 .pv-companion-settings-footer > span { font-size: 10px; color: var(--cc-muted); }
-html[data-theme] .pv-companion-primary { display: inline-flex; align-items: center; justify-content: center; gap: 13px; background: #ffd60a; color: #001d3d; border: 0; border-radius: 12px; padding: 12px 17px; font-size: 12px; font-weight: 750; cursor: pointer; }
+html[data-theme] .pv-companion-primary { display: inline-flex; align-items: center; justify-content: center; gap: 13px; background: var(--pv-action-gradient); color: var(--pv-on-action); border: 0; border-radius: 12px; padding: 12px 17px; font-size: 12px; font-weight: 750; cursor: pointer; }
 .pv-companion-enable { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 25px 9px; padding: 13px; border: 1px solid #ffc30055; border-radius: 14px; }
 .pv-companion-enable p { font-size: 11px; line-height: 1.6; color: var(--cc-muted); }
 .pv-companion-enable button { flex-shrink: 0; }

@@ -1,0 +1,2 @@
+--------- beginning of main
+{"fixture":"same-loopback-tls-server-and-photo","uncachedRequests":2,"uncachedBodies":2,"uncachedBodyBytes":136,"cachedRequests":2,"cachedBodies":1,"cachedBodyBytes":68}

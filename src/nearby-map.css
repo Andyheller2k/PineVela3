@@ -9,10 +9,10 @@ html[data-theme="dark"] .nearby-map .leaflet-control-zoom a, html[data-theme="da
 .nearby-map-footer { max-height: 46dvh; overflow-y: auto; padding-bottom: max(.75rem, env(safe-area-inset-bottom)); }
 .nearby-services-screen .nearby-map-action { display: inline-flex; align-items: center; justify-content: center; gap: .4rem; min-height: 40px; padding: .5rem .75rem; border: 1px solid var(--pv-edge); border-radius: .8rem; background: var(--pv-secondary); color: var(--pv-text); font-size: .75rem; font-weight: 700; line-height: 1.3; }
 .nearby-services-screen .nearby-map-action:hover { border-color: #ffc300; }
-.nearby-services-screen .nearby-map-action[aria-pressed="true"] { border-color: #ffc300; background: #ffd60a; color: #001d3d; }
+.nearby-services-screen .nearby-map-action[aria-pressed="true"] { border-color: var(--pv-selection); background: var(--pv-action-gradient); color: var(--pv-on-action); }
 .nearby-services-screen .nearby-travel-modes { border-color: var(--pv-edge); background: var(--pv-secondary); }
 .nearby-services-screen .nearby-travel-modes button { color: var(--pv-muted); }
-.nearby-services-screen .nearby-travel-modes button[aria-pressed="true"] { background: #ffd60a; color: #001d3d; box-shadow: 0 2px 5px #00081420; }
+.nearby-services-screen .nearby-travel-modes button[aria-pressed="true"] { background: var(--pv-action-gradient); color: var(--pv-on-action); box-shadow: 0 2px 5px #00081420; }
 .nearby-services-screen :is(button, a, summary):focus-visible { outline: 2px solid #ffc300; outline-offset: 3px; }
 .nearby-map[data-placement="waypoint"], .nearby-map[data-placement="origin"] { cursor: crosshair; }
 .nearby-map-results { background: var(--pv-panel) !important; }

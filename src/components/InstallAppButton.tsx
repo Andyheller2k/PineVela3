@@ -4,8 +4,14 @@ import { useInstalledAppMode } from '../lib/appMode';
 import { isAppleMobileDevice, requestPwaInstall, usePwaInstall } from '../lib/pwaInstall';
 import DashboardOverlay from './DashboardOverlay';
 import '../installApp.css';
+import { NATIVE_APP, NATIVE_PREVIEW } from '../native/environment';
 
 export default function InstallAppButton() {
+  if (NATIVE_APP || NATIVE_PREVIEW) return null;
+  return <BrowserInstallAppButton />;
+}
+
+function BrowserInstallAppButton() {
   const appMode = useInstalledAppMode();
   const { installed } = usePwaInstall();
   const [instructions, setInstructions] = useState(false);

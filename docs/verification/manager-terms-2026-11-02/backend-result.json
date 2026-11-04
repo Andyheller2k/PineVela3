@@ -1,0 +1,34 @@
+{
+  "passed": true,
+  "checks": 69,
+  "realRestoredPostgres": true,
+  "actualHttpHandlers": true,
+  "providerReplies": "local fixtures",
+  "liveGoogleOrEmailVerified": false,
+  "cloudWrites": 0,
+  "verifiedDate": "2026-11-03",
+  "processExitCode": 0,
+  "baseline": {
+    "passed": false,
+    "managerAcceptStatus": 403,
+    "managerAcceptCode": "manager_key_required",
+    "evidence": "backend-before.log"
+  },
+  "coverage": [
+    "Own approved manager can accept current Terms before obtaining an operation key",
+    "Manager receipt uses the authenticated manager context and session",
+    "Injected context is rejected and foreign accounts do not inherit acceptance",
+    "Anonymous and provider-unverified callers cannot write acceptance receipts",
+    "Manager operational writes still require the manager operation key after accepting",
+    "Missing, false, stale and spoofed signup and merchant agreement proofs rejected",
+    "Cross-origin acceptance rejected",
+    "Email and Google local-fixture receipts bind verified subjects and reject replay",
+    "Merchant enrollment ownership and idempotent application receipts enforced",
+    "Private legal table grants and RLS preserved",
+    "Rollback retains no partial receipt and revoked sessions cannot reuse acceptance"
+  ],
+  "limitations": [
+    "Google and email provider replies are explicit local fixtures",
+    "No hosted or production account changes; live manager UI remains unverified until deployment"
+  ]
+}

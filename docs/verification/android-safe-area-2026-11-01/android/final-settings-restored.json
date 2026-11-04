@@ -1,0 +1,12 @@
+{
+  "date": "2026-11-01T00:40:53.130979+00:00",
+  "size": "Physical size: 1080x2340",
+  "density": "Physical density: 440",
+  "rotation": "0",
+  "autoRotation": "1",
+  "keyboardSetting": "0",
+  "navigation": [
+    "[x] com.android.internal.systemui.navbar.gestural"
+  ],
+  "restored": true
+}

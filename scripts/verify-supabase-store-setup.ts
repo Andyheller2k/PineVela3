@@ -1,3 +1,4 @@
+import {termsAcceptance} from '../legalPolicy.js';
 import {freeStoreVerification} from './lib/free-store-verification.js';
 /** Real PostgreSQL/RLS checks using existing confirmed Auth subjects. Enrollment
  * and product fixtures roll back; no provider response, identity or email is mocked. */
@@ -43,7 +44,7 @@ try{
   await c.query('insert into public.admin_memberships(context_id,slot) values($1,1)',[admin.contextId]);
   async function denied(work:()=>Promise<unknown>,expected:number|string,label:string){await c.query('savepoint negative');let error:any;try{await work();}catch(e){error=e;}await c.query('rollback to savepoint negative');check(typeof expected==='number'?error instanceof ApiError && error.status===expected:error?.code===expected,label);}
   async function scoped(a:VerifiedActor,work:()=>Promise<any>){await bind(a);await c.query('set local role pinevela_backend');try{return await work();}finally{await c.query('reset role');}}
-  const payload={enrollmentId:own.id,university:'Kwame Nkrumah University of Science and Technology (KNUST)',categoryToSell:'General Campus Essentials',idNumber:'PV-20261009',storeName:child.raw_user_meta_data?.full_name || child.email,certified:true};
+  const payload={enrollmentId:own.id,university:'Kwame Nkrumah University of Science and Technology (KNUST)',categoryToSell:'General Campus Essentials',idNumber:'PV-20261009',storeName:child.raw_user_meta_data?.full_name || child.email,certified:true,termsAcceptance:termsAcceptance(true)};
   await bind(owner);const submitted=await submitSellerApplication(c,owner,payload);
   await bind(admin);await decideSellerApplication(c,admin,{id:submitted.application.id},true);
   await bind(own.actor);const store=await sellerStore(c,own.actor);

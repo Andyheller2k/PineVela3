@@ -6,6 +6,7 @@ import { ownedEnrollment } from './enrollment.js';
 import { notify,notifyPrimaryOwner } from './notifications.js';
 import { MARKET_DEFAULT_COVERS,MARKET_DEFAULT_LOGO,marketStoreBranding } from '../marketBranding.js';
 import {administratorApproval} from './administratorApproval.js';
+import { recordTermsAcceptance, validateTermsAcceptance } from './legal.js';
 const route=(work:(req:AuthRequest,res:any)=>Promise<unknown>):RequestHandler=>(req,res,next)=>{work(req as AuthRequest,res).catch(next);};
 function fields(body:any,allowed:string[]){if(!body || typeof body!=='object' || Array.isArray(body) || Object.keys(body).some(k=>!allowed.includes(k)))throw new ApiError(400,'Unsupported seller application fields.');}
 function text(v:unknown,max:number,min=1){if(typeof v!=='string' || v.length>max || v.trim().length<min)throw new ApiError(400,'Enter valid seller registration details.');return v.trim();}
@@ -44,7 +45,8 @@ export async function sellerStatus(c:PoolClient,a:VerifiedActor){
 }
 export async function submitSellerApplication(c:PoolClient,a:VerifiedActor,body:any){
   if(a.kind!=='primary')throw new ApiError(403,'Submit seller registration from your primary account.');
-  fields(body,['enrollmentId','university','categoryToSell','idNumber','storeName','certified']);
+  fields(body,['enrollmentId','university','categoryToSell','idNumber','storeName','certified','termsAcceptance']);
+  validateTermsAcceptance(body.termsAcceptance);
   const campus=text(body.university,250),category=text(body.categoryToSell,200),studentId=text(body.idNumber,32).toUpperCase(),name=text(body.storeName,200);
   if(!/^[A-Z0-9][A-Z0-9/-]{3,31}$/.test(studentId) || body.certified!==true)throw new ApiError(400,'Enter your actual school-issued ID and confirm the student seller declaration.');
   const e=await ownedEnrollment(c,a,uuid(body.enrollmentId));
@@ -58,12 +60,14 @@ export async function submitSellerApplication(c:PoolClient,a:VerifiedActor,body:
   const old=(await c.query('select a.* from public.seller_applications a join public.account_contexts x on x.id=a.seller_context_id where a.seller_context_id=$1 and a.registration_generation=x.seller_generation for update of a',[e.linked_context_id])).rows[0];
   if(old && old.status!=='rejected'){
     if(old.campus!==campus || old.primary_category!==category || old.student_id!==studentId || old.proposed_store_name!==name)throw new ApiError(409,'This seller application already exists.');
+    await recordTermsAcceptance(c,a,body.termsAcceptance,'merchant_application',`${old.id}:${old.submission_version}`);
     return {success:true,application:(await sellerStatus(c,a)).application,idempotent:true};
   }
   const row=old?(await c.query(`update public.seller_applications set campus=$2,primary_category=$3,student_id=$4,proposed_store_name=$5,
     status='submitted',submitted_at=now(),reviewed_at=null,reviewed_by_context_id=null,review_notes='',submission_version=submission_version+1 where id=$1 returning *`,[old.id,campus,category,studentId,name])).rows[0]:
     (await c.query('insert into public.seller_applications(seller_context_id,enrollment_id,campus,primary_category,student_id,proposed_store_name) values ($1,$2,$3,$4,$5,$6) returning *',[e.linked_context_id,e.id,campus,category,studentId,name])).rows[0];
   await c.query("update private.account_enrollments set status='completed' where id=$1",[e.id]);
+  await recordTermsAcceptance(c,a,body.termsAcceptance,'merchant_application',`${row.id}:${row.submission_version}`);
   await audit(c,a,row.id,old?'seller_application_resubmitted':'seller_application_submitted',{previous:old || null,submission:{campus,category,studentId,storeName:name,version:row.submission_version}});
   await notify(c,[a.contextId],{category:'account_submission',title:'Digital Market Application Submitted',message:'Your verified seller application has been received and is pending administrator review.',sender:a.contextId,link:'/user/dashboard?tab=notifications'});
   await notify(c,await administrators(c),{category:'verification',title:'Digital Market Application Submitted',message:`${name} is awaiting seller registration review.`,sender:a.contextId,link:'/admin/dashboard'});

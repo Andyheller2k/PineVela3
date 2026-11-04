@@ -1,3 +1,4 @@
+import {termsAcceptance} from '../legalPolicy.js';
 /** Admin reads on isolated native records and genuine archived Google identities. */
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -78,7 +79,7 @@ try{await withIsolatedBackup(checkpoint,async config=>{
  await denied(()=>adminRead({...f.admin,sessionId:crypto.randomUUID()},c=>administratorStores(c,f.admin)),401,'Missing native Auth session denied');
  stage='approved setup and actual zero-fee registration';
  await run(f.owner,c=>finishEnrollment(c,f.owner,f.enrollment,f.proof));
- const application=await run(f.owner,c=>submitSellerApplication(c,f.owner,{enrollmentId:f.enrollment,university:'Kwame Nkrumah University of Science and Technology (KNUST)',categoryToSell:'General Campus Essentials',idNumber:'PV-20261013',storeName:f.name,certified:true}));
+ const application=await run(f.owner,c=>submitSellerApplication(c,f.owner,{enrollmentId:f.enrollment,university:'Kwame Nkrumah University of Science and Technology (KNUST)',categoryToSell:'General Campus Essentials',idNumber:'PV-20261013',storeName:f.name,certified:true,termsAcceptance:termsAcceptance(true)}));
  await run(f.admin,c=>decideSellerApplication(c,f.admin,{id:application.application.id},true));
  let store=(await stores())[0];check(store.applicationId===application.application.id&&store.registrationGeneration===0,'Exact current approval/generation represented');
  check(store.ownerName===f.name&&store.studentEmail===f.proof.email,'Saved student identity represents actual seller');
@@ -95,7 +96,7 @@ try{await withIsolatedBackup(checkpoint,async config=>{
  await db.system(async c=>{await c.query("update public.stores set status='closed' where id=$1",[originalId]);await c.query("update public.account_contexts set status='closed' where id=$1",[f.seller.contextId]);});
  const proof=await run(f.owner,c=>checkPortalPin(c,f.seller.contextId,f.pin));check(proof.allowed,'Current seller PIN authorizes isolated re-registration');
  await run(f.owner,c=>reactivateSeller(c,f.owner,f.enrollment,f.proof,proof.version));
- const next=await run(f.owner,c=>submitSellerApplication(c,f.owner,{enrollmentId:f.enrollment,university:'Kwame Nkrumah University of Science and Technology (KNUST)',categoryToSell:'General Campus Essentials',idNumber:'PV-20261013',storeName:f.name,certified:true}));
+ const next=await run(f.owner,c=>submitSellerApplication(c,f.owner,{enrollmentId:f.enrollment,university:'Kwame Nkrumah University of Science and Technology (KNUST)',categoryToSell:'General Campus Essentials',idNumber:'PV-20261013',storeName:f.name,certified:true,termsAcceptance:termsAcceptance(true)}));
  await run(f.admin,c=>decideSellerApplication(c,f.admin,{id:next.application.id},true));
  const inventory=await stores();check(inventory.length===2,'Historical and new stores are shown separately');
  const old=inventory.find(s=>s.id===originalId)!,current=inventory.find(s=>s.id!==originalId)!;

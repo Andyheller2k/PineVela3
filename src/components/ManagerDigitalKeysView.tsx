@@ -5,6 +5,7 @@ import {
   RefreshCw, Building2, Users, Mail, XCircle, Download, 
   Layers, CheckCircle2, ChevronRight, Hash, ShieldCheck, Trash2
 } from 'lucide-react';
+import { useClipboardFeedback } from '../lib/useClipboardFeedback';
 
 export interface RoomKeyItem {
   id: string;
@@ -47,7 +48,8 @@ const DigitalKeyCard = memo(function DigitalKeyCard({
   onShare,
   onDispatch,
   onRelease,
-  isCopied
+  isCopied,
+  isShareCopied
 }: {
   keyItem: RoomKeyItem;
   onCopy: (key: string, id: string) => void;
@@ -55,6 +57,7 @@ const DigitalKeyCard = memo(function DigitalKeyCard({
   onDispatch: (keyItem: RoomKeyItem) => void;
   onRelease: (keyItem: RoomKeyItem) => void;
   isCopied: boolean;
+  isShareCopied: boolean;
 }) {
   const isAssigned = Boolean(keyItem.isAssigned || keyItem.status === 'Assigned' || keyItem.status === 'Occupied');
 
@@ -97,7 +100,7 @@ const DigitalKeyCard = memo(function DigitalKeyCard({
           type="button"
           onClick={() => onCopy(keyItem.roomKey, keyItem.id || keyItem.roomKey)}
           className="p-1 text-slate-400 hover:text-white rounded transition-colors cursor-pointer shrink-0 ml-2"
-          title="Copy key code"
+          title={isCopied ? 'Copied' : 'Copy key code'}
         >
           {isCopied ? (
             <span className="text-[10px] text-emerald-400 font-sans font-bold flex items-center gap-0.5">
@@ -145,10 +148,10 @@ const DigitalKeyCard = memo(function DigitalKeyCard({
           type="button"
           onClick={() => onShare(keyItem)}
           className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
-          title="Copy formatted share message"
+          title={isShareCopied ? 'Copied' : 'Copy formatted share message'}
         >
-          <Share2 className="w-3 h-3" />
-          <span>Share</span>
+          {isShareCopied ? <Check className="w-3 h-3" /> : <Share2 className="w-3 h-3" />}
+          <span>{isShareCopied ? 'Copied' : 'Share'}</span>
         </button>
       </div>
     </div>
@@ -171,7 +174,7 @@ export default function ManagerDigitalKeysView({
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'available' | 'occupied'>('all');
   const [floorFilter, setFloorFilter] = useState<number | 'all'>('all');
-  const [copiedKeyId, setCopiedKeyId] = useState<string | null>(null);
+  const clipboard = useClipboardFeedback();
 
   // Parent virtualizer scroll container ref
   const parentScrollRef = useRef<HTMLDivElement>(null);
@@ -277,19 +280,17 @@ export default function ManagerDigitalKeysView({
   });
 
   const handleCopy = useCallback((keyString: string, keyId: string) => {
-    navigator.clipboard.writeText(keyString);
-    setCopiedKeyId(keyId);
-    onTriggerToast(`Key "${keyString}" copied to clipboard!`);
-    setTimeout(() => {
-      setCopiedKeyId(null);
-    }, 2000);
-  }, [onTriggerToast]);
+    void clipboard.copy(`key:${keyId}`, keyString).then(copied => {
+      onTriggerToast(copied ? 'Room key copied to clipboard!' : 'Copy is unavailable. Select the room key to copy it.');
+    });
+  }, [clipboard.copy, onTriggerToast]);
 
   const handleShare = useCallback((keyItem: RoomKeyItem) => {
     const shareText = `*PineVela Room Key Access*\nResidence: ${primaryProperty?.name || 'Hostel'}\nBlock: ${keyItem.blockName}\nRoom: ${keyItem.roomNumber}\n*Digital Key Code:* ${keyItem.roomKey}\n\nUse this digital key on the PineVela student portal to link your room console.`;
-    navigator.clipboard.writeText(shareText);
-    onTriggerToast(`Access details for Room ${keyItem.roomNumber} copied to clipboard!`);
-  }, [primaryProperty, onTriggerToast]);
+    void clipboard.copy(`share:${keyItem.id || keyItem.roomKey}`, shareText).then(copied => {
+      onTriggerToast(copied ? `Access details for Room ${keyItem.roomNumber} copied to clipboard!` : 'Copy is unavailable. Select the room details to copy them.');
+    });
+  }, [primaryProperty, clipboard.copy, onTriggerToast]);
 
   // Batch Export CSV for manager records
   const handleExportKeysCsv = useCallback(() => {
@@ -594,7 +595,8 @@ export default function ManagerDigitalKeysView({
                         onShare={handleShare}
                         onDispatch={onOpenDispatch}
                         onRelease={onReleaseRoom}
-                        isCopied={copiedKeyId === (keyItem.id || keyItem.roomKey)}
+                        isCopied={clipboard.copiedId === `key:${keyItem.id || keyItem.roomKey}`}
+                        isShareCopied={clipboard.copiedId === `share:${keyItem.id || keyItem.roomKey}`}
                       />
                     ))}
                   </div>

@@ -42,6 +42,9 @@ export function installMobileViewport() {
   const viewport = document.querySelector<HTMLMetaElement>('meta[name="viewport"]');
   if (!viewport) return () => {};
   const original = viewport.content;
+  // Android's bundled pages use native containment. Preserve that decision on
+  // pageshow/resizing instead of reopening the area behind the system bars.
+  const viewportFit = /(?:^|,)\s*viewport-fit\s*=\s*(contain|cover|auto)\s*(?=,|$)/i.exec(original)?.[1].toLowerCase() || 'cover';
   const root = document.documentElement;
   const media = matchMedia(MOBILE_VIEWPORT);
   let pan: ProductPan | null = null;
@@ -50,7 +53,7 @@ export function installMobileViewport() {
     resetPan();
     if (media.matches) {
       root.dataset.mobileViewport = 'locked';
-      viewport.content = 'width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content';
+      viewport.content = `width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=${viewportFit}, interactive-widget=resizes-content`;
     } else {
       delete root.dataset.mobileViewport;
       viewport.content = original;

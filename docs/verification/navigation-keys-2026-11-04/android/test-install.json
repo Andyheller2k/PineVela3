@@ -1,0 +1,9 @@
+{
+  "package": "app.pinevela.mobile.transporttest",
+  "preexisting": false,
+  "packagesInstalledByThisRun": [
+    "app.pinevela.mobile.transporttest"
+  ],
+  "rebootPerformed": false,
+  "startedPreviouslyStoppedExistingEmulator": true
+}

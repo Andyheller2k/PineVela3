@@ -126,10 +126,12 @@ export default function Page1Public() {
               </nav>
             </div>
             <div className="landing-peak-artwork">
-              <img className="landing-peak-image" src={welcomeArtwork}
-                width={1448} height={1086} fetchPriority="high" decoding="async"
-                alt="A student connecting with campus life through shopping, conversations, and property management." />
-              <ArtworkLayers variant="landing" />
+              <div className="landing-peak-scene">
+                <img className="landing-peak-image" src={welcomeArtwork}
+                  width={1448} height={1086} fetchPriority="high" decoding="async"
+                  alt="A student connecting with campus life through shopping, conversations, and property management." />
+                <ArtworkLayers variant="landing" />
+              </div>
               <div className="landing-peak-brand">
                 <div className="landing-peak-brand-card" ref={glassCard}>
                   <PineLogo size={76} hideText />
@@ -227,6 +229,7 @@ export default function Page1Public() {
                 <li><button type="button" onClick={() => goToCompanySection('partner-with-us')} className="hover:text-blue-900 transition-colors cursor-pointer">Partner with Us</button></li>
                 <li><button type="button" onClick={() => goToCompanySection('contact-us')} className="hover:text-blue-900 transition-colors cursor-pointer">Contact</button></li>
                 <li><a href="/privacy.html" className="hover:text-blue-900 transition-colors">Privacy policy</a></li>
+                <li><a href="/privacy.html#analytics" data-analytics-preferences className="hover:text-blue-900 transition-colors">Analytics preferences</a></li>
                 <li><a href="/terms.html" className="hover:text-blue-900 transition-colors">Terms of service</a></li>
               </ul>
             </div>

@@ -1,0 +1,63 @@
+{
+  "date": "2026-10-31T16:39:25.326993+00:00",
+  "scope": "Actual Android OkHttp public-photo cache and isolated regressions, plus real debug APK startup and normal-reopen build persistence",
+  "passed": true,
+  "installedApkSha256": "cf618e06535092fe2081ccb4f20383ac62038027e66d48283592ff785c7ade06",
+  "normalReopenPreservedApk": true,
+  "normalQuickBootSuccessfullyLoaded": true,
+  "localStartupPassed": true,
+  "actualAndroidWebView": true,
+  "originalAppearanceRestored": true,
+  "temporaryDomOrStyleChangesMade": false,
+  "emulatorShutdown": true,
+  "taskEmulatorPids": [
+    67041,
+    68749
+  ],
+  "appDataCleared": false,
+  "accountFormsSubmitted": false,
+  "paymentActionsSubmitted": false,
+  "authenticatedCatalogueFlowTested": false,
+  "privateAccountFieldsInspected": false,
+  "realDebugAppUninstalled": false,
+  "fixturePackagesCreatedByThisRunRemoved": true,
+  "instrumentationPassed": true,
+  "cacheInstrumentationPassed": true,
+  "cacheInstrumentationTotal": 13,
+  "regressionInstrumentationPassed": true,
+  "regressionInstrumentationTotal": 13,
+  "instrumentationTotal": 26,
+  "nativeBodyBaseline": {
+    "fixture": "same-loopback-tls-server-and-photo",
+    "uncachedRequests": 2,
+    "uncachedBodies": 2,
+    "uncachedBodyBytes": 136,
+    "cachedRequests": 2,
+    "cachedBodies": 1,
+    "cachedBodyBytes": 68
+  },
+  "cleanDebugBuildPassed": true,
+  "cleanDebugBuildExitCode": 0,
+  "debugBuildLog": "debug-build.log",
+  "releaseApkCopiedByAgent": false,
+  "physicalPhoneTested": false,
+  "iosBuildTested": false,
+  "evidence": {
+    "instrumentation": "instrumentation.txt",
+    "instrumentationSummary": "instrumentation-summary.json",
+    "nativeBodyBaseline": "native-body-baseline.json",
+    "debugBuildLog": "debug-build.log",
+    "startup": "startup.json",
+    "normalReopenHash": "normal-reopen-installed-check.json",
+    "normalReopenUi": "normal-reopen-ui-state.json",
+    "normalShutdown": "final-shutdown.json",
+    "fixturePackageCleanup": "fixture-package-cleanup.json",
+    "screenshot": "real-local-startup.png"
+  },
+  "limitations": [
+    "The HTTP cache tests use the real interceptor/OkHttp/disk cache against a local TLS fixture in the isolated transport-test app, not hosted authenticated catalogue workflows.",
+    "The 136-to-68-byte baseline measures response bodies for the same small fixture image; it does not measure TLS/header bytes or imply a full-body website browser-cache baseline.",
+    "No real login/signup, payment, authenticated catalogue flow, physical phone or iOS flow was tested.",
+    "Initial saved Quick Boot snapshot fell back to Android booting; normal save and successful plain-command reopen with the final APK were verified."
+  ]
+}

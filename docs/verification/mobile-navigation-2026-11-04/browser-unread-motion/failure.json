@@ -1,0 +1,51 @@
+{
+  "scenario": "390px light curved mobile navigation unread manager selection motion",
+  "completed": 0,
+  "error": "Clearing the unread dot must not snap the indicator early: {\"before\":{\"ms\":0,\"indicator\":45.3984375,\"previousIcon\":756,\"targetIcon\":784,\"unread\":true},\"at80\":{\"ms\":1223.5,\"indicator\":195.0078125,\"previousIcon\":756,\"targetIcon\":784,\"unread\":false},\"at250\":{\"ms\":1393.7999999998137,\"indicator\":195.0078125,\"previousIcon\":759.8877563476562,\"targetIcon\":780.1122436523438,\"unread\":false},\"after\":{\"ms\":1796,\"indicator\":195.0078125,\"previousIcon\":783.9069213867188,\"targetIcon\":756.0930786132812,\"unread\":false}}",
+  "exceptions": [],
+  "apiRequests": [
+    "/api/settings",
+    "/api/auth/me",
+    "/api/auth/appearance",
+    "/api/manager/secret-key",
+    "/api/auth/maintenance-notice",
+    "/api/admin-messages/pending",
+    "/api/auth/account-access",
+    "/api/notifications",
+    "/api/sync/events",
+    "/api/manager/my-hostel",
+    "/api/manager/welcome/ensure",
+    "/api/issue-reports",
+    "/api/staff",
+    "/api/staff/invitations",
+    "/api/staff-bargains",
+    "/api/board-requests",
+    "/api/activities",
+    "/api/room-keys",
+    "/api/settings",
+    "/api/auth/maintenance-notice",
+    "/api/notifications",
+    "/api/sync/events"
+  ],
+  "debug": {
+    "url": "http://127.0.0.1:40507/?visual_nav_urgency=primary&scene=1793796968346-0.2601804020027536&visual_role=manager&visual_theme=light#/manager/dashboard",
+    "title": "PineVela",
+    "text": "Pine\nVela\nManager Dashboard\nHelp\nSign Out\nOverview\nProperties\nFixes\nAlerts\nMore\nMaintenance Dispatch & Work Orders\n\nTrack and resolve plumbing, electrical, Wi-Fi, and structural work orders across all residence wings.\n\nLog Maintenance Ticket\nPERFORMANCE ANALYTICS\n30-Day Maintenance Ticket Completion Rate\n\nTickets filed each day that have been closed by management.\n\n100%\nCurrent Ticket Closure Ratio\nOct 10\nOct 16\nOct 22\nOct 28\nNov 4\n0%\n25%\n50%\n75%\n100%\nAll (1)\nOpen\nIn Progress\nResolved\nClosed\nNormal Urgency\nGeneral\nRoom:\nClosed request with a new log\n\nUnassigned Dispatch Queue\nManage Desk\n0%",
+    "root": true,
+    "scripts": [
+      "http://127.0.0.1:40507/analytics.js",
+      "http://127.0.0.1:40507/assets/index-CIbxKkvM.js"
+    ],
+    "dataset": {
+      "appearance": "product",
+      "publicTheme": "none",
+      "authPage": "false",
+      "mobileAuth": "false",
+      "themePreference": "light",
+      "theme": "light",
+      "appMode": "browser",
+      "mobileViewport": "locked",
+      "mobileNavigation": "true"
+    }
+  }
+}

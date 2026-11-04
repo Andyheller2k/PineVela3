@@ -1,0 +1,10 @@
+{
+  "label": "Sign in",
+  "nativeHierarchyBounds": "[115,1736][965,1868]",
+  "nativePhysicalTap": [
+    540,
+    1802
+  ],
+  "tapReturnCode": 0,
+  "javascriptClickUsed": false
+}

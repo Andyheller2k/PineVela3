@@ -1,0 +1,173 @@
+TAP version 13
+# Subtest: actual install manifest launches sign-in with branded, opaque home screen icons
+ok 1 - actual install manifest launches sign-in with branded, opaque home screen icons
+  ---
+  duration_ms: 87.130618
+  type: 'test'
+  ...
+# Subtest: actual worker never intercepts APIs, media or subresources and never persists responses
+ok 2 - actual worker never intercepts APIs, media or subresources and never persists responses
+  ---
+  duration_ms: 98.699192
+  type: 'test'
+  ...
+# Subtest: native branding hides custom images when the supporting plan expires or is inactive
+ok 3 - native branding hides custom images when the supporting plan expires or is inactive
+  ---
+  duration_ms: 3.075393
+  type: 'test'
+  ...
+# Subtest: connected native bundle has only public client assets and preserves immutable policies
+ok 4 - connected native bundle has only public client assets and preserves immutable policies
+  ---
+  duration_ms: 19.355178
+  type: 'test'
+  ...
+# Subtest: native API dispatcher keeps exact local paths and forwards public external fetches without the private plugin
+ok 5 - native API dispatcher keeps exact local paths and forwards public external fetches without the private plugin
+  ---
+  duration_ms: 42.577287
+  type: 'test'
+  ...
+# Subtest: request bodies retain their bytes and credential headers never cross the JavaScript interface
+ok 6 - request bodies retain their bytes and credential headers never cross the JavaScript interface
+  ---
+  duration_ms: 2.505744
+  type: 'test'
+  ...
+# Subtest: encoded query values stay intact while encoded path separators remain forbidden
+ok 7 - encoded query values stay intact while encoded path separators remain forbidden
+  ---
+  duration_ms: 1.545735
+  type: 'test'
+  ...
+# Subtest: binary media and bodyless replies preserve fetch response semantics
+ok 8 - binary media and bodyless replies preserve fetch response semantics
+  ---
+  duration_ms: 2.389597
+  type: 'test'
+  ...
+# Subtest: aborted work rejects promptly and asks native to cancel its queued request
+ok 9 - aborted work rejects promptly and asks native to cancel its queued request
+  ---
+  duration_ms: 2.98429
+  type: 'test'
+  ...
+# Subtest: ambiguous paths and upload overflows never reach native
+ok 10 - ambiguous paths and upload overflows never reach native
+  ---
+  duration_ms: 100.120255
+  type: 'test'
+  ...
+# Subtest: upgrade comparison stops at Pro and preserves shared capacity rules
+ok 11 - upgrade comparison stops at Pro and preserves shared capacity rules
+  ---
+  duration_ms: 2.220394
+  type: 'test'
+  ...
+# Subtest: comparisons distinguish branding, frames and priority without promising new benefits
+ok 12 - comparisons distinguish branding, frames and priority without promising new benefits
+  ---
+  duration_ms: 0.754953
+  type: 'test'
+  ...
+# Subtest: prices follow changed admin values, including decimal and zero rates
+ok 13 - prices follow changed admin values, including decimal and zero rates
+  ---
+  duration_ms: 0.34936
+  type: 'test'
+  ...
+# Subtest: missing or invalid rates never fall back to preview prices or become checkout-ready
+ok 14 - missing or invalid rates never fall back to preview prices or become checkout-ready
+  ---
+  duration_ms: 0.516386
+  type: 'test'
+  ...
+# Subtest: store contact/location step rejects a country mismatch before checkout; matching country succeeds
+ok 15 - store contact/location step rejects a country mismatch before checkout; matching country succeeds
+  ---
+  duration_ms: 14.279638
+  type: 'test'
+  ...
+# Subtest: public market images revalidate; private/revoked/maintenance media never replays a public-cache 304
+ok 16 - public market images revalidate; private/revoked/maintenance media never replays a public-cache 304
+  ---
+  duration_ms: 134.175724
+  type: 'test'
+  ...
+# Subtest: public hostel images revalidate; private/revoked/maintenance media never replays a public-cache 304
+ok 17 - public hostel images revalidate; private/revoked/maintenance media never replays a public-cache 304
+  ---
+  duration_ms: 25.566601
+  type: 'test'
+  ...
+# Subtest: seller place routes require role middleware, validate input and cache bounded public results
+ok 18 - seller place routes require role middleware, validate input and cache bounded public results
+  ---
+  duration_ms: 90.444545
+  type: 'test'
+  ...
+# Subtest: Paystack missing/live/test configuration remains server controlled and grants no fake access
+ok 19 - Paystack missing/live/test configuration remains server controlled and grants no fake access
+  ---
+  duration_ms: 1.723801
+  type: 'test'
+  ...
+# Subtest: light: body copy, supporting text, links and input boundaries retain contrast
+ok 20 - light: body copy, supporting text, links and input boundaries retain contrast
+  ---
+  duration_ms: 1.866126
+  type: 'test'
+  ...
+# Subtest: light: gradient text and action labels stay readable throughout their gradients
+ok 21 - light: gradient text and action labels stay readable throughout their gradients
+  ---
+  duration_ms: 51.870627
+  type: 'test'
+  ...
+# Subtest: dark: body copy, supporting text, links and input boundaries retain contrast
+ok 22 - dark: body copy, supporting text, links and input boundaries retain contrast
+  ---
+  duration_ms: 0.375731
+  type: 'test'
+  ...
+# Subtest: dark: gradient text and action labels stay readable throughout their gradients
+ok 23 - dark: gradient text and action labels stay readable throughout their gradients
+  ---
+  duration_ms: 24.47057
+  type: 'test'
+  ...
+# Subtest: navy marketing and navigation: text, fields and actions keep contrast when surface roles change
+ok 24 - navy marketing and navigation: text, fields and actions keep contrast when surface roles change
+  ---
+  duration_ms: 0.952377
+  type: 'test'
+  ...
+# Subtest: gold feature panel: text, fields and actions keep contrast when surface roles change
+ok 25 - gold feature panel: text, fields and actions keep contrast when surface roles change
+  ---
+  duration_ms: 0.495193
+  type: 'test'
+  ...
+# Subtest: navigation labels retain contrast on the shared gold fill in either theme
+ok 26 - navigation labels retain contrast on the shared gold fill in either theme
+  ---
+  duration_ms: 1.075336
+  type: 'test'
+  ...
+# Audited 153 components, 952 buttons, 371 fields and 22 click surfaces.
+# Subtest: Every component exposes names for fields and icon buttons, and keyboard access for click surfaces
+ok 27 - Every component exposes names for fields and icon buttons, and keyboard access for click surfaces
+  ---
+  duration_ms: 1591.650866
+  type: 'test'
+  ...
+1..27
+# tests 27
+# suites 0
+# pass 27
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 13642.140881

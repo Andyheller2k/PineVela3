@@ -1,5 +1,40 @@
 # PineVela Security
 
+## Optional visitor analytics — 28 October 2026
+
+The GA4 bootstrap loads its one external tag only after a separate browser-level
+analytics choice. Terms acceptance does not grant it. Tracking uses known general
+page names and normalized locations, with sensitive auth/invitation/onboarding/
+payment-return paths and query keys excluded. Account identifiers, field values,
+private messages and complete referrer URLs are not supplied to the tag.
+Advertising/Google signals stay off. Withdrawal disables the tag before further
+calls and clears accessible analytics cookies. See
+[analytics setup](google-analytics-setup-2026-10-28.md) for consent, production-host
+restriction, Google stream settings and the local-versus-hosted test boundary.
+
+## Agreement evidence — 28 October 2026
+
+Saving the live account's own current Terms at `POST /api/legal/accept` is exempt
+from the manager operation key. Session authentication, exact consent/version
+validation, authorized transaction checks and the immutable receipt still apply.
+Manager business writes retain their key requirement. The agreement gate mounts
+before the key prompt, so it cannot depend on that prompt to save acceptance.
+
+Terms acceptance is an additional product-access prerequisite, never proof of
+role, ownership or housing authority. The server validates the exact current
+document version and records the authenticated subject/session/context. It does
+not accept identity selectors, hashes or timestamps from a consent request.
+Merchant submission rechecks verified enrollment/ownership and the separate
+student declaration before committing an application and versioned receipt in
+one transaction. Private legal tables retain RLS and have no browser grants.
+
+The authenticated agreement screen mounts before private page/notification
+providers and does not poll or initialize CAPTCHA. Every protected API request
+uses the indexed receipt check in the existing session-query round trip.
+Support, supported self-closure, account status/appearance and logout remain
+available without agreement. Optional AI sharing and marketing are not bundled
+into Terms acceptance. See `docs/auth.md` for the endpoint/versioning contract.
+
 ## Runtime checkpoint — 16 October 2026
 
 Supabase PostgreSQL/Storage and Supabase Auth are the sole runtime persistence and
@@ -506,8 +541,19 @@ Uploads authenticate before the 28MB parser, decode actual raster pixels, strip 
 resize to 2048px and cap output at 6MB. Daily account/global quotas serialize in PostgreSQL;
 IP admission and worker limits are bounded per process. Browser writes are denied. Attachment
 triggers enforce account, purpose and inspection relationships. Image responses check current
-publication/plan or private account access and verify digest/size, with no-store and a sandbox
-CSP. Failed transfers are reconciled through Storage APIs; ready assets are never removed by
+publication/plan or private account access and verify digest/size, with a sandbox
+CSP. Private photographs remain `private, no-store`, without generated ETags. Published marketplace and residence photographs
+use `private, no-cache, max-age=0, must-revalidate` and an immutable asset/digest ETag.
+Every conditional read rechecks publication and maintenance before 304; hidden, removed
+or unauthorized media cannot use that response. No image gets an unchecked cache lifetime.
+Verified public catalogue replies also carry `X-PineVela-Public-Photo: 1`. Android's
+dedicated 20MB photo cache accepts only these PNG replies with valid asset/digest ETags
+and no `Set-Cookie`; every new retrieval still validates with the server. Private,
+withdrawn, malformed and cookie-bearing replies cannot populate that cache. Generic
+API/session replies and the WebView media proxy remain `no-store`. Native session
+cookies are merged only from actual network headers, never cached response metadata.
+The app does not persist catalogue photos in a service worker, localStorage or Preferences.
+Failed transfers are reconciled through Storage APIs; ready assets are never removed by
 the stale-upload cleanup command. Ordinary API JSON bodies are 1MB. IP admission remains bounded per process;
 multi-instance deployments need shared ingress limits. Encrypted byte backups now bind
 the private object/catalog manifest to a fully rehearsed PostgreSQL checkpoint, including
@@ -826,6 +872,13 @@ In the Supabase manager dashboard, housing-control eligibility follows the nativ
 unlock those controls. Native publication, staff invitation and room-key issuance
 continue to enforce their separate saved residence-review requirements.
 
+The manager's `my-hostel` read first resolves its property under the manager's
+live-session RLS role. Its room/bed summary then uses a server-authorized read
+that rechecks the same live session and exact active manager assignment before
+returning any hierarchy rows. This avoids repeatedly evaluating nested room
+and bed RLS policies for a large residence; direct table access remains under
+the existing RLS policies.
+
 Resident directories are private. Administrators may view assigned residents; approved
 managers may view assigned residents only within their authorized residences. Primary
 accounts and unallocated records are excluded, and directory responses must not include
@@ -843,8 +896,27 @@ Authorize the residence before generating keys; database reads must not generate
 
 Verification and activation require a primary-account session. Verification exposes only
 the minimal room preview needed for onboarding, excluding occupant and manager contact
-records. Verification and activation aliases share persistent account/IP attempt limits
-and return HTTP 429 with `Retry-After` when exhausted. Private key responses must not be cached.
+records. Verification and activation aliases share an account budget of ten requests
+per fifteen minutes per verified Auth identity, plus the API's ten-per-minute IP
+budget. These bounded budgets live in each backend process; a process restart
+clears them. They return HTTP 429 with `Retry-After` when exhausted. Private key
+responses must not be cached.
+
+New room keys use the server-saved block prefix (or block-name initials when no
+prefix exists), followed by four cryptographically random uppercase letters/digits.
+Ambiguous I/O/0/1 characters are excluded. The global unique-code index prevents
+reuse, including revoked codes; bounded `ON CONFLICT` retries retain transaction
+atomicity. Generation, individual release and annual reset use the same allocator.
+Existing keys retain their validity until an authorized lifecycle action replaces them.
+
+New manager authorization codes contain six cryptographically random digits,
+stored only as salted scrypt hashes. They remain separate from session login and
+expire on replacement rather than on a timer. The persisted five-failure,
+fifteen-minute lockout and live key-version checks still apply. An authenticated
+manager may replace their own long key only with proof of that current key;
+rotation invalidates stale proofs, reveals the new code once, and records a
+secret-free audit event/notice. Previously issued long keys remain accepted until
+replaced; administrator recovery retains its independent settings-key requirement.
 
 
 ## Maintenance Actions
@@ -939,9 +1011,12 @@ requires the approval key; manager-key resets require the independent settings k
 
 Manager operation keys contain 256 bits of random entropy and are stored only as a
 purpose/account-bound SHA-256 digest. Constant-time comparison and persistent five-attempt,
-15-minute limits protect verification. The authenticated middleware checks every manager
-mutation, including uploads, staff and room operations. Initial residence onboarding,
+15-minute limits protect verification. The authenticated middleware checks manager
+business mutations, including residence uploads, staff and room operations. Initial residence onboarding,
 key issue/recovery and server popup delivery receipts are explicit lifecycle exceptions.
+An avatar upload and the manager-only picture endpoint are also exempt: both are bound
+to the active verified Auth identity, and the latter accepts only a picture field.
+Display-name and contact edits continue through the protected general profile route.
 Keys cannot be retrieved after issuance. Reset removes the old digest; only that manager
 receives the replacement. Business changes, notices and cooldown timestamps persist across
 restart. Popup acknowledgement does not delete a notice or mark it read.

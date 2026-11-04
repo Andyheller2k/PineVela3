@@ -1,0 +1,24 @@
+{
+  "date": "2026-10-29T20:57:24.290295+00:00",
+  "finalDeveloperAppInstalled": true,
+  "package": "app.pinevela.mobile.debug",
+  "installedApkSha256": "c5d3203cd3539d442392a48d582e6d4aaf4483cbca48b29cb1855b352efc2d31",
+  "localDebugApkMatches": true,
+  "transportTestRemoved": true,
+  "instrumentationTestRemoved": true,
+  "emulatorLeftRunning": true,
+  "productionAuthSubmitted": false,
+  "hostedServerUpdated": false,
+  "bundledLoginRendered": true,
+  "readOnlyUiSmokeCheck": {
+    "bundledOrigin": true,
+    "loginRoute": true,
+    "emailForm": true,
+    "googleAction": true,
+    "theme": "light",
+    "noLoader": true,
+    "noHorizontalOverflow": true,
+    "nativePlatform": true
+  },
+  "screenshot": "developer-installed-login.png"
+}

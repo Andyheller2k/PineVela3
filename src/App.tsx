@@ -6,6 +6,9 @@ import ApprovalKeyPrompt from './components/ApprovalKeyPrompt';
 import FormFeedback from './components/FormFeedback';
 import ManagerSecretKey from './components/ManagerSecretKey';
 import ProtectedRoute from './components/ProtectedRoute';
+import LegalTermsBoundary from './components/LegalTermsBoundary';
+import AnalyticsNavigation from './components/AnalyticsNavigation';
+import MobileBrowserReturn from './components/MobileBrowserReturn';
 import { AuthProvider,useAuth } from './context/AuthContext';
 import { NotificationProvider } from './context/NotificationContext';
 import { PlatformAccessBoundary,PlatformSettingsProvider } from './context/PlatformSettingsContext';
@@ -23,6 +26,7 @@ import { installedAppRedirect,useInstalledAppMode } from './lib/appMode';
 import AppLaunchLoader, { AppLaunchReady } from './components/AppLaunchLoader';
 import RouteLoadingSpinner from './components/RouteLoadingSpinner';
 import { appLaunch } from './lib/appLaunch';
+import { NATIVE_APP } from './native/environment';
 
 // Component imports
 const Page1Public = lazy(() => import('./components/Page1Public'));
@@ -39,6 +43,7 @@ const PageHelp = lazy(() => import('./components/PageHelp'));
 const PageSupportInvitation = lazy(() => import('./components/PageSupportInvitation'));
 const PageCustomerService = lazy(() => import('./components/PageCustomerService'));
 const PageUnifiedLogin = lazy(() => import('./components/PageUnifiedLogin'));
+const NativeAuthEntry = lazy(() => import('./native/NativeAuthEntry'));
 const PageManagerOnboarding = lazy(() => import('./components/PageManagerOnboarding'));
 const ManagerGoogleResult = lazy(() => import('./components/ManagerGoogleResult'));
 const PageAdminDashboard = lazy(() => import('./components/PageAdminDashboard'));
@@ -180,7 +185,7 @@ function AppContent() {
           path="/login"
           element={
             <PageWrapper smoothEntry loadingFallback={<p role="status" className="p-8 text-center text-sm text-slate-500">Loading sign in…</p>}>
-              <PageUnifiedLogin />
+              {NATIVE_APP ? <NativeAuthEntry /> : <PageUnifiedLogin />}
             </PageWrapper>
           }
         />
@@ -373,9 +378,12 @@ export default function App() {
       <AuthProvider>
         <HashRouter>
           <ThemeProvider>
+            <AnalyticsNavigation />
+            <MobileBrowserReturn />
             <PlatformSettingsProvider>
               <AppLaunchLoader />
               <PlatformAccessBoundary>
+                <LegalTermsBoundary>
                 <NotificationProvider>
                   <div className="app-canvas min-h-screen flex flex-col relative overflow-hidden">
                     <ThemeEnvironment />
@@ -391,6 +399,7 @@ export default function App() {
                     </div>
                   </div>
                 </NotificationProvider>
+                </LegalTermsBoundary>
               </PlatformAccessBoundary>
             </PlatformSettingsProvider>
           </ThemeProvider>

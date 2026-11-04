@@ -1,0 +1,56 @@
+{
+  "passed": true,
+  "suites": [
+    {
+      "suite": "managerTerms",
+      "exitCode": 0,
+      "tests": 7,
+      "passed": true
+    },
+    {
+      "suite": "legalAcceptance",
+      "exitCode": 0,
+      "tests": 3,
+      "passed": true
+    },
+    {
+      "suite": "supportPolicies",
+      "exitCode": 0,
+      "tests": 4,
+      "passed": true
+    },
+    {
+      "suite": "sessionSecurity",
+      "exitCode": 0,
+      "tests": 1,
+      "passed": true
+    },
+    {
+      "suite": "googleAuth",
+      "exitCode": 0,
+      "tests": 3,
+      "passed": true
+    },
+    {
+      "suite": "mobileGooglePage",
+      "exitCode": 0,
+      "tests": 3,
+      "passed": true
+    },
+    {
+      "suite": "mobileAppBuild",
+      "exitCode": 0,
+      "tests": 2,
+      "passed": true
+    },
+    {
+      "suite": "nativeTransport",
+      "exitCode": 0,
+      "tests": 6,
+      "passed": true
+    }
+  ],
+  "total": 29,
+  "hostedAccountWrites": 0,
+  "note": "mobilePreview artifact check requires a separate preview build; current connected artifact is checked with mobileAppBuild."
+}

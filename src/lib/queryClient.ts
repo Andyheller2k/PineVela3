@@ -1,5 +1,7 @@
 import { QueryClient } from '@tanstack/react-query';
 import { RealtimeLifecycle } from './realtimeLifecycle';
+import { NATIVE_APP } from '../native/environment';
+import { startForegroundRefresh } from '../native/foregroundRefresh';
 
 export const queryClient = new QueryClient({
   defaultOptions: {
@@ -58,6 +60,16 @@ let realtimeCleanup: (() => void) | undefined;
 export function setupRealtimeQuerySync() {
   if (typeof window === 'undefined') return;
   if (realtimeCleanup) return;
+
+  if (NATIVE_APP) {
+    const stop = startForegroundRefresh(() => {
+      window.dispatchEvent(new Event('pinevela-data-change'));
+      void queryClient.invalidateQueries({ type: 'active' });
+    });
+    const cleanup = () => { stop(); if (realtimeCleanup === cleanup) realtimeCleanup = undefined; };
+    realtimeCleanup = cleanup;
+    return cleanup;
+  }
 
   const lifecycle = new RealtimeLifecycle(retryAfter => {
       const eventSource = new EventSource('/api/sync/events');

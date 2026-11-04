@@ -1,0 +1,30 @@
+{
+  "origin": "https://localhost",
+  "theme": "light",
+  "welcome": true,
+  "ratio": 2.75,
+  "innerWidth": 393,
+  "innerHeight": 778,
+  "screen": {
+    "width": 393,
+    "height": 851
+  },
+  "viewport": {
+    "offsetTop": 0,
+    "height": 778.1818237304688,
+    "scale": 1
+  },
+  "button": {
+    "left": 42.72727584838867,
+    "top": 582.5454711914062,
+    "width": 307.6363830566406,
+    "height": 46.45454788208008,
+    "centerX": 196.54546737670898,
+    "centerY": 605.7727451324463
+  },
+  "nativeStatusBarHeight": 136,
+  "harnessTap": {
+    "x": 541,
+    "y": 1802
+  }
+}

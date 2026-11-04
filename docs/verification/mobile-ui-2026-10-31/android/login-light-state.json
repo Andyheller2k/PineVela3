@@ -1,0 +1,17 @@
+{
+  "origin": "https://localhost",
+  "platform": "android",
+  "hash": "#/login?mode=login",
+  "theme": "light",
+  "appearance": "public",
+  "welcome": false,
+  "activeTab": "login",
+  "originalLocalAppearance": "light",
+  "formCount": 1,
+  "horizontalOverflow": false,
+  "themeThumb": {
+    "background": "linear-gradient(135deg, rgb(0, 53, 102), rgb(0, 29, 61))",
+    "ink": "rgb(255, 255, 255)"
+  },
+  "signup": null
+}

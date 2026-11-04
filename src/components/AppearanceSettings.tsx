@@ -18,6 +18,6 @@ export default function AppearanceSettings() {
         ? 'Saved on this device. Syncing to your account…'
         : preference === 'system' ? `Following system default. ${themeLabel} mode is on.` : `${themeLabel} mode is on.`}</p>
     </div>
-    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 pt-4"><p className="text-sm text-slate-500">Have a question or need to report a problem?</p><HelpLink /></div>
+    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 pt-4"><a href="/privacy.html#analytics" data-analytics-preferences className="text-sm font-semibold text-blue-700 underline underline-offset-4">Analytics preferences</a><HelpLink /></div>
   </section>;
 }

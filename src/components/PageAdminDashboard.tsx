@@ -71,7 +71,7 @@ import { downloadPdfDocument,getPdfBlobUrl } from '../utils/pdfHelper';
 import AdminResidenceRegistrationReview from './AdminResidenceRegistrationReview';
 import HostelRegistration from './HostelRegistration';
 import LogoutConfirmationModal from './LogoutConfirmationModal';
-import PineLogo from './PineLogo';
+import PineLogo, { PineWordmark } from './PineLogo';
 import { AdminResidenceRequests } from './ResidenceChangeRequests';
 import SupabaseOfficerInvitationControls from './SupabaseOfficerInvitationControls';
 import TopNavBadge from './TopNavBadge';
@@ -654,7 +654,7 @@ export default function PageAdminDashboard() {
         <div className="flex min-w-0 flex-1 items-center gap-2">
           <PineLogo size={28} hideText />
           <div className="min-w-0">
-            <h1 className="truncate text-sm font-black tracking-tight text-blue-950 leading-tight">PineVela Admin {adminSlot ? `#${adminSlot}` : ''}</h1>
+            <h1 className="truncate text-sm font-black tracking-tight text-blue-950 leading-tight"><PineWordmark /></h1><p className="text-[10px] text-slate-500">Admin {adminSlot ? `#${adminSlot}` : ''}</p>
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-1">

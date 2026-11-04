@@ -1,0 +1,40 @@
+{
+  "date": "2026-10-30",
+  "sourceOnlyChange": "shared appearance, branding, help navigation and browser offline handling",
+  "typescriptPassed": true,
+  "webBuildPassed": true,
+  "mobileBuildPassed": true,
+  "androidBuildPassed": true,
+  "tests": {
+    "theme": 17,
+    "pwa": 8,
+    "legalAndSession": 21,
+    "mobile": 30
+  },
+  "androidEmulatorUi": {
+    "passed": true,
+    "scenarios": 6,
+    "report": "android/result.json",
+    "signedOut": true,
+    "accountFormsSubmitted": false
+  },
+  "privateDataCheckPassed": true,
+  "artifactPrivateValueScan": "artifact-scan.json",
+  "apk": "releases/android/pinevela-appearance-update-20261030.apk",
+  "previousApk": "releases/android/pinevela-mobile-welcome-20261030.apk",
+  "websiteZip": "/tmp/pinevela-appearance-update-20261030.zip",
+  "hostedDeploymentApplied": false,
+  "realRoleAuthorizationTested": false,
+  "iosBuildTested": false,
+  "googleOAuthOrCaptchaRetested": false,
+  "browser": {
+    "passed": true,
+    "scenarios": 145,
+    "uncaughtExceptions": 0,
+    "realAuthenticationTested": false,
+    "roleScreensUseVisualFixtures": true,
+    "report": "browser/report.json",
+    "offlineError": "ERR_INTERNET_DISCONNECTED",
+    "installabilityErrors": 0
+  }
+}

@@ -1,3 +1,4 @@
+import {termsAcceptance} from '../legalPolicy.js';
 /** Isolated domain scenarios using genuine archived Google identities and sessions. */
 import {spawnSync} from 'node:child_process';
 import assert from 'node:assert/strict';import fs from 'node:fs';import crypto from 'node:crypto';
@@ -39,7 +40,7 @@ try{await withIsolatedBackup(checkpoint,async config=>{
  stage='migrations';await db.system(async c=>{const ledger=new Map((await c.query('select version,digest from private.schema_migrations')).rows.map(r=>[r.version,r.digest]));for(const file of fs.readdirSync('supabase/migrations').filter(f=>/^\d{14}.*\.sql$/.test(f)).sort()){const sql=fs.readFileSync('supabase/migrations/'+file,'utf8'),digest=crypto.createHash('sha256').update(sql).digest('hex');if(ledger.has(file.slice(0,14)))assert.equal(ledger.get(file.slice(0,14)),digest);else{await c.query(sql);await c.query('insert into private.schema_migrations(version,digest)values($1,$2)',[file.slice(0,14),digest]);}}});
  async function run<T>(a:VerifiedActor,work:(c:any)=>Promise<T>){return db.system(async c=>{await c.query('update private.account_sessions set active_context_id=$2 where session_id=$1',[a.sessionId,a.contextId]);await c.query("select set_config('request.jwt.claims',$1,true)",[JSON.stringify({sub:a.authUserId,session_id:a.sessionId,role:'authenticated'})]);return work(c);});}
  async function denied(work:()=>Promise<unknown>,code:number|string,label:string){let e:any;try{await work();}catch(error){e=error;}check(typeof code==='number'?e instanceof ApiError&&e.status===code:e?.code===code,label);}
- const payload={enrollmentId:f.enrollment,university:'Kwame Nkrumah University of Science and Technology (KNUST)',categoryToSell:'General Campus Essentials',idNumber:'PV-20261013',storeName:f.name,certified:true};
+ const payload={enrollmentId:f.enrollment,university:'Kwame Nkrumah University of Science and Technology (KNUST)',categoryToSell:'General Campus Essentials',idNumber:'PV-20261013',storeName:f.name,certified:true,termsAcceptance:termsAcceptance(true)};
  stage='initial registration';await run(f.owner,c=>finishEnrollment(c,f.owner,f.enrollment,f.proof));const original=await run(f.owner,c=>submitSellerApplication(c,f.owner,payload));
  await run(f.admin,c=>decideSellerApplication(c,f.admin,{id:original.application.id},true));
  const store=(await db.pool.query('select * from public.stores where seller_context_id=$1',[f.seller.contextId])).rows[0];check(store.application_id===original.application.id&&store.registration_generation===0,'Initial store binds its exact generation-zero approval');

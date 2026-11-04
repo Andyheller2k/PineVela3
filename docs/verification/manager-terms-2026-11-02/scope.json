@@ -1,0 +1,9 @@
+{
+  "date": "2026-11-02",
+  "scope": [
+    "Manager password toggle styling",
+    "First manager Terms acceptance save"
+  ],
+  "productionDatabaseModified": false,
+  "remoteDeploymentPerformed": false
+}

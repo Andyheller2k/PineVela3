@@ -38,8 +38,10 @@ export function parseResidenceRegistration(body:any) {
   if (!['Per Night','Per Day','Per Week','Monthly','Weekend Package','Quarterly','Bi-Annually','Per Year','Per Academic Year','Per Semester'].includes(paymentFrequency)) throw new ApiError(400,'Choose a supported stay cycle.');
   if (body.agreeTerms !== true || body.accuracyCertified !== true) throw new ApiError(400,'Confirm the registration terms and accuracy of these details.');
   if (!Array.isArray(body.gallery) || body.gallery.length < 1 || body.gallery.length > 3 || new Set(body.gallery).size !== body.gallery.length) throw new ApiError(400,'Upload one to three distinct residence gallery photographs.');
+  if (!Array.isArray(body.blocksList) || body.blocksList.length < 1 || body.blocksList.length > 10)
+    throw new ApiError(400,'Configure between one and ten actual blocks for property registration.');
   const blocksList = parseResidenceStructure(body.blocksList);
-  return {name,description:optional(body.description,4000),propertyType:text(body.hostelType,120,true),genderCategory:body.genderCategory as string,
+  return {name,managerName:text(body.managerName,160,true),description:optional(body.description,4000),propertyType:text(body.hostelType,120,true),genderCategory:body.genderCategory as string,
     wing:body.wing as string,yearEstablished:body.yearEstablished as number,contactEmail,contactPhone,contactPhoneCountry:body.contactPhoneCountry as string,
     alternativePhone,website,addressLine1,addressLine2:optional(body.addressLine2,600),city:text(body.city,120,true),region:text(body.region,120,true),
     district:optional(body.district,120),country:text(body.country,120,true),postalCode:optional(body.postalCode,40),landmark:optional(body.landmark,200),
@@ -62,7 +64,7 @@ export async function residenceRegistrationDraft(client:PoolClient,actor:Verifie
   const r = await assignedResidence(client,actor);
   const data = (await client.query(`select id,status,submitted_data,review_notes from public.verification_cases where residence_id = $1 and kind = 'residence_registration'`,[r.id])).rows[0];
   return {residenceId:r.id,verificationId:data?.id || null,status:data?.status || 'not_submitted',reviewNotes:data?.review_notes || '',draft:data?.submitted_data || {
-    name:r.name,description:r.description,contactEmail:r.contact_email || '',contactPhone:r.contact_phone || '',contactPhoneCountry:r.contact_country || 'GH',
+    name:r.name,managerName:r.manager_contact_name || '',description:r.description,contactEmail:r.contact_email || '',contactPhone:r.contact_phone || '',contactPhoneCountry:r.contact_country || 'GH',
     addressLine1:r.location,city:r.city,region:r.region,landmark:r.landmark,latitude:Number(r.latitude),longitude:Number(r.longitude),
     formattedAddress:r.location,isLocationConfirmed:r.latitude !== null && r.longitude !== null,blocksList:(await residenceStructure(client,actor,r.id)).blocksList,
     imageUrl:r.cover_path || '',gallery:r.gallery_paths}};
@@ -96,7 +98,7 @@ export async function submitResidenceRegistration(client:PoolClient,actor:Verifi
   if (correcting) await correctResidenceStructure(client,actor,id,prior.submitted_data.blocksList,data.blocksList);
   else await createResidenceStructure(client,actor,id,data.blocksList);
   // Dynamic columns are constants controlled here, never client-supplied SQL.
-  const fields:Record<string,unknown> = {description:data.description,property_type:data.propertyType,property_category:data.wing,gender_category:data.genderCategory,year_established:data.yearEstablished,
+  const fields:Record<string,unknown> = {description:data.description,manager_contact_name:data.managerName,property_type:data.propertyType,property_category:data.wing,gender_category:data.genderCategory,year_established:data.yearEstablished,
     contact_phone:data.contactPhone,contact_country:data.contactPhoneCountry,contact_email:data.contactEmail,alternative_phone:data.alternativePhone,website:data.website,
     address_line1:data.addressLine1,address_line2:data.addressLine2,city:data.city,region:data.region,district:data.district,country:data.country,postal_code:data.postalCode,
     landmark:data.landmark,campus_proximity:data.campusProximity,campus_proximity_details:data.campusProximityDetails,payment_frequency:data.paymentFrequency,

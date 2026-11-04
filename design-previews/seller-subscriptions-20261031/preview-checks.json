@@ -1,0 +1,459 @@
+{
+  "passed": true,
+  "prototypeOnly": true,
+  "applicationSourceChanged": false,
+  "checkoutImplemented": false,
+  "responsiveThemeCases": 16,
+  "interactiveControlsPassed": true,
+  "runtimeExceptions": [],
+  "checks": [
+    {
+      "width": 320,
+      "theme": "light",
+      "plan": "default",
+      "next": "PineStar ✨",
+      "action": "linear-gradient(115deg, rgb(0, 53, 102), rgb(0, 29, 61))",
+      "ink": "rgb(255, 255, 255)",
+      "actionHeight": 50,
+      "noOverflow": true,
+      "tableFits": true,
+      "rows": 6,
+      "cardBottom": 920.359375,
+      "contrastColors": [
+        "rgb(0, 29, 61)",
+        "rgb(76, 98, 122)",
+        "rgb(0, 53, 102)"
+      ],
+      "backgrounds": [
+        "#f0f5fa",
+        "#e6eff9"
+      ],
+      "contrastRatios": {
+        "body": 16.64823283465479,
+        "helper": 6.2049278563257975,
+        "target": 10.627874725548475,
+        "action": 12.34493102785091
+      }
+    },
+    {
+      "width": 320,
+      "theme": "light",
+      "plan": "star",
+      "next": "PinePro ✨",
+      "action": "linear-gradient(115deg, rgb(0, 53, 102), rgb(0, 29, 61))",
+      "ink": "rgb(255, 255, 255)",
+      "actionHeight": 50,
+      "noOverflow": true,
+      "tableFits": true,
+      "rows": 6,
+      "cardBottom": 906.015625,
+      "contrastColors": [
+        "rgb(0, 29, 61)",
+        "rgb(76, 98, 122)",
+        "rgb(0, 53, 102)"
+      ],
+      "backgrounds": [
+        "#f0f5fa",
+        "#e6eff9"
+      ],
+      "contrastRatios": {
+        "body": 16.64823283465479,
+        "helper": 6.2049278563257975,
+        "target": 10.627874725548475,
+        "action": 12.34493102785091
+      }
+    },
+    {
+      "width": 320,
+      "theme": "dark",
+      "plan": "default",
+      "next": "PineStar ✨",
+      "action": "linear-gradient(115deg, rgb(255, 195, 0), rgb(255, 214, 10))",
+      "ink": "rgb(0, 29, 61)",
+      "actionHeight": 50,
+      "noOverflow": true,
+      "tableFits": true,
+      "rows": 6,
+      "cardBottom": 920.359375,
+      "contrastColors": [
+        "rgb(237, 245, 255)",
+        "rgb(177, 194, 212)",
+        "rgb(255, 214, 10)"
+      ],
+      "backgrounds": [
+        "#00152d",
+        "#283b35"
+      ],
+      "contrastRatios": {
+        "body": 15.56331622084166,
+        "helper": 9.397706239477294,
+        "target": 8.417193004614466,
+        "action": 10.504162393144675
+      }
+    },
+    {
+      "width": 320,
+      "theme": "dark",
+      "plan": "star",
+      "next": "PinePro ✨",
+      "action": "linear-gradient(115deg, rgb(255, 195, 0), rgb(255, 214, 10))",
+      "ink": "rgb(0, 29, 61)",
+      "actionHeight": 50,
+      "noOverflow": true,
+      "tableFits": true,
+      "rows": 6,
+      "cardBottom": 906.015625,
+      "contrastColors": [
+        "rgb(237, 245, 255)",
+        "rgb(177, 194, 212)",
+        "rgb(255, 214, 10)"
+      ],
+      "backgrounds": [
+        "#00152d",
+        "#283b35"
+      ],
+      "contrastRatios": {
+        "body": 15.56331622084166,
+        "helper": 9.397706239477294,
+        "target": 8.417193004614466,
+        "action": 10.504162393144675
+      }
+    },
+    {
+      "width": 390,
+      "theme": "light",
+      "plan": "default",
+      "next": "PineStar ✨",
+      "action": "linear-gradient(115deg, rgb(0, 53, 102), rgb(0, 29, 61))",
+      "ink": "rgb(255, 255, 255)",
+      "actionHeight": 50,
+      "noOverflow": true,
+      "tableFits": true,
+      "rows": 6,
+      "cardBottom": 910.109375,
+      "contrastColors": [
+        "rgb(0, 29, 61)",
+        "rgb(76, 98, 122)",
+        "rgb(0, 53, 102)"
+      ],
+      "backgrounds": [
+        "#f0f5fa",
+        "#e6eff9"
+      ],
+      "contrastRatios": {
+        "body": 16.64823283465479,
+        "helper": 6.2049278563257975,
+        "target": 10.627874725548475,
+        "action": 12.34493102785091
+      }
+    },
+    {
+      "width": 390,
+      "theme": "light",
+      "plan": "star",
+      "next": "PinePro ✨",
+      "action": "linear-gradient(115deg, rgb(0, 53, 102), rgb(0, 29, 61))",
+      "ink": "rgb(255, 255, 255)",
+      "actionHeight": 50,
+      "noOverflow": true,
+      "tableFits": true,
+      "rows": 6,
+      "cardBottom": 879.671875,
+      "contrastColors": [
+        "rgb(0, 29, 61)",
+        "rgb(76, 98, 122)",
+        "rgb(0, 53, 102)"
+      ],
+      "backgrounds": [
+        "#f0f5fa",
+        "#e6eff9"
+      ],
+      "contrastRatios": {
+        "body": 16.64823283465479,
+        "helper": 6.2049278563257975,
+        "target": 10.627874725548475,
+        "action": 12.34493102785091
+      }
+    },
+    {
+      "width": 390,
+      "theme": "dark",
+      "plan": "default",
+      "next": "PineStar ✨",
+      "action": "linear-gradient(115deg, rgb(255, 195, 0), rgb(255, 214, 10))",
+      "ink": "rgb(0, 29, 61)",
+      "actionHeight": 50,
+      "noOverflow": true,
+      "tableFits": true,
+      "rows": 6,
+      "cardBottom": 910.109375,
+      "contrastColors": [
+        "rgb(237, 245, 255)",
+        "rgb(177, 194, 212)",
+        "rgb(255, 214, 10)"
+      ],
+      "backgrounds": [
+        "#00152d",
+        "#283b35"
+      ],
+      "contrastRatios": {
+        "body": 15.56331622084166,
+        "helper": 9.397706239477294,
+        "target": 8.417193004614466,
+        "action": 10.504162393144675
+      }
+    },
+    {
+      "width": 390,
+      "theme": "dark",
+      "plan": "star",
+      "next": "PinePro ✨",
+      "action": "linear-gradient(115deg, rgb(255, 195, 0), rgb(255, 214, 10))",
+      "ink": "rgb(0, 29, 61)",
+      "actionHeight": 50,
+      "noOverflow": true,
+      "tableFits": true,
+      "rows": 6,
+      "cardBottom": 879.671875,
+      "contrastColors": [
+        "rgb(237, 245, 255)",
+        "rgb(177, 194, 212)",
+        "rgb(255, 214, 10)"
+      ],
+      "backgrounds": [
+        "#00152d",
+        "#283b35"
+      ],
+      "contrastRatios": {
+        "body": 15.56331622084166,
+        "helper": 9.397706239477294,
+        "target": 8.417193004614466,
+        "action": 10.504162393144675
+      }
+    },
+    {
+      "width": 430,
+      "theme": "light",
+      "plan": "default",
+      "next": "PineStar ✨",
+      "action": "linear-gradient(115deg, rgb(0, 53, 102), rgb(0, 29, 61))",
+      "ink": "rgb(255, 255, 255)",
+      "actionHeight": 50,
+      "noOverflow": true,
+      "tableFits": true,
+      "rows": 6,
+      "cardBottom": 879.671875,
+      "contrastColors": [
+        "rgb(0, 29, 61)",
+        "rgb(76, 98, 122)",
+        "rgb(0, 53, 102)"
+      ],
+      "backgrounds": [
+        "#f0f5fa",
+        "#e6eff9"
+      ],
+      "contrastRatios": {
+        "body": 16.64823283465479,
+        "helper": 6.2049278563257975,
+        "target": 10.627874725548475,
+        "action": 12.34493102785091
+      }
+    },
+    {
+      "width": 430,
+      "theme": "light",
+      "plan": "star",
+      "next": "PinePro ✨",
+      "action": "linear-gradient(115deg, rgb(0, 53, 102), rgb(0, 29, 61))",
+      "ink": "rgb(255, 255, 255)",
+      "actionHeight": 50,
+      "noOverflow": true,
+      "tableFits": true,
+      "rows": 6,
+      "cardBottom": 879.671875,
+      "contrastColors": [
+        "rgb(0, 29, 61)",
+        "rgb(76, 98, 122)",
+        "rgb(0, 53, 102)"
+      ],
+      "backgrounds": [
+        "#f0f5fa",
+        "#e6eff9"
+      ],
+      "contrastRatios": {
+        "body": 16.64823283465479,
+        "helper": 6.2049278563257975,
+        "target": 10.627874725548475,
+        "action": 12.34493102785091
+      }
+    },
+    {
+      "width": 430,
+      "theme": "dark",
+      "plan": "default",
+      "next": "PineStar ✨",
+      "action": "linear-gradient(115deg, rgb(255, 195, 0), rgb(255, 214, 10))",
+      "ink": "rgb(0, 29, 61)",
+      "actionHeight": 50,
+      "noOverflow": true,
+      "tableFits": true,
+      "rows": 6,
+      "cardBottom": 879.671875,
+      "contrastColors": [
+        "rgb(237, 245, 255)",
+        "rgb(177, 194, 212)",
+        "rgb(255, 214, 10)"
+      ],
+      "backgrounds": [
+        "#00152d",
+        "#283b35"
+      ],
+      "contrastRatios": {
+        "body": 15.56331622084166,
+        "helper": 9.397706239477294,
+        "target": 8.417193004614466,
+        "action": 10.504162393144675
+      }
+    },
+    {
+      "width": 430,
+      "theme": "dark",
+      "plan": "star",
+      "next": "PinePro ✨",
+      "action": "linear-gradient(115deg, rgb(255, 195, 0), rgb(255, 214, 10))",
+      "ink": "rgb(0, 29, 61)",
+      "actionHeight": 50,
+      "noOverflow": true,
+      "tableFits": true,
+      "rows": 6,
+      "cardBottom": 879.671875,
+      "contrastColors": [
+        "rgb(237, 245, 255)",
+        "rgb(177, 194, 212)",
+        "rgb(255, 214, 10)"
+      ],
+      "backgrounds": [
+        "#00152d",
+        "#283b35"
+      ],
+      "contrastRatios": {
+        "body": 15.56331622084166,
+        "helper": 9.397706239477294,
+        "target": 8.417193004614466,
+        "action": 10.504162393144675
+      }
+    },
+    {
+      "width": 1280,
+      "theme": "light",
+      "plan": "default",
+      "next": "PineStar ✨",
+      "action": "linear-gradient(115deg, rgb(0, 53, 102), rgb(0, 29, 61))",
+      "ink": "rgb(255, 255, 255)",
+      "actionHeight": 54,
+      "noOverflow": true,
+      "tableFits": true,
+      "rows": 6,
+      "cardBottom": 1051.890625,
+      "contrastColors": [
+        "rgb(0, 29, 61)",
+        "rgb(76, 98, 122)",
+        "rgb(0, 53, 102)"
+      ],
+      "backgrounds": [
+        "#f0f5fa",
+        "#e6eff9"
+      ],
+      "contrastRatios": {
+        "body": 16.64823283465479,
+        "helper": 6.2049278563257975,
+        "target": 10.627874725548475,
+        "action": 12.34493102785091
+      }
+    },
+    {
+      "width": 1280,
+      "theme": "light",
+      "plan": "star",
+      "next": "PinePro ✨",
+      "action": "linear-gradient(115deg, rgb(0, 53, 102), rgb(0, 29, 61))",
+      "ink": "rgb(255, 255, 255)",
+      "actionHeight": 54,
+      "noOverflow": true,
+      "tableFits": true,
+      "rows": 6,
+      "cardBottom": 1051.890625,
+      "contrastColors": [
+        "rgb(0, 29, 61)",
+        "rgb(76, 98, 122)",
+        "rgb(0, 53, 102)"
+      ],
+      "backgrounds": [
+        "#f0f5fa",
+        "#e6eff9"
+      ],
+      "contrastRatios": {
+        "body": 16.64823283465479,
+        "helper": 6.2049278563257975,
+        "target": 10.627874725548475,
+        "action": 12.34493102785091
+      }
+    },
+    {
+      "width": 1280,
+      "theme": "dark",
+      "plan": "default",
+      "next": "PineStar ✨",
+      "action": "linear-gradient(115deg, rgb(255, 195, 0), rgb(255, 214, 10))",
+      "ink": "rgb(0, 29, 61)",
+      "actionHeight": 54,
+      "noOverflow": true,
+      "tableFits": true,
+      "rows": 6,
+      "cardBottom": 1051.890625,
+      "contrastColors": [
+        "rgb(237, 245, 255)",
+        "rgb(177, 194, 212)",
+        "rgb(255, 214, 10)"
+      ],
+      "backgrounds": [
+        "#00152d",
+        "#283b35"
+      ],
+      "contrastRatios": {
+        "body": 15.56331622084166,
+        "helper": 9.397706239477294,
+        "target": 8.417193004614466,
+        "action": 10.504162393144675
+      }
+    },
+    {
+      "width": 1280,
+      "theme": "dark",
+      "plan": "star",
+      "next": "PinePro ✨",
+      "action": "linear-gradient(115deg, rgb(255, 195, 0), rgb(255, 214, 10))",
+      "ink": "rgb(0, 29, 61)",
+      "actionHeight": 54,
+      "noOverflow": true,
+      "tableFits": true,
+      "rows": 6,
+      "cardBottom": 1051.890625,
+      "contrastColors": [
+        "rgb(237, 245, 255)",
+        "rgb(177, 194, 212)",
+        "rgb(255, 214, 10)"
+      ],
+      "backgrounds": [
+        "#00152d",
+        "#283b35"
+      ],
+      "contrastRatios": {
+        "body": 15.56331622084166,
+        "helper": 9.397706239477294,
+        "target": 8.417193004614466,
+        "action": 10.504162393144675
+      }
+    }
+  ]
+}

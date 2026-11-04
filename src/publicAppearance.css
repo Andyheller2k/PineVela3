@@ -60,7 +60,6 @@ html[data-public-theme="adaptive"] :is(.landing-peak-page, .support-surface, .pu
 html[data-public-theme="adaptive"] :is(.landing-peak-page, .support-surface, .public-catalog-page) :is(h1, h2, h3, h4, h5, h6) { background-image: none; color: var(--pv-heading); -webkit-text-fill-color: currentColor; text-wrap: balance; }
 html[data-public-theme="adaptive"] .landing-peak-page { font-family: 'Outfit', 'Plus Jakarta Sans', sans-serif !important; background: var(--pv-canvas); }
 html[data-public-theme="adaptive"] .landing-peak-page :is(h1, h2, h3, h4, h5, h6) { font-family: 'Outfit', 'Plus Jakarta Sans', sans-serif !important; font-weight: 750; letter-spacing: -.035em; }
-html[data-public-theme="adaptive"] .landing-peak-page .pinevela-wordmark { font-family: 'Caviar Dreams', sans-serif !important; }
 html[data-public-theme="adaptive"] #public-header { background: var(--pv-panel) !important; color: var(--pv-text); border-color: var(--pv-edge) !important; border-radius: 0; box-shadow: 0 4px 20px rgb(0 29 61 / .04) !important; }
 html[data-public-theme="adaptive"] #public-header .public-header-sections { flex-wrap: wrap; gap: 8px 20px; }
 html[data-public-theme="adaptive"] #public-header .public-header-link { color: var(--pv-link) !important; }

@@ -3,6 +3,12 @@ build/
 dist/
 dist-supabase/
 dist-supabase-backend/
+dist-mobile/
+/releases/**/*.apk
+/releases/**/*.zip
+*.jks
+*.keystore
+android/app/src/transportTest/res/raw/pinevela_test_ca.pem
 coverage/
 .DS_Store
 *.log

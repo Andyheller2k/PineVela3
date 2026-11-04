@@ -18,7 +18,7 @@ export async function verifyResidenceRegistration(client:PoolClient,manager:Veri
   const upload = await reserveMedia(client,manager,'hostel',image);
   const photo = (await finishMedia(client,manager,upload.id)).imageUrl;
   const account = (await client.query('select email from public.profiles where id = $1',[manager.authUserId])).rows[0];
-  const input = {residenceId,name:property.name,description:property.description,hostelType:'Student accommodation',wing:'Hostel',genderCategory:'Mixed',yearEstablished:new Date().getFullYear(),
+  const input = {residenceId,name:property.name,managerName:'Registration Contact',description:property.description,hostelType:'Student accommodation',wing:'Hostel',genderCategory:'Mixed',yearEstablished:new Date().getFullYear(),
     contactEmail:account.email,contactPhone:'+233241234567',contactPhoneCountry:'GH',addressLine1:property.location,city:'Kumasi',region:'Ashanti',country:'Ghana',
     latitude:property.latitude,longitude:property.longitude,landmark:property.landmark,imageUrl:photo,gallery:[photo],
     paymentFrequency:'Per Academic Year',agreeTerms:true,accuracyCertified:true,
@@ -54,6 +54,8 @@ export async function verifyResidenceRegistration(client:PoolClient,manager:Veri
   await client.query('rollback to savepoint registration_ban');
   const submitted = await submitResidenceRegistration(client,manager,residenceId,data);
   check(!submitted.alreadySubmitted && submitted.hostel.id === residenceId,'Full registration completes the physically inspected residence instead of creating another one');
+  check(submitted.hostel.managerName === input.managerName && (await client.query('select manager_contact_name from public.residences where id=$1',[residenceId])).rows[0].manager_contact_name === input.managerName,
+    'The explicit public contact name is saved on the residence, separate from the manager login profile');
   check(submitted.hostel.totalRooms === 4 && submitted.hostel.totalBeds === 7 && submitted.hostel.totalFloors === 2,'Declared layouts produce real floor, room and bed rows');
   check(submitted.hostel.status === 'pending' && !submitted.hostel.isApproved,'Full registration awaits its own administrator review');
   const roster = (await adminResidenceRows(client,admin)).find(r => r.id === residenceId);
@@ -152,6 +154,8 @@ export async function verifyResidenceRegistration(client:PoolClient,manager:Veri
     where n.title = 'Residence Registration Approved!' and nr.context_id = $1`,[rootContext])).rowCount === 1,'Residence approval notice goes to the primary owner before manager portal entry');
 
   check((await client.query('select private.residence_is_public($1) as allowed',[residenceId])).rows[0].allowed,'Approved setup with an active assigned manager enters the public catalog');
+  check((await client.query('select manager_contact_name from public.residence_catalog where id=$1',[residenceId])).rows[0].manager_contact_name === input.managerName,
+    'Only the reviewed public contact name appears in the published residence catalog');
   check((await client.query('select private.media_asset_is_public($1) as allowed',[upload.id])).rows[0].allowed,'Approved public catalog and photo publication share the same gate');
   await client.query("update public.account_contexts set status = 'suspended' where id = $1",[manager.contextId]);
   check(!(await client.query('select private.residence_is_public($1) as allowed',[residenceId])).rows[0].allowed,'A suspended manager cannot retain public property publication');

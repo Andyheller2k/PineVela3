@@ -1,0 +1,22 @@
+{
+  "passed": false,
+  "installedFinalApkSha256": "646cb17c40b2703245a6642d456e306d3ee8e4be7001c4bd698777fae951615d",
+  "actualAndroidWebView": true,
+  "device": "PineVela_Pixel_4a_API_36",
+  "androidApi": 36,
+  "display": "1080x2340, 440 dpi",
+  "appDataPreserved": true,
+  "accountFormsSubmitted": false,
+  "accountCreated": false,
+  "sessionCleared": false,
+  "livePaymentsAttempted": false,
+  "signedOutStatus401": true,
+  "lightWelcomeBrandingAndNativeBarsPassed": true,
+  "singleMeasuredPhysicalTapOpenedBundledLogin": true,
+  "fullSixScenarioSuitePassed": false,
+  "warmFailureStage": "Sign in opens the local login card and the selector animates both ways",
+  "warmFailureReason": "Correct in-app card did not settle",
+  "sellerAuthenticatedFlowsTestedOnDevice": false,
+  "iosBuildTested": false,
+  "priorFailuresPreserved": true
+}

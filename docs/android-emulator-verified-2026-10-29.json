@@ -1,0 +1,77 @@
+{
+  "avd": "PineVela_Lite_API_35",
+  "serial": "emulator-5554",
+  "guiWindowRequested": true,
+  "bootCompleted": true,
+  "stoppedAfterTest": true,
+  "bootSeconds": 18.3,
+  "androidRelease": "15",
+  "apiLevel": "35",
+  "abi": "x86_64",
+  "screen": "Physical size: 720x1280",
+  "density": "Physical density: 320",
+  "guestCpuOnline": "0-1",
+  "webview": [
+    "Current WebView package (name, version): (com.android.webview, 124.0.6367.219)",
+    "Valid package com.android.webview (versionName: 124.0.6367.219, versionCode: 636771907, targetSdkVersion: 34) is  installed/enabled for all users"
+  ],
+  "guestMemoryTotal": "MemTotal:        2532892 kB",
+  "alphabeticKeyboardDetected": true,
+  "launcherActivity": [
+    "topResumedActivity=ActivityRecord{c4b2b6d u0 com.android.launcher3/.uioverrides.QuickstepLauncher t7}"
+  ],
+  "screenshot": "docs/verification/android-emulator-2026-10-29/android-home.png",
+  "processExit": 0,
+  "verifiedDate": "2026-10-29",
+  "emulatorVersion": "37.2.12",
+  "guestRamMiB": 2560,
+  "avdConfig": {
+    "hw.ramSize": "2560",
+    "hw.cpu.ncore": "2",
+    "hw.lcd.width": "720",
+    "hw.lcd.height": "1280",
+    "hw.lcd.density": "320",
+    "disk.dataPartition.size": "6442450944"
+  },
+  "hardwareAccelerationVerified": true,
+  "hostGpu": "Intel HD Graphics 620 / Mesa",
+  "systemImage": "system-images;android-35;default;x86_64",
+  "extensionId": "DiemasMichiels.emulate",
+  "extensionVersion": "1.9.0",
+  "extensionSettingsAndImplementationVerified": true,
+  "vscodeMenuInteractionAutomated": false,
+  "packages": [
+    {
+      "package": "emulator",
+      "revision": "37.2.12",
+      "url": "https://dl.google.com/android/repository/emulator-linux_x64-16428233.zip",
+      "bytes": 349654171,
+      "checksum_type": "sha1",
+      "checksum": "cd7362ea55dfb86a418958138dc396e74165dd01",
+      "license": "android-sdk-license",
+      "metadata": "repository2-3.xml",
+      "filename": "emulator-linux_x64-16428233.zip",
+      "size": 349654171,
+      "sha1": "cd7362ea55dfb86a418958138dc396e74165dd01",
+      "sha256": "b08fc43d8608d2955f607f1b287beb525041e730086bdca3af152accac3af9c1",
+      "cache": "/home/wyse/.cache/pinevela-android-setup/emulator-packages/emulator-linux_x64-16428233.zip"
+    },
+    {
+      "package": "system-images;android-35;default;x86_64",
+      "revision": "2",
+      "url": "https://dl.google.com/android/repository/sys-img/android/x86_64-35_r02.zip",
+      "bytes": 782404023,
+      "checksum_type": "sha1",
+      "checksum": "2d857d170c0d1b827149565da34b3383e5306f7f",
+      "license": "android-sdk-license",
+      "metadata": "android-sys-img2-3.xml",
+      "filename": "x86_64-35_r02.zip",
+      "size": 782404023,
+      "sha1": "2d857d170c0d1b827149565da34b3383e5306f7f",
+      "sha256": "6dd7de33e63ef105cf2fabea6badda1dbe7665c96d8908e5f6e1407e63ff4556",
+      "cache": "/home/wyse/.cache/pinevela-android-setup/emulator-packages/x86_64-35_r02.zip"
+    }
+  ],
+  "sourceFilesChanged": false,
+  "pinevelaApkTested": false
+}

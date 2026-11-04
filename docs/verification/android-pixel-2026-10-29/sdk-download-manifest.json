@@ -1,0 +1,19 @@
+{
+  "metadataSha256": {
+    "google-apis-repository.xml": "3429a93b0372fda1ea767364496706d4586eb6461850cd337a6918e4bcb10a50"
+  },
+  "packages": [
+    {
+      "package": "system-images;android-36;google_apis;x86_64",
+      "metadata": "google-apis-repository.xml",
+      "url": "https://dl.google.com/android/repository/sys-img/google_apis/x86_64-36_r07.zip",
+      "bytes": 1895447397,
+      "checksum": "c6bf44bdcd885bb902b4ba752d111a073ad7a817",
+      "filename": "x86_64-36_r07.zip",
+      "size": 1895447397,
+      "sha1": "c6bf44bdcd885bb902b4ba752d111a073ad7a817",
+      "sha256": "b1bb0769d0bed7698e61f203d7dc9bf6e7c37cd01a39d0d8788a11186bc78160",
+      "cache": "/home/wyse/.cache/pinevela-android-setup/emulator-packages/x86_64-36_r07.zip"
+    }
+  ]
+}

@@ -1,0 +1,33 @@
+{
+  "passed": true,
+  "date": "2026-11-01T12:38:13.916024+00:00",
+  "typescriptPassed": true,
+  "webBuildPassed": true,
+  "mobileBuildPassed": true,
+  "androidBuildPassed": true,
+  "capacitorSyncPassed": true,
+  "focusedTestsPassed": true,
+  "browserChecksPassed": true,
+  "regressionChecksPassed": true,
+  "diffCheckPassed": true,
+  "nodeTestCount": 51,
+  "androidBundleBrowserScenarios": 82,
+  "profileSaveBrowserScenarios": 8,
+  "googleReturnBrowserScenarios": 3,
+  "nativeInstrumentationTests": 32,
+  "actualEmulatorUiScenarios": 65,
+  "apkSha256": "4ed337dbbe863458f4b062f40915047bde8ff601ad05efbaafd0ef8a312a4b0c",
+  "normalEmulatorReopenPreservedApk": true,
+  "deployedRemotely": false,
+  "realGoogleAccountCompleted": false,
+  "iosBuildTested": false,
+  "physicalDeviceTested": false,
+  "hostedAccountWrites": 0,
+  "dependenciesChangedForThisUpdate": false,
+  "databaseMigrationRequired": false,
+  "limitations": [
+    "Emulator runs API 36 with WebView 133; modern Chromium checks supplement it.",
+    "Real Google account sign-in and hosted profile updates remain untested.",
+    "This debug APK is not a signed Google Play release."
+  ]
+}

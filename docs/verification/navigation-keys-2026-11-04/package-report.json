@@ -1,0 +1,11 @@
+{
+  "passed": true,
+  "zip": "/home/wyse/Documents/PineVela3/releases/web/pinevela-navigation-short-keys-20261104.zip",
+  "temporaryZip": "/tmp/pinevela-navigation-short-keys-20261104.zip",
+  "apk": "/home/wyse/Documents/PineVela3/releases/android/pinevela-navigation-short-keys-20261104.apk",
+  "zipFiles": 199,
+  "zipBytes": 6518449,
+  "zipSha256": "4c8091ce70a5c7d4ac4673ad6e46e5afd0b56b19a8460daab3385811f07959a7",
+  "apkSha256": "74aab1b14f02cc62ebf50470a565b4a47e3d5130edd4f362139e211012896ada",
+  "deployedRemotely": false
+}

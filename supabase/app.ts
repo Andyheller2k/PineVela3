@@ -4,6 +4,7 @@ import { ApiError, SessionExpiredError, SupabaseDatabase } from './db.js';
 import { SupabaseAuth, csrfBoundary, installSupabaseAuth, type AuthRequest } from './auth.js';
 import { installCatalog } from './catalog.js';
 import { installNotifications } from './notifications.js';
+import { installManagerWelcome } from './managerWelcome.js';
 import { installRealtime } from './realtime.js';
 import { installEnrollment } from './enrollment.js';
 import { SignupError } from '../supabaseSignup.js';
@@ -29,6 +30,7 @@ import { installStaffRetention } from './staffRetention.js';
 import { installMeetings } from './meetings.js';
 import { installSellerRegistration } from './sellerRegistration.js';
 import { installStoreSetup } from './storeSetup.js';
+import { installLocationSuggestions } from './locationSuggestions.js';
 import { installInventory } from './inventory.js';
 import { installOrders } from './orders.js';
 import { installMarketConversation } from './marketConversation.js';
@@ -60,15 +62,21 @@ import { installContentSafety } from './contentSafety.js';
 import { installCompanion } from './companion.js';
 import { AttemptBudgets, canonicalOperationPath, ResourceLimitError, trustedProxyAddresses } from '../resourceSecurity.js';
 import {authProtectionContext,publicCaptchaConfig} from './authProtection.js';
+import { installLegal } from './legal.js';
+import { createMobileAuth } from './mobileAuth.js';
+import { createNativeGoogleAuth } from './nativeGoogleAuth.js';
+import { installNativeCaptcha } from './nativeCaptcha.js';
 
 /** Replacement backend is tested independently until all active routes are ported.
  * It never imports localDb, persistentDb, JSON credentials, or legacy bootstrap. */
 export function createSupabaseApp(db: SupabaseDatabase) {
   const app = express(), auth = new SupabaseAuth(db);
+  const mobileAuth = createMobileAuth(auth);
   const budgets = new AttemptBudgets();
   app.disable('x-powered-by');
   app.set('trust proxy', trustedProxyAddresses());
   app.use('/api', (_req, res, next) => { res.set({ 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' }); next(); });
+  app.use('/api', mobileAuth.observe);
   app.use('/api', (req, _res, next) => {
     try {
       const path = canonicalOperationPath(req.path);
@@ -77,7 +85,7 @@ export function createSupabaseApp(db: SupabaseDatabase) {
         { scope: 'supabase-api-global', identity: 'all', maximum: 3000, windowMs: 60000 },
       ];
       if(req.method==='POST'&&path==='/auth/enrollments/google/start')limits.push({scope:'supabase-auth-ip',identity:req.ip||req.socket.remoteAddress||'',maximum:20,windowMs:60000});
-      if (req.method === 'POST' && ((path.startsWith('/auth/staff-invitations/') || path.startsWith('/auth/officer-invitation/')) || /^\/auth\/(login|register-unified|verify-unified|resend-unified|primary-reentry(?:\/verify)?|recover(?:\/complete)?|change-password|portal-pin|enrollments(?:\/[^/]+\/(?:verify|resend|reactivate(?:\/send-code)?))?|google\/start)$/.test(path) || /\/(login|verification-team-login)$/.test(path))) limits.push({ scope: 'supabase-auth-ip', identity: req.ip || req.socket.remoteAddress || '', maximum: 20, windowMs: 60000 });
+      if (req.method === 'POST' && ((path.startsWith('/auth/staff-invitations/') || path.startsWith('/auth/officer-invitation/')) || /^\/auth\/(login|register-unified|verify-unified|resend-unified|primary-reentry(?:\/verify)?|recover(?:\/complete)?|change-password|portal-pin|enrollments(?:\/[^/]+\/(?:verify|resend|reactivate(?:\/send-code)?))?|google\/start|mobile\/(?:start|finish|exchange))$/.test(path) || /\/(login|verification-team-login)$/.test(path))) limits.push({ scope: 'supabase-auth-ip', identity: req.ip || req.socket.remoteAddress || '', maximum: 20, windowMs: 60000 });
       if (req.method === 'POST' && ['/room-keys/claim','/room-keys/verify','/residents/onboard'].includes(path)) limits.push({ scope:'supabase-room-key-ip',identity:req.ip || req.socket.remoteAddress || '',maximum:10,windowMs:60000 });
       if(req.method==='POST' && (['/users/delete-registered-account','/student/delete-room'].includes(path) || /^\/(?:manager\/closure-request\/[^/]+\/withdraw|admin\/manager-closure-requests\/[^/]+\/(?:reject|review))$/.test(path)))
         limits.push({scope:'supabase-closure-ip',identity:req.ip || req.socket.remoteAddress || '',maximum:20,windowMs:60000});
@@ -86,6 +94,9 @@ export function createSupabaseApp(db: SupabaseDatabase) {
   });
   installPaymentWebhook(app,auth);
   app.use('/api', csrfBoundary);
+  // This public widget document uses only the public site key, without a
+  // session/maintenance read or cookie issuance. Native API auth stays separate.
+  installNativeCaptcha(app);
   // This private bootstrap read enforces maintenance inside authorizedRead's
   // live actor transaction. Avoid a second remote maintenance transaction first.
   installManagerOnboarding(app,auth);
@@ -104,7 +115,10 @@ export function createSupabaseApp(db: SupabaseDatabase) {
       return publicPlatformSettings({ platformSettings: rows[0]?.value });
     }).then(settings => res.json(settings)).catch(next);
   });
-  installSupabaseAuth(app, auth); installNotifications(app, auth);
+  mobileAuth.install(app);
+  createNativeGoogleAuth(auth).install(app);
+  installSupabaseAuth(app, auth); installLegal(app, auth); installNotifications(app, auth);
+  installManagerWelcome(app, auth);
   installSupport(app, auth);
   installModeration(app, auth);
   installContentSafety(app, auth);
@@ -136,6 +150,7 @@ export function createSupabaseApp(db: SupabaseDatabase) {
   installMeetings(app,auth);
   installSellerRegistration(app,auth);
   installStoreSetup(app,auth);
+  installLocationSuggestions(app,auth);
   installInventory(app,auth);
   installOrders(app,auth);
   installMarketConversation(app,auth);

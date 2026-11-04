@@ -1,0 +1,11 @@
+{
+  "passed": true,
+  "zipFiles": 200,
+  "internalChecksumsPassed": true,
+  "zipBytes": 6510048,
+  "apkBytes": 10966647,
+  "zipSha256": "3c00f996e599847802c090653c71841627688ff78d9480bb4fc6cb896b0b026c",
+  "apkSha256": "6751232c39c071adc8b745d6e94d3748f29255ca5d4a1c2146efdf6a847515fd",
+  "temporaryCopyMatches": true,
+  "remotelyDeployed": false
+}

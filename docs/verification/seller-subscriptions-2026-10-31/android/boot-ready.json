@@ -1,0 +1,15 @@
+{
+  "bootCompleted": true,
+  "checks": [
+    {
+      "boot": "1",
+      "returnCode": 0
+    }
+  ],
+  "safeQuickBootLogLines": [
+    "INFO         | Loading snapshot 'default_boot'...",
+    "WARNING      | Device 'cache' does not have the requested snapshot 'default_boot'",
+    "WARNING      | Failed to load snapshot 'default_boot'",
+    "INFO         | Boot completed in 73841 ms"
+  ]
+}

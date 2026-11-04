@@ -1,0 +1,6 @@
+{
+  "passed": false,
+  "stage": "Cold launch shows the glass welcome over the original landing artwork",
+  "reason": "Status bar matches theme",
+  "scenarios": []
+}

@@ -1,0 +1,12 @@
+{
+  "passed": true,
+  "checks": 93,
+  "advisorSkipped": true,
+  "shortCodesVerified": true,
+  "isolatedNative": true,
+  "genuineArchivedGoogleIdentities": true,
+  "cloudRecordsModified": 0,
+  "authRecordsChanged": false,
+  "providerMocks": false,
+  "realManagerResetBrowserPending": true
+}

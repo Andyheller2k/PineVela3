@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from 'react';
+import { NATIVE_APP, NATIVE_PREVIEW } from '../native/environment';
 
 interface InstallPromptEvent extends Event {
   prompt(): Promise<unknown>;
@@ -16,7 +17,7 @@ function publish() {
 
 // Imported by the entry point so a browser prompt is captured before lazy pages load.
 // Installation state stays in memory; this does not save account or device data.
-if (typeof window !== 'undefined') {
+if (typeof window !== 'undefined' && !NATIVE_APP && !NATIVE_PREVIEW) {
   window.addEventListener('beforeinstallprompt', event => {
     event.preventDefault();
     deferredPrompt = event as InstallPromptEvent;

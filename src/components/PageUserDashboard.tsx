@@ -64,6 +64,7 @@ import { useNotifications } from '../context/NotificationContext';
 import { usePlatformSettings } from '../context/PlatformSettingsContext';
 import { safeJson } from '../lib/api';
 import { routePopupFeedback } from '../lib/feedback';
+import { useClipboardFeedback } from '../lib/useClipboardFeedback';
 import { optimizeImageDisplayUrl } from '../lib/imageOptimizer';
 import { matchesMarketCategory } from '../lib/marketCatalog';
 import { marketNoticeKind } from '../lib/marketNotifications';
@@ -80,6 +81,7 @@ import ListingPlanBadge from './ListingPlanBadge';
 import ManagerRegistrationCard from './ManagerRegistrationCard';
 import MarketImageGallery from './MarketImageGallery';
 import MarketItemCard,{ getServiceActionLabel } from './MarketItemCard';
+import PurchaseCard from './PurchaseCard';
 import MarketplaceFilters from './MarketplaceFilters';
 import MarketplaceInbox from './MarketplaceInbox';
 import ReportButton from './ReportButton';
@@ -119,6 +121,7 @@ type PrimaryDashboardSnapshot = {
 export default function PageUserDashboard({ initialTab, initialMarketMode }: PageUserDashboardProps = {}) {
   const navigationId = useId();
   const { user, logout, apiFetch, updateUser, setSessionUser } = useAuth();
+  const clipboard = useClipboardFeedback();
   const cachedDashboard = readDashboardSnapshot<PrimaryDashboardSnapshot>('primary', user?.id);
   const marketAccount=useRef(user?.id),marketEpoch=useRef(0),marketGeneration=useRef(0),marketMounted=useRef(true);
   if(marketAccount.current!==user?.id){marketAccount.current=user?.id;marketEpoch.current++;marketGeneration.current++;}
@@ -481,7 +484,13 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
 
   // Catalog selection for the home tab
   const [homeFilterType, setHomeFilterType] = useState<'hostels' | 'market'>('market');
+  const [visitedCatalogs, setVisitedCatalogs] = useState({ market: true, hostels: false });
   const [marketVisibleCount, setMarketVisibleCount] = useState<number>(24);
+
+  useEffect(() => {
+    setVisitedCatalogs(previous => previous[homeFilterType] ? previous : { ...previous, [homeFilterType]: true });
+    if (activeTab !== 'home' || homeFilterType !== 'market') setShowPriceFilterPanel(false);
+  }, [homeFilterType, activeTab]);
 
   useEffect(() => {
     setMarketVisibleCount(24);
@@ -568,7 +577,6 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
 
   const triggerToast = (msg: string, type: 'success' | 'warning' | 'info' | 'error' = 'info') => {
     if (routePopupFeedback(msg, type)) return;
-    pushToast(msg, undefined, type);
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 2500);
   };
@@ -1218,19 +1226,20 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
         </section>}
 
         {/* TAB 0: HOME TAB (Residents View, Staff View & Gateways) */}
-        {activeTab === 'home' && (
-          <div data-home-catalog={homeFilterType} className="user-home-content space-y-8 animate-fadeIn relative z-10">
+        {/* Retain visited catalogue DOM so navigating back reuses decoded photos.
+            Data still refreshes normally, including hidden panels and removals. */}
+          <div key={user?.id} hidden={activeTab !== 'home'} data-home-catalog={homeFilterType} className="user-home-content space-y-8 relative z-10">
             <UserCatalogSwitcher value={homeFilterType} onChange={setHomeFilterType} />
 
             {/* Pinevela Digital Marketplace Section */}
-            {homeFilterType === 'market' && (
-              <div key="market" id="home-market-section" className="user-market-panel user-catalog-panel bg-transparent border-0 rounded-3xl p-0 shadow-none space-y-6 animate-fadeIn">
+            {(visitedCatalogs.market || homeFilterType === 'market') && (
+              <div key="market" hidden={homeFilterType !== 'market'} id="home-market-section" className="user-market-panel user-catalog-panel bg-transparent border-0 rounded-3xl p-0 shadow-none space-y-6">
                   <MarketplaceFilters compactCatalog onNearbyServices={() => setShowNearbyServices(true)} catalogSearch={catalogSearch} setCatalogSearch={setCatalogSearch}
                     catalogCategory={catalogCategory} setCatalogCategory={setCatalogCategory}
                     minPriceFilter={minPriceFilter} setMinPriceFilter={setMinPriceFilter}
                     maxPriceFilter={maxPriceFilter} setMaxPriceFilter={setMaxPriceFilter}
                     priceSortOption={priceSortOption} setPriceSortOption={setPriceSortOption}
-                    showPriceFilterPanel={showPriceFilterPanel} setShowPriceFilterPanel={setShowPriceFilterPanel}
+                    showPriceFilterPanel={activeTab === 'home' && homeFilterType === 'market' && showPriceFilterPanel} setShowPriceFilterPanel={setShowPriceFilterPanel}
                     itemCount={filteredProducts.length} />
 
                   {/* Main Marketplace Grid */}
@@ -1280,8 +1289,8 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
             )}
 
             {/* Available Hostels Section */}
-            {homeFilterType === 'hostels' && (
-                <div key="residences" id="home-hostels-section" className="user-catalog-panel bg-transparent border-0 rounded-3xl p-0 shadow-none space-y-6 animate-fadeIn">
+            {(visitedCatalogs.hostels || homeFilterType === 'hostels') && (
+                <div key="residences" hidden={homeFilterType !== 'hostels'} id="home-hostels-section" className="user-catalog-panel bg-transparent border-0 rounded-3xl p-0 shadow-none space-y-6">
                   <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-4">
                     <div>
                       <h3 className="user-section-title text-lg font-black text-slate-900 flex items-center gap-2">
@@ -1322,7 +1331,6 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
               {/* Job Offer Proposal Modal */}
 
           </div>
-        )}
 
         {/* TAB 1: NOTIFICATIONS TAB */}
         {activeTab === 'notifications' && (
@@ -1461,14 +1469,14 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                               </span>
                               {roomItem.roomKey && <button
                                 type="button"
-                                onClick={() => {
-                                  navigator.clipboard.writeText(roomItem.roomKey);
-                                  triggerToast(`Copied Room Key ${roomItem.roomKey}`, 'success');
+                                onClick={async () => {
+                                  if (await clipboard.copy(`room:${roomItem.id || roomItem.roomKey}`, roomItem.roomKey)) triggerToast('Room key copied to clipboard.', 'success');
+                                  else triggerToast('Copy is unavailable. Select the room key to copy it.', 'error');
                                 }}
-                                className="p-1 rounded bg-slate-200 hover:bg-slate-300 text-slate-700 cursor-pointer"
-                                title="Copy Key"
+                                className="inline-flex items-center gap-1 p-1 rounded bg-slate-200 hover:bg-slate-300 text-slate-700 cursor-pointer"
+                                title={clipboard.copiedId === `room:${roomItem.id || roomItem.roomKey}` ? 'Copied' : 'Copy Key'}
                               >
-                                <Copy className="w-3 h-3" />
+                                <Copy className="w-3 h-3" />{clipboard.copiedId === `room:${roomItem.id || roomItem.roomKey}` && <span className="text-[10px]">Copied</span>}
                               </button>}
                             </div>
                           </div>
@@ -1560,7 +1568,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
         {/* TAB: DIGITAL STUDENT MARKET */}
         {activeTab === 'digital-market' && (
           <div className="space-y-6 animate-fadeIn relative z-10 max-w-6xl">
-            <div className="flex items-center gap-3 rounded-3xl border border-slate-200 bg-white/90 p-5 sm:p-6 shadow-xl">
+            <div className="user-purchases-heading flex items-center gap-3 rounded-3xl border border-slate-200 bg-white/90 p-5 sm:p-6 shadow-xl">
               <div className="rounded-2xl bg-blue-600 p-3 text-white"><Package className="h-6 w-6" /></div>
               <div><h2 className="user-section-title text-xl font-black text-slate-900">Purchases & Tracking</h2>
                 <p className="user-section-description mt-1 text-xs font-medium text-slate-500">View your purchases, follow order updates, and track pickup or delivery.</p>
@@ -1569,8 +1577,8 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
             {/* MODE 3: PURCHASES & ORDER TRACKING */}
             {(
               <div className="space-y-6">
-                <div className="bg-white/90 border border-slate-200/80 rounded-3xl p-6 shadow-xl space-y-6 backdrop-blur-md">
-                  <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-4">
+                <div className="user-purchases-panel bg-white/90 border border-slate-200/80 rounded-3xl p-6 shadow-xl space-y-6 backdrop-blur-md">
+                  <div className="purchase-board-heading flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-4">
                     <div>
                       <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
                         <Clock className="w-5 h-5 text-blue-600" />
@@ -1586,38 +1594,14 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                   {/* Order History Cards List */}
                   {marketReadError && <p role="status" className="mb-3 text-sm text-red-700">{marketReadError}</p>}
                   {digitalMarketOrders.length > 0 ? (
-                    <div className="space-y-6">
+                    <div className="user-purchases-list">
                       {digitalMarketOrders.map(order => {
                         const isBuyer = user?.role === 'user' && (currentUser?.id || user?.id) === order.buyerId;
                         return (
-                          <div key={order.id} className="bg-slate-50/80 border border-slate-200/90 rounded-2xl p-5 shadow-sm space-y-4">
+                          <PurchaseCard key={order.id} order={order} isBuyer={isBuyer}>
                             <OrderNotifications orderId={order.id}/>
-                            {/* Order Header */}
-                            <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-200/60">
-                              <div className="flex items-center gap-3">
-                                <div className="p-2 bg-blue-100 text-blue-800 rounded-xl font-mono text-xs font-bold">
-                                  {order.id}
-                                </div>
-                                <div>
-                                  <div className="text-xs font-extrabold text-slate-900">
-                                    {isBuyer ? `Merchant: ${order.storeName}` : `Buyer: ${order.buyerName}`}
-                                  </div>
-                                  <div className="text-[10px] text-slate-500">
-                                    Placed on {new Date(order.createdAt).toLocaleDateString()} at {new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                  </div>
-                                </div>
-                              </div>
-
-                              <div className="flex items-center gap-2">
-                                <OrderCancelButton order={order} onCancelled={next=>{setDigitalMarketOrders(previous=>previous.map(row=>row.id===next.id?next:row));void loadDigitalMarketData();}}/>
-                                <span className={`px-3 py-1 rounded-full text-xs font-extrabold ${
-                                  order.status === 'Completed & Paid' 
-                                    ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' 
-                                    : (order.status === 'Cancelled' ? 'bg-rose-100 text-rose-800' : 'bg-blue-100 text-blue-900 border border-blue-300')
-                                }`}>
-                                  {order.status}
-                                </span>
-                              </div>
+                            <div className="purchase-detail-actions">
+                              <OrderCancelButton order={order} onCancelled={next=>{setDigitalMarketOrders(previous=>previous.map(row=>row.id===next.id?next:row));void loadDigitalMarketData();}}/>
                             </div>
 
                             {/* Order Product & Location Info */}
@@ -1802,7 +1786,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                             )}
 
                             <OrderTimeline order={order}/>
-                          </div>
+                          </PurchaseCard>
                         );
                       })}
                     </div>
@@ -1938,7 +1922,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
         )}
 
         {/* MULTI-PHASE DIGITAL MARKET STORE ONBOARDING WIZARD MODAL */}
-        {storeOnboardingModalOpen && <DashboardOverlay onClose={() => setStoreOnboardingModalOpen(false)} aria-label="Seller onboarding checkout" className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4"><section className="w-full max-w-md space-y-4 rounded-3xl bg-white p-6"><h2 className="text-xl font-bold">Activate your seller account</h2><p>Sign in with your seller password to save store details and pay the current registration, monthly plan and two-month fees through Paystack.</p><button onClick={() => navigate('/login')} className="rounded-xl bg-blue-600 px-5 py-3 text-white">Sign in as seller</button><button onClick={() => setStoreOnboardingModalOpen(false)} className="ml-3 text-slate-600">Close</button></section></DashboardOverlay>}
+        {storeOnboardingModalOpen && <DashboardOverlay data-pv-onboarding onClose={() => setStoreOnboardingModalOpen(false)} aria-label="Seller onboarding checkout" className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4"><section className="w-full max-w-md space-y-4 rounded-3xl bg-white p-6"><h2 className="text-xl font-bold">Activate your seller account</h2><p>Sign in with your seller password to save store details and pay the current registration, monthly plan and two-month fees through Paystack.</p><button onClick={() => navigate('/login')} className="rounded-xl bg-blue-600 px-5 py-3 text-white">Sign in as seller</button><button onClick={() => setStoreOnboardingModalOpen(false)} className="ml-3 text-slate-600">Close</button></section></DashboardOverlay>}
 
         {/* ADD PRODUCT MODAL */}
         {showAddProductModal && (

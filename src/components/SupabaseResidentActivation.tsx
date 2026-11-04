@@ -23,7 +23,7 @@ export default function SupabaseResidentActivation({ name,phone,residenceId,onCl
     if (!response.ok) throw new Error(data.error);
     setDone(true);onActivated();
   }
-  return <DashboardOverlay aria-label="Activate resident account" onClose={onClose} className="fixed inset-0 bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-4">
+  return <DashboardOverlay data-pv-onboarding aria-label="Activate resident account" onClose={onClose} className="fixed inset-0 bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-4">
     <div className="onboarding-fields w-full max-w-lg max-h-[90dvh] overflow-y-auto rounded-3xl border border-blue-200 bg-white p-5 sm:p-7 space-y-5">
       <div className="flex items-start justify-between gap-3">
         <h2 className="text-xl font-bold text-slate-900">Activate your resident account</h2>

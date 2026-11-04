@@ -1,0 +1,349 @@
+{
+  "passed": true,
+  "previewOnly": true,
+  "applicationFilesChanged": false,
+  "networkRequestsAllowed": false,
+  "roleThemeCases": 24,
+  "slidingCurveChecked": true,
+  "fixedPlusChecked": true,
+  "reducedMotionChecked": true,
+  "runtimeExceptions": [],
+  "cases": [
+    {
+      "width": 320,
+      "overflow": false,
+      "bars": [
+        {
+          "theme": "light",
+          "role": "standard",
+          "barWidth": 255,
+          "parentWidth": 255,
+          "connected": true,
+          "leftEdge": true,
+          "fill": "rgb(255, 255, 255)",
+          "selection": "rgb(0, 53, 102)",
+          "selected": "rgb(0, 53, 102)",
+          "inactive": "rgb(96, 112, 131)",
+          "hitTargets": true
+        },
+        {
+          "theme": "dark",
+          "role": "standard",
+          "barWidth": 255,
+          "parentWidth": 255,
+          "connected": true,
+          "leftEdge": true,
+          "fill": "rgb(0, 53, 102)",
+          "selection": "rgb(255, 214, 10)",
+          "selected": "rgb(255, 214, 10)",
+          "inactive": "rgb(187, 206, 224)",
+          "hitTargets": true
+        },
+        {
+          "theme": "light",
+          "role": "seller",
+          "barWidth": 255,
+          "parentWidth": 255,
+          "connected": true,
+          "leftEdge": true,
+          "fill": "rgb(255, 255, 255)",
+          "selection": "rgb(0, 53, 102)",
+          "selected": "rgb(0, 53, 102)",
+          "inactive": "rgb(96, 112, 131)",
+          "hitTargets": true
+        },
+        {
+          "theme": "dark",
+          "role": "seller",
+          "barWidth": 255,
+          "parentWidth": 255,
+          "connected": true,
+          "leftEdge": true,
+          "fill": "rgb(0, 53, 102)",
+          "selection": "rgb(255, 214, 10)",
+          "selected": "rgb(255, 214, 10)",
+          "inactive": "rgb(187, 206, 224)",
+          "hitTargets": true
+        },
+        {
+          "theme": "light",
+          "role": "resident",
+          "barWidth": 255,
+          "parentWidth": 255,
+          "connected": true,
+          "leftEdge": true,
+          "fill": "rgb(255, 255, 255)",
+          "selection": "rgb(0, 53, 102)",
+          "selected": "rgb(0, 53, 102)",
+          "inactive": "rgb(96, 112, 131)",
+          "hitTargets": true
+        },
+        {
+          "theme": "dark",
+          "role": "resident",
+          "barWidth": 255,
+          "parentWidth": 255,
+          "connected": true,
+          "leftEdge": true,
+          "fill": "rgb(0, 53, 102)",
+          "selection": "rgb(255, 214, 10)",
+          "selected": "rgb(255, 214, 10)",
+          "inactive": "rgb(187, 206, 224)",
+          "hitTargets": true
+        }
+      ]
+    },
+    {
+      "width": 390,
+      "overflow": false,
+      "bars": [
+        {
+          "theme": "light",
+          "role": "standard",
+          "barWidth": 325,
+          "parentWidth": 325,
+          "connected": true,
+          "leftEdge": true,
+          "fill": "rgb(255, 255, 255)",
+          "selection": "rgb(0, 53, 102)",
+          "selected": "rgb(0, 53, 102)",
+          "inactive": "rgb(96, 112, 131)",
+          "hitTargets": true
+        },
+        {
+          "theme": "dark",
+          "role": "standard",
+          "barWidth": 325,
+          "parentWidth": 325,
+          "connected": true,
+          "leftEdge": true,
+          "fill": "rgb(0, 53, 102)",
+          "selection": "rgb(255, 214, 10)",
+          "selected": "rgb(255, 214, 10)",
+          "inactive": "rgb(187, 206, 224)",
+          "hitTargets": true
+        },
+        {
+          "theme": "light",
+          "role": "seller",
+          "barWidth": 325,
+          "parentWidth": 325,
+          "connected": true,
+          "leftEdge": true,
+          "fill": "rgb(255, 255, 255)",
+          "selection": "rgb(0, 53, 102)",
+          "selected": "rgb(0, 53, 102)",
+          "inactive": "rgb(96, 112, 131)",
+          "hitTargets": true
+        },
+        {
+          "theme": "dark",
+          "role": "seller",
+          "barWidth": 325,
+          "parentWidth": 325,
+          "connected": true,
+          "leftEdge": true,
+          "fill": "rgb(0, 53, 102)",
+          "selection": "rgb(255, 214, 10)",
+          "selected": "rgb(255, 214, 10)",
+          "inactive": "rgb(187, 206, 224)",
+          "hitTargets": true
+        },
+        {
+          "theme": "light",
+          "role": "resident",
+          "barWidth": 325,
+          "parentWidth": 325,
+          "connected": true,
+          "leftEdge": true,
+          "fill": "rgb(255, 255, 255)",
+          "selection": "rgb(0, 53, 102)",
+          "selected": "rgb(0, 53, 102)",
+          "inactive": "rgb(96, 112, 131)",
+          "hitTargets": true
+        },
+        {
+          "theme": "dark",
+          "role": "resident",
+          "barWidth": 325,
+          "parentWidth": 325,
+          "connected": true,
+          "leftEdge": true,
+          "fill": "rgb(0, 53, 102)",
+          "selection": "rgb(255, 214, 10)",
+          "selected": "rgb(255, 214, 10)",
+          "inactive": "rgb(187, 206, 224)",
+          "hitTargets": true
+        }
+      ]
+    },
+    {
+      "width": 430,
+      "overflow": false,
+      "bars": [
+        {
+          "theme": "light",
+          "role": "standard",
+          "barWidth": 365,
+          "parentWidth": 365,
+          "connected": true,
+          "leftEdge": true,
+          "fill": "rgb(255, 255, 255)",
+          "selection": "rgb(0, 53, 102)",
+          "selected": "rgb(0, 53, 102)",
+          "inactive": "rgb(96, 112, 131)",
+          "hitTargets": true
+        },
+        {
+          "theme": "dark",
+          "role": "standard",
+          "barWidth": 365,
+          "parentWidth": 365,
+          "connected": true,
+          "leftEdge": true,
+          "fill": "rgb(0, 53, 102)",
+          "selection": "rgb(255, 214, 10)",
+          "selected": "rgb(255, 214, 10)",
+          "inactive": "rgb(187, 206, 224)",
+          "hitTargets": true
+        },
+        {
+          "theme": "light",
+          "role": "seller",
+          "barWidth": 365,
+          "parentWidth": 365,
+          "connected": true,
+          "leftEdge": true,
+          "fill": "rgb(255, 255, 255)",
+          "selection": "rgb(0, 53, 102)",
+          "selected": "rgb(0, 53, 102)",
+          "inactive": "rgb(96, 112, 131)",
+          "hitTargets": true
+        },
+        {
+          "theme": "dark",
+          "role": "seller",
+          "barWidth": 365,
+          "parentWidth": 365,
+          "connected": true,
+          "leftEdge": true,
+          "fill": "rgb(0, 53, 102)",
+          "selection": "rgb(255, 214, 10)",
+          "selected": "rgb(255, 214, 10)",
+          "inactive": "rgb(187, 206, 224)",
+          "hitTargets": true
+        },
+        {
+          "theme": "light",
+          "role": "resident",
+          "barWidth": 365,
+          "parentWidth": 365,
+          "connected": true,
+          "leftEdge": true,
+          "fill": "rgb(255, 255, 255)",
+          "selection": "rgb(0, 53, 102)",
+          "selected": "rgb(0, 53, 102)",
+          "inactive": "rgb(96, 112, 131)",
+          "hitTargets": true
+        },
+        {
+          "theme": "dark",
+          "role": "resident",
+          "barWidth": 365,
+          "parentWidth": 365,
+          "connected": true,
+          "leftEdge": true,
+          "fill": "rgb(0, 53, 102)",
+          "selection": "rgb(255, 214, 10)",
+          "selected": "rgb(255, 214, 10)",
+          "inactive": "rgb(187, 206, 224)",
+          "hitTargets": true
+        }
+      ]
+    },
+    {
+      "width": 1540,
+      "overflow": false,
+      "bars": [
+        {
+          "theme": "light",
+          "role": "standard",
+          "barWidth": 454.328125,
+          "parentWidth": 454.328125,
+          "connected": true,
+          "leftEdge": true,
+          "fill": "rgb(255, 255, 255)",
+          "selection": "rgb(0, 53, 102)",
+          "selected": "rgb(0, 53, 102)",
+          "inactive": "rgb(96, 112, 131)",
+          "hitTargets": true
+        },
+        {
+          "theme": "dark",
+          "role": "standard",
+          "barWidth": 454.328125,
+          "parentWidth": 454.328125,
+          "connected": true,
+          "leftEdge": true,
+          "fill": "rgb(0, 53, 102)",
+          "selection": "rgb(255, 214, 10)",
+          "selected": "rgb(255, 214, 10)",
+          "inactive": "rgb(187, 206, 224)",
+          "hitTargets": true
+        },
+        {
+          "theme": "light",
+          "role": "seller",
+          "barWidth": 454.328125,
+          "parentWidth": 454.328125,
+          "connected": true,
+          "leftEdge": true,
+          "fill": "rgb(255, 255, 255)",
+          "selection": "rgb(0, 53, 102)",
+          "selected": "rgb(0, 53, 102)",
+          "inactive": "rgb(96, 112, 131)",
+          "hitTargets": true
+        },
+        {
+          "theme": "dark",
+          "role": "seller",
+          "barWidth": 454.328125,
+          "parentWidth": 454.328125,
+          "connected": true,
+          "leftEdge": true,
+          "fill": "rgb(0, 53, 102)",
+          "selection": "rgb(255, 214, 10)",
+          "selected": "rgb(255, 214, 10)",
+          "inactive": "rgb(187, 206, 224)",
+          "hitTargets": true
+        },
+        {
+          "theme": "light",
+          "role": "resident",
+          "barWidth": 454.34375,
+          "parentWidth": 454.34375,
+          "connected": true,
+          "leftEdge": true,
+          "fill": "rgb(255, 255, 255)",
+          "selection": "rgb(0, 53, 102)",
+          "selected": "rgb(0, 53, 102)",
+          "inactive": "rgb(96, 112, 131)",
+          "hitTargets": true
+        },
+        {
+          "theme": "dark",
+          "role": "resident",
+          "barWidth": 454.34375,
+          "parentWidth": 454.34375,
+          "connected": true,
+          "leftEdge": true,
+          "fill": "rgb(0, 53, 102)",
+          "selection": "rgb(255, 214, 10)",
+          "selected": "rgb(255, 214, 10)",
+          "inactive": "rgb(187, 206, 224)",
+          "hitTargets": true
+        }
+      ]
+    }
+  ]
+}

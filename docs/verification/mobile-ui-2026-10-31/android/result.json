@@ -1,0 +1,85 @@
+{
+  "passed": false,
+  "date": "2026-10-31T10:54:29.060887+00:00",
+  "installedApkSha256": "6751232c39c071adc8b745d6e94d3748f29255ca5d4a1c2146efdf6a847515fd",
+  "actualAndroidWebView": true,
+  "actualDevice": true,
+  "device": "PineVela_Pixel_4a_API_36",
+  "androidApi": 36,
+  "physicalPhoneTested": false,
+  "checks": [
+    {
+      "name": "Preserved-data APK installation and installed checksum",
+      "passed": true
+    },
+    {
+      "name": "Real signed-out welcome on Android and bundled localhost origin",
+      "passed": true,
+      "signedOutStatus": 401
+    },
+    {
+      "name": "Physical native-hierarchy Sign in tap opens local login form",
+      "passed": true
+    },
+    {
+      "name": "Settled Light login screen has blue theme thumb and no horizontal overflow",
+      "passed": true
+    },
+    {
+      "name": "Native Sign Up tab interaction",
+      "passed": false,
+      "reason": "Native hierarchy unavailable twice; stopped after one recapture/retry without sending a Sign Up tap"
+    },
+    {
+      "name": "Separate temporary installed-WebView CSS probes in both themes",
+      "passed": true,
+      "evidence": "css-probes.json"
+    },
+    {
+      "name": "Temporary DOM/CSS removed and original local appearance preserved",
+      "passed": true
+    }
+  ],
+  "scopedStyleProbesPassed": true,
+  "styleProbeChecksPerTheme": 11,
+  "accountFormsSubmitted": false,
+  "authenticatedSellerFlowsTested": false,
+  "authenticatedPurchaseFlowsTested": false,
+  "livePaymentsAttempted": false,
+  "sessionsCleared": false,
+  "appDataPreserved": true,
+  "nativeThemeInteractionTested": false,
+  "limitations": [
+    "Full native login/signup/theme interaction suite is incomplete because native accessibility hierarchy became unavailable; one retry only was attempted.",
+    "DOM/CSS probes use inert local markup and the bundled marketplace stylesheet; they do not verify authenticated seller or purchase behavior.",
+    "No physical phone or iOS runtime tested."
+  ],
+  "screenshots": [
+    "welcome-light.png",
+    "login-light-settled.png",
+    "final-welcome-light.png"
+  ],
+  "emulatorShutdown": true,
+  "awaitingFinalDesktopNavRebuild": false,
+  "nativeInteractionEvidenceApkSha256": "1f15d83b68500f555cfb82626853fa11394e4bcff7a4e178d7302a04691f4a84",
+  "finalBuildReinstalledAndChecksPassed": true,
+  "finalBuildScopedChecks": {
+    "installedHashMatches": true,
+    "bundledAndroidWelcome": true,
+    "signedOutStatus401": true,
+    "noHorizontalOverflow": true,
+    "separateStyleProbes": true,
+    "temporaryProbesRemoved": true,
+    "originalAppearancePreserved": true
+  },
+  "finalStartupEvidence": "final-startup.json",
+  "finalStyleProbeEvidence": "css-probes.json",
+  "finalCleanupEvidence": "final-probe-cleanup.json",
+  "shutdown": {
+    "pid": 9284,
+    "avd": "PineVela_Pixel_4a_API_36",
+    "onlyTaskStartedEmulatorStopped": true,
+    "commandReturnCode": 0,
+    "serialAbsentAfterShutdown": true
+  }
+}

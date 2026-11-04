@@ -1,0 +1,18 @@
+{
+  "avd": "PineVela_Pixel_4a_API_36",
+  "serial": "emulator-5554",
+  "bootCompleted": true,
+  "firstObservedBootSeconds": 96.6,
+  "androidRelease": "16",
+  "apiLevel": "36",
+  "abi": "x86_64",
+  "screen": "Physical size: 1080x2340",
+  "density": "Physical density: 440",
+  "guestCpuOnline": "0-1",
+  "webview": [
+    "Current WebView package (name, version): (com.google.android.webview, 133.0.6943.137)",
+    "Valid package com.google.android.webview (versionName: 133.0.6943.137, versionCode: 694313738, targetSdkVersion: 34) is  installed/enabled for all users"
+  ],
+  "guestMemoryTotal": "MemTotal:        2532300 kB",
+  "homeScreenshot": "/tmp/pinevela-emulator-step3-api36/pixel-home-display.png"
+}

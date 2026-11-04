@@ -1,0 +1,648 @@
+{
+  "syntheticLoopbackFixtures": true,
+  "realAuthenticationTested": false,
+  "measurements": [
+    {
+      "width": 390,
+      "theme": "light",
+      "page": "primary dashboard",
+      "viewport": {
+        "w": 390,
+        "h": 844
+      },
+      "overflow": false,
+      "kind": "standard",
+      "active": "home",
+      "nav": {
+        "x": 0,
+        "y": 740,
+        "w": 390,
+        "h": 104,
+        "right": 390,
+        "bottom": 844,
+        "cx": 195
+      },
+      "surface": {
+        "background": "rgba(0, 0, 0, 0)",
+        "fill": "rgb(255, 255, 255)",
+        "color": "rgb(0, 29, 61)",
+        "backgroundImage": "none"
+      },
+      "indicator": {
+        "x": 16.3984375,
+        "y": 740,
+        "w": 58,
+        "h": 58,
+        "right": 74.3984375,
+        "bottom": 798,
+        "cx": 45.3984375,
+        "background": "rgb(0, 53, 102)",
+        "fill": "rgb(0, 0, 0)",
+        "color": "rgb(0, 29, 61)",
+        "backgroundImage": "none"
+      },
+      "safeBottom": "",
+      "reserved": 104,
+      "buttons": [
+        {
+          "id": "home",
+          "label": "Home",
+          "disabled": false,
+          "current": "page",
+          "x": 8,
+          "y": 740,
+          "w": 74.796875,
+          "h": 104,
+          "right": 82.796875,
+          "bottom": 844,
+          "cx": 45.3984375,
+          "icon": {
+            "x": 31.890625,
+            "y": 756,
+            "w": 27,
+            "h": 27,
+            "right": 58.890625,
+            "bottom": 783,
+            "cx": 45.390625
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(0, 53, 102)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(255, 255, 255)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "digital-market",
+          "label": "Purchases",
+          "disabled": false,
+          "current": null,
+          "x": 82.796875,
+          "y": 740,
+          "w": 74.8125,
+          "h": 104,
+          "right": 157.609375,
+          "bottom": 844,
+          "cx": 120.203125,
+          "icon": {
+            "x": 106.703125,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 133.703125,
+            "bottom": 811,
+            "cx": 120.203125
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "login-room",
+          "label": "Room",
+          "disabled": false,
+          "current": null,
+          "x": 157.609375,
+          "y": 740,
+          "w": 74.796875,
+          "h": 104,
+          "right": 232.40625,
+          "bottom": 844,
+          "cx": 195.0078125,
+          "icon": {
+            "x": 181.5,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 208.5,
+            "bottom": 811,
+            "cx": 195
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "options",
+          "label": "Options",
+          "disabled": false,
+          "current": null,
+          "x": 232.40625,
+          "y": 740,
+          "w": 74.796875,
+          "h": 104,
+          "right": 307.203125,
+          "bottom": 844,
+          "cx": 269.8046875,
+          "icon": {
+            "x": 256.296875,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 283.296875,
+            "bottom": 811,
+            "cx": 269.796875
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "companion",
+          "label": "Ask AI",
+          "disabled": false,
+          "current": null,
+          "x": 307.203125,
+          "y": 740,
+          "w": 74.796875,
+          "h": 104,
+          "right": 382,
+          "bottom": 844,
+          "cx": 344.6015625,
+          "icon": {
+            "x": 331.09375,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 358.09375,
+            "bottom": 811,
+            "cx": 344.59375
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          }
+        }
+      ]
+    },
+    {
+      "width": 390,
+      "theme": "light",
+      "page": "resident dashboard",
+      "viewport": {
+        "w": 390,
+        "h": 844
+      },
+      "overflow": false,
+      "kind": "action",
+      "active": "room",
+      "nav": {
+        "x": 0,
+        "y": 740,
+        "w": 390,
+        "h": 104,
+        "right": 390,
+        "bottom": 844,
+        "cx": 195
+      },
+      "surface": {
+        "background": "rgba(0, 0, 0, 0)",
+        "fill": "rgb(255, 255, 255)",
+        "color": "rgb(0, 29, 61)",
+        "backgroundImage": "none"
+      },
+      "indicator": {
+        "x": 166.0078125,
+        "y": 740,
+        "w": 58,
+        "h": 58,
+        "right": 224.0078125,
+        "bottom": 798,
+        "cx": 195.0078125,
+        "background": "rgb(0, 53, 102)",
+        "fill": "rgb(0, 0, 0)",
+        "color": "rgb(0, 29, 61)",
+        "backgroundImage": "none"
+      },
+      "safeBottom": "",
+      "reserved": 104,
+      "buttons": [
+        {
+          "id": "room",
+          "label": "My Room",
+          "disabled": false,
+          "current": "page",
+          "x": 8,
+          "y": 740,
+          "w": 74.796875,
+          "h": 104,
+          "right": 82.796875,
+          "bottom": 844,
+          "cx": 45.3984375,
+          "icon": {
+            "x": 31.890625,
+            "y": 778,
+            "w": 27,
+            "h": 27,
+            "right": 58.890625,
+            "bottom": 805,
+            "cx": 45.390625
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(0, 53, 102)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(0, 53, 102)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "complaints",
+          "label": "Complaints",
+          "disabled": false,
+          "current": null,
+          "x": 82.796875,
+          "y": 740,
+          "w": 74.8125,
+          "h": 104,
+          "right": 157.609375,
+          "bottom": 844,
+          "cx": 120.203125,
+          "icon": {
+            "x": 106.703125,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 133.703125,
+            "bottom": 811,
+            "cx": 120.203125
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "quick-action",
+          "label": "Actions",
+          "disabled": false,
+          "current": null,
+          "x": 157.609375,
+          "y": 740,
+          "w": 74.796875,
+          "h": 104,
+          "right": 232.40625,
+          "bottom": 844,
+          "cx": 195.0078125,
+          "icon": {
+            "x": 181.5,
+            "y": 754,
+            "w": 27,
+            "h": 27,
+            "right": 208.5,
+            "bottom": 781,
+            "cx": 195
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(255, 255, 255)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "alerts",
+          "label": "Bulletins",
+          "disabled": false,
+          "current": null,
+          "x": 232.40625,
+          "y": 740,
+          "w": 74.796875,
+          "h": 104,
+          "right": 307.203125,
+          "bottom": 844,
+          "cx": 269.8046875,
+          "icon": {
+            "x": 256.296875,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 283.296875,
+            "bottom": 811,
+            "cx": 269.796875
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "settings",
+          "label": "Settings",
+          "disabled": false,
+          "current": null,
+          "x": 307.203125,
+          "y": 740,
+          "w": 74.796875,
+          "h": 104,
+          "right": 382,
+          "bottom": 844,
+          "cx": 344.6015625,
+          "icon": {
+            "x": 331.09375,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 358.09375,
+            "bottom": 811,
+            "cx": 344.59375
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          }
+        }
+      ]
+    },
+    {
+      "width": 390,
+      "theme": "light",
+      "page": "seller dashboard",
+      "viewport": {
+        "w": 390,
+        "h": 844
+      },
+      "overflow": false,
+      "kind": "action",
+      "active": "dashboard",
+      "nav": {
+        "x": 0,
+        "y": 740,
+        "w": 390,
+        "h": 104,
+        "right": 390,
+        "bottom": 844,
+        "cx": 195
+      },
+      "surface": {
+        "background": "rgba(0, 0, 0, 0)",
+        "fill": "rgb(255, 255, 255)",
+        "color": "rgb(0, 29, 61)",
+        "backgroundImage": "none"
+      },
+      "indicator": {
+        "x": 166.0078125,
+        "y": 740,
+        "w": 58,
+        "h": 58,
+        "right": 224.0078125,
+        "bottom": 798,
+        "cx": 195.0078125,
+        "background": "rgb(0, 53, 102)",
+        "fill": "rgb(0, 0, 0)",
+        "color": "rgb(0, 29, 61)",
+        "backgroundImage": "none"
+      },
+      "safeBottom": "",
+      "reserved": 104,
+      "buttons": [
+        {
+          "id": "dashboard",
+          "label": "Home",
+          "disabled": false,
+          "current": "page",
+          "x": 8,
+          "y": 740,
+          "w": 74.796875,
+          "h": 104,
+          "right": 82.796875,
+          "bottom": 844,
+          "cx": 45.3984375,
+          "icon": {
+            "x": 31.890625,
+            "y": 778,
+            "w": 27,
+            "h": 27,
+            "right": 58.890625,
+            "bottom": 805,
+            "cx": 45.390625
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(0, 53, 102)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(0, 53, 102)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "inventory",
+          "label": "Stock",
+          "disabled": false,
+          "current": null,
+          "x": 82.796875,
+          "y": 740,
+          "w": 74.8125,
+          "h": 104,
+          "right": 157.609375,
+          "bottom": 844,
+          "cx": 120.203125,
+          "icon": {
+            "x": 106.703125,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 133.703125,
+            "bottom": 811,
+            "cx": 120.203125
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "quick-action",
+          "label": "Publish",
+          "disabled": false,
+          "current": null,
+          "x": 157.609375,
+          "y": 740,
+          "w": 74.796875,
+          "h": 104,
+          "right": 232.40625,
+          "bottom": 844,
+          "cx": 195.0078125,
+          "icon": {
+            "x": 181.5,
+            "y": 754,
+            "w": 27,
+            "h": 27,
+            "right": 208.5,
+            "bottom": 781,
+            "cx": 195
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(255, 255, 255)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "sales",
+          "label": "Sales",
+          "disabled": false,
+          "current": null,
+          "x": 232.40625,
+          "y": 740,
+          "w": 74.796875,
+          "h": 104,
+          "right": 307.203125,
+          "bottom": 844,
+          "cx": 269.8046875,
+          "icon": {
+            "x": 256.296875,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 283.296875,
+            "bottom": 811,
+            "cx": 269.796875
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "more",
+          "label": "More navigation",
+          "disabled": false,
+          "current": null,
+          "x": 307.203125,
+          "y": 740,
+          "w": 74.796875,
+          "h": 104,
+          "right": 382,
+          "bottom": 844,
+          "cx": 344.6015625,
+          "icon": {
+            "x": 331.09375,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 358.09375,
+            "bottom": 811,
+            "cx": 344.59375
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "pid": 67041,
+  "args": [
+    "/home/wyse/Android/Sdk/emulator/emulator",
+    "-avd",
+    "PineVela_Pixel_4a_API_36"
+  ],
+  "startedByTask": true,
+  "existingDevicesBeforeStart": 0,
+  "dataWiped": false,
+  "snapshotLoadDisabled": false,
+  "snapshotSaveDisabled": false,
+  "startedAt": "2026-10-31T16:27:11.100999+00:00",
+  "log": "/tmp/pinevela-image-cache-emulator-20261031.log"
+}

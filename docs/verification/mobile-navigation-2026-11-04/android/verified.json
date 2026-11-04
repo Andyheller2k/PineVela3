@@ -1,0 +1,1125 @@
+{
+  "passed": true,
+  "installedApkSha256": "a69d80125fa8b22a140dd5765c1bd78e67b5536360a12c5e68d82a55e0517bf3",
+  "actualInstalledAndroidWebView": true,
+  "realNativeAppearance": true,
+  "syntheticReadOnlyAccountFixtures": true,
+  "productionWrites": 0,
+  "debugSessionUntouched": true,
+  "scenes": [
+    {
+      "name": "user-light",
+      "theme": "light",
+      "w": 393,
+      "h": 778,
+      "ratio": 2.75,
+      "overflow": false,
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "nav": {
+        "x": 0,
+        "y": 674.1818237304688,
+        "width": 393.0909118652344,
+        "bottom": 778.1818237304688,
+        "height": 104,
+        "background": "#fff",
+        "accent": "#003566",
+        "variant": "standard"
+      },
+      "bubble": {
+        "left": 16.710227966308594,
+        "top": 674.1818237304688,
+        "width": 58,
+        "height": 58,
+        "visible": true
+      },
+      "buttons": [
+        {
+          "id": "home",
+          "current": "page",
+          "disabled": false
+        },
+        {
+          "id": "digital-market",
+          "current": null,
+          "disabled": false
+        },
+        {
+          "id": "login-room",
+          "current": null,
+          "disabled": false
+        },
+        {
+          "id": "options",
+          "current": null,
+          "disabled": false
+        },
+        {
+          "id": "companion",
+          "current": null,
+          "disabled": false
+        }
+      ],
+      "deniedWrites": 0,
+      "fixtureNoops": 0,
+      "fixtureReads": 14,
+      "pixels": {
+        "topRgb": [
+          255,
+          255,
+          255
+        ],
+        "bottomRgb": [
+          255,
+          255,
+          255
+        ],
+        "bubbleRgb": [
+          0,
+          53,
+          102
+        ]
+      },
+      "screenshot": "user-light.png"
+    },
+    {
+      "name": "user-dark",
+      "theme": "dark",
+      "w": 393,
+      "h": 778,
+      "ratio": 2.75,
+      "overflow": false,
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "nav": {
+        "x": 0,
+        "y": 674.1818237304688,
+        "width": 393.0909118652344,
+        "bottom": 778.1818237304688,
+        "height": 104,
+        "background": "#003566",
+        "accent": "#ffd60a",
+        "variant": "standard"
+      },
+      "bubble": {
+        "left": 16.710227966308594,
+        "top": 674.1818237304688,
+        "width": 58,
+        "height": 58,
+        "visible": true
+      },
+      "buttons": [
+        {
+          "id": "home",
+          "current": "page",
+          "disabled": false
+        },
+        {
+          "id": "digital-market",
+          "current": null,
+          "disabled": false
+        },
+        {
+          "id": "login-room",
+          "current": null,
+          "disabled": false
+        },
+        {
+          "id": "options",
+          "current": null,
+          "disabled": false
+        },
+        {
+          "id": "companion",
+          "current": null,
+          "disabled": false
+        }
+      ],
+      "deniedWrites": 0,
+      "fixtureNoops": 0,
+      "fixtureReads": 14,
+      "pixels": {
+        "topRgb": [
+          0,
+          29,
+          61
+        ],
+        "bottomRgb": [
+          0,
+          53,
+          102
+        ],
+        "bubbleRgb": [
+          255,
+          214,
+          10
+        ]
+      },
+      "screenshot": "user-dark.png"
+    },
+    {
+      "name": "merchant-light",
+      "theme": "light",
+      "w": 393,
+      "h": 778,
+      "ratio": 2.75,
+      "overflow": false,
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "nav": {
+        "x": 0,
+        "y": 674.1818237304688,
+        "width": 393.0909118652344,
+        "bottom": 778.1818237304688,
+        "height": 104,
+        "background": "#fff",
+        "accent": "#003566",
+        "variant": "action"
+      },
+      "bubble": {
+        "left": 167.5511474609375,
+        "top": 674.1818237304688,
+        "width": 58,
+        "height": 58,
+        "visible": true
+      },
+      "buttons": [
+        {
+          "id": "dashboard",
+          "current": "page",
+          "disabled": false
+        },
+        {
+          "id": "inventory",
+          "current": null,
+          "disabled": false
+        },
+        {
+          "id": "quick-action",
+          "current": null,
+          "disabled": false
+        },
+        {
+          "id": "sales",
+          "current": null,
+          "disabled": false
+        },
+        {
+          "id": "more",
+          "current": null,
+          "disabled": false
+        }
+      ],
+      "deniedWrites": 0,
+      "fixtureNoops": 0,
+      "fixtureReads": 10,
+      "pixels": {
+        "topRgb": [
+          255,
+          255,
+          255
+        ],
+        "bottomRgb": [
+          255,
+          255,
+          255
+        ],
+        "bubbleRgb": [
+          0,
+          53,
+          102
+        ]
+      },
+      "screenshot": "merchant-light.png"
+    },
+    {
+      "name": "merchant-dark",
+      "theme": "dark",
+      "w": 393,
+      "h": 778,
+      "ratio": 2.75,
+      "overflow": false,
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "nav": {
+        "x": 0,
+        "y": 674.1818237304688,
+        "width": 393.0909118652344,
+        "bottom": 778.1818237304688,
+        "height": 104,
+        "background": "#003566",
+        "accent": "#ffd60a",
+        "variant": "action"
+      },
+      "bubble": {
+        "left": 167.5511474609375,
+        "top": 674.1818237304688,
+        "width": 58,
+        "height": 58,
+        "visible": true
+      },
+      "buttons": [
+        {
+          "id": "dashboard",
+          "current": "page",
+          "disabled": false
+        },
+        {
+          "id": "inventory",
+          "current": null,
+          "disabled": false
+        },
+        {
+          "id": "quick-action",
+          "current": null,
+          "disabled": false
+        },
+        {
+          "id": "sales",
+          "current": null,
+          "disabled": false
+        },
+        {
+          "id": "more",
+          "current": null,
+          "disabled": false
+        }
+      ],
+      "deniedWrites": 0,
+      "fixtureNoops": 0,
+      "fixtureReads": 10,
+      "pixels": {
+        "topRgb": [
+          0,
+          29,
+          61
+        ],
+        "bottomRgb": [
+          0,
+          53,
+          102
+        ],
+        "bubbleRgb": [
+          255,
+          214,
+          10
+        ]
+      },
+      "screenshot": "merchant-dark.png"
+    },
+    {
+      "name": "student-light",
+      "theme": "light",
+      "w": 393,
+      "h": 778,
+      "ratio": 2.75,
+      "overflow": false,
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "nav": {
+        "x": 0,
+        "y": 674.1818237304688,
+        "width": 393.0909118652344,
+        "bottom": 778.1818237304688,
+        "height": 104,
+        "background": "#fff",
+        "accent": "#003566",
+        "variant": "action"
+      },
+      "bubble": {
+        "left": 167.5511474609375,
+        "top": 674.1818237304688,
+        "width": 58,
+        "height": 58,
+        "visible": true
+      },
+      "buttons": [
+        {
+          "id": "room",
+          "current": "page",
+          "disabled": false
+        },
+        {
+          "id": "complaints",
+          "current": null,
+          "disabled": false
+        },
+        {
+          "id": "quick-action",
+          "current": null,
+          "disabled": false
+        },
+        {
+          "id": "alerts",
+          "current": null,
+          "disabled": false
+        },
+        {
+          "id": "settings",
+          "current": null,
+          "disabled": false
+        }
+      ],
+      "deniedWrites": 0,
+      "fixtureNoops": 0,
+      "fixtureReads": 9,
+      "pixels": {
+        "topRgb": [
+          255,
+          255,
+          255
+        ],
+        "bottomRgb": [
+          255,
+          255,
+          255
+        ],
+        "bubbleRgb": [
+          0,
+          53,
+          102
+        ]
+      },
+      "screenshot": "student-light.png"
+    },
+    {
+      "name": "student-dark",
+      "theme": "dark",
+      "w": 393,
+      "h": 778,
+      "ratio": 2.75,
+      "overflow": false,
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "nav": {
+        "x": 0,
+        "y": 674.1818237304688,
+        "width": 393.0909118652344,
+        "bottom": 778.1818237304688,
+        "height": 104,
+        "background": "#003566",
+        "accent": "#ffd60a",
+        "variant": "action"
+      },
+      "bubble": {
+        "left": 167.5511474609375,
+        "top": 674.1818237304688,
+        "width": 58,
+        "height": 58,
+        "visible": true
+      },
+      "buttons": [
+        {
+          "id": "room",
+          "current": "page",
+          "disabled": false
+        },
+        {
+          "id": "complaints",
+          "current": null,
+          "disabled": false
+        },
+        {
+          "id": "quick-action",
+          "current": null,
+          "disabled": false
+        },
+        {
+          "id": "alerts",
+          "current": null,
+          "disabled": false
+        },
+        {
+          "id": "settings",
+          "current": null,
+          "disabled": false
+        }
+      ],
+      "deniedWrites": 0,
+      "fixtureNoops": 0,
+      "fixtureReads": 9,
+      "pixels": {
+        "topRgb": [
+          0,
+          29,
+          61
+        ],
+        "bottomRgb": [
+          0,
+          53,
+          102
+        ],
+        "bubbleRgb": [
+          255,
+          214,
+          10
+        ]
+      },
+      "screenshot": "student-dark.png"
+    },
+    {
+      "name": "manager-light",
+      "theme": "light",
+      "w": 393,
+      "h": 778,
+      "ratio": 2.75,
+      "overflow": false,
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "nav": {
+        "x": 0,
+        "y": 674.1818237304688,
+        "width": 393.0909118652344,
+        "bottom": 778.1818237304688,
+        "height": 104,
+        "background": "#fff",
+        "accent": "#003566",
+        "variant": "standard"
+      },
+      "bubble": {
+        "left": 120.40909576416016,
+        "top": 674.1818237304688,
+        "width": 58,
+        "height": 58,
+        "visible": true
+      },
+      "buttons": [
+        {
+          "id": "registration",
+          "current": null,
+          "disabled": false
+        },
+        {
+          "id": "notifications",
+          "current": "page",
+          "disabled": false
+        },
+        {
+          "id": "settings",
+          "current": null,
+          "disabled": false
+        },
+        {
+          "id": "more",
+          "current": null,
+          "disabled": false
+        }
+      ],
+      "deniedWrites": 0,
+      "fixtureNoops": 1,
+      "fixtureReads": 20,
+      "pixels": {
+        "topRgb": [
+          255,
+          255,
+          255
+        ],
+        "bottomRgb": [
+          255,
+          255,
+          255
+        ],
+        "bubbleRgb": [
+          0,
+          53,
+          102
+        ]
+      },
+      "screenshot": "manager-light.png"
+    },
+    {
+      "name": "manager-dark",
+      "theme": "dark",
+      "w": 393,
+      "h": 778,
+      "ratio": 2.75,
+      "overflow": false,
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "nav": {
+        "x": 0,
+        "y": 674.1818237304688,
+        "width": 393.0909118652344,
+        "bottom": 778.1818237304688,
+        "height": 104,
+        "background": "#003566",
+        "accent": "#ffd60a",
+        "variant": "standard"
+      },
+      "bubble": {
+        "left": 120.40909576416016,
+        "top": 674.1818237304688,
+        "width": 58,
+        "height": 58,
+        "visible": true
+      },
+      "buttons": [
+        {
+          "id": "registration",
+          "current": null,
+          "disabled": false
+        },
+        {
+          "id": "notifications",
+          "current": "page",
+          "disabled": false
+        },
+        {
+          "id": "settings",
+          "current": null,
+          "disabled": false
+        },
+        {
+          "id": "more",
+          "current": null,
+          "disabled": false
+        }
+      ],
+      "deniedWrites": 0,
+      "fixtureNoops": 1,
+      "fixtureReads": 20,
+      "pixels": {
+        "topRgb": [
+          0,
+          29,
+          61
+        ],
+        "bottomRgb": [
+          0,
+          53,
+          102
+        ],
+        "bubbleRgb": [
+          255,
+          214,
+          10
+        ]
+      },
+      "screenshot": "manager-dark.png"
+    },
+    {
+      "name": "staff-light",
+      "theme": "light",
+      "w": 393,
+      "h": 778,
+      "ratio": 2.75,
+      "overflow": false,
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "nav": {
+        "x": 0,
+        "y": 674.1818237304688,
+        "width": 393.0909118652344,
+        "bottom": 778.1818237304688,
+        "height": 104,
+        "background": "#fff",
+        "accent": "#003566",
+        "variant": "standard"
+      },
+      "bubble": {
+        "left": 293.2471618652344,
+        "top": 674.1818237304688,
+        "width": 58,
+        "height": 58,
+        "visible": true
+      },
+      "buttons": [
+        {
+          "id": "notifications",
+          "current": null,
+          "disabled": false
+        },
+        {
+          "id": "settings",
+          "current": null,
+          "disabled": false
+        },
+        {
+          "id": "maintenance",
+          "current": "page",
+          "disabled": false
+        }
+      ],
+      "deniedWrites": 0,
+      "fixtureNoops": 0,
+      "fixtureReads": 10,
+      "pixels": {
+        "topRgb": [
+          255,
+          255,
+          255
+        ],
+        "bottomRgb": [
+          255,
+          255,
+          255
+        ],
+        "bubbleRgb": [
+          0,
+          53,
+          102
+        ]
+      },
+      "screenshot": "staff-light.png"
+    },
+    {
+      "name": "staff-dark",
+      "theme": "dark",
+      "w": 393,
+      "h": 778,
+      "ratio": 2.75,
+      "overflow": false,
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "nav": {
+        "x": 0,
+        "y": 674.1818237304688,
+        "width": 393.0909118652344,
+        "bottom": 778.1818237304688,
+        "height": 104,
+        "background": "#003566",
+        "accent": "#ffd60a",
+        "variant": "standard"
+      },
+      "bubble": {
+        "left": 293.2471618652344,
+        "top": 674.1818237304688,
+        "width": 58,
+        "height": 58,
+        "visible": true
+      },
+      "buttons": [
+        {
+          "id": "notifications",
+          "current": null,
+          "disabled": false
+        },
+        {
+          "id": "settings",
+          "current": null,
+          "disabled": false
+        },
+        {
+          "id": "maintenance",
+          "current": "page",
+          "disabled": false
+        }
+      ],
+      "deniedWrites": 0,
+      "fixtureNoops": 0,
+      "fixtureReads": 10,
+      "pixels": {
+        "topRgb": [
+          0,
+          29,
+          61
+        ],
+        "bottomRgb": [
+          0,
+          53,
+          102
+        ],
+        "bubbleRgb": [
+          255,
+          214,
+          10
+        ]
+      },
+      "screenshot": "staff-dark.png"
+    },
+    {
+      "name": "admin-light",
+      "theme": "light",
+      "w": 393,
+      "h": 778,
+      "ratio": 2.75,
+      "overflow": false,
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "nav": {
+        "x": 0,
+        "y": 674.1818237304688,
+        "width": 393.0909118652344,
+        "bottom": 778.1818237304688,
+        "height": 104,
+        "background": "#fff",
+        "accent": "#003566",
+        "variant": "standard"
+      },
+      "bubble": {
+        "left": 16.710227966308594,
+        "top": 674.1818237304688,
+        "width": 58,
+        "height": 58,
+        "visible": true
+      },
+      "buttons": [
+        {
+          "id": "overview",
+          "current": "page",
+          "disabled": false
+        },
+        {
+          "id": "residences",
+          "current": null,
+          "disabled": false
+        },
+        {
+          "id": "managers",
+          "current": null,
+          "disabled": false
+        },
+        {
+          "id": "notifications",
+          "current": null,
+          "disabled": false
+        },
+        {
+          "id": "more",
+          "current": null,
+          "disabled": false
+        }
+      ],
+      "deniedWrites": 0,
+      "fixtureNoops": 0,
+      "fixtureReads": 11,
+      "pixels": {
+        "topRgb": [
+          255,
+          255,
+          255
+        ],
+        "bottomRgb": [
+          255,
+          255,
+          255
+        ],
+        "bubbleRgb": [
+          0,
+          53,
+          102
+        ]
+      },
+      "screenshot": "admin-light.png"
+    },
+    {
+      "name": "admin-dark",
+      "theme": "dark",
+      "w": 393,
+      "h": 778,
+      "ratio": 2.75,
+      "overflow": false,
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "nav": {
+        "x": 0,
+        "y": 674.1818237304688,
+        "width": 393.0909118652344,
+        "bottom": 778.1818237304688,
+        "height": 104,
+        "background": "#003566",
+        "accent": "#ffd60a",
+        "variant": "standard"
+      },
+      "bubble": {
+        "left": 16.710227966308594,
+        "top": 674.1818237304688,
+        "width": 58,
+        "height": 58,
+        "visible": true
+      },
+      "buttons": [
+        {
+          "id": "overview",
+          "current": "page",
+          "disabled": false
+        },
+        {
+          "id": "residences",
+          "current": null,
+          "disabled": false
+        },
+        {
+          "id": "managers",
+          "current": null,
+          "disabled": false
+        },
+        {
+          "id": "notifications",
+          "current": null,
+          "disabled": false
+        },
+        {
+          "id": "more",
+          "current": null,
+          "disabled": false
+        }
+      ],
+      "deniedWrites": 0,
+      "fixtureNoops": 0,
+      "fixtureReads": 10,
+      "pixels": {
+        "topRgb": [
+          0,
+          29,
+          61
+        ],
+        "bottomRgb": [
+          0,
+          53,
+          102
+        ],
+        "bubbleRgb": [
+          255,
+          214,
+          10
+        ]
+      },
+      "screenshot": "admin-dark.png"
+    },
+    {
+      "name": "field_officer-light",
+      "theme": "light",
+      "w": 393,
+      "h": 778,
+      "ratio": 2.75,
+      "overflow": false,
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "nav": {
+        "x": 0,
+        "y": 674.1818237304688,
+        "width": 393.0909118652344,
+        "bottom": 778.1818237304688,
+        "height": 104,
+        "background": "#fff",
+        "accent": "#003566",
+        "variant": "standard"
+      },
+      "bubble": {
+        "left": 73.2727279663086,
+        "top": 674.1818237304688,
+        "width": 58,
+        "height": 58,
+        "visible": true
+      },
+      "buttons": [
+        {
+          "id": "inspections",
+          "current": "page",
+          "disabled": false
+        },
+        {
+          "id": "options",
+          "current": null,
+          "disabled": false
+        }
+      ],
+      "deniedWrites": 0,
+      "fixtureNoops": 0,
+      "fixtureReads": 8,
+      "pixels": {
+        "topRgb": [
+          255,
+          255,
+          255
+        ],
+        "bottomRgb": [
+          255,
+          255,
+          255
+        ],
+        "bubbleRgb": [
+          0,
+          53,
+          102
+        ]
+      },
+      "screenshot": "field_officer-light.png"
+    },
+    {
+      "name": "field_officer-dark",
+      "theme": "dark",
+      "w": 393,
+      "h": 778,
+      "ratio": 2.75,
+      "overflow": false,
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "nav": {
+        "x": 0,
+        "y": 674.1818237304688,
+        "width": 393.0909118652344,
+        "bottom": 778.1818237304688,
+        "height": 104,
+        "background": "#003566",
+        "accent": "#ffd60a",
+        "variant": "standard"
+      },
+      "bubble": {
+        "left": 73.2727279663086,
+        "top": 674.1818237304688,
+        "width": 58,
+        "height": 58,
+        "visible": true
+      },
+      "buttons": [
+        {
+          "id": "inspections",
+          "current": "page",
+          "disabled": false
+        },
+        {
+          "id": "options",
+          "current": null,
+          "disabled": false
+        }
+      ],
+      "deniedWrites": 0,
+      "fixtureNoops": 0,
+      "fixtureReads": 8,
+      "pixels": {
+        "topRgb": [
+          0,
+          29,
+          61
+        ],
+        "bottomRgb": [
+          0,
+          53,
+          102
+        ],
+        "bubbleRgb": [
+          255,
+          214,
+          10
+        ]
+      },
+      "screenshot": "field_officer-dark.png"
+    },
+    {
+      "name": "support-light",
+      "theme": "light",
+      "w": 393,
+      "h": 778,
+      "ratio": 2.75,
+      "overflow": false,
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "nav": {
+        "x": 0,
+        "y": 674.1818237304688,
+        "width": 393.0909118652344,
+        "bottom": 778.1818237304688,
+        "height": 104,
+        "background": "#fff",
+        "accent": "#003566",
+        "variant": "standard"
+      },
+      "bubble": {
+        "left": 26.136363983154297,
+        "top": 674.1818237304688,
+        "width": 58,
+        "height": 58,
+        "visible": true
+      },
+      "buttons": [
+        {
+          "id": "inbox",
+          "current": "page",
+          "disabled": false
+        },
+        {
+          "id": "reports",
+          "current": null,
+          "disabled": false
+        },
+        {
+          "id": "notifications",
+          "current": null,
+          "disabled": false
+        },
+        {
+          "id": "settings",
+          "current": null,
+          "disabled": false
+        }
+      ],
+      "deniedWrites": 0,
+      "fixtureNoops": 0,
+      "fixtureReads": 9,
+      "pixels": {
+        "topRgb": [
+          255,
+          255,
+          255
+        ],
+        "bottomRgb": [
+          255,
+          255,
+          255
+        ],
+        "bubbleRgb": [
+          0,
+          53,
+          102
+        ]
+      },
+      "screenshot": "support-light.png"
+    },
+    {
+      "name": "support-dark",
+      "theme": "dark",
+      "w": 393,
+      "h": 778,
+      "ratio": 2.75,
+      "overflow": false,
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "nav": {
+        "x": 0,
+        "y": 674.1818237304688,
+        "width": 393.0909118652344,
+        "bottom": 778.1818237304688,
+        "height": 104,
+        "background": "#003566",
+        "accent": "#ffd60a",
+        "variant": "standard"
+      },
+      "bubble": {
+        "left": 26.136363983154297,
+        "top": 674.1818237304688,
+        "width": 58,
+        "height": 58,
+        "visible": true
+      },
+      "buttons": [
+        {
+          "id": "inbox",
+          "current": "page",
+          "disabled": false
+        },
+        {
+          "id": "reports",
+          "current": null,
+          "disabled": false
+        },
+        {
+          "id": "notifications",
+          "current": null,
+          "disabled": false
+        },
+        {
+          "id": "settings",
+          "current": null,
+          "disabled": false
+        }
+      ],
+      "deniedWrites": 0,
+      "fixtureNoops": 0,
+      "fixtureReads": 9,
+      "pixels": {
+        "topRgb": [
+          0,
+          29,
+          61
+        ],
+        "bottomRgb": [
+          0,
+          53,
+          102
+        ],
+        "bubbleRgb": [
+          255,
+          214,
+          10
+        ]
+      },
+      "screenshot": "support-dark.png"
+    }
+  ]
+}

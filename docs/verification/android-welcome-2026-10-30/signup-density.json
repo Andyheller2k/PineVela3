@@ -1,0 +1,21 @@
+{
+  "fieldHeights": [
+    44,
+    44,
+    44,
+    44
+  ],
+  "fieldFonts": [
+    16,
+    16,
+    16,
+    16
+  ],
+  "fieldGap": 10,
+  "termsFont": 11,
+  "privacyFont": 10.5,
+  "termsRequired": true,
+  "termsChecked": false,
+  "submitDisabled": true,
+  "googleDisabled": true
+}

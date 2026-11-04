@@ -1,3 +1,4 @@
+import {termsAcceptance} from '../legalPolicy.js';
 /** Account approval reviews on isolated restored Google identities and real sessions. */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -83,7 +84,7 @@ try{await withIsolatedBackup(backup,async config=>{
       await c.query('select private.initialize_auth_profile($1,$2)',[person.id,nonce]);
       const storeSeller:VerifiedActor={authUserId:person.id,sessionId:person.session_id,contextId:(await c.query("select id from public.account_contexts where auth_user_id=$1 and kind='seller'",[person.id])).rows[0].id,kind:'seller'};
       await finishEnrollment(c,owner,enrollment,{authUserId:person.id,email:person.email.toLowerCase(),sessionId:person.session_id});
-      const submitted=await submitSellerApplication(c,owner,{enrollmentId:enrollment,university:'Kwame Nkrumah University of Science and Technology (KNUST)',categoryToSell:'General Campus Essentials',idNumber:'PV-'+person.id.slice(0,8).toUpperCase(),storeName:person.raw_user_meta_data?.full_name||person.email,certified:true});
+      const submitted=await submitSellerApplication(c,owner,{enrollmentId:enrollment,university:'Kwame Nkrumah University of Science and Technology (KNUST)',categoryToSell:'General Campus Essentials',idNumber:'PV-'+person.id.slice(0,8).toUpperCase(),storeName:person.raw_user_meta_data?.full_name||person.email,certified:true,termsAcceptance:termsAcceptance(true)});
       await bind(actors[0]);await decideSellerApplication(c,actors[0],{id:submitted.application.id},true);
       await bind(storeSeller);await saveStoreProfile(c,storeSeller,{storeName:submitted.application.storeName,username:person.email.split('@')[0],location:submitted.application.university,category:'General Campus Essentials',deliveryMode:'Campus Meetup',phone:'+233241234567',phoneCountry:'GH',description:''},true);
       const payment=await prepareCheckout(c,storeSeller,{requestId:crypto.randomUUID(),purpose:'activation',plan:'default'});

@@ -1,0 +1,20 @@
+{
+  "localStatusFixturesOnly": true,
+  "measurements": [
+    {
+      "state": "none",
+      "passed": true,
+      "noAccountTransfer": true
+    },
+    {
+      "state": "fresh",
+      "passed": true,
+      "noAccountTransfer": true
+    },
+    {
+      "state": "stale",
+      "passed": true,
+      "noAccountTransfer": true
+    }
+  ]
+}

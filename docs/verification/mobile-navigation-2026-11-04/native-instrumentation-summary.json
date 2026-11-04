@@ -1,0 +1,145 @@
+{
+  "passed": true,
+  "tests": 5,
+  "testNames": [
+    "asymmetricCutoutsAndThreeButtonInsetsHaveOneNativeOwner",
+    "keyboardInsetsReplaceTheNavigationInsetWithoutDoublePadding",
+    "everyBundledDocumentPreservesContainAfterResizeAndPageShow",
+    "mobileNavigationTintChangesOnlyTheNativeNavigationRegion",
+    "realSystemBarsContainThePhysicalWebViewExactlyOnce"
+  ],
+  "isolatedPackage": "app.pinevela.mobile.transporttest",
+  "productionWrites": 0,
+  "nativeContainedInsetsPreserved": true,
+  "realNativePixelAssertions": true,
+  "measurements": [
+    {
+      "name": "left-cutout-three-button",
+      "window": "[0,0][1080,2340]",
+      "webView": "[92,145][1080,2208]",
+      "safeInsets": "Insets{left=92, top=145, right=0, bottom=132}",
+      "imeInsets": "Insets{left=0, top=0, right=0, bottom=0}",
+      "keyboardVisible": false,
+      "nativePadding": {
+        "left": 92,
+        "top": 145,
+        "right": 0,
+        "bottom": 132
+      }
+    },
+    {
+      "name": "right-landscape-cutout-and-navigation",
+      "window": "[0,0][1080,2340]",
+      "webView": "[0,64][900,2340]",
+      "safeInsets": "Insets{left=0, top=64, right=180, bottom=0}",
+      "imeInsets": "Insets{left=0, top=0, right=0, bottom=0}",
+      "keyboardVisible": false,
+      "nativePadding": {
+        "left": 0,
+        "top": 64,
+        "right": 180,
+        "bottom": 0
+      }
+    },
+    {
+      "name": "gesture-navigation",
+      "window": "[0,0][1080,2340]",
+      "webView": "[0,72][1080,2280]",
+      "safeInsets": "Insets{left=0, top=72, right=0, bottom=60}",
+      "imeInsets": "Insets{left=0, top=0, right=0, bottom=0}",
+      "keyboardVisible": false,
+      "nativePadding": {
+        "left": 0,
+        "top": 72,
+        "right": 0,
+        "bottom": 60
+      }
+    },
+    {
+      "name": "ime-open-with-cutout",
+      "window": "[0,0][1080,2340]",
+      "webView": "[92,145][1080,1620]",
+      "safeInsets": "Insets{left=92, top=145, right=0, bottom=132}",
+      "imeInsets": "Insets{left=0, top=0, right=0, bottom=720}",
+      "keyboardVisible": true,
+      "nativePadding": {
+        "left": 92,
+        "top": 145,
+        "right": 0,
+        "bottom": 720
+      }
+    },
+    {
+      "name": "ime-dismissed",
+      "window": "[0,0][1080,2340]",
+      "webView": "[92,145][1080,2208]",
+      "safeInsets": "Insets{left=92, top=145, right=0, bottom=132}",
+      "imeInsets": "Insets{left=0, top=0, right=0, bottom=0}",
+      "keyboardVisible": false,
+      "nativePadding": {
+        "left": 92,
+        "top": 145,
+        "right": 0,
+        "bottom": 132
+      }
+    },
+    {
+      "name": "navigation-tint-dark-true",
+      "window": "[0,0][1080,2340]",
+      "webView": "[0,136][1080,2274]",
+      "safeInsets": "Insets{left=0, top=136, right=0, bottom=66}",
+      "imeInsets": "Insets{left=0, top=0, right=0, bottom=0}",
+      "keyboardVisible": false,
+      "nativePadding": {
+        "left": 0,
+        "top": 136,
+        "right": 0,
+        "bottom": 66
+      }
+    },
+    {
+      "name": "navigation-tint-dark-false",
+      "window": "[0,0][1080,2340]",
+      "webView": "[0,136][1080,2274]",
+      "safeInsets": "Insets{left=0, top=136, right=0, bottom=66}",
+      "imeInsets": "Insets{left=0, top=0, right=0, bottom=0}",
+      "keyboardVisible": false,
+      "nativePadding": {
+        "left": 0,
+        "top": 136,
+        "right": 0,
+        "bottom": 66
+      }
+    },
+    {
+      "name": "navigation-tint-light-true",
+      "window": "[0,0][1080,2340]",
+      "webView": "[0,136][1080,2274]",
+      "safeInsets": "Insets{left=0, top=136, right=0, bottom=66}",
+      "imeInsets": "Insets{left=0, top=0, right=0, bottom=0}",
+      "keyboardVisible": false,
+      "nativePadding": {
+        "left": 0,
+        "top": 136,
+        "right": 0,
+        "bottom": 66
+      }
+    },
+    {
+      "name": "actual-system-bars",
+      "window": "[0,0][1080,2340]",
+      "webView": "[0,136][1080,2274]",
+      "safeInsets": "Insets{left=0, top=136, right=0, bottom=66}",
+      "imeInsets": "Insets{left=0, top=0, right=0, bottom=0}",
+      "keyboardVisible": false,
+      "nativePadding": {
+        "left": 0,
+        "top": 136,
+        "right": 0,
+        "bottom": 66
+      }
+    }
+  ],
+  "log": "native-instrumentation.log",
+  "buildLog": "native-build.log"
+}

@@ -1,0 +1,23 @@
+{
+  "passed": true,
+  "date": "2026-11-01T12:38:13.915534+00:00",
+  "installedApkSha256": "4ed337dbbe863458f4b062f40915047bde8ff601ad05efbaafd0ef8a312a4b0c",
+  "normalReopenPreservedApk": true,
+  "reinstalledBeforeHashCheck": false,
+  "emulatorShutdown": true,
+  "dataWiped": false,
+  "settingsRestored": true,
+  "fixturePackagesRemoved": true,
+  "nativeInstrumentationTests": 32,
+  "actualAndroidUiScenarios": 65,
+  "realGoogleAccountTested": false,
+  "physicalDeviceTested": false,
+  "webViewVersion": "133.0.6943.137",
+  "normalStartupCommand": "/home/wyse/Android/Sdk/emulator/emulator -avd PineVela_Pixel_4a_API_36",
+  "notes": [
+    "Installed APK hash matched before any reinstall after ordinary Quick Boot.",
+    "Normal adb emulator shutdown completed and device disconnected.",
+    "Reopen screenshot captures startup loading; complete UI matrix is recorded separately.",
+    "A duplicate launch attempt was rejected by the emulator and did not change the AVD."
+  ]
+}

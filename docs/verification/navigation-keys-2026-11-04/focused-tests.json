@@ -1,0 +1,7 @@
+{
+  "passed": true,
+  "tests": 23,
+  "failures": 0,
+  "loopbackHttpFixtures": true,
+  "productionWrites": 0
+}

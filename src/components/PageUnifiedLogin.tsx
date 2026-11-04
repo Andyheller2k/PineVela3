@@ -1,4 +1,7 @@
 import HelpLink from './HelpLink';
+import TermsAcceptanceControl from './TermsAcceptanceControl';
+import { termsAcceptance } from '../../legalPolicy';
+import { signupPasswordError } from '../../signupPassword';
 import InstallAppButton from './InstallAppButton';
 import DashboardOverlay from './DashboardOverlay';
 
@@ -32,14 +35,19 @@ import '../login.css';
 import '../loginMotion.css';
 import GoogleAuthButton from './GoogleAuthButton';
 import WindDust from './WindDust';
+import { NATIVE_APP, NATIVE_PREVIEW_MESSAGE } from '../native/environment';
+import NativeEmailVerification from '../native/NativeEmailVerification';
+import { nativeSignedInDestination } from '../native/signedInDestination';
+import ThemeToggle from './ThemeToggle';
+import '../native/signupDensity.css';
 
 const featureImage = marketImg;
 const featureSources = `${mobileMarketImg} 768w, ${featureImage} 1122w`;
 const featureSizes = '(max-width: 1023px) 100vw, (max-width: 1480px) 46vw, 680px';
 const featureDescription = "PineVela- The unified digital ecosystem connecting Properties, People, and Services into one seamless campus platform.";
 
-export default function PageUnifiedLogin() {
-  const { login, user, setSessionUser } = useAuth();
+export default function PageUnifiedLogin({ nativePreview = false }: { nativePreview?: boolean } = {}) {
+  const { login, user, setSessionUser, loading: restoringSession } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const installedApp = useInstalledAppMode();
@@ -76,6 +84,7 @@ export default function PageUnifiedLogin() {
       ? 'register' : 'login');
   const authScrollRef = useRef<HTMLDivElement>(null);
   const [regName, setRegName] = useState('');
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [regEmail, setRegEmail] = useState('');
   const [registeredEmailError, setRegisteredEmailError] = useState<string | null>(null);
   const registrationEmailRef = useRef<HTMLInputElement>(null);
@@ -85,8 +94,11 @@ export default function PageUnifiedLogin() {
   const [showRegPass, setShowRegPass] = useState(false);
   const [showRegConfirmPass, setShowRegConfirmPass] = useState(false);
   const [verificationPending, setVerificationPending] = useState(false);
+  const [resumedSignup,setResumedSignup] = useState(false);
+  const signupResumeNotice='This email has an unfinished signup. Verify it with the new code. Your original name and password are kept. Use Forgot Password on the sign-in page if you need a new password.';
   const [verificationEmail, setVerificationEmail] = useState('');
   const [verificationCodeInput, setVerificationCodeInput] = useState('');
+  const [verificationError,setVerificationError] = useState<string|null>(null);
   const [signupId, setSignupId] = useState('');
   const [developmentSignupCode, setDevelopmentSignupCode] = useState('');
   const [verifyingCode, setVerifyingCode] = useState(false);
@@ -95,7 +107,7 @@ export default function PageUnifiedLogin() {
   const [resendSeconds, setResendSeconds] = useState(0);
   const verificationActionPending = useRef(false);
   const credentialActionPending = useRef(false);
-  const captcha = useAuthCaptcha(verificationPending ? 'resend' : activeTab, !showPasswordRecovery && (!verificationPending || resendSeconds === 0));
+  const captcha = useAuthCaptcha(verificationPending ? 'resend' : activeTab, !nativePreview && !showPasswordRecovery && (!verificationPending || resendSeconds === 0));
 
   useLayoutEffect(() => {
     if (authScrollRef.current) authScrollRef.current.scrollTop = 0;
@@ -127,6 +139,16 @@ export default function PageUnifiedLogin() {
   const [showStudentKeyModal, setShowStudentKeyModal] = useState(false);
 
   useEffect(() => {
+    // A cold return can finish before the router mounts. Restore the destination
+    // from the provider-verified account, never from the incoming callback URL.
+    const params = new URLSearchParams(location.search);
+    const roomClaim = ['onboard', 'claim'].includes(params.get('mode') || '') || params.get('verify_room_key') === 'true' || (location.state as { mode?: string } | null)?.mode === 'onboard';
+    if (NATIVE_APP && user && !restoringSession && !roomClaim && !showStudentKeyModal && !showPasswordRecovery) {
+      navigate(nativeSignedInDestination(user, continuation), { replace: true });
+    }
+  }, [user, restoringSession, showStudentKeyModal, showPasswordRecovery, continuation, location.search, location.state, navigate]);
+
+  useEffect(() => {
     const params = new URLSearchParams(location.search);
     const googleErrors: Record<string, string> = {
       expired: 'Your Google sign-in expired. Please try again.',
@@ -145,10 +167,10 @@ export default function PageUnifiedLogin() {
     if (params.get('mode') === 'register' || (location.state as any)?.mode === 'register') {
       setActiveTab('register');
     }
-    if (params.get('mode') === 'onboard' || params.get('mode') === 'claim' || params.get('verify_room_key') === 'true' || (location.state as any)?.mode === 'onboard') {
+    if (!nativePreview && (params.get('mode') === 'onboard' || params.get('mode') === 'claim' || params.get('verify_room_key') === 'true' || (location.state as any)?.mode === 'onboard')) {
       setShowStudentKeyModal(true);
     }
-  }, [location]);
+  }, [location, nativePreview]);
 
   // Toast notification
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -163,6 +185,7 @@ export default function PageUnifiedLogin() {
 
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (nativePreview) { setLoginError(NATIVE_PREVIEW_MESSAGE); return; }
     if (credentialActionPending.current) return;
     setLoginError(null);
     if (!usernameOrEmail || !password) {
@@ -174,6 +197,11 @@ export default function PageUnifiedLogin() {
     setLoadingLogin(true);
     try {
       const authenticatedUser = await login(usernameOrEmail, password,needsPortalPin ? { accountKind:loginPortal,portalPin:loginPortalPin } : undefined, await captcha.requireToken());
+
+      if (NATIVE_APP) {
+        navigate(nativeSignedInDestination(authenticatedUser, continuation), { replace: true });
+        return;
+      }
 
       // Redirect based on role and digital market merchant status
       setTimeout(() => {
@@ -250,6 +278,8 @@ export default function PageUnifiedLogin() {
 
   const handleUnifiedRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (nativePreview) { setLoginError(NATIVE_PREVIEW_MESSAGE); return; }
+    if (!acceptedTerms) { setLoginError('Read and accept the Terms of service to create an account.'); return; }
     if (credentialActionPending.current) return;
     setRegisteredEmailError(null);
     if (!regName.trim() || !regEmail.trim() || !regPass) {
@@ -261,8 +291,9 @@ export default function PageUnifiedLogin() {
       triggerToast(emailCheck.error || 'Invalid email format.', 'error');
       return;
     }
-    if (regPass.length < 6) {
-      triggerToast('Password must be at least 6 characters long.', 'error');
+    const passwordError = signupPasswordError(regPass);
+    if (passwordError) {
+      triggerToast(passwordError, 'error');
       return;
     }
     if (regPass !== regConfirmPass) {
@@ -279,6 +310,7 @@ export default function PageUnifiedLogin() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: regName.trim(),
+          termsAcceptance: termsAcceptance(acceptedTerms),
           email: regEmail.trim(),
           password: regPass,
           captchaToken
@@ -300,14 +332,18 @@ export default function PageUnifiedLogin() {
         }
         if (res.status === 429 && verificationEmail === regEmail.trim().toLowerCase() && signupId) {
           startResendCountdown(Number(res.headers.get('Retry-After')) || EMAIL_CODE_RESEND_SECONDS);
+          setResumedSignup(true);setRegPass('');setRegConfirmPass('');
           setVerificationPending(true);
         }
         throw new Error(data.error || 'Registration failed.');
       }
 
       setSignupId(data.signupId || '');
+      setResumedSignup(data.resumed===true);
+      if(data.resumed===true){setRegPass('');setRegConfirmPass('');}
       setDevelopmentSignupCode(data.developmentOnly ? data.developmentCode || '' : '');
       setVerificationCodeInput('');
+      setVerificationError(null);
       setVerificationEmail(regEmail.trim().toLowerCase());
       startResendCountdown(data.retryAfter);
       setVerificationPending(true);
@@ -323,10 +359,12 @@ export default function PageUnifiedLogin() {
 
   const handleUnifiedVerifySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (nativePreview) { setLoginError(NATIVE_PREVIEW_MESSAGE); return; }
     if (verificationActionPending.current) return;
+    setVerificationError(null);
     const code = normalizeEmailOtp(verificationCodeInput);
     if (code === null) {
-      triggerToast('Enter the verification code from your email (6–10 digits).', 'error');
+      setVerificationError('Enter the verification code from your email (6–10 digits).');
       return;
     }
 
@@ -338,7 +376,7 @@ export default function PageUnifiedLogin() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email: verificationEmail,
-          password: regPass,
+          termsAcceptance: termsAcceptance(acceptedTerms),
           code,
           signupId
         })
@@ -366,11 +404,16 @@ export default function PageUnifiedLogin() {
       setRegPass('');
       setRegConfirmPass('');
 
+      if (NATIVE_APP) {
+        navigate(nativeSignedInDestination(authenticatedUser, continuation), { replace: true });
+        return;
+      }
+
       setTimeout(() => {
         navigate(authenticatedUser.role === 'user' && continuation ? continuation : authenticatedUser.customerService ? '/customer-service' : '/student/dashboard', { replace: true });
       }, 800);
     } catch (err: any) {
-      triggerToast(err.message || 'Verification failed.', 'error');
+      setVerificationError(err.message || 'Verification failed.');
     } finally {
       verificationActionPending.current = false;
       setVerifyingCode(false);
@@ -378,6 +421,7 @@ export default function PageUnifiedLogin() {
   };
 
   const handleResendCode = async () => {
+    if (nativePreview) { setLoginError(NATIVE_PREVIEW_MESSAGE); return; }
     if (verificationActionPending.current || resendAvailableAt > Date.now()) return;
     verificationActionPending.current = true;
     setResendingCode(true);
@@ -396,6 +440,7 @@ export default function PageUnifiedLogin() {
       }
       startResendCountdown(data.retryAfter);
       setVerificationCodeInput('');
+      setVerificationError(null);
       triggerToast(data.message || 'A new code has been requested. Check your inbox and spam folder.', 'success');
     } catch (err: any) {
       triggerToast(err.name === 'TimeoutError' ? 'The email request took too long. Please try again.' : err.message || 'The code could not be resent. Please try again.', 'error');
@@ -410,9 +455,27 @@ export default function PageUnifiedLogin() {
 
   // Student/Resident Claim Room Key & Complete Onboarding Handler
 
+  if (NATIVE_APP && verificationPending) return <NativeEmailVerification
+    email={verificationEmail}
+    code={verificationCodeInput}
+    onCodeChange={value=>{setVerificationCodeInput(value);setVerificationError(null);}}
+    codeError={verificationError||undefined}
+    onSubmit={handleUnifiedVerifySubmit}
+    onResend={handleResendCode}
+    onBack={() => { setVerificationPending(false); setActiveTab('register'); }}
+    verifying={verifyingCode}
+    resending={resendingCode}
+    resendSeconds={resendSeconds}
+    resendReady={captcha.ready}
+    captchaWidget={captcha.widget}
+    developmentCode={developmentSignupCode}
+    resumeNotice={resumedSignup?signupResumeNotice:undefined}
+    feedback={toastMessage ? { message: toastMessage, type: toastType } : undefined}
+  />;
+
   return (
-    <div ref={motionRef} data-motion-active="false" data-portrait-state={portraitSource ? 'ready' : portraitFailed ? 'error' : 'loading'} className="unified-login page-canvas min-h-screen flex flex-col font-sans justify-between relative overflow-hidden">
-      {(showPasswordRecovery) && <EmailPasswordRecovery initialEmail={usernameOrEmail} onClose={() => setShowPasswordRecovery(false)} />}
+    <div ref={motionRef} data-native-auth={NATIVE_APP || undefined} data-motion-active="false" data-portrait-state={portraitSource ? 'ready' : portraitFailed ? 'error' : 'loading'} className="unified-login page-canvas min-h-screen flex flex-col font-sans justify-between relative overflow-hidden">
+      {!nativePreview && showPasswordRecovery && <EmailPasswordRecovery initialEmail={usernameOrEmail} onClose={() => setShowPasswordRecovery(false)} />}
       <div className="mobile-login-backdrop" aria-hidden="true">
         <img src={featureImage} srcSet={featureSources} sizes={featureSizes} alt="" width={1122} height={1402} loading="eager" fetchPriority="high" decoding="async" className="login-portrait" onLoad={revealPortrait} onError={() => setPortraitFailed(true)} />
       </div>
@@ -436,10 +499,11 @@ export default function PageUnifiedLogin() {
 
       {/* Header */}
       <header className="login-header public-header-card bg-transparent px-6 py-4 flex items-center justify-between z-10 sticky top-0">
-        {installedApp ? <div className="login-logo-link"><PineLogo /></div> : <button type="button" aria-label="PineVela home" className="login-logo-link cursor-pointer" onClick={() => navigate('/')}>
+        {NATIVE_APP ? <button type="button" aria-label="PineVela welcome" className="login-logo-link cursor-pointer" onClick={() => navigate('/login')}><PineLogo /></button> : installedApp ? <div className="login-logo-link"><PineLogo /></div> : <button type="button" aria-label="PineVela home" className="login-logo-link cursor-pointer" onClick={() => navigate('/')}>
           <PineLogo />
         </button>}
-        <div className="login-header-actions flex items-center gap-2"><InstallAppButton /><HelpLink />
+        <div className="login-header-actions flex items-center gap-2"><InstallAppButton /><HelpLink compact={NATIVE_APP} />
+        {NATIVE_APP && <ThemeToggle showSystemDefault={false} />}
         {!installedApp && <div className="login-home-link">
           <button 
             onClick={() => navigate('/')}
@@ -493,7 +557,7 @@ export default function PageUnifiedLogin() {
                   <span 
                     className="login-brand-heading text-black font-black"
                   >
-                    Sign Up
+                    {NATIVE_APP ? 'Create your account' : 'Sign Up'}
                   </span>
                 )}
               </h2>
@@ -552,6 +616,7 @@ export default function PageUnifiedLogin() {
                     <button type="button" onClick={() => setVerificationCodeInput(developmentSignupCode)} className="text-xs font-bold text-blue-900 underline cursor-pointer">Use this code</button>
                   </div>
                 )}
+                {resumedSignup&&<p role="status" data-signup-resume className="rounded-xl border border-blue-200 bg-blue-50 p-3 text-xs leading-relaxed text-blue-900">{signupResumeNotice}</p>}
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-slate-700 block">{developmentSignupCode ? 'Development code' : 'Email verification code'}</label>
                   <input
@@ -561,10 +626,13 @@ export default function PageUnifiedLogin() {
                     inputMode="numeric"
                     autoComplete="one-time-code"
                     aria-label="Email verification code"
+                    aria-invalid={!!verificationError}
+                    aria-describedby={verificationError?'signup-email-code-error':undefined}
                     value={verificationCodeInput}
-                    onChange={(e) => setVerificationCodeInput(e.target.value)}
+                    onChange={(e) => {setVerificationCodeInput(e.target.value);setVerificationError(null);}}
                     className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-900 bg-white text-slate-800 font-mono text-sm transition-all"
                   />
+                  {verificationError&&<p id="signup-email-code-error" data-signup-code-error role="alert" className="mt-1 text-xs leading-relaxed text-rose-700 dark:text-rose-200">{verificationError}</p>}
                 </div>
 
                 {!developmentSignupCode && <p className="text-[11px] text-slate-500 leading-relaxed">Use the full code from your latest verification email.</p>}
@@ -647,7 +715,8 @@ export default function PageUnifiedLogin() {
                     <label className="text-xs font-bold text-slate-700 block">Password</label>
                     <button 
                       type="button" 
-                      onClick={() => (setShowPasswordRecovery(true))}
+                      onClick={() => nativePreview ? setLoginError(NATIVE_PREVIEW_MESSAGE) : setShowPasswordRecovery(true)}
+                      disabled={nativePreview}
                       className="text-xs font-bold text-blue-900 hover:underline cursor-pointer"
                     >
                       Forgot Password?
@@ -702,7 +771,7 @@ export default function PageUnifiedLogin() {
                 {captcha.widget}
                 <button
                   type="submit"
-                  disabled={loadingLogin || !captcha.ready}
+                  disabled={nativePreview || loadingLogin || !captcha.ready}
                   aria-busy={loadingLogin}
                   className="w-full py-3 bg-blue-900 hover:bg-blue-850 text-white font-black text-xs sm:text-sm rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer mt-2"
                 >
@@ -744,7 +813,8 @@ export default function PageUnifiedLogin() {
                     <input aria-label="Your Full Name"
                       type="text"
                       required
-                      placeholder="e.g. Oppong Manu Andy"
+                      autoComplete="name"
+                      placeholder={NATIVE_APP ? 'Full name' : 'e.g. Oppong Manu Andy'}
                       value={regName}
                       onChange={(e) => setRegName(e.target.value)}
                       className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-900 bg-white text-slate-800 text-xs sm:text-sm font-semibold transition-all"
@@ -762,7 +832,8 @@ export default function PageUnifiedLogin() {
                       ref={registrationEmailRef}
                       type="email"
                       required
-                      placeholder="e.g. andy@example.com"
+                      autoComplete="email"
+                      placeholder={NATIVE_APP ? 'Email address' : 'e.g. andy@example.com'}
                       value={regEmail}
                       aria-invalid={showRegisteredEmailError || undefined}
                       aria-describedby={showRegisteredEmailError ? 'signup-email-error' : undefined}
@@ -781,7 +852,11 @@ export default function PageUnifiedLogin() {
                     <input aria-label="Choose Password"
                       type={showRegPass ? 'text' : 'password'}
                       required
-                      placeholder="Min. 6 characters"
+                      minLength={8}
+                      maxLength={256}
+                      aria-describedby="signup-password-requirements"
+                      autoComplete="new-password"
+                      placeholder={NATIVE_APP ? 'Password' : 'Min. 8 characters'}
                       value={regPass}
                       onChange={(e) => setRegPass(e.target.value)}
                       className="w-full pl-10 pr-10 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-900 bg-white text-slate-800 text-xs sm:text-sm font-semibold transition-all"
@@ -794,7 +869,8 @@ export default function PageUnifiedLogin() {
                       {showRegPass ? <EyeOff size={16} /> : <Eye size={16} />}
                     </button>
                   </div>
-                  <PasswordStrengthGauge password={regPass} />
+                  <p id="signup-password-requirements" className="text-[11px] leading-relaxed text-slate-600">8+ characters with uppercase, lowercase, a number and a symbol.</p>
+                  <PasswordStrengthGauge password={regPass} requirementsMet={!signupPasswordError(regPass)} />
 
                 </div>
 
@@ -807,7 +883,8 @@ export default function PageUnifiedLogin() {
                     <input aria-label="Confirm Password"
                       type={showRegConfirmPass ? 'text' : 'password'}
                       required
-                      placeholder="Repeat password"
+                      autoComplete="new-password"
+                      placeholder={NATIVE_APP ? 'Confirm password' : 'Repeat password'}
                       value={regConfirmPass}
                       onChange={(e) => setRegConfirmPass(e.target.value)}
                       className="w-full pl-10 pr-10 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-900 bg-white text-slate-800 text-xs sm:text-sm font-semibold transition-all"
@@ -820,14 +897,15 @@ export default function PageUnifiedLogin() {
                       {showRegConfirmPass ? <EyeOff size={16} /> : <Eye size={16} />}
                     </button>
                   </div>
-                  <PasswordStrengthGauge password={regConfirmPass} />
+                  <PasswordStrengthGauge password={regConfirmPass} requirementsMet={!signupPasswordError(regConfirmPass)} />
                 </div>
 
+                <TermsAcceptanceControl checked={acceptedTerms} onChange={setAcceptedTerms} />
                 {captcha.widget}
                 <button
                   type="submit"
-                  disabled={loadingLogin || !captcha.ready}
-                  className="w-full py-2.5 bg-blue-900 hover:bg-blue-850 text-white font-black text-xs sm:text-sm rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer mt-1"
+                  disabled={nativePreview || loadingLogin || !captcha.ready || !acceptedTerms}
+                  className="w-full py-2.5 bg-blue-900 hover:bg-blue-850 text-white font-black text-xs sm:text-sm rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer mt-1 disabled:opacity-50"
                 >
                   {loadingLogin ? (
                     <>
@@ -835,7 +913,7 @@ export default function PageUnifiedLogin() {
                       <span>Sending Code...</span>
                     </>
                   ) : (
-                    <span>Create a free account</span>
+                    <span>{NATIVE_APP ? 'Create account' : 'Create a free account'}</span>
                   )}
                 </button>
 
@@ -856,7 +934,7 @@ export default function PageUnifiedLogin() {
               </form>
             )}
 
-            {!verificationPending && <GoogleAuthButton returnTo={continuation} mode={activeTab === 'register' ? 'signup' : 'login'} onError={setLoginError} />}
+            {!verificationPending && <GoogleAuthButton disabled={nativePreview} acceptedTerms={acceptedTerms} returnTo={continuation} mode={activeTab === 'register' ? 'signup' : 'login'} onError={setLoginError} />}
             {activeTab === 'register' && !verificationPending && loginError && <p role="alert" className="text-xs font-semibold text-rose-800">{loginError}</p>}
 
           </div>
@@ -988,7 +1066,7 @@ export default function PageUnifiedLogin() {
       )}
 
       {/* RESIDENT & STUDENT DIGITAL ROOM KEY ONBOARDING MODAL */}
-      {showStudentKeyModal && true && <SupabaseResidentActivation name={user?.name} phone={user?.phone} onClose={() => setShowStudentKeyModal(false)} onActivated={() => undefined} />}
+      {!nativePreview && showStudentKeyModal && <SupabaseResidentActivation name={user?.name} phone={user?.phone} onClose={() => setShowStudentKeyModal(false)} onActivated={() => undefined} />}
 
     </div>
   );

@@ -1,0 +1,15 @@
+{
+  "pid": 61410,
+  "args": [
+    "/home/wyse/Android/Sdk/emulator/emulator",
+    "-avd",
+    "PineVela_Pixel_4a_API_36"
+  ],
+  "plainNormalStartupCommand": true,
+  "dataWiped": false,
+  "startedByTask": true,
+  "startedAt": "2026-10-31T15:52:23.161656+00:00",
+  "log": "/tmp/pinevela-subscriptions-native-reopen-20261031.log",
+  "snapshotLoadDisabled": false,
+  "snapshotSaveDisabled": false
+}

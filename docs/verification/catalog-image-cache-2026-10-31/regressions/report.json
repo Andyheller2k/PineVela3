@@ -1,0 +1,49 @@
+{
+  "passed": true,
+  "scenes": 14,
+  "checks": [
+    "320px light mobile UI compact purchases expand with PIN and tracking",
+    "320px dark mobile UI compact purchases expand with PIN and tracking",
+    "390px light mobile UI compact purchases expand with PIN and tracking",
+    "390px dark mobile UI compact purchases expand with PIN and tracking",
+    "430px light mobile UI compact purchases expand with PIN and tracking",
+    "430px dark mobile UI compact purchases expand with PIN and tracking",
+    "1440px light mobile UI compact purchases expand with PIN and tracking",
+    "1440px dark mobile UI compact purchases expand with PIN and tracking",
+    "320px light mobile UI user System default keeps pill shape",
+    "320px dark mobile UI user System default keeps pill shape",
+    "390px light mobile UI user System default keeps pill shape",
+    "390px dark mobile UI user System default keeps pill shape",
+    "1440px light mobile UI user System default keeps pill shape",
+    "1440px dark mobile UI user System default keeps pill shape"
+  ],
+  "screenshots": [
+    "docs/verification/catalog-image-cache-2026-10-31/regressions/390-light-compact-purchases.png",
+    "docs/verification/catalog-image-cache-2026-10-31/regressions/390-dark-compact-purchases.png",
+    "docs/verification/catalog-image-cache-2026-10-31/regressions/390-light-user-system-pill.png",
+    "docs/verification/catalog-image-cache-2026-10-31/regressions/390-dark-user-system-pill.png"
+  ],
+  "navigationClearance": [],
+  "buildDirectory": "dist-supabase",
+  "syntheticGuestCatalog": true,
+  "syntheticRoleVisualFixtures": [
+    "primary dashboard",
+    "manager dashboard",
+    "staff dashboard",
+    "resident dashboard",
+    "administrator dashboard",
+    "seller dashboard",
+    "field officer",
+    "customer service",
+    "manager onboarding",
+    "store onboarding"
+  ],
+  "hostedOrAccountWrites": 0,
+  "realAuthenticationTested": false,
+  "runtimeExceptions": 0,
+  "syntheticSellerWrites": 0,
+  "syntheticSignupResumeWrites": 0,
+  "syntheticAppearanceWrites": 12,
+  "syntheticSubscriptionCheckouts": 0,
+  "exceptionDetails": []
+}

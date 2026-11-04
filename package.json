@@ -83,7 +83,7 @@
     "test:account-refresh": "node --import tsx --test --test-concurrency=1 tests/accountRefresh.test.ts",
     "test:session-restoration": "node --import tsx --test --test-concurrency=1 tests/sessionRestoration.test.ts",
     "test:registration": "node --import tsx --test --test-concurrency=1 tests/registrationStatus.test.ts",
-    "test:signup-verification": "node --import tsx --test tests/signupConfirmation.test.ts",
+    "test:signup-verification": "node --import tsx --test tests/signupConfirmation.test.ts tests/signupPassword.test.ts tests/authProviderErrors.test.ts",
     "test:security": "node --import tsx --test --test-concurrency=1 tests/accountSecurity.test.ts tests/signupConfirmation.test.ts tests/loginAttempts.test.ts tests/authProtection.test.ts tests/accountRefresh.test.ts tests/dashboardSnapshot.test.ts tests/googleAuth.test.ts tests/googleAuth.integration.test.ts tests/governanceRefresh.test.ts tests/imageUploadSecurity.test.ts tests/inspectionReportSecurity.test.ts tests/internationalPhone.test.ts tests/marketBranding.test.ts tests/portalRoles.test.ts tests/primaryRegistrationRefresh.test.ts tests/publicContinuation.test.ts tests/realtimeLifecycle.test.ts tests/registrationStatus.test.ts tests/resourceSecurity.test.ts tests/serviceLocation.test.ts tests/sessionRestoration.test.ts tests/sessionSecurity.test.ts tests/supabaseAccountAccess.test.ts tests/supabaseDatabaseAvailability.test.ts tests/supabaseStorageBackup.test.ts tests/uiRules.test.ts tests/supabaseOnlyRuntime.test.ts tests/administratorApproval.test.ts tests/sourceMapSecurity.test.ts tests/adminDirectories.test.ts tests/historyPagination.test.ts tests/companionSubmission.test.ts tests/companionLoad.test.ts tests/companionHostDiagnostic.test.ts tests/companionInference.test.ts tests/companionProviderConsent.test.ts tests/companionConsent.test.ts tests/mapLogo.test.ts tests/orderReservationPolicy.test.ts tests/paymentReversalPolicy.test.ts tests/staticFrontendSecurity.test.ts tests/companion.test.ts",
     "check:private-data": "node scripts/check-private-data.cjs",
     "db:prepare-residence-backup": "node --import tsx scripts/prepare-supabase-residence-backup.ts",
@@ -146,9 +146,23 @@
     "db:local:reports": "node --import tsx scripts/verify-supabase-local-moderation.ts",
     "db:verify-report-encryption": "node --import tsx scripts/verify-supabase-report-encryption-installation.ts",
     "test:map-routing": "node --import tsx tests/mapRoute.test.ts",
-    "verify:map-routing": "node --import tsx scripts/verify-map-routing.ts"
+    "verify:map-routing": "node --import tsx scripts/verify-map-routing.ts",
+    "test:legal": "node --import tsx --test tests/legalAcceptance.test.ts tests/signupConfirmation.test.ts tests/googleAuth.test.ts tests/legalAppearance.test.ts tests/sessionSecurity.test.ts tests/authProtection.test.ts",
+    "db:verify-terms": "node --import tsx scripts/verify-terms-acceptance.ts",
+    "test:analytics": "node --import tsx --test tests/analytics.test.ts",
+    "verify:analytics:browser": "node scripts/verify-analytics-browser.cjs",
+    "build:mobile": "node scripts/build-mobile.mjs",
+    "android:sync": "npm run build:mobile && cap sync android",
+    "android:apk": "npm run android:sync && node scripts/build-android.mjs",
+    "android:run": "npm run android:sync && cap run android",
+    "test:mobile": "node --import tsx --test --test-concurrency=1 tests/nativeTransport.test.ts tests/mobileAuth.test.ts tests/nativeCaptcha.test.ts tests/nativeOtpInput.test.ts tests/nativeDestination.test.ts tests/mobileAppBuild.test.ts",
+    "verify:mobile-browser": "node scripts/verify-mobile-browser-return.cjs",
+    "build:mobile:preview": "PINEVELA_NATIVE_PREVIEW=1 node scripts/build-mobile.mjs",
+    "verify:mobile-preview-browser": "node scripts/verify-mobile-preview-browser.cjs"
   },
   "dependencies": {
+    "@capacitor/android": "8.5.3",
+    "@capacitor/core": "8.5.3",
     "@google/genai": "^2.4.0",
     "@tailwindcss/vite": "^4.1.14",
     "@tanstack/react-query": "^5.103.2",
@@ -174,6 +188,7 @@
     "vite": "^6.4.4"
   },
   "devDependencies": {
+    "@capacitor/cli": "8.5.3",
     "@types/compression": "^1.8.1",
     "@types/express": "^4.17.21",
     "@types/node": "^22.14.0",

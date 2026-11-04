@@ -1,0 +1,13 @@
+{
+  "date": "2026-11-01T12:36:48.592660+00:00",
+  "installedApkSha256": "4ed337dbbe863458f4b062f40915047bde8ff601ad05efbaafd0ef8a312a4b0c",
+  "normalReopenPreservedApk": true,
+  "reinstalledBeforeHashCheck": false,
+  "dataWiped": false,
+  "displaySize": "Physical size: 1080x2340",
+  "displayDensity": "Physical density: 440",
+  "rotation": "0",
+  "autoRotation": "1",
+  "keyboardSetting": "0",
+  "testPackages": ""
+}

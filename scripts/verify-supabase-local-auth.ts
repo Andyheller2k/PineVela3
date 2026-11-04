@@ -1,3 +1,4 @@
+import {termsAcceptance} from '../legalPolicy.js';
 /** Actual local GoTrue + captured confirmation mail + unchanged PineVela HTTP
  * auth. Dummy identities exist only in the separately owned disposable stack. */
 import assert from 'node:assert/strict';
@@ -23,13 +24,13 @@ async function verify(h:LocalSupabaseHarness){
  check((await guest.request('/api/auth/login',{method:'POST',headers:{origin:'https://untrusted.invalid','content-type':'application/json'},body:'{}'})).status===403,'Cross-origin login is rejected');
 
  stage='real signup and local mail';const started=Date.now();
- const signup=await user.json('/api/auth/register-unified',{name:'Local Auth Founder',email,password,role:'admin',userId:crypto.randomUUID()});
+ const signup=await user.json('/api/auth/register-unified',{termsAcceptance:termsAcceptance(true),name:'Local Auth Founder',email,password,role:'admin',userId:crypto.randomUUID()});
  check(signup.status===202&&signup.data?.verificationRequired===true,'Real GoTrue signup requires email confirmation');
  check(typeof signup.data?.signupId==='string','Actual provider returns the new Auth UUID');
  check(!signup.headers.has('set-cookie'),'Unconfirmed signup creates no app session cookie');
  check((await user.json('/api/auth/login',{email,password})).status===401,'Actual unconfirmed GoTrue identity cannot sign in');
  const confirmation=await h.mail.confirmation(email,started);
- const verified=await user.json('/api/auth/verify-unified',{email,signupId:signup.data.signupId,code:h.providerOrigin+confirmation});
+ const verified=await user.json('/api/auth/verify-unified',{termsAcceptance:termsAcceptance(true),email,signupId:signup.data.signupId,code:h.providerOrigin+confirmation});
  check(verified.status===200&&verified.data?.verified===true,'The actual locally delivered confirmation proves email ownership');
  check(verified.data?.user?.role==='user','Client-supplied signup role does not grant administrator authority');
  check(verified.headers.getSetCookie().filter(c=>c.startsWith('pv_sb_')).length===2,'Native app issues both HTTP-only session cookies');
@@ -72,7 +73,7 @@ async function verify(h:LocalSupabaseHarness){
  check((await reentry.request('/api/auth/me')).data?.id===me.data.id,'The new password session reaches the original primary profile');
  check((await firstReplay.request('/api/auth/me')).status===401,'The new login does not restore the revoked old cookie session');
  check((await user.request('/api/auth/me')).status===200,'Signing out one session preserves the independently verified session');
- const duplicate=await guest.json('/api/auth/register-unified',{name:'Repeated registration',email,password});
+ const duplicate=await guest.json('/api/auth/register-unified',{termsAcceptance:termsAcceptance(true),name:'Repeated registration',email,password});
  check(duplicate.status===409&&duplicate.data?.code==='email_already_registered'&&!duplicate.headers.has('set-cookie'),
   'The duplicate-registration guard remains separate from successful password re-entry');
  check((await reentry.request('/api/auth/me')).status===200,'Rejected duplicate registration does not disturb the signed-in account');

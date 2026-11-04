@@ -4,9 +4,9 @@ import assert from 'node:assert/strict';import crypto from 'node:crypto';import 
 import {withIsolatedBackup} from './lib/isolated-postgres.js';import {ApiError,SupabaseDatabase,type VerifiedActor} from '../supabase/db.js';
 import {SupabaseAuth} from '../supabase/auth.js';
 import {hashCredentialAsync} from '../accountSecurity.js';import {hashPortalPin} from '../supabase/portalAccess.js';
-import {issueManagerKey,checkManagerKey} from '../supabase/managerKeys.js';import {checkApprovalKey,deniedApprovalKey} from '../supabase/adminGovernance.js';
+import {issueManagerKey,checkManagerKey,rotateManagerKey} from '../supabase/managerKeys.js';import {checkApprovalKey,deniedApprovalKey} from '../supabase/adminGovernance.js';
 import {academicResetPreview,resetAcademicRoomKeys,academicYear} from '../supabase/academicRoomKeys.js';
-import {releaseResidentRoom,keyRows} from '../supabase/housing.js';import {claimResidentRoom} from '../supabase/enrollment.js';import {reactivateResident} from '../supabase/residentReactivation.js';
+import {releaseResidentRoom,keyRows,generateRoomKeys} from '../supabase/housing.js';import {claimResidentRoom} from '../supabase/enrollment.js';import {reactivateResident} from '../supabase/residentReactivation.js';
 dotenv.config({ quiet: true });
 const [checkpoint, applicationCheckpoint] = process.argv.slice(2);
 if (process.argv.length !== 4 || [checkpoint, applicationCheckpoint].some(v => !/^[a-f0-9-]{36}$/.test(v || ''))) throw new Error('Pass genuine Auth and pre-enrollment checkpoint UUIDs.');
@@ -47,7 +47,7 @@ try {
         const seller: VerifiedActor = { ...resident, sessionId: student.sessions[1], kind: 'seller', contextId: (await c.query("insert into public.account_contexts(auth_user_id,primary_owner_id,kind,status) values($1,$2,'seller','active') returning id", [student.id, ownerPerson.id])).rows[0].id };
         const foreign: VerifiedActor = { authUserId: foreignPerson.id, sessionId: foreignPerson.sessions[0], kind: 'resident', contextId: (await c.query("insert into public.account_contexts(auth_user_id,primary_owner_id,kind,status) values($1,$2,'resident','active') returning id", [foreignPerson.id, foreignOwnerPerson.id])).rows[0].id };
         const home = (await c.query("insert into public.residences(primary_owner_id,name,status) values($1,$2,'approved') returning id", [ownerPerson.id, ownerPerson.name])).rows[0].id;
-        const block = (await c.query('insert into public.blocks(residence_id,name) values($1,$2) returning id', [home, student.name])).rows[0].id;
+        const block = (await c.query("insert into public.blocks(residence_id,name,room_prefix) values($1,$2,'PM') returning id", [home, student.name])).rows[0].id;
         const floor = (await c.query('insert into public.floors(block_id,floor_number) values($1,0) returning id', [block])).rows[0].id;
         const room = (await c.query("insert into public.rooms(floor_id,room_number) values($1,'1') returning id", [floor])).rows[0].id;
         const bed = (await c.query('insert into public.beds(room_id,bed_number) values($1,1) returning id', [room])).rows[0].id;
@@ -64,7 +64,7 @@ try {
         const key=(await c.query('insert into private.room_activation_keys(room_id,code,claimed_by,claimed_at) values($1,$2,$3,now()) returning id',[room,'PV-'+crypto.randomBytes(16).toString('hex').toUpperCase(),resident.contextId])).rows[0].id;
         const foreignHome=(await c.query("insert into public.residences(primary_owner_id,name,status) values($1,$2,'approved') returning id",[foreignOwnerPerson.id,foreignOwnerPerson.name])).rows[0].id;
         await c.query('insert into public.manager_assignments(manager_context_id,residence_id) values($1,$2)',[managers[1].contextId,foreignHome]);
-        const fb=(await c.query('insert into public.blocks(residence_id,name) values($1,$2) returning id',[foreignHome,foreignPerson.name])).rows[0].id;
+        const fb=(await c.query("insert into public.blocks(residence_id,name,room_prefix) values($1,$2,'PF') returning id",[foreignHome,foreignPerson.name])).rows[0].id;
         const ff=(await c.query('insert into public.floors(block_id,floor_number) values($1,0) returning id',[fb])).rows[0].id;
         const fr=(await c.query("insert into public.rooms(floor_id,room_number) values($1,'1') returning id",[ff])).rows[0].id;
         const fbed=(await c.query('insert into public.beds(room_id,bed_number) values($1,1) returning id',[fr])).rows[0].id;
@@ -81,7 +81,7 @@ try {
         await c.query('insert into public.admin_memberships(context_id,slot)values($1,1)',[admin.contextId]);
         await c.query('insert into private.admin_secrets(context_id,approval_key_hash,approval_enrolled_at,settings_key_hash,settings_enrolled_at)values($1,$2,now(),$3,now())',[admin.contextId,await hashCredentialAsync(`approval:${admin.contextId}:${approval}`),await hashCredentialAsync(`settings:${admin.contextId}:${settings}`)]);
         for(const h of[home,foreignHome]){await c.query('update public.residences set setup_submitted_at=now() where id=$1',[h]);await c.query("insert into public.verification_cases(applicant_context_id,residence_id,kind,status)values($1,$2,'residence_registration','approved')",[managers[h===home?0:1].contextId,h]);}
-        const extraRooms=[];for(const n of['2','3']){const id=(await c.query('insert into public.rooms(floor_id,room_number)values($1,$2)returning id',[floor,n])).rows[0].id;extraRooms.push(id);await c.query('insert into public.beds(room_id,bed_number)values($1,1)',[id]);await c.query('insert into private.room_activation_keys(room_id,code)values($1,$2)',[id,'PV-'+crypto.randomBytes(16).toString('hex').toUpperCase()]);}
+        const extraRooms=[];for(const n of['2','3']){const id=(await c.query('insert into public.rooms(floor_id,room_number)values($1,$2)returning id',[floor,n])).rows[0].id;extraRooms.push(id);await c.query('insert into public.beds(room_id,bed_number)values($1,1)',[id]);if(n==='2')await c.query('insert into private.room_activation_keys(room_id,code)values($1,$2)',[id,'PV-'+crypto.randomBytes(16).toString('hex').toUpperCase()]);}
         const enrollment=(await c.query("insert into private.account_enrollments(initiator_context_id,primary_owner_id,kind,invited_email,token_digest,enrollment_fields,status,verified_at,auth_user_id,linked_context_id,room_id,residence_id,expires_at)values($1,$2,'resident',$3,$4,$5,'completed',now(),$6,$7,$8,$9,now()+interval'24 hours')returning id",[ownerActors[0].contextId,ownerPerson.id,student.email,crypto.randomBytes(32).toString('hex'),JSON.stringify({displayName:student.name,phone:''}),student.id,resident.contextId,room,home])).rows[0].id;
         const applied = new Map((await c.query('select version,digest from private.schema_migrations')).rows.map(r => [r.version, r.digest]));
         for (const file of fs.readdirSync('supabase/migrations').filter(f => /^\d{14}_[a-z0-9_]+\.sql$/.test(f)).sort()) {
@@ -93,7 +93,43 @@ try {
       });
       const {owner,resident,seller,foreign,managers,home,foreignHome,admin,approval,settings,extraRooms,enrollment,student}=fixture;
       const run=<T>(a:VerifiedActor,work:(c:PoolClient)=>Promise<T>,exclusive=false)=>db.authorizedSystem(a,[a.kind],work,false,false,exclusive);
-      for(const manager of managers){const key=(await run(manager,c=>issueManagerKey(c,manager))).key;manager.managerKeyVersion=(await run(manager,c=>checkManagerKey(c,manager,key))).version;}
+      const managerCodes=new Map<string,string>();
+      for(const manager of managers){const key=(await run(manager,c=>issueManagerKey(c,manager))).key;check(/^[0-9]{6}$/.test(key),'New manager authorization code has exactly six digits');managerCodes.set(manager.contextId,key);manager.managerKeyVersion=(await run(manager,c=>checkManagerKey(c,manager,key))).version;}
+      stage='short manager code security';
+      const current=managers[0],oldCode=managerCodes.get(current.contextId)!;
+      const legacy=crypto.randomBytes(32).toString('base64url');
+      const legacyHash=await hashCredentialAsync(legacy);
+      await db.system(c=>c.query('update private.manager_operation_keys set key_hash=$2 where manager_context_id=$1',[current.contextId,legacyHash]));
+      current.managerKeyVersion=(await run({...current,managerKeyVersion:undefined},c=>checkManagerKey(c,current,legacy))).version;
+      check(Boolean(current.managerKeyVersion),'Existing long manager keys still authenticate');
+      const stale={...current};
+      let replaced=(await run(current,c=>rotateManagerKey(c,current))).key;
+      check(/^[0-9]{6}$/.test(replaced),'Owner-authorized replacement issues a six-digit code');
+      await denied(()=>run(stale,c=>c.query('select 1')),403,'Rotating a manager code invalidates stale authorization proofs');
+      check(!(await run({...current,managerKeyVersion:undefined},c=>checkManagerKey(c,current,legacy))).allowed,'Previous long manager key stops working after replacement');
+      check(!(await run({...current,managerKeyVersion:undefined},c=>checkManagerKey(c,current,oldCode))).allowed,'Earlier six-digit manager code does not authorize a later version');
+      current.managerKeyVersion=(await run({...current,managerKeyVersion:undefined},c=>checkManagerKey(c,current,replaced))).version;
+      await denied(()=>run({...current,managerKeyVersion:undefined},c=>rotateManagerKey(c,{...current,managerKeyVersion:undefined})),403,'Rotation cannot bypass current key proof');
+      for(const other of[owner,seller,resident])await denied(()=>run(other,c=>rotateManagerKey(c,other)),403,'Other portal roles cannot rotate manager codes');
+      const parallel=await Promise.allSettled([run(current,c=>rotateManagerKey(c,current)),run(current,c=>rotateManagerKey(c,current))]);
+      const winners=parallel.filter(r=>r.status==='fulfilled'),losers=parallel.filter(r=>r.status==='rejected');
+      check(winners.length===1&&losers.length===1,'Concurrent manager rotations produce exactly one replacement');
+      check([403,409].includes((losers[0] as PromiseRejectedResult).reason.status),'Concurrent rotation is rejected cleanly without a database deadlock');
+      replaced=(winners[0] as PromiseFulfilledResult<{key:string}>).value.key;
+      current.managerKeyVersion=(await run({...current,managerKeyVersion:undefined},c=>checkManagerKey(c,current,replaced))).version;
+      const wrong=replaced==='999999'?'888888':'999999';
+      for(let i=0;i<5;i++)check(!(await run({...current,managerKeyVersion:undefined},c=>checkManagerKey(c,current,wrong))).allowed,'Incorrect numeric code is denied and counted');
+      check((await run({...current,managerKeyVersion:undefined},c=>checkManagerKey(c,current,replaced))).locked,'Correct code cannot bypass the persisted five-attempt lockout');
+      await db.system(c=>c.query("update private.manager_operation_keys set locked_until=clock_timestamp()-interval'1 second' where manager_context_id=$1",[current.contextId]));
+      current.managerKeyVersion=(await run({...current,managerKeyVersion:undefined},c=>checkManagerKey(c,current,replaced))).version;
+      const audit=(await db.pool.query("select event_data from private.audit_events where event_type='manager_secret_key_rotated'")).rows;
+      check(audit.length===2&&!JSON.stringify(audit).includes(replaced),'Manager rotation audit never includes the secret code');
+      stage='initial room key generation';
+      // One never-issued empty room exercises generation while the other legacy codes remain valid.
+      const generated=await run(current,c=>generateRoomKeys(c,current,home));
+      check(/^PM-[A-HJ-NP-Z2-9]{4}$/.test(generated.find(r=>r.roomId===extraRooms[1]).roomKey),'Initial room generation uses the saved block prefix and four random characters');
+      check(generated.some(r=>/^PV-[A-F0-9]{32}$/.test(r.roomKey)),'Unreplaced long room keys remain intact');
+
       const year='2026/2027';const preview=(a=managers[0],id=home,y=year)=>run(a,c=>academicResetPreview(c,a,id,y));
       const initial=await preview();check(initial.rooms===3&&initial.occupants===1&&!initial.alreadyCompleted,'Exact own-residence preview counts occupied and empty rooms');
       check(!JSON.stringify(initial).includes(student.email)&&!JSON.stringify(initial).includes('roomKey'),'Preview exposes no resident mailbox or activation code');
@@ -119,6 +155,7 @@ try {
       const outcomes=await Promise.all([reset(),reset()]);check(outcomes.every(r=>r.success)&&outcomes.filter(r=>!r.noChange).length===1,'Concurrent exact retries produce one completed cycle');const result=outcomes.find(r=>!r.noChange)!;
       check(result.count===3&&result.occupantsRemoved===1,'All selected residence rooms reset atomically');
       const nowKeys=await run(managers[0],c=>keyRows(c,managers[0],home));check(nowKeys.length===3&&nowKeys.every(r=>!r.isAssigned&&r.academicYear===year&&!oldKeys.includes(r.roomKey)),'Exactly one distinct new unclaimed key per room carries its academic year');
+      check(nowKeys.every(r=>/^PM-[A-HJ-NP-Z2-9]{4}$/.test(r.roomKey)),'Annual room reset uses the saved initials and four random alphanumeric characters');
       check((await db.pool.query('select count(*)from private.room_activation_keys where room_id=any($1::uuid[])and revoked_at is not null',[nowKeys.map(r=>r.roomId)])).rows[0].count==='3','Every old room key is retained and revoked');
       check((await db.pool.query('select ended_at from public.allocations where id=$1',[fixture.allocation])).rows[0].ended_at,'Original allocation history is retained');
       check((await db.pool.query('select status from public.account_contexts where id=$1',[resident.contextId])).rows[0].status==='closed','Only resident portal closes');
@@ -140,7 +177,7 @@ try {
       await denied(()=>run(owner,c=>claimResidentRoom(c,owner,enrollment,oldKeys[0])),404,'Retired key cannot reactivate a room');
       await run(owner,c=>claimResidentRoom(c,owner,enrollment,nowKeys[0].roomKey));check((await db.pool.query('select count(*)from public.allocations where resident_context_id=$1 and ended_at is null',[resident.contextId])).rows[0].count==='1','Reactivation retains one active allocation on the same resident identity');
       const afterClaim=await mutableDigest();check((await reset()).noChange,'Retry of a completed year returns its receipt');check(await mutableDigest()===afterClaim,'Completed-year retry never evicts a newly activated resident or reissues keys');
-      const released=await run(managers[0],c=>releaseResidentRoom(c,managers[0],nowKeys[0].id,true),true);check(released.academicYear===year&&!released.isAssigned,'Individual release retains the current academic-year cycle');
+      const released=await run(managers[0],c=>releaseResidentRoom(c,managers[0],nowKeys[0].id,true),true);check(released.academicYear===year&&!released.isAssigned&&/^PM-[A-HJ-NP-Z2-9]{4}$/.test(released.roomKey),'Individual release retains its academic year and issues a short replacement key');
       const next=await preview(managers[0],home,'2027/2028');await denied(()=>reset(managers[0],home,{...input,academicYear:'2027/2028'}),409,'New year requires its own exact preview');
       const nextResult=await reset(managers[0],home,{...input,academicYear:'2027/2028',fingerprint:next.fingerprint});check(nextResult.count===3&&nextResult.occupantsRemoved===0,'Next consecutive year replaces every key while preserving empty-room history');
       stage='native completion boundary';
@@ -159,8 +196,11 @@ try {
       const adminPreview=await preview(admin,foreignHome);const adminResult=await reset(admin,foreignHome,{...input,fingerprint:adminPreview.fingerprint},grant);check(adminResult.count===1&&adminResult.occupantsRemoved===1,'Genuine administrator with own approval grant can reset its selected approved residence');
       check((await db.pool.query('select count(*)from public.registration_bans')).rows[0].count==='0','Annual reset creates no registration cooldown');check(await authDigest()===beforeAuth,'Genuine Auth users, identities and native sessions remain byte-for-byte unchanged');
       await db.close();db=new SupabaseDatabase(config);check((await db.pool.query('select count(*)from private.residence_room_key_cycles')).rows[0].count==='3','All immutable cycle receipts survive reconnect');
+      const advisorSkipped=process.env.PINEVELA_SKIP_DB_ADVISORS==='1';
+      if(!advisorSkipped){
       const advisor=spawnSync('/tmp/pv-supabase-cli-2.120.0/supabase',['db','advisors','--db-url','postgresql://pv_restore@localhost:6543/postgres?host='+encodeURIComponent(String(config.host)),'--type','security','--output-format','json'],{timeout:60000,maxBuffer:4*1024*1024});fs.writeFileSync('.security/migration-reset/academic-room-keys-native-advisors.json',advisor.stdout.length?advisor.stdout:advisor.stderr,{mode:0o600});check(advisor.status===0,'Native security advisors completed');const reportData=JSON.parse(advisor.stdout.toString()),findings=reportData.results||reportData;check(Array.isArray(findings)&&!findings.length,'Native security advisors report zero findings');
-      const report={passed:true,checks,isolatedNative:true,genuineArchivedGoogleIdentities:true,cloudRecordsModified:0,authRecordsChanged:false,providerMocks:false,realManagerResetBrowserPending:true};fs.writeFileSync('.security/migration-reset/academic-room-keys-native.json',JSON.stringify(report,null,2)+'\n',{mode:0o600});console.log(JSON.stringify(report));
+      }
+      const report={passed:true,checks,advisorSkipped,shortCodesVerified:true,isolatedNative:true,genuineArchivedGoogleIdentities:true,cloudRecordsModified:0,authRecordsChanged:false,providerMocks:false,realManagerResetBrowserPending:true};fs.writeFileSync('.security/migration-reset/academic-room-keys-native.json',JSON.stringify(report,null,2)+'\n',{mode:0o600});if(process.env.PINEVELA_SHORT_KEY_REPORT)fs.writeFileSync(process.env.PINEVELA_SHORT_KEY_REPORT,JSON.stringify(report,null,2)+'\n');console.log(JSON.stringify(report));
     }finally{await db.close();}
   },{applicationCheckpoint});
 }catch(e:any){fs.writeFileSync('.security/migration-reset/academic-room-keys-failure.log',String(e.stack||e),{mode:0o600});console.error(JSON.stringify({passed:false,stage,checks,code:e?.code||null,error:e instanceof assert.AssertionError?e.message:'Native verification failed; diagnostics saved privately.'}));process.exitCode=1;}

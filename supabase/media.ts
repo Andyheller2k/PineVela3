@@ -11,6 +11,7 @@ import { checkProfileContext,profileSettingsGrant } from './profiles.js';
 import { requireSettingsGrant } from './adminSettings.js';
 import {managerRegistrationRestricted} from './registrationRestrictions.js';
 import { moderateContent } from './contentSafety.js';
+import { termsRequired } from './legal.js';
 export type Purpose = 'hostel'|'market'|'inspection'|'maintenance'|'repair'|'avatar';
 type HousingScope = {residenceId?:string;allocationId?:string;issueId?:string};
 const route = (work:(req:AuthRequest,res:any)=>Promise<unknown>):RequestHandler => (req,res,next) => {work(req as AuthRequest,res).catch(next);};
@@ -121,8 +122,8 @@ export async function ownedMedia(client:PoolClient,actor:VerifiedActor,url:unkno
 }
 /** Install before the ordinary small JSON parser: authorization and bounded
  * admission happen before reading a potentially large image request. */
-export function installMedia(app:Express,auth:SupabaseAuth) {
-  const storage = new SupabaseStorage(),budgets = new AttemptBudgets();let uploads = 0;
+export function installMedia(app:Express,auth:SupabaseAuth,storage = new SupabaseStorage()) {
+  const budgets = new AttemptBudgets();let uploads = 0;
   const admission:RequestHandler = (req,res,next) => {
     if (uploads >= 2) return next(new ApiError(503,'Photograph processing is busy. Try again shortly.'));
     try {budgets.reserve([{scope:'photo-ip',identity:req.ip || req.socket.remoteAddress || '',maximum:200,windowMs:86400000}]);} catch (error) {return next(error);}
@@ -212,17 +213,27 @@ export function installMedia(app:Express,auth:SupabaseAuth) {
       return (await client.query(`select * from public.media_assets
         where id = $1 and private.media_asset_is_public(id)`,[id])).rows[0];
     });
+    const publicCataloguePhoto=Boolean(asset && ['market','hostel'].includes(asset.purpose));
     if (!asset) {
       // Do not reveal whether an unauthenticated private identifier exists.
       let actor:VerifiedActor;try {actor = (await auth.authenticate(req,res)).actor;} catch (error) {
         if (error instanceof ApiError && error.status === 401) throw new ApiError(404,'Photograph not found.');throw error;
       }
+      if(!actor.termsAccepted)throw termsRequired();
       asset = await auth.db.actor(actor,async client => (await client.query("select * from public.media_assets where id = $1 and state = 'ready'",[id])).rows[0]);
     }
     if (!asset) throw new ApiError(404,'Photograph not found.');
-    const bytes = await storage.download(asset.object_path,asset);
     res.set({'Content-Type':'image/png','Content-Disposition':'inline; filename="photograph.png"',
-      'Cache-Control':'private, no-store','Content-Security-Policy':"sandbox; default-src 'none'; frame-ancestors 'none'",'Referrer-Policy':'no-referrer'});
-    return res.send(bytes);
+      'Cache-Control':publicCataloguePhoto?'private, no-cache, max-age=0, must-revalidate':'private, no-store','Content-Security-Policy':"sandbox; default-src 'none'; frame-ancestors 'none'",'Referrer-Policy':'no-referrer'});
+    // Publication/maintenance/ownership checks above run even for a conditional
+    // request. A hidden or removed image must never receive a cached 304 reply.
+    if(publicCataloguePhoto && /^[a-f0-9]{64}$/.test(asset.sha256)) {
+      res.set({'ETag':`"pv-${id}-${asset.sha256}"`,'X-PineVela-Public-Photo':'1'});
+      if(req.fresh)return res.status(304).end();
+    }
+    const bytes = await storage.download(asset.object_path,asset);
+    // Conditional replies are handled explicitly above. Express must not add a
+    // weak ETag or synthesize a 304 for an authorized private photograph.
+    return res.set('Content-Length',String(bytes.length)).end(bytes);
   }));
 }

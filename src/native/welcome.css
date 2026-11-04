@@ -1,0 +1,75 @@
+/* One static, bundled portrait and one glass panel; no idle animation. */
+.native-welcome {
+  --welcome-canvas: #ffffff;
+  --welcome-ink: #003566;
+  --welcome-muted: #304b65;
+  --welcome-glass: linear-gradient(145deg, rgb(255 255 255 / .68), rgb(255 255 255 / .54));
+  --welcome-edge: rgb(0 53 102 / .32);
+  --welcome-action: linear-gradient(115deg, #003566, #001d3d);
+  --welcome-action-ink: #ffffff;
+  --welcome-header: rgb(255 255 255 / .88);
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  overflow: clip;
+  background: var(--welcome-canvas);
+  color: var(--welcome-ink);
+}
+html[data-theme="dark"] .native-welcome {
+  --welcome-canvas: #001d3d;
+  --welcome-ink: #ffffff;
+  --welcome-muted: #e0e9f2;
+  --welcome-glass: linear-gradient(145deg, rgb(0 8 20 / .66), rgb(0 29 61 / .58));
+  --welcome-edge: rgb(255 214 10 / .42);
+  --welcome-action: linear-gradient(115deg, #ffd60a, #ffc300);
+  --welcome-action-ink: #001d3d;
+  --welcome-header: rgb(0 29 61 / .88);
+}
+.native-welcome-artwork { position: absolute; z-index: -1; inset: 72px -12% 0; pointer-events: none; }
+.native-welcome-artwork img { width: 100%; height: 100%; object-fit: cover; object-position: 38% top; }
+.native-welcome-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 20px; background: var(--welcome-header); border-bottom: 1px solid var(--welcome-edge); }
+.native-welcome-header .pinevela-brand { flex-shrink: 0; }
+.native-welcome-tools { display: flex; align-items: center; gap: 6px; }
+.native-welcome-tools > a { min-width: 44px; min-height: 44px; padding: 10px; color: var(--welcome-ink); }
+.native-welcome-main { display: flex; align-items: flex-end; justify-content: center; flex: 1; width: 100%; padding: clamp(180px, 34dvh, 360px) 20px 20px; }
+.native-welcome-card { width: min(100%, 420px); padding: 26px 22px 24px; border: 1px solid var(--welcome-edge); border-radius: 28px; background: var(--welcome-glass); box-shadow: inset 0 1px 0 rgb(255 255 255 / .28), 0 16px 48px rgb(0 8 20 / .16); -webkit-backdrop-filter: blur(14px) saturate(1.12); backdrop-filter: blur(14px) saturate(1.12); text-align: center; }
+.native-welcome-card h1 { margin: 0; color: var(--welcome-ink); font-size: clamp(28px, 7vw, 34px); font-weight: 800; line-height: 1.12; letter-spacing: -.035em; }
+.native-welcome-card h1 span { display: block; }
+.native-welcome-card > p { margin: 12px 0 0; color: var(--welcome-muted); font-size: 14px; line-height: 1.55; }
+.native-welcome-actions { display: grid; gap: 10px; margin-top: 22px; }
+.native-welcome-actions > a { display: flex; align-items: center; justify-content: center; gap: 9px; min-height: 48px; padding: 12px 18px; border: 1px solid transparent; border-radius: 999px; font-size: 14px; font-weight: 750; text-decoration: none; }
+.native-welcome-primary { background: var(--welcome-action); color: var(--welcome-action-ink); }
+.native-welcome-secondary { border-color: var(--welcome-edge) !important; background: rgb(255 255 255 / .22); color: var(--welcome-ink); }
+.native-welcome-actions > a:focus-visible, .native-welcome-footer :focus-visible { outline: 3px solid var(--welcome-ink); outline-offset: 4px; }
+.native-welcome-card > .native-welcome-restoring { font-size: 11px; }
+.native-welcome-footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 4px 18px; padding: 4px 16px 12px; background: var(--welcome-header); color: var(--welcome-ink); }
+.native-welcome-footer a { display: inline-flex; align-items: center; min-height: 32px; color: inherit; font-size: 11px; text-decoration: underline; text-underline-offset: 3px; }
+@media (max-width: 370px) {
+  .native-welcome-header { padding-inline: 12px; gap: 4px; }
+  .native-welcome-header .pinevela-wordmark { font-size: 18px; }
+  .native-welcome-header .pinevela-brand { gap: 6px; }
+  .native-welcome-tools { gap: 0; }
+  .native-welcome-main { padding-inline: 12px; }
+}
+@media (max-height: 540px) and (min-width: 600px) {
+  .native-welcome-main { justify-content: flex-end; padding: 16px 24px; }
+  .native-welcome-card { width: min(52%, 420px); padding: 20px; }
+  .native-welcome-artwork { inset: 48px 30% 0 -10%; }
+  .native-welcome-artwork img { object-fit: contain; }
+  .native-welcome-card h1 span { display: inline; }
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .native-welcome-card { background: var(--welcome-header); }
+}
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
+  .native-welcome-card { background: var(--welcome-canvas); -webkit-backdrop-filter: none; backdrop-filter: none; }
+}
+@media (forced-colors: active) {
+  .native-welcome-artwork { display: none; }
+  .native-welcome { background: Canvas; color: CanvasText; }
+  .native-welcome-card { background: Canvas; border-color: CanvasText; }
+  .native-welcome-card :is(h1, p), .native-welcome-footer { color: CanvasText; }
+  .native-welcome-actions > a { background: ButtonFace; color: ButtonText; border-color: ButtonText !important; }
+}

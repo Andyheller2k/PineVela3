@@ -1,0 +1,8 @@
+{
+  "date": "2026-11-01T00:41:50.948854+00:00",
+  "normalEmulatorShutdown": true,
+  "dataWiped": false,
+  "snapshotSaveDisabled": false,
+  "adbKillOutput": "OK: killing emulator, bye bye\nOK",
+  "emulatorDeviceGone": true
+}

@@ -1,0 +1,16 @@
+TAP version 13
+# Subtest: restored native accounts reach their actual portal, including seller setup and support
+ok 1 - restored native accounts reach their actual portal, including seller setup and support
+  ---
+  duration_ms: 11.747847
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 96.237275

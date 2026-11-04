@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { sessionFetch } from '../lib/session';
+import { NATIVE_APP } from '../native/environment';
+import NativeCaptcha from '../native/NativeCaptcha';
 
 type Turnstile = {
   render: (container: HTMLElement, options: Record<string, unknown>) => string;
@@ -136,7 +138,9 @@ export function useAuthCaptcha(scope: string, active = true) {
     if (challengeId !== undefined) settle(challengeId, undefined, `${message} Submit again when ready.`);
   }, [challengeId, settle]);
   const widget = !active ? null : <>
-    {challenge && <TurnstileWidget key={challenge.id} siteKey={challenge.siteKey} action={challenge.action} onToken={onToken} onError={onError} />}
+    {challenge && (NATIVE_APP
+      ? <NativeCaptcha key={challenge.id} action={challenge.action} onToken={onToken} onError={onError} />
+      : <TurnstileWidget key={challenge.id} siteKey={challenge.siteKey} action={challenge.action} onToken={onToken} onError={onError} />)}
     {error ? <p role="alert" className="text-xs font-semibold text-amber-700 dark:text-amber-300">{error}</p>
       : checking && <p role="status" className="text-xs font-medium text-amber-700 dark:text-amber-300">Checking security…</p>}
   </>;

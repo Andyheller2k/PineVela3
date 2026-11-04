@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>PineVela seller plans — design preview</title>
+  <link rel="stylesheet" href="../../public/brand.css">
+  <style>
+    @font-face { font-family: 'PineVela Preview'; src: url('../../assets/fonts/native/plus-jakarta-sans-latin-variable.woff2') format('woff2'); font-weight: 200 800; font-display: swap; }
+    * { box-sizing: border-box; }
+    :root {
+      color-scheme: light; --canvas:#f0f5fa; --ink:#001d3d; --muted:#4c627a;
+      --edge:#c6d6e5; --panel:rgb(255 255 255 / .84); --row:#edf3f9;
+      --selected:#003566; --on-selected:#fff; --action:linear-gradient(115deg,#003566,#001d3d);
+      --target:#e6eff9; --target-edge:#b9cde2; --check:#003566;
+      --soft-glow:rgb(0 53 102 / .10); --shadow:rgb(0 29 61 / .09);
+      --hero:radial-gradient(ellipse at 50% 0%,rgb(0 53 102 / .07),transparent 70%);
+    }
+    :root[data-theme="dark"] {
+      color-scheme:dark; --canvas:#00152d; --ink:#edf5ff; --muted:#b1c2d4;
+      --edge:#355069; --panel:rgb(0 29 61 / .86); --row:#082b4c;
+      --selected:#ffd60a; --on-selected:#001d3d; --action:linear-gradient(115deg,#ffc300,#ffd60a);
+      --target:#283b35; --target-edge:#8d7d33; --check:#ffd60a;
+      --soft-glow:rgb(255 214 10 / .10); --shadow:rgb(0 8 20 / .32);
+      --hero:radial-gradient(ellipse at 50% 0%,rgb(255 214 10 / .08),transparent 70%);
+    }
+    body { margin:0; background:var(--canvas); color:var(--ink); font:14px/1.5 'PineVela Preview',sans-serif; }
+    button,a { -webkit-tap-highlight-color:transparent; }
+    button { font:inherit; cursor:pointer; }
+    button:focus-visible,a:focus-visible { outline:3px solid var(--selected); outline-offset:3px; }
+    .preview-toolbar { max-width:940px; margin:24px auto; padding:16px 20px; border:1px solid var(--edge); border-radius:20px; background:var(--panel); }
+    .preview-toolbar > strong { font-size:15px; }
+    .preview-toolbar > p { margin:4px 0 12px; color:var(--muted); font-size:12px; }
+    .preview-controls { display:flex; align-items:center; flex-wrap:wrap; gap:12px; }
+    .control-group { display:flex; gap:4px; padding:4px; background:var(--row); border:1px solid var(--edge); border-radius:999px; }
+    .control-group button { min-height:44px; padding:8px 14px; border:0; border-radius:999px; background:transparent; color:var(--muted); font-size:12px; font-weight:700; }
+    .control-group button[aria-pressed="true"] { background:var(--action); color:var(--on-selected); }
+    .preview-controls > span { font-size:12px; color:var(--muted); }
+    #preview-status { margin-top:10px; color:var(--selected); font-size:12px; min-height:18px; }
+    main { width:100%; max-width:720px; margin:0 auto; padding:18px 16px 32px; }
+    .app-header { display:flex; align-items:center; justify-content:space-between; margin:0 2px 14px; gap:14px; }
+    .brand { display:flex; align-items:center; gap:8px; }
+    .brand img { width:29px; height:36px; object-fit:contain; }
+    .pinevela-wordmark { font-size:19px; }
+    .app-section { font-size:12px; color:var(--muted); font-weight:700; }
+    .plan-card { position:relative; border:1px solid var(--edge); border-radius:30px; background:var(--hero),var(--panel); overflow:hidden; box-shadow:0 18px 55px var(--shadow); }
+    .plan-card::before { content:''; position:absolute; top:0; right:20%; left:20%; height:2px; background:linear-gradient(90deg,transparent,var(--selected),transparent); }
+    .intro { text-align:center; padding:18px 20px 12px; }
+    .eyebrow { display:inline-flex; align-items:center; gap:6px; padding:5px 10px; border-radius:999px; color:var(--selected); border:1px solid var(--target-edge); background:var(--target); font-size:11px; font-weight:750; }
+    .hero-icon { display:block; width:max-content; margin:10px auto 6px; font-size:30px; line-height:1.2; filter:drop-shadow(0 3px 9px var(--soft-glow)); }
+    h1 { margin:0; font-size:27px; line-height:1.17; font-weight:800; letter-spacing:-1.25px; }
+    h1 em { font-style:normal; color:var(--selected); }
+    .intro > p { color:var(--muted); margin:8px auto 0; max-width:29ch; font-size:12px; line-height:1.55; }
+    .comparison-wrap { padding:0 16px; }
+    table { width:100%; border-collapse:separate; border-spacing:0; table-layout:fixed; }
+    col.feature-col { width:48%; }
+    col.plan-col { width:26%; }
+    th,td { font-weight:inherit; }
+    thead th { vertical-align:bottom; padding:9px 3px 10px; font-size:12px; line-height:1.4; }
+    thead th:first-child { text-align:left; color:var(--muted); font-size:11px; font-weight:650; padding-right:10px; }
+    .column-label { display:block; font-size:11px; color:var(--muted); margin-bottom:3px; }
+    .plan-name { display:block; font-weight:800; }
+    .plan-name > span { display:block; }
+    .next-head { border:1px solid var(--target-edge); border-bottom:0; border-radius:16px 16px 0 0; background:var(--target); color:var(--selected); }
+    .next-head .column-label { color:var(--selected); }
+    tbody th { text-align:left; padding:9px 6px 9px 0; border-top:1px solid var(--edge); }
+    .feature { display:flex; align-items:center; gap:8px; }
+    .feature-emoji { flex:0 0 24px; font-size:22px; line-height:1; text-align:center; filter:drop-shadow(0 2px 4px var(--soft-glow)); }
+    .feature strong { display:block; font-size:12px; line-height:1.4; font-weight:750; }
+    .feature small { display:block; margin-top:3px; color:var(--muted); font-size:10.5px; line-height:1.45; }
+    td { border-top:1px solid var(--edge); text-align:center; font-size:12px; font-weight:750; padding:9px 2px; color:var(--muted); }
+    td.next-value { border-inline:1px solid var(--target-edge); background:var(--target); color:var(--selected); }
+    tbody tr:last-child td.next-value { border-bottom:1px solid var(--target-edge); border-radius:0 0 16px 16px; }
+    .tick { display:inline-grid; place-items:center; width:23px; height:23px; border-radius:50%; background:var(--selected); color:var(--on-selected); font-size:14px; font-weight:800; line-height:1; }
+    .not-included { display:inline-grid; place-items:center; width:23px; height:23px; color:var(--muted); border:1px solid var(--edge); border-radius:50%; font-size:15px; line-height:1; }
+    .current-text { font-size:11px; }
+    .upgrade-area { margin-top:12px; padding:15px 20px; background:linear-gradient(0deg,var(--soft-glow),transparent); border-top:1px solid var(--edge); }
+    .price-line { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:10px; }
+    .price-line strong { font-size:16px; letter-spacing:-.3px; }
+    .price-line small { font-size:11px; font-weight:500; color:var(--muted); }
+    .renewal-pill { padding:4px 7px; background:var(--row); border:1px solid var(--edge); color:var(--muted); border-radius:999px; font-size:10px; white-space:nowrap; }
+    .upgrade-button { display:flex; align-items:center; justify-content:center; gap:9px; width:100%; min-height:50px; border:0; border-radius:15px; background:var(--action); color:var(--on-selected); font-weight:800; font-size:13px; box-shadow:0 6px 20px var(--soft-glow); }
+    .keep-button { display:block; width:100%; min-height:44px; margin-top:4px; border:0; background:transparent; color:var(--muted); font-size:12px; font-weight:650; }
+    .payment-note { margin:3px 0 0; text-align:center; font-size:10.5px; color:var(--muted); }
+    .outside-note { margin:14px auto 0; text-align:center; color:var(--muted); font-size:11px; }
+    .gallery { display:none; }
+    html[data-capture="true"] .preview-toolbar { display:none; }
+    html[data-capture="true"] main { padding-top:18px; }
+    html[data-board="true"] .preview-toolbar,html[data-board="true"] main { display:none; }
+    html[data-board="true"] .gallery { display:block; max-width:858px; margin:28px auto; }
+    .gallery > h1 { font-size:25px; margin:0 16px 6px; }
+    .gallery > p { font-size:12px; color:var(--muted); margin:0 16px 20px; }
+    .gallery-grid { display:grid; grid-template-columns:repeat(2,390px); gap:20px 26px; margin:0 26px; }
+    .gallery-item > h2 { font-size:13px; margin:0 0 8px; color:#001d3d; }
+    .gallery-item iframe { width:390px; height:920px; border:1px solid #c6d6e5; border-radius:22px; display:block; }
+    @media(min-width:640px) {
+      .intro { padding-top:32px; } h1 { font-size:37px; }
+      .comparison-wrap { padding-inline:30px; } .feature strong,td { font-size:14px; }
+      .feature small { font-size:12px; } .feature-emoji { font-size:25px; flex-basis:30px; }
+      tbody th,td { padding-block:17px; } .upgrade-area { padding:22px 30px; }
+      thead th { font-size:14px; } .plan-name > span { display:inline; } .plan-name > span+span::before { content:' '; }
+      .price-line strong { font-size:20px; } .upgrade-button { min-height:54px; font-size:15px; }
+    }
+    @media(max-width:359px) {
+      main { padding-inline:10px; } .comparison-wrap { padding-inline:12px; }
+      .feature { gap:5px; } .feature-emoji { font-size:19px; flex-basis:21px; }
+      .feature strong { font-size:11.5px; } h1 { font-size:27px; }
+      .price-line { align-items:flex-start; } .renewal-pill { font-size:9.5px; }
+    }
+    @media(prefers-reduced-motion:reduce) { *,*::before,*::after { animation:none!important; transition:none!important; } }
+  </style>
+</head>
+<body>
+  <aside class="preview-toolbar" aria-label="Design preview controls">
+    <strong>Seller subscriptions · design preview</strong>
+    <p>Not applied to the app. Prices below use existing code defaults; the real page will read your admin-configured rates.</p>
+    <div class="preview-controls">
+      <div class="control-group" aria-label="Preview theme"><button type="button" data-theme-choice="light" aria-pressed="true">☀ Light</button><button type="button" data-theme-choice="dark" aria-pressed="false">☾ Dark</button></div>
+      <span>Preview current plan:</span>
+      <div class="control-group" aria-label="Preview current plan"><button type="button" data-plan-choice="default" aria-pressed="true">Pine Default</button><button type="button" data-plan-choice="star" aria-pressed="false">Pine Star</button></div>
+    </div>
+    <div id="preview-status" role="status" aria-live="polite">Try both themes and current plans. Checkout buttons are demonstrations.</div>
+  </aside>
+  <main>
+    <header class="app-header"><div class="brand"><img src="../../public/store-covers/pinevela-logo.svg" alt=""><span class="pinevela-wordmark" aria-label="PineVela"><span class="pine-label">Pine</span><span class="vela-label">Vela</span></span></div><span class="app-section">Seller plans</span></header>
+    <section class="plan-card" aria-labelledby="plan-heading">
+      <div class="intro"><span class="eyebrow">A little more possibility</span><span class="hero-icon" aria-hidden="true">🌟</span><h1 id="plan-heading">Stand out with<br><em>Pine Star.</em></h1><p id="plan-description">More room for your products.<br>More personality for your store.</p></div>
+      <div class="comparison-wrap"><table aria-label="Current and next seller plan comparison"><colgroup><col class="feature-col"><col class="plan-col"><col class="plan-col"></colgroup><thead><tr><th scope="col">Find your next<br>step forward.</th><th scope="col"><span class="column-label">Your plan</span><span class="plan-name" id="current-name"><span>Pine</span><span>Default</span></span></th><th scope="col" class="next-head"><span class="column-label">Upgrade</span><span class="plan-name" id="next-name"><span>Pine</span><span>Star ✨</span></span></th></tr></thead><tbody id="comparison-rows"></tbody></table></div>
+      <footer class="upgrade-area"><div class="price-line"><strong><span id="plan-price">GH₵90</span><small> / month</small></strong><span class="renewal-pill">No automatic debit</span></div><button type="button" class="upgrade-button"><span id="upgrade-label">Upgrade to Pine Star</span><span aria-hidden="true">→</span></button><button type="button" class="keep-button">Keep Pine Default</button><p class="payment-note">Secure checkout · Review the total before paying</p></footer>
+    </section>
+    <p class="outside-note">Registration and two-month fees remain separate.</p>
+  </main>
+  <section class="gallery"><h1>PineVela · seller subscription concept</h1><p>Current plan → next tier. Same layout, both themes. Draft only; displayed rates are code defaults.</p><div class="gallery-grid" id="gallery-grid"></div></section>
+  <script>
+    const params=new URLSearchParams(location.search);
+    let theme=params.get('theme')==='dark'?'dark':'light',current=params.get('plan')==='star'?'star':'default';
+    // Existing project rules: marketPlans.ts and marketBranding.ts. No API calls.
+    const plans={default:{name:'Default',items:20,services:1,inventory:200,price:0},star:{name:'Star',items:100,services:5,inventory:600,price:90},pro:{name:'Pro',items:200,services:10,inventory:900,price:150}};
+    const featureRows={default:[['📦','Item listings','Active at a time','20','100'],['🛠️','Service listings','Active at a time','1','5'],['🛍️','Inventory units','Total stock capacity','200','600'],['🎨','Store cover','Four designs or your own','4 designs','Custom'],['🌟','Glowing badge','On your listings','Standard','yes'],['🍍','Store logo','Your brand, front & centre','PineVela','Custom']],star:[['📦','Item listings','Active at a time','100','200'],['🛠️','Service listings','Active at a time','5','10'],['🛍️','Inventory units','Total stock capacity','600','900'],['🎨','Store branding','Your logo & cover','yes','yes'],['💎','Golden frames','Around your listings','no','yes'],['🚀','Search placement','In featured results','Standard','Priority']]};
+    const valueCell=value=>value==='yes'?'<span class="tick" aria-label="Included">✓</span>':value==='no'?'<span class="not-included" aria-label="Not included">−</span>':'<span class="current-text">'+value+'</span>';
+    function render(){
+      document.documentElement.dataset.theme=theme;
+      const next=current==='default'?'star':'pro',plan=plans[next];
+      document.querySelectorAll('[data-theme-choice]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.themeChoice===theme));
+      document.querySelectorAll('[data-plan-choice]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.planChoice===current));
+      document.querySelector('.hero-icon').textContent=next==='star'?'🌟':'💎';
+      document.querySelector('h1#plan-heading').innerHTML=(next==='star'?'Stand out with':'Go further with')+'<br><em>Pine '+plan.name+'.</em>';
+      document.querySelector('#plan-description').innerHTML=next==='star'?'More room for your products.<br>More personality for your store.':'More capacity. Golden frames.<br>Priority in featured searches.';
+      document.querySelector('#current-name').innerHTML='<span>Pine</span><span>'+plans[current].name+'</span>';
+      document.querySelector('#next-name').innerHTML='<span>Pine</span><span>'+plan.name+' ✨</span>';
+      document.querySelector('#comparison-rows').innerHTML=featureRows[current].map(([emoji,label,description,oldValue,newValue])=>'<tr><th scope="row"><span class="feature"><span class="feature-emoji" aria-hidden="true">'+emoji+'</span><span><strong>'+label+'</strong><small>'+description+'</small></span></span></th><td>'+valueCell(oldValue)+'</td><td class="next-value">'+valueCell(newValue)+'</td></tr>').join('');
+      document.querySelector('#plan-price').textContent='GH₵'+plan.price;
+      document.querySelector('#upgrade-label').textContent='Upgrade to Pine '+plan.name;
+      document.querySelector('.keep-button').textContent='Keep Pine '+plans[current].name;
+    }
+    document.querySelectorAll('[data-theme-choice]').forEach(b=>b.onclick=()=>{theme=b.dataset.themeChoice;render();});
+    document.querySelectorAll('[data-plan-choice]').forEach(b=>b.onclick=()=>{current=b.dataset.planChoice;render();});
+    document.querySelector('.upgrade-button').onclick=()=>{document.querySelector('#preview-status').textContent='Preview only — this would open secure checkout for Pine '+plans[current==='default'?'star':'pro'].name+'.';};
+    document.querySelector('.keep-button').onclick=()=>{document.querySelector('#preview-status').textContent='Preview only — this would return to your store with your current plan.';};
+    if(params.get('capture')==='1')document.documentElement.dataset.capture='true';
+    if(params.get('board')==='1'){
+      document.documentElement.dataset.board='true';
+      for(const plan of ['default','star'])for(const mode of ['light','dark']){
+        const item=document.createElement('div');item.className='gallery-item';
+        const heading=document.createElement('h2');heading.textContent=(plan==='default'?'Default → Star':'Star → Pro')+' · '+mode[0].toUpperCase()+mode.slice(1);
+        const frame=document.createElement('iframe');frame.title=heading.textContent;frame.src='?capture=1&plan='+plan+'&theme='+mode;
+        item.append(heading,frame);document.querySelector('#gallery-grid').append(item);
+      }
+    }
+    render();
+  </script>
+</body>
+</html>

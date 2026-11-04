@@ -1,0 +1,114 @@
+--------- beginning of main
+10-29 16:05:05.046  2255  2255 I la.mobile.debug: Late-enabling -Xcheck:jni
+10-29 16:05:05.104  2255  2255 I la.mobile.debug: Using CollectorTypeCMC GC.
+10-29 16:05:05.105  2255  2255 W la.mobile.debug: Unexpected CPU variant for x86: x86_64.
+10-29 16:05:05.105  2255  2255 W la.mobile.debug: Known variants: atom, sandybridge, silvermont, goldmont, goldmont-plus, goldmont-without-sha-xsaves, tremont, kabylake, default
+10-29 16:05:05.161  2255  2255 D nativeloader: Load libframework-connectivity-tiramisu-jni.so using APEX ns com_android_tethering for caller /apex/com.android.tethering/javalib/framework-connectivity-t.jar: ok
+10-29 16:05:05.519  2255  2255 W ziparchive: Unable to open '/data/app/~~W4--R1menc5B4byQROFTaA==/app.pinevela.mobile.debug-LDPnY_1c-MlqvRbkjkKnAQ==/base.dm': No such file or directory
+10-29 16:05:05.523  2255  2255 W ziparchive: Unable to open '/data/app/~~W4--R1menc5B4byQROFTaA==/app.pinevela.mobile.debug-LDPnY_1c-MlqvRbkjkKnAQ==/base.dm': No such file or directory
+10-29 16:05:05.894  2255  2255 D nativeloader: Configuring clns-7 for other apk /data/app/~~W4--R1menc5B4byQROFTaA==/app.pinevela.mobile.debug-LDPnY_1c-MlqvRbkjkKnAQ==/base.apk. target_sdk_version=36, uses_libraries=, library_path=/data/app/~~W4--R1menc5B4byQROFTaA==/app.pinevela.mobile.debug-LDPnY_1c-MlqvRbkjkKnAQ==/lib/x86_64, permitted_path=/data:/mnt/expand:/data/user/0/app.pinevela.mobile.debug
+10-29 16:05:05.920  2255  2255 V GraphicsEnvironment: Currently set values for:
+10-29 16:05:05.920  2255  2255 V GraphicsEnvironment:   angle_gl_driver_selection_pkgs=[]
+10-29 16:05:05.921  2255  2255 V GraphicsEnvironment:   angle_gl_driver_selection_values=[]
+10-29 16:05:05.922  2255  2255 V GraphicsEnvironment: Global.Settings values are invalid: number of packages: 0, number of values: 0
+10-29 16:05:05.922  2255  2255 V GraphicsEnvironment: Neither updatable production driver nor prerelease driver is supported.
+10-29 16:05:06.058  2255  2255 D AppCompatDelegate: Checking for metadata for AppLocalesMetadataHolderService : Service not found
+10-29 16:05:06.198  2255  2255 W la.mobile.debug: Accessing hidden method Landroid/view/ViewGroup;->makeOptionalFitsSystemWindows()V (unsupported, reflection, allowed)
+10-29 16:05:06.215  2255  2255 I WebViewFactory: Loading com.android.webview version 124.0.6367.219 (code 636771907)
+--------- beginning of system
+10-29 16:05:06.228  2255  2255 V ResourcesManager: The following library key has been added: ResourcesKey{ mHash=b02785b2 mResDir=null mSplitDirs=[] mOverlayDirs=[/data/resource-cache/com.android.systemui-neutral-vGRR.frro,/data/resource-cache/com.android.systemui-accent-DMDm.frro,/data/resource-cache/com.android.systemui-dynamic-Zz2Y.frro] mLibDirs=[/product/app/webview/webview.apk,/system_ext/framework/androidx.window.extensions.jar] mDisplayId=0 mOverrideConfig=v35 mCompatInfo={320dpi always-compat} mLoaders=[]}
+10-29 16:05:06.229  2255  2255 D ApplicationLoaders: Returning zygote-cached class loader: /system_ext/framework/androidx.window.extensions.jar
+10-29 16:05:06.233  2255  2255 D nativeloader: InitLlndkLibrariesProduct: libEGL.so:libGLESv1_CM.so:libGLESv2.so:libGLESv3.so:libRS.so:libandroid_net.so:libapexsupport.so:libbinder_ndk.so:libc.so:libcgrouprc.so:libclang_rt.asan-x86_64-android.so:libcom.android.tethering.connectivity_native.so:libdl.so:libft2.so:liblog.so:libm.so:libmediandk.so:libnativewindow.so:libneuralnetworks.so:libselinux.so:libsync.so:libvendorsupport.so:libvndksupport.so:libvulkan.so
+10-29 16:05:06.233  2255  2255 D nativeloader: Configuring product-clns-8 for unbundled product apk /product/app/webview/webview.apk. target_sdk_version=34, uses_libraries=, library_path=/product/app/webview/lib/x86_64:/product/app/webview/webview.apk!/lib/x86_64:/product/lib64:/system/product/lib64, permitted_path=/data:/mnt/expand:/product/lib64:/system/product/lib64
+10-29 16:05:06.234  2255  2255 D nativeloader: InitVndkspLibrariesProduct: VNDK is deprecated with product
+10-29 16:05:06.275  2255  2255 I cr_WVCFactoryProvider: Loaded version=124.0.6367.219 minSdkVersion=1 isBundle=false multiprocess=true packageId=2
+10-29 16:05:06.315  2255  2255 D nativeloader: Load /product/app/webview/webview.apk!/lib/x86_64/libwebviewchromium.so using ns product-clns-8 from class loader (caller=/product/app/webview/webview.apk): ok
+10-29 16:05:06.318  2255  2255 D nativeloader: Load /system/lib64/libwebviewchromium_plat_support.so using ns product-clns-8 from class loader (caller=/product/app/webview/webview.apk): ok
+10-29 16:05:06.328  2255  2279 E chromium: [1029/160506.327953:ERROR:variations_seed_loader.cc(37)] Seed missing signature.
+10-29 16:05:06.328  2255  2279 I cr_VariationsUtils: Failed reading seed file "/data/user/0/app.pinevela.mobile.debug/app_webview/variations_seed_new"
+10-29 16:05:06.328  2255  2279 I chromium: [1029/160506.328824:INFO:variations_seed_loader.cc(66)] Failed to open file for reading.: No such file or directory (2)
+10-29 16:05:06.329  2255  2279 I cr_VariationsUtils: Failed reading seed file "/data/user/0/app.pinevela.mobile.debug/app_webview/variations_seed"
+10-29 16:05:06.335  2255  2255 I cr_LibraryLoader: Successfully loaded native library
+10-29 16:05:06.336  2255  2255 I cr_CachingUmaRecorder: Flushed 6 samples from 6 histograms, 0 samples were dropped.
+10-29 16:05:06.341  2255  2255 I cr_CombinedPProvider: #registerProvider() provider:WV.o7@d22b0cb isPolicyCacheEnabled:false policyProvidersSize:0
+10-29 16:05:06.342  2255  2255 I cr_PolicyProvider: #setManagerAndSource() 0
+10-29 16:05:06.361  2255  2255 I cr_CombinedPProvider: #linkNativeInternal() 1
+10-29 16:05:06.362  2255  2255 I cr_AppResProvider: #getApplicationRestrictionsFromUserManager() Bundle[EMPTY_PARCEL]
+10-29 16:05:06.363  2255  2255 I cr_PolicyProvider: #notifySettingsAvailable() 0
+10-29 16:05:06.363  2255  2255 I cr_CombinedPProvider: #onSettingsAvailable() 0
+10-29 16:05:06.363  2255  2255 I cr_CombinedPProvider: #flushPolicies()
+10-29 16:05:06.407  2255  2284 W chromium: [WARNING:dns_config_service_android.cc(81)] Failed to read DnsConfig.
+10-29 16:05:06.582  2255  2255 D Capacitor: Starting BridgeActivity
+10-29 16:05:06.641  2255  2255 D Capacitor: Registering plugin instance: CapacitorCookies
+10-29 16:05:06.661  2255  2255 D Capacitor: Registering plugin instance: WebView
+10-29 16:05:06.672  2255  2255 D Capacitor: Registering plugin instance: CapacitorHttp
+10-29 16:05:06.676  2255  2255 D Capacitor: Registering plugin instance: SystemBars
+10-29 16:05:06.767  2255  2255 W Capacitor: Unable to read file at path public/plugins
+10-29 16:05:06.780  2255  2255 D Capacitor: Loading app at https://localhost
+10-29 16:05:06.814  2255  2314 I EGL_emulation: Opening libGLESv1_CM_emulation.so
+10-29 16:05:06.822  2255  2314 I EGL_emulation: Opening libGLESv2_emulation.so
+10-29 16:05:06.831  2255  2299 W cr_media: BLUETOOTH_CONNECT permission is missing.
+10-29 16:05:06.831  2255  2299 W cr_media: registerBluetoothIntentsIfNeeded: Requires BLUETOOTH permission
+10-29 16:05:06.839  2255  2314 E EGL_emulation: eglCreateContext: EGL_BAD_CONFIG: no ES 3.2 support
+10-29 16:05:06.842  2255  2314 E EGL_emulation: tid 2314: eglCreateContext(1830): error 0x3005 (EGL_BAD_CONFIG)
+10-29 16:05:06.842  2255  2314 E EGL_emulation: eglCreateContext: EGL_BAD_CONFIG: no ES 3.1 support
+10-29 16:05:06.842  2255  2314 E EGL_emulation: tid 2314: eglCreateContext(1824): error 0x3005 (EGL_BAD_CONFIG)
+10-29 16:05:06.877  2255  2255 D Capacitor: App started
+10-29 16:05:06.885  2255  2255 D Capacitor: App resumed
+10-29 16:05:06.901  2255  2255 W HWUI    : Unknown dataspace 0
+10-29 16:05:06.945  2255  2301 D Capacitor: Handling local request: https://localhost/
+10-29 16:05:07.060  2255  2273 W HWUI    : Failed to choose config with EGL_SWAP_BEHAVIOR_PRESERVED, retrying without...
+10-29 16:05:07.061  2255  2273 W HWUI    : Failed to initialize 101010-2 format, error = EGL_SUCCESS
+10-29 16:05:07.093  2255  2273 I Gralloc4: mapper 4.x is not supported
+10-29 16:05:07.212  2255  2311 W chromium: [WARNING:display_webview.cc(32)] WebView overlays are enabled!
+10-29 16:05:07.225  2255  2283 D Capacitor: Handling local request: https://localhost/assets/index-C5FfHavU.css
+10-29 16:05:07.230  2255  2301 D Capacitor: Handling local request: https://localhost/assets/index-ClOXS29D.js
+10-29 16:05:08.138  2255  2301 W la.mobile.debug: Long monitor contention with owner ThreadPoolForeg (2283) at java.lang.Object libcore.content.type.MimeMap$MemoizingSupplier.get()(MimeMap.java:475) waiters=0 in java.lang.Object libcore.content.type.MimeMap$MemoizingSupplier.get() for 907ms
+10-29 16:05:08.275  2255  2301 D Capacitor: Handling local request: https://localhost/assets/outfit-latin-variable-Bc-8i84L.woff2
+10-29 16:05:08.288  2255  2297 D Capacitor: Handling local request: https://localhost/icons/pinevela-192.png
+10-29 16:05:08.311  2255  2298 D Capacitor: Handling local request: https://localhost/icons/pinevela-192.png
+10-29 16:05:08.318  2255  2284 D Capacitor: Handling local request: https://localhost/icons/pinevela-192.png
+10-29 16:05:08.334  2255  2297 D Capacitor: Handling local request: https://localhost/assets/login-market-mobile-D2v90UW2.webp
+10-29 16:05:08.349  2255  2301 D Capacitor: Handling local request: https://localhost/store-covers/pinevela-logo.svg
+10-29 16:05:08.432  2255  2297 D Capacitor: Handling local request: https://localhost/assets/CaviarDreams_Bold-WXaKfAEr.ttf
+10-29 16:05:08.434  2255  2283 D Capacitor: Handling local request: https://localhost/assets/CaviarDreams-4rcTrv0h.ttf
+10-29 16:05:08.442  2255  2298 D Capacitor: Handling local request: https://localhost/assets/Childer-CS_u0cFW.otf
+10-29 16:05:08.612  2255  2273 D EGL_emulation: app_time_stats: avg=267.66ms min=54.04ms max=786.12ms count=5
+10-29 16:05:08.944  2255  2314 W chromium: [WARNING:angle_platform_impl.cc(49)] ProgramGL.cpp:666 (checkLinkStatus): Program link or binary loading failed with no info log.
+10-29 16:05:09.090  2255  2260 I la.mobile.debug: Compiler allocated 5174KB to compile void android.view.ViewRootImpl.performTraversals()
+10-29 16:05:09.651  2255  2273 D EGL_emulation: app_time_stats: avg=207.71ms min=59.33ms max=782.70ms count=5
+10-29 16:05:09.658  2255  2255 I Choreographer: Skipped 46 frames!  The application may be doing too much work on its main thread.
+10-29 16:05:09.672  2255  2267 I HWUI    : Davey! duration=849ms; Flags=0, FrameTimelineVsyncId=93321, IntendedVsync=1067461734179, Vsync=1067495067511, InputEventId=0, HandleInputStart=1067507374832, AnimationStart=1067507375996, PerformTraversalsStart=1067513947413, DrawStart=1067514454784, FrameDeadline=1067611734173, FrameInterval=1067507355100, FrameStartTime=16666666, SyncQueued=1067515639179, SyncStart=1067577969796, IssueDrawCommandsStart=1067578002101, SwapBuffers=1068359371297, FrameCompleted=1068373691191, DequeueBufferDuration=4065, QueueBufferDuration=176204, GpuCompleted=1068373691191, SwapBuffersCompleted=1068360649809, DisplayPresentTime=0, CommandSubmissionCompleted=1068359371297, 
+10-29 16:05:09.815  2255  2267 I HWUI    : Davey! duration=893ms; Flags=0, FrameTimelineVsyncId=93337, IntendedVsync=1067595067507, Vsync=1068361734143, InputEventId=0, HandleInputStart=1068370699500, AnimationStart=1068370701782, PerformTraversalsStart=1068384578152, DrawStart=1068384692579, FrameDeadline=1068461734139, FrameInterval=1068368468892, FrameStartTime=16666666, SyncQueued=1068384941057, SyncStart=1068415269826, IssueDrawCommandsStart=1068415322519, SwapBuffers=1068503884571, FrameCompleted=1068518435476, DequeueBufferDuration=10727, QueueBufferDuration=647207, GpuCompleted=1068518435476, SwapBuffersCompleted=1068505783664, DisplayPresentTime=0, CommandSubmissionCompleted=1068503884571, 
+10-29 16:05:10.668  2255  2273 D EGL_emulation: app_time_stats: avg=56.52ms min=36.79ms max=122.11ms count=18
+10-29 16:05:11.677  2255  2273 D EGL_emulation: app_time_stats: avg=47.99ms min=38.71ms max=59.84ms count=21
+10-29 16:05:11.997  2255  2342 D ProfileInstaller: Installing profile for app.pinevela.mobile.debug
+10-29 16:05:12.710  2255  2273 D EGL_emulation: app_time_stats: avg=44.90ms min=36.40ms max=52.03ms count=23
+10-29 16:05:13.726  2255  2273 D EGL_emulation: app_time_stats: avg=46.16ms min=35.96ms max=81.00ms count=22
+10-29 16:05:14.744  2255  2273 D EGL_emulation: app_time_stats: avg=42.38ms min=35.90ms max=54.15ms count=24
+10-29 16:05:15.783  2255  2273 D EGL_emulation: app_time_stats: avg=49.43ms min=41.30ms max=66.26ms count=21
+10-29 16:05:16.805  2255  2273 D EGL_emulation: app_time_stats: avg=42.53ms min=35.05ms max=56.93ms count=24
+10-29 16:05:17.825  2255  2273 D EGL_emulation: app_time_stats: avg=42.49ms min=35.08ms max=49.49ms count=24
+10-29 16:05:18.853  2255  2273 D EGL_emulation: app_time_stats: avg=44.69ms min=36.94ms max=67.60ms count=23
+10-29 16:05:19.861  2255  2273 D EGL_emulation: app_time_stats: avg=45.78ms min=37.14ms max=55.61ms count=22
+10-29 16:05:20.209  2255  2261 I la.mobile.debug: Background concurrent mark compact GC freed 4129KB AllocSpace bytes, 27(984KB) LOS objects, 49% free, 3523KB/7046KB, paused 165us,3.496ms total 176.407ms
+10-29 16:05:20.212  2255  2263 W la.mobile.debug: ApkAssets: Deleting an ApkAssets object '<empty> and /product/app/webview/webview.apk' with 2 weak references
+10-29 16:05:20.885  2255  2273 D EGL_emulation: app_time_stats: avg=46.51ms min=37.21ms max=126.32ms count=22
+10-29 16:05:21.902  2255  2273 D EGL_emulation: app_time_stats: avg=42.35ms min=37.46ms max=48.06ms count=24
+10-29 16:05:22.945  2255  2273 D EGL_emulation: app_time_stats: avg=43.41ms min=37.47ms max=58.37ms count=24
+10-29 16:05:23.969  2255  2273 D EGL_emulation: app_time_stats: avg=44.51ms min=36.94ms max=55.68ms count=23
+10-29 16:05:24.989  2255  2273 D EGL_emulation: app_time_stats: avg=42.46ms min=36.53ms max=49.84ms count=24
+10-29 16:05:25.989  2255  2273 D EGL_emulation: app_time_stats: avg=43.46ms min=37.87ms max=52.13ms count=23
+10-29 16:05:27.004  2255  2273 D EGL_emulation: app_time_stats: avg=44.10ms min=36.17ms max=58.93ms count=23
+10-29 16:05:28.032  2255  2273 D EGL_emulation: app_time_stats: avg=44.69ms min=36.25ms max=58.82ms count=23
+10-29 16:05:29.053  2255  2273 D EGL_emulation: app_time_stats: avg=42.51ms min=36.05ms max=50.48ms count=24
+10-29 16:05:30.065  2255  2273 D EGL_emulation: app_time_stats: avg=42.15ms min=36.07ms max=49.67ms count=24
+10-29 16:05:31.135  2255  2273 D EGL_emulation: app_time_stats: avg=48.63ms min=37.04ms max=75.44ms count=22
+10-29 16:05:32.173  2255  2273 D EGL_emulation: app_time_stats: avg=47.16ms min=36.08ms max=61.60ms count=22
+10-29 16:05:33.188  2255  2273 D EGL_emulation: app_time_stats: avg=53.38ms min=39.21ms max=76.05ms count=19
+10-29 16:05:34.231  2255  2273 D EGL_emulation: app_time_stats: avg=45.28ms min=37.72ms max=58.58ms count=23
+10-29 16:05:35.298  2255  2273 D EGL_emulation: app_time_stats: avg=56.10ms min=37.30ms max=72.04ms count=19
+10-29 16:05:36.307  2255  2273 D EGL_emulation: app_time_stats: avg=53.12ms min=39.44ms max=66.68ms count=19
+10-29 16:05:37.316  2255  2273 D EGL_emulation: app_time_stats: avg=59.28ms min=49.72ms max=84.50ms count=17
+10-29 16:05:38.361  2255  2273 D EGL_emulation: app_time_stats: avg=49.75ms min=37.67ms max=62.54ms count=21
+10-29 16:05:39.404  2255  2273 D EGL_emulation: app_time_stats: avg=57.95ms min=38.03ms max=161.81ms count=18

@@ -45,7 +45,7 @@ export function signupEmailWait(sentAt: Date | null, now: Date): number {
 /** Native confirmation_sent_at is a floor, including direct provider sends.
  * Persist only hashed delivery budgets, never OTPs. The lock spans actual Auth
  * delivery; rejected CAPTCHA/provider requests do not increase the penalty. */
-export async function withSignupEmailCooldown<T>(db: SupabaseDatabase, value: unknown, send: () => Promise<T>, options: { registration?: boolean } = {}): Promise<{value:T;retryAfter:number}> {
+export async function withSignupEmailCooldown<T>(db: SupabaseDatabase, value: unknown, send: (state:{pendingSignupId?:string}) => Promise<T>, options: { registration?: boolean } = {}): Promise<{value:T;retryAfter:number}> {
   const email = signupEmail(value);
   const key = crypto.createHash('sha256').update('pinevela-signup-email:'+email).digest('hex');
   return db.system(async client => {
@@ -58,6 +58,17 @@ export async function withSignupEmailCooldown<T>(db: SupabaseDatabase, value: un
     // This is an availability decision, never identity or ownership proof. Check
     // before the timer/provider call, including for Google and closed accounts.
     if (options.registration && delivery.registered) throw registeredSignupEmailError();
+    let pendingSignupId:string|undefined;
+    if(options.registration){
+      const pending=(await client.query(`select u.id,exists(select 1 from public.profiles p
+        join public.account_contexts c on c.auth_user_id=p.id where p.id=u.id and p.primary_owner_id is null
+        and c.kind='primary' and c.status='active' and c.primary_owner_id is null
+        and not exists(select 1 from public.account_contexts other where other.auth_user_id=u.id and other.kind<>'primary')) as primary_signup
+        from auth.users u where lower(u.email)=$1 and u.email_confirmed_at is null`,[email])).rows[0];
+      // Delivery selector only. A pending child/foreign enrollment cannot become
+      // a primary signup through email equality. Confirmation still proves identity.
+      if(pending){if(!pending.primary_signup)throw registeredSignupEmailError();pendingSignupId=pending.id;}
+    }
     const saved = (await client.query(`select send_count,next_allowed_at,last_requested_at from private.auth_email_delivery_limits
       where bucket_key=$1 and last_requested_at>clock_timestamp()-interval '24 hours'`,[key])).rows[0];
     let count = saved?.send_count || (delivery.sent_at && delivery.server_now.getTime()-delivery.sent_at.getTime()<86400000 ? 1 : 0);
@@ -71,7 +82,7 @@ export async function withSignupEmailCooldown<T>(db: SupabaseDatabase, value: un
     await client.query(`delete from private.auth_email_delivery_limits where bucket_key in
       (select bucket_key from private.auth_email_delivery_limits where last_requested_at<clock_timestamp()-interval '24 hours'
        order by last_requested_at limit 100 for update skip locked)`);
-    const result=await send(),nextCount=Math.min(5,count+1),retryAfter=emailResendDelay(nextCount);
+    const result=await send({pendingSignupId}),nextCount=Math.min(5,count+1),retryAfter=emailResendDelay(nextCount);
     if(!saved){
       await client.query("select pg_advisory_xact_lock(hashtextextended('pinevela-email-budget-capacity',0))");
       const capacity=(await client.query('select count(*)::int as total from private.auth_email_delivery_limits')).rows[0];

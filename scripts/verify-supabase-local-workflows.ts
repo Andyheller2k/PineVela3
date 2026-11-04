@@ -1,3 +1,4 @@
+import {termsAcceptance} from '../legalPolicy.js';
 /** Native business acceptance against the explicitly owned local Supabase stack.
  * Business writes go through real HTTP handlers. Identities are confirmed by the
  * real local GoTrue/Mailpit pair; SQL below is read-only verification only. */
@@ -114,7 +115,7 @@ await runLocalSupabaseVerification(async h=>{
    roomTypes:[{typeName:'Local twin',bedsPerRoom:2,totalRooms:2}]}];
   const registration=await write(label+'-registration',actor,'/api/hostels/register',{
    residenceId,name:property.name,addressLine1:'1 Local Test Road, Kumasi',latitude:property.latitude,longitude:property.longitude,
-   contactEmail:enrolled.credentials.email,contactPhone:'+233241234567',contactPhoneCountry:'GH',
+   managerName:'Local Test Manager',contactEmail:enrolled.credentials.email,contactPhone:'+233241234567',contactPhoneCountry:'GH',
    genderCategory:'Mixed',wing:'Hostel',hostelType:'Hostel',yearEstablished:2020,paymentFrequency:'Per Academic Year',
    agreeTerms:true,accuracyCertified:true,description:'Disposable local acceptance residence.',city:'Kumasi',region:'Ashanti',country:'Ghana',
    imageUrl,gallery:[gallery],blocksList},201);
@@ -153,7 +154,7 @@ await runLocalSupabaseVerification(async h=>{
   const label='seller-'+suffix,e=await enrollment(owner,label,'seller');
   const application=await write(label+'-application',owner,'/api/digital-market/register',{
    enrollmentId:e.enrollmentId,university:'Owned Local Acceptance University',categoryToSell:'Books',idNumber:'LOCAL-'+suffix.toUpperCase()+'-1234',
-   storeName:'Local Acceptance Store '+suffix.toUpperCase(),certified:true});
+   storeName:'Local Acceptance Store '+suffix.toUpperCase(),certified:true,termsAcceptance:termsAcceptance(true)});
   expect(await call(admin,'/api/admin/digital-market/approve-application',{id:application.application.id,adminNotes:'Owned local dummy student seller.'}),403,'Missing own approval key cannot approve seller');
   await write(label+'-approved',admin,'/api/admin/digital-market/approve-application',{id:application.application.id,adminNotes:'Owned local dummy student seller.',privateKey:admin.credentials.approvalKey});
   const actor=await login(e.credentials);

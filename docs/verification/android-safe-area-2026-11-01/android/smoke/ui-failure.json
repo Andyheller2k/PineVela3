@@ -1,0 +1,10 @@
+{
+  "passed": false,
+  "stage": "original-phone-gestural-light-signup",
+  "message": "Themed welcome did not settle",
+  "scenes": [
+    "original-phone-gestural-light-welcome",
+    "original-phone-gestural-light-login",
+    "original-phone-gestural-light-signup"
+  ]
+}

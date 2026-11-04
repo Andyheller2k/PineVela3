@@ -6,6 +6,7 @@ import { queryClient } from '../lib/queryClient';
 import SignOutProgress from '../components/SignOutProgress';
 import { advanceSessionGeneration,clearLegacySessionStorage,sessionFetch as fetch } from '../lib/session';
 import { SessionCheckUnavailable,SessionRestoration } from '../lib/sessionRestoration';
+import { nativePreviewUnavailable } from '../native/environment';
 
 
 export interface AuthenticatedUser {
@@ -76,6 +77,18 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+/** Step 2 has no native session transport. It never restores or invents a session. */
+export function NativePreviewAuthProvider({ children }: { children: ReactNode }) {
+  const unavailable = async (): Promise<never> => nativePreviewUnavailable();
+  return <AuthContext.Provider value={{
+    user: null, loading: false, restorationError: null,
+    retrySession: nativePreviewUnavailable, login: unavailable,
+    setSessionUser: nativePreviewUnavailable, updateUser: nativePreviewUnavailable,
+    logout: unavailable, apiFetch: unavailable,
+  }}>{children}</AuthContext.Provider>;
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthenticatedUser | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -87,6 +100,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [retry, setRetry] = useState(0);
   const [signingOut,setSigningOut]=useState(false);
   const pendingLogout=useRef<Promise<boolean>|null>(null);
+
+  useEffect(() => {
+    const changing = () => {
+      restoration.invalidate();
+      advanceSessionGeneration();
+      setRestorationError(null);
+      userRef.current = null;
+      setUser(null);
+      queryClient.clear();
+      setLoading(true);
+    };
+    const complete = () => setRetry(value => value + 1);
+    window.addEventListener('pinevela-native-auth-changing', changing);
+    window.addEventListener('pinevela-native-auth-complete', complete);
+    return () => {
+      window.removeEventListener('pinevela-native-auth-changing', changing);
+      window.removeEventListener('pinevela-native-auth-complete', complete);
+    };
+  }, [restoration]);
 
   function supersedeRestoration() {
     restoration.invalidate();

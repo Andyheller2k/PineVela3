@@ -1,0 +1,102 @@
+html[data-theme] [data-seller-subscriptions] {
+  --sp-ink:#001d3d; --sp-muted:#4c627a; --sp-edge:#c6d6e5;
+  --sp-panel:rgb(255 255 255 / .88); --sp-row:#edf3f9;
+  --sp-selected:#003566; --sp-target:#e6eff9; --sp-target-edge:#b9cde2;
+  --sp-glow:rgb(0 53 102 / .10); --sp-shadow:rgb(0 29 61 / .09);
+  --sp-hero:radial-gradient(ellipse at 50% 0%,rgb(0 53 102 / .07),transparent 70%);
+  color:var(--sp-ink);
+}
+html[data-theme="dark"] [data-seller-subscriptions] {
+  --sp-ink:#edf5ff; --sp-muted:#b1c2d4; --sp-edge:#355069;
+  --sp-panel:rgb(0 29 61 / .88); --sp-row:#082b4c;
+  --sp-selected:#ffd60a; --sp-target:#283b35; --sp-target-edge:#8d7d33;
+  --sp-glow:rgb(255 214 10 / .10); --sp-shadow:rgb(0 8 20 / .32);
+  --sp-hero:radial-gradient(ellipse at 50% 0%,rgb(255 214 10 / .08),transparent 70%);
+}
+.seller-subscriptions-section { width:100%; max-width:760px; margin-inline:auto; }
+.seller-plan-card { position:relative; min-width:0; border:1px solid var(--sp-edge); border-radius:30px; background:var(--sp-hero),var(--sp-panel); overflow:hidden; box-shadow:0 18px 55px var(--sp-shadow); }
+.seller-plan-card::before { content:''; position:absolute; top:0; right:20%; left:20%; height:2px; background:linear-gradient(90deg,transparent,var(--sp-selected),transparent); }
+.seller-plan-intro { text-align:center; padding:18px 20px 12px; }
+.seller-plan-eyebrow { display:inline-flex; padding:5px 10px; border-radius:999px; color:var(--sp-selected); border:1px solid var(--sp-target-edge); background:var(--sp-target); font-size:11px; font-weight:750; }
+.seller-plan-hero-icon { display:block; width:max-content; margin:10px auto 6px; font-size:30px; line-height:1.2; filter:drop-shadow(0 3px 9px var(--sp-glow)); }
+html[data-theme] [data-seller-subscriptions] .seller-plan-intro h2 { margin:0; color:var(--sp-ink); font-size:27px; line-height:1.17; font-weight:800; letter-spacing:-1.1px; }
+.seller-plan-intro h2 em { font-style:normal; color:var(--sp-selected); }
+.seller-plan-intro > p { color:var(--sp-muted); margin:8px auto 0; max-width:29ch; font-size:12px; line-height:1.55; }
+.seller-plan-comparison-wrap { padding:0 16px; }
+.seller-plan-comparison { width:100%; border-collapse:separate; border-spacing:0; table-layout:fixed; }
+.seller-plan-feature-col { width:48%; }
+.seller-plan-feature-col-solo { width:72%; }
+.seller-plan-value-col { width:26%; }
+.seller-plan-comparison thead th { vertical-align:bottom; padding:9px 3px 10px; font-size:12px; line-height:1.4; text-align:center; }
+.seller-plan-comparison thead th:first-child { text-align:left; color:var(--sp-muted); font-size:11px; font-weight:650; padding-right:10px; }
+.seller-plan-column-label { display:block; font-size:11px; color:var(--sp-muted); margin-bottom:3px; font-weight:500; }
+.seller-plan-name { display:block; font-weight:800; }
+.seller-plan-name > span { display:block; }
+.seller-plan-comparison th.seller-plan-next-head { border:1px solid var(--sp-target-edge); border-bottom:0; border-radius:16px 16px 0 0; background:var(--sp-target); color:var(--sp-selected); }
+.seller-plan-next-head .seller-plan-column-label { color:var(--sp-selected); }
+.seller-plan-comparison tbody th { text-align:left; padding:9px 6px 9px 0; border-top:1px solid var(--sp-edge); font-weight:inherit; }
+.seller-plan-feature { display:flex; align-items:center; gap:8px; }
+.seller-plan-feature-emoji { flex:0 0 24px; font-size:22px; line-height:1; text-align:center; filter:drop-shadow(0 2px 4px var(--sp-glow)); }
+.seller-plan-feature strong { display:block; font-size:12px; line-height:1.4; font-weight:750; }
+.seller-plan-feature small { display:block; margin-top:3px; color:var(--sp-muted); font-size:11px; line-height:1.45; }
+.seller-plan-comparison td { border-top:1px solid var(--sp-edge); text-align:center; font-size:12px; font-weight:750; padding:9px 2px; color:var(--sp-muted); overflow-wrap:anywhere; }
+.seller-plan-comparison td.seller-plan-next-value { border-inline:1px solid var(--sp-target-edge); background:var(--sp-target); color:var(--sp-selected); }
+.seller-plan-comparison tbody tr:last-child td.seller-plan-next-value { border-bottom:1px solid var(--sp-target-edge); border-radius:0 0 16px 16px; }
+.seller-plan-tick { display:inline-grid; place-items:center; width:23px; height:23px; border-radius:50%; background:var(--sp-selected); color:var(--pv-on-action); font-size:14px; font-weight:800; line-height:1; }
+.seller-plan-not-included { display:inline-grid; place-items:center; width:23px; height:23px; color:var(--sp-muted); border:1px solid var(--sp-edge); border-radius:50%; font-size:15px; line-height:1; }
+.seller-plan-upgrade-area { margin-top:12px; padding:15px 20px; background:linear-gradient(0deg,var(--sp-glow),transparent); border-top:1px solid var(--sp-edge); }
+.seller-plan-price-line { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; margin-bottom:10px; }
+.seller-plan-price-line strong { font-size:16px; letter-spacing:-.3px; }
+.seller-plan-price-line small,.seller-plan-option-price small { font-size:11px; font-weight:500; color:var(--sp-muted); }
+.seller-plan-renewal-pill { padding:4px 7px; background:var(--sp-row); border:1px solid var(--sp-edge); color:var(--sp-muted); border-radius:999px; font-size:11px; white-space:nowrap; }
+html[data-theme][data-appearance] [data-seller-subscriptions] .seller-plan-upgrade { display:flex; align-items:center; justify-content:center; gap:9px; width:100%; min-height:50px; border:0; border-radius:15px; background:var(--pv-action-gradient); color:var(--pv-on-action); font-weight:800; font-size:13px; box-shadow:0 6px 20px var(--sp-glow); padding:10px; }
+html[data-theme][data-appearance] [data-seller-subscriptions] .seller-plan-keep { display:block; width:100%; min-height:44px; margin-top:4px; border:0; background:transparent; color:var(--sp-muted); font-size:12px; font-weight:650; padding:8px; }
+.seller-plan-payment-note { margin:3px 0 0; text-align:center; font-size:11px; color:var(--sp-muted); }
+.seller-plan-payment-error { margin-top:12px; border:1px solid #e5a5b2; background:#fff0f3; color:#8c1232; padding:10px; border-radius:12px; font-size:13px; line-height:1.5; overflow-wrap:anywhere; }
+html[data-theme="dark"] .seller-plan-payment-error { border-color:#a45d70; background:#3a1928; color:#ffd9df; }
+.seller-plan-other-plans { margin-top:16px; border:1px solid var(--sp-edge); border-radius:18px; background:var(--sp-panel); }
+.seller-plan-other-plans > summary { cursor:pointer; padding:14px 16px; min-height:48px; color:var(--sp-selected); font-size:13px; font-weight:750; }
+.seller-plan-other-plans ul { list-style:none; margin:0; padding:0 16px 4px; }
+.seller-plan-other-plans li { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:8px 12px; align-items:center; padding-block:14px; border-top:1px solid var(--sp-edge); }
+.seller-plan-other-plans li > div { grid-column:1 / -1; }
+.seller-plan-other-plans li > div > strong { font-size:13px; }
+.seller-plan-other-plans li > div > small { display:block; color:var(--sp-muted); font-size:11px; margin-top:3px; }
+.seller-plan-current-tag { display:inline-block; margin-left:7px; font-size:10px; padding:2px 6px; color:var(--sp-selected); background:var(--sp-target); border-radius:999px; }
+html[data-theme][data-appearance] [data-seller-subscriptions] .seller-plan-other-plans li > button { min-height:44px; min-width:72px; padding:8px 12px; border:1px solid var(--sp-target-edge); border-radius:12px; background:var(--pv-action-gradient); color:var(--pv-on-action); font-size:12px; font-weight:750; }
+[data-seller-subscriptions] :is(button,summary):focus-visible { outline:3px solid var(--sp-selected); outline-offset:3px; }
+[data-seller-subscriptions] button:disabled { opacity:.6; cursor:default; }
+.seller-billing-details { border:1px solid var(--pv-edge); border-radius:20px; background:var(--pv-panel); padding:18px; color:var(--pv-text); font-size:13px; line-height:1.6; }
+.seller-billing-details > * + * { margin-top:12px; }
+.seller-billing-details h3 { font-size:15px; font-weight:800; }
+.seller-billing-actions { display:flex; align-items:center; flex-wrap:wrap; gap:12px; }
+.seller-billing-actions button { min-height:44px; padding:9px 12px; border-radius:12px; font-weight:700; }
+@media(min-width:640px) {
+  .seller-plan-intro { padding-top:32px; }
+  html[data-theme] [data-seller-subscriptions] .seller-plan-intro h2 { font-size:37px; }
+  .seller-plan-comparison-wrap { padding-inline:30px; }
+  .seller-plan-feature strong,.seller-plan-comparison td { font-size:14px; }
+  .seller-plan-feature small { font-size:12px; }
+  .seller-plan-feature-emoji { font-size:25px; flex-basis:30px; }
+  .seller-plan-comparison tbody th,.seller-plan-comparison td { padding-block:17px; }
+  .seller-plan-upgrade-area { padding:22px 30px; }
+  .seller-plan-comparison thead th { font-size:14px; }
+  .seller-plan-name > span { display:inline; }
+  .seller-plan-name > span+span::before { content:' '; }
+  .seller-plan-price-line strong { font-size:20px; }
+  html[data-theme][data-appearance] [data-seller-subscriptions] .seller-plan-upgrade { min-height:54px; font-size:15px; }
+  .seller-plan-other-plans li { grid-template-columns:minmax(0,1fr) auto auto; }
+  .seller-plan-other-plans li > div { grid-column:auto; }
+}
+@media(max-width:359px) {
+  .seller-plan-comparison-wrap { padding-inline:10px; }
+  .seller-plan-feature { gap:5px; }
+  .seller-plan-feature-emoji { font-size:19px; flex-basis:21px; }
+  .seller-plan-feature strong { font-size:11.5px; }
+  .seller-plan-upgrade-area { padding-inline:14px; }
+}
+@media(forced-colors:active) {
+  html[data-theme] [data-seller-subscriptions] { --sp-ink:CanvasText; --sp-muted:CanvasText; --sp-edge:CanvasText; --sp-panel:Canvas; --sp-target:Canvas; --sp-target-edge:Highlight; --sp-selected:Highlight; }
+  .seller-plan-card { background:Canvas; box-shadow:none; }
+  .seller-plan-tick { background:Highlight; color:HighlightText; }
+  html[data-theme][data-appearance] [data-seller-subscriptions] :is(.seller-plan-upgrade,.seller-plan-other-plans li > button) { background:Highlight; color:HighlightText; border:1px solid Highlight; }
+}

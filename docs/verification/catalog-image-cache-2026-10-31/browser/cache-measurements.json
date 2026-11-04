@@ -1,0 +1,103 @@
+{
+  "baseline": false,
+  "measurements": [
+    {
+      "width": 390,
+      "theme": "light",
+      "marketSame": true,
+      "residenceSame": true,
+      "homeSame": true,
+      "initialMarketRequests": 3,
+      "initialBothRequests": 6,
+      "navigationRequests": [],
+      "navigationDownloadedBytes": 0
+    },
+    {
+      "width": 390,
+      "theme": "dark",
+      "marketSame": true,
+      "residenceSame": true,
+      "homeSame": true,
+      "initialMarketRequests": 3,
+      "initialBothRequests": 6,
+      "navigationRequests": [],
+      "navigationDownloadedBytes": 0
+    },
+    {
+      "width": 1440,
+      "theme": "light",
+      "marketSame": true,
+      "residenceSame": true,
+      "homeSame": true,
+      "initialMarketRequests": 3,
+      "initialBothRequests": 6,
+      "navigationRequests": [],
+      "navigationDownloadedBytes": 0
+    },
+    {
+      "width": 1440,
+      "theme": "dark",
+      "marketSame": true,
+      "residenceSame": true,
+      "homeSame": true,
+      "initialMarketRequests": 3,
+      "initialBothRequests": 6,
+      "navigationRequests": [],
+      "navigationDownloadedBytes": 0
+    },
+    {
+      "theme": "light",
+      "filterRevalidation": []
+    },
+    {
+      "theme": "light",
+      "browserReload": [
+        {
+          "path": "/api/media/11111111-1111-4111-8111-000000000001",
+          "status": 304,
+          "bytes": 0,
+          "conditional": true
+        },
+        {
+          "path": "/api/media/11111111-1111-4111-8111-000000000002",
+          "status": 304,
+          "bytes": 0,
+          "conditional": true
+        },
+        {
+          "path": "/api/media/11111111-1111-4111-8111-000000000003",
+          "status": 304,
+          "bytes": 0,
+          "conditional": true
+        }
+      ]
+    },
+    {
+      "theme": "dark",
+      "filterRevalidation": []
+    },
+    {
+      "theme": "dark",
+      "browserReload": [
+        {
+          "path": "/api/media/11111111-1111-4111-8111-000000000001",
+          "status": 304,
+          "bytes": 0,
+          "conditional": true
+        },
+        {
+          "path": "/api/media/11111111-1111-4111-8111-000000000002",
+          "status": 304,
+          "bytes": 0,
+          "conditional": true
+        },
+        {
+          "path": "/api/media/11111111-1111-4111-8111-000000000003",
+          "status": 304,
+          "bytes": 0,
+          "conditional": true
+        }
+      ]
+    }
+  ]
+}

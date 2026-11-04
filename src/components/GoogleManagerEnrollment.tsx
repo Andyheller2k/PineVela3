@@ -50,7 +50,7 @@ export default function GoogleManagerEnrollment({initialName,initialPhone,initia
       }catch(e){popup.current?.close();await onChanged().catch(()=>undefined);throw e;}
     });
   };
-  return <div className="space-y-4">
+  return <div data-pv-onboarding className="space-y-4">
     <p className="text-sm text-slate-600 dark:text-slate-300">Use a separate Google account you control for your manager login. Google verifies its email; no emailed code or new password is needed here. Property inspection and administrator approval still apply.</p>
     {error&&<p role="alert" className="rounded-xl bg-rose-50 p-3 text-sm text-rose-900 dark:bg-rose-950 dark:text-rose-100">{error}</p>}
     {!pending&&!waiting&&<form onSubmit={start} className="space-y-3">

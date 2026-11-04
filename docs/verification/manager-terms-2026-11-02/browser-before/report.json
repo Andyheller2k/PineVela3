@@ -1,0 +1,38 @@
+{
+  "passed": true,
+  "scenes": 3,
+  "checks": [
+    "1440 light manager password eye",
+    "1440 dark manager password eye",
+    "manager Terms legacy-key denial settles without hidden prompt"
+  ],
+  "screenshots": [
+    "docs/verification/manager-terms-2026-11-02/browser-before/1440-light-manager-password-shown.png",
+    "docs/verification/manager-terms-2026-11-02/browser-before/1440-dark-manager-password-shown.png",
+    "docs/verification/manager-terms-2026-11-02/browser-before/manager-saving-before.png"
+  ],
+  "navigationClearance": [],
+  "buildDirectory": "dist-supabase",
+  "syntheticGuestCatalog": true,
+  "syntheticRoleVisualFixtures": [
+    "primary dashboard",
+    "manager dashboard",
+    "staff dashboard",
+    "resident dashboard",
+    "administrator dashboard",
+    "seller dashboard",
+    "field officer",
+    "customer service",
+    "manager onboarding",
+    "store onboarding"
+  ],
+  "hostedOrAccountWrites": 0,
+  "realAuthenticationTested": false,
+  "runtimeExceptions": 0,
+  "syntheticSellerWrites": 0,
+  "syntheticSignupResumeWrites": 0,
+  "syntheticAppearanceWrites": 0,
+  "syntheticSubscriptionCheckouts": 0,
+  "syntheticProfileSaves": 0,
+  "exceptionDetails": []
+}

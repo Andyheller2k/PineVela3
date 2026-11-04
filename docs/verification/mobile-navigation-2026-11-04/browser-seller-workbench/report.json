@@ -1,0 +1,44 @@
+{
+  "passed": true,
+  "scenes": 4,
+  "checks": [
+    "390px light seller workbench publishing and retained photographs",
+    "390px dark seller workbench publishing and retained photographs",
+    "1440px light seller workbench publishing and retained photographs",
+    "1440px dark seller workbench publishing and retained photographs"
+  ],
+  "screenshots": [
+    "docs/verification/mobile-navigation-2026-11-04/browser-seller-workbench/390-light-seller-item-inline-error.png",
+    "docs/verification/mobile-navigation-2026-11-04/browser-seller-workbench/390-light-seller-service-inline-error.png",
+    "docs/verification/mobile-navigation-2026-11-04/browser-seller-workbench/390-dark-seller-item-inline-error.png",
+    "docs/verification/mobile-navigation-2026-11-04/browser-seller-workbench/390-dark-seller-service-inline-error.png",
+    "docs/verification/mobile-navigation-2026-11-04/browser-seller-workbench/1440-light-seller-item-inline-error.png",
+    "docs/verification/mobile-navigation-2026-11-04/browser-seller-workbench/1440-light-seller-service-inline-error.png",
+    "docs/verification/mobile-navigation-2026-11-04/browser-seller-workbench/1440-dark-seller-item-inline-error.png",
+    "docs/verification/mobile-navigation-2026-11-04/browser-seller-workbench/1440-dark-seller-service-inline-error.png"
+  ],
+  "navigationClearance": [],
+  "buildDirectory": "dist-supabase",
+  "syntheticGuestCatalog": true,
+  "syntheticRoleVisualFixtures": [
+    "primary dashboard",
+    "manager dashboard",
+    "staff dashboard",
+    "resident dashboard",
+    "administrator dashboard",
+    "seller dashboard",
+    "field officer",
+    "customer service",
+    "manager onboarding",
+    "store onboarding"
+  ],
+  "hostedOrAccountWrites": 0,
+  "realAuthenticationTested": false,
+  "runtimeExceptions": 0,
+  "syntheticSellerWrites": 0,
+  "syntheticSignupResumeWrites": 0,
+  "syntheticAppearanceWrites": 0,
+  "syntheticSubscriptionCheckouts": 0,
+  "syntheticProfileSaves": 0,
+  "exceptionDetails": []
+}

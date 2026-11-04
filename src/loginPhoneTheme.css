@@ -41,8 +41,6 @@ html[data-auth-page="true"][data-theme="light"] .unified-login .login-header {
   background: #ffffff !important;
   border-color: rgb(0 53 102 / .25) !important;
 }
-html[data-auth-page="true"][data-theme="light"] .unified-login .login-header .pinevela-wordmark .pine-label { color: #191919; -webkit-text-fill-color: #191919; }
-html[data-auth-page="true"][data-theme="light"] .unified-login .login-header .pinevela-wordmark .vela-label { background: transparent; color: #191919; -webkit-text-fill-color: #191919; }
 html[data-auth-page="true"][data-theme="light"] .unified-login .login-header .pv-install-button { color: #ffffff; background: #003566; border-color: #003566; }
 html[data-auth-page="true"][data-theme="light"] .unified-login .login-header .pv-install-button:hover { background: #00274e; border-color: #00274e; box-shadow: 0 4px 16px rgb(0 53 102 / .18); }
 html[data-auth-page="true"][data-theme="light"] .unified-login .wind-dust { --pv-wind-blue: #c5d8ec; --pv-wind-gold: #003566; --pv-wind-sky: #86a8c9; }

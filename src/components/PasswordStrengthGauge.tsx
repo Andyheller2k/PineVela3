@@ -1,8 +1,8 @@
 /** Visual guidance only; account password validation remains authoritative. */
-export default function PasswordStrengthGauge({ password }: { password: string }) {
+export default function PasswordStrengthGauge({ password, requirementsMet = true }: { password: string; requirementsMet?: boolean }) {
   if (!password) return null;
   const points = Number(password.length >= 6) + Number(password.length >= 8) + Number(/[A-Z]/.test(password)) + Number(/[0-9]/.test(password)) + Number(/[^A-Za-z0-9]/.test(password));
-  const level = password.length < 6 || points <= 1 ? 0 : points === 2 ? 1 : points <= 4 ? 2 : 3;
+  const level = password.length < 6 || points <= 1 ? 0 : !requirementsMet || points === 2 ? 1 : points <= 4 ? 2 : 3;
   const labels = ['Weak', 'Okay', 'Good', 'Strong'];
   const colors = ['bg-rose-500', 'bg-amber-500', 'bg-blue-600', 'bg-emerald-600'];
   return <div className="mt-2 space-y-1" data-password-gauge>

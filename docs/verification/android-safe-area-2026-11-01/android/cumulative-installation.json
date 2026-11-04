@@ -1,0 +1,21 @@
+{
+  "date": "2026-11-01T00:31:04.347486+00:00",
+  "packages": [
+    {
+      "file": "android/app/build/outputs/apk/debug/app-debug.apk",
+      "sha256": "2876ddc906ddd7fda1b8dc6970c0c125a1526efa865fc35bcd6dd3b2d187ed9c",
+      "installed": "Performing Streamed Install\nSuccess"
+    },
+    {
+      "file": "android/app/build/outputs/apk/transportTest/app-transportTest.apk",
+      "sha256": "7246cca687e0fdc02d07ea3f552f6767e65a8505ba473e76f4a3f58b659c1b43",
+      "installed": "Performing Streamed Install\nSuccess"
+    },
+    {
+      "file": "android/app/build/outputs/apk/androidTest/transportTest/app-transportTest-androidTest.apk",
+      "sha256": "bf2b076c0e85c7fdb551392c6ecfb9849273d4fe240c358013824165b8b1cad8",
+      "installed": "Performing Streamed Install\nSuccess"
+    }
+  ],
+  "userDataCleared": false
+}

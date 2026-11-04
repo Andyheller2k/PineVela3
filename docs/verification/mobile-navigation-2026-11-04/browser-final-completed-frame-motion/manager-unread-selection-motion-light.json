@@ -1,0 +1,34 @@
+{
+  "before": {
+    "ms": 0.09999999962747097,
+    "indicator": 45.3984375,
+    "previousIcon": 756,
+    "targetIcon": 784,
+    "unread": true
+  },
+  "frames": [
+    {
+      "ms": 938.8999999999069,
+      "indicator": 52.65452003479004,
+      "previousIcon": 756,
+      "targetIcon": 784,
+      "unread": false
+    },
+    {
+      "ms": 947.3999999999069,
+      "indicator": 195.0078125,
+      "previousIcon": 784,
+      "targetIcon": 756,
+      "unread": false
+    }
+  ],
+  "after": {
+    "ms": 947.7999999998137,
+    "indicator": 195.0078125,
+    "previousIcon": 784,
+    "targetIcon": 756,
+    "unread": false
+  },
+  "mainPaintingIsolated": true,
+  "samplesAfterAnimationCallbacks": true
+}

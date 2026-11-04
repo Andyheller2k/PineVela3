@@ -1,0 +1,18 @@
+{
+  "origin": "https://localhost",
+  "platform": "android",
+  "readyState": "complete",
+  "nativeWelcomeVisible": true,
+  "localLoginCardVisible": false,
+  "launchOverlayVisible": false,
+  "theme": "light",
+  "privateAccountFieldsInspected": false,
+  "formsSubmitted": false,
+  "bundledScriptFiles": [
+    "index-B-yTvCrM.js"
+  ],
+  "bundledCssFiles": [
+    "index-BkCs-Ruy.css",
+    "NativeAuthEntry-BRmgUJ1n.css"
+  ]
+}

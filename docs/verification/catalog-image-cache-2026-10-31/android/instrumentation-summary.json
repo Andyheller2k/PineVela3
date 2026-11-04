@@ -1,0 +1,28 @@
+{
+  "passed": true,
+  "cacheTestsPassed": true,
+  "cacheTestCount": 13,
+  "regressionTestsPassed": true,
+  "regressionTestCount": 13,
+  "totalTestCount": 26,
+  "classCounts": {
+    "app.pinevela.mobile.PublicMediaCacheTest": 13,
+    "app.pinevela.mobile.NativeHttpClientCookieTest": 10,
+    "app.pinevela.mobile.PineVelaWebViewBoundaryTest": 3
+  },
+  "isolatedTargetPackage": "app.pinevela.mobile.transporttest",
+  "realOkHttpAndDiskCache": true,
+  "localTlsServerFixtureOnly": true,
+  "realHostedRequests": false,
+  "accountFormsSubmitted": false,
+  "paymentActionsSubmitted": false,
+  "baseline": {
+    "fixture": "same-loopback-tls-server-and-photo",
+    "uncachedRequests": 2,
+    "uncachedBodies": 2,
+    "uncachedBodyBytes": 136,
+    "cachedRequests": 2,
+    "cachedBodies": 1,
+    "cachedBodyBytes": 68
+  }
+}

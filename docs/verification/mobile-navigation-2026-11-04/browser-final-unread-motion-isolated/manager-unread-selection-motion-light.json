@@ -1,0 +1,32 @@
+{
+  "before": {
+    "ms": 0,
+    "indicator": 45.3984375,
+    "previousIcon": 756,
+    "targetIcon": 784,
+    "unread": true
+  },
+  "renderedAt": 397.70000000018626,
+  "at80": {
+    "ms": 477.79999999981374,
+    "indicator": 193.10540771484375,
+    "previousIcon": 783.2052001953125,
+    "targetIcon": 756.7947998046875,
+    "unread": false
+  },
+  "at250": {
+    "ms": 648.2999999998137,
+    "indicator": 195.0078125,
+    "previousIcon": 784,
+    "targetIcon": 756,
+    "unread": false
+  },
+  "after": {
+    "ms": 1048.8999999999069,
+    "indicator": 195.0078125,
+    "previousIcon": 784,
+    "targetIcon": 756,
+    "unread": false
+  },
+  "mainPaintingIsolated": true
+}

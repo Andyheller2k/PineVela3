@@ -1,0 +1,11 @@
+{
+  "zip": "/home/wyse/Documents/PineVela3/releases/web/pinevela-mobile-navigation-20261104.zip",
+  "temporaryZip": "/tmp/pinevela-mobile-navigation-20261104.zip",
+  "apk": "/home/wyse/Documents/PineVela3/releases/android/pinevela-mobile-navigation-20261104.apk",
+  "zipFiles": 197,
+  "zipBytes": 6266310,
+  "apkSha256": "b4649a2ae5d1a520e13f3ede2ca6004788074f268078363ffd4a7a6e25d9cedd",
+  "zipSha256": "22355263889ef849dbae1934fad2e001fd5eff227d0693f5860668393d9d12f4",
+  "passed": true,
+  "deployedRemotely": false
+}

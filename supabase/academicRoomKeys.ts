@@ -9,6 +9,7 @@ import {requireManagerKeyGrant} from './managerKeys.js';
 import {requireAccountAccess} from './accountAccess.js';
 import {managedResidence,keyRows} from './housing.js';
 import {notify} from './notifications.js';
+import {insertRoomActivationKeys} from './activationCodes.js';
 export function academicYear(value:unknown){
  const match=typeof value==='string'&&/^([0-9]{4})\/([0-9]{4})$/.exec(value);
  if(!match||Number(match[2])!==Number(match[1])+1)throw new ApiError(400,'Enter consecutive academic years, such as 2026/2027.');return value as string;
@@ -60,7 +61,7 @@ export async function resetAcademicRoomKeys(c:PoolClient,a:VerifiedActor,id:stri
  const year=academicYear(body.academicYear),s=await snapshot(c,a,id,year);
  if(s.alreadyCompleted)return receipt(s.latest,true);
  if(body.fingerprint!==s.fingerprint)throw new ApiError(409,'Rooms, occupants or authorization changed. Refresh the exact reset preview.');
- const codes=s.rooms.map(()=>`PV-${crypto.randomBytes(16).toString('hex').toUpperCase()}`),occupied=s.rooms.filter(r=>r.allocation_id);
+ const occupied=s.rooms.filter(r=>r.allocation_id);
  await c.query("select set_config('pinevela.room_cycle_confirmation','RESET ROOM ACCESS',true),set_config('pinevela.room_cycle_key_version',$1,true)",[a.managerKeyVersion||String(grant?.version)]);
  const cycle=(await c.query(`insert into private.residence_room_key_cycles(residence_id,residence_name,academic_year,actor_context_id,actor_kind,manager_key_version,approval_key_version,fingerprint,room_count,occupants_removed)
   values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) returning *`,[id,s.residence.name,year,a.contextId,a.kind,a.managerKeyVersion||null,grant?.version||null,s.fingerprint,s.rooms.length,occupied.length])).rows[0];
@@ -72,7 +73,7 @@ export async function resetAcademicRoomKeys(c:PoolClient,a:VerifiedActor,id:stri
  await c.query("update public.account_contexts set status='closed',updated_at=transaction_timestamp() where id=any($1::uuid[]) and kind='resident'",[residentIds]);
  await c.query('delete from private.account_sessions where active_context_id=any($1::uuid[])',[residentIds]);
  await c.query('update private.room_activation_keys set revoked_at=transaction_timestamp() where room_id=any($1::uuid[]) and revoked_at is null',[roomIds]);
- await c.query('insert into private.room_activation_keys(room_id,code,cycle_id) select room_id,code,$3::uuid from unnest($1::uuid[],$2::text[])as k(room_id,code)',[roomIds,codes,cycle.id]);
+ await insertRoomActivationKeys(c,roomIds,cycle.id);
  await c.query("insert into private.audit_events(actor_context_id,event_type,resource_type,resource_id,event_data)values($1,'academic_year_room_keys_reset','residence',$2,$3)",[a.contextId,id,JSON.stringify({cycleId:cycle.id,academicYear:year,roomCount:s.rooms.length,occupantsRemoved:occupied.length})]);
  const managers=(await c.query("select m.manager_context_id from public.manager_assignments m join public.account_contexts x on x.id=m.manager_context_id where m.residence_id=$1 and m.ended_at is null and x.status='active'",[id])).rows.map(r=>r.manager_context_id);
  const admins=(await c.query("select m.context_id from public.admin_memberships m join public.account_contexts x on x.id=m.context_id where m.status='active' and x.status='active'")).rows.map(r=>r.context_id);

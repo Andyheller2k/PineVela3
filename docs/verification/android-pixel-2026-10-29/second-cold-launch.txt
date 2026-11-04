@@ -1,0 +1,7 @@
+Starting: Intent { cmp=app.pinevela.mobile.debug/app.pinevela.mobile.MainActivity }
+Status: ok
+LaunchState: COLD
+Activity: app.pinevela.mobile.debug/app.pinevela.mobile.MainActivity
+TotalTime: 13760
+WaitTime: 13984
+Complete

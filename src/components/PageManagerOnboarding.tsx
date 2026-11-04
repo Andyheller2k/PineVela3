@@ -394,7 +394,7 @@ export default function PageManagerOnboarding() {
   ];
 
   return (
-    <div className="page-canvas min-h-screen flex flex-col font-sans relative text-slate-800">
+    <div data-pv-onboarding className="page-canvas min-h-screen flex flex-col font-sans relative text-slate-800">
       
       {/* Decorative gradient backdrops */}
       <div className="absolute top-0 right-0 w-96 h-96 bg-blue-100/60 rounded-full blur-3xl opacity-30 -z-10 pointer-events-none fixed" />
@@ -610,7 +610,7 @@ export default function PageManagerOnboarding() {
                     <button
                       type="button"
                       onClick={() => navigate('/login')}
-                      className="w-full sm:w-auto px-6 py-3 rounded-2xl bg-emerald-700 hover:bg-emerald-800 text-white font-black text-xs shadow-md flex items-center justify-center gap-2 cursor-pointer transition-all"
+                      className="pv-onboarding-action w-full sm:w-auto px-6 py-3 rounded-2xl bg-emerald-700 hover:bg-emerald-800 text-white font-black text-xs shadow-md flex items-center justify-center gap-2 cursor-pointer transition-all"
                     >
                       <span>Log In to Manager Console</span>
                       <ArrowRight className="w-4 h-4" />
@@ -933,12 +933,12 @@ export default function PageManagerOnboarding() {
                           value={password}
                           onChange={(e) => setPassword(e.target.value)}
                           placeholder="••••••••"
-                          className="w-full pl-10 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 focus:bg-white focus:border-blue-800 focus:ring-1 focus:ring-blue-800 focus:outline-none transition-colors"
+                          className="w-full pl-10 pr-12 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 focus:bg-white focus:border-blue-800 focus:ring-1 focus:ring-blue-800 focus:outline-none transition-colors"
                         />
-                        <button aria-label={showPassword ? 'Hide password' : 'Show password'} aria-pressed={showPassword}
+                        <button data-password-toggle aria-label={showPassword ? 'Hide password' : 'Show password'} aria-pressed={showPassword}
                           type="button"
                           onClick={() => setShowPassword(!showPassword)}
-                          className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                          className="pv-password-toggle"
                         >
                           {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                         </button>
@@ -1060,7 +1060,7 @@ export default function PageManagerOnboarding() {
       {/* Account Deletion Modal */}
       {showDeleteModal && ((<ManagerClosureRequest onClose={() => setShowDeleteModal(false)} />)
       )}
-      {verifiedSubmission && <DashboardOverlay aria-label="Verify manager email" onClose={() => setVerifiedSubmission(null)} className="fixed inset-0 bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-4">
+      {verifiedSubmission && <DashboardOverlay data-pv-onboarding aria-label="Verify manager email" onClose={() => setVerifiedSubmission(null)} className="fixed inset-0 bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-4">
         <section className="onboarding-fields w-full max-w-lg max-h-[90dvh] overflow-y-auto rounded-3xl border border-blue-200 bg-white p-5 sm:p-7 space-y-4">
           <div className="flex items-start justify-between gap-3">
             <h2 className="text-lg font-bold text-slate-900">{googleManagerPreview?'Verify your manager Google account':'Verify your manager work email'}</h2>

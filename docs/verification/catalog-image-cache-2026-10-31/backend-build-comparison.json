@@ -1,0 +1,26 @@
+{
+  "passed": true,
+  "expectedChangedServerBundles": [
+    "supabase-server.mjs"
+  ],
+  "comparisons": [
+    {
+      "file": "dist-supabase-backend/supabase-server.mjs",
+      "previous": "40ebbbd84cbe8e13839d8ea5057ba8ede2d439c18f6b733666d20c461ad54a37",
+      "current": "2db9e8a0ac35aa8bf938c0ec54bea8ed7c486454a7deea1ee15b68d2894870c5",
+      "changed": true
+    },
+    {
+      "file": "dist-supabase-backend/residence-worker.mjs",
+      "previous": "c3566950533b94dc15093ebf3b523990b16efa054641e5a9ea9ec23dbb999e3c",
+      "current": "c3566950533b94dc15093ebf3b523990b16efa054641e5a9ea9ec23dbb999e3c",
+      "changed": false
+    },
+    {
+      "file": "dist-supabase-backend/system-wipe-worker.mjs",
+      "previous": "1f003184d68bc925d71310384460dbf564b46d34ff389d73a08894935e86a868",
+      "current": "1f003184d68bc925d71310384460dbf564b46d34ff389d73a08894935e86a868",
+      "changed": false
+    }
+  ]
+}

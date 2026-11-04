@@ -137,8 +137,8 @@ async function freePort() {
     await command('Network.emulateNetworkConditions', {offline: true, latency: 0, downloadThroughput: 0, uploadThroughput: 0}, workerSession);
     await command('Network.emulateNetworkConditions', {offline: true, latency: 0, downloadThroughput: 0, uploadThroughput: 0});
     await navigate(origin + '/?offline-check=1#/login');
-    await until(`document.body.innerText.includes('You’re offline')`, 'Fixed offline notice');
-    check(await evaluate(`!document.querySelector('input') && !document.querySelector('#root')`), 'Offline response contains no cached account page or form');
+    await until(`document.documentURI === 'chrome-error://chromewebdata/'`, 'Browser default network error page');
+    check(await evaluate(`!document.querySelector('input') && !document.querySelector('#root') && !document.body.innerText.includes('PineVela needs an internet connection')`), 'Browser offline page contains no cached account page, form or custom PineVela notice');
     await command('Network.emulateNetworkConditions', {offline: false, latency: 0, downloadThroughput: -1, uploadThroughput: -1}, workerSession);
     await command('Network.emulateNetworkConditions', {offline: false, latency: 0, downloadThroughput: -1, uploadThroughput: -1});
     await navigate(origin + '/#/login'); await until(login, 'Online recovery');

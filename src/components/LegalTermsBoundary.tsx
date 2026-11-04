@@ -1,0 +1,75 @@
+import { useEffect, useRef, useState, type ReactNode, type FormEvent } from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import { PLATFORM_TERMS } from '../../legalPolicy';
+import { useAuth, type AuthenticatedUser } from '../context/AuthContext';
+import { legalRequest } from '../lib/legalRequest';
+import { AppLaunchReady } from './AppLaunchLoader';
+import TermsAcceptanceControl from './TermsAcceptanceControl';
+import PineLogo from './PineLogo';
+
+type Status = {accepted:boolean;document:{version:string;href:string;privacyHref:string}};
+function TermsReview({ user, onAccepted }: {user:AuthenticatedUser;onAccepted:()=>void}) {
+  const { setSessionUser, logout } = useAuth();
+  const [status,setStatus] = useState<Status|null>(null);
+  const [checked,setChecked] = useState(false), [busy,setBusy] = useState(false), [error,setError] = useState(''), [attempt,setAttempt] = useState(0);
+  const saveController = useRef<AbortController | null>(null);
+  useEffect(() => () => saveController.current?.abort(), []);
+  useEffect(() => {
+    const controller = new AbortController();
+    setError('');
+    (async () => {
+      const { response, data } = await legalRequest('/api/legal/status',{signal:controller.signal});
+      if(!response.ok)throw new Error(data.error || 'The Terms could not be loaded. Please retry.');
+      if(!data.document?.version || !/^\/legal\/terms-[\d-]+\.html$/.test(data.document.href))throw new Error('Reload PineVela to load the current Terms.');
+      if(data.document.version!==PLATFORM_TERMS.version)throw new Error('A newer agreement is available. Reload PineVela before continuing.');
+      if(data.accepted){
+        const { response: me, data: next } = await legalRequest('/api/auth/me',{signal:controller.signal});
+        if(!me.ok)throw new Error('Your account could not be refreshed. Please retry.');
+        if(!controller.signal.aborted){setSessionUser(next,user.id);onAccepted();}
+      }else if(!controller.signal.aborted)setStatus(data);
+    })().catch(e=>{if(!controller.signal.aborted)setError(e.message);});
+    return()=>controller.abort();
+  },[user.id,attempt]);
+  const submit=async(e:FormEvent)=>{
+    e.preventDefault();if(busy||!checked||!status)return;
+    setBusy(true);setError('');
+    const controller = new AbortController();
+    saveController.current = controller;
+    try{
+      const {response,data}=await legalRequest('/api/legal/accept',{method:'POST',headers:{'Content-Type':'application/json'},signal:controller.signal,
+        body:JSON.stringify({termsAcceptance:{accepted:checked,version:status.document.version}})});
+      if(!response.ok)throw new Error(data.error || 'Your acceptance could not be saved. Please retry.');
+      if(!controller.signal.aborted){setSessionUser(data,user.id);onAccepted();}
+    }catch(e){if(!controller.signal.aborted)setError(e instanceof Error?e.message:'Your acceptance could not be saved.');}
+    finally{if(!controller.signal.aborted)setBusy(false);if(saveController.current===controller)saveController.current=null;}
+  };
+  return <main data-pv-onboarding className="terms-review-screen"><AppLaunchReady /><section className="terms-review-card" aria-labelledby="terms-review-title">
+    <PineLogo size={48} />
+    <p className="terms-review-eyebrow">Before you continue</p>
+    <h1 id="terms-review-title">Your PineVela agreement</h1>
+    <p>Read our Terms of service before using your account. We’ll save the version you accept so you can continue without this step next time.</p>
+    <form onSubmit={submit}>
+      {status?<TermsAcceptanceControl checked={checked} onChange={setChecked} document={status.document}/>:!error&&<p role="status">Loading the current Terms…</p>}
+      {error&&<p className="terms-review-error" role="alert">{error}</p>}
+      {error&&!status&&<div className="flex gap-3"><button type="button" className="terms-review-secondary" onClick={()=>setAttempt(n=>n+1)}>Retry</button><button type="button" className="terms-review-secondary" onClick={()=>window.location.reload()}>Reload PineVela</button></div>}
+      <button type="submit" className="terms-review-primary" disabled={busy||!checked||!status}>{busy?'Saving…':'Accept and continue'}</button>
+    </form>
+    <div className="terms-review-footer"><Link to="/help?category=account">Contact support or request account closure</Link><button type="button" disabled={busy} onClick={()=>void logout()}>Sign out</button></div>
+  </section></main>;
+}
+
+export default function LegalTermsBoundary({children}:{children:ReactNode}) {
+  const {user} = useAuth();
+  const {pathname} = useLocation();
+  const [forced,setForced] = useState(false);
+  useEffect(()=>{
+    const requireTerms=()=>setForced(true);
+    window.addEventListener('pinevela-terms-required',requireTerms);
+    return()=>window.removeEventListener('pinevela-terms-required',requireTerms);
+  },[]);
+  useEffect(()=>setForced(false),[user?.id]);
+  // Match the server's existing support exemption. Product routes still require
+  // current acceptance, including after returning from Help or FAQ.
+  if(!user || ['/help','/faq'].includes(pathname.replace(/\/+$/, '')) || (!forced&&user.legal?.accepted===true&&user.legal?.document?.version===PLATFORM_TERMS.version))return children;
+  return <TermsReview key={user.id} user={user} onAccepted={()=>setForced(false)}/>;
+}

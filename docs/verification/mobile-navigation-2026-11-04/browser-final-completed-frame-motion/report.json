@@ -1,0 +1,41 @@
+{
+  "passed": true,
+  "scenes": 7,
+  "checks": [
+    "390px light curved mobile navigation smooth slide and icon handoff",
+    "390px dark curved mobile navigation smooth slide and icon handoff",
+    "390px curved mobile navigation reduced motion settles without sliding",
+    "390px light curved mobile navigation unread manager selection motion",
+    "390px dark curved mobile navigation unread manager selection motion",
+    "390px light curved mobile navigation rapid destination changes settle on final tab",
+    "390px dark curved mobile navigation rapid destination changes settle on final tab"
+  ],
+  "screenshots": [
+    "docs/verification/mobile-navigation-2026-11-04/browser-final-completed-frame-motion/390-light-curved-selected-purchases.png",
+    "docs/verification/mobile-navigation-2026-11-04/browser-final-completed-frame-motion/390-dark-curved-selected-purchases.png"
+  ],
+  "navigationClearance": [],
+  "buildDirectory": "dist-supabase",
+  "syntheticGuestCatalog": true,
+  "syntheticRoleVisualFixtures": [
+    "primary dashboard",
+    "manager dashboard",
+    "staff dashboard",
+    "resident dashboard",
+    "administrator dashboard",
+    "seller dashboard",
+    "field officer",
+    "customer service",
+    "manager onboarding",
+    "store onboarding"
+  ],
+  "hostedOrAccountWrites": 0,
+  "realAuthenticationTested": false,
+  "runtimeExceptions": 0,
+  "syntheticSellerWrites": 0,
+  "syntheticSignupResumeWrites": 0,
+  "syntheticAppearanceWrites": 0,
+  "syntheticSubscriptionCheckouts": 0,
+  "syntheticProfileSaves": 0,
+  "exceptionDetails": []
+}

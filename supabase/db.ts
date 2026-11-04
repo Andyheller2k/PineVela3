@@ -6,7 +6,7 @@ import { Pool, escapeLiteral, type PoolClient, type PoolConfig, type QueryResult
 import { MAINTENANCE_MESSAGE } from '../platformSettings.js';
 import {takeTransactionAdmission,transactionAdmissionSql,type AdmissionOptions} from './transactionAdmission.js';
 
-export type VerifiedActor = { authUserId: string; sessionId: string; contextId: string; kind: string; managerKeyVersion?:string; requiredFeatures?:AccountFeature[] };
+export type VerifiedActor = { authUserId: string; sessionId: string; contextId: string; kind: string; termsAccepted?:boolean; managerKeyVersion?:string; requiredFeatures?:AccountFeature[] };
 export class ApiError extends Error {
   constructor(public status: number, message: string, public code?: string) { super(message); }
 }

@@ -1,0 +1,13 @@
+# Android public-photo cache verification — 2026-10-31
+
+`PublicMediaCacheTest.java` exercises real Android OkHttp and its disk cache against a loopback TLS ServerSocket. The public test-only TLS identity exists in instrumentation source only. The fixture does not alter network security configuration, global cookies, hosted data or the real app's session.
+
+All 13 new cache tests and 13 existing cookie/session/WebView boundary regressions passed (26 total). The cache cases cover conditional 304 reuse, fresh-client disk persistence, changed ETags, revoked/private eviction, cookie-bearing 200 and 304 rejection, invalid response proof, exact request/path/type allowlists, sensitive Vary metadata, and failure without offline stale replay. Sensitive Vary cases scan the isolated cache files for synthetic credential sentinels and image bytes.
+
+The measured Android baseline uses the same TLS server, URL and 68-byte image: an uncached client makes 2 requests and transfers 2 bodies / 136 body bytes; the public-media cache client makes 2 requests and transfers 1 body / 68 body bytes, with a conditional 304 on the second request. These are response-body metrics, not total TLS/header bandwidth, and do not describe the website's existing browser-cache baseline. See `native-body-baseline.json` and `instrumentation-summary.json`.
+
+The final debug APK was built with a clean exit-0 offline assemble; `debug-build.log` records that completion. It is installed with `-r` and its actual device SHA is checked. Local Android startup/appearance and normal saved Quick Boot reopening are checked separately from the isolated HTTP tests. No authenticated catalogue, real login/signup, payment, physical-phone or iOS flow is claimed.
+
+The isolated `.transporttest` and test-runner packages were first installed by this run and removed afterward with parent authorization, preventing duplicate Development launcher entries. The real `.debug` package and its data were retained. Only task-started emulators are closed normally; no AVD, snapshot or user data is cleared. The parent packager copies the final APK into releases after verification; this agent does not overwrite release files.
+
+Completed scoped status: passed. Final installed SHA-256 is `cf618e06535092fe2081ccb4f20383ac62038027e66d48283592ff785c7ade06`. Normal Quick Boot reopened successfully in 8.7 seconds and retained that exact hash without another install. Original appearance was unchanged. Task-started PIDs 67041 and 68749 were stopped normally. `result.json` lists the clean exit-0 build log, 26-test result, baseline metrics, persistence evidence and limits. No release APK was copied by this agent.

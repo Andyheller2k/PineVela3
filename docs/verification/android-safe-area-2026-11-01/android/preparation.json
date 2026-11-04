@@ -1,0 +1,13 @@
+{
+  "startedByTask": true,
+  "pid": 10963,
+  "args": [
+    "/home/wyse/Android/Sdk/emulator/emulator",
+    "-avd",
+    "PineVela_Pixel_4a_API_36"
+  ],
+  "dataWiped": false,
+  "snapshotSaveDisabled": false,
+  "snapshotLoadDisabled": false,
+  "startedAt": "2026-11-01T00:15:05.562409+00:00"
+}

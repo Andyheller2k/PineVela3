@@ -1,0 +1,237 @@
+{
+  "baseline": false,
+  "localFixturesOnly": true,
+  "measurements": [
+    {
+      "width": 390,
+      "theme": "light",
+      "hidden": {
+        "pressed": "false",
+        "type": "password",
+        "background": "rgba(0, 0, 0, 0)",
+        "image": "none",
+        "color": "rgb(82, 101, 124)",
+        "iconColor": "rgb(82, 101, 124)",
+        "x": 305,
+        "right": 349,
+        "width": 44,
+        "centerY": 576,
+        "inputRight": 349,
+        "inputCenterY": 576,
+        "viewport": 390,
+        "overflow": false
+      },
+      "shown": {
+        "pressed": "true",
+        "type": "text",
+        "background": "rgba(0, 0, 0, 0)",
+        "image": "none",
+        "color": "rgb(82, 101, 124)",
+        "iconColor": "rgb(82, 101, 124)",
+        "x": 305,
+        "right": 349,
+        "width": 44,
+        "centerY": 450,
+        "inputRight": 349,
+        "inputCenterY": 450,
+        "viewport": 390,
+        "overflow": false
+      }
+    },
+    {
+      "width": 390,
+      "theme": "dark",
+      "hidden": {
+        "pressed": "false",
+        "type": "password",
+        "background": "rgba(0, 0, 0, 0)",
+        "image": "none",
+        "color": "rgb(165, 186, 208)",
+        "iconColor": "rgb(165, 186, 208)",
+        "x": 305,
+        "right": 349,
+        "width": 44,
+        "centerY": 576,
+        "inputRight": 349,
+        "inputCenterY": 576,
+        "viewport": 390,
+        "overflow": false
+      },
+      "shown": {
+        "pressed": "true",
+        "type": "text",
+        "background": "rgba(0, 0, 0, 0)",
+        "image": "none",
+        "color": "rgb(165, 186, 208)",
+        "iconColor": "rgb(165, 186, 208)",
+        "x": 305,
+        "right": 349,
+        "width": 44,
+        "centerY": 450,
+        "inputRight": 349,
+        "inputCenterY": 450,
+        "viewport": 390,
+        "overflow": false
+      }
+    },
+    {
+      "width": 1440,
+      "theme": "light",
+      "hidden": {
+        "pressed": "false",
+        "type": "password",
+        "background": "rgba(0, 0, 0, 0)",
+        "image": "none",
+        "color": "rgb(82, 101, 124)",
+        "iconColor": "rgb(82, 101, 124)",
+        "x": 665,
+        "right": 709,
+        "width": 44,
+        "centerY": 473,
+        "inputRight": 709,
+        "inputCenterY": 473,
+        "viewport": 1440,
+        "overflow": false
+      },
+      "shown": {
+        "pressed": "true",
+        "type": "text",
+        "background": "rgba(0, 0, 0, 0)",
+        "image": "none",
+        "color": "rgb(82, 101, 124)",
+        "iconColor": "rgb(82, 101, 124)",
+        "x": 665,
+        "right": 709,
+        "width": 44,
+        "centerY": 450,
+        "inputRight": 709,
+        "inputCenterY": 450,
+        "viewport": 1440,
+        "overflow": false
+      }
+    },
+    {
+      "width": 1440,
+      "theme": "dark",
+      "hidden": {
+        "pressed": "false",
+        "type": "password",
+        "background": "rgba(0, 0, 0, 0)",
+        "image": "none",
+        "color": "rgb(165, 186, 208)",
+        "iconColor": "rgb(165, 186, 208)",
+        "x": 665,
+        "right": 709,
+        "width": 44,
+        "centerY": 473,
+        "inputRight": 709,
+        "inputCenterY": 473,
+        "viewport": 1440,
+        "overflow": false
+      },
+      "shown": {
+        "pressed": "true",
+        "type": "text",
+        "background": "rgba(0, 0, 0, 0)",
+        "image": "none",
+        "color": "rgb(165, 186, 208)",
+        "iconColor": "rgb(165, 186, 208)",
+        "x": 665,
+        "right": 709,
+        "width": 44,
+        "centerY": 447.13525390625,
+        "inputRight": 709,
+        "inputCenterY": 447.13525390625,
+        "viewport": 1440,
+        "overflow": false
+      }
+    }
+  ],
+  "terms": [
+    {
+      "scenario": "first save",
+      "width": 390,
+      "theme": "light",
+      "requests": 1,
+      "gated": false,
+      "error": "",
+      "dashboard": true,
+      "hiddenKeyPrompt": false,
+      "overflow": false
+    },
+    {
+      "scenario": "first save",
+      "width": 390,
+      "theme": "dark",
+      "requests": 1,
+      "gated": false,
+      "error": "",
+      "dashboard": true,
+      "hiddenKeyPrompt": false,
+      "overflow": false
+    },
+    {
+      "scenario": "first save",
+      "width": 1440,
+      "theme": "light",
+      "requests": 1,
+      "gated": false,
+      "error": "",
+      "dashboard": true,
+      "hiddenKeyPrompt": false,
+      "overflow": false
+    },
+    {
+      "scenario": "first save",
+      "width": 1440,
+      "theme": "dark",
+      "requests": 1,
+      "gated": false,
+      "error": "",
+      "dashboard": true,
+      "hiddenKeyPrompt": false,
+      "overflow": false
+    },
+    {
+      "scenario": "legacy-key denial",
+      "gated": true,
+      "button": "Accept and continue",
+      "disabled": false,
+      "error": "Enter your current manager secret key to authorize this action.",
+      "dashboard": false,
+      "hiddenKeyPrompt": false,
+      "overflow": false
+    },
+    {
+      "scenario": "503 error before explicit retry",
+      "gated": true,
+      "button": "Accept and continue",
+      "disabled": false,
+      "error": "Local fixture: acceptance could not be saved.",
+      "dashboard": false,
+      "hiddenKeyPrompt": false,
+      "overflow": false
+    },
+    {
+      "scenario": "503 explicit retry",
+      "requests": 2,
+      "gated": false,
+      "error": "",
+      "dashboard": true,
+      "hiddenKeyPrompt": false,
+      "overflow": false
+    },
+    {
+      "scenario": "stalled save",
+      "elapsedMs": 20040,
+      "requests": 1,
+      "gated": true,
+      "button": "Accept and continue",
+      "disabled": false,
+      "error": "Saving your acceptance took too long. It may have been saved. Check your connection, then retry to confirm.",
+      "dashboard": false,
+      "hiddenKeyPrompt": false,
+      "overflow": false
+    }
+  ]
+}

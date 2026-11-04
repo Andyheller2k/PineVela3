@@ -1,3 +1,4 @@
+import { clearFormFeedback, feedbackField, reportFormFieldError } from '../lib/feedback';
 import OrderTimeline from './OrderTimeline';
 import OrderNotifications from './OrderNotifications';
 import OrderCancelButton from './OrderCancelButton';
@@ -79,6 +80,8 @@ import RouteSkeleton from './RouteSkeleton';
 import StoreBrandingEditor from './StoreBrandingEditor';
 import StoreProfileSummary from './StoreProfileSummary';
 import TopNavBadge from './TopNavBadge';
+import CompactCardDetails from './CompactCardDetails';
+import SellerSubscriptionPlans from './SellerSubscriptionPlans';
 
 export const DIGITAL_MARKET_CATEGORIES = [
   "Services",
@@ -197,7 +200,7 @@ const SellerInventoryCard: React.FC<SellerInventoryCardProps> = memo(
             <ListingPlanBadge plan={plan} />
             {isService ? (
               <div className="absolute top-3 left-3 px-2.5 py-1 bg-gradient-to-r from-blue-700 via-blue-600 to-indigo-700 text-white text-[9px] font-black rounded-lg uppercase flex items-center gap-1 shadow-xs">
-                <PineWordmark />
+                <PineWordmark surface="inverse" />
                 <span>(Service)</span>
               </div>
             ) : (
@@ -413,6 +416,12 @@ export default function PageDigitalMarket() {
 
   // New Product Modal Form
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showPublishActions, setShowPublishActions] = useState(false);
+  const productForm = useRef<HTMLFormElement>(null), serviceForm = useRef<HTMLFormElement>(null);
+  const [visitedSellerTabs,setVisitedSellerTabs] = useState({inventory:false,services:false});
+  useEffect(()=>{if(activeTab==='inventory'||activeTab==='services')setVisitedSellerTabs(previous=>({...previous,[activeTab]:true}));},[activeTab]);
+  const productError = (label:string|null,message:string) => reportFormFieldError(productForm.current,label,message);
+  const serviceError = (label:string|null,message:string) => reportFormFieldError(serviceForm.current,label,message);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [isSubmittingProduct, setIsSubmittingProduct] = useState(false);
   const [prodTitle, setProdTitle] = useState('');
@@ -525,11 +534,8 @@ export default function PageDigitalMarket() {
   const university = storeData?.university || applicationData?.university || 'Accredited Ghanaian University';
   const { settings: paymentSettings } = usePlatformSettings();
   const subscriptionPlan = effectiveMarketPlan(storeData);
-  const planPrice = (plan: 'default' | 'star' | 'pro') => paymentSettings ? `GH₵${paymentSettings.subscriptionPrices[plan].toFixed(2)} / month` : 'Loading price…';
   const [paymentError, setPaymentError] = useState('');
-  const [selectedMobilePlan, setSelectedMobilePlan] = useState<"default" | "star" | "pro" | null>(null);
   const [isPlanActivationLoading, setIsPlanActivationLoading] = useState(false);
-  const displayedMobilePlan = selectedMobilePlan || subscriptionPlan;
   const subscriptionLimits = PLAN_LIMITS[subscriptionPlan];
   const checkoutRequest=useRef<{params:string;id:string}|null>(null);
   const checkoutPayment = async (purpose: 'activation' | 'subscription' | 'semester', plan: 'default' | 'star' | 'pro' = subscriptionPlan) => {
@@ -548,7 +554,6 @@ export default function PageDigitalMarket() {
     finally { if(accountIsCurrent(accountId,generation))setIsPlanActivationLoading(false); }
   };
   const selectSubscription = (plan: 'default' | 'star' | 'pro') => checkoutPayment('subscription', plan);
-  const activateMobilePlan = () => selectSubscription(displayedMobilePlan);
   useEffect(()=>{checkoutRequest.current=null;setIsPlanActivationLoading(false);setPaymentError('');},[user?.id]);
 
   const loadDataRead = async (isBackground = false, cancellation?: AbortSignal) => {
@@ -648,7 +653,8 @@ export default function PageDigitalMarket() {
     setStoreData(saved?.store || null);setApplicationData(saved?.application || null);setProducts(saved?.products || []);setOrders(saved?.orders || []);setActiveTab('dashboard');
     profileDraftInitialized.current=false;if(saved)initializeStoreDraft(saved.store);
     setOrderCursor(undefined);setOlderOrdersLoading(false);setOrderSummary(null);setOrderCustomers([]);
-    setShowAddModal(false);setShowServiceModal(false);setProfileMediaUploads(0);setMediaUploads(0);
+    setVisitedSellerTabs({inventory:false,services:false});
+    setShowAddModal(false);setShowServiceModal(false);setShowPublishActions(false);setProfileMediaUploads(0);setMediaUploads(0);
     setIsSubmittingProduct(false);setIsSubmittingService(false);setIsUpdatingProfile(false);
     setCropRawImage(null);setIsCropModalOpen(false);setVerifyingOrder(null);setDecliningOrder(null);setPinInput('');setPinSubmitting(false);setConfirmingOrderId(null);
     setProdImageUrl('');setProdAdditionalImages([]);setServImageUrl('');setServPriceCategories([]);
@@ -663,27 +669,28 @@ export default function PageDigitalMarket() {
   // Handle Add Product (MANDATORY Description and Image)
   const handleCreateProduct = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (mediaUploads) { triggerToast('Wait for your photographs to finish uploading.', 'error'); return; }
+    clearFormFeedback(productForm.current);
+    if (mediaUploads) { productError('Product photograph', 'Wait for your photographs to finish uploading.'); return; }
     
     if (!prodTitle.trim()) {
-      triggerToast("Please provide a product title.", "error");
+      productError('Product / Item Title', 'Please provide a product title.');
       return;
     }
-    if (!prodPrice.trim() || parseFloat(prodPrice) <= 0) {
-      triggerToast("Please provide a valid price.", "error");
+    if (!prodPrice.trim() || !Number.isFinite(Number(prodPrice)) || Number(prodPrice) < 1) {
+      productError('Price in GHS (GH₵)', 'Please provide a valid price.');
       return;
     }
     const stock = Number(prodStock);
     if (!prodStock.trim() || !Number.isSafeInteger(stock) || stock < 1) {
-      triggerToast('Stock quantity must be a whole number of at least 1.', 'error');
+      productError('Stock Quantity', 'Stock quantity must be a whole number of at least 1.');
       return;
     }
     if (!prodImageUrl.trim()) {
-      triggerToast("It is mandatory to put up an item picture for campus listing.", "error");
+      productError('Product photograph', 'It is mandatory to put up an item picture for campus listing.');
       return;
     }
     if (!prodDesc.trim()) {
-      triggerToast("It is mandatory to provide a detailed product description.", "error");
+      productError('Product Description * (Mandatory)', 'It is mandatory to provide a detailed product description.');
       return;
     }
 
@@ -731,10 +738,10 @@ export default function PageDigitalMarket() {
         setProdAdditionalImages([]);
         await loadData();
       } else {
-        triggerToast(res?.error || "Failed to publish product.", "error");
+        productError(null, res?.error || "Failed to publish product.");
       }
     } catch (err: any) {
-      if(accountIsCurrent(accountId))triggerToast(err?.message || "Failed to publish product.", "error");
+      if(accountIsCurrent(accountId))reportFormFieldError(productForm.current, feedbackField(productForm.current!, err?.message || "")?.getAttribute("aria-label") || null, err?.message || "Failed to publish product.");
     } finally {
       if(accountIsCurrent(accountId))setIsSubmittingProduct(false);
     }
@@ -1008,33 +1015,35 @@ export default function PageDigitalMarket() {
 
   const handleSaveService = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (mediaUploads) { triggerToast('Wait for your photographs to finish uploading.', 'error'); return; }
+    clearFormFeedback(serviceForm.current);
+    if (mediaUploads) { serviceError('Service photograph', 'Wait for your photographs to finish uploading.'); return; }
     if (!servTitle.trim()) {
-      triggerToast("Please provide a service title.", "error");
+      serviceError('Service Title', 'Please provide a service title.');
       return;
     }
-    if (!servPrice.trim() || parseFloat(servPrice) <= 0) {
-      triggerToast("Please provide a valid starting rate or price.", "error");
+    if (!servPrice.trim() || !Number.isFinite(Number(servPrice)) || Number(servPrice) < 1) {
+      serviceError('Starting Price / Fee (GHS)', 'Please provide a valid starting rate or price.');
       return;
     }
     if (!servDesc.trim()) {
-      triggerToast("Please provide a detailed description of what you offer.", "error");
+      serviceError('Detailed Description of What You Offer', 'Please provide a detailed description of what you offer.');
       return;
     }
     if ((servLocationMode === 'fixed' || servLocationMode === 'hybrid') && !servLocation.trim()) {
-      triggerToast("Please specify or select your campus location on the map.", "error");
+      serviceError('Campus Location / Service Base', 'Please specify or select your campus location on the map.');
       return;
     }
     if ((servLocationMode === 'fixed' || servLocationMode === 'hybrid') && !servLocationPinned) {
-      triggerToast("Fixed and Hybrid services require a location pin selected on the map.", "error");
+      serviceError('Campus Location / Service Base', 'Fixed and Hybrid services require a location pin selected on the map.');
       return;
     }
     if (!servCallLine.trim()) {
-      triggerToast("A direct call line or WhatsApp number is mandatory for services.", "error");
+      serviceError('Direct Call Line / WhatsApp', 'A direct call line or WhatsApp number is mandatory for services.');
       return;
     }
+    try { internationalPhone(servCallLine, storeData?.phoneCountry || 'GH'); } catch(error) { serviceError('Direct Call Line / WhatsApp', error instanceof Error?error.message:'Enter a valid service phone number.'); return; }
     if (!servImageUrl.trim()) {
-      triggerToast("Please upload a cover photograph for your service.", "error");
+      serviceError('Service photograph', 'Please upload a cover photograph for your service.');
       return;
     }
 
@@ -1044,8 +1053,11 @@ export default function PageDigitalMarket() {
       const email = user?.studentEmail || user?.email || '';
       const storeId = storeData?.id || ((undefined));
 
-      if (servPriceCategories.length > 4 || servPriceCategories.some(c => !c.name.trim() || c.price === '' || !Number.isFinite(Number(c.price)) || Number(c.price) < 0)) {
-        triggerToast('Add a name and valid price for every option (maximum four).', 'error'); return;
+      if (servPriceCategories.length > 4) { serviceError(null, 'Use a maximum of four price options.'); return; }
+      const invalidOption=servPriceCategories.findIndex(c=>!c.name.trim()||c.price===''||!Number.isFinite(Number(c.price))||Number(c.price)<0);
+      if(invalidOption>=0){
+        const missingName=!servPriceCategories[invalidOption].name.trim();
+        serviceError(`Option ${invalidOption+1} ${missingName?'name':'price'}`,missingName?'Give this price option a name.':'Enter a valid price of zero or more for this option.');return;
       }
       const validPriceCategories = servPriceCategories.map(c => ({
         ...((/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(c.id)) ? {id:c.id} : {}), name: c.name.trim(), price: Number(c.price), ...(c.imageUrl ? { imageUrl: c.imageUrl } : {})
@@ -1100,10 +1112,10 @@ export default function PageDigitalMarket() {
         setActiveTab('services');
         await loadData();
       } else {
-        triggerToast(res?.error || "Failed to save service.", "error");
+        serviceError(null, res?.error || "Failed to save service.");
       }
     } catch (err: any) {
-      if(accountIsCurrent(accountId))triggerToast(err?.message || "Failed to save service.", "error");
+      if(accountIsCurrent(accountId))reportFormFieldError(serviceForm.current, feedbackField(serviceForm.current!, err?.message || "")?.getAttribute("aria-label") || null, err?.message || "Failed to save service.");
     } finally {
       if(accountIsCurrent(accountId))setIsSubmittingService(false);
     }
@@ -1623,8 +1635,8 @@ export default function PageDigitalMarket() {
         )}
 
         {/* TAB 2: INVENTORY STOCK ADJUSTER */}
-        {activeTab === 'inventory' && (
-          <div className="space-y-6">
+        {(activeTab === 'inventory' || visitedSellerTabs.inventory) && (
+          <div hidden={activeTab !== 'inventory'} inert={activeTab !== 'inventory'} data-seller-panel="inventory" className="space-y-6">
             {/* Search, price filter, sorting, category tags */}
             <div className="bg-slate-100/45 border border-slate-300/50 backdrop-blur-sm rounded-3xl p-5 shadow-none space-y-4">
               <div className="flex flex-col lg:flex-row items-center justify-between gap-4">
@@ -1793,8 +1805,8 @@ export default function PageDigitalMarket() {
         )}
 
         {/* TAB: CAMPUS SERVICES & SKILLED WORK */}
-        {activeTab === 'services' && (
-          <div className="space-y-6 animate-fadeIn">
+        {(activeTab === 'services' || visitedSellerTabs.services) && (
+          <div hidden={activeTab !== 'services'} inert={activeTab !== 'services'} data-seller-panel="services" className="space-y-6 animate-fadeIn">
             {/* Services Header Banner with White Glassy Backdrop */}
             <div className="relative overflow-hidden bg-white/80 backdrop-blur-xl border border-slate-200/80 text-slate-900 rounded-3xl p-6 sm:p-8 shadow-xl">
               <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
@@ -1821,18 +1833,18 @@ export default function PageDigitalMarket() {
 
             {/* Services Grid */}
             {filteredServices.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="seller-services-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {filteredServices.map(service => (
                   <div
                     key={service.id}
-                    data-market-plan={subscriptionPlan} data-listing-id={service.id}
-                    className="market-plan-card bg-slate-100/55 border border-slate-300/60 rounded-3xl overflow-hidden shadow-none hover:bg-slate-100/80 hover:border-blue-300 transition-all duration-150 flex flex-col justify-between group"
+                    data-market-plan={subscriptionPlan} data-listing-id={service.id} data-market-kind="service"
+                    className="seller-service-card market-plan-card bg-slate-100/55 border border-slate-300/60 rounded-3xl overflow-hidden shadow-none hover:bg-slate-100/80 hover:border-blue-300 transition-all duration-150 flex flex-col justify-between group"
                   >
                     <div>
                       {/* Photo container with written PineVela (Service) text */}
                       <div role="button" tabIndex={0} aria-label={`View ${service.title || "service"} location`} onKeyDown={activateOnKeyboard}
                         onClick={() => setViewingServiceMap(service)}
-                        className="relative h-48 bg-slate-100 overflow-hidden flex items-center justify-center p-1 border-b border-slate-100 select-none cursor-pointer"
+                        className="market-card-thumbnail relative h-48 bg-slate-100 overflow-hidden flex items-center justify-center p-1 border-b border-slate-100 select-none cursor-pointer"
                         title="Click to view service location on interactive map"
                       >
                         <img
@@ -1844,22 +1856,23 @@ export default function PageDigitalMarket() {
 
                         <ListingPlanBadge plan={subscriptionPlan} />
                         {/* Written PineVela like text written as (Service) */}
-                        <div className="absolute top-2 left-2 px-2 py-0.5 bg-gradient-to-r from-blue-700 via-blue-600 to-indigo-700 text-white text-[9.5px] font-black rounded-md shadow-xs flex items-center gap-1 border border-blue-400/30 tracking-wide pointer-events-none">
-                          <PineWordmark />
+                        <div className="market-card-service-tag absolute top-2 left-2 px-2 py-0.5 bg-gradient-to-r from-blue-700 via-blue-600 to-indigo-700 text-white text-[9.5px] font-black rounded-md shadow-xs flex items-center gap-1 border border-blue-400/30 tracking-wide pointer-events-none">
+                          <PineWordmark surface="inverse" />
                           <span className="text-white font-black">(Service)</span>
                         </div>
 
                         {/* Starting Price Badge */}
-                        <div className="absolute top-2 right-2 px-2 py-0.5 bg-emerald-600 text-white text-[10px] font-black rounded-md shadow-xs pointer-events-none">
+                        <div className="market-card-price absolute top-2 right-2 px-2 py-0.5 bg-emerald-600 text-white text-[10px] font-black rounded-md shadow-xs pointer-events-none">
                           GHS {service.price}
                         </div>
 
                         {/* Availability Pill & Map Tap Cue */}
-                        <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between pointer-events-none">
+                        <div className="seller-service-availability absolute bottom-2 left-2 right-2 flex items-center justify-between pointer-events-none">
                           <div className={`px-2 py-0.5 rounded-md text-[9px] font-black shadow-xs ${
                             service.isAvailable !== false ? 'bg-emerald-500 text-white' : 'bg-slate-700 text-slate-200'
                           }`}>
-                            {service.isAvailable !== false ? '● Active & Open' : '○ Paused'}
+                            <span className="seller-service-status-full">{service.isAvailable !== false ? '● Active & Open' : '○ Paused'}</span>
+                            <span className="seller-service-status-compact">{service.isAvailable !== false ? 'Open' : 'Paused'}</span>
                           </div>
 
                           <span className="px-2 py-0.5 bg-slate-900/80 backdrop-blur-md text-white text-[9px] font-black rounded-md shadow-xs flex items-center gap-1">
@@ -1870,8 +1883,8 @@ export default function PageDigitalMarket() {
                       </div>
 
                       {/* Content Section */}
-                      <div className="p-4 space-y-2.5">
-                        <div className="flex items-center justify-between gap-1 text-[10px] font-bold text-blue-700">
+                      <div className="market-card-copy p-4 space-y-2.5">
+                        <div className="seller-service-meta flex items-center justify-between gap-1 text-[10px] font-bold text-blue-700">
                           <span className="bg-blue-50 text-blue-800 px-2 py-0.5 rounded-md border border-blue-100 truncate max-w-[150px]">
                             {(service as any).serviceCategory || 'Campus Service'}
                           </span>
@@ -1889,12 +1902,17 @@ export default function PageDigitalMarket() {
                           </button>
                         </div>
 
-                        <h4 className="text-sm font-black text-slate-900 line-clamp-1">{service.title}</h4>
+                        <h4 className="market-card-title text-sm font-black text-slate-900 line-clamp-1">{service.title}</h4>
                         
-                        <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed font-medium">
+                        <p className="market-card-description text-xs text-slate-600 line-clamp-2 leading-relaxed font-medium">
                           {service.description || 'No description provided.'}
                         </p>
 
+                        <CompactCardDetails>
+                        <p className="seller-service-mobile-detail text-xs text-slate-600">{service.description || 'No description provided.'}</p>
+                        <button type="button" onClick={() => handleOpenServiceReviews(service)} className="seller-service-mobile-detail seller-service-mobile-reviews text-xs font-bold text-blue-700">
+                          <Star size={14} aria-hidden="true" /> Reviews ({service.reviewCount || 0})
+                        </button>
                         <div className="pt-2 border-t border-slate-100 space-y-2 text-xs">
                           {/* Opening Hours & Working Days */}
                           <div className="flex items-center gap-1.5 text-slate-700 font-bold bg-slate-50 p-2 rounded-xl border border-slate-100">
@@ -1959,11 +1977,12 @@ export default function PageDigitalMarket() {
                             </div>
                           )}
                         </div>
+                        </CompactCardDetails>
                       </div>
                     </div>
 
                     {/* Card Actions Footer */}
-                    <div className="p-3 border-t border-slate-100 bg-slate-50/50 flex items-center justify-between gap-2">
+                    <div className="seller-service-actions market-card-footer p-3 border-t border-slate-100 bg-slate-50/50 flex items-center justify-between gap-2">
                       <div className="flex items-center gap-1.5">
                         <button
                           type="button"
@@ -2126,7 +2145,7 @@ export default function PageDigitalMarket() {
               </div>
 
               {/* FILTER TABS */}
-              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+              <div role="group" aria-label="Seller notification filters" tabIndex={0} className="pv-scroll-filters pb-1">
                 {[
                   { id: 'all', label: `All Alerts (${sellerNotifications.length})` },
                   { id: 'unread', label: `Unread (${unreadNotifCount})` },
@@ -2136,6 +2155,7 @@ export default function PageDigitalMarket() {
                   <button
                     key={filterTab.id}
                     type="button"
+                    aria-pressed={notifFilter === filterTab.id}
                     onClick={() => setNotifFilter(filterTab.id as any)}
                     className={`px-3.5 py-1.5 rounded-xl text-xs font-extrabold whitespace-nowrap transition-all cursor-pointer ${
                       notifFilter === filterTab.id
@@ -2306,38 +2326,19 @@ export default function PageDigitalMarket() {
         {activeTab === 'messages' && <MarketplaceInbox />}
 
         {activeTab === "upgrade" && (
-          <section className="space-y-6 animate-fadeIn">
-            <div className="relative overflow-hidden rounded-3xl border border-blue-300/40 bg-gradient-to-br from-slate-950 via-blue-950 to-indigo-900 p-6 sm:p-9 text-white shadow-[0_20px_60px_rgba(30,64,175,0.25)]">
-              <div className="absolute -right-16 -top-20 h-56 w-56 rounded-full border border-cyan-300/30 bg-cyan-300/10 animate-pulse" />
-              <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div><div className="mb-3 inline-flex items-center gap-2 rounded-full border border-cyan-200/30 bg-white/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-cyan-100"><Star className="h-3.5 w-3.5 fill-current" /> PineVela seller plans</div><h2 className="text-2xl font-black tracking-tight sm:text-3xl">Make your store stand out.</h2></div>
-                <div className="rounded-2xl border border-white/20 bg-white/10 px-4 py-3 backdrop-blur"><div className="text-[10px] font-black uppercase tracking-wider text-blue-200">Current plan</div><div className="mt-1 flex items-center gap-2 text-lg font-black"><BadgeCheck className="h-5 w-5 text-cyan-300" />Pine {subscriptionPlan === "star" ? "Star" : subscriptionPlan === "pro" ? "Pro" : "Default"}</div></div>
-              </div>
-            </div>
-            <div className="sm:hidden space-y-4">
-              <div className="grid grid-cols-3 gap-2 rounded-2xl border border-slate-200/80 bg-white/55 p-1.5 backdrop-blur-md">
-                <button type="button" onClick={() => setSelectedMobilePlan("default")} className={`rounded-xl px-2 py-2 text-[10px] font-black transition-all ${displayedMobilePlan === "default" ? "bg-blue-600 text-white shadow-md" : "text-slate-500"}`}>Pine Default</button>
-                <button type="button" onClick={() => setSelectedMobilePlan("star")} className={`rounded-xl px-2 py-2 text-[10px] font-black transition-all ${displayedMobilePlan === "star" ? "bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 shadow-md" : "text-slate-500"}`}>Pine Star</button>
-                <button type="button" onClick={() => setSelectedMobilePlan("pro")} className={`rounded-xl px-2 py-2 text-[10px] font-black transition-all ${displayedMobilePlan === "pro" ? "bg-indigo-950 text-cyan-200 shadow-md" : "text-slate-500"}`}>Pine Pro</button>
-              </div>
-              <div key={displayedMobilePlan} className={`relative min-h-[365px] overflow-hidden rounded-3xl border p-6 shadow-xl animate-fadeIn ${displayedMobilePlan === "pro" ? "border-cyan-300/70 bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-900 text-white" : displayedMobilePlan === "star" ? "border-amber-300 bg-gradient-to-br from-amber-50 via-white to-orange-50 text-slate-900" : "border-blue-200 bg-gradient-to-br from-white via-blue-50 to-slate-50 text-slate-900"}`}>
-                <div className={`absolute inset-x-0 top-0 h-1 ${displayedMobilePlan === "pro" ? "bg-gradient-to-r from-indigo-500 via-cyan-300 to-indigo-500 animate-pulse" : displayedMobilePlan === "star" ? "bg-gradient-to-r from-amber-300 via-yellow-500 to-orange-400 animate-pulse" : "bg-gradient-to-r from-blue-300 via-blue-600 to-indigo-400"}`} />
-                <div className="relative flex h-full flex-col"><div className="flex items-start justify-between"><div className={`rounded-2xl p-3 ${displayedMobilePlan === "pro" ? "bg-cyan-300/15 text-cyan-200" : displayedMobilePlan === "star" ? "bg-gradient-to-br from-amber-400 to-orange-500 text-white" : "bg-blue-100 text-blue-700"}`}>{displayedMobilePlan === "pro" ? <TrendingUp className="h-7 w-7" /> : displayedMobilePlan === "star" ? <Star className="h-7 w-7 fill-current" /> : <Store className="h-7 w-7" />}</div><BadgeCheck className={`h-6 w-6 ${displayedMobilePlan === "pro" ? "text-cyan-300" : displayedMobilePlan === "star" ? "text-amber-600" : "text-blue-600"}`} /></div><div className="mt-6"><div className={`text-[10px] font-black uppercase tracking-[0.16em] ${displayedMobilePlan === "pro" ? "text-cyan-200" : displayedMobilePlan === "star" ? "text-amber-700" : "text-blue-700"}`}>Selected seller subscription</div><h3 className="mt-1 text-3xl font-black">Pine {displayedMobilePlan === "star" ? "Star" : displayedMobilePlan === "pro" ? "Pro" : "Default"}</h3><p className={`mt-2 text-sm font-medium ${displayedMobilePlan === "pro" ? "text-indigo-100" : "text-slate-600"}`}>{displayedMobilePlan === "pro" ? "More publishing capacity for established stores." : displayedMobilePlan === "star" ? "A brighter presence for growing stores." : "Everything needed to begin selling."}</p></div><div className={`my-6 h-px ${displayedMobilePlan === "pro" ? "bg-white/15" : "bg-slate-200"}`} /><div className="grid grid-cols-3 gap-2 text-center"><div className={`rounded-2xl p-3 ${displayedMobilePlan === "pro" ? "bg-white/10" : "bg-white/70"}`}><div className="text-lg font-black">{displayedMobilePlan === "pro" ? "200" : displayedMobilePlan === "star" ? "100" : "20"}</div><div className="text-[9px] font-bold opacity-70">items</div></div><div className={`rounded-2xl p-3 ${displayedMobilePlan === "pro" ? "bg-white/10" : "bg-white/70"}`}><div className="text-lg font-black">{displayedMobilePlan === "pro" ? "10" : displayedMobilePlan === "star" ? "5" : "1"}</div><div className="text-[9px] font-bold opacity-70">services</div></div><div className={`rounded-2xl p-3 ${displayedMobilePlan === "pro" ? "bg-white/10" : "bg-white/70"}`}><div className="text-lg font-black">{displayedMobilePlan === "pro" ? "900" : displayedMobilePlan === "star" ? "600" : "200"}</div><div className="text-[9px] font-bold opacity-70">inventory</div></div></div><div className={`mt-6 rounded-2xl p-3 text-xs font-semibold leading-relaxed ${displayedMobilePlan === "pro" ? "bg-cyan-300/10 text-cyan-100" : displayedMobilePlan === "star" ? "bg-amber-100 text-amber-950" : "bg-blue-100 text-blue-950"}`}>{displayedMobilePlan === "pro" ? "Publish up to 200 items and 10 services, with 900 inventory units. Glowing PineVela badge, golden card frames, custom store logo and cover uploads, and priority in featured searches." : displayedMobilePlan === "star" ? "Publish up to 100 items and five services, with 600 inventory units. Golden glowing PineVela badges on your item and service cards, plus custom store logo and cover uploads." : "Publish up to 20 items and one service at a time, with 200 total inventory units. Standard PineVela logo and four built-in cover designs."}</div><div className={`mt-auto pt-5 text-lg font-black ${displayedMobilePlan === "pro" ? "text-cyan-200" : displayedMobilePlan === "star" ? "text-amber-700" : "text-blue-700"}`}>{planPrice(displayedMobilePlan)}</div></div>
-                <button type="button" onClick={activateMobilePlan} disabled={isPlanActivationLoading || !paymentSettings} className={`mt-6 flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-3 text-xs font-black transition-all disabled:cursor-default ${displayedMobilePlan === subscriptionPlan ? "bg-emerald-500 text-white" : displayedMobilePlan === "pro" ? "bg-cyan-300 text-slate-950" : displayedMobilePlan === "star" ? "bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950" : "bg-blue-600 text-white"}`}>{isPlanActivationLoading ? <><RefreshCw className="h-4 w-4 animate-spin" />Activating...</> : displayedMobilePlan === subscriptionPlan ? <><CheckCircle2 className="h-4 w-4" />Renew plan</> : <>Upgrade to Pine {displayedMobilePlan === "star" ? "Star" : displayedMobilePlan === "pro" ? "Pro" : "Default"}<ArrowRight className="h-4 w-4" /></>}</button>
-              </div>
-            </div>
-            <div className="space-y-3 rounded-2xl border border-blue-200 bg-white/80 p-5 text-sm text-slate-900">
-              {paymentError && <p role="alert" className="text-red-700">{paymentError}</p>}
+          <section className="seller-subscriptions-section space-y-6 animate-fadeIn" aria-label="Seller subscriptions">
+            <SellerSubscriptionPlans currentPlan={subscriptionPlan} prices={paymentSettings?.subscriptionPrices}
+              busy={isPlanActivationLoading} error={paymentError} onChoose={selectSubscription}
+              onKeep={() => setActiveTab('dashboard')} />
+            <div className="seller-billing-details">
+              <h3>Fees &amp; payment status</h3>
               <p>Registration: GHS {paymentSettings?.registrationFee ?? '…'} once. Semester fee: GHS {paymentSettings?.semesterFee ?? '…'} every two months. Plans renew monthly through checkout; no automatic debit.</p>
               <p>Plan paid until: {storeData?.subscriptionExpiresAt ? new Date(storeData.subscriptionExpiresAt).toLocaleDateString() : 'No verified paid period'}. Two-month fee paid until: {storeData?.semesterExpiresAt ? new Date(storeData.semesterExpiresAt).toLocaleDateString() : 'Payment required'}.</p>
               {storeData?.paymentMode === 'test' && <p className="font-semibold text-amber-700">Paystack test payment — development access only.</p>}
-              <button disabled={isPlanActivationLoading || !paymentSettings} onClick={() => checkoutPayment(storeData?.registrationFeePaid ? 'semester' : 'activation')} className="rounded-xl bg-blue-600 px-4 py-3 text-white disabled:opacity-50">{storeData?.registrationFeePaid ? 'Renew two-month fee' : 'Complete verified registration'}</button>
-              {(<button onClick={() => navigate('/payments/return')} className="ml-3 text-blue-700">View unfinished payments</button>)}
-            </div>
-            <div className="hidden grid-cols-1 gap-5 sm:grid lg:grid-cols-3">
-              <button type="button" disabled={isPlanActivationLoading || !paymentSettings} onClick={() => selectSubscription("default")} className={`group relative overflow-hidden rounded-3xl border bg-white/70 p-6 text-left shadow-sm transition-all hover:-translate-y-1 hover:shadow-xl ${subscriptionPlan === "default" ? "border-blue-500 ring-2 ring-blue-200" : "border-slate-200"}`}><div className="flex items-start justify-between"><div className="rounded-2xl bg-blue-100 p-3 text-blue-700"><Store className="h-6 w-6" /></div>{subscriptionPlan === "default" && <BadgeCheck className="h-6 w-6 text-blue-600" />}</div><h3 className="mt-5 text-xl font-black text-slate-900">Pine Default</h3><p className="mt-1 text-sm text-slate-500">Everything needed to begin selling.</p><div className="my-5 h-px bg-slate-200" /><div className="space-y-3 text-sm font-semibold text-slate-700"><div className="flex gap-2"><CheckCircle2 className="h-4 w-4 text-blue-600" />Publish 20 items at a time</div><div className="flex gap-2"><CheckCircle2 className="h-4 w-4 text-blue-600" />1 active service</div><div className="flex gap-2"><CheckCircle2 className="h-4 w-4 text-blue-600" />200 total inventory units</div><div className="flex gap-2"><ImageIcon className="h-4 w-4 text-blue-600" />Four PineVela covers and standard logo</div></div><div className="mt-6 text-sm font-black text-blue-700">{planPrice("default")} <ArrowRight className="ml-1 inline h-4 w-4" /></div></button>
-              <button type="button" disabled={isPlanActivationLoading || !paymentSettings} onClick={() => selectSubscription("star")} className={`group relative overflow-hidden rounded-3xl border bg-gradient-to-b from-amber-50 via-white to-orange-50 p-6 text-left shadow-md transition-all hover:-translate-y-1 hover:shadow-2xl ${subscriptionPlan === "star" ? "border-amber-400 ring-2 ring-amber-200" : "border-amber-200"}`}><div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-amber-300 via-yellow-500 to-orange-400 animate-pulse" /><div className="flex items-start justify-between"><div className="rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 p-3 text-white shadow-lg"><Star className="h-6 w-6 fill-current" /></div>{subscriptionPlan === "star" && <BadgeCheck className="h-6 w-6 text-amber-600" />}</div><h3 className="mt-5 text-xl font-black text-slate-900">Pine Star</h3><p className="mt-1 text-sm text-slate-600">A brighter presence for growing stores.</p><div className="mt-4 text-2xl font-black text-slate-900">{planPrice("star")}</div><div className="my-5 h-px bg-amber-200" /><div className="space-y-3 text-sm font-semibold text-slate-700"><div className="flex gap-2"><BadgeCheck className="h-4 w-4 text-amber-600" />100 items, 5 services, 600 inventory</div><div className="flex gap-2"><TrendingUp className="h-4 w-4 text-amber-600" />Glowing PineVela star badges on listing cards</div><div className="flex gap-2"><ImageIcon className="h-4 w-4 text-amber-600" />Custom store logo and cover uploads</div></div><div className="mt-6 text-sm font-black text-amber-700">Choose Pine Star <ArrowRight className="ml-1 inline h-4 w-4" /></div></button>
-              <button type="button" disabled={isPlanActivationLoading || !paymentSettings} onClick={() => selectSubscription("pro")} className={`group relative overflow-hidden rounded-3xl border bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-900 p-6 text-left text-white shadow-lg transition-all hover:-translate-y-1 hover:shadow-2xl ${subscriptionPlan === "pro" ? "border-cyan-300 ring-2 ring-cyan-300/70" : "border-indigo-500/60"}`}><div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-cyan-300/20 blur-2xl animate-pulse" /><div className="relative flex items-start justify-between"><div className="rounded-2xl border border-cyan-200/40 bg-cyan-300/15 p-3 text-cyan-200"><TrendingUp className="h-6 w-6" /></div>{subscriptionPlan === "pro" && <BadgeCheck className="h-6 w-6 text-cyan-300" />}</div><div className="relative"><h3 className="mt-5 text-xl font-black">Pine Pro</h3><p className="mt-1 text-sm text-indigo-200">More publishing capacity for established stores.</p><div className="mt-4 text-2xl font-black">{planPrice("pro")}</div><div className="my-5 h-px bg-white/15" /><div className="space-y-3 text-sm font-semibold text-indigo-50"><div className="flex gap-2"><CheckCircle2 className="h-4 w-4 text-cyan-300" />200 items, 10 services, 900 inventory</div><div className="flex gap-2"><Star className="h-4 w-4 text-cyan-300" />Golden frames on item and service cards</div><div className="flex gap-2"><ImageIcon className="h-4 w-4 text-cyan-300" />Priority search placement and custom store branding</div></div><div className="mt-6 text-sm font-black text-cyan-200">Choose Pine Pro <ArrowRight className="ml-1 inline h-4 w-4" /></div></div></button>
+              <div className="seller-billing-actions">
+                <button disabled={isPlanActivationLoading || !paymentSettings} onClick={() => checkoutPayment(storeData?.registrationFeePaid ? 'semester' : 'activation')} className="bg-blue-600 text-white disabled:opacity-50">{storeData?.registrationFeePaid ? 'Renew two-month fee' : 'Complete verified registration'}</button>
+                <button onClick={() => navigate('/payments/return')} className="text-blue-700">View unfinished payments</button>
+              </div>
             </div>
           </section>
         )}
@@ -2496,7 +2497,7 @@ export default function PageDigitalMarket() {
 
       {/* MODAL 1: PUBLISH PRODUCT (MANDATORY DESCRIPTION AND IMAGE) */}
       {showAddModal && (
-        <DashboardOverlay aria-label="Publish Item to Global Market" onClose={() => setShowAddModal(false)} className="fixed inset-0 z-50 bg-slate-950/40 backdrop-blur-sm flex items-center justify-center p-4 overflow-hidden">
+        <DashboardOverlay data-market-dialog aria-label="Publish Item to Global Market" onClose={() => setShowAddModal(false)} className="fixed inset-0 z-50 bg-slate-950/40 backdrop-blur-sm flex items-center justify-center p-4 overflow-hidden">
           <div data-popup-card className="bg-white rounded-3xl max-w-xl w-full max-h-[90vh] flex flex-col p-6 sm:p-8 shadow-2xl border border-slate-100 animate-scaleIn">
             
             {/* Header: Fixed & static */}
@@ -2521,7 +2522,7 @@ export default function PageDigitalMarket() {
             </div>
 
             {/* Scrollable Form Body Container */}
-            <form onSubmit={handleCreateProduct} className="flex-1 overflow-y-auto pr-1 py-4 space-y-4 scrollbar-thin">
+            <form ref={productForm} noValidate onSubmit={handleCreateProduct} className="flex-1 overflow-y-auto pr-1 py-4 space-y-4 scrollbar-thin">
               <div id="add-group-title">
                 <label className="block text-xs font-black text-slate-800 mb-1">Product / Item Title *</label>
                 <input aria-label="Product / Item Title"
@@ -2607,7 +2608,7 @@ export default function PageDigitalMarket() {
               </div>
 
               {/* MANDATORY IMAGE INPUT (FROM SELLERS DEVICE ONLY WITH CROPPER) */}
-              <div id="add-group-image">
+              <div id="add-group-image" data-feedback-field="Product photograph">
                 <label className="block text-xs font-black text-slate-800 mb-1">Product Photo * (Mandatory - Upload & crop directly from your device to ensure listing fit)</label>
                 <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-slate-300 border-dashed rounded-2xl hover:border-blue-500 transition-all bg-slate-50 relative">
                   <div className="space-y-1 text-center w-full">
@@ -2648,7 +2649,7 @@ export default function PageDigitalMarket() {
                               onChange={(e) => {
                                 const file = e.target.files?.[0];
                                 if (file) {
-                                  if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 20 * 1024 * 1024) { triggerToast('Choose a JPEG, PNG or WebP photo up to 20MB.', 'error'); return; }
+                                  if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 20 * 1024 * 1024) { reportFormFieldError(e.currentTarget.closest('form'), e.currentTarget.closest('form')===productForm.current?'Product photograph':'Service photograph', 'Choose a JPEG, PNG or WebP photo up to 20MB.'); return; }
                                   const uploadAccount=user?.id;
                                   const reader = new FileReader();
                                   reader.onloadend = () => {
@@ -2683,7 +2684,7 @@ export default function PageDigitalMarket() {
                               onChange={(e) => {
                                 const file = e.target.files?.[0];
                                 if (file) {
-                                  if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 20 * 1024 * 1024) { triggerToast('Choose a JPEG, PNG or WebP photo up to 20MB.', 'error'); return; }
+                                  if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 20 * 1024 * 1024) { reportFormFieldError(e.currentTarget.closest('form'), e.currentTarget.closest('form')===productForm.current?'Product photograph':'Service photograph', 'Choose a JPEG, PNG or WebP photo up to 20MB.'); return; }
                                   const uploadAccount=user?.id;
                                   const reader = new FileReader();
                                   reader.onloadend = () => {
@@ -2751,7 +2752,7 @@ export default function PageDigitalMarket() {
 
       {/* MODAL: OFFER / EDIT CAMPUS SERVICE */}
       {showServiceModal && (
-        <DashboardOverlay aria-label="Publish service" onClose={() => setShowServiceModal(false)} className="fixed inset-0 z-50 bg-slate-950/40 backdrop-blur-sm flex items-center justify-center p-4 overflow-hidden">
+        <DashboardOverlay data-market-dialog aria-label="Publish service" onClose={() => setShowServiceModal(false)} className="fixed inset-0 z-50 bg-slate-950/40 backdrop-blur-sm flex items-center justify-center p-4 overflow-hidden">
           <div data-popup-card className="bg-white rounded-3xl max-w-xl w-full max-h-[90vh] flex flex-col p-6 sm:p-8 shadow-2xl border border-slate-100 animate-scaleIn">
             {/* Header */}
             <div className="flex items-center justify-between pb-4 border-b border-slate-100 shrink-0">
@@ -2777,7 +2778,7 @@ export default function PageDigitalMarket() {
             </div>
 
             {/* Scrollable Form Body */}
-            <form onSubmit={handleSaveService} className="flex-1 overflow-y-auto space-y-4 py-4 pr-1">
+            <form ref={serviceForm} noValidate onSubmit={handleSaveService} className="flex-1 overflow-y-auto space-y-4 py-4 pr-1">
               {/* Service Title */}
               <div className="space-y-1">
                 <label className="text-xs font-black text-slate-800">
@@ -2880,7 +2881,7 @@ export default function PageDigitalMarket() {
                           <label className="text-[10px] font-extrabold text-slate-700 block">
                             Category Name <span className="text-red-500">*</span>
                           </label>
-                          <input aria-label="Category Name"
+                          <input aria-label="Category Name" data-feedback-field={`Option ${idx+1} name`}
                             type="text"
                             placeholder="e.g. Indomie Assorted, Jollof with Chicken"
                             value={cat.name}
@@ -2898,7 +2899,7 @@ export default function PageDigitalMarket() {
                           </label>
                           <div className="relative">
                             <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400">GH₵</span>
-                            <input aria-label="Price (Cedis)"
+                            <input aria-label="Price (Cedis)" data-feedback-field={`Option ${idx+1} price`}
                               type="number"
                               min="0"
                               step="0.5"
@@ -3102,13 +3103,13 @@ export default function PageDigitalMarket() {
                 </div>
 
                 {/* Image Preview / Upload Box */}
-                <div className="relative border-2 border-dashed border-slate-200 hover:border-blue-400 rounded-2xl p-4 flex flex-col items-center justify-center bg-slate-50/70 transition-all">
+                <div data-feedback-field="Service photograph" className="relative border-2 border-dashed border-slate-200 hover:border-blue-400 rounded-2xl p-4 flex flex-col items-center justify-center bg-slate-50/70 transition-all">
                   {servImageUrl ? (
                     <div className="relative w-full flex flex-col items-center">
                       <div className="relative w-full h-40 rounded-xl overflow-hidden bg-slate-900 border border-slate-200 flex items-center justify-center shadow-xs">
                         <img src={servImageUrl} alt="Service cover" className="w-full h-full object-cover" />
                         <div className="absolute top-2 left-2 px-2 py-0.5 bg-gradient-to-r from-blue-700 via-blue-600 to-indigo-700 text-white text-[9.5px] font-black rounded-md shadow-xs flex items-center gap-1 border border-blue-400/30">
-                          <PineWordmark />
+                          <PineWordmark surface="inverse" />
                           <span className="text-white font-black">(Service)</span>
                         </div>
                       </div>
@@ -3136,7 +3137,7 @@ export default function PageDigitalMarket() {
                             onChange={(e) => {
                               const file = e.target.files?.[0];
                               if (file) {
-                                if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 20 * 1024 * 1024) { triggerToast('Choose a JPEG, PNG or WebP photo up to 20MB.', 'error'); return; }
+                                if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 20 * 1024 * 1024) { reportFormFieldError(e.currentTarget.closest('form'), e.currentTarget.closest('form')===productForm.current?'Product photograph':'Service photograph', 'Choose a JPEG, PNG or WebP photo up to 20MB.'); return; }
                                 const uploadAccount=user?.id;
                                 const reader = new FileReader();
                                 reader.onloadend = () => {
@@ -3174,7 +3175,7 @@ export default function PageDigitalMarket() {
                           onChange={(e) => {
                             const file = e.target.files?.[0];
                             if (file) {
-                              if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 20 * 1024 * 1024) { triggerToast('Choose a JPEG, PNG or WebP photo up to 20MB.', 'error'); return; }
+                              if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 20 * 1024 * 1024) { reportFormFieldError(e.currentTarget.closest('form'), e.currentTarget.closest('form')===productForm.current?'Product photograph':'Service photograph', 'Choose a JPEG, PNG or WebP photo up to 20MB.'); return; }
                               const uploadAccount=user?.id;
                               const reader = new FileReader();
                               reader.onloadend = () => {
@@ -3235,7 +3236,7 @@ export default function PageDigitalMarket() {
 
       {/* MODAL 2: OTP VERIFICATION POPUP */}
       {decliningOrder && (
-        <DashboardOverlay aria-label="Decline meetup confirmation" onClose={confirmingOrderId ? null : () => setDecliningOrder(null)} className="fixed inset-0 bg-slate-950/40 backdrop-blur-sm flex items-center justify-center p-4">
+        <DashboardOverlay data-market-dialog aria-label="Decline meetup confirmation" onClose={confirmingOrderId ? null : () => setDecliningOrder(null)} className="fixed inset-0 bg-slate-950/40 backdrop-blur-sm flex items-center justify-center p-4">
           <section className="relative w-full max-w-md rounded-3xl border border-rose-200 bg-white p-6 shadow-2xl space-y-5">
             <button type="button" aria-label="Close decline confirmation" disabled={!!confirmingOrderId} onClick={() => setDecliningOrder(null)} className="absolute right-3 top-3 p-2 text-slate-500 disabled:opacity-50"><X size={20} /></button>
             <h2 className="pr-8 text-lg font-black text-slate-900">Decline this meetup?</h2>
@@ -3249,7 +3250,7 @@ export default function PageDigitalMarket() {
       )}
 
       {verifyingOrder && (
-        <DashboardOverlay aria-label="Verify Customer Pickup PIN" onClose={() => setVerifyingOrder(null)} className="fixed inset-0 z-50 bg-slate-950/40 backdrop-blur-sm flex items-center justify-center p-4">
+        <DashboardOverlay data-market-dialog aria-label="Verify Customer Pickup PIN" onClose={() => setVerifyingOrder(null)} className="fixed inset-0 z-50 bg-slate-950/40 backdrop-blur-sm flex items-center justify-center p-4">
           <div data-popup-card className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-slate-100 space-y-6 animate-scaleIn">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2.5">
@@ -3326,7 +3327,7 @@ export default function PageDigitalMarket() {
 
       {/* VIEW ORDER PINNED MEETUP SPOT MODAL */}
       {viewingOrderMap && (
-        <DashboardOverlay aria-label="Order meetup location" onClose={() => setViewingOrderMap(null)} className="fixed inset-0 z-[200] bg-slate-950/75 backdrop-blur-xl flex items-center justify-center p-3 sm:p-6 animate-fadeIn">
+        <DashboardOverlay data-market-dialog aria-label="Order meetup location" onClose={() => setViewingOrderMap(null)} className="fixed inset-0 z-[200] bg-slate-950/75 backdrop-blur-xl flex items-center justify-center p-3 sm:p-6 animate-fadeIn">
           <div className="max-w-[calc(100vw-1rem)] sm:max-w-2xl w-full">
             <CampusMeetupMapPicker
               latitude={viewingOrderMap.meetingLatitude ?? 6.6745}
@@ -3340,24 +3341,17 @@ export default function PageDigitalMarket() {
         </DashboardOverlay>
       )}
 
-      {/* GLOBAL FLOATING PLUS BUTTON (MOBILE ONLY) */}
-      <button
-        type="button"
-        onClick={() => {
-          if (activeTab === 'services') {
-            handleOpenAddService();
-          } else {
-            setShowAddModal(true);
-          }
-        }}
-        data-seller-add className="sm:hidden fixed bottom-20 left-6 z-40 w-14 h-14 bg-gradient-to-tr from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-full shadow-[0_8px_32px_rgba(59,130,246,0.35)] flex items-center justify-center transition-all transform active:scale-95 cursor-pointer border border-blue-400/30"
-        title={activeTab === 'services' ? "Offer New Service" : "Publish New Item"}
-      >
-        <Plus className="w-7 h-7 text-white" />
-      </button>
+      {showPublishActions && <DashboardOverlay data-market-dialog aria-label="Publish to your store" onClose={() => setShowPublishActions(false)} className="ux-more-overlay flex items-end justify-center bg-slate-950/50 p-3 backdrop-blur-sm">
+        <section data-popup-card className="max-h-[85dvh] w-full max-w-lg space-y-3 overflow-y-auto rounded-3xl border border-blue-200 bg-white p-5 text-slate-900 shadow-xl">
+          <div className="flex items-center justify-between gap-3"><h2 className="text-lg font-bold">Publish to your store</h2><button type="button" aria-label="Close publish actions" onClick={() => setShowPublishActions(false)} className="rounded-xl p-2 text-slate-600"><X size={20} aria-hidden="true" /></button></div>
+          <p className="text-sm text-slate-500">What would you like to offer?</p>
+          <button type="button" aria-label="Publish an item" onClick={() => { setShowPublishActions(false); setShowAddModal(true); }} className="flex min-h-14 w-full items-center gap-3 rounded-2xl border border-blue-200 bg-blue-50 p-4 text-left text-blue-900"><Package size={22} aria-hidden="true" /><span className="flex-1"><strong className="block text-sm">Publish an item</strong><span className="text-xs">Add a product to your stock.</span></span><ArrowRight size={18} aria-hidden="true" /></button>
+          <button type="button" aria-label="Offer a service" onClick={() => { setShowPublishActions(false); handleOpenAddService(); }} className="flex min-h-14 w-full items-center gap-3 rounded-2xl border border-blue-200 bg-blue-50 p-4 text-left text-blue-900"><Wrench size={22} aria-hidden="true" /><span className="flex-1"><strong className="block text-sm">Offer a service</strong><span className="text-xs">Create a bookable service.</span></span><ArrowRight size={18} aria-hidden="true" /></button>
+        </section>
+      </DashboardOverlay>}
 
-      {/* MOBILE BOTTOM NAVIGATION BAR — FIXED FROSTY LIGHT-BLUE GLASS LOOK */}
-      <MobileNavigation label="Seller navigation" visibility="sm:hidden" activeTab={activeTab} onSelect={id => { setActiveTab(id as any); window.scrollTo({ top: 0, behavior: 'smooth' }); }} primaryIds={['dashboard','inventory','services','sales']} items={[
+      {/* MOBILE BOTTOM NAVIGATION */}
+      <MobileNavigation dialogTheme="market" label="Seller navigation" visibility="sm:hidden" activeTab={activeTab} onSelect={id => { setActiveTab(id as any); window.scrollTo({ top: 0, behavior: 'smooth' }); }} primaryIds={['dashboard','inventory','sales']} centralAction={{ label: 'Publish', icon: Plus, onClick: () => setShowPublishActions(true) }} items={[
         { id: 'dashboard', label: 'Home', icon: TrendingUp },
         { id: 'inventory', label: 'Stock', icon: Package },
         { id: 'services', label: 'Services', icon: Wrench },
@@ -3370,7 +3364,7 @@ export default function PageDigitalMarket() {
 
       {/* SELECT SERVICE LOCATION ON MAP MODAL */}
       {isMapLocationPickerOpen && (
-        <DashboardOverlay aria-label="Choose service location" onClose={() => setIsMapLocationPickerOpen(false)} className="fixed inset-0 z-[200] bg-slate-950/75 backdrop-blur-xl flex items-center justify-center p-3 sm:p-6 animate-fadeIn">
+        <DashboardOverlay data-market-dialog aria-label="Choose service location" onClose={() => setIsMapLocationPickerOpen(false)} className="fixed inset-0 z-[200] bg-slate-950/75 backdrop-blur-xl flex items-center justify-center p-3 sm:p-6 animate-fadeIn">
           <div className="max-w-[calc(100vw-1rem)] sm:max-w-2xl w-full">
             <CampusMeetupMapPicker
               latitude={servLat}
@@ -3394,7 +3388,7 @@ export default function PageDigitalMarket() {
 
       {/* VIEW EXACT SERVICE LOCATION PIN MODAL */}
       {viewingServiceMap && (
-        <DashboardOverlay aria-label="Service location" onClose={() => setViewingServiceMap(null)} className="fixed inset-0 z-[200] bg-slate-950/75 backdrop-blur-xl flex items-center justify-center p-3 sm:p-6 animate-fadeIn">
+        <DashboardOverlay data-market-dialog aria-label="Service location" onClose={() => setViewingServiceMap(null)} className="fixed inset-0 z-[200] bg-slate-950/75 backdrop-blur-xl flex items-center justify-center p-3 sm:p-6 animate-fadeIn">
           <div className="max-w-[calc(100vw-1rem)] sm:max-w-2xl w-full">
             <CampusMeetupMapPicker
               latitude={viewingServiceMap.lat || viewingServiceMap.latitude || 6.6745}
@@ -3410,7 +3404,7 @@ export default function PageDigitalMarket() {
 
       {/* SERVICE RATINGS & STUDENT REVIEWS MODAL */}
       {viewingServiceReviews && (
-        <DashboardOverlay aria-label="Service reviews" onClose={() => setViewingServiceReviews(null)} className="fixed inset-0 z-[200] bg-slate-950/75 backdrop-blur-xl flex items-center justify-center p-4 animate-fadeIn">
+        <DashboardOverlay data-market-dialog aria-label="Service reviews" onClose={() => setViewingServiceReviews(null)} className="fixed inset-0 z-[200] bg-slate-950/75 backdrop-blur-xl flex items-center justify-center p-4 animate-fadeIn">
           <div data-popup-card className="bg-white rounded-3xl max-w-lg w-full max-h-[85vh] flex flex-col p-6 shadow-2xl border border-slate-100 animate-scaleUp">
             {/* Header */}
             <div className="flex items-center justify-between pb-4 border-b border-slate-100 shrink-0">
@@ -3505,7 +3499,7 @@ export default function PageDigitalMarket() {
 
       {/* SECURE SIGNOUT CONFIRMATION MODAL */}
       {showLogoutConfirm && (
-        <DashboardOverlay aria-label="Sign out of market" onClose={() => setShowLogoutConfirm(false)} className="pv-signout-overlay fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/40 backdrop-blur-md">
+        <DashboardOverlay data-market-dialog aria-label="Sign out of market" onClose={() => setShowLogoutConfirm(false)} className="pv-signout-overlay fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/40 backdrop-blur-md">
           {/* Backdrop */}
           <div 
             className="absolute inset-0"
@@ -3571,7 +3565,7 @@ export default function PageDigitalMarket() {
               if(!accountIsCurrent(accountId))return;
               if(target==='service')setServImageUrl(url);else setProdImageUrl(url);
             } catch(err:any) {
-              if(accountIsCurrent(accountId))triggerToast(err?.message || 'Could not upload your cover photograph.','error');
+              if(accountIsCurrent(accountId))reportFormFieldError(target==='service'?serviceForm.current:productForm.current,target==='service'?'Service photograph':'Product photograph',err?.message || 'Could not upload your cover photograph.');
             } finally {
               if((accountIsCurrent(accountId)))mediaBusyChange(false);
             }

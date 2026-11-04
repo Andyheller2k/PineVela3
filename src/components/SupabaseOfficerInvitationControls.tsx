@@ -1,5 +1,7 @@
+import { publicAppBase } from '../lib/publicAppUrl';
 import {useCallback,useEffect,useRef,useState} from 'react';
 import {useAuth} from '../context/AuthContext';
+import {useClipboardFeedback} from '../lib/useClipboardFeedback';
 
 type Invitation={id:string;email:string;fullName:string;phone:string;assignedZone:string;status:string;expiresAt:string;officerId?:string};
 const inputClass='mt-1 w-full rounded-xl border border-[var(--pv-field-edge)] bg-[var(--pv-field)] p-3 text-sm text-[var(--pv-text)]';
@@ -10,6 +12,7 @@ export default function SupabaseOfficerInvitationControls({onChanged}:{onChanged
   const [error,setError]=useState(''),[notice,setNotice]=useState(''),[busy,setBusy]=useState(false),[key,setKey]=useState('');
   const [fields,setFields]=useState({fullName:'',email:'',phone:'',assignedZone:''}),[created,setCreated]=useState<{url:string;email:string;expiresAt:string}|null>(null);
   const mounted=useRef(true),inFlight=useRef(false);
+  const clipboard=useClipboardFeedback();
   useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;};},[]);
   const load=useCallback(async()=>{const rows=await apiFetch('/api/verification-teams/invitations');if(mounted.current)setInvitations(rows);},[apiFetch]);
   useEffect(()=>{load().catch((e:any)=>{if(mounted.current)setError(e.message||'Officer invitations could not load.');}).finally(()=>{if(mounted.current)setLoading(false);});},[load]);
@@ -23,7 +26,7 @@ export default function SupabaseOfficerInvitationControls({onChanged}:{onChanged
       const result=await apiFetch('/api/verification-teams',{method:'POST',body:JSON.stringify({...fields,privateKey:key})});
       if(!mounted.current)return;
       if(!result?.success||typeof result.invitationToken!=='string')throw new Error('The invitation could not be confirmed. Refresh before retrying.');
-      const url=`${window.location.origin}${window.location.pathname}#/officer-invitation?${new URLSearchParams({token:result.invitationToken})}`;
+      const url=`${publicAppBase()}#/officer-invitation?${new URLSearchParams({token:result.invitationToken})}`;
       setCreated({url,email:result.email,expiresAt:result.expiresAt});setKey('');setFields({fullName:'',email:'',phone:'',assignedZone:''});
       setNotice('Invitation saved. Share the private link with the intended officer; it is shown only here.');
       await load();await onChanged?.();
@@ -34,7 +37,7 @@ export default function SupabaseOfficerInvitationControls({onChanged}:{onChanged
     if(mounted.current){setKey('');setNotice('Officer invitation cancelled.');}
     await load();await onChanged?.();
   });}
-  return <section className="space-y-5 rounded-3xl border p-5" style={{borderColor:'var(--pv-edge)',background:'var(--pv-glass)',color:'var(--pv-text)'}} aria-label="Verified officer invitations">
+  return <section data-pv-onboarding className="space-y-5 rounded-3xl border p-5" style={{borderColor:'var(--pv-edge)',background:'var(--pv-glass)',color:'var(--pv-text)'}} aria-label="Verified officer invitations">
     <div><h3 className="text-lg font-bold">Invite a verification officer</h3><p className="mt-1 text-sm" style={{color:'var(--pv-muted)'}}>Use a separate official Google/email address. The officer verifies their own sign-in and accepts this invitation. Your approval key authorizes the invitation.</p></div>
     {error&&<p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-800 dark:bg-red-950 dark:text-red-200">{error}</p>}
     {notice&&<p role="status" className="rounded-xl bg-blue-50 p-3 text-sm dark:bg-blue-950">{notice}</p>}
@@ -51,7 +54,7 @@ export default function SupabaseOfficerInvitationControls({onChanged}:{onChanged
     {created&&<div className="space-y-3 rounded-2xl border p-4" style={{borderColor:'var(--pv-edge)',background:'var(--pv-secondary)'}}>
       <p className="text-sm font-semibold break-all">Private invitation for {created.email}</p><p className="text-xs">Expires {new Date(created.expiresAt).toLocaleString()}</p>
       <textarea readOnly aria-label="Private officer invitation link" value={created.url} className={`${inputClass} min-h-24`}/>
-      <div className="flex flex-wrap gap-3"><button type="button" className={buttonClass} onClick={async()=>{try{await navigator.clipboard.writeText(created.url);setNotice('Private invitation link copied.');}catch{setError('Copy the invitation link from the field above.');}}}>Copy private link</button><button type="button" className="rounded-xl border border-blue-300 px-4 py-3 text-sm font-semibold" onClick={()=>setCreated(null)}>I saved the link</button></div>
+      <div className="flex flex-wrap gap-3"><button type="button" className={buttonClass} onClick={async()=>{if(await clipboard.copy('officer-invitation',created.url)){setError('');setNotice('Private invitation link copied.');}else setError('Copy the invitation link from the field above.');}}>{clipboard.copiedId==='officer-invitation'?'Copied':'Copy private link'}</button><button type="button" className="rounded-xl border border-blue-300 px-4 py-3 text-sm font-semibold" onClick={()=>setCreated(null)}>I saved the link</button></div>
     </div>}
     <div className="space-y-3"><h4 className="font-semibold">Officer invitations</h4>
       {loading?<p role="status" className="text-sm">Loading invitations…</p>:invitations.length===0?<p className="text-sm text-slate-600 dark:text-slate-300">No officer invitations have been issued.</p>:invitations.map(i=><div key={i.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border p-4" style={{borderColor:'var(--pv-edge)'}}>

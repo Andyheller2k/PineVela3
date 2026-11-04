@@ -1,0 +1,38 @@
+{
+  "passed": true,
+  "scenes": 3,
+  "checks": [
+    "390px light curved mobile navigation: primary dashboard",
+    "390px light curved mobile navigation: resident dashboard",
+    "390px light curved mobile navigation: seller dashboard"
+  ],
+  "screenshots": [
+    "docs/verification/mobile-navigation-2026-11-04/browser-smoke/390-light-curved-primary-dashboard.png",
+    "docs/verification/mobile-navigation-2026-11-04/browser-smoke/390-light-curved-resident-dashboard.png",
+    "docs/verification/mobile-navigation-2026-11-04/browser-smoke/390-light-curved-seller-dashboard.png"
+  ],
+  "navigationClearance": [],
+  "buildDirectory": "dist-supabase",
+  "syntheticGuestCatalog": true,
+  "syntheticRoleVisualFixtures": [
+    "primary dashboard",
+    "manager dashboard",
+    "staff dashboard",
+    "resident dashboard",
+    "administrator dashboard",
+    "seller dashboard",
+    "field officer",
+    "customer service",
+    "manager onboarding",
+    "store onboarding"
+  ],
+  "hostedOrAccountWrites": 0,
+  "realAuthenticationTested": false,
+  "runtimeExceptions": 0,
+  "syntheticSellerWrites": 0,
+  "syntheticSignupResumeWrites": 0,
+  "syntheticAppearanceWrites": 0,
+  "syntheticSubscriptionCheckouts": 0,
+  "syntheticProfileSaves": 0,
+  "exceptionDetails": []
+}

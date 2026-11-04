@@ -1,0 +1,22 @@
+/* Scopes include the actual dialog node so portaled onboarding forms inherit
+   the same action colors as full pages. Secondary and destructive actions keep
+   their distinct roles; Google and OTP resend buttons keep their own styling. */
+html[data-theme="light"] :is([data-pv-onboarding], .onboarding-fields) {
+  --pv-action-gradient: linear-gradient(115deg, #003566, #001d3d);
+  --pv-action-hover-gradient: linear-gradient(115deg, #00274e, #000814);
+  --pv-on-action: #ffffff;
+  --pv-onboarding-edge: #003566;
+}
+html[data-theme="dark"] :is([data-pv-onboarding], .onboarding-fields) {
+  --pv-action-gradient: linear-gradient(115deg, #ffc300, #ffd60a);
+  --pv-action-hover-gradient: linear-gradient(115deg, #ffd60a, #ffe272);
+  --pv-on-action: #001d3d;
+  --pv-onboarding-edge: #ffc300;
+}
+html[data-theme][data-appearance] :is([data-pv-onboarding], .onboarding-fields) :is(.pv-primary-action, .pv-onboarding-action) {
+  background: var(--pv-action-gradient);
+  border-color: var(--pv-onboarding-edge);
+  color: var(--pv-on-action);
+}
+html[data-theme][data-appearance] :is([data-pv-onboarding], .onboarding-fields) :is(.pv-primary-action, .pv-onboarding-action):not(:disabled):hover { background: var(--pv-action-hover-gradient); }
+html[data-theme][data-appearance] :is([data-pv-onboarding], .onboarding-fields) :is(.pv-primary-action, .pv-onboarding-action) :is(svg, span) { color: inherit; }

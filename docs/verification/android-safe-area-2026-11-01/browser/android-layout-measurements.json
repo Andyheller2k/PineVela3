@@ -1,0 +1,1530 @@
+{
+  "actualNativeBundle": true,
+  "syntheticBridgeAndApi": true,
+  "measurements": [
+    {
+      "label": "Welcome",
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "w": 320,
+      "h": 560,
+      "overflow": false,
+      "fixed": []
+    },
+    {
+      "label": "Login",
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "w": 320,
+      "h": 560,
+      "overflow": false,
+      "fixed": [
+        {
+          "tag": "HEADER",
+          "x": 0,
+          "y": 0,
+          "right": 320,
+          "bottom": 79,
+          "w": 320,
+          "h": 79
+        }
+      ]
+    },
+    {
+      "label": "Signup",
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "w": 320,
+      "h": 560,
+      "overflow": false,
+      "fixed": [
+        {
+          "tag": "HEADER",
+          "x": 0,
+          "y": 0,
+          "right": 320,
+          "bottom": 79,
+          "w": 320,
+          "h": 79
+        }
+      ]
+    },
+    {
+      "label": "primary dashboard",
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "w": 320,
+      "h": 560,
+      "overflow": false,
+      "fixed": [
+        {
+          "tag": "NAV",
+          "label": "User navigation",
+          "x": 10,
+          "y": 481.203125,
+          "right": 310,
+          "bottom": 552,
+          "w": 300,
+          "h": 70.796875
+        }
+      ]
+    },
+    {
+      "label": "manager dashboard",
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "w": 320,
+      "h": 560,
+      "overflow": false,
+      "fixed": [
+        {
+          "tag": "NAV",
+          "label": "Manager navigation",
+          "x": 8,
+          "y": 482,
+          "right": 312,
+          "bottom": 552,
+          "w": 304,
+          "h": 70
+        }
+      ]
+    },
+    {
+      "label": "staff dashboard",
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "w": 320,
+      "h": 560,
+      "overflow": false,
+      "fixed": [
+        {
+          "tag": "NAV",
+          "label": "Staff navigation",
+          "x": 8,
+          "y": 482,
+          "right": 312,
+          "bottom": 552,
+          "w": 304,
+          "h": 70
+        }
+      ]
+    },
+    {
+      "label": "resident dashboard",
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "w": 320,
+      "h": 560,
+      "overflow": false,
+      "fixed": [
+        {
+          "tag": "NAV",
+          "label": "Resident navigation",
+          "x": 8,
+          "y": 482,
+          "right": 312,
+          "bottom": 552,
+          "w": 304,
+          "h": 70
+        }
+      ]
+    },
+    {
+      "label": "administrator dashboard",
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "w": 320,
+      "h": 560,
+      "overflow": false,
+      "fixed": [
+        {
+          "tag": "NAV",
+          "label": "Administrator navigation",
+          "x": 8,
+          "y": 482,
+          "right": 312,
+          "bottom": 552,
+          "w": 304,
+          "h": 70
+        }
+      ]
+    },
+    {
+      "label": "seller dashboard",
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "w": 320,
+      "h": 560,
+      "overflow": false,
+      "fixed": [
+        {
+          "tag": "HEADER",
+          "label": "header",
+          "x": 0,
+          "y": 0,
+          "right": 320,
+          "bottom": 73,
+          "w": 320,
+          "h": 73
+        },
+        {
+          "tag": "NAV",
+          "label": "Seller navigation",
+          "x": 8,
+          "y": 482,
+          "right": 312,
+          "bottom": 552,
+          "w": 304,
+          "h": 70
+        }
+      ]
+    },
+    {
+      "label": "field officer",
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "w": 320,
+      "h": 560,
+      "overflow": false,
+      "fixed": [
+        {
+          "tag": "HEADER",
+          "label": "header",
+          "x": 0,
+          "y": 0,
+          "right": 320,
+          "bottom": 69,
+          "w": 320,
+          "h": 69
+        }
+      ]
+    },
+    {
+      "label": "customer service",
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "w": 320,
+      "h": 560,
+      "overflow": false,
+      "fixed": [
+        {
+          "tag": "HEADER",
+          "label": "header",
+          "x": 0,
+          "y": 0,
+          "right": 320,
+          "bottom": 165,
+          "w": 320,
+          "h": 165
+        }
+      ]
+    },
+    {
+      "label": "manager onboarding",
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "w": 320,
+      "h": 560,
+      "overflow": false,
+      "fixed": [
+        {
+          "tag": "HEADER",
+          "x": 0,
+          "y": 0,
+          "right": 320,
+          "bottom": 73,
+          "w": 320,
+          "h": 73
+        }
+      ]
+    },
+    {
+      "label": "store onboarding",
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "w": 320,
+      "h": 560,
+      "overflow": false,
+      "fixed": []
+    },
+    {
+      "label": "Welcome",
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "w": 320,
+      "h": 560,
+      "overflow": false,
+      "fixed": []
+    },
+    {
+      "label": "Login",
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "w": 320,
+      "h": 560,
+      "overflow": false,
+      "fixed": [
+        {
+          "tag": "HEADER",
+          "x": 0,
+          "y": 0,
+          "right": 320,
+          "bottom": 79,
+          "w": 320,
+          "h": 79
+        }
+      ]
+    },
+    {
+      "label": "Signup",
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "w": 320,
+      "h": 560,
+      "overflow": false,
+      "fixed": [
+        {
+          "tag": "HEADER",
+          "x": 0,
+          "y": 0,
+          "right": 320,
+          "bottom": 79,
+          "w": 320,
+          "h": 79
+        }
+      ]
+    },
+    {
+      "label": "primary dashboard",
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "w": 320,
+      "h": 560,
+      "overflow": false,
+      "fixed": [
+        {
+          "tag": "NAV",
+          "label": "User navigation",
+          "x": 10,
+          "y": 481.203125,
+          "right": 310,
+          "bottom": 552,
+          "w": 300,
+          "h": 70.796875
+        }
+      ]
+    },
+    {
+      "label": "manager dashboard",
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "w": 320,
+      "h": 560,
+      "overflow": false,
+      "fixed": [
+        {
+          "tag": "NAV",
+          "label": "Manager navigation",
+          "x": 8,
+          "y": 482,
+          "right": 312,
+          "bottom": 552,
+          "w": 304,
+          "h": 70
+        }
+      ]
+    },
+    {
+      "label": "staff dashboard",
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "w": 320,
+      "h": 560,
+      "overflow": false,
+      "fixed": [
+        {
+          "tag": "NAV",
+          "label": "Staff navigation",
+          "x": 8,
+          "y": 482,
+          "right": 312,
+          "bottom": 552,
+          "w": 304,
+          "h": 70
+        }
+      ]
+    },
+    {
+      "label": "resident dashboard",
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "w": 320,
+      "h": 560,
+      "overflow": false,
+      "fixed": [
+        {
+          "tag": "NAV",
+          "label": "Resident navigation",
+          "x": 8,
+          "y": 482,
+          "right": 312,
+          "bottom": 552,
+          "w": 304,
+          "h": 70
+        }
+      ]
+    },
+    {
+      "label": "administrator dashboard",
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "w": 320,
+      "h": 560,
+      "overflow": false,
+      "fixed": [
+        {
+          "tag": "NAV",
+          "label": "Administrator navigation",
+          "x": 8,
+          "y": 482,
+          "right": 312,
+          "bottom": 552,
+          "w": 304,
+          "h": 70
+        }
+      ]
+    },
+    {
+      "label": "seller dashboard",
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "w": 320,
+      "h": 560,
+      "overflow": false,
+      "fixed": [
+        {
+          "tag": "HEADER",
+          "label": "header",
+          "x": 0,
+          "y": 0,
+          "right": 320,
+          "bottom": 73,
+          "w": 320,
+          "h": 73
+        },
+        {
+          "tag": "NAV",
+          "label": "Seller navigation",
+          "x": 8,
+          "y": 482,
+          "right": 312,
+          "bottom": 552,
+          "w": 304,
+          "h": 70
+        }
+      ]
+    },
+    {
+      "label": "field officer",
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "w": 320,
+      "h": 560,
+      "overflow": false,
+      "fixed": [
+        {
+          "tag": "HEADER",
+          "label": "header",
+          "x": 12,
+          "y": 16,
+          "right": 308,
+          "bottom": 86,
+          "w": 296,
+          "h": 70
+        }
+      ]
+    },
+    {
+      "label": "customer service",
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "w": 320,
+      "h": 560,
+      "overflow": false,
+      "fixed": [
+        {
+          "tag": "HEADER",
+          "label": "header",
+          "x": 0,
+          "y": 0,
+          "right": 320,
+          "bottom": 165,
+          "w": 320,
+          "h": 165
+        }
+      ]
+    },
+    {
+      "label": "manager onboarding",
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "w": 320,
+      "h": 560,
+      "overflow": false,
+      "fixed": [
+        {
+          "tag": "HEADER",
+          "x": 0,
+          "y": 0,
+          "right": 320,
+          "bottom": 73,
+          "w": 320,
+          "h": 73
+        }
+      ]
+    },
+    {
+      "label": "store onboarding",
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "w": 320,
+      "h": 560,
+      "overflow": false,
+      "fixed": []
+    },
+    {
+      "label": "Welcome",
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "w": 390,
+      "h": 780,
+      "overflow": false,
+      "fixed": []
+    },
+    {
+      "label": "Login",
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "w": 390,
+      "h": 780,
+      "overflow": false,
+      "fixed": [
+        {
+          "tag": "HEADER",
+          "x": 0,
+          "y": 0,
+          "right": 390,
+          "bottom": 79,
+          "w": 390,
+          "h": 79
+        }
+      ]
+    },
+    {
+      "label": "Signup",
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "w": 390,
+      "h": 780,
+      "overflow": false,
+      "fixed": [
+        {
+          "tag": "HEADER",
+          "x": 0,
+          "y": 0,
+          "right": 390,
+          "bottom": 79,
+          "w": 390,
+          "h": 79
+        }
+      ]
+    },
+    {
+      "label": "primary dashboard",
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "w": 390,
+      "h": 780,
+      "overflow": false,
+      "fixed": [
+        {
+          "tag": "NAV",
+          "label": "User navigation",
+          "x": 10,
+          "y": 701.203125,
+          "right": 380,
+          "bottom": 772,
+          "w": 370,
+          "h": 70.796875
+        }
+      ]
+    },
+    {
+      "label": "manager dashboard",
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "w": 390,
+      "h": 780,
+      "overflow": false,
+      "fixed": [
+        {
+          "tag": "NAV",
+          "label": "Manager navigation",
+          "x": 8,
+          "y": 702,
+          "right": 382,
+          "bottom": 772,
+          "w": 374,
+          "h": 70
+        }
+      ]
+    },
+    {
+      "label": "staff dashboard",
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "w": 390,
+      "h": 780,
+      "overflow": false,
+      "fixed": [
+        {
+          "tag": "NAV",
+          "label": "Staff navigation",
+          "x": 8,
+          "y": 702,
+          "right": 382,
+          "bottom": 772,
+          "w": 374,
+          "h": 70
+        }
+      ]
+    },
+    {
+      "label": "resident dashboard",
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "w": 390,
+      "h": 780,
+      "overflow": false,
+      "fixed": [
+        {
+          "tag": "NAV",
+          "label": "Resident navigation",
+          "x": 8,
+          "y": 702,
+          "right": 382,
+          "bottom": 772,
+          "w": 374,
+          "h": 70
+        }
+      ]
+    },
+    {
+      "label": "administrator dashboard",
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "w": 390,
+      "h": 780,
+      "overflow": false,
+      "fixed": [
+        {
+          "tag": "NAV",
+          "label": "Administrator navigation",
+          "x": 8,
+          "y": 702,
+          "right": 382,
+          "bottom": 772,
+          "w": 374,
+          "h": 70
+        }
+      ]
+    },
+    {
+      "label": "seller dashboard",
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "w": 390,
+      "h": 780,
+      "overflow": false,
+      "fixed": [
+        {
+          "tag": "HEADER",
+          "label": "header",
+          "x": 0,
+          "y": 0,
+          "right": 390,
+          "bottom": 73,
+          "w": 390,
+          "h": 73
+        },
+        {
+          "tag": "NAV",
+          "label": "Seller navigation",
+          "x": 8,
+          "y": 702,
+          "right": 382,
+          "bottom": 772,
+          "w": 374,
+          "h": 70
+        }
+      ]
+    },
+    {
+      "label": "field officer",
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "w": 390,
+      "h": 780,
+      "overflow": false,
+      "fixed": [
+        {
+          "tag": "HEADER",
+          "label": "header",
+          "x": 0,
+          "y": 0,
+          "right": 390,
+          "bottom": 69,
+          "w": 390,
+          "h": 69
+        }
+      ]
+    },
+    {
+      "label": "customer service",
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "w": 390,
+      "h": 780,
+      "overflow": false,
+      "fixed": [
+        {
+          "tag": "HEADER",
+          "label": "header",
+          "x": 0,
+          "y": 0,
+          "right": 390,
+          "bottom": 109,
+          "w": 390,
+          "h": 109
+        }
+      ]
+    },
+    {
+      "label": "manager onboarding",
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "w": 390,
+      "h": 780,
+      "overflow": false,
+      "fixed": [
+        {
+          "tag": "HEADER",
+          "x": 0,
+          "y": 0,
+          "right": 390,
+          "bottom": 73,
+          "w": 390,
+          "h": 73
+        }
+      ]
+    },
+    {
+      "label": "store onboarding",
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "w": 390,
+      "h": 780,
+      "overflow": false,
+      "fixed": []
+    },
+    {
+      "label": "Welcome",
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "w": 390,
+      "h": 780,
+      "overflow": false,
+      "fixed": []
+    },
+    {
+      "label": "Login",
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "w": 390,
+      "h": 780,
+      "overflow": false,
+      "fixed": [
+        {
+          "tag": "HEADER",
+          "x": 0,
+          "y": 0,
+          "right": 390,
+          "bottom": 79,
+          "w": 390,
+          "h": 79
+        }
+      ]
+    },
+    {
+      "label": "Signup",
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "w": 390,
+      "h": 780,
+      "overflow": false,
+      "fixed": [
+        {
+          "tag": "HEADER",
+          "x": 0,
+          "y": 0,
+          "right": 390,
+          "bottom": 79,
+          "w": 390,
+          "h": 79
+        }
+      ]
+    },
+    {
+      "label": "primary dashboard",
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "w": 390,
+      "h": 780,
+      "overflow": false,
+      "fixed": [
+        {
+          "tag": "NAV",
+          "label": "User navigation",
+          "x": 10,
+          "y": 701.203125,
+          "right": 380,
+          "bottom": 772,
+          "w": 370,
+          "h": 70.796875
+        }
+      ]
+    },
+    {
+      "label": "manager dashboard",
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "w": 390,
+      "h": 780,
+      "overflow": false,
+      "fixed": [
+        {
+          "tag": "NAV",
+          "label": "Manager navigation",
+          "x": 8,
+          "y": 702,
+          "right": 382,
+          "bottom": 772,
+          "w": 374,
+          "h": 70
+        }
+      ]
+    },
+    {
+      "label": "staff dashboard",
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "w": 390,
+      "h": 780,
+      "overflow": false,
+      "fixed": [
+        {
+          "tag": "NAV",
+          "label": "Staff navigation",
+          "x": 8,
+          "y": 702,
+          "right": 382,
+          "bottom": 772,
+          "w": 374,
+          "h": 70
+        }
+      ]
+    },
+    {
+      "label": "resident dashboard",
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "w": 390,
+      "h": 780,
+      "overflow": false,
+      "fixed": [
+        {
+          "tag": "NAV",
+          "label": "Resident navigation",
+          "x": 8,
+          "y": 702,
+          "right": 382,
+          "bottom": 772,
+          "w": 374,
+          "h": 70
+        }
+      ]
+    },
+    {
+      "label": "administrator dashboard",
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "w": 390,
+      "h": 780,
+      "overflow": false,
+      "fixed": [
+        {
+          "tag": "NAV",
+          "label": "Administrator navigation",
+          "x": 8,
+          "y": 702,
+          "right": 382,
+          "bottom": 772,
+          "w": 374,
+          "h": 70
+        }
+      ]
+    },
+    {
+      "label": "seller dashboard",
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "w": 390,
+      "h": 780,
+      "overflow": false,
+      "fixed": [
+        {
+          "tag": "HEADER",
+          "label": "header",
+          "x": 0,
+          "y": 0,
+          "right": 390,
+          "bottom": 73,
+          "w": 390,
+          "h": 73
+        },
+        {
+          "tag": "NAV",
+          "label": "Seller navigation",
+          "x": 8,
+          "y": 702,
+          "right": 382,
+          "bottom": 772,
+          "w": 374,
+          "h": 70
+        }
+      ]
+    },
+    {
+      "label": "field officer",
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "w": 390,
+      "h": 780,
+      "overflow": false,
+      "fixed": [
+        {
+          "tag": "HEADER",
+          "label": "header",
+          "x": 12,
+          "y": 16,
+          "right": 378,
+          "bottom": 86,
+          "w": 366,
+          "h": 70
+        }
+      ]
+    },
+    {
+      "label": "customer service",
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "w": 390,
+      "h": 780,
+      "overflow": false,
+      "fixed": [
+        {
+          "tag": "HEADER",
+          "label": "header",
+          "x": 0,
+          "y": 0,
+          "right": 390,
+          "bottom": 109,
+          "w": 390,
+          "h": 109
+        }
+      ]
+    },
+    {
+      "label": "manager onboarding",
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "w": 390,
+      "h": 780,
+      "overflow": false,
+      "fixed": [
+        {
+          "tag": "HEADER",
+          "x": 0,
+          "y": 0,
+          "right": 390,
+          "bottom": 73,
+          "w": 390,
+          "h": 73
+        }
+      ]
+    },
+    {
+      "label": "store onboarding",
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "w": 390,
+      "h": 780,
+      "overflow": false,
+      "fixed": []
+    },
+    {
+      "label": "Welcome",
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "w": 812,
+      "h": 360,
+      "overflow": false,
+      "fixed": []
+    },
+    {
+      "label": "Login",
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "w": 812,
+      "h": 360,
+      "overflow": false,
+      "fixed": [
+        {
+          "tag": "HEADER",
+          "x": 0,
+          "y": 0,
+          "right": 812,
+          "bottom": 51,
+          "w": 812,
+          "h": 51
+        }
+      ]
+    },
+    {
+      "label": "Signup",
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "w": 812,
+      "h": 360,
+      "overflow": false,
+      "fixed": [
+        {
+          "tag": "HEADER",
+          "x": 0,
+          "y": 0,
+          "right": 812,
+          "bottom": 51,
+          "w": 812,
+          "h": 51
+        }
+      ]
+    },
+    {
+      "label": "primary dashboard",
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "w": 812,
+      "h": 360,
+      "overflow": false,
+      "fixed": [
+        {
+          "tag": "NAV",
+          "label": "User navigation",
+          "x": 126,
+          "y": 281.203125,
+          "right": 686,
+          "bottom": 352,
+          "w": 560,
+          "h": 70.796875
+        }
+      ]
+    },
+    {
+      "label": "manager dashboard",
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "w": 812,
+      "h": 360,
+      "overflow": false,
+      "fixed": [
+        {
+          "tag": "NAV",
+          "label": "Manager navigation",
+          "x": 8,
+          "y": 282,
+          "right": 804,
+          "bottom": 352,
+          "w": 796,
+          "h": 70
+        }
+      ]
+    },
+    {
+      "label": "staff dashboard",
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "w": 812,
+      "h": 360,
+      "overflow": false,
+      "fixed": [
+        {
+          "tag": "NAV",
+          "label": "Staff navigation",
+          "x": 8,
+          "y": 282,
+          "right": 804,
+          "bottom": 352,
+          "w": 796,
+          "h": 70
+        }
+      ]
+    },
+    {
+      "label": "resident dashboard",
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "w": 812,
+      "h": 360,
+      "overflow": false,
+      "fixed": [
+        {
+          "tag": "NAV",
+          "label": "Resident navigation",
+          "x": 8,
+          "y": 282,
+          "right": 804,
+          "bottom": 352,
+          "w": 796,
+          "h": 70
+        }
+      ]
+    },
+    {
+      "label": "administrator dashboard",
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "w": 812,
+      "h": 360,
+      "overflow": false,
+      "fixed": [
+        {
+          "tag": "NAV",
+          "label": "Administrator navigation",
+          "x": 8,
+          "y": 282,
+          "right": 804,
+          "bottom": 352,
+          "w": 796,
+          "h": 70
+        }
+      ]
+    },
+    {
+      "label": "seller dashboard",
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "w": 812,
+      "h": 360,
+      "overflow": false,
+      "fixed": [
+        {
+          "tag": "HEADER",
+          "label": "header",
+          "x": 0,
+          "y": 0,
+          "right": 812,
+          "bottom": 142,
+          "w": 812,
+          "h": 142
+        }
+      ]
+    },
+    {
+      "label": "field officer",
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "w": 812,
+      "h": 360,
+      "overflow": false,
+      "fixed": [
+        {
+          "tag": "HEADER",
+          "label": "header",
+          "x": 0,
+          "y": 0,
+          "right": 806,
+          "bottom": 69,
+          "w": 806,
+          "h": 69
+        }
+      ]
+    },
+    {
+      "label": "customer service",
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "w": 812,
+      "h": 360,
+      "overflow": false,
+      "fixed": [
+        {
+          "tag": "HEADER",
+          "label": "header",
+          "x": 0,
+          "y": 0,
+          "right": 806,
+          "bottom": 63,
+          "w": 806,
+          "h": 63
+        }
+      ]
+    },
+    {
+      "label": "manager onboarding",
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "w": 812,
+      "h": 360,
+      "overflow": false,
+      "fixed": [
+        {
+          "tag": "HEADER",
+          "x": 0,
+          "y": 0,
+          "right": 806,
+          "bottom": 73,
+          "w": 806,
+          "h": 73
+        }
+      ]
+    },
+    {
+      "label": "store onboarding",
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "w": 812,
+      "h": 360,
+      "overflow": false,
+      "fixed": []
+    },
+    {
+      "label": "Welcome",
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "w": 812,
+      "h": 360,
+      "overflow": false,
+      "fixed": []
+    },
+    {
+      "label": "Login",
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "w": 812,
+      "h": 360,
+      "overflow": false,
+      "fixed": [
+        {
+          "tag": "HEADER",
+          "x": 0,
+          "y": 0,
+          "right": 812,
+          "bottom": 51,
+          "w": 812,
+          "h": 51
+        }
+      ]
+    },
+    {
+      "label": "Signup",
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "w": 812,
+      "h": 360,
+      "overflow": false,
+      "fixed": [
+        {
+          "tag": "HEADER",
+          "x": 0,
+          "y": 0,
+          "right": 812,
+          "bottom": 51,
+          "w": 812,
+          "h": 51
+        }
+      ]
+    },
+    {
+      "label": "primary dashboard",
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "w": 812,
+      "h": 360,
+      "overflow": false,
+      "fixed": [
+        {
+          "tag": "NAV",
+          "label": "User navigation",
+          "x": 126,
+          "y": 281.203125,
+          "right": 686,
+          "bottom": 352,
+          "w": 560,
+          "h": 70.796875
+        }
+      ]
+    },
+    {
+      "label": "manager dashboard",
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "w": 812,
+      "h": 360,
+      "overflow": false,
+      "fixed": [
+        {
+          "tag": "NAV",
+          "label": "Manager navigation",
+          "x": 8,
+          "y": 282,
+          "right": 804,
+          "bottom": 352,
+          "w": 796,
+          "h": 70
+        }
+      ]
+    },
+    {
+      "label": "staff dashboard",
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "w": 812,
+      "h": 360,
+      "overflow": false,
+      "fixed": [
+        {
+          "tag": "NAV",
+          "label": "Staff navigation",
+          "x": 8,
+          "y": 282,
+          "right": 804,
+          "bottom": 352,
+          "w": 796,
+          "h": 70
+        }
+      ]
+    },
+    {
+      "label": "resident dashboard",
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "w": 812,
+      "h": 360,
+      "overflow": false,
+      "fixed": [
+        {
+          "tag": "NAV",
+          "label": "Resident navigation",
+          "x": 8,
+          "y": 282,
+          "right": 804,
+          "bottom": 352,
+          "w": 796,
+          "h": 70
+        }
+      ]
+    },
+    {
+      "label": "administrator dashboard",
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "w": 812,
+      "h": 360,
+      "overflow": false,
+      "fixed": [
+        {
+          "tag": "NAV",
+          "label": "Administrator navigation",
+          "x": 8,
+          "y": 282,
+          "right": 804,
+          "bottom": 352,
+          "w": 796,
+          "h": 70
+        }
+      ]
+    },
+    {
+      "label": "seller dashboard",
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "w": 812,
+      "h": 360,
+      "overflow": false,
+      "fixed": [
+        {
+          "tag": "HEADER",
+          "label": "header",
+          "x": 0,
+          "y": 0,
+          "right": 812,
+          "bottom": 142,
+          "w": 812,
+          "h": 142
+        }
+      ]
+    },
+    {
+      "label": "field officer",
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "w": 812,
+      "h": 360,
+      "overflow": false,
+      "fixed": [
+        {
+          "tag": "HEADER",
+          "label": "header",
+          "x": 12,
+          "y": 40,
+          "right": 794,
+          "bottom": 110,
+          "w": 782,
+          "h": 70
+        }
+      ]
+    },
+    {
+      "label": "customer service",
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "w": 812,
+      "h": 360,
+      "overflow": false,
+      "fixed": [
+        {
+          "tag": "HEADER",
+          "label": "header",
+          "x": 0,
+          "y": 0,
+          "right": 806,
+          "bottom": 63,
+          "w": 806,
+          "h": 63
+        }
+      ]
+    },
+    {
+      "label": "manager onboarding",
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "w": 812,
+      "h": 360,
+      "overflow": false,
+      "fixed": [
+        {
+          "tag": "HEADER",
+          "x": 0,
+          "y": 0,
+          "right": 806,
+          "bottom": 73,
+          "w": 806,
+          "h": 73
+        }
+      ]
+    },
+    {
+      "label": "store onboarding",
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "w": 812,
+      "h": 360,
+      "overflow": false,
+      "fixed": []
+    },
+    {
+      "label": "/help",
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "w": 390,
+      "h": 780,
+      "overflow": false,
+      "fixed": []
+    },
+    {
+      "label": "/faq",
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "w": 390,
+      "h": 780,
+      "overflow": false,
+      "fixed": []
+    },
+    {
+      "label": "/pinemarket",
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "w": 390,
+      "h": 780,
+      "overflow": false,
+      "fixed": [
+        {
+          "tag": "HEADER",
+          "x": 0,
+          "y": 0,
+          "right": 390,
+          "bottom": 131,
+          "w": 390,
+          "h": 131
+        }
+      ]
+    },
+    {
+      "label": "/pineresidence",
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "w": 390,
+      "h": 780,
+      "overflow": false,
+      "fixed": [
+        {
+          "tag": "HEADER",
+          "x": 0,
+          "y": 0,
+          "right": 390,
+          "bottom": 131,
+          "w": 390,
+          "h": 131
+        }
+      ]
+    },
+    {
+      "label": "/help",
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "w": 390,
+      "h": 780,
+      "overflow": false,
+      "fixed": []
+    },
+    {
+      "label": "/faq",
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "w": 390,
+      "h": 780,
+      "overflow": false,
+      "fixed": []
+    },
+    {
+      "label": "/pinemarket",
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "w": 390,
+      "h": 780,
+      "overflow": false,
+      "fixed": [
+        {
+          "tag": "HEADER",
+          "x": 0,
+          "y": 0,
+          "right": 390,
+          "bottom": 131,
+          "w": 390,
+          "h": 131
+        }
+      ]
+    },
+    {
+      "label": "/pineresidence",
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "w": 390,
+      "h": 780,
+      "overflow": false,
+      "fixed": [
+        {
+          "tag": "HEADER",
+          "x": 0,
+          "y": 0,
+          "right": 390,
+          "bottom": 131,
+          "w": 390,
+          "h": 131
+        }
+      ]
+    },
+    {
+      "label": "/privacy.html",
+      "viewport": "width=device-width, initial-scale=1, viewport-fit=contain",
+      "w": 390,
+      "h": 780,
+      "overflow": false,
+      "fixed": []
+    },
+    {
+      "label": "/terms.html",
+      "viewport": "width=device-width, initial-scale=1, viewport-fit=contain",
+      "w": 390,
+      "h": 780,
+      "overflow": false,
+      "fixed": []
+    },
+    {
+      "label": "/legal/terms-2026-10-27.html",
+      "viewport": "width=device-width, initial-scale=1, viewport-fit=contain",
+      "w": 390,
+      "h": 780,
+      "overflow": false,
+      "fixed": []
+    },
+    {
+      "label": "/privacy.html",
+      "viewport": "width=device-width, initial-scale=1, viewport-fit=contain",
+      "w": 390,
+      "h": 780,
+      "overflow": false,
+      "fixed": []
+    },
+    {
+      "label": "/terms.html",
+      "viewport": "width=device-width, initial-scale=1, viewport-fit=contain",
+      "w": 390,
+      "h": 780,
+      "overflow": false,
+      "fixed": []
+    },
+    {
+      "label": "/legal/terms-2026-10-27.html",
+      "viewport": "width=device-width, initial-scale=1, viewport-fit=contain",
+      "w": 390,
+      "h": 780,
+      "overflow": false,
+      "fixed": []
+    }
+  ]
+}

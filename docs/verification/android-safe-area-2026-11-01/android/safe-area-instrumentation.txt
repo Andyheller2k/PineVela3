@@ -1,0 +1,107 @@
+INSTRUMENTATION_STATUS: class=app.pinevela.mobile.NativeSafeAreaTest
+INSTRUMENTATION_STATUS: current=1
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=4
+INSTRUMENTATION_STATUS: stream=
+app.pinevela.mobile.NativeSafeAreaTest:
+INSTRUMENTATION_STATUS: test=asymmetricCutoutsAndThreeButtonInsetsHaveOneNativeOwner
+INSTRUMENTATION_STATUS_CODE: 1
+INSTRUMENTATION_STATUS: stream=
+PV_SAFE_AREA {"name":"left-cutout-three-button","window":"[0,0][1080,2340]","webView":"[92,145][1080,2208]","safeInsets":"Insets{left=92, top=145, right=0, bottom=132}","imeInsets":"Insets{left=0, top=0, right=0, bottom=0}","keyboardVisible":false,"nativePadding":{"left":92,"top":145,"right":0,"bottom":132}}
+
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_STATUS: stream=
+PV_SAFE_AREA {"name":"right-landscape-cutout-and-navigation","window":"[0,0][1080,2340]","webView":"[0,64][900,2340]","safeInsets":"Insets{left=0, top=64, right=180, bottom=0}","imeInsets":"Insets{left=0, top=0, right=0, bottom=0}","keyboardVisible":false,"nativePadding":{"left":0,"top":64,"right":180,"bottom":0}}
+
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_STATUS: stream=
+PV_SAFE_AREA {"name":"gesture-navigation","window":"[0,0][1080,2340]","webView":"[0,72][1080,2280]","safeInsets":"Insets{left=0, top=72, right=0, bottom=60}","imeInsets":"Insets{left=0, top=0, right=0, bottom=0}","keyboardVisible":false,"nativePadding":{"left":0,"top":72,"right":0,"bottom":60}}
+
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_STATUS: class=app.pinevela.mobile.NativeSafeAreaTest
+INSTRUMENTATION_STATUS: current=1
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=4
+INSTRUMENTATION_STATUS: stream=.
+INSTRUMENTATION_STATUS: test=asymmetricCutoutsAndThreeButtonInsetsHaveOneNativeOwner
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_STATUS: class=app.pinevela.mobile.NativeSafeAreaTest
+INSTRUMENTATION_STATUS: current=2
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=4
+INSTRUMENTATION_STATUS: stream=
+INSTRUMENTATION_STATUS: test=keyboardInsetsReplaceTheNavigationInsetWithoutDoublePadding
+INSTRUMENTATION_STATUS_CODE: 1
+INSTRUMENTATION_STATUS: stream=
+PV_SAFE_AREA {"name":"ime-open-with-cutout","window":"[0,0][1080,2340]","webView":"[92,145][1080,1620]","safeInsets":"Insets{left=92, top=145, right=0, bottom=132}","imeInsets":"Insets{left=0, top=0, right=0, bottom=720}","keyboardVisible":true,"nativePadding":{"left":92,"top":145,"right":0,"bottom":720}}
+
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_STATUS: stream=
+PV_SAFE_AREA {"name":"ime-dismissed","window":"[0,0][1080,2340]","webView":"[92,145][1080,2208]","safeInsets":"Insets{left=92, top=145, right=0, bottom=132}","imeInsets":"Insets{left=0, top=0, right=0, bottom=0}","keyboardVisible":false,"nativePadding":{"left":92,"top":145,"right":0,"bottom":132}}
+
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_STATUS: class=app.pinevela.mobile.NativeSafeAreaTest
+INSTRUMENTATION_STATUS: current=2
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=4
+INSTRUMENTATION_STATUS: stream=.
+INSTRUMENTATION_STATUS: test=keyboardInsetsReplaceTheNavigationInsetWithoutDoublePadding
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_STATUS: class=app.pinevela.mobile.NativeSafeAreaTest
+INSTRUMENTATION_STATUS: current=3
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=4
+INSTRUMENTATION_STATUS: stream=
+INSTRUMENTATION_STATUS: test=everyBundledDocumentPreservesContainAfterResizeAndPageShow
+INSTRUMENTATION_STATUS_CODE: 1
+INSTRUMENTATION_STATUS: class=app.pinevela.mobile.NativeSafeAreaTest
+INSTRUMENTATION_STATUS: current=3
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=4
+INSTRUMENTATION_STATUS: stack=java.lang.AssertionError: Bundled document settled: https://localhost/
+	at org.junit.Assert.fail(Assert.java:89)
+	at app.pinevela.mobile.NativeSafeAreaTest.awaitDocument(NativeSafeAreaTest.java:81)
+	at app.pinevela.mobile.NativeSafeAreaTest.launchIsolatedApp(NativeSafeAreaTest.java:41)
+
+INSTRUMENTATION_STATUS: stream=
+Error in everyBundledDocumentPreservesContainAfterResizeAndPageShow(app.pinevela.mobile.NativeSafeAreaTest):
+java.lang.AssertionError: Bundled document settled: https://localhost/
+	at org.junit.Assert.fail(Assert.java:89)
+	at app.pinevela.mobile.NativeSafeAreaTest.awaitDocument(NativeSafeAreaTest.java:81)
+	at app.pinevela.mobile.NativeSafeAreaTest.launchIsolatedApp(NativeSafeAreaTest.java:41)
+
+INSTRUMENTATION_STATUS: test=everyBundledDocumentPreservesContainAfterResizeAndPageShow
+INSTRUMENTATION_STATUS_CODE: -2
+INSTRUMENTATION_STATUS: class=app.pinevela.mobile.NativeSafeAreaTest
+INSTRUMENTATION_STATUS: current=4
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=4
+INSTRUMENTATION_STATUS: stream=
+INSTRUMENTATION_STATUS: test=realSystemBarsContainThePhysicalWebViewExactlyOnce
+INSTRUMENTATION_STATUS_CODE: 1
+INSTRUMENTATION_STATUS: stream=
+PV_SAFE_AREA {"name":"actual-system-bars","window":"[0,0][1080,2340]","webView":"[0,136][1080,2274]","safeInsets":"Insets{left=0, top=136, right=0, bottom=66}","imeInsets":"Insets{left=0, top=0, right=0, bottom=0}","keyboardVisible":false,"nativePadding":{"left":0,"top":136,"right":0,"bottom":66}}
+
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_STATUS: class=app.pinevela.mobile.NativeSafeAreaTest
+INSTRUMENTATION_STATUS: current=4
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=4
+INSTRUMENTATION_STATUS: stream=.
+INSTRUMENTATION_STATUS: test=realSystemBarsContainThePhysicalWebViewExactlyOnce
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_RESULT: stream=
+
+Time: 45.501
+There was 1 failure:
+1) everyBundledDocumentPreservesContainAfterResizeAndPageShow(app.pinevela.mobile.NativeSafeAreaTest)
+java.lang.AssertionError: Bundled document settled: https://localhost/
+	at org.junit.Assert.fail(Assert.java:89)
+	at app.pinevela.mobile.NativeSafeAreaTest.awaitDocument(NativeSafeAreaTest.java:81)
+	at app.pinevela.mobile.NativeSafeAreaTest.launchIsolatedApp(NativeSafeAreaTest.java:41)
+
+FAILURES!!!
+Tests run: 4,  Failures: 1
+
+
+INSTRUMENTATION_CODE: -1

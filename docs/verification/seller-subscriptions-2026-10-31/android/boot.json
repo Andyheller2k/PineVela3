@@ -1,0 +1,57 @@
+{
+  "bootCompleted": false,
+  "checks": [
+    {
+      "boot": "",
+      "returnCode": 1
+    },
+    {
+      "boot": "",
+      "returnCode": 1
+    },
+    {
+      "boot": "",
+      "returnCode": 1
+    },
+    {
+      "boot": "",
+      "returnCode": 1
+    },
+    {
+      "boot": "",
+      "returnCode": 1
+    },
+    {
+      "boot": "",
+      "returnCode": 1
+    },
+    {
+      "boot": "",
+      "returnCode": 0
+    },
+    {
+      "boot": "",
+      "returnCode": 0
+    },
+    {
+      "boot": "",
+      "returnCode": 0
+    },
+    {
+      "boot": "",
+      "returnCode": 0
+    },
+    {
+      "boot": "",
+      "returnCode": 0
+    },
+    {
+      "boot": "",
+      "returnCode": 0
+    }
+  ],
+  "safeQuickBootLogLines": [
+    "INFO         | Loading snapshot 'default_boot'...",
+    "WARNING      | Failed to load snapshot 'default_boot'"
+  ]
+}

@@ -23,9 +23,10 @@ it does not publish an App Store/Play Store app or deploy `pinevela.app`.
 ## Privacy and updates
 
 The service worker is online-only. It does not use Cache Storage, IndexedDB or
-localStorage. It intercepts only same-origin root/index document navigations,
-requests them with `cache: no-store`, and returns a fixed offline notice on a
-network failure. API calls, authentication, media, messages and other subresources
+localStorage. It fetches only the public install manifest with `cache: no-store`.
+Document navigations use the browser's normal network stack and default offline
+screen. An already open page is not forcibly reloaded when connectivity drops.
+API calls, authentication, media, messages and other subresources
 are never intercepted or cached by the worker. Existing HTTP and account cache
 policies remain in force. The worker never reloads an open form during updates.
 

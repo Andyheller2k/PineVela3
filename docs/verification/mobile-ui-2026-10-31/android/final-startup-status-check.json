@@ -1,0 +1,34 @@
+{
+  "origin": "https://localhost",
+  "hash": "#/login",
+  "theme": "light",
+  "appearance": "public",
+  "welcome": false,
+  "activeTab": null,
+  "readyState": "complete",
+  "launchOverlay": true,
+  "platform": "android",
+  "signedOutStatus": 401,
+  "buttons": [
+    {
+      "tag": "BUTTON",
+      "text": "",
+      "ariaLabel": "Dark mode"
+    },
+    {
+      "tag": "A",
+      "text": "Sign in",
+      "ariaLabel": null
+    },
+    {
+      "tag": "A",
+      "text": "Create an account",
+      "ariaLabel": null
+    }
+  ],
+  "viewport": {
+    "width": 393,
+    "height": 778,
+    "scrollWidth": 393
+  }
+}

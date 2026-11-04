@@ -1,0 +1,45 @@
+{
+  "scenario": "390 light profile save confirmation user",
+  "completed": 0,
+  "error": "Confirmation stays inside the screen: {\"x\":-163,\"right\":195,\"y\":771.203125,\"bottom\":805.203125,\"width\":358,\"viewport\":390,\"height\":900,\"translate\":\"-50%\",\"transform\":\"none\",\"text\":\"Profile avatar updated successfully!\"}",
+  "exceptions": [],
+  "apiRequests": [
+    "/api/settings",
+    "/api/auth/me",
+    "/api/auth/appearance",
+    "/api/auth/maintenance-notice",
+    "/api/admin-messages/pending",
+    "/api/auth/account-access",
+    "/api/users/my-registered-accounts",
+    "/api/notifications",
+    "/api/sync/events",
+    "/api/digital-market/status",
+    "/api/student/my-profile",
+    "/api/hostels",
+    "/api/digital-market/products",
+    "/api/digital-market/my-orders",
+    "/api/companion",
+    "/api/auth/profile"
+  ],
+  "debug": {
+    "url": "http://127.0.0.1:46599/?scene=1793493041461-0.17420436563101482&visual_role=user&visual_theme=light#/user/dashboard?tab=options",
+    "title": "PineVela",
+    "text": "Profile avatar updated successfully!\nPine\nVela\n\nPineVela Resident\n\nHelp\nHome\nPurchases\nRoom\nOptions\nAsk AI\nAppearance\n\nChoose a theme for login and product pages.\n\nSystem default\n\nLight mode is on.\n\nAnalytics preferences\nHelp\nMerchant account\n\nApply, track your registration or open your store.\n\nBecome a Merchant\nUser Options & Account Preferences\n\nManage your resident profile, avatar, registered accounts, security credentials, and session options.\n\nVisual fixture user\nUSER\n\nSelect a system avatar or upload your own photo.\n\nProfile Avatar Saved!\nSystem Icons\nUpload Image\nCHOOSE A SYSTEM ICON AVATAR\nClassic Avatar\nEmerald Pine\nAmber Pine\nRose Pine\nViolet Pine\nMidnight Pine\nOcean Cyan Pine\nGolden Sun Pine\nCrimson Ruby Pine\nDeep Forest Pine\nVisual fixture user\ntheme-fixture-user@pinevela.invalid\nVERIFIED ACCOUNT\nDigital Room Key Activation\n\nNot linked to a room key yet.\n\nActivate Room Key Now\nSession Management\n\nSecurely sign out of your PineVela resident session across devices.\n\nSign Out\nMy Saved Wishlist\n\nYour saved marketplace products and room gear.\n\n0 ITEMS SAVED\nYour wishlist is empty\n\nBrowse the Student Digital Market on the Home tab and tap the heart icon to save products!\n\nExp",
+    "root": true,
+    "scripts": [
+      "http://127.0.0.1:46599/analytics.js",
+      "http://127.0.0.1:46599/assets/index-A7fEIhdz.js"
+    ],
+    "dataset": {
+      "appearance": "product",
+      "publicTheme": "none",
+      "authPage": "false",
+      "mobileAuth": "false",
+      "themePreference": "light",
+      "theme": "light",
+      "appMode": "browser",
+      "mobileViewport": "locked",
+      "mobileNavigation": "true"
+    }
+  }
+}

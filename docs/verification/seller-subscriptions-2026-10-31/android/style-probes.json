@@ -1,0 +1,605 @@
+{
+  "scope": "Isolated server-rendered actual component markup with final APK CSS; no authenticated seller context",
+  "isolatedDomCssProbes": true,
+  "ssrActualComponent": "src/components/SellerSubscriptionPlans.tsx",
+  "syntheticPrices": {
+    "default": 7.25,
+    "star": 127.35,
+    "pro": 211.5
+  },
+  "actualAndroidWebView": true,
+  "origin": "https://localhost",
+  "viewport": {
+    "width": 393,
+    "height": 778
+  },
+  "sourceHashes": [
+    {
+      "file": "src/components/SellerSubscriptionPlans.tsx",
+      "sha256": "1a02e4614268b3ce8771726943b082a4ef4e8fac97782a42686668db20451ff1"
+    },
+    {
+      "file": "src/sellerSubscriptions.css",
+      "sha256": "6a93236c714f3cab847ce60892aaa48387d63e26b0544a4f01c801c137691aeb"
+    },
+    {
+      "file": "src/lib/sellerPlanComparison.ts",
+      "sha256": "91ffa048855b4cd843226b921cdffef47915f124af0e6869a1e88cbe0bc2aaf4"
+    },
+    {
+      "file": "marketPlans.ts",
+      "sha256": "c2fb254dc9c8a0548b0fa9516a0554dcf1b1e6aff4d3f0aaff349c3876c31fec"
+    }
+  ],
+  "cssVerification": [
+    {
+      "href": "/assets/PageDigitalMarket-CSEeWEtB.css",
+      "sha256": "9166f39035ee370b1f6f581fd43253131d285a8103148c3adb81117ba48c542b",
+      "matchesFinalBuild": true
+    }
+  ],
+  "allChecksPassed": true,
+  "results": [
+    {
+      "theme": "light",
+      "currentPlan": "default",
+      "checks": {
+        "currentPlanMatches": true,
+        "mainPriceUsesExplicitSyntheticProps": true,
+        "checkoutTargetMatches": true,
+        "allExplicitPricesVisible": true,
+        "actionButtonUsesTheme": true,
+        "allRenewalButtonsUseTheme": true,
+        "allButtonsAtLeast44px": true,
+        "summaryAtLeast44px": true,
+        "tableFitsWithinCard": true,
+        "componentHasNoHorizontalOverflow": true,
+        "probeHasNoHorizontalOverflow": true,
+        "renderedWithoutAccountActions": true
+      },
+      "closed": {
+        "mainPrice": "GH\u20b5127.35",
+        "buttonLabel": "Upgrade to Pine Star\u2192",
+        "checkoutTarget": "star",
+        "mainButton": {
+          "background": "linear-gradient(115deg, rgb(0, 53, 102), rgb(0, 29, 61))",
+          "color": "rgb(255, 255, 255)",
+          "fontSize": "13px",
+          "width": 321.81817626953125,
+          "height": 50
+        },
+        "keepButton": {
+          "background": "none",
+          "color": "rgb(76, 98, 122)",
+          "fontSize": "12px",
+          "width": 321.81817626953125,
+          "height": 44
+        },
+        "tableWidth": 329.8182067871094,
+        "tableScrollWidth": 330,
+        "tableClientWidth": 330,
+        "componentWidth": 363.2727355957031,
+        "componentScrollWidth": 363,
+        "cardWidth": 363.2727355957031,
+        "rootClientWidth": 387,
+        "rootScrollWidth": 387,
+        "headers": [
+          "Find your nextstep forward.",
+          "Your planPineDefault",
+          "UpgradePineStar \u2728"
+        ]
+      },
+      "optionPrices": [
+        {
+          "plan": "default",
+          "label": "GH\u20b57.25 / month",
+          "button": {
+            "background": "linear-gradient(115deg, rgb(0, 53, 102), rgb(0, 29, 61))",
+            "color": "rgb(255, 255, 255)",
+            "fontSize": "12px",
+            "width": 72,
+            "height": 44
+          }
+        },
+        {
+          "plan": "star",
+          "label": "GH\u20b5127.35 / month",
+          "button": {
+            "background": "linear-gradient(115deg, rgb(0, 53, 102), rgb(0, 29, 61))",
+            "color": "rgb(255, 255, 255)",
+            "fontSize": "12px",
+            "width": 72,
+            "height": 44
+          }
+        },
+        {
+          "plan": "pro",
+          "label": "GH\u20b5211.50 / month",
+          "button": {
+            "background": "linear-gradient(115deg, rgb(0, 53, 102), rgb(0, 29, 61))",
+            "color": "rgb(255, 255, 255)",
+            "fontSize": "12px",
+            "width": 72,
+            "height": 44
+          }
+        }
+      ],
+      "buttonHeights": [
+        50,
+        44,
+        44,
+        44,
+        44
+      ],
+      "summaryHeight": 48
+    },
+    {
+      "theme": "light",
+      "currentPlan": "star",
+      "checks": {
+        "currentPlanMatches": true,
+        "mainPriceUsesExplicitSyntheticProps": true,
+        "checkoutTargetMatches": true,
+        "allExplicitPricesVisible": true,
+        "actionButtonUsesTheme": true,
+        "allRenewalButtonsUseTheme": true,
+        "allButtonsAtLeast44px": true,
+        "summaryAtLeast44px": true,
+        "tableFitsWithinCard": true,
+        "componentHasNoHorizontalOverflow": true,
+        "probeHasNoHorizontalOverflow": true,
+        "renderedWithoutAccountActions": true
+      },
+      "closed": {
+        "mainPrice": "GH\u20b5211.50",
+        "buttonLabel": "Upgrade to Pine Pro\u2192",
+        "checkoutTarget": "pro",
+        "mainButton": {
+          "background": "linear-gradient(115deg, rgb(0, 53, 102), rgb(0, 29, 61))",
+          "color": "rgb(255, 255, 255)",
+          "fontSize": "13px",
+          "width": 321.81817626953125,
+          "height": 50
+        },
+        "keepButton": {
+          "background": "none",
+          "color": "rgb(76, 98, 122)",
+          "fontSize": "12px",
+          "width": 321.81817626953125,
+          "height": 44
+        },
+        "tableWidth": 329.8182067871094,
+        "tableScrollWidth": 330,
+        "tableClientWidth": 330,
+        "componentWidth": 363.2727355957031,
+        "componentScrollWidth": 363,
+        "cardWidth": 363.2727355957031,
+        "rootClientWidth": 387,
+        "rootScrollWidth": 387,
+        "headers": [
+          "Find your nextstep forward.",
+          "Your planPineStar",
+          "UpgradePinePro \u2728"
+        ]
+      },
+      "optionPrices": [
+        {
+          "plan": "default",
+          "label": "GH\u20b57.25 / month",
+          "button": {
+            "background": "linear-gradient(115deg, rgb(0, 53, 102), rgb(0, 29, 61))",
+            "color": "rgb(255, 255, 255)",
+            "fontSize": "12px",
+            "width": 72,
+            "height": 44
+          }
+        },
+        {
+          "plan": "star",
+          "label": "GH\u20b5127.35 / month",
+          "button": {
+            "background": "linear-gradient(115deg, rgb(0, 53, 102), rgb(0, 29, 61))",
+            "color": "rgb(255, 255, 255)",
+            "fontSize": "12px",
+            "width": 72,
+            "height": 44
+          }
+        },
+        {
+          "plan": "pro",
+          "label": "GH\u20b5211.50 / month",
+          "button": {
+            "background": "linear-gradient(115deg, rgb(0, 53, 102), rgb(0, 29, 61))",
+            "color": "rgb(255, 255, 255)",
+            "fontSize": "12px",
+            "width": 72,
+            "height": 44
+          }
+        }
+      ],
+      "buttonHeights": [
+        50,
+        44,
+        44,
+        44,
+        44
+      ],
+      "summaryHeight": 48
+    },
+    {
+      "theme": "light",
+      "currentPlan": "pro",
+      "checks": {
+        "currentPlanMatches": true,
+        "mainPriceUsesExplicitSyntheticProps": true,
+        "checkoutTargetMatches": true,
+        "allExplicitPricesVisible": true,
+        "actionButtonUsesTheme": true,
+        "allRenewalButtonsUseTheme": true,
+        "allButtonsAtLeast44px": true,
+        "summaryAtLeast44px": true,
+        "tableFitsWithinCard": true,
+        "componentHasNoHorizontalOverflow": true,
+        "probeHasNoHorizontalOverflow": true,
+        "renderedWithoutAccountActions": true
+      },
+      "closed": {
+        "mainPrice": "GH\u20b5211.50",
+        "buttonLabel": "Renew Pine Pro\u2192",
+        "checkoutTarget": "pro",
+        "mainButton": {
+          "background": "linear-gradient(115deg, rgb(0, 53, 102), rgb(0, 29, 61))",
+          "color": "rgb(255, 255, 255)",
+          "fontSize": "13px",
+          "width": 321.81817626953125,
+          "height": 50
+        },
+        "keepButton": {
+          "background": "none",
+          "color": "rgb(76, 98, 122)",
+          "fontSize": "12px",
+          "width": 321.81817626953125,
+          "height": 44
+        },
+        "tableWidth": 329.8182067871094,
+        "tableScrollWidth": 330,
+        "tableClientWidth": 330,
+        "componentWidth": 363.2727355957031,
+        "componentScrollWidth": 363,
+        "cardWidth": 363.2727355957031,
+        "rootClientWidth": 387,
+        "rootScrollWidth": 387,
+        "headers": [
+          "Your included benefits",
+          "Your planPinePro"
+        ]
+      },
+      "optionPrices": [
+        {
+          "plan": "default",
+          "label": "GH\u20b57.25 / month",
+          "button": {
+            "background": "linear-gradient(115deg, rgb(0, 53, 102), rgb(0, 29, 61))",
+            "color": "rgb(255, 255, 255)",
+            "fontSize": "12px",
+            "width": 72,
+            "height": 44
+          }
+        },
+        {
+          "plan": "star",
+          "label": "GH\u20b5127.35 / month",
+          "button": {
+            "background": "linear-gradient(115deg, rgb(0, 53, 102), rgb(0, 29, 61))",
+            "color": "rgb(255, 255, 255)",
+            "fontSize": "12px",
+            "width": 72,
+            "height": 44
+          }
+        },
+        {
+          "plan": "pro",
+          "label": "GH\u20b5211.50 / month",
+          "button": {
+            "background": "linear-gradient(115deg, rgb(0, 53, 102), rgb(0, 29, 61))",
+            "color": "rgb(255, 255, 255)",
+            "fontSize": "12px",
+            "width": 72,
+            "height": 44
+          }
+        }
+      ],
+      "buttonHeights": [
+        50,
+        44,
+        44,
+        44,
+        44
+      ],
+      "summaryHeight": 48
+    },
+    {
+      "theme": "dark",
+      "currentPlan": "default",
+      "checks": {
+        "currentPlanMatches": true,
+        "mainPriceUsesExplicitSyntheticProps": true,
+        "checkoutTargetMatches": true,
+        "allExplicitPricesVisible": true,
+        "actionButtonUsesTheme": true,
+        "allRenewalButtonsUseTheme": true,
+        "allButtonsAtLeast44px": true,
+        "summaryAtLeast44px": true,
+        "tableFitsWithinCard": true,
+        "componentHasNoHorizontalOverflow": true,
+        "probeHasNoHorizontalOverflow": true,
+        "renderedWithoutAccountActions": true
+      },
+      "closed": {
+        "mainPrice": "GH\u20b5127.35",
+        "buttonLabel": "Upgrade to Pine Star\u2192",
+        "checkoutTarget": "star",
+        "mainButton": {
+          "background": "linear-gradient(115deg, rgb(255, 195, 0), rgb(255, 214, 10))",
+          "color": "rgb(0, 29, 61)",
+          "fontSize": "13px",
+          "width": 321.81817626953125,
+          "height": 50
+        },
+        "keepButton": {
+          "background": "none",
+          "color": "rgb(177, 194, 212)",
+          "fontSize": "12px",
+          "width": 321.81817626953125,
+          "height": 44
+        },
+        "tableWidth": 329.8182067871094,
+        "tableScrollWidth": 330,
+        "tableClientWidth": 330,
+        "componentWidth": 363.2727355957031,
+        "componentScrollWidth": 363,
+        "cardWidth": 363.2727355957031,
+        "rootClientWidth": 387,
+        "rootScrollWidth": 387,
+        "headers": [
+          "Find your nextstep forward.",
+          "Your planPineDefault",
+          "UpgradePineStar \u2728"
+        ]
+      },
+      "optionPrices": [
+        {
+          "plan": "default",
+          "label": "GH\u20b57.25 / month",
+          "button": {
+            "background": "linear-gradient(115deg, rgb(255, 195, 0), rgb(255, 214, 10))",
+            "color": "rgb(0, 29, 61)",
+            "fontSize": "12px",
+            "width": 72,
+            "height": 44
+          }
+        },
+        {
+          "plan": "star",
+          "label": "GH\u20b5127.35 / month",
+          "button": {
+            "background": "linear-gradient(115deg, rgb(255, 195, 0), rgb(255, 214, 10))",
+            "color": "rgb(0, 29, 61)",
+            "fontSize": "12px",
+            "width": 72,
+            "height": 44
+          }
+        },
+        {
+          "plan": "pro",
+          "label": "GH\u20b5211.50 / month",
+          "button": {
+            "background": "linear-gradient(115deg, rgb(255, 195, 0), rgb(255, 214, 10))",
+            "color": "rgb(0, 29, 61)",
+            "fontSize": "12px",
+            "width": 72,
+            "height": 44
+          }
+        }
+      ],
+      "buttonHeights": [
+        50,
+        44,
+        44,
+        44,
+        44
+      ],
+      "summaryHeight": 48
+    },
+    {
+      "theme": "dark",
+      "currentPlan": "star",
+      "checks": {
+        "currentPlanMatches": true,
+        "mainPriceUsesExplicitSyntheticProps": true,
+        "checkoutTargetMatches": true,
+        "allExplicitPricesVisible": true,
+        "actionButtonUsesTheme": true,
+        "allRenewalButtonsUseTheme": true,
+        "allButtonsAtLeast44px": true,
+        "summaryAtLeast44px": true,
+        "tableFitsWithinCard": true,
+        "componentHasNoHorizontalOverflow": true,
+        "probeHasNoHorizontalOverflow": true,
+        "renderedWithoutAccountActions": true
+      },
+      "closed": {
+        "mainPrice": "GH\u20b5211.50",
+        "buttonLabel": "Upgrade to Pine Pro\u2192",
+        "checkoutTarget": "pro",
+        "mainButton": {
+          "background": "linear-gradient(115deg, rgb(255, 195, 0), rgb(255, 214, 10))",
+          "color": "rgb(0, 29, 61)",
+          "fontSize": "13px",
+          "width": 321.81817626953125,
+          "height": 50
+        },
+        "keepButton": {
+          "background": "none",
+          "color": "rgb(177, 194, 212)",
+          "fontSize": "12px",
+          "width": 321.81817626953125,
+          "height": 44
+        },
+        "tableWidth": 329.8182067871094,
+        "tableScrollWidth": 330,
+        "tableClientWidth": 330,
+        "componentWidth": 363.2727355957031,
+        "componentScrollWidth": 363,
+        "cardWidth": 363.2727355957031,
+        "rootClientWidth": 387,
+        "rootScrollWidth": 387,
+        "headers": [
+          "Find your nextstep forward.",
+          "Your planPineStar",
+          "UpgradePinePro \u2728"
+        ]
+      },
+      "optionPrices": [
+        {
+          "plan": "default",
+          "label": "GH\u20b57.25 / month",
+          "button": {
+            "background": "linear-gradient(115deg, rgb(255, 195, 0), rgb(255, 214, 10))",
+            "color": "rgb(0, 29, 61)",
+            "fontSize": "12px",
+            "width": 72,
+            "height": 44
+          }
+        },
+        {
+          "plan": "star",
+          "label": "GH\u20b5127.35 / month",
+          "button": {
+            "background": "linear-gradient(115deg, rgb(255, 195, 0), rgb(255, 214, 10))",
+            "color": "rgb(0, 29, 61)",
+            "fontSize": "12px",
+            "width": 72,
+            "height": 44
+          }
+        },
+        {
+          "plan": "pro",
+          "label": "GH\u20b5211.50 / month",
+          "button": {
+            "background": "linear-gradient(115deg, rgb(255, 195, 0), rgb(255, 214, 10))",
+            "color": "rgb(0, 29, 61)",
+            "fontSize": "12px",
+            "width": 72,
+            "height": 44
+          }
+        }
+      ],
+      "buttonHeights": [
+        50,
+        44,
+        44,
+        44,
+        44
+      ],
+      "summaryHeight": 48
+    },
+    {
+      "theme": "dark",
+      "currentPlan": "pro",
+      "checks": {
+        "currentPlanMatches": true,
+        "mainPriceUsesExplicitSyntheticProps": true,
+        "checkoutTargetMatches": true,
+        "allExplicitPricesVisible": true,
+        "actionButtonUsesTheme": true,
+        "allRenewalButtonsUseTheme": true,
+        "allButtonsAtLeast44px": true,
+        "summaryAtLeast44px": true,
+        "tableFitsWithinCard": true,
+        "componentHasNoHorizontalOverflow": true,
+        "probeHasNoHorizontalOverflow": true,
+        "renderedWithoutAccountActions": true
+      },
+      "closed": {
+        "mainPrice": "GH\u20b5211.50",
+        "buttonLabel": "Renew Pine Pro\u2192",
+        "checkoutTarget": "pro",
+        "mainButton": {
+          "background": "linear-gradient(115deg, rgb(255, 195, 0), rgb(255, 214, 10))",
+          "color": "rgb(0, 29, 61)",
+          "fontSize": "13px",
+          "width": 321.81817626953125,
+          "height": 50
+        },
+        "keepButton": {
+          "background": "none",
+          "color": "rgb(177, 194, 212)",
+          "fontSize": "12px",
+          "width": 321.81817626953125,
+          "height": 44
+        },
+        "tableWidth": 329.8182067871094,
+        "tableScrollWidth": 330,
+        "tableClientWidth": 330,
+        "componentWidth": 363.2727355957031,
+        "componentScrollWidth": 363,
+        "cardWidth": 363.2727355957031,
+        "rootClientWidth": 387,
+        "rootScrollWidth": 387,
+        "headers": [
+          "Your included benefits",
+          "Your planPinePro"
+        ]
+      },
+      "optionPrices": [
+        {
+          "plan": "default",
+          "label": "GH\u20b57.25 / month",
+          "button": {
+            "background": "linear-gradient(115deg, rgb(255, 195, 0), rgb(255, 214, 10))",
+            "color": "rgb(0, 29, 61)",
+            "fontSize": "12px",
+            "width": 72,
+            "height": 44
+          }
+        },
+        {
+          "plan": "star",
+          "label": "GH\u20b5127.35 / month",
+          "button": {
+            "background": "linear-gradient(115deg, rgb(255, 195, 0), rgb(255, 214, 10))",
+            "color": "rgb(0, 29, 61)",
+            "fontSize": "12px",
+            "width": 72,
+            "height": 44
+          }
+        },
+        {
+          "plan": "pro",
+          "label": "GH\u20b5211.50 / month",
+          "button": {
+            "background": "linear-gradient(115deg, rgb(255, 195, 0), rgb(255, 214, 10))",
+            "color": "rgb(0, 29, 61)",
+            "fontSize": "12px",
+            "width": 72,
+            "height": 44
+          }
+        }
+      ],
+      "buttonHeights": [
+        50,
+        44,
+        44,
+        44,
+        44
+      ],
+      "summaryHeight": 48
+    }
+  ],
+  "before": {
+    "theme": "light",
+    "appearance": "public",
+    "localAppearance": "light"
+  }
+}

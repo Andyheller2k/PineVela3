@@ -1,3 +1,4 @@
+import {termsAcceptance} from '../legalPolicy.js';
 /** Validates relational constraints and RLS against real existing Auth subjects.
  * All temporary domain records, bindings, and session-revocation checks roll back.
  * Never creates an Auth identity, sends an email, or imports a legacy JSON record. */
@@ -93,7 +94,7 @@ try {
   await denied('update public.admin_memberships set sessions_invalidated_at=clock_timestamp() where context_id=$1',[admin.contextId],'42501','Administrator session epoch is database-controlled');
   async function bindReview(a:VerifiedActor){await client.query('insert into private.account_sessions(session_id,auth_user_id,active_context_id) values($1,$2,$3) on conflict(session_id) do update set active_context_id=excluded.active_context_id',[a.sessionId,a.authUserId,a.contextId]);await client.query("select set_config('request.jwt.claims',$1,true)",[JSON.stringify({sub:a.authUserId,session_id:a.sessionId,role:'authenticated'})]);}
   await bindReview(sellerOwner);
-  const sellerApplication=await submitSellerApplication(client,sellerOwner,{enrollmentId:sellerEnrollment,university:'Boundary verification campus',categoryToSell:'General Campus Essentials',idNumber:'PV-BOUNDARY-CHECK',storeName:first.raw_user_meta_data?.full_name || first.email,certified:true});
+  const sellerApplication=await submitSellerApplication(client,sellerOwner,{enrollmentId:sellerEnrollment,university:'Boundary verification campus',categoryToSell:'General Campus Essentials',idNumber:'PV-BOUNDARY-CHECK',storeName:first.raw_user_meta_data?.full_name || first.email,certified:true,termsAcceptance:termsAcceptance(true)});
   await bindReview(admin);await decideSellerApplication(client,admin,{id:sellerApplication.application.id},true);
   const store1=(await client.query('select id from public.stores where seller_context_id=$1',[seller1])).rows[0].id;
   await denied("insert into public.listings(store_id,kind,title,price) values ($1,'service','Boundary verification',1)", [store1], '23514', 'Service mode cannot be NULL');

@@ -1,0 +1,11 @@
+{
+  "avd": "PineVela_Pixel_4a_API_36",
+  "pid": 9284,
+  "startedByThisTask": true,
+  "dataWiped": false,
+  "snapshotLoad": false,
+  "snapshotSave": false,
+  "existingSessionsPreserved": true,
+  "preparedAt": "2026-10-31T10:06:01Z",
+  "log": "/tmp/pinevela-mobile-ui-emulator-20261031.log"
+}

@@ -1,0 +1,27 @@
+{
+  "commit": "1973633cdd28b2d607aadcf769f578743dc1f6f4",
+  "repository": "https://android.googlesource.com/platform/tools/adt/idea/",
+  "files": [
+    {
+      "name": "back.webp",
+      "bytes": 152074,
+      "gitBlob": "8b792b2bd615224fa62a65bb786e67dea4443724",
+      "sha256": "0e625ed165a3ed1fb1f11df9f13cd0624b8dce74976e8353d56c8d75a95c9ca7",
+      "source": "https://android.googlesource.com/platform/tools/adt/idea/+/1973633cdd28b2d607aadcf769f578743dc1f6f4/artwork/resources/device-art-resources/pixel_4a/back.webp"
+    },
+    {
+      "name": "layout",
+      "bytes": 420,
+      "gitBlob": "b3121c995e3328732493eba45f4c328cdb7f87cd",
+      "sha256": "b838993582afb1ad87216a73a42f64f3afb0f056689a777cd88f19c1e1c81305",
+      "source": "https://android.googlesource.com/platform/tools/adt/idea/+/1973633cdd28b2d607aadcf769f578743dc1f6f4/artwork/resources/device-art-resources/pixel_4a/layout"
+    },
+    {
+      "name": "mask.webp",
+      "bytes": 7404,
+      "gitBlob": "5f1cfb858f0363bf1a57e30f9d09cf09852bbcb6",
+      "sha256": "abb352cefba43422c1b36a61b3f2667519959c9f6de705ecc9d6c3f74479b5af",
+      "source": "https://android.googlesource.com/platform/tools/adt/idea/+/1973633cdd28b2d607aadcf769f578743dc1f6f4/artwork/resources/device-art-resources/pixel_4a/mask.webp"
+    }
+  ]
+}

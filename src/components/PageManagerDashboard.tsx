@@ -1,3 +1,4 @@
+import { publicAppBase } from '../lib/publicAppUrl';
 import HelpLink from './HelpLink';
 import { useQuery } from '@tanstack/react-query';
 import React,{ useEffect,useMemo,useState } from 'react';
@@ -8,18 +9,21 @@ import { routePopupFeedback } from '../lib/feedback';
 import { activateOnKeyboard } from '../lib/keyboardActivation';
 import { saveNavigationLayout,usesTopNavigation } from '../lib/navigationLayout';
 import { invalidateAllQueries,queryClient } from '../lib/queryClient';
+import { loadManagerDashboardData } from '../lib/managerDashboardData';
 import AcademicYearRoomReset from './AcademicYearRoomReset';
 import DashboardOverlay from './DashboardOverlay';
 import HostelRegistration from './HostelRegistration';
 import LogoutConfirmationModal from './LogoutConfirmationModal';
 import ManagerAccountControls from './ManagerAccountControls';
 import ManagerDigitalKeysView from './ManagerDigitalKeysView';
+import ManagerPropertyStatusCard,{ managerPropertyLockMessage,managerPropertyReviewState } from './ManagerPropertyStatusCard';
 import { ManagerMeetingsTab } from './ManagerMeetingsTab';
 import ManagerProfileSettings from './ManagerProfileSettings';
 import MobileNavigation from './MobileNavigation';
 import OnboardingProgress,{ STAFF_ACCOUNT_STEPS } from './OnboardingProgress';
 import PineLogo from './PineLogo';
 import { ManagerResidenceRequests } from './ResidenceChangeRequests';
+import { useClipboardFeedback } from '../lib/useClipboardFeedback';
 import RouteSkeleton from './RouteSkeleton';
 import TopNavBadge from './TopNavBadge';
 
@@ -117,13 +121,13 @@ export default function PageManagerDashboard() {
   const profileAccountRef=React.useRef(profileAccountKey);
   profileAccountRef.current=profileAccountKey;
   useEffect(()=>{profileAccountRef.current=profileAccountKey;return()=>{profileAccountRef.current='';};},[profileAccountKey]);
-  const { notifications: systemNotifications, unreadCount: systemUnreadCount, markAsRead } = useNotifications();
+  const { notifications: systemNotifications, unreadCount: systemUnreadCount, markAsRead, refreshNotifications } = useNotifications();
   const navigate = useNavigate();
 
   // Prioritize onboarding flow/tabs immediately if manager is pending approval
   const isPendingOnboarding = user && user.role === 'manager' && user.hasApprovedHostel === false;
 
-  const [activeTab, setActiveTab] = useState<'overview' | 'properties' | 'blocks' | 'staff' | 'maintenance' | 'meetings' | 'notifications' | 'settings'>(
+  const [activeTab, setActiveTab] = useState<'overview' | 'registration' | 'properties' | 'blocks' | 'staff' | 'maintenance' | 'meetings' | 'notifications' | 'settings'>(
     isPendingOnboarding ? 'notifications' : 'overview'
   );
   // Collapsible sidebar state (Disabled minimizing to prevent glitched overlapping)
@@ -135,11 +139,14 @@ export default function PageManagerDashboard() {
   }, [isSidebarTopNav]);
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const clipboard = useClipboardFeedback();
   const [selectedBlock, setSelectedBlock] = useState<any | null>(null);
   const [showRegistration, setShowRegistration] = useState(false);
   const [showAccountControls, setShowAccountControls] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [showWelcomePopup, setShowWelcomePopup] = useState(false);
+  const welcomeHandled = React.useRef(false);
+  const [welcomeError, setWelcomeError] = useState('');
 
   // Manager specific states
   const [properties, setProperties] = useState<any[]>([]);
@@ -235,7 +242,6 @@ export default function PageManagerDashboard() {
     return `${year}/${year + 1}`;
   });
   const [loadingRoomKeys, setLoadingRoomKeys] = useState(false);
-  const [copiedKeyId, setCopiedKeyId] = useState<string | null>(null);
 
   // Digital Dispatch Modal
   const [dispatchModalOpen, setDispatchModalOpen] = useState(false);
@@ -257,7 +263,8 @@ export default function PageManagerDashboard() {
   const hasApprovedProperty = 
     properties.some(isPropertyApproved) || 
     Boolean(primaryProperty && isPropertyApproved(primaryProperty));
-  const hasAnyProperty = properties.length > 0;
+  const propertyReview = managerPropertyReviewState(primaryProperty);
+  const lockNotice = managerPropertyLockMessage(primaryProperty);
 
   // Welcome Banner Dismissal State
   const [isWelcomeBannerDismissed, setIsWelcomeBannerDismissed] = useState<boolean>(() => {
@@ -290,71 +297,10 @@ export default function PageManagerDashboard() {
   // TanStack Query for manager server-state caching and automatic refetching
   const { data: managerData, isPending: managerPending, error: managerError, refetch: retryManagerData } = useQuery({
     queryKey: ['managerData', user?.id, user?.email],
-    queryFn: async ({ signal }) => {
-      const nativeData = (await Promise.all([
-        '/api/hostels', '/api/manager/my-hostel', '/api/issue-reports', '/api/staff',
-        '/api/staff/invitations', '/api/staff-bargains', '/api/board-requests',
-        '/api/activities', '/api/room-keys'
-      ].map(path => apiFetch(path, { signal }))));
-      // 1. Fetch properties from backend
-      const resProperties = nativeData[0];
-      const myHostelRes = nativeData[1];
-      
-      const cleanEmail = (user?.email || '').toLowerCase().trim();
-      const userId = user?.id;
-
-      let managerProperties: any[] = [];
-      if (Array.isArray(resProperties)) {
-        managerProperties = resProperties.filter((p: any) => {
-          if (!p) return false;
-          const matchEmail = p.managerEmail && cleanEmail && p.managerEmail.toLowerCase().trim() === cleanEmail;
-          const matchId = (p.managerId && userId && p.managerId === userId) || (p.assignedManagerId && userId && p.assignedManagerId === userId);
-          return matchEmail || matchId;
-        });
-      }
-
-      if (managerProperties.length === 0 && myHostelRes?.hostel) {
-        managerProperties = [myHostelRes.hostel];
-      } else if (myHostelRes?.hostel && managerProperties.length > 0) {
-        managerProperties = managerProperties.map(p => 
-          p.id === myHostelRes.hostel.id ? { ...p, ...myHostelRes.hostel } : p
-        );
-      }
-
-      // 3. Fetch issue reports / maintenance
-      const resIssues = nativeData[2];
-      let mappedIssues: any[] = [];
-      if (Array.isArray(resIssues)) {
-        const relevantIssues = managerProperties.length > 0
-          ? resIssues.filter((i: any) => 
-              !i.hostelName || managerProperties.some(p => p.name?.toLowerCase() === i.hostelName?.toLowerCase()) ||
-              (i.hostelId && managerProperties.some(p => p.id === i.hostelId))
-            )
-          : resIssues;
-
-        mappedIssues = relevantIssues.map((i: any) => (i));
-      }
-
-      // 4. Fetch staff members
-      const resStaff = nativeData[3];
-      const invitations = nativeData[4];
-      const resBargains = nativeData[5];
-      const resBoard = nativeData[6];
-      const resActivities = nativeData[7];
-      const resRoomKeys = nativeData[8];
-
-      return {
-        managerProperties,
-        mappedIssues,
-        invitations,
-        staffList: Array.isArray(resStaff) ? resStaff : [], staffBargains: Array.isArray(resBargains) ? resBargains : [],
-        boardRequests: Array.isArray(resBoard) ? resBoard : [],
-        activities: Array.isArray(resActivities) && resActivities.length > 0 ? resActivities.slice(0, 10) : [],
-        roomKeys: Array.isArray(resRoomKeys) ? resRoomKeys : []
-      };
-    },
+    queryFn: ({ signal }) => loadManagerDashboardData(apiFetch, signal),
     enabled: Boolean(user),
-    refetchInterval: 8000,
+    retry: false,
+    refetchInterval: 60000,
   });
 
   const loading = Boolean(user) && managerPending;
@@ -429,13 +375,8 @@ export default function PageManagerDashboard() {
     }
   };
 
-  const handleCopyKey = (keyString: string, keyId: string) => {
-    navigator.clipboard.writeText(keyString);
-    setCopiedKeyId(keyId);
-    setToastMessage(`Key "${keyString}" copied to clipboard!`);
-    setTimeout(() => {
-      setCopiedKeyId(null);
-    }, 2200);
+  const handleCopyKey = async (keyString: string, keyId: string) => {
+    triggerToast(await clipboard.copy(keyId, keyString) ? 'Room key copied to clipboard!' : 'Copy is unavailable. Select the room key to copy it.');
   };
 
   // Display the registered structure without inventing room types, floors or bed counts.
@@ -473,10 +414,12 @@ export default function PageManagerDashboard() {
   const handleSaveProfile = async (updatedProfile: any) => {
     const profileAccount=profileAccountRef.current;
     try {
-      const res = await apiFetch('/api/auth/profile', {
+      const photoOnly = updatedProfile.name === (user?.name || '') && updatedProfile.phone === (user?.phone || '');
+      const res = await apiFetch(photoOnly ? '/api/auth/profile/avatar' : '/api/auth/profile', {
         method: 'PUT',
         headers:{'X-PineVela-Profile-Context':String(user?.id)},
-        body: JSON.stringify(({name:updatedProfile.name,phone:updatedProfile.phone,photo:updatedProfile.photo}))
+        body: JSON.stringify(photoOnly ? {photo:updatedProfile.photo} :
+          {name:updatedProfile.name,phone:updatedProfile.phone,photo:updatedProfile.photo})
       });
       if(profileAccountRef.current!==profileAccount)return;
       if(!res?.success || !res?.user)throw new Error('Your profile could not be saved. Sign in and try again.');
@@ -524,7 +467,7 @@ export default function PageManagerDashboard() {
 
       {
         if (!/^[a-f0-9]{64}$/.test(createdStaff?.invitationToken || '')) throw new Error('The invitation link could not be retrieved. Renew it from pending staff invitations.');
-        setStaffInvitationLink(`${window.location.origin}${window.location.pathname}#/staff-invitation?token=${createdStaff.invitationToken}`);
+        setStaffInvitationLink(`${publicAppBase()}#/staff-invitation?token=${createdStaff.invitationToken}`);
         setNewStaffName(''); setNewStaffPhone(''); setNewStaffEmail('');
         triggerToast('Invitation created. Share the link with your staff member to verify their work email.');
         await fetchManagerData();
@@ -730,13 +673,62 @@ export default function PageManagerDashboard() {
     }
   }, [user?.id, user?.email]);
 
-  const mayShowWelcome=(activeTab!=='settings'&&!showAccountControls);
   useEffect(() => {
-    if (!loading && !managerError && user) {
-      const hasAnyHostel = (managerData?.managerProperties.length || properties.length) > 0;
-      setShowWelcomePopup(!hasAnyHostel && !showRegistration && mayShowWelcome);
+    if (!user?.id || user.role !== 'manager') return;
+    let current = true;
+    welcomeHandled.current = false;
+    apiFetch('/api/manager/welcome/ensure', { method: 'POST', body: '{}' }).then(result => {
+      if (!current) return;
+      setShowWelcomePopup(Boolean(result.show) && !welcomeHandled.current);
+      setWelcomeError('');
+      void refreshNotifications();
+    }).catch(() => {
+      if (current) setWelcomeError('Your welcome alert could not be loaded. Retry to save it to your alerts.');
+    });
+    return () => { current = false; };
+  }, [user?.id, user?.role]);
+
+  const dismissManagerWelcome = () => {
+    welcomeHandled.current = true;
+    setShowWelcomePopup(false);
+    void apiFetch('/api/manager/welcome/ack', { method: 'PUT' }).catch(() => {
+      setWelcomeError('Your welcome acknowledgement could not be saved. It may appear again at your next sign-in.');
+    });
+  };
+
+  const retryManagerWelcome = async () => {
+    setWelcomeError('');
+    try {
+      if (welcomeHandled.current) {
+        await apiFetch('/api/manager/welcome/ack', { method: 'PUT' });
+        return;
+      }
+      const result = await apiFetch('/api/manager/welcome/ensure', { method: 'POST', body: '{}' });
+      setShowWelcomePopup(Boolean(result.show) && !welcomeHandled.current);
+      await refreshNotifications();
+    } catch {
+      setWelcomeError(welcomeHandled.current
+        ? 'Your welcome acknowledgement could not be saved. Retry when connected.'
+        : 'Your welcome alert could not be loaded. Retry to save it to your alerts.');
     }
-  }, [loading, managerError, managerData, properties.length, showRegistration, mayShowWelcome]);
+  };
+
+  const openPropertyRegistration = () => {
+    if (showWelcomePopup) dismissManagerWelcome();
+    setShowRegistration(true);
+    setActiveTab('registration');
+  };
+
+  const openRegistrationTab = () => {
+    if (showWelcomePopup) dismissManagerWelcome();
+    const needsForm = Boolean(primaryProperty &&
+      (primaryProperty.registrationStatus === 'more_info_required' ||
+        primaryProperty.registrationStatus === 'not_submitted' ||
+        primaryProperty.registrationRequired));
+    if (needsForm) setShowRegistration(true);
+    else setShowRegistration(false);
+    setActiveTab('registration');
+  };
 
   const handleLogout = () => {
     setShowLogoutConfirm(true);
@@ -838,7 +830,6 @@ export default function PageManagerDashboard() {
 
   return (
     <div data-dashboard-shell className="page-canvas min-h-screen h-screen flex flex-col lg:flex-row text-slate-800 overflow-hidden font-sans">
-      {managerError && <div role="alert" className="fixed top-2 left-1/2 -translate-x-1/2 z-50 rounded-xl bg-red-50 border border-red-200 px-4 py-2 text-sm text-red-800">Updates unavailable: {managerError.message} <button onClick={() => void retryManagerData()} className="underline">Retry</button></div>}
       {/* Toast Notification */}
       <AnimatePresence>
         {toastMessage && (
@@ -877,7 +868,8 @@ export default function PageManagerDashboard() {
       </header>
 
       {/* MOBILE BOTTOM NAV (lg:hidden) */}
-      <MobileNavigation label="Manager navigation" activeTab={activeTab} onSelect={id => setActiveTab(id as any)} primaryIds={["overview", "properties", "maintenance", "notifications"]} items={[
+      <MobileNavigation label="Manager navigation" activeTab={activeTab} onSelect={id => id === 'registration' ? openRegistrationTab() : setActiveTab(id as any)} primaryIds={hasApprovedProperty ? ["overview", "properties", "maintenance", "notifications"] : ["registration", "notifications", "settings"]} items={[
+            { id: 'registration', label: primaryProperty?.registrationRequired ? 'Register' : 'Status', icon: Building2, group: 'Property setup' },
             { id: 'overview', label: 'Overview', icon: ShieldCheck, locked: !hasApprovedProperty },
             { id: 'properties', label: 'Properties', icon: Building2, locked: !hasApprovedProperty },
             { id: 'blocks', label: 'Blocks', icon: Layers, group: 'Property operations', locked: !hasApprovedProperty },
@@ -919,8 +911,8 @@ export default function PageManagerDashboard() {
         </button>
         <div className="w-px h-6 bg-slate-200/70 shrink-0" />
         {[
-        { id: 'overview', label: 'Overview', icon: ShieldCheck }, { id: 'properties', label: 'Properties', icon: Building2 }, { id: 'blocks', label: 'Blocks', icon: Layers }, { id: 'staff', label: 'Staff', icon: Users, badge: staffBargains.filter(b => (b.status || '').toLowerCase() === 'pending').length || staffList.length }, { id: 'maintenance', label: 'Fixes', icon: Wrench, badge: maintenanceIssues.filter(i => !i.withdrawn && !i.closedByManager && (i.status === 'Pending' || i.status === 'Resolved' || i.rescheduleRequested || i.staffRescheduleRequested || i.staffDeclined)).length || activeIssues }, { id: 'meetings', label: 'Meetings', icon: CalendarCheck }, { id: 'notifications', label: 'Alerts', icon: Bell, badge: systemUnreadCount }
-      ].map(tab => <button aria-current={activeTab === tab.id ? 'page' : undefined} key={tab.id} disabled={!hasApprovedProperty && tab.id !== 'notifications'} onClick={() => setActiveTab(tab.id as any)} aria-label={`${tab.label}${tab.badge ? ` (${tab.badge})` : ''}`} className={`flex-1 min-w-0 flex flex-col items-center gap-0.5 py-1.5 rounded-xl text-[9px] font-bold ${activeTab === tab.id ? 'text-blue-700 bg-blue-100/65' : 'text-slate-500 hover:bg-white/70'} disabled:opacity-40 cursor-pointer`}><span className="relative inline-flex"><tab.icon className="w-4 h-4" /><TopNavBadge count={tab.badge} /></span><span className="truncate max-w-full">{tab.label}</span></button>)}<button onClick={() => setShowLogoutConfirm(true)} title="Sign Out" className="shrink-0 flex flex-col items-center gap-0.5 px-2 py-1.5 text-[9px] font-bold text-rose-600 hover:bg-rose-50 rounded-xl cursor-pointer"><LogOutIcon className="w-4 h-4" /><span>Sign Out</span></button><button onClick={() => setIsSidebarTopNav(false)} title="Show sidebar" className="p-2 text-slate-500 hover:text-blue-700 cursor-pointer"><PanelLeftOpen className="w-4 h-4" /></button><HelpLink compact className="!px-2" /></div></nav>}
+        { id: 'overview', label: 'Overview', icon: ShieldCheck }, { id: 'registration', label: primaryProperty?.registrationRequired ? 'Register' : 'Status', icon: Building2 }, ...(hasApprovedProperty ? [{ id: 'properties', label: 'Properties', icon: Building2 }] : []), { id: 'blocks', label: 'Blocks', icon: Layers }, { id: 'staff', label: 'Staff', icon: Users, badge: staffBargains.filter(b => (b.status || '').toLowerCase() === 'pending').length || staffList.length }, { id: 'maintenance', label: 'Fixes', icon: Wrench, badge: maintenanceIssues.filter(i => !i.withdrawn && !i.closedByManager && (i.status === 'Pending' || i.status === 'Resolved' || i.rescheduleRequested || i.staffRescheduleRequested || i.staffDeclined)).length || activeIssues }, { id: 'meetings', label: 'Meetings', icon: CalendarCheck }, { id: 'notifications', label: 'Alerts', icon: Bell, badge: systemUnreadCount }
+      ].map(tab => <button aria-current={activeTab === tab.id ? 'page' : undefined} key={tab.id} disabled={!hasApprovedProperty && tab.id !== 'notifications' && tab.id !== 'registration'} onClick={() => tab.id === 'registration' ? openRegistrationTab() : setActiveTab(tab.id as any)} aria-label={`${tab.label}${tab.badge ? ` (${tab.badge})` : ''}`} className={`flex-1 min-w-0 flex flex-col items-center gap-0.5 py-1.5 rounded-xl text-[9px] font-bold ${activeTab === tab.id ? 'text-blue-700 bg-blue-100/65' : 'text-slate-500 hover:bg-white/70'} disabled:opacity-40 cursor-pointer`}><span className="relative inline-flex"><tab.icon className="w-4 h-4" /><TopNavBadge count={tab.badge} /></span><span className="truncate max-w-full">{tab.label}</span></button>)}<button onClick={() => setShowLogoutConfirm(true)} title="Sign Out" className="shrink-0 flex flex-col items-center gap-0.5 px-2 py-1.5 text-[9px] font-bold text-rose-600 hover:bg-rose-50 rounded-xl cursor-pointer"><LogOutIcon className="w-4 h-4" /><span>Sign Out</span></button><button onClick={() => setIsSidebarTopNav(false)} title="Show sidebar" className="p-2 text-slate-500 hover:text-blue-700 cursor-pointer"><PanelLeftOpen className="w-4 h-4" /></button><HelpLink compact className="!px-2" /></div></nav>}
       {!isSidebarTopNav && <aside data-portal-navigation="sidebar" className={`hidden lg:flex ${isSidebarCollapsed ? 'w-20 p-4' : 'w-72 p-6'} my-6 ml-6 h-[calc(100vh-3rem)] bg-gradient-to-br from-sky-100/90 via-blue-100/85 to-amber-50/40 backdrop-blur-3xl border border-sky-200/80 shadow-2xl rounded-3xl flex flex-col justify-between shrink-0 overflow-y-auto z-20 transition-all duration-300 relative`}>
         <button onClick={() => setIsSidebarTopNav(true)} title="Use top navigation" className="absolute top-3 right-3 p-2 rounded-xl text-slate-500 hover:text-blue-700 hover:bg-white/70 cursor-pointer"><PanelLeftClose className="w-4 h-4" /></button>
 
@@ -975,6 +967,7 @@ export default function PageManagerDashboard() {
               <p className="px-3 text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Operations Center</p>
             )}
             {[
+              { id: 'registration', label: primaryProperty?.registrationRequired ? 'Register Property' : 'Property Status', icon: Building2, sub: 'Residence registration review', locked: false },
               { id: 'overview', label: 'Dashboard Overview', icon: ShieldCheck, sub: 'Live metrics & activity', locked: !hasApprovedProperty },
               { id: 'properties', label: 'My Properties', icon: Building2, sub: 'Registered residence space', locked: !hasApprovedProperty },
               { id: 'blocks', label: 'Blocks & Rooms', icon: Layers, sub: 'Interactive 3D structure', locked: !hasApprovedProperty },
@@ -1022,7 +1015,7 @@ export default function PageManagerDashboard() {
                 <button
                   key={tab.id}
                   aria-current={activeTab === tab.id ? 'page' : undefined}
-                  onClick={() => !isLocked && setActiveTab(tab.id as any)}
+                  onClick={() => !isLocked && (tab.id === 'registration' ? openRegistrationTab() : setActiveTab(tab.id as any))}
                   disabled={isLocked}
                   title={tab.label}
                   className={`w-full flex items-center ${isSidebarCollapsed ? 'justify-center' : 'justify-between'} px-3.5 py-3 rounded-2xl font-medium transition-all duration-300 text-left group relative ${
@@ -1091,14 +1084,19 @@ export default function PageManagerDashboard() {
 
       {/* MAIN CONTENT AREA */}
       <main className={`dashboard-centered-content flex-1 p-6 pb-28 lg:p-10 lg:pb-10 space-y-8 overflow-y-auto h-full relative ${isSidebarTopNav ? 'lg:pt-24 lg:w-[calc(100vw-22rem)] lg:max-w-[calc(100vw-22rem)] lg:mx-auto' : ''}`}>
-        {((primaryProperty?.registrationRequired || primaryProperty?.registrationStatus === 'more_info_required')) && !showRegistration && <div className="relative z-10 flex flex-col gap-4 rounded-2xl border border-blue-200 bg-blue-50 p-5 sm:flex-row sm:items-center sm:justify-between dark:border-cyan-900 dark:bg-slate-900">
+        {managerError && <div role="alert" className="relative z-10 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800 dark:border-red-800 dark:bg-red-950 dark:text-red-100">Updates unavailable: {managerError.message} <button type="button" onClick={() => void retryManagerData()} className="font-bold underline">Retry</button></div>}
+        {managerData?.failedSections.length > 0 && <div role="status" className="relative z-10 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950 dark:border-amber-500 dark:bg-amber-950 dark:text-amber-100">Some sections are temporarily unavailable: {managerData.failedSections.join(', ')}. <button type="button" onClick={() => void retryManagerData()} className="font-bold underline">Retry</button></div>}
+        {welcomeError && <div role="alert" className="relative z-10 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-rose-300 bg-rose-50 p-3 text-sm font-semibold text-rose-800">
+          <span>{welcomeError}</span><button type="button" onClick={retryManagerWelcome} className="rounded-lg border border-rose-400 px-3 py-1.5 font-bold">Retry</button>
+        </div>}
+        {activeTab !== 'registration' && activeTab !== 'notifications' && ((primaryProperty?.registrationRequired || primaryProperty?.registrationStatus === 'more_info_required')) && !showRegistration && <div className="relative z-10 flex flex-col gap-4 rounded-2xl border border-blue-200 bg-blue-50 p-5 sm:flex-row sm:items-center sm:justify-between dark:border-cyan-900 dark:bg-slate-900">
           <div><h2 className="font-bold text-blue-950 dark:text-cyan-100">{primaryProperty.registrationStatus === 'more_info_required' ? 'Residence corrections requested' : 'Complete residence registration'}</h2>
             <p className="mt-1 text-sm text-slate-700 dark:text-slate-200">{primaryProperty.registrationStatus === 'more_info_required' ? 'An administrator requested more information. Open your saved registration, review the feedback and submit your corrections.' : 'Your manager account is verified. Add the property photographs and actual room configuration for residence review.'}</p></div>
-          <button type="button" onClick={() => setShowRegistration(true)} className="shrink-0 rounded-xl bg-blue-700 px-5 py-3 font-bold text-white hover:bg-blue-800">{primaryProperty.registrationStatus === 'more_info_required' ? 'Review & Correct Registration' : 'Complete Registration'}</button>
+          <button type="button" onClick={openPropertyRegistration} className="shrink-0 rounded-xl bg-blue-700 px-5 py-3 font-bold text-white hover:bg-blue-800">{primaryProperty.registrationStatus === 'more_info_required' ? 'Review & Correct Registration' : 'Complete Registration'}</button>
         </div>}
-        {/* TAB CONTENT OR REGISTRATION */}
-        {showRegistration && activeTab !== 'settings' ? (
-          <div className="animate-fadeIn relative z-10 h-full">
+        {/* Keep the draft mounted when moving between dashboard tabs. */}
+        {showRegistration && (
+          <div className={`relative z-10 h-full ${activeTab === 'registration' ? 'animate-fadeIn' : 'hidden'}`} inert={activeTab !== 'registration'}>
             <div className="bg-white border border-blue-200/50 rounded-3xl shadow-2xl p-0 md:p-2 overflow-y-auto h-full max-h-[calc(100vh-4rem)]">
               <HostelRegistration 
                 onSuccess={(h) => {
@@ -1107,14 +1105,18 @@ export default function PageManagerDashboard() {
                   triggerToast('Hostel Registration Submitted to Admin for Review!');
                   void fetchManagerData();
                   setShowRegistration(false);
-                  setActiveTab('notifications');
+                  setActiveTab('registration');
                 }} 
-                onCancel={() => { setShowRegistration(false); setShowWelcomePopup(true); }} 
+                onCancel={() => setActiveTab('notifications')}
                 currentUserId={user?.id}
               />
             </div>
           </div>
-        ) : (
+        )}
+        {activeTab === 'registration' && !showRegistration &&
+          <ManagerPropertyStatusCard property={primaryProperty} onRegister={openPropertyRegistration}
+            onRefresh={() => void retryManagerData()} onOpenDashboard={() => setActiveTab('overview')} />}
+        {activeTab !== 'registration' && (
           <>
             {activeTab === 'settings' && <ManagerProfileSettings
               key={profileAccountKey}
@@ -1131,10 +1133,10 @@ export default function PageManagerDashboard() {
                   <div className="absolute right-0 top-0 w-96 h-96 bg-cyan-400/20 rounded-full blur-3xl pointer-events-none" />
                   <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
                     <div className="space-y-2 max-w-2xl">
-                      <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/15 text-emerald-900 border border-emerald-300/60 rounded-full text-xs font-black uppercase tracking-wider">
+                      {!primaryProperty?.isApproved && <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/15 text-emerald-900 border border-emerald-300/60 rounded-full text-xs font-black uppercase tracking-wider">
                         <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                        <span>{(!primaryProperty?.isApproved) ? primaryProperty?.registrationRequired ? 'Residence setup required' : 'Residence review pending' : 'Official Accredited Residence • Live & Active'}</span>
-                      </div>
+                        <span>{primaryProperty?.registrationRequired ? 'Residence setup required' : 'Residence review pending'}</span>
+                      </div>}
                       <h2 className="text-2xl lg:text-3xl font-black tracking-tight text-slate-900">
                         {primaryProperty?.name || 'Premium PineVela'}
                       </h2>
@@ -1503,7 +1505,7 @@ export default function PageManagerDashboard() {
             )}
 
             {/* TAB 4: STAFF MANAGEMENT */}
-            {activeTab === 'staff' && true && staffInvitations.length > 0 && <section className="relative z-10 space-y-3 rounded-2xl border border-blue-200 bg-white p-5 dark:border-cyan-900 dark:bg-slate-900"><h2 className="font-bold">Pending staff invitations</h2>{staffInvitations.map(invite => <div key={invite.id} className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 pt-3"><div><p className="text-sm font-semibold">{invite.name}</p><p className="text-xs break-all">{invite.email} · {new Date(invite.expires_at).getTime() <= Date.now() ? 'Expired link' : 'Awaiting email verification'}</p></div><div className="flex gap-3"><button disabled={invitationBusy} className="min-h-11 text-sm font-bold text-blue-700 dark:text-cyan-300" onClick={async () => {setInvitationBusy(true);try {const result=await apiFetch(`/api/staff/invitations/${invite.id}/rotate`,{method:'POST',body:'{}'});setStaffInvitationLink(`${window.location.origin}${window.location.pathname}#/staff-invitation?token=${result.invitationToken}`);setShowAddStaffModal(true);await fetchManagerData();}catch(e:any){triggerToast(e.message);}finally{setInvitationBusy(false);}}}>Renew invitation link</button><button disabled={invitationBusy} className="min-h-11 text-sm text-rose-700 dark:text-rose-300" onClick={async()=>{setInvitationBusy(true);try{await apiFetch(`/api/staff/invitations/${invite.id}`,{method:'DELETE'});await fetchManagerData();triggerToast('Invitation cancelled.');}catch(e:any){triggerToast(e.message);}finally{setInvitationBusy(false);}}}>Cancel invitation</button></div></div>)}</section>}
+            {activeTab === 'staff' && true && staffInvitations.length > 0 && <section className="relative z-10 space-y-3 rounded-2xl border border-blue-200 bg-white p-5 dark:border-cyan-900 dark:bg-slate-900"><h2 className="font-bold">Pending staff invitations</h2>{staffInvitations.map(invite => <div key={invite.id} className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 pt-3"><div><p className="text-sm font-semibold">{invite.name}</p><p className="text-xs break-all">{invite.email} · {new Date(invite.expires_at).getTime() <= Date.now() ? 'Expired link' : 'Awaiting email verification'}</p></div><div className="flex gap-3"><button disabled={invitationBusy} className="min-h-11 text-sm font-bold text-blue-700 dark:text-cyan-300" onClick={async () => {setInvitationBusy(true);try {const result=await apiFetch(`/api/staff/invitations/${invite.id}/rotate`,{method:'POST',body:'{}'});setStaffInvitationLink(`${publicAppBase()}#/staff-invitation?token=${result.invitationToken}`);setShowAddStaffModal(true);await fetchManagerData();}catch(e:any){triggerToast(e.message);}finally{setInvitationBusy(false);}}}>Renew invitation link</button><button disabled={invitationBusy} className="min-h-11 text-sm text-rose-700 dark:text-rose-300" onClick={async()=>{setInvitationBusy(true);try{await apiFetch(`/api/staff/invitations/${invite.id}`,{method:'DELETE'});await fetchManagerData();triggerToast('Invitation cancelled.');}catch(e:any){triggerToast(e.message);}finally{setInvitationBusy(false);}}}>Cancel invitation</button></div></div>)}</section>}
             {activeTab === 'staff' && (
               <div className="animate-fadeIn relative z-10 space-y-6">
                 <div className="bg-white/70 border border-blue-200/50 p-6 md:p-8 rounded-3xl backdrop-blur-xl shadow-lg space-y-6">
@@ -2568,37 +2570,21 @@ export default function PageManagerDashboard() {
             {/* TAB 7: NOTIFICATIONS & ADMIN BOARD */}
             {activeTab === 'notifications' && (
               <div className="animate-fadeIn relative z-10 max-w-4xl mx-auto space-y-6 pt-2">
-                {!hasAnyProperty && (
-                  <div className="bg-gradient-to-br from-blue-600 to-cyan-700 border border-blue-400/50 p-8 md:p-10 rounded-3xl shadow-xl shadow-blue-900/20 text-white relative overflow-hidden">
-                    <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 bg-white/10 rounded-full blur-3xl mix-blend-overlay"></div>
-                    <div className="absolute bottom-0 left-0 -ml-16 -mb-16 w-64 h-64 bg-cyan-400/10 rounded-full blur-3xl mix-blend-overlay"></div>
-                    <div className="relative z-10 space-y-4">
-                      <h2 className="text-3xl font-black tracking-tight">Welcome to PineVela, {user?.name || 'Manager'}!</h2>
-                      <p className="text-sm font-medium text-blue-100 max-w-2xl leading-relaxed">
-                        Your manager account has been successfully verified. To unlock your dashboard and begin accepting students, you need to register your official residence property.
-                      </p>
-                      <button
-                        onClick={() => setShowRegistration(true)}
-                        className="mt-6 px-6 py-3.5 bg-white text-blue-800 font-extrabold text-sm rounded-xl shadow-lg hover:shadow-xl hover:scale-[1.02] transition-all cursor-pointer inline-flex items-center gap-2"
-                      >
-                        <Building2 className="w-5 h-5" />
-                        <span>Register a Hostel to Start Onboarding</span>
-                      </button>
-                    </div>
+                {!hasApprovedProperty && propertyReview.kind !== 'approved' && <section role="status" aria-live="polite"
+                  className="rounded-3xl border p-5 shadow-lg backdrop-blur-xl sm:p-7"
+                  style={{ background: 'var(--pv-glass)', borderColor: 'var(--pv-edge)', color: 'var(--pv-text)' }}>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <span className="pv-onboarding-action flex size-11 items-center justify-center rounded-2xl"><Lock size={22} /></span>
+                    <span className="rounded-full border px-3 py-1 text-xs font-bold" style={{ borderColor: 'var(--pv-edge)', background: 'var(--pv-secondary)', color: 'var(--pv-link)' }}>
+                      {propertyReview.label}
+                    </span>
                   </div>
-                )}
-
-                {hasAnyProperty && !hasApprovedProperty && (
-                  <div className="bg-gradient-to-br from-amber-500 to-orange-500 border border-amber-400/50 p-8 md:p-10 rounded-3xl shadow-xl shadow-amber-900/20 text-white relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl mix-blend-overlay"></div>
-                    <div className="relative z-10 space-y-4">
-                      <h2 className="text-3xl font-black tracking-tight">Property Registration Pending Review</h2>
-                      <p className="text-sm font-medium text-amber-50 max-w-2xl leading-relaxed">
-                        Your property <strong>"{properties[0]?.name}"</strong> is currently under review by the administration. Once approved, your operational dashboard will be fully unlocked.
-                      </p>
-                    </div>
-                  </div>
-                )}
+                  <h2 className="mt-4 text-xl font-black sm:text-2xl" style={{ color: 'var(--pv-heading)' }}>{lockNotice.title}</h2>
+                  <p className="mt-2 max-w-2xl text-sm leading-relaxed">{lockNotice.detail}</p>
+                  <button type="button" onClick={openRegistrationTab} className="pv-onboarding-action mt-5 min-h-11 rounded-xl px-5 py-2.5 text-sm font-bold">
+                    {lockNotice.action}
+                  </button>
+                </section>}
 
                 {hasApprovedProperty && (
                   <>
@@ -2664,10 +2650,12 @@ export default function PageManagerDashboard() {
                         </button>
                       </div>
                     )}
+                  </>
+                )}
 
-                    <h2 className="text-2xl font-black text-slate-800 tracking-tight flex items-center justify-between">
+                    <h2 className="text-2xl font-black tracking-tight flex items-center justify-between" style={{color:'var(--pv-heading)'}}>
                       <span className="flex items-center gap-2">
-                        <Bell className="w-6 h-6 text-blue-600" />
+                        <Bell className="w-6 h-6" style={{color:'var(--pv-link)'}} />
                         <span>System Notifications & Operational Alerts</span>
                       </span>
                       {(systemNotifications || []).filter(n => !n.read).length > 0 && (
@@ -2678,11 +2666,11 @@ export default function PageManagerDashboard() {
                     </h2>
 
                     {/* REAL-TIME NOTIFICATIONS FEED */}
-                    <div className="bg-white/90 border border-blue-200/70 p-6 rounded-3xl backdrop-blur-xl shadow-lg space-y-4">
-                      <div className="flex items-center justify-between border-b border-blue-100 pb-3">
+                    <div className="border p-6 rounded-3xl backdrop-blur-xl shadow-lg space-y-4" style={{background:'var(--pv-glass)',borderColor:'var(--pv-edge)',color:'var(--pv-text)'}}>
+                      <div className="flex items-center justify-between border-b pb-3" style={{borderColor:'var(--pv-edge)'}}>
                         <div>
-                          <h3 className="text-base font-bold text-slate-900">Live Activity & Dispatch Alerts</h3>
-                          <p className="text-xs text-slate-500">Staff job requests, maintenance progress, and critical residence updates</p>
+                          <h3 className="text-base font-bold" style={{color:'var(--pv-heading)'}}>Live Activity & Dispatch Alerts</h3>
+                          <p className="text-xs" style={{color:'var(--pv-muted)'}}>Staff job requests, maintenance progress, and critical residence updates</p>
                         </div>
                         {(systemNotifications || []).some(n => !n.read) && (
                           <button
@@ -2709,24 +2697,23 @@ export default function PageManagerDashboard() {
                               onClick={() => {
                                 if (!n.read) markAsRead(n.id);
                                 if (n.category === 'support' && /^\/help\?ticket=[a-f0-9-]{36}$/.test(n.link || '')) { navigate(n.link); return; }
-                                if (n.link === '/manager-dashboard?tab=staff' || (n.title || '').toLowerCase().includes('staff') || (n.title || '').toLowerCase().includes('job')) {
+                                if (n.category === 'manager_welcome') {
+                                  openRegistrationTab();
+                                } else if (n.link === '/manager-dashboard?tab=staff' || (n.title || '').toLowerCase().includes('staff') || (n.title || '').toLowerCase().includes('job')) {
                                   setActiveTab('staff');
                                   setStaffSubTab('roster');
                                 } else if (n.type === 'issue_report' || (n.title || '').toLowerCase().includes('maintenance') || (n.title || '').toLowerCase().includes('repair')) {
                                   setActiveTab('maintenance');
                                 }
                               }}
-                              className={`p-3.5 rounded-2xl border transition-all flex items-start justify-between gap-3 cursor-pointer ${
-                                !n.read 
-                                  ? 'bg-blue-50/80 border-blue-300 shadow-sm ring-1 ring-blue-400/20' 
-                                  : 'bg-slate-50/70 border-slate-200 hover:bg-slate-100/70'
-                              }`}
+                              className="p-3.5 rounded-2xl border transition-all flex items-start justify-between gap-3 cursor-pointer"
+                              style={{background:!n.read?'var(--pv-secondary)':'var(--pv-panel)',borderColor:'var(--pv-edge)'}}
                             >
                               <div className="flex items-start gap-3">
                                 <div className={`w-2.5 h-2.5 rounded-full mt-1.5 shrink-0 ${!n.read ? 'bg-red-500 animate-ping ring-2 ring-red-300' : 'bg-slate-300'}`} />
                                 <div className="space-y-0.5">
                                   <div className="flex items-center gap-2 flex-wrap">
-                                    <h4 className={`text-xs font-black ${!n.read ? 'text-blue-950' : 'text-slate-800'}`}>{n.title}</h4>
+                                    <h4 className="text-xs font-black" style={{color:'var(--pv-heading)'}}>{n.title}</h4>
                                     <span className={`text-[9px] font-extrabold px-2 py-0.5 rounded-full ${
 
                                       n.type === 'issue_report' ? 'bg-amber-100 text-amber-800 border border-amber-200' :
@@ -2735,8 +2722,8 @@ export default function PageManagerDashboard() {
                                       {n.type === 'issue_report' ? 'Maintenance' : (n.type || 'Notice')}
                                     </span>
                                   </div>
-                                  <p className="text-xs text-slate-600 leading-snug">{n.message}</p>
-                                  <span className="text-[10px] text-slate-400">{n.date || 'Today'}</span>
+                                  <p className="text-xs leading-snug" style={{color:'var(--pv-text)'}}>{n.message}</p>
+                                  <span className="text-[10px]" style={{color:'var(--pv-muted)'}}>{n.date || 'Today'}</span>
                                 </div>
                               </div>
                               <div className="shrink-0 flex items-center gap-1.5">
@@ -2760,9 +2747,7 @@ export default function PageManagerDashboard() {
                       )}
                     </div>
 
-                    <ManagerResidenceRequests />
-                </>
-                )}
+                    {hasApprovedProperty && <ManagerResidenceRequests />}
               </div>
             )}
 
@@ -3016,7 +3001,7 @@ export default function PageManagerDashboard() {
                   className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white rounded-lg text-xs font-sans font-bold flex items-center gap-1 transition-colors cursor-pointer"
                 >
                   <Copy className="w-3.5 h-3.5" />
-                  <span>Copy</span>
+                  <span>{clipboard.copiedId === 'modal-key' ? 'Copied' : 'Copy'}</span>
                 </button>}
               </div>
             </div>
@@ -3121,7 +3106,7 @@ export default function PageManagerDashboard() {
               </div>
             </div>
 
-            {staffInvitationLink && <div className="space-y-3 rounded-xl border border-blue-200 p-4"><p role="status" className="text-sm">Share this private invitation with the intended staff member. It expires after 24 hours.</p><input aria-label="Staff invitation link" readOnly value={staffInvitationLink} className="w-full rounded-lg border border-slate-300 p-2 text-xs" /><button type="button" onClick={() => { navigator.clipboard.writeText(staffInvitationLink).then(() => triggerToast('Invitation link copied.')).catch(() => triggerToast('Select the link above to copy it.')); }} className="min-h-11 text-sm font-bold text-blue-700">Copy invitation link</button></div>}
+            {staffInvitationLink && <div className="space-y-3 rounded-xl border border-blue-200 p-4"><p role="status" className="text-sm">Share this private invitation with the intended staff member. It expires after 24 hours.</p><input aria-label="Staff invitation link" readOnly value={staffInvitationLink} className="w-full rounded-lg border border-slate-300 p-2 text-xs" /><button type="button" onClick={async () => { triggerToast(await clipboard.copy('staff-invitation', staffInvitationLink) ? 'Invitation link copied.' : 'Copy is unavailable. Select the link above to copy it.'); }} className="min-h-11 text-sm font-bold text-blue-700">{clipboard.copiedId === 'staff-invitation' ? 'Copied' : 'Copy invitation link'}</button></div>}
             <form onSubmit={handleAddStaff} className="space-y-4">
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">Full Name <span className="text-rose-500">*</span></label>
@@ -3251,52 +3236,59 @@ export default function PageManagerDashboard() {
       {/* WELCOME ONBOARDING POPUP */}
       <AnimatePresence>
         {showWelcomePopup && (
-          <DashboardOverlay aria-label="Welcome to PineVela!" onClose={() => setShowWelcomePopup(false)} className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-blue-950/40 backdrop-blur-xl">
+          <DashboardOverlay data-pv-onboarding aria-label="Welcome to PineVela!" onClose={dismissManagerWelcome} className="fixed inset-0 z-[9999] flex items-center justify-center p-4 backdrop-blur-xl" style={{ background: 'var(--pv-dialog-scrim)' }}>
             <motion.div data-popup-card
               initial={{ opacity: 0, scale: 0.95, y: 15 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 15 }}
               transition={{ duration: 0.3, ease: "easeOut" }}
-              className="relative max-w-md w-full bg-blue-50/90 backdrop-blur-2xl rounded-3xl p-8 border border-white/80 shadow-2xl shadow-blue-950/30 text-center space-y-6"
+              className="relative max-w-md w-full backdrop-blur-2xl rounded-3xl p-8 border shadow-2xl text-center space-y-6"
+              style={{ background: 'var(--pv-dialog-glass)', borderColor: 'var(--pv-dialog-edge)', color: 'var(--pv-text)' }}
             >
               <button
-                onClick={() => setShowWelcomePopup(false)}
-                className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-white/50 transition-colors cursor-pointer"
+                onClick={dismissManagerWelcome}
+                className="absolute top-4 right-4 p-2 rounded-full transition-colors cursor-pointer"
+                style={{ color: 'var(--pv-muted)' }}
                 title="Dismiss dialog"
               >
                 <XCircle size={20} />
               </button>
 
-              <div className="mx-auto w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-600 to-cyan-500 text-white flex items-center justify-center shadow-lg shadow-blue-500/20 animate-pulse">
+              <div className="pv-onboarding-action mx-auto w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg animate-pulse">
                 <Building2 className="w-8 h-8" />
               </div>
 
               <div className="space-y-2">
-                <h3 className="text-2xl font-black text-blue-950 tracking-tight">
+                <h3 className="text-2xl font-black tracking-tight" style={{ color: 'var(--pv-heading)' }}>
                   Welcome to PineVela!
                 </h3>
-                <p className="text-xs font-bold text-blue-800 uppercase tracking-widest flex items-center justify-center gap-1">
-                  <span>Onboarding Initiated</span>
+                <p className="text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-1" style={{ color: 'var(--pv-link)' }}>
+                  <span>Manager account ready</span>
                 </p>
               </div>
 
-              <p className="text-sm font-semibold text-slate-700 leading-relaxed">
-                Hello, <strong>{user?.name || 'Manager'}</strong>! Your manager profile is successfully verified. 
-                To unlock your operational dashboard and start accepting students, tap the button below to register your official residence property.
+              <p className="text-sm font-semibold leading-relaxed">
+                Hello, <strong>{user?.name || 'Manager'}</strong>! Your manager portal is ready.{' '}
+                {hasApprovedProperty || user?.hasApprovedHostel === true
+                  ? 'Your approved property tools are available in the dashboard.'
+                  : propertyReview.kind === 'pending'
+                    ? 'Your residence registration is under administrator review. You can check its status from your manager portal.'
+                    : propertyReview.kind === 'corrections' || propertyReview.kind === 'rejected'
+                      ? 'Your residence review needs attention. Open Property Status to read the decision.'
+                      : 'Register your residence property to start verification and unlock its management tools.'}
               </p>
 
               <div className="pt-2">
                 <button
-                  onClick={() => {
-                    setShowWelcomePopup(false);
-                    setShowRegistration(true);
-                  }}
-                  className="w-full py-4 bg-blue-600 hover:bg-blue-700 active:scale-98 text-white font-black rounded-2xl text-sm shadow-xl shadow-blue-600/30 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                  onClick={hasApprovedProperty || user?.hasApprovedHostel === true
+                    ? () => { dismissManagerWelcome(); setActiveTab('overview'); }
+                    : openRegistrationTab}
+                  className="pv-onboarding-action w-full py-4 active:scale-98 font-black rounded-2xl text-sm shadow-xl transition-all flex items-center justify-center gap-2 cursor-pointer"
                 >
                   <Building2 className="w-5 h-5" />
-                  <span>Register a Hostel to Start</span>
+                  <span>{hasApprovedProperty || user?.hasApprovedHostel === true ? 'Open Manager Dashboard' : propertyReview.kind === 'setup' ? 'Register Your Property' : 'View Property Status'}</span>
                 </button>
-                {(<button type="button" onClick={()=>{setShowWelcomePopup(false);setActiveTab('settings');}} className="mt-3 min-h-11 w-full rounded-xl border border-blue-200 px-4 py-3 text-sm font-bold text-blue-800">Manager profile and account</button>)}
+                <button type="button" onClick={()=>{dismissManagerWelcome();setActiveTab('settings');}} className="mt-3 min-h-11 w-full rounded-xl border px-4 py-3 text-sm font-bold" style={{ borderColor: 'var(--pv-dialog-edge)', color: 'var(--pv-link)', background: 'var(--pv-secondary)' }}>Manager profile and account</button>
               </div>
             </motion.div>
           </DashboardOverlay>

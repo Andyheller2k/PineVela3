@@ -1,0 +1,1850 @@
+[
+  {
+    "width": 320,
+    "theme": "light",
+    "plan": "default",
+    "current": "default",
+    "next": "star",
+    "heading": "Stand out withPine Star.",
+    "button": "Upgrade to Pine Star→",
+    "paint": "linear-gradient(115deg, rgb(0, 53, 102), rgb(0, 29, 61))",
+    "ink": "rgb(255, 255, 255)",
+    "buttonHeight": 50,
+    "price": "GH₵127.35",
+    "overflow": false,
+    "table": {
+      "x": 23,
+      "w": 274,
+      "h": 443.984375,
+      "right": 297
+    },
+    "rows": [
+      {
+        "feature": "items",
+        "values": [
+          "20",
+          "100"
+        ]
+      },
+      {
+        "feature": "services",
+        "values": [
+          "1",
+          "5"
+        ]
+      },
+      {
+        "feature": "inventory",
+        "values": [
+          "200",
+          "600"
+        ]
+      },
+      {
+        "feature": "cover",
+        "values": [
+          "4 designs",
+          "Custom"
+        ]
+      },
+      {
+        "feature": "badge",
+        "values": [
+          "Standard",
+          "✓"
+        ]
+      },
+      {
+        "feature": "logo",
+        "values": [
+          "PineVela",
+          "Custom"
+        ]
+      }
+    ],
+    "palette": {
+      "ink": "#001d3d",
+      "muted": "#4c627a",
+      "panel": "rgb(255 255 255 / .88)",
+      "target": "#e6eff9",
+      "selected": "#003566"
+    },
+    "canvas": "rgb(255, 255, 255)",
+    "keep": "Keep Pine Default",
+    "contrastRatios": {
+      "body": 16.892838796819365,
+      "helper": 6.296094430191763,
+      "target": 10.627874725548475,
+      "button": 12.34493102785091
+    }
+  },
+  {
+    "width": 320,
+    "theme": "light",
+    "plan": "star",
+    "current": "star",
+    "next": "pro",
+    "heading": "Go further withPine Pro.",
+    "button": "Upgrade to Pine Pro→",
+    "paint": "linear-gradient(115deg, rgb(0, 53, 102), rgb(0, 29, 61))",
+    "ink": "rgb(255, 255, 255)",
+    "buttonHeight": 50,
+    "price": "GH₵211.50",
+    "overflow": false,
+    "table": {
+      "x": 23,
+      "w": 274,
+      "h": 444.140625,
+      "right": 297
+    },
+    "rows": [
+      {
+        "feature": "items",
+        "values": [
+          "100",
+          "200"
+        ]
+      },
+      {
+        "feature": "services",
+        "values": [
+          "5",
+          "10"
+        ]
+      },
+      {
+        "feature": "inventory",
+        "values": [
+          "600",
+          "900"
+        ]
+      },
+      {
+        "feature": "branding",
+        "values": [
+          "✓",
+          "✓"
+        ]
+      },
+      {
+        "feature": "frames",
+        "values": [
+          "−",
+          "✓"
+        ]
+      },
+      {
+        "feature": "priority",
+        "values": [
+          "Standard",
+          "Priority"
+        ]
+      }
+    ],
+    "palette": {
+      "ink": "#001d3d",
+      "muted": "#4c627a",
+      "panel": "rgb(255 255 255 / .88)",
+      "target": "#e6eff9",
+      "selected": "#003566"
+    },
+    "canvas": "rgb(255, 255, 255)",
+    "keep": "Keep Pine Star",
+    "contrastRatios": {
+      "body": 16.892838796819365,
+      "helper": 6.296094430191763,
+      "target": 10.627874725548475,
+      "button": 12.34493102785091
+    }
+  },
+  {
+    "width": 320,
+    "theme": "light",
+    "plan": "pro",
+    "current": "pro",
+    "next": "none",
+    "heading": "You’re onPine Pro.",
+    "button": "Renew Pine Pro→",
+    "paint": "linear-gradient(115deg, rgb(0, 53, 102), rgb(0, 29, 61))",
+    "ink": "rgb(255, 255, 255)",
+    "buttonHeight": 50,
+    "price": "GH₵211.50",
+    "overflow": false,
+    "table": {
+      "x": 23,
+      "w": 274,
+      "h": 396.171875,
+      "right": 297
+    },
+    "rows": [
+      {
+        "feature": "items",
+        "values": [
+          "200"
+        ]
+      },
+      {
+        "feature": "services",
+        "values": [
+          "10"
+        ]
+      },
+      {
+        "feature": "inventory",
+        "values": [
+          "900"
+        ]
+      },
+      {
+        "feature": "branding",
+        "values": [
+          "✓"
+        ]
+      },
+      {
+        "feature": "frames",
+        "values": [
+          "✓"
+        ]
+      },
+      {
+        "feature": "priority",
+        "values": [
+          "Priority"
+        ]
+      }
+    ],
+    "palette": {
+      "ink": "#001d3d",
+      "muted": "#4c627a",
+      "panel": "rgb(255 255 255 / .88)",
+      "target": "#e6eff9",
+      "selected": "#003566"
+    },
+    "canvas": "rgb(255, 255, 255)",
+    "keep": "Back to my store",
+    "contrastRatios": {
+      "body": 16.892838796819365,
+      "helper": 6.296094430191763,
+      "target": 10.627874725548475,
+      "button": 12.34493102785091
+    }
+  },
+  {
+    "width": 320,
+    "theme": "dark",
+    "plan": "default",
+    "current": "default",
+    "next": "star",
+    "heading": "Stand out withPine Star.",
+    "button": "Upgrade to Pine Star→",
+    "paint": "linear-gradient(115deg, rgb(255, 195, 0), rgb(255, 214, 10))",
+    "ink": "rgb(0, 29, 61)",
+    "buttonHeight": 50,
+    "price": "GH₵127.35",
+    "overflow": false,
+    "table": {
+      "x": 23,
+      "w": 274,
+      "h": 443.984375,
+      "right": 297
+    },
+    "rows": [
+      {
+        "feature": "items",
+        "values": [
+          "20",
+          "100"
+        ]
+      },
+      {
+        "feature": "services",
+        "values": [
+          "1",
+          "5"
+        ]
+      },
+      {
+        "feature": "inventory",
+        "values": [
+          "200",
+          "600"
+        ]
+      },
+      {
+        "feature": "cover",
+        "values": [
+          "4 designs",
+          "Custom"
+        ]
+      },
+      {
+        "feature": "badge",
+        "values": [
+          "Standard",
+          "✓"
+        ]
+      },
+      {
+        "feature": "logo",
+        "values": [
+          "PineVela",
+          "Custom"
+        ]
+      }
+    ],
+    "palette": {
+      "ink": "#edf5ff",
+      "muted": "#b1c2d4",
+      "panel": "rgb(0 29 61 / .88)",
+      "target": "#283b35",
+      "selected": "#ffd60a"
+    },
+    "canvas": "rgb(0, 29, 61)",
+    "keep": "Keep Pine Default",
+    "contrastRatios": {
+      "body": 15.369159514896296,
+      "helper": 9.280467235848,
+      "target": 8.417193004614466,
+      "button": 10.504162393144675
+    }
+  },
+  {
+    "width": 320,
+    "theme": "dark",
+    "plan": "star",
+    "current": "star",
+    "next": "pro",
+    "heading": "Go further withPine Pro.",
+    "button": "Upgrade to Pine Pro→",
+    "paint": "linear-gradient(115deg, rgb(255, 195, 0), rgb(255, 214, 10))",
+    "ink": "rgb(0, 29, 61)",
+    "buttonHeight": 50,
+    "price": "GH₵211.50",
+    "overflow": false,
+    "table": {
+      "x": 23,
+      "w": 274,
+      "h": 444.140625,
+      "right": 297
+    },
+    "rows": [
+      {
+        "feature": "items",
+        "values": [
+          "100",
+          "200"
+        ]
+      },
+      {
+        "feature": "services",
+        "values": [
+          "5",
+          "10"
+        ]
+      },
+      {
+        "feature": "inventory",
+        "values": [
+          "600",
+          "900"
+        ]
+      },
+      {
+        "feature": "branding",
+        "values": [
+          "✓",
+          "✓"
+        ]
+      },
+      {
+        "feature": "frames",
+        "values": [
+          "−",
+          "✓"
+        ]
+      },
+      {
+        "feature": "priority",
+        "values": [
+          "Standard",
+          "Priority"
+        ]
+      }
+    ],
+    "palette": {
+      "ink": "#edf5ff",
+      "muted": "#b1c2d4",
+      "panel": "rgb(0 29 61 / .88)",
+      "target": "#283b35",
+      "selected": "#ffd60a"
+    },
+    "canvas": "rgb(0, 29, 61)",
+    "keep": "Keep Pine Star",
+    "contrastRatios": {
+      "body": 15.369159514896296,
+      "helper": 9.280467235848,
+      "target": 8.417193004614466,
+      "button": 10.504162393144675
+    }
+  },
+  {
+    "width": 320,
+    "theme": "dark",
+    "plan": "pro",
+    "current": "pro",
+    "next": "none",
+    "heading": "You’re onPine Pro.",
+    "button": "Renew Pine Pro→",
+    "paint": "linear-gradient(115deg, rgb(255, 195, 0), rgb(255, 214, 10))",
+    "ink": "rgb(0, 29, 61)",
+    "buttonHeight": 50,
+    "price": "GH₵211.50",
+    "overflow": false,
+    "table": {
+      "x": 23,
+      "w": 274,
+      "h": 396.171875,
+      "right": 297
+    },
+    "rows": [
+      {
+        "feature": "items",
+        "values": [
+          "200"
+        ]
+      },
+      {
+        "feature": "services",
+        "values": [
+          "10"
+        ]
+      },
+      {
+        "feature": "inventory",
+        "values": [
+          "900"
+        ]
+      },
+      {
+        "feature": "branding",
+        "values": [
+          "✓"
+        ]
+      },
+      {
+        "feature": "frames",
+        "values": [
+          "✓"
+        ]
+      },
+      {
+        "feature": "priority",
+        "values": [
+          "Priority"
+        ]
+      }
+    ],
+    "palette": {
+      "ink": "#edf5ff",
+      "muted": "#b1c2d4",
+      "panel": "rgb(0 29 61 / .88)",
+      "target": "#283b35",
+      "selected": "#ffd60a"
+    },
+    "canvas": "rgb(0, 29, 61)",
+    "keep": "Back to my store",
+    "contrastRatios": {
+      "body": 15.369159514896296,
+      "helper": 9.280467235848,
+      "target": 8.417193004614466,
+      "button": 10.504162393144675
+    }
+  },
+  {
+    "width": 390,
+    "theme": "light",
+    "plan": "default",
+    "current": "default",
+    "next": "star",
+    "heading": "Stand out withPine Star.",
+    "button": "Upgrade to Pine Star→",
+    "paint": "linear-gradient(115deg, rgb(0, 53, 102), rgb(0, 29, 61))",
+    "ink": "rgb(255, 255, 255)",
+    "buttonHeight": 50,
+    "price": "GH₵127.35",
+    "overflow": false,
+    "table": {
+      "x": 29,
+      "w": 332,
+      "h": 432.265625,
+      "right": 361
+    },
+    "rows": [
+      {
+        "feature": "items",
+        "values": [
+          "20",
+          "100"
+        ]
+      },
+      {
+        "feature": "services",
+        "values": [
+          "1",
+          "5"
+        ]
+      },
+      {
+        "feature": "inventory",
+        "values": [
+          "200",
+          "600"
+        ]
+      },
+      {
+        "feature": "cover",
+        "values": [
+          "4 designs",
+          "Custom"
+        ]
+      },
+      {
+        "feature": "badge",
+        "values": [
+          "Standard",
+          "✓"
+        ]
+      },
+      {
+        "feature": "logo",
+        "values": [
+          "PineVela",
+          "Custom"
+        ]
+      }
+    ],
+    "palette": {
+      "ink": "#001d3d",
+      "muted": "#4c627a",
+      "panel": "rgb(255 255 255 / .88)",
+      "target": "#e6eff9",
+      "selected": "#003566"
+    },
+    "canvas": "rgb(255, 255, 255)",
+    "keep": "Keep Pine Default",
+    "contrastRatios": {
+      "body": 16.892838796819365,
+      "helper": 6.296094430191763,
+      "target": 10.627874725548475,
+      "button": 12.34493102785091
+    }
+  },
+  {
+    "width": 390,
+    "theme": "light",
+    "plan": "star",
+    "current": "star",
+    "next": "pro",
+    "heading": "Go further withPine Pro.",
+    "button": "Upgrade to Pine Pro→",
+    "paint": "linear-gradient(115deg, rgb(0, 53, 102), rgb(0, 29, 61))",
+    "ink": "rgb(255, 255, 255)",
+    "buttonHeight": 50,
+    "price": "GH₵211.50",
+    "overflow": false,
+    "table": {
+      "x": 29,
+      "w": 332,
+      "h": 400.390625,
+      "right": 361
+    },
+    "rows": [
+      {
+        "feature": "items",
+        "values": [
+          "100",
+          "200"
+        ]
+      },
+      {
+        "feature": "services",
+        "values": [
+          "5",
+          "10"
+        ]
+      },
+      {
+        "feature": "inventory",
+        "values": [
+          "600",
+          "900"
+        ]
+      },
+      {
+        "feature": "branding",
+        "values": [
+          "✓",
+          "✓"
+        ]
+      },
+      {
+        "feature": "frames",
+        "values": [
+          "−",
+          "✓"
+        ]
+      },
+      {
+        "feature": "priority",
+        "values": [
+          "Standard",
+          "Priority"
+        ]
+      }
+    ],
+    "palette": {
+      "ink": "#001d3d",
+      "muted": "#4c627a",
+      "panel": "rgb(255 255 255 / .88)",
+      "target": "#e6eff9",
+      "selected": "#003566"
+    },
+    "canvas": "rgb(255, 255, 255)",
+    "keep": "Keep Pine Star",
+    "contrastRatios": {
+      "body": 16.892838796819365,
+      "helper": 6.296094430191763,
+      "target": 10.627874725548475,
+      "button": 12.34493102785091
+    }
+  },
+  {
+    "width": 390,
+    "theme": "light",
+    "plan": "pro",
+    "current": "pro",
+    "next": "none",
+    "heading": "You’re onPine Pro.",
+    "button": "Renew Pine Pro→",
+    "paint": "linear-gradient(115deg, rgb(0, 53, 102), rgb(0, 29, 61))",
+    "ink": "rgb(255, 255, 255)",
+    "buttonHeight": 50,
+    "price": "GH₵211.50",
+    "overflow": false,
+    "table": {
+      "x": 29,
+      "w": 332,
+      "h": 400.390625,
+      "right": 361
+    },
+    "rows": [
+      {
+        "feature": "items",
+        "values": [
+          "200"
+        ]
+      },
+      {
+        "feature": "services",
+        "values": [
+          "10"
+        ]
+      },
+      {
+        "feature": "inventory",
+        "values": [
+          "900"
+        ]
+      },
+      {
+        "feature": "branding",
+        "values": [
+          "✓"
+        ]
+      },
+      {
+        "feature": "frames",
+        "values": [
+          "✓"
+        ]
+      },
+      {
+        "feature": "priority",
+        "values": [
+          "Priority"
+        ]
+      }
+    ],
+    "palette": {
+      "ink": "#001d3d",
+      "muted": "#4c627a",
+      "panel": "rgb(255 255 255 / .88)",
+      "target": "#e6eff9",
+      "selected": "#003566"
+    },
+    "canvas": "rgb(255, 255, 255)",
+    "keep": "Back to my store",
+    "contrastRatios": {
+      "body": 16.892838796819365,
+      "helper": 6.296094430191763,
+      "target": 10.627874725548475,
+      "button": 12.34493102785091
+    }
+  },
+  {
+    "width": 390,
+    "theme": "dark",
+    "plan": "default",
+    "current": "default",
+    "next": "star",
+    "heading": "Stand out withPine Star.",
+    "button": "Upgrade to Pine Star→",
+    "paint": "linear-gradient(115deg, rgb(255, 195, 0), rgb(255, 214, 10))",
+    "ink": "rgb(0, 29, 61)",
+    "buttonHeight": 50,
+    "price": "GH₵127.35",
+    "overflow": false,
+    "table": {
+      "x": 29,
+      "w": 332,
+      "h": 432.265625,
+      "right": 361
+    },
+    "rows": [
+      {
+        "feature": "items",
+        "values": [
+          "20",
+          "100"
+        ]
+      },
+      {
+        "feature": "services",
+        "values": [
+          "1",
+          "5"
+        ]
+      },
+      {
+        "feature": "inventory",
+        "values": [
+          "200",
+          "600"
+        ]
+      },
+      {
+        "feature": "cover",
+        "values": [
+          "4 designs",
+          "Custom"
+        ]
+      },
+      {
+        "feature": "badge",
+        "values": [
+          "Standard",
+          "✓"
+        ]
+      },
+      {
+        "feature": "logo",
+        "values": [
+          "PineVela",
+          "Custom"
+        ]
+      }
+    ],
+    "palette": {
+      "ink": "#edf5ff",
+      "muted": "#b1c2d4",
+      "panel": "rgb(0 29 61 / .88)",
+      "target": "#283b35",
+      "selected": "#ffd60a"
+    },
+    "canvas": "rgb(0, 29, 61)",
+    "keep": "Keep Pine Default",
+    "contrastRatios": {
+      "body": 15.369159514896296,
+      "helper": 9.280467235848,
+      "target": 8.417193004614466,
+      "button": 10.504162393144675
+    }
+  },
+  {
+    "width": 390,
+    "theme": "dark",
+    "plan": "star",
+    "current": "star",
+    "next": "pro",
+    "heading": "Go further withPine Pro.",
+    "button": "Upgrade to Pine Pro→",
+    "paint": "linear-gradient(115deg, rgb(255, 195, 0), rgb(255, 214, 10))",
+    "ink": "rgb(0, 29, 61)",
+    "buttonHeight": 50,
+    "price": "GH₵211.50",
+    "overflow": false,
+    "table": {
+      "x": 29,
+      "w": 332,
+      "h": 400.390625,
+      "right": 361
+    },
+    "rows": [
+      {
+        "feature": "items",
+        "values": [
+          "100",
+          "200"
+        ]
+      },
+      {
+        "feature": "services",
+        "values": [
+          "5",
+          "10"
+        ]
+      },
+      {
+        "feature": "inventory",
+        "values": [
+          "600",
+          "900"
+        ]
+      },
+      {
+        "feature": "branding",
+        "values": [
+          "✓",
+          "✓"
+        ]
+      },
+      {
+        "feature": "frames",
+        "values": [
+          "−",
+          "✓"
+        ]
+      },
+      {
+        "feature": "priority",
+        "values": [
+          "Standard",
+          "Priority"
+        ]
+      }
+    ],
+    "palette": {
+      "ink": "#edf5ff",
+      "muted": "#b1c2d4",
+      "panel": "rgb(0 29 61 / .88)",
+      "target": "#283b35",
+      "selected": "#ffd60a"
+    },
+    "canvas": "rgb(0, 29, 61)",
+    "keep": "Keep Pine Star",
+    "contrastRatios": {
+      "body": 15.369159514896296,
+      "helper": 9.280467235848,
+      "target": 8.417193004614466,
+      "button": 10.504162393144675
+    }
+  },
+  {
+    "width": 390,
+    "theme": "dark",
+    "plan": "pro",
+    "current": "pro",
+    "next": "none",
+    "heading": "You’re onPine Pro.",
+    "button": "Renew Pine Pro→",
+    "paint": "linear-gradient(115deg, rgb(255, 195, 0), rgb(255, 214, 10))",
+    "ink": "rgb(0, 29, 61)",
+    "buttonHeight": 50,
+    "price": "GH₵211.50",
+    "overflow": false,
+    "table": {
+      "x": 29,
+      "w": 332,
+      "h": 400.390625,
+      "right": 361
+    },
+    "rows": [
+      {
+        "feature": "items",
+        "values": [
+          "200"
+        ]
+      },
+      {
+        "feature": "services",
+        "values": [
+          "10"
+        ]
+      },
+      {
+        "feature": "inventory",
+        "values": [
+          "900"
+        ]
+      },
+      {
+        "feature": "branding",
+        "values": [
+          "✓"
+        ]
+      },
+      {
+        "feature": "frames",
+        "values": [
+          "✓"
+        ]
+      },
+      {
+        "feature": "priority",
+        "values": [
+          "Priority"
+        ]
+      }
+    ],
+    "palette": {
+      "ink": "#edf5ff",
+      "muted": "#b1c2d4",
+      "panel": "rgb(0 29 61 / .88)",
+      "target": "#283b35",
+      "selected": "#ffd60a"
+    },
+    "canvas": "rgb(0, 29, 61)",
+    "keep": "Back to my store",
+    "contrastRatios": {
+      "body": 15.369159514896296,
+      "helper": 9.280467235848,
+      "target": 8.417193004614466,
+      "button": 10.504162393144675
+    }
+  },
+  {
+    "width": 430,
+    "theme": "light",
+    "plan": "default",
+    "current": "default",
+    "next": "star",
+    "heading": "Stand out withPine Star.",
+    "button": "Upgrade to Pine Star→",
+    "paint": "linear-gradient(115deg, rgb(0, 53, 102), rgb(0, 29, 61))",
+    "ink": "rgb(255, 255, 255)",
+    "buttonHeight": 50,
+    "price": "GH₵127.35",
+    "overflow": false,
+    "table": {
+      "x": 29,
+      "w": 372,
+      "h": 400.390625,
+      "right": 401
+    },
+    "rows": [
+      {
+        "feature": "items",
+        "values": [
+          "20",
+          "100"
+        ]
+      },
+      {
+        "feature": "services",
+        "values": [
+          "1",
+          "5"
+        ]
+      },
+      {
+        "feature": "inventory",
+        "values": [
+          "200",
+          "600"
+        ]
+      },
+      {
+        "feature": "cover",
+        "values": [
+          "4 designs",
+          "Custom"
+        ]
+      },
+      {
+        "feature": "badge",
+        "values": [
+          "Standard",
+          "✓"
+        ]
+      },
+      {
+        "feature": "logo",
+        "values": [
+          "PineVela",
+          "Custom"
+        ]
+      }
+    ],
+    "palette": {
+      "ink": "#001d3d",
+      "muted": "#4c627a",
+      "panel": "rgb(255 255 255 / .88)",
+      "target": "#e6eff9",
+      "selected": "#003566"
+    },
+    "canvas": "rgb(255, 255, 255)",
+    "keep": "Keep Pine Default",
+    "contrastRatios": {
+      "body": 16.892838796819365,
+      "helper": 6.296094430191763,
+      "target": 10.627874725548475,
+      "button": 12.34493102785091
+    }
+  },
+  {
+    "width": 430,
+    "theme": "light",
+    "plan": "star",
+    "current": "star",
+    "next": "pro",
+    "heading": "Go further withPine Pro.",
+    "button": "Upgrade to Pine Pro→",
+    "paint": "linear-gradient(115deg, rgb(0, 53, 102), rgb(0, 29, 61))",
+    "ink": "rgb(255, 255, 255)",
+    "buttonHeight": 50,
+    "price": "GH₵211.50",
+    "overflow": false,
+    "table": {
+      "x": 29,
+      "w": 372,
+      "h": 400.390625,
+      "right": 401
+    },
+    "rows": [
+      {
+        "feature": "items",
+        "values": [
+          "100",
+          "200"
+        ]
+      },
+      {
+        "feature": "services",
+        "values": [
+          "5",
+          "10"
+        ]
+      },
+      {
+        "feature": "inventory",
+        "values": [
+          "600",
+          "900"
+        ]
+      },
+      {
+        "feature": "branding",
+        "values": [
+          "✓",
+          "✓"
+        ]
+      },
+      {
+        "feature": "frames",
+        "values": [
+          "−",
+          "✓"
+        ]
+      },
+      {
+        "feature": "priority",
+        "values": [
+          "Standard",
+          "Priority"
+        ]
+      }
+    ],
+    "palette": {
+      "ink": "#001d3d",
+      "muted": "#4c627a",
+      "panel": "rgb(255 255 255 / .88)",
+      "target": "#e6eff9",
+      "selected": "#003566"
+    },
+    "canvas": "rgb(255, 255, 255)",
+    "keep": "Keep Pine Star",
+    "contrastRatios": {
+      "body": 16.892838796819365,
+      "helper": 6.296094430191763,
+      "target": 10.627874725548475,
+      "button": 12.34493102785091
+    }
+  },
+  {
+    "width": 430,
+    "theme": "light",
+    "plan": "pro",
+    "current": "pro",
+    "next": "none",
+    "heading": "You’re onPine Pro.",
+    "button": "Renew Pine Pro→",
+    "paint": "linear-gradient(115deg, rgb(0, 53, 102), rgb(0, 29, 61))",
+    "ink": "rgb(255, 255, 255)",
+    "buttonHeight": 50,
+    "price": "GH₵211.50",
+    "overflow": false,
+    "table": {
+      "x": 29,
+      "w": 372,
+      "h": 400.390625,
+      "right": 401
+    },
+    "rows": [
+      {
+        "feature": "items",
+        "values": [
+          "200"
+        ]
+      },
+      {
+        "feature": "services",
+        "values": [
+          "10"
+        ]
+      },
+      {
+        "feature": "inventory",
+        "values": [
+          "900"
+        ]
+      },
+      {
+        "feature": "branding",
+        "values": [
+          "✓"
+        ]
+      },
+      {
+        "feature": "frames",
+        "values": [
+          "✓"
+        ]
+      },
+      {
+        "feature": "priority",
+        "values": [
+          "Priority"
+        ]
+      }
+    ],
+    "palette": {
+      "ink": "#001d3d",
+      "muted": "#4c627a",
+      "panel": "rgb(255 255 255 / .88)",
+      "target": "#e6eff9",
+      "selected": "#003566"
+    },
+    "canvas": "rgb(255, 255, 255)",
+    "keep": "Back to my store",
+    "contrastRatios": {
+      "body": 16.892838796819365,
+      "helper": 6.296094430191763,
+      "target": 10.627874725548475,
+      "button": 12.34493102785091
+    }
+  },
+  {
+    "width": 430,
+    "theme": "dark",
+    "plan": "default",
+    "current": "default",
+    "next": "star",
+    "heading": "Stand out withPine Star.",
+    "button": "Upgrade to Pine Star→",
+    "paint": "linear-gradient(115deg, rgb(255, 195, 0), rgb(255, 214, 10))",
+    "ink": "rgb(0, 29, 61)",
+    "buttonHeight": 50,
+    "price": "GH₵127.35",
+    "overflow": false,
+    "table": {
+      "x": 29,
+      "w": 372,
+      "h": 400.390625,
+      "right": 401
+    },
+    "rows": [
+      {
+        "feature": "items",
+        "values": [
+          "20",
+          "100"
+        ]
+      },
+      {
+        "feature": "services",
+        "values": [
+          "1",
+          "5"
+        ]
+      },
+      {
+        "feature": "inventory",
+        "values": [
+          "200",
+          "600"
+        ]
+      },
+      {
+        "feature": "cover",
+        "values": [
+          "4 designs",
+          "Custom"
+        ]
+      },
+      {
+        "feature": "badge",
+        "values": [
+          "Standard",
+          "✓"
+        ]
+      },
+      {
+        "feature": "logo",
+        "values": [
+          "PineVela",
+          "Custom"
+        ]
+      }
+    ],
+    "palette": {
+      "ink": "#edf5ff",
+      "muted": "#b1c2d4",
+      "panel": "rgb(0 29 61 / .88)",
+      "target": "#283b35",
+      "selected": "#ffd60a"
+    },
+    "canvas": "rgb(0, 29, 61)",
+    "keep": "Keep Pine Default",
+    "contrastRatios": {
+      "body": 15.369159514896296,
+      "helper": 9.280467235848,
+      "target": 8.417193004614466,
+      "button": 10.504162393144675
+    }
+  },
+  {
+    "width": 430,
+    "theme": "dark",
+    "plan": "star",
+    "current": "star",
+    "next": "pro",
+    "heading": "Go further withPine Pro.",
+    "button": "Upgrade to Pine Pro→",
+    "paint": "linear-gradient(115deg, rgb(255, 195, 0), rgb(255, 214, 10))",
+    "ink": "rgb(0, 29, 61)",
+    "buttonHeight": 50,
+    "price": "GH₵211.50",
+    "overflow": false,
+    "table": {
+      "x": 29,
+      "w": 372,
+      "h": 400.3905944824219,
+      "right": 401
+    },
+    "rows": [
+      {
+        "feature": "items",
+        "values": [
+          "100",
+          "200"
+        ]
+      },
+      {
+        "feature": "services",
+        "values": [
+          "5",
+          "10"
+        ]
+      },
+      {
+        "feature": "inventory",
+        "values": [
+          "600",
+          "900"
+        ]
+      },
+      {
+        "feature": "branding",
+        "values": [
+          "✓",
+          "✓"
+        ]
+      },
+      {
+        "feature": "frames",
+        "values": [
+          "−",
+          "✓"
+        ]
+      },
+      {
+        "feature": "priority",
+        "values": [
+          "Standard",
+          "Priority"
+        ]
+      }
+    ],
+    "palette": {
+      "ink": "#edf5ff",
+      "muted": "#b1c2d4",
+      "panel": "rgb(0 29 61 / .88)",
+      "target": "#283b35",
+      "selected": "#ffd60a"
+    },
+    "canvas": "rgb(0, 29, 61)",
+    "keep": "Keep Pine Star",
+    "contrastRatios": {
+      "body": 15.369159514896296,
+      "helper": 9.280467235848,
+      "target": 8.417193004614466,
+      "button": 10.504162393144675
+    }
+  },
+  {
+    "width": 430,
+    "theme": "dark",
+    "plan": "pro",
+    "current": "pro",
+    "next": "none",
+    "heading": "You’re onPine Pro.",
+    "button": "Renew Pine Pro→",
+    "paint": "linear-gradient(115deg, rgb(255, 195, 0), rgb(255, 214, 10))",
+    "ink": "rgb(0, 29, 61)",
+    "buttonHeight": 50,
+    "price": "GH₵211.50",
+    "overflow": false,
+    "table": {
+      "x": 29,
+      "w": 372,
+      "h": 400.390625,
+      "right": 401
+    },
+    "rows": [
+      {
+        "feature": "items",
+        "values": [
+          "200"
+        ]
+      },
+      {
+        "feature": "services",
+        "values": [
+          "10"
+        ]
+      },
+      {
+        "feature": "inventory",
+        "values": [
+          "900"
+        ]
+      },
+      {
+        "feature": "branding",
+        "values": [
+          "✓"
+        ]
+      },
+      {
+        "feature": "frames",
+        "values": [
+          "✓"
+        ]
+      },
+      {
+        "feature": "priority",
+        "values": [
+          "Priority"
+        ]
+      }
+    ],
+    "palette": {
+      "ink": "#edf5ff",
+      "muted": "#b1c2d4",
+      "panel": "rgb(0 29 61 / .88)",
+      "target": "#283b35",
+      "selected": "#ffd60a"
+    },
+    "canvas": "rgb(0, 29, 61)",
+    "keep": "Back to my store",
+    "contrastRatios": {
+      "body": 15.369159514896296,
+      "helper": 9.280467235848,
+      "target": 8.417193004614466,
+      "button": 10.504162393144675
+    }
+  },
+  {
+    "width": 1440,
+    "theme": "light",
+    "plan": "default",
+    "current": "default",
+    "next": "star",
+    "heading": "Stand out withPine Star.",
+    "button": "Upgrade to Pine Star→",
+    "paint": "linear-gradient(115deg, rgb(0, 53, 102), rgb(0, 29, 61))",
+    "ink": "rgb(255, 255, 255)",
+    "buttonHeight": 53.99993896484375,
+    "price": "GH₵127.35",
+    "overflow": false,
+    "table": {
+      "x": 371,
+      "w": 698,
+      "h": 507.890625,
+      "right": 1069
+    },
+    "rows": [
+      {
+        "feature": "items",
+        "values": [
+          "20",
+          "100"
+        ]
+      },
+      {
+        "feature": "services",
+        "values": [
+          "1",
+          "5"
+        ]
+      },
+      {
+        "feature": "inventory",
+        "values": [
+          "200",
+          "600"
+        ]
+      },
+      {
+        "feature": "cover",
+        "values": [
+          "4 designs",
+          "Custom"
+        ]
+      },
+      {
+        "feature": "badge",
+        "values": [
+          "Standard",
+          "✓"
+        ]
+      },
+      {
+        "feature": "logo",
+        "values": [
+          "PineVela",
+          "Custom"
+        ]
+      }
+    ],
+    "palette": {
+      "ink": "#001d3d",
+      "muted": "#4c627a",
+      "panel": "rgb(255 255 255 / .88)",
+      "target": "#e6eff9",
+      "selected": "#003566"
+    },
+    "canvas": "rgb(255, 255, 255)",
+    "keep": "Keep Pine Default",
+    "contrastRatios": {
+      "body": 16.892838796819365,
+      "helper": 6.296094430191763,
+      "target": 10.627874725548475,
+      "button": 12.34493102785091
+    }
+  },
+  {
+    "width": 1440,
+    "theme": "light",
+    "plan": "star",
+    "current": "star",
+    "next": "pro",
+    "heading": "Go further withPine Pro.",
+    "button": "Upgrade to Pine Pro→",
+    "paint": "linear-gradient(115deg, rgb(0, 53, 102), rgb(0, 29, 61))",
+    "ink": "rgb(255, 255, 255)",
+    "buttonHeight": 54,
+    "price": "GH₵211.50",
+    "overflow": false,
+    "table": {
+      "x": 371,
+      "w": 698,
+      "h": 507.890625,
+      "right": 1069
+    },
+    "rows": [
+      {
+        "feature": "items",
+        "values": [
+          "100",
+          "200"
+        ]
+      },
+      {
+        "feature": "services",
+        "values": [
+          "5",
+          "10"
+        ]
+      },
+      {
+        "feature": "inventory",
+        "values": [
+          "600",
+          "900"
+        ]
+      },
+      {
+        "feature": "branding",
+        "values": [
+          "✓",
+          "✓"
+        ]
+      },
+      {
+        "feature": "frames",
+        "values": [
+          "−",
+          "✓"
+        ]
+      },
+      {
+        "feature": "priority",
+        "values": [
+          "Standard",
+          "Priority"
+        ]
+      }
+    ],
+    "palette": {
+      "ink": "#001d3d",
+      "muted": "#4c627a",
+      "panel": "rgb(255 255 255 / .88)",
+      "target": "#e6eff9",
+      "selected": "#003566"
+    },
+    "canvas": "rgb(255, 255, 255)",
+    "keep": "Keep Pine Star",
+    "contrastRatios": {
+      "body": 16.892838796819365,
+      "helper": 6.296094430191763,
+      "target": 10.627874725548475,
+      "button": 12.34493102785091
+    }
+  },
+  {
+    "width": 1440,
+    "theme": "light",
+    "plan": "pro",
+    "current": "pro",
+    "next": "none",
+    "heading": "You’re onPine Pro.",
+    "button": "Renew Pine Pro→",
+    "paint": "linear-gradient(115deg, rgb(0, 53, 102), rgb(0, 29, 61))",
+    "ink": "rgb(255, 255, 255)",
+    "buttonHeight": 53.99993896484375,
+    "price": "GH₵211.50",
+    "overflow": false,
+    "table": {
+      "x": 371,
+      "w": 698,
+      "h": 507.890625,
+      "right": 1069
+    },
+    "rows": [
+      {
+        "feature": "items",
+        "values": [
+          "200"
+        ]
+      },
+      {
+        "feature": "services",
+        "values": [
+          "10"
+        ]
+      },
+      {
+        "feature": "inventory",
+        "values": [
+          "900"
+        ]
+      },
+      {
+        "feature": "branding",
+        "values": [
+          "✓"
+        ]
+      },
+      {
+        "feature": "frames",
+        "values": [
+          "✓"
+        ]
+      },
+      {
+        "feature": "priority",
+        "values": [
+          "Priority"
+        ]
+      }
+    ],
+    "palette": {
+      "ink": "#001d3d",
+      "muted": "#4c627a",
+      "panel": "rgb(255 255 255 / .88)",
+      "target": "#e6eff9",
+      "selected": "#003566"
+    },
+    "canvas": "rgb(255, 255, 255)",
+    "keep": "Back to my store",
+    "contrastRatios": {
+      "body": 16.892838796819365,
+      "helper": 6.296094430191763,
+      "target": 10.627874725548475,
+      "button": 12.34493102785091
+    }
+  },
+  {
+    "width": 1440,
+    "theme": "dark",
+    "plan": "default",
+    "current": "default",
+    "next": "star",
+    "heading": "Stand out withPine Star.",
+    "button": "Upgrade to Pine Star→",
+    "paint": "linear-gradient(115deg, rgb(255, 195, 0), rgb(255, 214, 10))",
+    "ink": "rgb(0, 29, 61)",
+    "buttonHeight": 54.00006103515625,
+    "price": "GH₵127.35",
+    "overflow": false,
+    "table": {
+      "x": 371,
+      "w": 698,
+      "h": 507.890625,
+      "right": 1069
+    },
+    "rows": [
+      {
+        "feature": "items",
+        "values": [
+          "20",
+          "100"
+        ]
+      },
+      {
+        "feature": "services",
+        "values": [
+          "1",
+          "5"
+        ]
+      },
+      {
+        "feature": "inventory",
+        "values": [
+          "200",
+          "600"
+        ]
+      },
+      {
+        "feature": "cover",
+        "values": [
+          "4 designs",
+          "Custom"
+        ]
+      },
+      {
+        "feature": "badge",
+        "values": [
+          "Standard",
+          "✓"
+        ]
+      },
+      {
+        "feature": "logo",
+        "values": [
+          "PineVela",
+          "Custom"
+        ]
+      }
+    ],
+    "palette": {
+      "ink": "#edf5ff",
+      "muted": "#b1c2d4",
+      "panel": "rgb(0 29 61 / .88)",
+      "target": "#283b35",
+      "selected": "#ffd60a"
+    },
+    "canvas": "rgb(0, 29, 61)",
+    "keep": "Keep Pine Default",
+    "contrastRatios": {
+      "body": 15.369159514896296,
+      "helper": 9.280467235848,
+      "target": 8.417193004614466,
+      "button": 10.504162393144675
+    }
+  },
+  {
+    "width": 1440,
+    "theme": "dark",
+    "plan": "star",
+    "current": "star",
+    "next": "pro",
+    "heading": "Go further withPine Pro.",
+    "button": "Upgrade to Pine Pro→",
+    "paint": "linear-gradient(115deg, rgb(255, 195, 0), rgb(255, 214, 10))",
+    "ink": "rgb(0, 29, 61)",
+    "buttonHeight": 53.99993896484375,
+    "price": "GH₵211.50",
+    "overflow": false,
+    "table": {
+      "x": 371,
+      "w": 698,
+      "h": 507.890625,
+      "right": 1069
+    },
+    "rows": [
+      {
+        "feature": "items",
+        "values": [
+          "100",
+          "200"
+        ]
+      },
+      {
+        "feature": "services",
+        "values": [
+          "5",
+          "10"
+        ]
+      },
+      {
+        "feature": "inventory",
+        "values": [
+          "600",
+          "900"
+        ]
+      },
+      {
+        "feature": "branding",
+        "values": [
+          "✓",
+          "✓"
+        ]
+      },
+      {
+        "feature": "frames",
+        "values": [
+          "−",
+          "✓"
+        ]
+      },
+      {
+        "feature": "priority",
+        "values": [
+          "Standard",
+          "Priority"
+        ]
+      }
+    ],
+    "palette": {
+      "ink": "#edf5ff",
+      "muted": "#b1c2d4",
+      "panel": "rgb(0 29 61 / .88)",
+      "target": "#283b35",
+      "selected": "#ffd60a"
+    },
+    "canvas": "rgb(0, 29, 61)",
+    "keep": "Keep Pine Star",
+    "contrastRatios": {
+      "body": 15.369159514896296,
+      "helper": 9.280467235848,
+      "target": 8.417193004614466,
+      "button": 10.504162393144675
+    }
+  },
+  {
+    "width": 1440,
+    "theme": "dark",
+    "plan": "pro",
+    "current": "pro",
+    "next": "none",
+    "heading": "You’re onPine Pro.",
+    "button": "Renew Pine Pro→",
+    "paint": "linear-gradient(115deg, rgb(255, 195, 0), rgb(255, 214, 10))",
+    "ink": "rgb(0, 29, 61)",
+    "buttonHeight": 54,
+    "price": "GH₵211.50",
+    "overflow": false,
+    "table": {
+      "x": 371,
+      "w": 698,
+      "h": 507.890625,
+      "right": 1069
+    },
+    "rows": [
+      {
+        "feature": "items",
+        "values": [
+          "200"
+        ]
+      },
+      {
+        "feature": "services",
+        "values": [
+          "10"
+        ]
+      },
+      {
+        "feature": "inventory",
+        "values": [
+          "900"
+        ]
+      },
+      {
+        "feature": "branding",
+        "values": [
+          "✓"
+        ]
+      },
+      {
+        "feature": "frames",
+        "values": [
+          "✓"
+        ]
+      },
+      {
+        "feature": "priority",
+        "values": [
+          "Priority"
+        ]
+      }
+    ],
+    "palette": {
+      "ink": "#edf5ff",
+      "muted": "#b1c2d4",
+      "panel": "rgb(0 29 61 / .88)",
+      "target": "#283b35",
+      "selected": "#ffd60a"
+    },
+    "canvas": "rgb(0, 29, 61)",
+    "keep": "Back to my store",
+    "contrastRatios": {
+      "body": 15.369159514896296,
+      "helper": 9.280467235848,
+      "target": 8.417193004614466,
+      "button": 10.504162393144675
+    }
+  }
+]

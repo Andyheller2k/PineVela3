@@ -1,0 +1,13 @@
+{
+  "origin": "https://localhost",
+  "platform": "android",
+  "readyState": "complete",
+  "nativeWelcomeVisible": true,
+  "localLoginCardVisible": false,
+  "launchOverlayVisible": false,
+  "theme": "light",
+  "appearance": "public",
+  "localAppearance": "light",
+  "privateAccountFieldsInspected": false,
+  "formsSubmitted": false
+}

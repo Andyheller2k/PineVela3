@@ -1,0 +1,5934 @@
+{
+  "syntheticLoopbackFixtures": true,
+  "realAuthenticationTested": false,
+  "measurements": [
+    {
+      "width": 320,
+      "theme": "light",
+      "page": "primary dashboard",
+      "viewport": {
+        "w": 320,
+        "layoutWidth": 320,
+        "h": 844
+      },
+      "overflow": false,
+      "kind": "standard",
+      "active": "home",
+      "nav": {
+        "x": 0,
+        "y": 740,
+        "w": 320,
+        "h": 104,
+        "right": 320,
+        "bottom": 844,
+        "cx": 160
+      },
+      "surface": {
+        "background": "rgba(0, 0, 0, 0)",
+        "fill": "rgb(255, 255, 255)",
+        "color": "rgb(0, 29, 61)",
+        "backgroundImage": "none"
+      },
+      "indicator": {
+        "x": 9.3984375,
+        "y": 740,
+        "w": 58,
+        "h": 58,
+        "right": 67.3984375,
+        "bottom": 798,
+        "cx": 38.3984375,
+        "background": "rgb(0, 53, 102)",
+        "fill": "rgb(0, 0, 0)",
+        "color": "rgb(0, 29, 61)",
+        "backgroundImage": "none"
+      },
+      "safeBottom": "",
+      "reserved": 104,
+      "buttons": [
+        {
+          "id": "home",
+          "label": "Home",
+          "disabled": false,
+          "current": "page",
+          "x": 8,
+          "y": 740,
+          "w": 60.796875,
+          "h": 104,
+          "right": 68.796875,
+          "bottom": 844,
+          "cx": 38.3984375,
+          "icon": {
+            "x": 24.890625,
+            "y": 756,
+            "w": 27,
+            "h": 27,
+            "right": 51.890625,
+            "bottom": 783,
+            "cx": 38.390625
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(0, 53, 102)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(255, 255, 255)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "digital-market",
+          "label": "Purchases",
+          "disabled": false,
+          "current": null,
+          "x": 68.796875,
+          "y": 740,
+          "w": 60.8125,
+          "h": 104,
+          "right": 129.609375,
+          "bottom": 844,
+          "cx": 99.203125,
+          "icon": {
+            "x": 85.703125,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 112.703125,
+            "bottom": 811,
+            "cx": 99.203125
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "login-room",
+          "label": "Room",
+          "disabled": false,
+          "current": null,
+          "x": 129.609375,
+          "y": 740,
+          "w": 60.796875,
+          "h": 104,
+          "right": 190.40625,
+          "bottom": 844,
+          "cx": 160.0078125,
+          "icon": {
+            "x": 146.5,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 173.5,
+            "bottom": 811,
+            "cx": 160
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "options",
+          "label": "Options",
+          "disabled": false,
+          "current": null,
+          "x": 190.40625,
+          "y": 740,
+          "w": 60.796875,
+          "h": 104,
+          "right": 251.203125,
+          "bottom": 844,
+          "cx": 220.8046875,
+          "icon": {
+            "x": 207.296875,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 234.296875,
+            "bottom": 811,
+            "cx": 220.796875
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "companion",
+          "label": "Ask AI",
+          "disabled": false,
+          "current": null,
+          "x": 251.203125,
+          "y": 740,
+          "w": 60.796875,
+          "h": 104,
+          "right": 312,
+          "bottom": 844,
+          "cx": 281.6015625,
+          "icon": {
+            "x": 268.09375,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 295.09375,
+            "bottom": 811,
+            "cx": 281.59375
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          }
+        }
+      ]
+    },
+    {
+      "width": 320,
+      "theme": "light",
+      "page": "manager dashboard",
+      "viewport": {
+        "w": 320,
+        "layoutWidth": 320,
+        "h": 844
+      },
+      "overflow": false,
+      "kind": "standard",
+      "active": "notifications",
+      "nav": {
+        "x": 0,
+        "y": 740,
+        "w": 320,
+        "h": 104,
+        "right": 320,
+        "bottom": 844,
+        "cx": 160
+      },
+      "surface": {
+        "background": "rgba(0, 0, 0, 0)",
+        "fill": "rgb(255, 255, 255)",
+        "color": "rgb(0, 29, 61)",
+        "backgroundImage": "none"
+      },
+      "indicator": {
+        "x": 93,
+        "y": 740,
+        "w": 58,
+        "h": 58,
+        "right": 151,
+        "bottom": 798,
+        "cx": 122,
+        "background": "rgb(0, 53, 102)",
+        "fill": "rgb(0, 0, 0)",
+        "color": "rgb(0, 29, 61)",
+        "backgroundImage": "none"
+      },
+      "safeBottom": "",
+      "reserved": 104,
+      "buttons": [
+        {
+          "id": "registration",
+          "label": "Status",
+          "disabled": false,
+          "current": null,
+          "x": 8,
+          "y": 740,
+          "w": 76,
+          "h": 104,
+          "right": 84,
+          "bottom": 844,
+          "cx": 46,
+          "icon": {
+            "x": 32.5,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 59.5,
+            "bottom": 811,
+            "cx": 46
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "notifications",
+          "label": "Alerts",
+          "disabled": false,
+          "current": "page",
+          "x": 84,
+          "y": 740,
+          "w": 76,
+          "h": 104,
+          "right": 160,
+          "bottom": 844,
+          "cx": 122,
+          "icon": {
+            "x": 108.5,
+            "y": 756,
+            "w": 27,
+            "h": 27,
+            "right": 135.5,
+            "bottom": 783,
+            "cx": 122
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(0, 53, 102)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(255, 255, 255)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "settings",
+          "label": "Settings",
+          "disabled": false,
+          "current": null,
+          "x": 160,
+          "y": 740,
+          "w": 76,
+          "h": 104,
+          "right": 236,
+          "bottom": 844,
+          "cx": 198,
+          "icon": {
+            "x": 184.5,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 211.5,
+            "bottom": 811,
+            "cx": 198
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "more",
+          "label": "More navigation",
+          "disabled": false,
+          "current": null,
+          "x": 236,
+          "y": 740,
+          "w": 76,
+          "h": 104,
+          "right": 312,
+          "bottom": 844,
+          "cx": 274,
+          "icon": {
+            "x": 260.5,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 287.5,
+            "bottom": 811,
+            "cx": 274
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          }
+        }
+      ]
+    },
+    {
+      "width": 320,
+      "theme": "light",
+      "page": "staff dashboard",
+      "viewport": {
+        "w": 320,
+        "layoutWidth": 320,
+        "h": 844
+      },
+      "overflow": false,
+      "kind": "standard",
+      "active": "maintenance",
+      "nav": {
+        "x": 0,
+        "y": 740,
+        "w": 320,
+        "h": 104,
+        "right": 320,
+        "bottom": 844,
+        "cx": 160
+      },
+      "surface": {
+        "background": "rgba(0, 0, 0, 0)",
+        "fill": "rgb(255, 255, 255)",
+        "color": "rgb(0, 29, 61)",
+        "backgroundImage": "none"
+      },
+      "indicator": {
+        "x": 232.3359375,
+        "y": 740,
+        "w": 58,
+        "h": 58,
+        "right": 290.3359375,
+        "bottom": 798,
+        "cx": 261.3359375,
+        "background": "rgb(0, 53, 102)",
+        "fill": "rgb(0, 0, 0)",
+        "color": "rgb(0, 29, 61)",
+        "backgroundImage": "none"
+      },
+      "safeBottom": "",
+      "reserved": 104,
+      "buttons": [
+        {
+          "id": "notifications",
+          "label": "Alerts",
+          "disabled": false,
+          "current": null,
+          "x": 8,
+          "y": 740,
+          "w": 101.328125,
+          "h": 104,
+          "right": 109.328125,
+          "bottom": 844,
+          "cx": 58.6640625,
+          "icon": {
+            "x": 45.15625,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 72.15625,
+            "bottom": 811,
+            "cx": 58.65625
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "settings",
+          "label": "Settings",
+          "disabled": false,
+          "current": null,
+          "x": 109.328125,
+          "y": 740,
+          "w": 101.34375,
+          "h": 104,
+          "right": 210.671875,
+          "bottom": 844,
+          "cx": 160,
+          "icon": {
+            "x": 146.5,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 173.5,
+            "bottom": 811,
+            "cx": 160
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "maintenance",
+          "label": "Orders",
+          "disabled": false,
+          "current": "page",
+          "x": 210.671875,
+          "y": 740,
+          "w": 101.328125,
+          "h": 104,
+          "right": 312,
+          "bottom": 844,
+          "cx": 261.3359375,
+          "icon": {
+            "x": 247.828125,
+            "y": 756,
+            "w": 27,
+            "h": 27,
+            "right": 274.828125,
+            "bottom": 783,
+            "cx": 261.328125
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(0, 53, 102)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(255, 255, 255)",
+            "backgroundImage": "none"
+          }
+        }
+      ]
+    },
+    {
+      "width": 320,
+      "theme": "light",
+      "page": "resident dashboard",
+      "viewport": {
+        "w": 320,
+        "layoutWidth": 320,
+        "h": 844
+      },
+      "overflow": false,
+      "kind": "action",
+      "active": "room",
+      "nav": {
+        "x": 0,
+        "y": 740,
+        "w": 320,
+        "h": 104,
+        "right": 320,
+        "bottom": 844,
+        "cx": 160
+      },
+      "surface": {
+        "background": "rgba(0, 0, 0, 0)",
+        "fill": "rgb(255, 255, 255)",
+        "color": "rgb(0, 29, 61)",
+        "backgroundImage": "none"
+      },
+      "indicator": {
+        "x": 131.0078125,
+        "y": 740,
+        "w": 58,
+        "h": 58,
+        "right": 189.0078125,
+        "bottom": 798,
+        "cx": 160.0078125,
+        "background": "rgb(0, 53, 102)",
+        "fill": "rgb(0, 0, 0)",
+        "color": "rgb(0, 29, 61)",
+        "backgroundImage": "none"
+      },
+      "safeBottom": "",
+      "reserved": 104,
+      "buttons": [
+        {
+          "id": "room",
+          "label": "My Room",
+          "disabled": false,
+          "current": "page",
+          "x": 8,
+          "y": 740,
+          "w": 60.796875,
+          "h": 104,
+          "right": 68.796875,
+          "bottom": 844,
+          "cx": 38.3984375,
+          "icon": {
+            "x": 24.890625,
+            "y": 778,
+            "w": 27,
+            "h": 27,
+            "right": 51.890625,
+            "bottom": 805,
+            "cx": 38.390625
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(0, 53, 102)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(0, 53, 102)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "complaints",
+          "label": "Complaints",
+          "disabled": false,
+          "current": null,
+          "x": 68.796875,
+          "y": 740,
+          "w": 60.8125,
+          "h": 104,
+          "right": 129.609375,
+          "bottom": 844,
+          "cx": 99.203125,
+          "icon": {
+            "x": 85.703125,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 112.703125,
+            "bottom": 811,
+            "cx": 99.203125
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "quick-action",
+          "label": "Actions",
+          "disabled": false,
+          "current": null,
+          "x": 129.609375,
+          "y": 740,
+          "w": 60.796875,
+          "h": 104,
+          "right": 190.40625,
+          "bottom": 844,
+          "cx": 160.0078125,
+          "icon": {
+            "x": 146.5,
+            "y": 754,
+            "w": 27,
+            "h": 27,
+            "right": 173.5,
+            "bottom": 781,
+            "cx": 160
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(255, 255, 255)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "alerts",
+          "label": "Bulletins",
+          "disabled": false,
+          "current": null,
+          "x": 190.40625,
+          "y": 740,
+          "w": 60.796875,
+          "h": 104,
+          "right": 251.203125,
+          "bottom": 844,
+          "cx": 220.8046875,
+          "icon": {
+            "x": 207.296875,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 234.296875,
+            "bottom": 811,
+            "cx": 220.796875
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "settings",
+          "label": "Settings",
+          "disabled": false,
+          "current": null,
+          "x": 251.203125,
+          "y": 740,
+          "w": 60.796875,
+          "h": 104,
+          "right": 312,
+          "bottom": 844,
+          "cx": 281.6015625,
+          "icon": {
+            "x": 268.09375,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 295.09375,
+            "bottom": 811,
+            "cx": 281.59375
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          }
+        }
+      ]
+    },
+    {
+      "width": 320,
+      "theme": "light",
+      "page": "administrator dashboard",
+      "viewport": {
+        "w": 320,
+        "layoutWidth": 320,
+        "h": 844
+      },
+      "overflow": false,
+      "kind": "standard",
+      "active": "overview",
+      "nav": {
+        "x": 0,
+        "y": 740,
+        "w": 320,
+        "h": 104,
+        "right": 320,
+        "bottom": 844,
+        "cx": 160
+      },
+      "surface": {
+        "background": "rgba(0, 0, 0, 0)",
+        "fill": "rgb(255, 255, 255)",
+        "color": "rgb(0, 29, 61)",
+        "backgroundImage": "none"
+      },
+      "indicator": {
+        "x": 9.3984375,
+        "y": 740,
+        "w": 58,
+        "h": 58,
+        "right": 67.3984375,
+        "bottom": 798,
+        "cx": 38.3984375,
+        "background": "rgb(0, 53, 102)",
+        "fill": "rgb(0, 0, 0)",
+        "color": "rgb(0, 29, 61)",
+        "backgroundImage": "none"
+      },
+      "safeBottom": "",
+      "reserved": 104,
+      "buttons": [
+        {
+          "id": "overview",
+          "label": "Overview",
+          "disabled": false,
+          "current": "page",
+          "x": 8,
+          "y": 740,
+          "w": 60.796875,
+          "h": 104,
+          "right": 68.796875,
+          "bottom": 844,
+          "cx": 38.3984375,
+          "icon": {
+            "x": 24.890625,
+            "y": 756,
+            "w": 27,
+            "h": 27,
+            "right": 51.890625,
+            "bottom": 783,
+            "cx": 38.390625
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(0, 53, 102)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(255, 255, 255)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "residences",
+          "label": "Residences",
+          "disabled": false,
+          "current": null,
+          "x": 68.796875,
+          "y": 740,
+          "w": 60.8125,
+          "h": 104,
+          "right": 129.609375,
+          "bottom": 844,
+          "cx": 99.203125,
+          "icon": {
+            "x": 85.703125,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 112.703125,
+            "bottom": 811,
+            "cx": 99.203125
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "managers",
+          "label": "Managers",
+          "disabled": false,
+          "current": null,
+          "x": 129.609375,
+          "y": 740,
+          "w": 60.796875,
+          "h": 104,
+          "right": 190.40625,
+          "bottom": 844,
+          "cx": 160.0078125,
+          "icon": {
+            "x": 146.5,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 173.5,
+            "bottom": 811,
+            "cx": 160
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "notifications",
+          "label": "Alerts",
+          "disabled": false,
+          "current": null,
+          "x": 190.40625,
+          "y": 740,
+          "w": 60.796875,
+          "h": 104,
+          "right": 251.203125,
+          "bottom": 844,
+          "cx": 220.8046875,
+          "icon": {
+            "x": 207.296875,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 234.296875,
+            "bottom": 811,
+            "cx": 220.796875
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "more",
+          "label": "More navigation",
+          "disabled": false,
+          "current": null,
+          "x": 251.203125,
+          "y": 740,
+          "w": 60.796875,
+          "h": 104,
+          "right": 312,
+          "bottom": 844,
+          "cx": 281.6015625,
+          "icon": {
+            "x": 268.09375,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 295.09375,
+            "bottom": 811,
+            "cx": 281.59375
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          }
+        }
+      ]
+    },
+    {
+      "width": 320,
+      "theme": "light",
+      "page": "seller dashboard",
+      "viewport": {
+        "w": 320,
+        "layoutWidth": 320,
+        "h": 844
+      },
+      "overflow": false,
+      "kind": "action",
+      "active": "dashboard",
+      "nav": {
+        "x": 0,
+        "y": 740,
+        "w": 320,
+        "h": 104,
+        "right": 320,
+        "bottom": 844,
+        "cx": 160
+      },
+      "surface": {
+        "background": "rgba(0, 0, 0, 0)",
+        "fill": "rgb(255, 255, 255)",
+        "color": "rgb(0, 29, 61)",
+        "backgroundImage": "none"
+      },
+      "indicator": {
+        "x": 131.0078125,
+        "y": 740,
+        "w": 58,
+        "h": 58,
+        "right": 189.0078125,
+        "bottom": 798,
+        "cx": 160.0078125,
+        "background": "rgb(0, 53, 102)",
+        "fill": "rgb(0, 0, 0)",
+        "color": "rgb(0, 29, 61)",
+        "backgroundImage": "none"
+      },
+      "safeBottom": "",
+      "reserved": 104,
+      "buttons": [
+        {
+          "id": "dashboard",
+          "label": "Home",
+          "disabled": false,
+          "current": "page",
+          "x": 8,
+          "y": 740,
+          "w": 60.796875,
+          "h": 104,
+          "right": 68.796875,
+          "bottom": 844,
+          "cx": 38.3984375,
+          "icon": {
+            "x": 24.890625,
+            "y": 778,
+            "w": 27,
+            "h": 27,
+            "right": 51.890625,
+            "bottom": 805,
+            "cx": 38.390625
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(0, 53, 102)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(0, 53, 102)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "inventory",
+          "label": "Stock",
+          "disabled": false,
+          "current": null,
+          "x": 68.796875,
+          "y": 740,
+          "w": 60.8125,
+          "h": 104,
+          "right": 129.609375,
+          "bottom": 844,
+          "cx": 99.203125,
+          "icon": {
+            "x": 85.703125,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 112.703125,
+            "bottom": 811,
+            "cx": 99.203125
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "quick-action",
+          "label": "Publish",
+          "disabled": false,
+          "current": null,
+          "x": 129.609375,
+          "y": 740,
+          "w": 60.796875,
+          "h": 104,
+          "right": 190.40625,
+          "bottom": 844,
+          "cx": 160.0078125,
+          "icon": {
+            "x": 146.5,
+            "y": 754,
+            "w": 27,
+            "h": 27,
+            "right": 173.5,
+            "bottom": 781,
+            "cx": 160
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(255, 255, 255)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "sales",
+          "label": "Sales",
+          "disabled": false,
+          "current": null,
+          "x": 190.40625,
+          "y": 740,
+          "w": 60.796875,
+          "h": 104,
+          "right": 251.203125,
+          "bottom": 844,
+          "cx": 220.8046875,
+          "icon": {
+            "x": 207.296875,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 234.296875,
+            "bottom": 811,
+            "cx": 220.796875
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "more",
+          "label": "More navigation",
+          "disabled": false,
+          "current": null,
+          "x": 251.203125,
+          "y": 740,
+          "w": 60.796875,
+          "h": 104,
+          "right": 312,
+          "bottom": 844,
+          "cx": 281.6015625,
+          "icon": {
+            "x": 268.09375,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 295.09375,
+            "bottom": 811,
+            "cx": 281.59375
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          }
+        }
+      ]
+    },
+    {
+      "width": 320,
+      "theme": "light",
+      "page": "field officer",
+      "viewport": {
+        "w": 320,
+        "layoutWidth": 320,
+        "h": 844
+      },
+      "overflow": false,
+      "kind": "standard",
+      "active": "inspections",
+      "nav": {
+        "x": 0,
+        "y": 740,
+        "w": 320,
+        "h": 104,
+        "right": 320,
+        "bottom": 844,
+        "cx": 160
+      },
+      "surface": {
+        "background": "rgba(0, 0, 0, 0)",
+        "fill": "rgb(255, 255, 255)",
+        "color": "rgb(0, 29, 61)",
+        "backgroundImage": "none"
+      },
+      "indicator": {
+        "x": 55,
+        "y": 740,
+        "w": 58,
+        "h": 58,
+        "right": 113,
+        "bottom": 798,
+        "cx": 84,
+        "background": "rgb(0, 53, 102)",
+        "fill": "rgb(0, 0, 0)",
+        "color": "rgb(0, 29, 61)",
+        "backgroundImage": "none"
+      },
+      "safeBottom": "",
+      "reserved": 104,
+      "buttons": [
+        {
+          "id": "inspections",
+          "label": "Inspections",
+          "disabled": false,
+          "current": "page",
+          "x": 8,
+          "y": 740,
+          "w": 152,
+          "h": 104,
+          "right": 160,
+          "bottom": 844,
+          "cx": 84,
+          "icon": {
+            "x": 70.5,
+            "y": 756,
+            "w": 27,
+            "h": 27,
+            "right": 97.5,
+            "bottom": 783,
+            "cx": 84
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(0, 53, 102)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(255, 255, 255)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "options",
+          "label": "Options",
+          "disabled": false,
+          "current": null,
+          "x": 160,
+          "y": 740,
+          "w": 152,
+          "h": 104,
+          "right": 312,
+          "bottom": 844,
+          "cx": 236,
+          "icon": {
+            "x": 222.5,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 249.5,
+            "bottom": 811,
+            "cx": 236
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          }
+        }
+      ]
+    },
+    {
+      "width": 320,
+      "theme": "light",
+      "page": "customer service",
+      "viewport": {
+        "w": 320,
+        "layoutWidth": 320,
+        "h": 844
+      },
+      "overflow": false,
+      "kind": "standard",
+      "active": "inbox",
+      "nav": {
+        "x": 0,
+        "y": 740,
+        "w": 320,
+        "h": 104,
+        "right": 320,
+        "bottom": 844,
+        "cx": 160
+      },
+      "surface": {
+        "background": "rgba(0, 0, 0, 0)",
+        "fill": "rgb(255, 255, 255)",
+        "color": "rgb(0, 29, 61)",
+        "backgroundImage": "none"
+      },
+      "indicator": {
+        "x": 17,
+        "y": 740,
+        "w": 58,
+        "h": 58,
+        "right": 75,
+        "bottom": 798,
+        "cx": 46,
+        "background": "rgb(0, 53, 102)",
+        "fill": "rgb(0, 0, 0)",
+        "color": "rgb(0, 29, 61)",
+        "backgroundImage": "none"
+      },
+      "safeBottom": "",
+      "reserved": 104,
+      "buttons": [
+        {
+          "id": "inbox",
+          "label": "Inbox",
+          "disabled": false,
+          "current": "page",
+          "x": 8,
+          "y": 740,
+          "w": 76,
+          "h": 104,
+          "right": 84,
+          "bottom": 844,
+          "cx": 46,
+          "icon": {
+            "x": 32.5,
+            "y": 756,
+            "w": 27,
+            "h": 27,
+            "right": 59.5,
+            "bottom": 783,
+            "cx": 46
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(0, 53, 102)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(255, 255, 255)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "reports",
+          "label": "Reports",
+          "disabled": false,
+          "current": null,
+          "x": 84,
+          "y": 740,
+          "w": 76,
+          "h": 104,
+          "right": 160,
+          "bottom": 844,
+          "cx": 122,
+          "icon": {
+            "x": 108.5,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 135.5,
+            "bottom": 811,
+            "cx": 122
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "notifications",
+          "label": "Alerts",
+          "disabled": false,
+          "current": null,
+          "x": 160,
+          "y": 740,
+          "w": 76,
+          "h": 104,
+          "right": 236,
+          "bottom": 844,
+          "cx": 198,
+          "icon": {
+            "x": 184.5,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 211.5,
+            "bottom": 811,
+            "cx": 198
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "settings",
+          "label": "Settings",
+          "disabled": false,
+          "current": null,
+          "x": 236,
+          "y": 740,
+          "w": 76,
+          "h": 104,
+          "right": 312,
+          "bottom": 844,
+          "cx": 274,
+          "icon": {
+            "x": 260.5,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 287.5,
+            "bottom": 811,
+            "cx": 274
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          }
+        }
+      ]
+    },
+    {
+      "width": 320,
+      "theme": "dark",
+      "page": "primary dashboard",
+      "viewport": {
+        "w": 320,
+        "layoutWidth": 320,
+        "h": 844
+      },
+      "overflow": false,
+      "kind": "standard",
+      "active": "home",
+      "nav": {
+        "x": 0,
+        "y": 740,
+        "w": 320,
+        "h": 104,
+        "right": 320,
+        "bottom": 844,
+        "cx": 160
+      },
+      "surface": {
+        "background": "rgba(0, 0, 0, 0)",
+        "fill": "rgb(0, 53, 102)",
+        "color": "rgb(232, 240, 248)",
+        "backgroundImage": "none"
+      },
+      "indicator": {
+        "x": 9.3984375,
+        "y": 740,
+        "w": 58,
+        "h": 58,
+        "right": 67.3984375,
+        "bottom": 798,
+        "cx": 38.3984375,
+        "background": "rgb(255, 214, 10)",
+        "fill": "rgb(0, 0, 0)",
+        "color": "rgb(232, 240, 248)",
+        "backgroundImage": "none"
+      },
+      "safeBottom": "",
+      "reserved": 104,
+      "buttons": [
+        {
+          "id": "home",
+          "label": "Home",
+          "disabled": false,
+          "current": "page",
+          "x": 8,
+          "y": 740,
+          "w": 60.796875,
+          "h": 104,
+          "right": 68.796875,
+          "bottom": 844,
+          "cx": 38.3984375,
+          "icon": {
+            "x": 24.890625,
+            "y": 756,
+            "w": 27,
+            "h": 27,
+            "right": 51.890625,
+            "bottom": 783,
+            "cx": 38.390625
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(255, 214, 10)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(0, 29, 61)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "digital-market",
+          "label": "Purchases",
+          "disabled": false,
+          "current": null,
+          "x": 68.796875,
+          "y": 740,
+          "w": 60.8125,
+          "h": 104,
+          "right": 129.609375,
+          "bottom": 844,
+          "cx": 99.203125,
+          "icon": {
+            "x": 85.703125,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 112.703125,
+            "bottom": 811,
+            "cx": 99.203125
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(187, 206, 224)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(187, 206, 224)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "login-room",
+          "label": "Room",
+          "disabled": false,
+          "current": null,
+          "x": 129.609375,
+          "y": 740,
+          "w": 60.796875,
+          "h": 104,
+          "right": 190.40625,
+          "bottom": 844,
+          "cx": 160.0078125,
+          "icon": {
+            "x": 146.5,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 173.5,
+            "bottom": 811,
+            "cx": 160
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(187, 206, 224)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(187, 206, 224)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "options",
+          "label": "Options",
+          "disabled": false,
+          "current": null,
+          "x": 190.40625,
+          "y": 740,
+          "w": 60.796875,
+          "h": 104,
+          "right": 251.203125,
+          "bottom": 844,
+          "cx": 220.8046875,
+          "icon": {
+            "x": 207.296875,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 234.296875,
+            "bottom": 811,
+            "cx": 220.796875
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(187, 206, 224)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(187, 206, 224)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "companion",
+          "label": "Ask AI",
+          "disabled": false,
+          "current": null,
+          "x": 251.203125,
+          "y": 740,
+          "w": 60.796875,
+          "h": 104,
+          "right": 312,
+          "bottom": 844,
+          "cx": 281.6015625,
+          "icon": {
+            "x": 268.09375,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 295.09375,
+            "bottom": 811,
+            "cx": 281.59375
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(187, 206, 224)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(187, 206, 224)",
+            "backgroundImage": "none"
+          }
+        }
+      ]
+    },
+    {
+      "width": 320,
+      "theme": "dark",
+      "page": "manager dashboard",
+      "viewport": {
+        "w": 320,
+        "layoutWidth": 320,
+        "h": 844
+      },
+      "overflow": false,
+      "kind": "standard",
+      "active": "notifications",
+      "nav": {
+        "x": 0,
+        "y": 740,
+        "w": 320,
+        "h": 104,
+        "right": 320,
+        "bottom": 844,
+        "cx": 160
+      },
+      "surface": {
+        "background": "rgba(0, 0, 0, 0)",
+        "fill": "rgb(0, 53, 102)",
+        "color": "rgb(232, 240, 248)",
+        "backgroundImage": "none"
+      },
+      "indicator": {
+        "x": 93,
+        "y": 740,
+        "w": 58,
+        "h": 58,
+        "right": 151,
+        "bottom": 798,
+        "cx": 122,
+        "background": "rgb(255, 214, 10)",
+        "fill": "rgb(0, 0, 0)",
+        "color": "rgb(232, 240, 248)",
+        "backgroundImage": "none"
+      },
+      "safeBottom": "",
+      "reserved": 104,
+      "buttons": [
+        {
+          "id": "registration",
+          "label": "Status",
+          "disabled": false,
+          "current": null,
+          "x": 8,
+          "y": 740,
+          "w": 76,
+          "h": 104,
+          "right": 84,
+          "bottom": 844,
+          "cx": 46,
+          "icon": {
+            "x": 32.5,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 59.5,
+            "bottom": 811,
+            "cx": 46
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(187, 206, 224)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(187, 206, 224)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "notifications",
+          "label": "Alerts",
+          "disabled": false,
+          "current": "page",
+          "x": 84,
+          "y": 740,
+          "w": 76,
+          "h": 104,
+          "right": 160,
+          "bottom": 844,
+          "cx": 122,
+          "icon": {
+            "x": 108.5,
+            "y": 756,
+            "w": 27,
+            "h": 27,
+            "right": 135.5,
+            "bottom": 783,
+            "cx": 122
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(255, 214, 10)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(0, 29, 61)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "settings",
+          "label": "Settings",
+          "disabled": false,
+          "current": null,
+          "x": 160,
+          "y": 740,
+          "w": 76,
+          "h": 104,
+          "right": 236,
+          "bottom": 844,
+          "cx": 198,
+          "icon": {
+            "x": 184.5,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 211.5,
+            "bottom": 811,
+            "cx": 198
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(187, 206, 224)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(187, 206, 224)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "more",
+          "label": "More navigation",
+          "disabled": false,
+          "current": null,
+          "x": 236,
+          "y": 740,
+          "w": 76,
+          "h": 104,
+          "right": 312,
+          "bottom": 844,
+          "cx": 274,
+          "icon": {
+            "x": 260.5,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 287.5,
+            "bottom": 811,
+            "cx": 274
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(187, 206, 224)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(187, 206, 224)",
+            "backgroundImage": "none"
+          }
+        }
+      ]
+    },
+    {
+      "width": 320,
+      "theme": "dark",
+      "page": "staff dashboard",
+      "viewport": {
+        "w": 320,
+        "layoutWidth": 320,
+        "h": 844
+      },
+      "overflow": false,
+      "kind": "standard",
+      "active": "maintenance",
+      "nav": {
+        "x": 0,
+        "y": 740,
+        "w": 320,
+        "h": 104,
+        "right": 320,
+        "bottom": 844,
+        "cx": 160
+      },
+      "surface": {
+        "background": "rgba(0, 0, 0, 0)",
+        "fill": "rgb(0, 53, 102)",
+        "color": "rgb(232, 240, 248)",
+        "backgroundImage": "none"
+      },
+      "indicator": {
+        "x": 232.3359375,
+        "y": 740,
+        "w": 58,
+        "h": 58,
+        "right": 290.3359375,
+        "bottom": 798,
+        "cx": 261.3359375,
+        "background": "rgb(255, 214, 10)",
+        "fill": "rgb(0, 0, 0)",
+        "color": "rgb(232, 240, 248)",
+        "backgroundImage": "none"
+      },
+      "safeBottom": "",
+      "reserved": 104,
+      "buttons": [
+        {
+          "id": "notifications",
+          "label": "Alerts",
+          "disabled": false,
+          "current": null,
+          "x": 8,
+          "y": 740,
+          "w": 101.328125,
+          "h": 104,
+          "right": 109.328125,
+          "bottom": 844,
+          "cx": 58.6640625,
+          "icon": {
+            "x": 45.15625,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 72.15625,
+            "bottom": 811,
+            "cx": 58.65625
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(187, 206, 224)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(187, 206, 224)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "settings",
+          "label": "Settings",
+          "disabled": false,
+          "current": null,
+          "x": 109.328125,
+          "y": 740,
+          "w": 101.34375,
+          "h": 104,
+          "right": 210.671875,
+          "bottom": 844,
+          "cx": 160,
+          "icon": {
+            "x": 146.5,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 173.5,
+            "bottom": 811,
+            "cx": 160
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(187, 206, 224)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(187, 206, 224)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "maintenance",
+          "label": "Orders",
+          "disabled": false,
+          "current": "page",
+          "x": 210.671875,
+          "y": 740,
+          "w": 101.328125,
+          "h": 104,
+          "right": 312,
+          "bottom": 844,
+          "cx": 261.3359375,
+          "icon": {
+            "x": 247.828125,
+            "y": 756,
+            "w": 27,
+            "h": 27,
+            "right": 274.828125,
+            "bottom": 783,
+            "cx": 261.328125
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(255, 214, 10)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(0, 29, 61)",
+            "backgroundImage": "none"
+          }
+        }
+      ]
+    },
+    {
+      "width": 320,
+      "theme": "dark",
+      "page": "resident dashboard",
+      "viewport": {
+        "w": 320,
+        "layoutWidth": 320,
+        "h": 844
+      },
+      "overflow": false,
+      "kind": "action",
+      "active": "room",
+      "nav": {
+        "x": 0,
+        "y": 740,
+        "w": 320,
+        "h": 104,
+        "right": 320,
+        "bottom": 844,
+        "cx": 160
+      },
+      "surface": {
+        "background": "rgba(0, 0, 0, 0)",
+        "fill": "rgb(0, 53, 102)",
+        "color": "rgb(232, 240, 248)",
+        "backgroundImage": "none"
+      },
+      "indicator": {
+        "x": 131.0078125,
+        "y": 740,
+        "w": 58,
+        "h": 58,
+        "right": 189.0078125,
+        "bottom": 798,
+        "cx": 160.0078125,
+        "background": "rgb(255, 214, 10)",
+        "fill": "rgb(0, 0, 0)",
+        "color": "rgb(232, 240, 248)",
+        "backgroundImage": "none"
+      },
+      "safeBottom": "",
+      "reserved": 104,
+      "buttons": [
+        {
+          "id": "room",
+          "label": "My Room",
+          "disabled": false,
+          "current": "page",
+          "x": 8,
+          "y": 740,
+          "w": 60.796875,
+          "h": 104,
+          "right": 68.796875,
+          "bottom": 844,
+          "cx": 38.3984375,
+          "icon": {
+            "x": 24.890625,
+            "y": 778,
+            "w": 27,
+            "h": 27,
+            "right": 51.890625,
+            "bottom": 805,
+            "cx": 38.390625
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(255, 214, 10)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(255, 214, 10)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "complaints",
+          "label": "Complaints",
+          "disabled": false,
+          "current": null,
+          "x": 68.796875,
+          "y": 740,
+          "w": 60.8125,
+          "h": 104,
+          "right": 129.609375,
+          "bottom": 844,
+          "cx": 99.203125,
+          "icon": {
+            "x": 85.703125,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 112.703125,
+            "bottom": 811,
+            "cx": 99.203125
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(187, 206, 224)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(187, 206, 224)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "quick-action",
+          "label": "Actions",
+          "disabled": false,
+          "current": null,
+          "x": 129.609375,
+          "y": 740,
+          "w": 60.796875,
+          "h": 104,
+          "right": 190.40625,
+          "bottom": 844,
+          "cx": 160.0078125,
+          "icon": {
+            "x": 146.5,
+            "y": 754,
+            "w": 27,
+            "h": 27,
+            "right": 173.5,
+            "bottom": 781,
+            "cx": 160
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(187, 206, 224)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(0, 29, 61)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "alerts",
+          "label": "Bulletins",
+          "disabled": false,
+          "current": null,
+          "x": 190.40625,
+          "y": 740,
+          "w": 60.796875,
+          "h": 104,
+          "right": 251.203125,
+          "bottom": 844,
+          "cx": 220.8046875,
+          "icon": {
+            "x": 207.296875,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 234.296875,
+            "bottom": 811,
+            "cx": 220.796875
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(187, 206, 224)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(187, 206, 224)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "settings",
+          "label": "Settings",
+          "disabled": false,
+          "current": null,
+          "x": 251.203125,
+          "y": 740,
+          "w": 60.796875,
+          "h": 104,
+          "right": 312,
+          "bottom": 844,
+          "cx": 281.6015625,
+          "icon": {
+            "x": 268.09375,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 295.09375,
+            "bottom": 811,
+            "cx": 281.59375
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(187, 206, 224)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(187, 206, 224)",
+            "backgroundImage": "none"
+          }
+        }
+      ]
+    },
+    {
+      "width": 320,
+      "theme": "dark",
+      "page": "administrator dashboard",
+      "viewport": {
+        "w": 320,
+        "layoutWidth": 320,
+        "h": 844
+      },
+      "overflow": false,
+      "kind": "standard",
+      "active": "overview",
+      "nav": {
+        "x": 0,
+        "y": 740,
+        "w": 320,
+        "h": 104,
+        "right": 320,
+        "bottom": 844,
+        "cx": 160
+      },
+      "surface": {
+        "background": "rgba(0, 0, 0, 0)",
+        "fill": "rgb(0, 53, 102)",
+        "color": "rgb(232, 240, 248)",
+        "backgroundImage": "none"
+      },
+      "indicator": {
+        "x": 9.3984375,
+        "y": 740,
+        "w": 58,
+        "h": 58,
+        "right": 67.3984375,
+        "bottom": 798,
+        "cx": 38.3984375,
+        "background": "rgb(255, 214, 10)",
+        "fill": "rgb(0, 0, 0)",
+        "color": "rgb(232, 240, 248)",
+        "backgroundImage": "none"
+      },
+      "safeBottom": "",
+      "reserved": 104,
+      "buttons": [
+        {
+          "id": "overview",
+          "label": "Overview",
+          "disabled": false,
+          "current": "page",
+          "x": 8,
+          "y": 740,
+          "w": 60.796875,
+          "h": 104,
+          "right": 68.796875,
+          "bottom": 844,
+          "cx": 38.3984375,
+          "icon": {
+            "x": 24.890625,
+            "y": 756,
+            "w": 27,
+            "h": 27,
+            "right": 51.890625,
+            "bottom": 783,
+            "cx": 38.390625
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(255, 214, 10)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(0, 29, 61)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "residences",
+          "label": "Residences",
+          "disabled": false,
+          "current": null,
+          "x": 68.796875,
+          "y": 740,
+          "w": 60.8125,
+          "h": 104,
+          "right": 129.609375,
+          "bottom": 844,
+          "cx": 99.203125,
+          "icon": {
+            "x": 85.703125,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 112.703125,
+            "bottom": 811,
+            "cx": 99.203125
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(187, 206, 224)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(187, 206, 224)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "managers",
+          "label": "Managers",
+          "disabled": false,
+          "current": null,
+          "x": 129.609375,
+          "y": 740,
+          "w": 60.796875,
+          "h": 104,
+          "right": 190.40625,
+          "bottom": 844,
+          "cx": 160.0078125,
+          "icon": {
+            "x": 146.5,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 173.5,
+            "bottom": 811,
+            "cx": 160
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(187, 206, 224)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(187, 206, 224)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "notifications",
+          "label": "Alerts",
+          "disabled": false,
+          "current": null,
+          "x": 190.40625,
+          "y": 740,
+          "w": 60.796875,
+          "h": 104,
+          "right": 251.203125,
+          "bottom": 844,
+          "cx": 220.8046875,
+          "icon": {
+            "x": 207.296875,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 234.296875,
+            "bottom": 811,
+            "cx": 220.796875
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(187, 206, 224)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(187, 206, 224)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "more",
+          "label": "More navigation",
+          "disabled": false,
+          "current": null,
+          "x": 251.203125,
+          "y": 740,
+          "w": 60.796875,
+          "h": 104,
+          "right": 312,
+          "bottom": 844,
+          "cx": 281.6015625,
+          "icon": {
+            "x": 268.09375,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 295.09375,
+            "bottom": 811,
+            "cx": 281.59375
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(187, 206, 224)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(187, 206, 224)",
+            "backgroundImage": "none"
+          }
+        }
+      ]
+    },
+    {
+      "width": 320,
+      "theme": "dark",
+      "page": "seller dashboard",
+      "viewport": {
+        "w": 320,
+        "layoutWidth": 320,
+        "h": 844
+      },
+      "overflow": false,
+      "kind": "action",
+      "active": "dashboard",
+      "nav": {
+        "x": 0,
+        "y": 740,
+        "w": 320,
+        "h": 104,
+        "right": 320,
+        "bottom": 844,
+        "cx": 160
+      },
+      "surface": {
+        "background": "rgba(0, 0, 0, 0)",
+        "fill": "rgb(0, 53, 102)",
+        "color": "rgb(232, 240, 248)",
+        "backgroundImage": "none"
+      },
+      "indicator": {
+        "x": 131.0078125,
+        "y": 740,
+        "w": 58,
+        "h": 58,
+        "right": 189.0078125,
+        "bottom": 798,
+        "cx": 160.0078125,
+        "background": "rgb(255, 214, 10)",
+        "fill": "rgb(0, 0, 0)",
+        "color": "rgb(232, 240, 248)",
+        "backgroundImage": "none"
+      },
+      "safeBottom": "",
+      "reserved": 104,
+      "buttons": [
+        {
+          "id": "dashboard",
+          "label": "Home",
+          "disabled": false,
+          "current": "page",
+          "x": 8,
+          "y": 740,
+          "w": 60.796875,
+          "h": 104,
+          "right": 68.796875,
+          "bottom": 844,
+          "cx": 38.3984375,
+          "icon": {
+            "x": 24.890625,
+            "y": 778,
+            "w": 27,
+            "h": 27,
+            "right": 51.890625,
+            "bottom": 805,
+            "cx": 38.390625
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(255, 214, 10)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(255, 214, 10)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "inventory",
+          "label": "Stock",
+          "disabled": false,
+          "current": null,
+          "x": 68.796875,
+          "y": 740,
+          "w": 60.8125,
+          "h": 104,
+          "right": 129.609375,
+          "bottom": 844,
+          "cx": 99.203125,
+          "icon": {
+            "x": 85.703125,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 112.703125,
+            "bottom": 811,
+            "cx": 99.203125
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(187, 206, 224)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(187, 206, 224)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "quick-action",
+          "label": "Publish",
+          "disabled": false,
+          "current": null,
+          "x": 129.609375,
+          "y": 740,
+          "w": 60.796875,
+          "h": 104,
+          "right": 190.40625,
+          "bottom": 844,
+          "cx": 160.0078125,
+          "icon": {
+            "x": 146.5,
+            "y": 754,
+            "w": 27,
+            "h": 27,
+            "right": 173.5,
+            "bottom": 781,
+            "cx": 160
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(187, 206, 224)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(0, 29, 61)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "sales",
+          "label": "Sales",
+          "disabled": false,
+          "current": null,
+          "x": 190.40625,
+          "y": 740,
+          "w": 60.796875,
+          "h": 104,
+          "right": 251.203125,
+          "bottom": 844,
+          "cx": 220.8046875,
+          "icon": {
+            "x": 207.296875,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 234.296875,
+            "bottom": 811,
+            "cx": 220.796875
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(187, 206, 224)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(187, 206, 224)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "more",
+          "label": "More navigation",
+          "disabled": false,
+          "current": null,
+          "x": 251.203125,
+          "y": 740,
+          "w": 60.796875,
+          "h": 104,
+          "right": 312,
+          "bottom": 844,
+          "cx": 281.6015625,
+          "icon": {
+            "x": 268.09375,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 295.09375,
+            "bottom": 811,
+            "cx": 281.59375
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(187, 206, 224)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(187, 206, 224)",
+            "backgroundImage": "none"
+          }
+        }
+      ]
+    },
+    {
+      "width": 320,
+      "theme": "dark",
+      "page": "field officer",
+      "viewport": {
+        "w": 320,
+        "layoutWidth": 320,
+        "h": 844
+      },
+      "overflow": false,
+      "kind": "standard",
+      "active": "inspections",
+      "nav": {
+        "x": 0,
+        "y": 740,
+        "w": 320,
+        "h": 104,
+        "right": 320,
+        "bottom": 844,
+        "cx": 160
+      },
+      "surface": {
+        "background": "rgba(0, 0, 0, 0)",
+        "fill": "rgb(0, 53, 102)",
+        "color": "rgb(232, 240, 248)",
+        "backgroundImage": "none"
+      },
+      "indicator": {
+        "x": 55,
+        "y": 740,
+        "w": 58,
+        "h": 58,
+        "right": 113,
+        "bottom": 798,
+        "cx": 84,
+        "background": "rgb(255, 214, 10)",
+        "fill": "rgb(0, 0, 0)",
+        "color": "rgb(232, 240, 248)",
+        "backgroundImage": "none"
+      },
+      "safeBottom": "",
+      "reserved": 104,
+      "buttons": [
+        {
+          "id": "inspections",
+          "label": "Inspections",
+          "disabled": false,
+          "current": "page",
+          "x": 8,
+          "y": 740,
+          "w": 152,
+          "h": 104,
+          "right": 160,
+          "bottom": 844,
+          "cx": 84,
+          "icon": {
+            "x": 70.5,
+            "y": 756,
+            "w": 27,
+            "h": 27,
+            "right": 97.5,
+            "bottom": 783,
+            "cx": 84
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(255, 214, 10)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(0, 29, 61)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "options",
+          "label": "Options",
+          "disabled": false,
+          "current": null,
+          "x": 160,
+          "y": 740,
+          "w": 152,
+          "h": 104,
+          "right": 312,
+          "bottom": 844,
+          "cx": 236,
+          "icon": {
+            "x": 222.5,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 249.5,
+            "bottom": 811,
+            "cx": 236
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(187, 206, 224)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(187, 206, 224)",
+            "backgroundImage": "none"
+          }
+        }
+      ]
+    },
+    {
+      "width": 320,
+      "theme": "dark",
+      "page": "customer service",
+      "viewport": {
+        "w": 320,
+        "layoutWidth": 320,
+        "h": 844
+      },
+      "overflow": false,
+      "kind": "standard",
+      "active": "inbox",
+      "nav": {
+        "x": 0,
+        "y": 740,
+        "w": 320,
+        "h": 104,
+        "right": 320,
+        "bottom": 844,
+        "cx": 160
+      },
+      "surface": {
+        "background": "rgba(0, 0, 0, 0)",
+        "fill": "rgb(0, 53, 102)",
+        "color": "rgb(232, 240, 248)",
+        "backgroundImage": "none"
+      },
+      "indicator": {
+        "x": 17,
+        "y": 740,
+        "w": 58,
+        "h": 58,
+        "right": 75,
+        "bottom": 798,
+        "cx": 46,
+        "background": "rgb(255, 214, 10)",
+        "fill": "rgb(0, 0, 0)",
+        "color": "rgb(232, 240, 248)",
+        "backgroundImage": "none"
+      },
+      "safeBottom": "",
+      "reserved": 104,
+      "buttons": [
+        {
+          "id": "inbox",
+          "label": "Inbox",
+          "disabled": false,
+          "current": "page",
+          "x": 8,
+          "y": 740,
+          "w": 76,
+          "h": 104,
+          "right": 84,
+          "bottom": 844,
+          "cx": 46,
+          "icon": {
+            "x": 32.5,
+            "y": 756,
+            "w": 27,
+            "h": 27,
+            "right": 59.5,
+            "bottom": 783,
+            "cx": 46
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(255, 214, 10)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(0, 29, 61)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "reports",
+          "label": "Reports",
+          "disabled": false,
+          "current": null,
+          "x": 84,
+          "y": 740,
+          "w": 76,
+          "h": 104,
+          "right": 160,
+          "bottom": 844,
+          "cx": 122,
+          "icon": {
+            "x": 108.5,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 135.5,
+            "bottom": 811,
+            "cx": 122
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(187, 206, 224)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(187, 206, 224)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "notifications",
+          "label": "Alerts",
+          "disabled": false,
+          "current": null,
+          "x": 160,
+          "y": 740,
+          "w": 76,
+          "h": 104,
+          "right": 236,
+          "bottom": 844,
+          "cx": 198,
+          "icon": {
+            "x": 184.5,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 211.5,
+            "bottom": 811,
+            "cx": 198
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(187, 206, 224)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(187, 206, 224)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "settings",
+          "label": "Settings",
+          "disabled": false,
+          "current": null,
+          "x": 236,
+          "y": 740,
+          "w": 76,
+          "h": 104,
+          "right": 312,
+          "bottom": 844,
+          "cx": 274,
+          "icon": {
+            "x": 260.5,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 287.5,
+            "bottom": 811,
+            "cx": 274
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(187, 206, 224)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(187, 206, 224)",
+            "backgroundImage": "none"
+          }
+        }
+      ]
+    },
+    {
+      "width": 390,
+      "theme": "light",
+      "page": "primary dashboard",
+      "viewport": {
+        "w": 390,
+        "layoutWidth": 390,
+        "h": 844
+      },
+      "overflow": false,
+      "kind": "standard",
+      "active": "home",
+      "nav": {
+        "x": 0,
+        "y": 740,
+        "w": 390,
+        "h": 104,
+        "right": 390,
+        "bottom": 844,
+        "cx": 195
+      },
+      "surface": {
+        "background": "rgba(0, 0, 0, 0)",
+        "fill": "rgb(255, 255, 255)",
+        "color": "rgb(0, 29, 61)",
+        "backgroundImage": "none"
+      },
+      "indicator": {
+        "x": 16.3984375,
+        "y": 740,
+        "w": 58,
+        "h": 58,
+        "right": 74.3984375,
+        "bottom": 798,
+        "cx": 45.3984375,
+        "background": "rgb(0, 53, 102)",
+        "fill": "rgb(0, 0, 0)",
+        "color": "rgb(0, 29, 61)",
+        "backgroundImage": "none"
+      },
+      "safeBottom": "",
+      "reserved": 104,
+      "buttons": [
+        {
+          "id": "home",
+          "label": "Home",
+          "disabled": false,
+          "current": "page",
+          "x": 8,
+          "y": 740,
+          "w": 74.796875,
+          "h": 104,
+          "right": 82.796875,
+          "bottom": 844,
+          "cx": 45.3984375,
+          "icon": {
+            "x": 31.890625,
+            "y": 756,
+            "w": 27,
+            "h": 27,
+            "right": 58.890625,
+            "bottom": 783,
+            "cx": 45.390625
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(0, 53, 102)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(255, 255, 255)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "digital-market",
+          "label": "Purchases",
+          "disabled": false,
+          "current": null,
+          "x": 82.796875,
+          "y": 740,
+          "w": 74.8125,
+          "h": 104,
+          "right": 157.609375,
+          "bottom": 844,
+          "cx": 120.203125,
+          "icon": {
+            "x": 106.703125,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 133.703125,
+            "bottom": 811,
+            "cx": 120.203125
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "login-room",
+          "label": "Room",
+          "disabled": false,
+          "current": null,
+          "x": 157.609375,
+          "y": 740,
+          "w": 74.796875,
+          "h": 104,
+          "right": 232.40625,
+          "bottom": 844,
+          "cx": 195.0078125,
+          "icon": {
+            "x": 181.5,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 208.5,
+            "bottom": 811,
+            "cx": 195
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "options",
+          "label": "Options",
+          "disabled": false,
+          "current": null,
+          "x": 232.40625,
+          "y": 740,
+          "w": 74.796875,
+          "h": 104,
+          "right": 307.203125,
+          "bottom": 844,
+          "cx": 269.8046875,
+          "icon": {
+            "x": 256.296875,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 283.296875,
+            "bottom": 811,
+            "cx": 269.796875
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "companion",
+          "label": "Ask AI",
+          "disabled": false,
+          "current": null,
+          "x": 307.203125,
+          "y": 740,
+          "w": 74.796875,
+          "h": 104,
+          "right": 382,
+          "bottom": 844,
+          "cx": 344.6015625,
+          "icon": {
+            "x": 331.09375,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 358.09375,
+            "bottom": 811,
+            "cx": 344.59375
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          }
+        }
+      ]
+    },
+    {
+      "width": 390,
+      "theme": "light",
+      "page": "manager dashboard",
+      "viewport": {
+        "w": 390,
+        "layoutWidth": 390,
+        "h": 844
+      },
+      "overflow": false,
+      "kind": "standard",
+      "active": "notifications",
+      "nav": {
+        "x": 0,
+        "y": 740,
+        "w": 390,
+        "h": 104,
+        "right": 390,
+        "bottom": 844,
+        "cx": 195
+      },
+      "surface": {
+        "background": "rgba(0, 0, 0, 0)",
+        "fill": "rgb(255, 255, 255)",
+        "color": "rgb(0, 29, 61)",
+        "backgroundImage": "none"
+      },
+      "indicator": {
+        "x": 119.25,
+        "y": 740,
+        "w": 58,
+        "h": 58,
+        "right": 177.25,
+        "bottom": 798,
+        "cx": 148.25,
+        "background": "rgb(0, 53, 102)",
+        "fill": "rgb(0, 0, 0)",
+        "color": "rgb(0, 29, 61)",
+        "backgroundImage": "none"
+      },
+      "safeBottom": "",
+      "reserved": 104,
+      "buttons": [
+        {
+          "id": "registration",
+          "label": "Status",
+          "disabled": false,
+          "current": null,
+          "x": 8,
+          "y": 740,
+          "w": 93.5,
+          "h": 104,
+          "right": 101.5,
+          "bottom": 844,
+          "cx": 54.75,
+          "icon": {
+            "x": 41.25,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 68.25,
+            "bottom": 811,
+            "cx": 54.75
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "notifications",
+          "label": "Alerts",
+          "disabled": false,
+          "current": "page",
+          "x": 101.5,
+          "y": 740,
+          "w": 93.5,
+          "h": 104,
+          "right": 195,
+          "bottom": 844,
+          "cx": 148.25,
+          "icon": {
+            "x": 134.75,
+            "y": 756,
+            "w": 27,
+            "h": 27,
+            "right": 161.75,
+            "bottom": 783,
+            "cx": 148.25
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(0, 53, 102)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(255, 255, 255)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "settings",
+          "label": "Settings",
+          "disabled": false,
+          "current": null,
+          "x": 195,
+          "y": 740,
+          "w": 93.5,
+          "h": 104,
+          "right": 288.5,
+          "bottom": 844,
+          "cx": 241.75,
+          "icon": {
+            "x": 228.25,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 255.25,
+            "bottom": 811,
+            "cx": 241.75
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "more",
+          "label": "More navigation",
+          "disabled": false,
+          "current": null,
+          "x": 288.5,
+          "y": 740,
+          "w": 93.5,
+          "h": 104,
+          "right": 382,
+          "bottom": 844,
+          "cx": 335.25,
+          "icon": {
+            "x": 321.75,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 348.75,
+            "bottom": 811,
+            "cx": 335.25
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          }
+        }
+      ]
+    },
+    {
+      "width": 390,
+      "theme": "light",
+      "page": "staff dashboard",
+      "viewport": {
+        "w": 390,
+        "layoutWidth": 390,
+        "h": 844
+      },
+      "overflow": false,
+      "kind": "standard",
+      "active": "maintenance",
+      "nav": {
+        "x": 0,
+        "y": 740,
+        "w": 390,
+        "h": 104,
+        "right": 390,
+        "bottom": 844,
+        "cx": 195
+      },
+      "surface": {
+        "background": "rgba(0, 0, 0, 0)",
+        "fill": "rgb(255, 255, 255)",
+        "color": "rgb(0, 29, 61)",
+        "backgroundImage": "none"
+      },
+      "indicator": {
+        "x": 290.6640625,
+        "y": 740,
+        "w": 58,
+        "h": 58,
+        "right": 348.6640625,
+        "bottom": 798,
+        "cx": 319.6640625,
+        "background": "rgb(0, 53, 102)",
+        "fill": "rgb(0, 0, 0)",
+        "color": "rgb(0, 29, 61)",
+        "backgroundImage": "none"
+      },
+      "safeBottom": "",
+      "reserved": 104,
+      "buttons": [
+        {
+          "id": "notifications",
+          "label": "Alerts",
+          "disabled": false,
+          "current": null,
+          "x": 8,
+          "y": 740,
+          "w": 124.65625,
+          "h": 104,
+          "right": 132.65625,
+          "bottom": 844,
+          "cx": 70.328125,
+          "icon": {
+            "x": 56.828125,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 83.828125,
+            "bottom": 811,
+            "cx": 70.328125
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "settings",
+          "label": "Settings",
+          "disabled": false,
+          "current": null,
+          "x": 132.65625,
+          "y": 740,
+          "w": 124.671875,
+          "h": 104,
+          "right": 257.328125,
+          "bottom": 844,
+          "cx": 194.9921875,
+          "icon": {
+            "x": 181.484375,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 208.484375,
+            "bottom": 811,
+            "cx": 194.984375
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "maintenance",
+          "label": "Orders",
+          "disabled": false,
+          "current": "page",
+          "x": 257.328125,
+          "y": 740,
+          "w": 124.671875,
+          "h": 104,
+          "right": 382,
+          "bottom": 844,
+          "cx": 319.6640625,
+          "icon": {
+            "x": 306.15625,
+            "y": 756,
+            "w": 27,
+            "h": 27,
+            "right": 333.15625,
+            "bottom": 783,
+            "cx": 319.65625
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(0, 53, 102)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(255, 255, 255)",
+            "backgroundImage": "none"
+          }
+        }
+      ]
+    },
+    {
+      "width": 390,
+      "theme": "light",
+      "page": "resident dashboard",
+      "viewport": {
+        "w": 390,
+        "layoutWidth": 390,
+        "h": 844
+      },
+      "overflow": false,
+      "kind": "action",
+      "active": "room",
+      "nav": {
+        "x": 0,
+        "y": 740,
+        "w": 390,
+        "h": 104,
+        "right": 390,
+        "bottom": 844,
+        "cx": 195
+      },
+      "surface": {
+        "background": "rgba(0, 0, 0, 0)",
+        "fill": "rgb(255, 255, 255)",
+        "color": "rgb(0, 29, 61)",
+        "backgroundImage": "none"
+      },
+      "indicator": {
+        "x": 166.0078125,
+        "y": 740,
+        "w": 58,
+        "h": 58,
+        "right": 224.0078125,
+        "bottom": 798,
+        "cx": 195.0078125,
+        "background": "rgb(0, 53, 102)",
+        "fill": "rgb(0, 0, 0)",
+        "color": "rgb(0, 29, 61)",
+        "backgroundImage": "none"
+      },
+      "safeBottom": "",
+      "reserved": 104,
+      "buttons": [
+        {
+          "id": "room",
+          "label": "My Room",
+          "disabled": false,
+          "current": "page",
+          "x": 8,
+          "y": 740,
+          "w": 74.796875,
+          "h": 104,
+          "right": 82.796875,
+          "bottom": 844,
+          "cx": 45.3984375,
+          "icon": {
+            "x": 31.890625,
+            "y": 778,
+            "w": 27,
+            "h": 27,
+            "right": 58.890625,
+            "bottom": 805,
+            "cx": 45.390625
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(0, 53, 102)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(0, 53, 102)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "complaints",
+          "label": "Complaints",
+          "disabled": false,
+          "current": null,
+          "x": 82.796875,
+          "y": 740,
+          "w": 74.8125,
+          "h": 104,
+          "right": 157.609375,
+          "bottom": 844,
+          "cx": 120.203125,
+          "icon": {
+            "x": 106.703125,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 133.703125,
+            "bottom": 811,
+            "cx": 120.203125
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "quick-action",
+          "label": "Actions",
+          "disabled": false,
+          "current": null,
+          "x": 157.609375,
+          "y": 740,
+          "w": 74.796875,
+          "h": 104,
+          "right": 232.40625,
+          "bottom": 844,
+          "cx": 195.0078125,
+          "icon": {
+            "x": 181.5,
+            "y": 754,
+            "w": 27,
+            "h": 27,
+            "right": 208.5,
+            "bottom": 781,
+            "cx": 195
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(255, 255, 255)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "alerts",
+          "label": "Bulletins",
+          "disabled": false,
+          "current": null,
+          "x": 232.40625,
+          "y": 740,
+          "w": 74.796875,
+          "h": 104,
+          "right": 307.203125,
+          "bottom": 844,
+          "cx": 269.8046875,
+          "icon": {
+            "x": 256.296875,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 283.296875,
+            "bottom": 811,
+            "cx": 269.796875
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "settings",
+          "label": "Settings",
+          "disabled": false,
+          "current": null,
+          "x": 307.203125,
+          "y": 740,
+          "w": 74.796875,
+          "h": 104,
+          "right": 382,
+          "bottom": 844,
+          "cx": 344.6015625,
+          "icon": {
+            "x": 331.09375,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 358.09375,
+            "bottom": 811,
+            "cx": 344.59375
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          }
+        }
+      ]
+    },
+    {
+      "width": 390,
+      "theme": "light",
+      "page": "administrator dashboard",
+      "viewport": {
+        "w": 390,
+        "layoutWidth": 390,
+        "h": 844
+      },
+      "overflow": false,
+      "kind": "standard",
+      "active": "overview",
+      "nav": {
+        "x": 0,
+        "y": 740,
+        "w": 390,
+        "h": 104,
+        "right": 390,
+        "bottom": 844,
+        "cx": 195
+      },
+      "surface": {
+        "background": "rgba(0, 0, 0, 0)",
+        "fill": "rgb(255, 255, 255)",
+        "color": "rgb(0, 29, 61)",
+        "backgroundImage": "none"
+      },
+      "indicator": {
+        "x": 16.3984375,
+        "y": 740,
+        "w": 58,
+        "h": 58,
+        "right": 74.3984375,
+        "bottom": 798,
+        "cx": 45.3984375,
+        "background": "rgb(0, 53, 102)",
+        "fill": "rgb(0, 0, 0)",
+        "color": "rgb(0, 29, 61)",
+        "backgroundImage": "none"
+      },
+      "safeBottom": "",
+      "reserved": 104,
+      "buttons": [
+        {
+          "id": "overview",
+          "label": "Overview",
+          "disabled": false,
+          "current": "page",
+          "x": 8,
+          "y": 740,
+          "w": 74.796875,
+          "h": 104,
+          "right": 82.796875,
+          "bottom": 844,
+          "cx": 45.3984375,
+          "icon": {
+            "x": 31.890625,
+            "y": 756,
+            "w": 27,
+            "h": 27,
+            "right": 58.890625,
+            "bottom": 783,
+            "cx": 45.390625
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(0, 53, 102)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(255, 255, 255)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "residences",
+          "label": "Residences",
+          "disabled": false,
+          "current": null,
+          "x": 82.796875,
+          "y": 740,
+          "w": 74.8125,
+          "h": 104,
+          "right": 157.609375,
+          "bottom": 844,
+          "cx": 120.203125,
+          "icon": {
+            "x": 106.703125,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 133.703125,
+            "bottom": 811,
+            "cx": 120.203125
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "managers",
+          "label": "Managers",
+          "disabled": false,
+          "current": null,
+          "x": 157.609375,
+          "y": 740,
+          "w": 74.796875,
+          "h": 104,
+          "right": 232.40625,
+          "bottom": 844,
+          "cx": 195.0078125,
+          "icon": {
+            "x": 181.5,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 208.5,
+            "bottom": 811,
+            "cx": 195
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "notifications",
+          "label": "Alerts",
+          "disabled": false,
+          "current": null,
+          "x": 232.40625,
+          "y": 740,
+          "w": 74.796875,
+          "h": 104,
+          "right": 307.203125,
+          "bottom": 844,
+          "cx": 269.8046875,
+          "icon": {
+            "x": 256.296875,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 283.296875,
+            "bottom": 811,
+            "cx": 269.796875
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "more",
+          "label": "More navigation",
+          "disabled": false,
+          "current": null,
+          "x": 307.203125,
+          "y": 740,
+          "w": 74.796875,
+          "h": 104,
+          "right": 382,
+          "bottom": 844,
+          "cx": 344.6015625,
+          "icon": {
+            "x": 331.09375,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 358.09375,
+            "bottom": 811,
+            "cx": 344.59375
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          }
+        }
+      ]
+    },
+    {
+      "width": 390,
+      "theme": "light",
+      "page": "seller dashboard",
+      "viewport": {
+        "w": 390,
+        "layoutWidth": 390,
+        "h": 844
+      },
+      "overflow": false,
+      "kind": "action",
+      "active": "dashboard",
+      "nav": {
+        "x": 0,
+        "y": 740,
+        "w": 390,
+        "h": 104,
+        "right": 390,
+        "bottom": 844,
+        "cx": 195
+      },
+      "surface": {
+        "background": "rgba(0, 0, 0, 0)",
+        "fill": "rgb(255, 255, 255)",
+        "color": "rgb(0, 29, 61)",
+        "backgroundImage": "none"
+      },
+      "indicator": {
+        "x": 166.0078125,
+        "y": 740,
+        "w": 58,
+        "h": 58,
+        "right": 224.0078125,
+        "bottom": 798,
+        "cx": 195.0078125,
+        "background": "rgb(0, 53, 102)",
+        "fill": "rgb(0, 0, 0)",
+        "color": "rgb(0, 29, 61)",
+        "backgroundImage": "none"
+      },
+      "safeBottom": "",
+      "reserved": 104,
+      "buttons": [
+        {
+          "id": "dashboard",
+          "label": "Home",
+          "disabled": false,
+          "current": "page",
+          "x": 8,
+          "y": 740,
+          "w": 74.796875,
+          "h": 104,
+          "right": 82.796875,
+          "bottom": 844,
+          "cx": 45.3984375,
+          "icon": {
+            "x": 31.890625,
+            "y": 778,
+            "w": 27,
+            "h": 27,
+            "right": 58.890625,
+            "bottom": 805,
+            "cx": 45.390625
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(0, 53, 102)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(0, 53, 102)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "inventory",
+          "label": "Stock",
+          "disabled": false,
+          "current": null,
+          "x": 82.796875,
+          "y": 740,
+          "w": 74.8125,
+          "h": 104,
+          "right": 157.609375,
+          "bottom": 844,
+          "cx": 120.203125,
+          "icon": {
+            "x": 106.703125,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 133.703125,
+            "bottom": 811,
+            "cx": 120.203125
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "quick-action",
+          "label": "Publish",
+          "disabled": false,
+          "current": null,
+          "x": 157.609375,
+          "y": 740,
+          "w": 74.796875,
+          "h": 104,
+          "right": 232.40625,
+          "bottom": 844,
+          "cx": 195.0078125,
+          "icon": {
+            "x": 181.5,
+            "y": 754,
+            "w": 27,
+            "h": 27,
+            "right": 208.5,
+            "bottom": 781,
+            "cx": 195
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(255, 255, 255)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "sales",
+          "label": "Sales",
+          "disabled": false,
+          "current": null,
+          "x": 232.40625,
+          "y": 740,
+          "w": 74.796875,
+          "h": 104,
+          "right": 307.203125,
+          "bottom": 844,
+          "cx": 269.8046875,
+          "icon": {
+            "x": 256.296875,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 283.296875,
+            "bottom": 811,
+            "cx": 269.796875
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "more",
+          "label": "More navigation",
+          "disabled": false,
+          "current": null,
+          "x": 307.203125,
+          "y": 740,
+          "w": 74.796875,
+          "h": 104,
+          "right": 382,
+          "bottom": 844,
+          "cx": 344.6015625,
+          "icon": {
+            "x": 331.09375,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 358.09375,
+            "bottom": 811,
+            "cx": 344.59375
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          }
+        }
+      ]
+    },
+    {
+      "width": 390,
+      "theme": "light",
+      "page": "field officer",
+      "viewport": {
+        "w": 390,
+        "layoutWidth": 390,
+        "h": 844
+      },
+      "overflow": false,
+      "kind": "standard",
+      "active": "inspections",
+      "nav": {
+        "x": 0,
+        "y": 740,
+        "w": 390,
+        "h": 104,
+        "right": 390,
+        "bottom": 844,
+        "cx": 195
+      },
+      "surface": {
+        "background": "rgba(0, 0, 0, 0)",
+        "fill": "rgb(255, 255, 255)",
+        "color": "rgb(0, 29, 61)",
+        "backgroundImage": "none"
+      },
+      "indicator": {
+        "x": 72.5,
+        "y": 740,
+        "w": 58,
+        "h": 58,
+        "right": 130.5,
+        "bottom": 798,
+        "cx": 101.5,
+        "background": "rgb(0, 53, 102)",
+        "fill": "rgb(0, 0, 0)",
+        "color": "rgb(0, 29, 61)",
+        "backgroundImage": "none"
+      },
+      "safeBottom": "",
+      "reserved": 104,
+      "buttons": [
+        {
+          "id": "inspections",
+          "label": "Inspections",
+          "disabled": false,
+          "current": "page",
+          "x": 8,
+          "y": 740,
+          "w": 187,
+          "h": 104,
+          "right": 195,
+          "bottom": 844,
+          "cx": 101.5,
+          "icon": {
+            "x": 88,
+            "y": 756,
+            "w": 27,
+            "h": 27,
+            "right": 115,
+            "bottom": 783,
+            "cx": 101.5
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(0, 53, 102)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(255, 255, 255)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "options",
+          "label": "Options",
+          "disabled": false,
+          "current": null,
+          "x": 195,
+          "y": 740,
+          "w": 187,
+          "h": 104,
+          "right": 382,
+          "bottom": 844,
+          "cx": 288.5,
+          "icon": {
+            "x": 275,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 302,
+            "bottom": 811,
+            "cx": 288.5
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          }
+        }
+      ]
+    },
+    {
+      "width": 390,
+      "theme": "light",
+      "page": "customer service",
+      "viewport": {
+        "w": 390,
+        "layoutWidth": 390,
+        "h": 844
+      },
+      "overflow": false,
+      "kind": "standard",
+      "active": "inbox",
+      "nav": {
+        "x": 0,
+        "y": 740,
+        "w": 390,
+        "h": 104,
+        "right": 390,
+        "bottom": 844,
+        "cx": 195
+      },
+      "surface": {
+        "background": "rgba(0, 0, 0, 0)",
+        "fill": "rgb(255, 255, 255)",
+        "color": "rgb(0, 29, 61)",
+        "backgroundImage": "none"
+      },
+      "indicator": {
+        "x": 25.75,
+        "y": 740,
+        "w": 58,
+        "h": 58,
+        "right": 83.75,
+        "bottom": 798,
+        "cx": 54.75,
+        "background": "rgb(0, 53, 102)",
+        "fill": "rgb(0, 0, 0)",
+        "color": "rgb(0, 29, 61)",
+        "backgroundImage": "none"
+      },
+      "safeBottom": "",
+      "reserved": 104,
+      "buttons": [
+        {
+          "id": "inbox",
+          "label": "Inbox",
+          "disabled": false,
+          "current": "page",
+          "x": 8,
+          "y": 740,
+          "w": 93.5,
+          "h": 104,
+          "right": 101.5,
+          "bottom": 844,
+          "cx": 54.75,
+          "icon": {
+            "x": 41.25,
+            "y": 756,
+            "w": 27,
+            "h": 27,
+            "right": 68.25,
+            "bottom": 783,
+            "cx": 54.75
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(0, 53, 102)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(255, 255, 255)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "reports",
+          "label": "Reports",
+          "disabled": false,
+          "current": null,
+          "x": 101.5,
+          "y": 740,
+          "w": 93.5,
+          "h": 104,
+          "right": 195,
+          "bottom": 844,
+          "cx": 148.25,
+          "icon": {
+            "x": 134.75,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 161.75,
+            "bottom": 811,
+            "cx": 148.25
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "notifications",
+          "label": "Alerts",
+          "disabled": false,
+          "current": null,
+          "x": 195,
+          "y": 740,
+          "w": 93.5,
+          "h": 104,
+          "right": 288.5,
+          "bottom": 844,
+          "cx": 241.75,
+          "icon": {
+            "x": 228.25,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 255.25,
+            "bottom": 811,
+            "cx": 241.75
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "settings",
+          "label": "Settings",
+          "disabled": false,
+          "current": null,
+          "x": 288.5,
+          "y": 740,
+          "w": 93.5,
+          "h": 104,
+          "right": 382,
+          "bottom": 844,
+          "cx": 335.25,
+          "icon": {
+            "x": 321.75,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 348.75,
+            "bottom": 811,
+            "cx": 335.25
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(96, 112, 131)",
+            "backgroundImage": "none"
+          }
+        }
+      ]
+    },
+    {
+      "width": 390,
+      "theme": "dark",
+      "page": "primary dashboard",
+      "viewport": {
+        "w": 390,
+        "layoutWidth": 390,
+        "h": 844
+      },
+      "overflow": false,
+      "kind": "standard",
+      "active": "home",
+      "nav": {
+        "x": 0,
+        "y": 740,
+        "w": 390,
+        "h": 104,
+        "right": 390,
+        "bottom": 844,
+        "cx": 195
+      },
+      "surface": {
+        "background": "rgba(0, 0, 0, 0)",
+        "fill": "rgb(0, 53, 102)",
+        "color": "rgb(232, 240, 248)",
+        "backgroundImage": "none"
+      },
+      "indicator": {
+        "x": 16.3984375,
+        "y": 740,
+        "w": 58,
+        "h": 58,
+        "right": 74.3984375,
+        "bottom": 798,
+        "cx": 45.3984375,
+        "background": "rgb(255, 214, 10)",
+        "fill": "rgb(0, 0, 0)",
+        "color": "rgb(232, 240, 248)",
+        "backgroundImage": "none"
+      },
+      "safeBottom": "",
+      "reserved": 104,
+      "buttons": [
+        {
+          "id": "home",
+          "label": "Home",
+          "disabled": false,
+          "current": "page",
+          "x": 8,
+          "y": 740,
+          "w": 74.796875,
+          "h": 104,
+          "right": 82.796875,
+          "bottom": 844,
+          "cx": 45.3984375,
+          "icon": {
+            "x": 31.890625,
+            "y": 756,
+            "w": 27,
+            "h": 27,
+            "right": 58.890625,
+            "bottom": 783,
+            "cx": 45.390625
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(255, 214, 10)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(0, 29, 61)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "digital-market",
+          "label": "Purchases",
+          "disabled": false,
+          "current": null,
+          "x": 82.796875,
+          "y": 740,
+          "w": 74.8125,
+          "h": 104,
+          "right": 157.609375,
+          "bottom": 844,
+          "cx": 120.203125,
+          "icon": {
+            "x": 106.703125,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 133.703125,
+            "bottom": 811,
+            "cx": 120.203125
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(187, 206, 224)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(187, 206, 224)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "login-room",
+          "label": "Room",
+          "disabled": false,
+          "current": null,
+          "x": 157.609375,
+          "y": 740,
+          "w": 74.796875,
+          "h": 104,
+          "right": 232.40625,
+          "bottom": 844,
+          "cx": 195.0078125,
+          "icon": {
+            "x": 181.5,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 208.5,
+            "bottom": 811,
+            "cx": 195
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(187, 206, 224)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(187, 206, 224)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "options",
+          "label": "Options",
+          "disabled": false,
+          "current": null,
+          "x": 232.40625,
+          "y": 740,
+          "w": 74.796875,
+          "h": 104,
+          "right": 307.203125,
+          "bottom": 844,
+          "cx": 269.8046875,
+          "icon": {
+            "x": 256.296875,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 283.296875,
+            "bottom": 811,
+            "cx": 269.796875
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(187, 206, 224)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(187, 206, 224)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "companion",
+          "label": "Ask AI",
+          "disabled": false,
+          "current": null,
+          "x": 307.203125,
+          "y": 740,
+          "w": 74.796875,
+          "h": 104,
+          "right": 382,
+          "bottom": 844,
+          "cx": 344.6015625,
+          "icon": {
+            "x": 331.09375,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 358.09375,
+            "bottom": 811,
+            "cx": 344.59375
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(187, 206, 224)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(187, 206, 224)",
+            "backgroundImage": "none"
+          }
+        }
+      ]
+    },
+    {
+      "width": 390,
+      "theme": "dark",
+      "page": "manager dashboard",
+      "viewport": {
+        "w": 390,
+        "layoutWidth": 390,
+        "h": 844
+      },
+      "overflow": false,
+      "kind": "standard",
+      "active": "notifications",
+      "nav": {
+        "x": 0,
+        "y": 740,
+        "w": 390,
+        "h": 104,
+        "right": 390,
+        "bottom": 844,
+        "cx": 195
+      },
+      "surface": {
+        "background": "rgba(0, 0, 0, 0)",
+        "fill": "rgb(0, 53, 102)",
+        "color": "rgb(232, 240, 248)",
+        "backgroundImage": "none"
+      },
+      "indicator": {
+        "x": 119.25,
+        "y": 740,
+        "w": 58,
+        "h": 58,
+        "right": 177.25,
+        "bottom": 798,
+        "cx": 148.25,
+        "background": "rgb(255, 214, 10)",
+        "fill": "rgb(0, 0, 0)",
+        "color": "rgb(232, 240, 248)",
+        "backgroundImage": "none"
+      },
+      "safeBottom": "",
+      "reserved": 104,
+      "buttons": [
+        {
+          "id": "registration",
+          "label": "Status",
+          "disabled": false,
+          "current": null,
+          "x": 8,
+          "y": 740,
+          "w": 93.5,
+          "h": 104,
+          "right": 101.5,
+          "bottom": 844,
+          "cx": 54.75,
+          "icon": {
+            "x": 41.25,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 68.25,
+            "bottom": 811,
+            "cx": 54.75
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(187, 206, 224)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(187, 206, 224)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "notifications",
+          "label": "Alerts",
+          "disabled": false,
+          "current": "page",
+          "x": 101.5,
+          "y": 740,
+          "w": 93.5,
+          "h": 104,
+          "right": 195,
+          "bottom": 844,
+          "cx": 148.25,
+          "icon": {
+            "x": 134.75,
+            "y": 756,
+            "w": 27,
+            "h": 27,
+            "right": 161.75,
+            "bottom": 783,
+            "cx": 148.25
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(255, 214, 10)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(0, 29, 61)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "settings",
+          "label": "Settings",
+          "disabled": false,
+          "current": null,
+          "x": 195,
+          "y": 740,
+          "w": 93.5,
+          "h": 104,
+          "right": 288.5,
+          "bottom": 844,
+          "cx": 241.75,
+          "icon": {
+            "x": 228.25,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 255.25,
+            "bottom": 811,
+            "cx": 241.75
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(187, 206, 224)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(187, 206, 224)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "more",
+          "label": "More navigation",
+          "disabled": false,
+          "current": null,
+          "x": 288.5,
+          "y": 740,
+          "w": 93.5,
+          "h": 104,
+          "right": 382,
+          "bottom": 844,
+          "cx": 335.25,
+          "icon": {
+            "x": 321.75,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 348.75,
+            "bottom": 811,
+            "cx": 335.25
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(187, 206, 224)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(187, 206, 224)",
+            "backgroundImage": "none"
+          }
+        }
+      ]
+    },
+    {
+      "width": 390,
+      "theme": "dark",
+      "page": "staff dashboard",
+      "viewport": {
+        "w": 390,
+        "layoutWidth": 390,
+        "h": 844
+      },
+      "overflow": false,
+      "kind": "standard",
+      "active": "maintenance",
+      "nav": {
+        "x": 0,
+        "y": 740,
+        "w": 390,
+        "h": 104,
+        "right": 390,
+        "bottom": 844,
+        "cx": 195
+      },
+      "surface": {
+        "background": "rgba(0, 0, 0, 0)",
+        "fill": "rgb(0, 53, 102)",
+        "color": "rgb(232, 240, 248)",
+        "backgroundImage": "none"
+      },
+      "indicator": {
+        "x": 290.6640625,
+        "y": 740,
+        "w": 58,
+        "h": 58,
+        "right": 348.6640625,
+        "bottom": 798,
+        "cx": 319.6640625,
+        "background": "rgb(255, 214, 10)",
+        "fill": "rgb(0, 0, 0)",
+        "color": "rgb(232, 240, 248)",
+        "backgroundImage": "none"
+      },
+      "safeBottom": "",
+      "reserved": 104,
+      "buttons": [
+        {
+          "id": "notifications",
+          "label": "Alerts",
+          "disabled": false,
+          "current": null,
+          "x": 8,
+          "y": 740,
+          "w": 124.65625,
+          "h": 104,
+          "right": 132.65625,
+          "bottom": 844,
+          "cx": 70.328125,
+          "icon": {
+            "x": 56.828125,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 83.828125,
+            "bottom": 811,
+            "cx": 70.328125
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(187, 206, 224)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(187, 206, 224)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "settings",
+          "label": "Settings",
+          "disabled": false,
+          "current": null,
+          "x": 132.65625,
+          "y": 740,
+          "w": 124.671875,
+          "h": 104,
+          "right": 257.328125,
+          "bottom": 844,
+          "cx": 194.9921875,
+          "icon": {
+            "x": 181.484375,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 208.484375,
+            "bottom": 811,
+            "cx": 194.984375
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(187, 206, 224)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(187, 206, 224)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "maintenance",
+          "label": "Orders",
+          "disabled": false,
+          "current": "page",
+          "x": 257.328125,
+          "y": 740,
+          "w": 124.671875,
+          "h": 104,
+          "right": 382,
+          "bottom": 844,
+          "cx": 319.6640625,
+          "icon": {
+            "x": 306.15625,
+            "y": 756,
+            "w": 27,
+            "h": 27,
+            "right": 333.15625,
+            "bottom": 783,
+            "cx": 319.65625
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(255, 214, 10)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(0, 29, 61)",
+            "backgroundImage": "none"
+          }
+        }
+      ]
+    },
+    {
+      "width": 390,
+      "theme": "dark",
+      "page": "resident dashboard",
+      "viewport": {
+        "w": 390,
+        "layoutWidth": 390,
+        "h": 844
+      },
+      "overflow": false,
+      "kind": "action",
+      "active": "room",
+      "nav": {
+        "x": 0,
+        "y": 740,
+        "w": 390,
+        "h": 104,
+        "right": 390,
+        "bottom": 844,
+        "cx": 195
+      },
+      "surface": {
+        "background": "rgba(0, 0, 0, 0)",
+        "fill": "rgb(0, 53, 102)",
+        "color": "rgb(232, 240, 248)",
+        "backgroundImage": "none"
+      },
+      "indicator": {
+        "x": 166.0078125,
+        "y": 740,
+        "w": 58,
+        "h": 58,
+        "right": 224.0078125,
+        "bottom": 798,
+        "cx": 195.0078125,
+        "background": "rgb(255, 214, 10)",
+        "fill": "rgb(0, 0, 0)",
+        "color": "rgb(232, 240, 248)",
+        "backgroundImage": "none"
+      },
+      "safeBottom": "",
+      "reserved": 104,
+      "buttons": [
+        {
+          "id": "room",
+          "label": "My Room",
+          "disabled": false,
+          "current": "page",
+          "x": 8,
+          "y": 740,
+          "w": 74.796875,
+          "h": 104,
+          "right": 82.796875,
+          "bottom": 844,
+          "cx": 45.3984375,
+          "icon": {
+            "x": 31.890625,
+            "y": 778,
+            "w": 27,
+            "h": 27,
+            "right": 58.890625,
+            "bottom": 805,
+            "cx": 45.390625
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(255, 214, 10)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(255, 214, 10)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "complaints",
+          "label": "Complaints",
+          "disabled": false,
+          "current": null,
+          "x": 82.796875,
+          "y": 740,
+          "w": 74.8125,
+          "h": 104,
+          "right": 157.609375,
+          "bottom": 844,
+          "cx": 120.203125,
+          "icon": {
+            "x": 106.703125,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 133.703125,
+            "bottom": 811,
+            "cx": 120.203125
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(187, 206, 224)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(187, 206, 224)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "quick-action",
+          "label": "Actions",
+          "disabled": false,
+          "current": null,
+          "x": 157.609375,
+          "y": 740,
+          "w": 74.796875,
+          "h": 104,
+          "right": 232.40625,
+          "bottom": 844,
+          "cx": 195.0078125,
+          "icon": {
+            "x": 181.5,
+            "y": 754,
+            "w": 27,
+            "h": 27,
+            "right": 208.5,
+            "bottom": 781,
+            "cx": 195
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(187, 206, 224)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(0, 29, 61)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "alerts",
+          "label": "Bulletins",
+          "disabled": false,
+          "current": null,
+          "x": 232.40625,
+          "y": 740,
+          "w": 74.796875,
+          "h": 104,
+          "right": 307.203125,
+          "bottom": 844,
+          "cx": 269.8046875,
+          "icon": {
+            "x": 256.296875,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 283.296875,
+            "bottom": 811,
+            "cx": 269.796875
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(187, 206, 224)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(187, 206, 224)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "settings",
+          "label": "Settings",
+          "disabled": false,
+          "current": null,
+          "x": 307.203125,
+          "y": 740,
+          "w": 74.796875,
+          "h": 104,
+          "right": 382,
+          "bottom": 844,
+          "cx": 344.6015625,
+          "icon": {
+            "x": 331.09375,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 358.09375,
+            "bottom": 811,
+            "cx": 344.59375
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(187, 206, 224)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(187, 206, 224)",
+            "backgroundImage": "none"
+          }
+        }
+      ]
+    },
+    {
+      "width": 390,
+      "theme": "dark",
+      "page": "administrator dashboard",
+      "viewport": {
+        "w": 390,
+        "layoutWidth": 390,
+        "h": 844
+      },
+      "overflow": false,
+      "kind": "standard",
+      "active": "overview",
+      "nav": {
+        "x": 0,
+        "y": 740,
+        "w": 390,
+        "h": 104,
+        "right": 390,
+        "bottom": 844,
+        "cx": 195
+      },
+      "surface": {
+        "background": "rgba(0, 0, 0, 0)",
+        "fill": "rgb(0, 53, 102)",
+        "color": "rgb(232, 240, 248)",
+        "backgroundImage": "none"
+      },
+      "indicator": {
+        "x": 16.3984375,
+        "y": 740,
+        "w": 58,
+        "h": 58,
+        "right": 74.3984375,
+        "bottom": 798,
+        "cx": 45.3984375,
+        "background": "rgb(255, 214, 10)",
+        "fill": "rgb(0, 0, 0)",
+        "color": "rgb(232, 240, 248)",
+        "backgroundImage": "none"
+      },
+      "safeBottom": "",
+      "reserved": 104,
+      "buttons": [
+        {
+          "id": "overview",
+          "label": "Overview",
+          "disabled": false,
+          "current": "page",
+          "x": 8,
+          "y": 740,
+          "w": 74.796875,
+          "h": 104,
+          "right": 82.796875,
+          "bottom": 844,
+          "cx": 45.3984375,
+          "icon": {
+            "x": 31.890625,
+            "y": 756,
+            "w": 27,
+            "h": 27,
+            "right": 58.890625,
+            "bottom": 783,
+            "cx": 45.390625
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(255, 214, 10)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(0, 29, 61)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "residences",
+          "label": "Residences",
+          "disabled": false,
+          "current": null,
+          "x": 82.796875,
+          "y": 740,
+          "w": 74.8125,
+          "h": 104,
+          "right": 157.609375,
+          "bottom": 844,
+          "cx": 120.203125,
+          "icon": {
+            "x": 106.703125,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 133.703125,
+            "bottom": 811,
+            "cx": 120.203125
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(187, 206, 224)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(187, 206, 224)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "managers",
+          "label": "Managers",
+          "disabled": false,
+          "current": null,
+          "x": 157.609375,
+          "y": 740,
+          "w": 74.796875,
+          "h": 104,
+          "right": 232.40625,
+          "bottom": 844,
+          "cx": 195.0078125,
+          "icon": {
+            "x": 181.5,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 208.5,
+            "bottom": 811,
+            "cx": 195
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(187, 206, 224)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(187, 206, 224)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "notifications",
+          "label": "Alerts",
+          "disabled": false,
+          "current": null,
+          "x": 232.40625,
+          "y": 740,
+          "w": 74.796875,
+          "h": 104,
+          "right": 307.203125,
+          "bottom": 844,
+          "cx": 269.8046875,
+          "icon": {
+            "x": 256.296875,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 283.296875,
+            "bottom": 811,
+            "cx": 269.796875
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(187, 206, 224)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(187, 206, 224)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "more",
+          "label": "More navigation",
+          "disabled": false,
+          "current": null,
+          "x": 307.203125,
+          "y": 740,
+          "w": 74.796875,
+          "h": 104,
+          "right": 382,
+          "bottom": 844,
+          "cx": 344.6015625,
+          "icon": {
+            "x": 331.09375,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 358.09375,
+            "bottom": 811,
+            "cx": 344.59375
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(187, 206, 224)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(187, 206, 224)",
+            "backgroundImage": "none"
+          }
+        }
+      ]
+    },
+    {
+      "width": 390,
+      "theme": "dark",
+      "page": "seller dashboard",
+      "viewport": {
+        "w": 390,
+        "layoutWidth": 390,
+        "h": 844
+      },
+      "overflow": false,
+      "kind": "action",
+      "active": "dashboard",
+      "nav": {
+        "x": 0,
+        "y": 740,
+        "w": 390,
+        "h": 104,
+        "right": 390,
+        "bottom": 844,
+        "cx": 195
+      },
+      "surface": {
+        "background": "rgba(0, 0, 0, 0)",
+        "fill": "rgb(0, 53, 102)",
+        "color": "rgb(232, 240, 248)",
+        "backgroundImage": "none"
+      },
+      "indicator": {
+        "x": 166.0078125,
+        "y": 740,
+        "w": 58,
+        "h": 58,
+        "right": 224.0078125,
+        "bottom": 798,
+        "cx": 195.0078125,
+        "background": "rgb(255, 214, 10)",
+        "fill": "rgb(0, 0, 0)",
+        "color": "rgb(232, 240, 248)",
+        "backgroundImage": "none"
+      },
+      "safeBottom": "",
+      "reserved": 104,
+      "buttons": [
+        {
+          "id": "dashboard",
+          "label": "Home",
+          "disabled": false,
+          "current": "page",
+          "x": 8,
+          "y": 740,
+          "w": 74.796875,
+          "h": 104,
+          "right": 82.796875,
+          "bottom": 844,
+          "cx": 45.3984375,
+          "icon": {
+            "x": 31.890625,
+            "y": 778,
+            "w": 27,
+            "h": 27,
+            "right": 58.890625,
+            "bottom": 805,
+            "cx": 45.390625
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(255, 214, 10)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(255, 214, 10)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "inventory",
+          "label": "Stock",
+          "disabled": false,
+          "current": null,
+          "x": 82.796875,
+          "y": 740,
+          "w": 74.8125,
+          "h": 104,
+          "right": 157.609375,
+          "bottom": 844,
+          "cx": 120.203125,
+          "icon": {
+            "x": 106.703125,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 133.703125,
+            "bottom": 811,
+            "cx": 120.203125
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(187, 206, 224)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(187, 206, 224)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "quick-action",
+          "label": "Publish",
+          "disabled": false,
+          "current": null,
+          "x": 157.609375,
+          "y": 740,
+          "w": 74.796875,
+          "h": 104,
+          "right": 232.40625,
+          "bottom": 844,
+          "cx": 195.0078125,
+          "icon": {
+            "x": 181.5,
+            "y": 754,
+            "w": 27,
+            "h": 27,
+            "right": 208.5,
+            "bottom": 781,
+            "cx": 195
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(187, 206, 224)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(0, 29, 61)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "sales",
+          "label": "Sales",
+          "disabled": false,
+          "current": null,
+          "x": 232.40625,
+          "y": 740,
+          "w": 74.796875,
+          "h": 104,
+          "right": 307.203125,
+          "bottom": 844,
+          "cx": 269.8046875,
+          "icon": {
+            "x": 256.296875,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 283.296875,
+            "bottom": 811,
+            "cx": 269.796875
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(187, 206, 224)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(187, 206, 224)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "more",
+          "label": "More navigation",
+          "disabled": false,
+          "current": null,
+          "x": 307.203125,
+          "y": 740,
+          "w": 74.796875,
+          "h": 104,
+          "right": 382,
+          "bottom": 844,
+          "cx": 344.6015625,
+          "icon": {
+            "x": 331.09375,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 358.09375,
+            "bottom": 811,
+            "cx": 344.59375
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(187, 206, 224)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(187, 206, 224)",
+            "backgroundImage": "none"
+          }
+        }
+      ]
+    },
+    {
+      "width": 390,
+      "theme": "dark",
+      "page": "field officer",
+      "viewport": {
+        "w": 390,
+        "layoutWidth": 390,
+        "h": 844
+      },
+      "overflow": false,
+      "kind": "standard",
+      "active": "inspections",
+      "nav": {
+        "x": 0,
+        "y": 740,
+        "w": 390,
+        "h": 104,
+        "right": 390,
+        "bottom": 844,
+        "cx": 195
+      },
+      "surface": {
+        "background": "rgba(0, 0, 0, 0)",
+        "fill": "rgb(0, 53, 102)",
+        "color": "rgb(232, 240, 248)",
+        "backgroundImage": "none"
+      },
+      "indicator": {
+        "x": 72.5,
+        "y": 740,
+        "w": 58,
+        "h": 58,
+        "right": 130.5,
+        "bottom": 798,
+        "cx": 101.5,
+        "background": "rgb(255, 214, 10)",
+        "fill": "rgb(0, 0, 0)",
+        "color": "rgb(232, 240, 248)",
+        "backgroundImage": "none"
+      },
+      "safeBottom": "",
+      "reserved": 104,
+      "buttons": [
+        {
+          "id": "inspections",
+          "label": "Inspections",
+          "disabled": false,
+          "current": "page",
+          "x": 8,
+          "y": 740,
+          "w": 187,
+          "h": 104,
+          "right": 195,
+          "bottom": 844,
+          "cx": 101.5,
+          "icon": {
+            "x": 88,
+            "y": 756,
+            "w": 27,
+            "h": 27,
+            "right": 115,
+            "bottom": 783,
+            "cx": 101.5
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(255, 214, 10)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(0, 29, 61)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "options",
+          "label": "Options",
+          "disabled": false,
+          "current": null,
+          "x": 195,
+          "y": 740,
+          "w": 187,
+          "h": 104,
+          "right": 382,
+          "bottom": 844,
+          "cx": 288.5,
+          "icon": {
+            "x": 275,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 302,
+            "bottom": 811,
+            "cx": 288.5
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(187, 206, 224)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(187, 206, 224)",
+            "backgroundImage": "none"
+          }
+        }
+      ]
+    },
+    {
+      "width": 390,
+      "theme": "dark",
+      "page": "customer service",
+      "viewport": {
+        "w": 390,
+        "layoutWidth": 390,
+        "h": 844
+      },
+      "overflow": false,
+      "kind": "standard",
+      "active": "inbox",
+      "nav": {
+        "x": 0,
+        "y": 740,
+        "w": 390,
+        "h": 104,
+        "right": 390,
+        "bottom": 844,
+        "cx": 195
+      },
+      "surface": {
+        "background": "rgba(0, 0, 0, 0)",
+        "fill": "rgb(0, 53, 102)",
+        "color": "rgb(232, 240, 248)",
+        "backgroundImage": "none"
+      },
+      "indicator": {
+        "x": 25.75,
+        "y": 740,
+        "w": 58,
+        "h": 58,
+        "right": 83.75,
+        "bottom": 798,
+        "cx": 54.75,
+        "background": "rgb(255, 214, 10)",
+        "fill": "rgb(0, 0, 0)",
+        "color": "rgb(232, 240, 248)",
+        "backgroundImage": "none"
+      },
+      "safeBottom": "",
+      "reserved": 104,
+      "buttons": [
+        {
+          "id": "inbox",
+          "label": "Inbox",
+          "disabled": false,
+          "current": "page",
+          "x": 8,
+          "y": 740,
+          "w": 93.5,
+          "h": 104,
+          "right": 101.5,
+          "bottom": 844,
+          "cx": 54.75,
+          "icon": {
+            "x": 41.25,
+            "y": 756,
+            "w": 27,
+            "h": 27,
+            "right": 68.25,
+            "bottom": 783,
+            "cx": 54.75
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(255, 214, 10)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(0, 29, 61)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "reports",
+          "label": "Reports",
+          "disabled": false,
+          "current": null,
+          "x": 101.5,
+          "y": 740,
+          "w": 93.5,
+          "h": 104,
+          "right": 195,
+          "bottom": 844,
+          "cx": 148.25,
+          "icon": {
+            "x": 134.75,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 161.75,
+            "bottom": 811,
+            "cx": 148.25
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(187, 206, 224)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(187, 206, 224)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "notifications",
+          "label": "Alerts",
+          "disabled": false,
+          "current": null,
+          "x": 195,
+          "y": 740,
+          "w": 93.5,
+          "h": 104,
+          "right": 288.5,
+          "bottom": 844,
+          "cx": 241.75,
+          "icon": {
+            "x": 228.25,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 255.25,
+            "bottom": 811,
+            "cx": 241.75
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(187, 206, 224)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(187, 206, 224)",
+            "backgroundImage": "none"
+          }
+        },
+        {
+          "id": "settings",
+          "label": "Settings",
+          "disabled": false,
+          "current": null,
+          "x": 288.5,
+          "y": 740,
+          "w": 93.5,
+          "h": 104,
+          "right": 382,
+          "bottom": 844,
+          "cx": 335.25,
+          "icon": {
+            "x": 321.75,
+            "y": 784,
+            "w": 27,
+            "h": 27,
+            "right": 348.75,
+            "bottom": 811,
+            "cx": 335.25
+          },
+          "paint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(187, 206, 224)",
+            "backgroundImage": "none"
+          },
+          "iconPaint": {
+            "background": "rgba(0, 0, 0, 0)",
+            "fill": "rgb(0, 0, 0)",
+            "color": "rgb(187, 206, 224)",
+            "backgroundImage": "none"
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="pinevela_window_background">#FFFFFF</color>
+    <color name="pinevela_light">#FFFFFF</color>
+    <color name="pinevela_dark">#001D3D</color>
+</resources>

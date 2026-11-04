@@ -1,3 +1,4 @@
+import { insertRoomActivationKeys } from './activationCodes.js';
 import crypto from 'node:crypto';
 import type { Express,RequestHandler } from 'express';
 import type { PoolClient } from 'pg';
@@ -61,8 +62,7 @@ export async function generateRoomKeys(client:PoolClient,actor:VerifiedActor,res
   if (state.some(room => !room.has_bed)) throw new ApiError(409,'Configure at least one bed in each room before generating keys.');
   if (state.some(room => !room.has_key && room.occupied)) throw new ApiError(409,'An occupied room is missing its original key. Contact an administrator.');
   const missing = state.filter(room => !room.has_key);
-  if (missing.length) await client.query(`insert into private.room_activation_keys(room_id,code,cycle_id)
-    select room_id,code,(select id from private.residence_room_key_cycles where residence_id=$3 order by academic_year desc limit 1) from unnest($1::uuid[],$2::text[]) as k(room_id,code)`,[missing.map(room => room.id),missing.map(() => `PV-${crypto.randomBytes(16).toString('hex').toUpperCase()}`),residenceId]);
+  await insertRoomActivationKeys(client,missing.map(room => room.id));
   return keyRows(client,actor,residenceId);
 }
 async function endResidentRoomAccess(client:PoolClient,actor:VerifiedActor,occupant:any,keyId:string,roomId:string,residence:{id:string;name:string},self=false) {
@@ -83,7 +83,8 @@ async function endResidentRoomAccess(client:PoolClient,actor:VerifiedActor,occup
   await client.query("update public.account_contexts set status = 'closed',updated_at = now() where id = $1 and kind = 'resident'",[occupant.resident_context_id]);
   await client.query('delete from private.account_sessions where active_context_id = $1',[occupant.resident_context_id]);
   await client.query('update private.room_activation_keys set revoked_at = now() where id = $1',[keyId]);
-  await client.query('insert into private.room_activation_keys(room_id,code,cycle_id) values ($1,$2,(select cycle_id from private.room_activation_keys where id=$3))',[roomId,`PV-${crypto.randomBytes(16).toString('hex').toUpperCase()}`,keyId]);
+  const previous=(await client.query('select cycle_id from private.room_activation_keys where id=$1',[keyId])).rows[0];
+  await insertRoomActivationKeys(client,[roomId],previous.cycle_id);
 }
 async function ownResidentReleaseTarget(client:PoolClient,actor:VerifiedActor) {
   if(actor.kind!=='resident')throw new ApiError(403,'Use your separately verified resident portal.');
@@ -153,18 +154,26 @@ export async function releaseResidentRoom(client:PoolClient,actor:VerifiedActor,
 }
 export function installHousing(app:Express,auth:SupabaseAuth) {
   app.get('/api/manager/my-hostel',auth.require(['manager']),route(async (req,res) => {
-    const hostel = await auth.db.actor(req.actor,async c => {
-      const row = (await c.query(`select h.*,private.residence_has_reviewed_setup(h.id) as operational,
-        (select v.status from public.verification_cases v where v.residence_id = h.id and v.kind = 'residence_registration') as registration_status
+    // Resolve the assigned residence through RLS first. The large room summary
+    // then uses an authorized server read, which rechecks the live session and
+    // manager assignment without evaluating nested room/bed RLS per row.
+    const row = await auth.db.readActor(req.actor,async c => {
+      return (await c.query(`select h.*,private.residence_has_reviewed_setup(h.id) as operational,
+        (select v.status from public.verification_cases v where v.residence_id = h.id and v.kind = 'residence_registration') as registration_status,
+        (select v.review_notes from public.verification_cases v where v.residence_id = h.id and v.kind = 'residence_registration') as registration_review_notes,
+        (select v.submitted_at from public.verification_cases v where v.residence_id = h.id and v.kind = 'residence_registration') as registration_submitted_at,
+        (select v.reviewed_at from public.verification_cases v where v.residence_id = h.id and v.kind = 'residence_registration') as registration_reviewed_at
         from public.residences h join public.manager_assignments a on a.residence_id = h.id
         where a.manager_context_id = $1 and a.ended_at is null order by a.assigned_at limit 1`,[req.actor.contextId])).rows[0];
-      if (!row) return null;
-      const structure = await residenceStructure(c,req.actor,row.id);
-      return {...row,...structure,totalCapacity:structure.totalBeds,capacity:structure.totalBeds,blocksConfig:structure.blocksList,
+    });
+    if (!row) return res.json({success:true,hostel:null});
+    const structure = await auth.db.authorizedRead(req.actor,['manager'],c => residenceStructure(c,req.actor,row.id));
+    const hostel = {...row,...structure,totalCapacity:structure.totalBeds,capacity:structure.totalBeds,blocksConfig:structure.blocksList,
         image:row.cover_path,imageUrl:row.cover_path,gallery:row.gallery_paths,contactPhone:row.contact_phone,contactEmail:row.contact_email,
         isApproved:row.operational,approvalStatus:row.registration_status || 'not_submitted',
-        registrationRequired:!row.setup_submitted_at,registrationStatus:row.registration_status || 'not_submitted',managerId:req.actor.contextId};
-    });
+        registrationRequired:!row.setup_submitted_at,registrationStatus:row.registration_status || 'not_submitted',
+        registrationReviewNotes:row.registration_review_notes || '',registrationSubmittedAt:row.registration_submitted_at,
+        registrationReviewedAt:row.registration_reviewed_at,managerId:req.actor.contextId};
     return res.json({success:true,hostel});
   }));
   app.get('/api/room-keys',auth.require(['manager','admin','staff']),route(async (req,res) => res.json(await auth.db.authorizedSystem(req.actor,['manager','admin','staff'],

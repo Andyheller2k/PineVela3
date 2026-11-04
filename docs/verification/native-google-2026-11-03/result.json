@@ -1,0 +1,26 @@
+{
+  "passed": true,
+  "date": "2026-11-03",
+  "typescript": "passed",
+  "webBuild": "passed",
+  "connectedMobileBuild": "passed",
+  "capacitorSync": "passed",
+  "androidDebugBuild": "passed",
+  "androidDebugUnitTests": "passed",
+  "focusedNodeTests": 66,
+  "nativeGoogleHttpTests": 19,
+  "focusedAndroidInstrumentation": 11,
+  "device": "PineVela Pixel 4a API 36 emulator",
+  "debugApkInstalledAndLaunched": true,
+  "debugPackage": "app.pinevela.mobile.debug",
+  "debugSigningSha1": "18:3A:1A:1D:BF:F7:EA:22:D4:A2:A6:10:3C:1F:31:D7:38:E1:AD:73",
+  "debugClientRegistrationReportedByUser": true,
+  "fullAndroidInstrumentation": "Incomplete: stopped after its unrelated safe-area document test stalled; all 11 targeted cookie tests passed separately",
+  "realGoogleAccountLogin": false,
+  "hostedServerUpdated": false,
+  "hostedAccountWrites": 0,
+  "limitations": [
+    "The native Google server endpoints must be deployed with this APK before an account chooser can complete sign-in on pinevela.app.",
+    "Provider and account binding tests used local synthetic identities; a real Google account round trip remains to be checked after applying the update."
+  ]
+}

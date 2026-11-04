@@ -1,0 +1,30 @@
+{
+  "passed": true,
+  "installedPackage": "app.pinevela.mobile.debug",
+  "installedDebugSha256": "74aab1b14f02cc62ebf50470a565b4a47e3d5130edd4f362139e211012896ada",
+  "persistentApk": "releases/android/pinevela-navigation-short-keys-20261104.apk",
+  "noDataClearing": true,
+  "packageWritesFlushed": true,
+  "installMode": "adb install -r",
+  "rebootPerformed": false,
+  "startedPreviouslyStoppedExistingEmulator": true,
+  "logoutPerformed": false,
+  "authenticationFormsSubmitted": false,
+  "productionWrites": 0,
+  "ui": {
+    "page": "welcome",
+    "theme": "light",
+    "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+    "width": 393,
+    "height": 778,
+    "overflow": false,
+    "header": {
+      "top": 0,
+      "bottom": 78.7272720336914
+    }
+  },
+  "testOnlyPackagesRemoved": [
+    "app.pinevela.mobile.transporttest"
+  ],
+  "emulatorLeftRunning": true
+}

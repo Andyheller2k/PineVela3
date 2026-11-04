@@ -1,0 +1,87 @@
+{
+  "completed": "2026-10-29",
+  "timezone": "Africa/Accra",
+  "step": 1,
+  "scope": "Android command-line preparation only",
+  "sdkRoot": "/home/wyse/Android/Sdk",
+  "capacitorVersion": "8.5.3",
+  "nodeVersion": "22.16.0",
+  "javaVersion": "21.0.12.1",
+  "commandLineToolsVersion": "22.0",
+  "commandLineToolsArchiveSha256": "4e4c464f145a7512b57d088ac6c278c03c9eea610886b35a5e0804e74eedf583",
+  "communitySkillsVerified": 39,
+  "metadataUrl": "https://dl.google.com/android/repository/repository2-3.xml",
+  "metadataSha256": "b4dc4cffc08f132bbdebf3128298f35efa5717ea5ed304c30f715455496a1cae",
+  "packages": [
+    {
+      "package": "build-tools;35.0.0",
+      "filename": "build-tools_r35_linux.zip",
+      "size": 61958799,
+      "sha1": "2cfaa0bbb2336e9ec18ed3ecea84fa2e2af607bc",
+      "url": "https://dl.google.com/android/repository/build-tools_r35_linux.zip",
+      "sha256": "bd3a4966912eb8b30ed0d00b0cda6b6543b949d5ffe00bea54c04c81e1561d88",
+      "cache": "/home/wyse/.cache/pinevela-android-setup/sdk-packages/build-tools_r35_linux.zip"
+    },
+    {
+      "package": "platforms;android-36",
+      "filename": "platform-36_r02.zip",
+      "size": 65878410,
+      "sha1": "2c1a80dd4d9f7d0e6dd336ec603d9b5c55a6f576",
+      "url": "https://dl.google.com/android/repository/platform-36_r02.zip",
+      "sha256": "37607369a28c5b640b3a7998868d45898ebcb777565a0e85f9acf36f29631d2e",
+      "cache": "/home/wyse/.cache/pinevela-android-setup/sdk-packages/platform-36_r02.zip"
+    },
+    {
+      "package": "platform-tools",
+      "filename": "platform-tools_r37.0.1-linux.zip",
+      "size": 9054187,
+      "sha1": "477254aa5f903c15cf51001717bdf347fb6b53e0",
+      "url": "https://dl.google.com/android/repository/platform-tools_r37.0.1-linux.zip",
+      "sha256": "d230f13842f60f782a8645f9c813f8f845bf36089ea7289f28c48f17979313f1",
+      "cache": "/home/wyse/.cache/pinevela-android-setup/sdk-packages/platform-tools_r37.0.1-linux.zip"
+    }
+  ],
+  "officialSdkManagerInstalledInventoryVerified": true,
+  "licenseRecordedByOfficialInstaller": true,
+  "adbVersion": "1.0.41 / 37.0.1-15733141",
+  "aapt2Version": "2.19-11948202",
+  "apksignerVersion": "0.9",
+  "java21CompilationPassed": true,
+  "dexApi24CompilationPassed": true,
+  "installedArchiveChecks": [
+    {
+      "package": "build-tools;35.0.0",
+      "officialPackageMetadata": true,
+      "archiveFileMatches": "aapt2"
+    },
+    {
+      "package": "platforms;android-36",
+      "officialPackageMetadata": true,
+      "archiveFileMatches": "android.jar"
+    },
+    {
+      "package": "platform-tools",
+      "officialPackageMetadata": true,
+      "archiveFileMatches": "adb"
+    }
+  ],
+  "productionWebBuildPassed": true,
+  "typescriptPassed": true,
+  "frontendEntry": "/assets/index-B7N_kwPF.js",
+  "workspaceBaselineFiles": 987,
+  "sourceAndDependencyFilesChangedDuringSdkResume": [],
+  "nativeAndroidProjectCreated": false,
+  "apkCreated": false,
+  "aabCreated": false,
+  "gradleAppBuildVerified": false,
+  "androidStudioInstalled": false,
+  "emulatorInstalled": true,
+  "deviceTested": false,
+  "hostedChanges": false,
+  "nextStep": "Add Android project and dedicated bundled mobile build; preserve server authorization and design native sessions.",
+  "emulatorVersion": "37.2.12",
+  "emulatorAvd": "PineVela_Lite_API_35",
+  "emulatorOsBootVerified": true,
+  "emulatorSetupReport": "docs/android-emulator-vscode-2026-10-29.md",
+  "deviceTestedScope": "PineVela APK and physical device testing are pending; only emulator OS boot is verified."
+}

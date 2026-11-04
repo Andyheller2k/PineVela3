@@ -1,0 +1,14 @@
+{
+  "bootCompleted": true,
+  "focus": [],
+  "checks": [
+    {
+      "at": "10:07:33",
+      "boot": ""
+    },
+    {
+      "at": "10:07:37",
+      "boot": "1"
+    }
+  ]
+}

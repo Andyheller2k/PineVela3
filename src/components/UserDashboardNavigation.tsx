@@ -4,7 +4,7 @@ import { activateOnKeyboard } from '../lib/keyboardActivation';
 import HelpLink from './HelpLink';
 import MobileNavigation from './MobileNavigation';
 import NavigationHighlight from './NavigationHighlight';
-import PineLogo from './PineLogo';
+import PineLogo, { PineWordmark } from './PineLogo';
 import TopNavBadge from './TopNavBadge';
 import { renderAvatarGraphic } from './UserAvatarSelector';
 
@@ -44,7 +44,7 @@ export default function UserDashboardNavigation({
         <div role="button" tabIndex={0} aria-label="Go to home" onKeyDown={activateOnKeyboard} className="user-dashboard-brand flex items-center gap-2 cursor-pointer" onClick={() => handleNavClick('home')}>
           <PineLogo size={28} hideText />
           <div>
-            <h1 className="text-xs font-black tracking-tight text-blue-950 leading-tight">PineVela</h1>
+            <h1 className="text-xs font-black tracking-tight text-blue-950 leading-tight"><PineWordmark /></h1>
             <p className="text-[10px] text-slate-500 truncate max-w-[160px]">{hostelName || 'PineVela Resident'}</p>
           </div>
         </div>
@@ -133,7 +133,7 @@ export default function UserDashboardNavigation({
             <div role="button" tabIndex={0} aria-label="Go to home" onKeyDown={activateOnKeyboard} className="flex items-center space-x-3 cursor-pointer" onClick={() => handleNavClick('home')}>
               <PineLogo size={36} hideText />
               <div>
-                <h1 className="text-sm font-extrabold tracking-tight bg-gradient-to-r from-blue-900 to-cyan-800 bg-clip-text text-transparent">PineVela Resident</h1>
+                <h1 className="text-sm font-extrabold tracking-tight bg-gradient-to-r from-blue-900 to-cyan-800 bg-clip-text text-transparent"><PineWordmark /></h1>
                 <p className="text-[10px] font-medium text-blue-600/70 uppercase tracking-widest">User Account</p>
               </div>
             </div>

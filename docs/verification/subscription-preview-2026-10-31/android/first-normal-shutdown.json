@@ -1,0 +1,9 @@
+{
+  "pid": 24895,
+  "correctAvdVerified": true,
+  "command": "adb emu kill",
+  "normalSnapshotSaveEnabled": true,
+  "returnCode": 0,
+  "dataCleared": false,
+  "snapshotsDeleted": false
+}

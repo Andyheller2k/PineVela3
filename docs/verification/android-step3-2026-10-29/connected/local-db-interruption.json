@@ -1,0 +1,18 @@
+{
+  "passed": false,
+  "stage": "Native signup verifies the genuine emailed OTP in themed square boxes",
+  "reason": "Genuine native email verification screen did not settle",
+  "checks": 65,
+  "scenarios": [
+    "Bundled native login uses a real private API transport",
+    "Installed native PKCE handoff restores the exact real account",
+    "Encrypted native session survives a stopped application",
+    "Native boundaries reject forged requests and private storage exposure",
+    "Cold browser return redeems the encrypted pending native flow",
+    "Native logout revokes access and remains signed out after restart",
+    "Existing native email form signs in without opening a browser",
+    "A stale browser return cannot replace a newer native email identity"
+  ],
+  "installedApkSha256": "952e3db0d4e3205445234e22b0ac223ddffc634e455f54629626d8c6ba6e6391",
+  "cloudWrites": 0
+}

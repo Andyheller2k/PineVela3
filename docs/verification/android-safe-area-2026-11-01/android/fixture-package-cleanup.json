@@ -1,0 +1,18 @@
+{
+  "passed": true,
+  "packages": [
+    {
+      "package": "app.pinevela.mobile.transporttest.test",
+      "firstInstallTime": "2026-11-01 00:16:21",
+      "createdByTask": true,
+      "uninstalled": true
+    },
+    {
+      "package": "app.pinevela.mobile.transporttest",
+      "firstInstallTime": "2026-11-01 00:16:20",
+      "createdByTask": true,
+      "uninstalled": true
+    }
+  ],
+  "realDebugAppUninstalled": false
+}

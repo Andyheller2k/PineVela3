@@ -1,0 +1,49 @@
+{
+  "passed": true,
+  "scenes": 14,
+  "checks": [
+    "390px light catalog image cache navigation",
+    "390px dark catalog image cache navigation",
+    "1440px light catalog image cache navigation",
+    "1440px dark catalog image cache navigation",
+    "light catalog image cache hidden panels cannot leave the filters modal open",
+    "light catalog image cache updates hidden images and removes withdrawn cards",
+    "light catalog image cache reuses image bytes after a filter remount",
+    "light catalog image cache residence recovers when a failed cover is replaced",
+    "light catalog image cache survives a browser reload with conditional validation",
+    "dark catalog image cache hidden panels cannot leave the filters modal open",
+    "dark catalog image cache updates hidden images and removes withdrawn cards",
+    "dark catalog image cache reuses image bytes after a filter remount",
+    "dark catalog image cache residence recovers when a failed cover is replaced",
+    "dark catalog image cache survives a browser reload with conditional validation"
+  ],
+  "screenshots": [
+    "docs/verification/catalog-image-cache-2026-10-31/browser/390-light-residence-cache.png",
+    "docs/verification/catalog-image-cache-2026-10-31/browser/390-dark-residence-cache.png",
+    "docs/verification/catalog-image-cache-2026-10-31/browser/1440-light-residence-cache.png",
+    "docs/verification/catalog-image-cache-2026-10-31/browser/1440-dark-residence-cache.png"
+  ],
+  "navigationClearance": [],
+  "buildDirectory": "dist-supabase",
+  "syntheticGuestCatalog": true,
+  "syntheticRoleVisualFixtures": [
+    "primary dashboard",
+    "manager dashboard",
+    "staff dashboard",
+    "resident dashboard",
+    "administrator dashboard",
+    "seller dashboard",
+    "field officer",
+    "customer service",
+    "manager onboarding",
+    "store onboarding"
+  ],
+  "hostedOrAccountWrites": 0,
+  "realAuthenticationTested": false,
+  "runtimeExceptions": 0,
+  "syntheticSellerWrites": 0,
+  "syntheticSignupResumeWrites": 0,
+  "syntheticAppearanceWrites": 0,
+  "syntheticSubscriptionCheckouts": 0,
+  "exceptionDetails": []
+}

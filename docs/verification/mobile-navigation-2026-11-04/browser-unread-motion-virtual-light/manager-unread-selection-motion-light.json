@@ -1,0 +1,31 @@
+{
+  "before": {
+    "ms": 0,
+    "indicator": 45.3984375,
+    "previousIcon": 756,
+    "targetIcon": 784,
+    "unread": true
+  },
+  "at80": {
+    "ms": 9.899999999906868,
+    "indicator": 45.887983322143555,
+    "previousIcon": 756.0936889648438,
+    "targetIcon": 783.9063110351562,
+    "unread": false
+  },
+  "at250": {
+    "ms": 260,
+    "indicator": 195.0078125,
+    "previousIcon": 784,
+    "targetIcon": 756,
+    "unread": false
+  },
+  "after": {
+    "ms": 659.8999999999069,
+    "indicator": 195.0078125,
+    "previousIcon": 784,
+    "targetIcon": 756,
+    "unread": false
+  },
+  "virtualTimeBudgets": true
+}

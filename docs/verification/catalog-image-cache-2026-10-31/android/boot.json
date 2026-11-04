@@ -1,0 +1,8 @@
+{
+  "bootCompleted": true,
+  "safeQuickBootLifecycleLog": [
+    "INFO         | Loading snapshot 'default_boot'...",
+    "WARNING      | Failed to load snapshot 'default_boot'",
+    "INFO         | Boot completed in 45299 ms"
+  ]
+}

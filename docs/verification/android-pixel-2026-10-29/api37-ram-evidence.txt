@@ -1,0 +1,5 @@
+INFO         | Increasing RAM size to 4096MB
+INFO         |      Warning: Suggested minimum system RAM to run avd 'PineVela_Pixel_4a_API_37' is 16384 MiB (available: 7838 MiB)
+USER_WARNING | Suggested minimum system RAM to run avd 'PineVela_Pixel_4a_API_37' is 16384 MiB (available: 7838 MiB).
+INFO         |      Warning: Suggested minimum system RAM to run avd 'PineVela_Pixel_4a_API_37' is 16384 MiB (available: 7838 MiB)
+[39030:39030:20261029,162602.605489:INFO emulator-qt-window.cpp:3965] Displaying warning message dialog with Suggested minimum system RAM to run avd 'PineVela_Pixel_4a_API_37' is 16384 MiB (available: 7838 MiB). to user.

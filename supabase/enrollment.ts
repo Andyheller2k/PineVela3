@@ -11,6 +11,7 @@ import {confirmSellerReactivation} from './sellerReactivation.js';
 import {confirmManagerReactivation} from './managerReactivation.js';
 import { portalPin,hashPortalPin,checkPortalPin } from './portalAccess.js';
 import {primaryManagerRegistrationRestricted} from './registrationRestrictions.js';
+import { AttemptBudgets } from '../resourceSecurity.js';
 
 const route = (work: (req: AuthRequest, res: Response) => Promise<unknown>): RequestHandler =>
   (req, res, next) => { work(req as AuthRequest, res).catch(next); };
@@ -184,6 +185,15 @@ export async function claimResidentRoom(client: PoolClient, actor: VerifiedActor
 
 export function installEnrollment(app: Express, auth: SupabaseAuth) {
   const primary = auth.require(['primary']);
+  const roomAttempts = new AttemptBudgets();
+  const roomAttempt: RequestHandler = (req,_res,next) => {
+    try {
+      // All aliases and sessions share the verified Auth identity's budget,
+      // including requests arriving from different IPs. No body identity counts.
+      roomAttempts.reserve([{scope:'room-activation-account',identity:(req as AuthRequest).actor.authUserId,maximum:10,windowMs:15*60*1000}]);
+      next();
+    } catch(error) { next(error); }
+  };
   app.post('/api/auth/enrollments',primary,route(async (req,res) => {
     const input = enrollmentInput(req.body);
     requireConfirmationSettings(await auth.provider('/settings'));
@@ -308,13 +318,13 @@ export function installEnrollment(app: Express, auth: SupabaseAuth) {
     });
     return res.json({ success:true });
   }));
-  app.post(['/api/room-keys/claim','/api/residents/onboard'],primary,route(async (req,res) => {
+  app.post(['/api/room-keys/claim','/api/residents/onboard'],primary,roomAttempt,route(async (req,res) => {
     let result;
     try { result = await auth.db.authorizedSystem(req.actor,['primary'],client => claimResidentRoom(client,req.actor,uuid(req.body?.enrollmentId),req.body?.roomKey)); }
     catch (error) { if ((error as any)?.code === '23505') throw new ApiError(409,'This resident or room is already allocated.'); throw error; }
     return res.json(result);
   }));
-  app.post('/api/room-keys/verify',primary,route(async (req,res) => {
+  app.post('/api/room-keys/verify',primary,roomAttempt,route(async (req,res) => {
     const code = typeof req.body?.roomKey === 'string' ? req.body.roomKey.trim().toUpperCase() : '';
     if (!code || code.length > 100) throw new ApiError(400,'Enter your room activation key.');
     const key = await auth.db.authorizedSystem(req.actor,['primary'],async client => {

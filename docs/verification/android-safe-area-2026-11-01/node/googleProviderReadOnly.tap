@@ -1,0 +1,18 @@
+TAP version 13
+[Google Auth] Callback rejected: cancelled.
+[Google Auth] Callback rejected: cancelled.
+# Subtest: Local production Google flow reaches the real provider and validates callback cookie/state
+ok 1 - Local production Google flow reaches the real provider and validates callback cookie/state
+  ---
+  duration_ms: 3316.256154
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 3334.660653

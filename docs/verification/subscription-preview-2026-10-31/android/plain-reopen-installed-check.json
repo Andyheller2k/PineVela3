@@ -1,0 +1,26 @@
+{
+  "at": "2026-10-31T11:35:59.443257+00:00",
+  "plainStartupArgs": [
+    "/home/wyse/Android/Sdk/emulator/emulator",
+    "-avd",
+    "PineVela_Pixel_4a_API_36"
+  ],
+  "installedPackageIds": [
+    "app.pinevela.mobile.debug"
+  ],
+  "installedApkSha256": "6751232c39c071adc8b745d6e94d3748f29255ca5d4a1c2146efdf6a847515fd",
+  "matchesLatestVerifiedApk": true,
+  "apkReinstalledAfterThisReopen": false,
+  "packageMetadata": [
+    "versionCode=1 minSdk=24 targetSdk=36",
+    "versionName=1.0-step3-debug",
+    "lastUpdateTime=2026-10-31 11:31:28",
+    "firstInstallTime=2026-10-29 20:57:22"
+  ],
+  "focus": [
+    "mCurrentFocus=Window{255bdd5 u0 app.pinevela.mobile.debug/app.pinevela.mobile.MainActivity}",
+    "mFocusedApp=ActivityRecord{246929743 u0 app.pinevela.mobile.debug/app.pinevela.mobile.MainActivity t6}"
+  ],
+  "dataCleared": false,
+  "accountFormsSubmitted": false
+}

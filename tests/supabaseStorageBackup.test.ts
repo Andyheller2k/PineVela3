@@ -7,9 +7,9 @@ import {createStorageBackup,verifyStorageBackup,storageRecoveryObjects,storageSn
   type StorageSnapshot,type StorageBackupBinding} from '../supabase/storageBackup.js';
 import {SupabaseStorage} from '../supabase/storage.js';
 
-// Use the user's actual PineVela cover bytes. These filesystem-only recovery
+// Use the project's current PineVela PNG bytes. These filesystem-only recovery
 // tests create no application accounts/data and simulate no provider response.
-const image=fs.readFileSync('assets/PineCoverlight.png'),hash=crypto.createHash('sha256').update(image).digest('hex');
+const image=fs.readFileSync('public/icons/pinevela-192.png'),hash=crypto.createHash('sha256').update(image).digest('hex');
 function fixture() {
   const owner=crypto.randomUUID(),asset=crypto.randomUUID(),orphan=crypto.randomUUID();
   const snapshot:StorageSnapshot={buckets:[{id:'pinevela-media',public:false}],multipartUploads:0,

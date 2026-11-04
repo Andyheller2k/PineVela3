@@ -1,0 +1,82 @@
+[
+  {
+    "width": 320,
+    "theme": "light",
+    "purchase": {
+      "height": 168.578125,
+      "reference": "Order #7F535369",
+      "referenceHeight": 15.390625,
+      "overflow": false
+    }
+  },
+  {
+    "width": 320,
+    "theme": "dark",
+    "purchase": {
+      "height": 168.578125,
+      "reference": "Order #7F535369",
+      "referenceHeight": 15.390625,
+      "overflow": false
+    }
+  },
+  {
+    "width": 390,
+    "theme": "light",
+    "purchase": {
+      "height": 168.578125,
+      "reference": "Order #7F535369",
+      "referenceHeight": 15.390625,
+      "overflow": false
+    }
+  },
+  {
+    "width": 390,
+    "theme": "dark",
+    "purchase": {
+      "height": 168.578125,
+      "reference": "Order #7F535369",
+      "referenceHeight": 15.390625,
+      "overflow": false
+    }
+  },
+  {
+    "width": 430,
+    "theme": "light",
+    "purchase": {
+      "height": 168.578125,
+      "reference": "Order #7F535369",
+      "referenceHeight": 15.390625,
+      "overflow": false
+    }
+  },
+  {
+    "width": 430,
+    "theme": "dark",
+    "purchase": {
+      "height": 168.578125,
+      "reference": "Order #7F535369",
+      "referenceHeight": 15.390625,
+      "overflow": false
+    }
+  },
+  {
+    "width": 1440,
+    "theme": "light",
+    "purchase": {
+      "height": 181.1875,
+      "reference": "Order #7F535369",
+      "referenceHeight": 15.390625,
+      "overflow": false
+    }
+  },
+  {
+    "width": 1440,
+    "theme": "dark",
+    "purchase": {
+      "height": 181.1875,
+      "reference": "Order #7F535369",
+      "referenceHeight": 15.390625,
+      "overflow": false
+    }
+  }
+]

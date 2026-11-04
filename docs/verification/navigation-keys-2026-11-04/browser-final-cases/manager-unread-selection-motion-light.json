@@ -1,0 +1,90 @@
+{
+  "before": {
+    "ms": 0.40000000037252903,
+    "indicator": 45.3984375,
+    "previousIcon": 756,
+    "targetIcon": 784,
+    "unread": true
+  },
+  "frames": [
+    {
+      "ms": 625.0999999996275,
+      "indicator": 45.3984375,
+      "previousIcon": 756,
+      "targetIcon": 784,
+      "unread": false
+    },
+    {
+      "ms": 628.8000000007451,
+      "indicator": 195.0078125,
+      "previousIcon": 784,
+      "targetIcon": 756,
+      "unread": false
+    },
+    {
+      "ms": 634.9000000003725,
+      "indicator": 195.0078125,
+      "previousIcon": 784,
+      "targetIcon": 756,
+      "unread": false
+    },
+    {
+      "ms": 651.5999999996275,
+      "indicator": 195.0078125,
+      "previousIcon": 784,
+      "targetIcon": 756,
+      "unread": false
+    },
+    {
+      "ms": 670.6999999992549,
+      "indicator": 195.0078125,
+      "previousIcon": 784,
+      "targetIcon": 756,
+      "unread": false
+    },
+    {
+      "ms": 685.6999999992549,
+      "indicator": 195.0078125,
+      "previousIcon": 784,
+      "targetIcon": 756,
+      "unread": false
+    },
+    {
+      "ms": 701.9000000003725,
+      "indicator": 195.0078125,
+      "previousIcon": 784,
+      "targetIcon": 756,
+      "unread": false
+    },
+    {
+      "ms": 718.8000000007451,
+      "indicator": 195.0078125,
+      "previousIcon": 784,
+      "targetIcon": 756,
+      "unread": false
+    },
+    {
+      "ms": 735.1999999992549,
+      "indicator": 195.0078125,
+      "previousIcon": 784,
+      "targetIcon": 756,
+      "unread": false
+    },
+    {
+      "ms": 751.5999999996275,
+      "indicator": 195.0078125,
+      "previousIcon": 784,
+      "targetIcon": 756,
+      "unread": false
+    }
+  ],
+  "after": {
+    "ms": 767.1999999992549,
+    "indicator": 195.0078125,
+    "previousIcon": 784,
+    "targetIcon": 756,
+    "unread": false
+  },
+  "mainPaintingIsolated": true,
+  "samplesAtAnimationFrames": true
+}

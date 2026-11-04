@@ -4,6 +4,7 @@ import { activateOnKeyboard } from '../lib/keyboardActivation';
 import { sessionFetch as fetch } from '../lib/session';
 import DashboardOverlay from './DashboardOverlay';
 import ProtectedRoute from './ProtectedRoute';
+import MobileNavigation from './MobileNavigation';
 
 import {
 AlertCircle,
@@ -345,7 +346,7 @@ function OfficerWorkspace() {
   };
 
   return (
-    <div className="page-canvas verification-portal relative min-h-screen w-full text-slate-800 flex flex-col items-center justify-start p-4 sm:p-6 md:p-10 overflow-x-hidden font-sans">
+    <div className="page-canvas verification-portal product-mobile-nav-content relative min-h-screen w-full text-slate-800 flex flex-col items-center justify-start p-4 sm:p-6 md:p-10 overflow-x-hidden font-sans">
       {/* Decorative ambient blurred blobs */}
       <div className="fixed top-1/4 -left-48 w-96 h-96 bg-blue-400/15 rounded-full blur-3xl pointer-events-none" />
       <div className="fixed bottom-1/4 -right-48 w-96 h-96 bg-indigo-400/15 rounded-full blur-3xl pointer-events-none" />
@@ -365,7 +366,7 @@ function OfficerWorkspace() {
 
           <div className="flex items-center gap-2 sm:gap-3">
             {/* Tab Navigators */}
-            <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200">
+            <div className="hidden lg:flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200">
               <button
                 type="button"
                 data-page-tabs aria-current={activeTab === 'inspections' ? 'page' : undefined}
@@ -1220,6 +1221,21 @@ function OfficerWorkspace() {
           )}
           </div>
       </div>
+
+      <MobileNavigation
+        label="Field officer navigation"
+        activeTab={activeTab}
+        items={[
+          { id: 'inspections', label: 'Inspections', icon: ClipboardList, badge: inspections.length },
+          { id: 'options', label: 'Options', icon: Settings },
+        ]}
+        onSelect={id => {
+          if (id === 'inspections') {
+            setActiveTab('inspections');
+            setActiveInspection(null);
+          } else if (id === 'options') setActiveTab('options');
+        }}
+      />
 
       {/* Full Filed Audit Report & Inspection History Modal */}
       <AnimatePresence>

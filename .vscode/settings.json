@@ -1,3 +1,6 @@
 {
-    "workbench.externalBrowser": "/usr/bin/chromium"
+    "workbench.externalBrowser": "/usr/bin/chromium",
+    "emulator.emulatorPath": "/home/wyse/Android/Sdk/emulator",
+    "emulator.emulatorPathLinux": "/home/wyse/Android/Sdk/emulator",
+    "emulator.androidExtraBootArgs": "-cores 2 -memory 2560 -gpu auto -no-boot-anim -no-audio -camera-front none -camera-back none"
 }

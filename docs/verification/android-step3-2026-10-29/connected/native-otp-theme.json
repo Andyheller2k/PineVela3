@@ -1,0 +1,20 @@
+{
+  "actualMailedOtp": true,
+  "codePublished": false,
+  "colors": [
+    {
+      "theme": "light",
+      "verifyBackground": "rgb(0, 53, 102)",
+      "verifyImage": "none",
+      "resendBackground": "rgb(255, 255, 255)",
+      "overflow": false
+    },
+    {
+      "theme": "dark",
+      "verifyBackground": "rgb(255, 214, 10)",
+      "verifyImage": "none",
+      "resendBackground": "rgb(255, 255, 255)",
+      "overflow": false
+    }
+  ]
+}

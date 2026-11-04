@@ -29,11 +29,11 @@ async function assignedResidence(c: PoolClient, actor: VerifiedActor, id: string
     throw new ApiError(409, 'Your manager assignment changed.');
   return home;
 }
-async function residenceFields(c: PoolClient, home: any, managerId: string) {
-  const profile = (await c.query(`select p.display_name,p.phone from public.account_contexts x
+export async function residenceFields(c: PoolClient, home: any, managerId: string) {
+  const profile = (await c.query(`select p.phone from public.account_contexts x
     join public.profiles p on p.id=x.auth_user_id where x.id=$1 and x.kind='manager'`, [managerId])).rows[0];
   return { name: home.name, cover: home.cover_path || '', gallery: home.gallery_paths,
-    managerName: home.manager_contact_name || profile?.display_name || '', managerPhone: home.contact_phone || profile?.phone || '',
+    managerName: home.manager_contact_name || '', managerPhone: home.contact_phone || profile?.phone || '',
     managerPhoneCountry: home.contact_country || '', blocks: (await c.query('select id,name from public.blocks where residence_id=$1 order by created_at,id', [home.id])).rows };
 }
 async function removalAllowed(c: PoolClient, residenceId: string, blocks: any[]) {

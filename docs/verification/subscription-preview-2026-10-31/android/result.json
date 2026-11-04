@@ -1,0 +1,44 @@
+{
+  "date": "2026-10-31T11:37:45.796989+00:00",
+  "scope": "Existing emulator build identity and normal Quick Boot persistence only",
+  "passed": true,
+  "oldInstalledApkConfirmed": true,
+  "oldApkSha256": "c5d3203cd3539d442392a48d582e6d4aaf4483cbca48b29cb1855b352efc2d31",
+  "oldBuildMatchedArchivedOctober29Step3": true,
+  "duplicatePineVelaPackagesFound": false,
+  "installedApkSha256": "6751232c39c071adc8b745d6e94d3748f29255ca5d4a1c2146efdf6a847515fd",
+  "latestApkInstalledWithReplaceFlag": true,
+  "plainCommandReopenVerified": true,
+  "latestApkPersistedAfterPlainReopenWithoutReinstall": true,
+  "normalQuickBootSuccessfullyLoaded": true,
+  "normalQuickBootLoadMilliseconds": 14617,
+  "actualAndroidWebView": true,
+  "appDataCleared": false,
+  "appUninstalled": false,
+  "accountFormsSubmitted": false,
+  "privateAccountFieldsInspected": false,
+  "snapshotsDeleted": false,
+  "avdsDeleted": false,
+  "globalEmulatorSettingsChanged": false,
+  "appSourceChanged": false,
+  "apkRebuilt": false,
+  "quickBootCauseProven": false,
+  "inferredPossibleCause": "The previous test disabled snapshot load/save; an outdated or inconsistent normal Quick Boot state may explain the older standalone app. The exact restoration mechanism was not established.",
+  "confirmedFindings": [
+    "Correct API36 AVD had the archived October29 APK before any replacement.",
+    "Only app.pinevela.mobile.debug was installed.",
+    "Latest existing APK installed with -r and retained after successful plain-command Quick Boot reopening."
+  ],
+  "stalePixel4aRegistryEntryLeftUntouched": true,
+  "taskEmulatorPids": [
+    24895,
+    25716
+  ],
+  "allTaskEmulatorProcessesStopped": true,
+  "emulatorDeviceAbsentAfterShutdown": true,
+  "limitations": [
+    "Build identity/startup persistence diagnostic only; no authenticated seller or purchase workflows tested.",
+    "Full native signup/theme suite was not repeated.",
+    "Initial snapshot-list command unexpectedly booted the emulator; exact arguments are recorded, and final persistence verification used the plain startup command."
+  ]
+}

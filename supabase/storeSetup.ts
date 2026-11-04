@@ -30,13 +30,13 @@ export async function saveStoreProfile(c:PoolClient,a:VerifiedActor,body:any,set
   const patch:any={};
   for(const [field,column,max,min] of [['storeName','name',200,1],['username','username',120,1],['location','location',600,1],['category','primary_category',200,1],['description','description',4000,0]] as const){
     if(body[field]===undefined && !setup)continue;
-    if(typeof body[field]!=='string' || body[field].length>max || body[field].trim().length<min)throw new ApiError(400,`Enter valid ${field}.`);patch[column]=body[field].trim();
+    if(typeof body[field]!=='string' || body[field].length>max || body[field].trim().length<min)throw new ApiError(400,`Enter valid ${field}.`,`store_field_${field}`);patch[column]=body[field].trim();
   }
   if(body.deliveryMode!==undefined || setup){if(!(STORE_DELIVERY_METHODS as readonly unknown[]).includes(body.deliveryMode))throw new ApiError(400,'Choose a supported delivery / handover method.');patch.delivery_mode=body.deliveryMode;}
   if(body.phone!==undefined || body.phoneCountry!==undefined || setup){
     const country=body.phoneCountry ?? s.phone_country;
-    if(!supportedPhoneCountry(country))throw new ApiError(400,'Choose a valid phone country.');
-    try{patch.primary_phone=internationalPhone(body.phone ?? s.primary_phone,country).number;patch.phone_country=country;}catch{throw new ApiError(400,'Enter a valid primary store contact number.');}
+    if(!supportedPhoneCountry(country))throw new ApiError(400,'Choose a valid phone country.','store_field_phone');
+    try{patch.primary_phone=internationalPhone(body.phone ?? s.primary_phone,country).number;patch.phone_country=country;}catch(error){throw new ApiError(400,error instanceof Error?error.message:'Enter a valid primary store contact number.','store_field_phone');}
   }
   const plan=await storePlan(c,s.id);
   for(const [field,column] of [['profilePicture','logo_path'],['coverPicture','cover_path']] as const){

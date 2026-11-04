@@ -2,6 +2,7 @@ import SupportNotificationLink from './SupportNotificationLink';
 import HelpLink from './HelpLink';
 import AppearanceSettings from './AppearanceSettings';
 import { routePopupFeedback } from '../lib/feedback';
+import { useClipboardFeedback } from '../lib/useClipboardFeedback';
 import { activateOnKeyboard } from '../lib/keyboardActivation';
 import DashboardOverlay from './DashboardOverlay';
 import MobileNavigation from './MobileNavigation';
@@ -48,15 +49,16 @@ import { uploadMaintenancePhoto } from '../lib/maintenanceMedia';
 import { saveNavigationLayout,usesTopNavigation } from '../lib/navigationLayout';
 import { sessionFetch } from '../lib/session';
 import { HostelRoomKey,IssueReport } from '../types';
-import PineLogo from './PineLogo';
+import PineLogo, { PineWordmark } from './PineLogo';
 import PortalPinSettings from './PortalPinSettings';
-import QuickMaintenanceReport from './QuickMaintenanceReport';
+import QuickMaintenanceReport, { type QuickMaintenanceReportHandle } from './QuickMaintenanceReport';
 import ResidentAccountClosure from './ResidentAccountClosure';
 import TopNavBadge from './TopNavBadge';
 import UserAvatarSelector,{ renderAvatarGraphic } from './UserAvatarSelector';
 
 export default function PageResidentDashboard() {
   const { user, logout, apiFetch, updateUser } = useAuth();
+  const clipboard = useClipboardFeedback();
   const profileAccountKey=JSON.stringify([user?.id,user?.role]);
   const profileAccountRef=React.useRef(profileAccountKey);
   profileAccountRef.current=profileAccountKey;
@@ -104,6 +106,8 @@ export default function PageResidentDashboard() {
 
   // New Issue Modal states
   const [showNewIssueModal, setShowNewIssueModal] = useState<boolean>(false);
+  const [showRoomActions, setShowRoomActions] = useState(false);
+  const quickMaintenance = React.useRef<QuickMaintenanceReportHandle>(null);
   const [issueTitle, setIssueTitle] = useState<string>('');
   const [issueCategory, setIssueCategory] = useState<string>('Plumbing');
   const [issueUrgency, setIssueUrgency] = useState<'Low' | 'Medium' | 'High'>('Medium');
@@ -380,14 +384,15 @@ export default function PageResidentDashboard() {
       {/* MOBILE HEADER (lg:hidden) */}
       <header data-portal-navigation="header" className="lg:hidden flex items-center justify-between px-5 py-3.5 bg-white border-b border-slate-200/80 sticky top-0 z-40 shadow-xs">
         <div className="flex items-center gap-2">
-          <PineLogo size={24} />
+          <PineLogo size={24} hideText />
           <div>
-            <h1 className="text-xs font-black tracking-tight text-blue-950 leading-tight">PineVela Resident</h1>
-            <p className="text-[10px] text-slate-500 truncate max-w-[150px]">{currentUser?.hostelName || 'Verifying Accommodation'}</p>
+            <h1 className="text-xs font-black tracking-tight text-blue-950 leading-tight"><PineWordmark /></h1>
+            <p className="text-[10px] text-slate-500 truncate max-w-[150px]">Resident · {currentUser?.hostelName || 'Verifying Accommodation'}</p>
           </div>
         </div>
         <div className="flex items-center gap-2.5">
           <button aria-label="Profile and settings"
+            aria-current={activeTab === 'settings' ? 'page' : undefined}
             onClick={() => setActiveTab('settings')}
             className={`p-1.5 rounded-lg ${activeTab === 'settings' ? 'bg-blue-50 text-blue-600' : 'text-slate-500'}`}
           >
@@ -474,6 +479,7 @@ export default function PageResidentDashboard() {
               return (
                 <button
                   key={tab.id}
+                  aria-current={isActive ? 'page' : undefined}
                   onClick={() => {
                     if ((tab as any).action) {
                       (tab as any).action();
@@ -547,7 +553,7 @@ export default function PageResidentDashboard() {
       </aside>}
 
       {/* MOBILE BOTTOM NAVIGATION */}
-      <MobileNavigation label="Resident navigation" activeTab={activeTab} onSelect={id => setActiveTab(id as any)} items={[
+      <MobileNavigation label="Resident navigation" activeTab={activeTab} onSelect={id => setActiveTab(id as any)} centralAction={{ label: 'Actions', icon: Plus, onClick: () => setShowRoomActions(true) }} items={[
         { id: 'room', label: 'My Room', icon: Home },
         { id: 'complaints', label: 'Complaints', icon: Wrench, isRed: hasMaintenanceUpdates, hasUpdates: hasMaintenanceUpdates },
         { id: 'alerts', label: 'Bulletins', icon: Bell },
@@ -712,14 +718,15 @@ export default function PageResidentDashboard() {
                       {showRoomKey && (
                         <button
                           type="button"
-                          onClick={() => {
-                            navigator.clipboard.writeText(currentUser?.roomKey || roomKeyDetails?.roomKey || '');
-                            triggerToast('Digital Room Key copied to clipboard!');
+                          onClick={async () => {
+                            const key = currentUser?.roomKey || roomKeyDetails?.roomKey || userRooms[0]?.roomKey;
+                            if (!key) return triggerToast('No room key is available to copy.');
+                            triggerToast(await clipboard.copy('resident-room-key', key) ? 'Digital Room Key copied to clipboard!' : 'Copy is unavailable. Select the room key to copy it.');
                           }}
-                          className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-all cursor-pointer"
-                          title="Copy Key"
+                          className="absolute right-2.5 top-1/2 -translate-y-1/2 inline-flex items-center gap-1 p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-all cursor-pointer"
+                          title={clipboard.copiedId === 'resident-room-key' ? 'Copied' : 'Copy Key'}
                         >
-                          <Copy size={13} />
+                          <Copy size={13} />{clipboard.copiedId === 'resident-room-key' && <span className="text-[10px]">Copied</span>}
                         </button>
                       )}
                     </div>
@@ -1382,7 +1389,16 @@ export default function PageResidentDashboard() {
 
       </main>
 
-      <QuickMaintenanceReport key={`${user?.role}:${user?.id}`} activeComplaint={activeComplaint} hidden={showNewIssueModal || showSignoutConfirmModal} onSubmitted={issue => { setIssueReports(previous => [issue, ...previous]); triggerToast('Maintenance complaint submitted successfully to your manager.'); }} />
+      {showRoomActions && <DashboardOverlay aria-label="Resident quick actions" onClose={() => setShowRoomActions(false)} className="ux-more-overlay flex items-end justify-center bg-slate-950/50 p-3 backdrop-blur-sm">
+        <section data-popup-card className="max-h-[85dvh] w-full max-w-lg space-y-3 overflow-y-auto rounded-3xl border border-blue-200 bg-white p-5 text-slate-900 shadow-xl">
+          <div className="flex items-center justify-between gap-3"><h2 className="text-lg font-bold">Room quick actions</h2><button type="button" aria-label="Close room quick actions" onClick={() => setShowRoomActions(false)} className="rounded-xl p-2 text-slate-600"><X size={20} aria-hidden="true" /></button></div>
+          <button type="button" aria-label="Report maintenance" onClick={() => { setShowRoomActions(false); setActiveTab('complaints'); if (activeComplaint) triggerToast(`Your complaint “${activeComplaint.title}” is still active. Wait for its resolution before filing another.`); else setShowNewIssueModal(true); }} className="flex min-h-14 w-full items-center gap-3 rounded-2xl border border-blue-200 bg-blue-50 p-4 text-left text-blue-900"><Wrench size={22} aria-hidden="true" /><span className="flex-1"><strong className="block text-sm">Report maintenance</strong><span className="text-xs">Describe a fault in your room.</span></span><ArrowRight size={18} aria-hidden="true" /></button>
+          <button type="button" aria-label="Report maintenance with photo" onClick={() => { setShowRoomActions(false); quickMaintenance.current?.openCamera(); }} className="flex min-h-14 w-full items-center gap-3 rounded-2xl border border-blue-200 bg-blue-50 p-4 text-left text-blue-900"><Camera size={22} aria-hidden="true" /><span className="flex-1"><strong className="block text-sm">Report with a photo</strong><span className="text-xs">Take a photo or choose one to attach.</span></span><ArrowRight size={18} aria-hidden="true" /></button>
+          <button type="button" aria-label="View my room key" onClick={() => { setShowRoomActions(false); setActiveTab('room'); }} className="flex min-h-14 w-full items-center gap-3 rounded-2xl border border-blue-200 bg-blue-50 p-4 text-left text-blue-900"><Key size={22} aria-hidden="true" /><span className="flex-1"><strong className="block text-sm">View my room key</strong><span className="text-xs">Open your accommodation and access details.</span></span><ArrowRight size={18} aria-hidden="true" /></button>
+        </section>
+      </DashboardOverlay>}
+
+      <QuickMaintenanceReport ref={quickMaintenance} key={`${user?.role}:${user?.id}`} activeComplaint={activeComplaint} hideFloatingLauncher hidden={showNewIssueModal || showSignoutConfirmModal} onSubmitted={issue => { setIssueReports(previous => [issue, ...previous]); triggerToast('Maintenance complaint submitted successfully to your manager.'); }} />
 
       {/* NEW COMPLAINT MODAL */}
       {showNewIssueModal && (

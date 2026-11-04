@@ -1,0 +1,50 @@
+{
+  "scenario": "390px light curved mobile navigation unread manager selection motion",
+  "completed": 0,
+  "error": "Clearing the unread dot must not snap the indicator early: {\"before\":{\"ms\":0,\"indicator\":45.3984375,\"previousIcon\":756,\"targetIcon\":784,\"unread\":true},\"renderedAt\":397.70000000018626,\"at80\":{\"ms\":477.79999999981374,\"indicator\":193.10540771484375,\"previousIcon\":783.2052001953125,\"targetIcon\":756.7947998046875,\"unread\":false},\"at250\":{\"ms\":648.2999999998137,\"indicator\":195.0078125,\"previousIcon\":784,\"targetIcon\":756,\"unread\":false},\"after\":{\"ms\":1048.8999999999069,\"indicator\":195.0078125,\"previousIcon\":784,\"targetIcon\":756,\"unread\":false},\"mainPaintingIsolated\":true}",
+  "exceptions": [],
+  "apiRequests": [
+    "/api/settings",
+    "/api/auth/me",
+    "/api/auth/appearance",
+    "/api/manager/secret-key",
+    "/api/auth/maintenance-notice",
+    "/api/admin-messages/pending",
+    "/api/auth/account-access",
+    "/api/notifications",
+    "/api/sync/events",
+    "/api/manager/my-hostel",
+    "/api/manager/welcome/ensure",
+    "/api/issue-reports",
+    "/api/staff",
+    "/api/staff/invitations",
+    "/api/staff-bargains",
+    "/api/board-requests",
+    "/api/activities",
+    "/api/room-keys",
+    "/api/settings",
+    "/api/auth/maintenance-notice",
+    "/api/notifications"
+  ],
+  "debug": {
+    "url": "http://127.0.0.1:34077/?visual_nav_urgency=primary&scene=1793797539883-0.7215207079022137&visual_role=manager&visual_theme=light#/manager/dashboard",
+    "title": "PineVela",
+    "text": "Pine\nVela\nManager Dashboard\nHelp\nSign Out\nOverview\nProperties\nFixes\nAlerts\nMore\n0%",
+    "root": true,
+    "scripts": [
+      "http://127.0.0.1:34077/analytics.js",
+      "http://127.0.0.1:34077/assets/index-C-PDHN2Z.js"
+    ],
+    "dataset": {
+      "appearance": "product",
+      "publicTheme": "none",
+      "authPage": "false",
+      "mobileAuth": "false",
+      "themePreference": "light",
+      "theme": "light",
+      "appMode": "browser",
+      "mobileViewport": "locked",
+      "mobileNavigation": "true"
+    }
+  }
+}

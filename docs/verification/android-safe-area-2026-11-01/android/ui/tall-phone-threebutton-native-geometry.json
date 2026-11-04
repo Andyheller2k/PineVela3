@@ -1,0 +1,33 @@
+{
+  "bounds": {
+    "left": 0,
+    "top": 136,
+    "right": 1080,
+    "bottom": 2268,
+    "width": 1080,
+    "height": 2132
+  },
+  "sources": [
+    {
+      "type": "navigationBars",
+      "left": 0,
+      "top": 2268,
+      "right": 1080,
+      "bottom": 2400
+    },
+    {
+      "type": "displayCutout",
+      "left": 0,
+      "top": 0,
+      "right": 1080,
+      "bottom": 136
+    },
+    {
+      "type": "statusBars",
+      "left": 0,
+      "top": 0,
+      "right": 1080,
+      "bottom": 136
+    }
+  ]
+}

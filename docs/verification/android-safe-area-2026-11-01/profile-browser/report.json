@@ -1,0 +1,48 @@
+{
+  "passed": true,
+  "scenes": 8,
+  "checks": [
+    "390 light profile save confirmation user",
+    "390 light profile save confirmation student",
+    "390 dark profile save confirmation user",
+    "390 dark profile save confirmation student",
+    "1440 light profile save confirmation user",
+    "1440 light profile save confirmation student",
+    "1440 dark profile save confirmation user",
+    "1440 dark profile save confirmation student"
+  ],
+  "screenshots": [
+    "docs/verification/android-safe-area-2026-11-01/profile-browser/390-light-user-profile-confirmation.png",
+    "docs/verification/android-safe-area-2026-11-01/profile-browser/390-light-student-profile-confirmation.png",
+    "docs/verification/android-safe-area-2026-11-01/profile-browser/390-dark-user-profile-confirmation.png",
+    "docs/verification/android-safe-area-2026-11-01/profile-browser/390-dark-student-profile-confirmation.png",
+    "docs/verification/android-safe-area-2026-11-01/profile-browser/1440-light-user-profile-confirmation.png",
+    "docs/verification/android-safe-area-2026-11-01/profile-browser/1440-light-student-profile-confirmation.png",
+    "docs/verification/android-safe-area-2026-11-01/profile-browser/1440-dark-user-profile-confirmation.png",
+    "docs/verification/android-safe-area-2026-11-01/profile-browser/1440-dark-student-profile-confirmation.png"
+  ],
+  "navigationClearance": [],
+  "buildDirectory": "dist-supabase",
+  "syntheticGuestCatalog": true,
+  "syntheticRoleVisualFixtures": [
+    "primary dashboard",
+    "manager dashboard",
+    "staff dashboard",
+    "resident dashboard",
+    "administrator dashboard",
+    "seller dashboard",
+    "field officer",
+    "customer service",
+    "manager onboarding",
+    "store onboarding"
+  ],
+  "hostedOrAccountWrites": 0,
+  "realAuthenticationTested": false,
+  "runtimeExceptions": 0,
+  "syntheticSellerWrites": 0,
+  "syntheticSignupResumeWrites": 0,
+  "syntheticAppearanceWrites": 0,
+  "syntheticSubscriptionCheckouts": 0,
+  "syntheticProfileSaves": 8,
+  "exceptionDetails": []
+}

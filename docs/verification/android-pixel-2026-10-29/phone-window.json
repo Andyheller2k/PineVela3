@@ -1,0 +1,11 @@
+{
+  "avd": "PineVela_Pixel_4a_API_36",
+  "windowId": "0x1c00007",
+  "geometry": {
+    "x": 0,
+    "y": 0,
+    "width": 521,
+    "height": 1079
+  },
+  "screenshot": "/tmp/pinevela-emulator-step3-api36/pixel-phone-frame.png"
+}

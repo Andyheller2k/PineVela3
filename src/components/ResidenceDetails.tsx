@@ -1,10 +1,13 @@
 import { useState } from 'react';
 import { Building2, Key, MapPin, X } from 'lucide-react';
 import DashboardOverlay from './DashboardOverlay';
-import { residenceImages, type Residence } from '../lib/residenceCatalog';
+import { publicResidenceContact, residenceImages, type Residence } from '../lib/residenceCatalog';
 
 export default function ResidenceDetails({ hostel, onClose, onActivate }: { hostel: Residence; onClose: () => void; onActivate: (hostel: Residence) => void }) {
   const [activeImage, setActiveImage] = useState('');
+  const contact = publicResidenceContact(hostel);
+  const secondaryContact = [hostel.managerPhone || hostel.contact_phone, hostel.managerEmail || hostel.contact_email]
+    .filter(value => value && value !== contact.value).join(' • ');
   return (
     <DashboardOverlay aria-label="Hostel Accommodation Details" onClose={() => onClose()} className="fixed inset-0 bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-4">
       <div className="bg-white rounded-3xl max-w-xl w-full max-h-[90vh] overflow-y-auto border border-slate-100 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
@@ -65,15 +68,15 @@ export default function ResidenceDetails({ hostel, onClose, onActivate }: { host
             </p>
           )}
 
-          {/* Manager Details */}
+          {/* Published residence contact details */}
           <div className="p-3.5 bg-blue-50/60 rounded-2xl border border-blue-200/60 flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-blue-900 text-white font-black flex items-center justify-center shrink-0 border border-blue-300">
-              {hostel?.managerName ? hostel.managerName.substring(0, 2).toUpperCase() : 'MG'}
+              {hostel.managerName ? hostel.managerName.substring(0, 2).toUpperCase() : 'PV'}
             </div>
             <div className="text-xs">
-              <span className="text-[10px] font-bold uppercase text-slate-400 block">Property Residence Manager</span>
-              <p className="font-black text-slate-900">{hostel.managerName || 'Manager not provided'}</p>
-              <p className="text-[11px] text-slate-600 font-semibold">{[hostel.managerPhone, hostel.managerEmail].filter(Boolean).join(' • ')}</p>
+              <span className="text-[10px] font-bold uppercase text-slate-400 block">{contact.label}</span>
+              <p className="font-black text-slate-900">{contact.value}</p>
+              {secondaryContact && <p className="text-[11px] text-slate-600 font-semibold">{secondaryContact}</p>}
             </div>
           </div>
 

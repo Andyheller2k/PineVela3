@@ -1,16 +1,17 @@
 import { useState } from 'react';
 import { Building2, Eye, Key, MapPin } from 'lucide-react';
-import { residenceImages, type Residence } from '../lib/residenceCatalog';
+import { publicResidenceContact, residenceImages, type Residence } from '../lib/residenceCatalog';
 
 export default function ResidenceCard({ hostel, onInspect, onActivate }: { hostel: Residence; onInspect: (hostel: Residence) => void; onActivate: (hostel: Residence) => void }) {
-  const [imageFailed, setImageFailed] = useState(false);
-  const coverImg = imageFailed ? undefined : residenceImages(hostel)[0];
-  const managerName = hostel.managerName || hostel.managerEmail || 'Manager not provided';
+  const [failedCover, setFailedCover] = useState<string>();
+  const source = residenceImages(hostel)[0];
+  const coverImg = source === failedCover ? undefined : source;
+  const contact = publicResidenceContact(hostel);
   return (
     <div data-residence-id={hostel.id} className="bg-slate-50/80 border border-slate-200/80 rounded-2xl overflow-hidden shadow-xs hover:shadow-md transition-all flex flex-col justify-between">
       <div>
         <div className="relative h-36 w-full bg-slate-200 overflow-hidden">
-          {coverImg ? <img src={coverImg} alt={hostel.name} referrerPolicy="no-referrer" onError={() => setImageFailed(true)} className="w-full h-full object-cover" /> : <div className="h-full flex flex-col items-center justify-center gap-2 text-slate-500"><Building2 size={28} /><span className="text-xs">No residence photos uploaded</span></div>}
+          {coverImg ? <img src={coverImg} alt={hostel.name} loading="lazy" decoding="async" fetchPriority="low" referrerPolicy="no-referrer" onError={() => setFailedCover(coverImg)} className="w-full h-full object-cover" /> : <div className="h-full flex flex-col items-center justify-center gap-2 text-slate-500"><Building2 size={28} /><span className="text-xs">No residence photos uploaded</span></div>}
           <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5">
             {hostel.hostelType && (
               <span className="px-2.5 py-0.5 bg-white/90 backdrop-blur-sm text-slate-800 text-[10px] font-black rounded-full shadow-xs">
@@ -30,8 +31,8 @@ export default function ResidenceCard({ hostel, onInspect, onActivate }: { hoste
           </div>
 
           <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between text-xs text-slate-600">
-            <span className="text-slate-400 font-medium">Manager:</span>
-            <span className="font-bold text-slate-800 truncate max-w-[150px]">{managerName}</span>
+            <span className="text-slate-400 font-medium">{contact.label}:</span>
+            <span className="font-bold text-slate-800 truncate max-w-[150px]" title={contact.value}>{contact.value}</span>
           </div>
         </div>
       </div>

@@ -1,0 +1,9 @@
+{
+  "unchangedSincePreviousMobileUiUpdate": true,
+  "files": {
+    "dist-supabase-backend/supabase-server.mjs": true,
+    "dist-supabase-backend/residence-worker.mjs": true,
+    "dist-supabase-backend/system-wipe-worker.mjs": true
+  },
+  "checkoutHandlerUnchanged": true
+}

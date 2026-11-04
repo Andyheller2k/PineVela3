@@ -27,7 +27,7 @@ html[data-theme] .market-price-panel {
   color: var(--pv-text);
 }
 html[data-theme] .market-price-heading button { min-height: 36px; min-width: 36px; }
-html[data-theme] .market-price-panel input[type="range"] { min-height: 36px; accent-color: var(--pv-brand-yellow); }
+html[data-theme] .market-price-panel input[type="range"] { min-height: 36px; accent-color: var(--pv-selection); }
 html[data-theme] .market-price-presets button {
   min-height: 36px;
   color: var(--pv-muted);

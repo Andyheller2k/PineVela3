@@ -1,0 +1,15 @@
+.pv-analytics-choice{position:fixed;z-index:80;left:max(16px,env(safe-area-inset-left));bottom:max(16px,env(safe-area-inset-bottom));box-sizing:border-box;width:min(390px,calc(100vw - 32px));max-height:calc(100dvh - 40px);overflow:auto;padding:20px;border:1px solid #b8c8d9;border-radius:20px;background:#fffffff5;color:#152e49;box-shadow:0 12px 44px #001d3d26;backdrop-filter:blur(16px);font:14px/1.6 system-ui,sans-serif}
+.pv-analytics-choice h2{margin:0 0 8px;color:#001d3d;font:750 17px/1.3 system-ui,sans-serif;letter-spacing:-.02em}
+.pv-analytics-choice p{margin:0 0 10px}
+.pv-analytics-choice a{color:#003566;text-decoration:underline;text-underline-offset:3px;font-weight:650;font-size:12px}
+.pv-analytics-actions{display:flex;gap:10px;margin-top:16px}
+.pv-analytics-actions button{flex:1;min-height:44px;border:1px solid #8293a8;border-radius:12px;background:#eaf0f7;color:#001d3d;padding:8px 12px;font:700 13px/1.3 system-ui,sans-serif;cursor:pointer}
+.pv-analytics-actions button[data-analytics-action=allow]{background:#003566;color:#fff;border-color:#003566}
+.pv-analytics-actions button:disabled{opacity:.5;cursor:default}
+.pv-analytics-choice:focus-visible,.pv-analytics-choice :focus-visible{outline:3px solid #245780;outline-offset:4px}
+html[data-theme=dark] .pv-analytics-choice{background:#001d3df5;border-color:#52657c;color:#dce7f3;box-shadow:0 12px 44px #00081466}
+html[data-theme=dark] .pv-analytics-choice h2,html[data-theme=dark] .pv-analytics-choice a{color:#ffd60a}
+html[data-theme=dark] .pv-analytics-actions button{background:#123456;color:#f4f6fb;border-color:#8293a8}
+html[data-theme=dark] .pv-analytics-actions button[data-analytics-action=allow]{background:#ffd60a;border-color:#ffd60a;color:#001d3d}
+@media(max-width:1023px){html[data-appearance=product] .pv-analytics-choice{bottom:calc(var(--pv-mobile-nav-height,80px) + 20px + env(safe-area-inset-bottom))}}
+@media(forced-colors:active){.pv-analytics-choice{background:Canvas;color:CanvasText;border-color:CanvasText;backdrop-filter:none}.pv-analytics-choice h2,.pv-analytics-choice a{color:LinkText}.pv-analytics-actions button,.pv-analytics-actions button[data-analytics-action=allow]{background:ButtonFace;color:ButtonText;border-color:ButtonText}}

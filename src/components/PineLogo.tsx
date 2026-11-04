@@ -8,8 +8,8 @@ interface PineLogoProps {
   variant?: 'light' | 'dark';
 }
 
-export function PineWordmark({ className = '' }: { className?: string }) {
-  return <span className={`pinevela-wordmark ${className}`}><span className="pine-label">Pine</span><span className="vela-label">Vela</span></span>;
+export function PineWordmark({ className = '', surface }: { className?: string; surface?: 'inverse' }) {
+  return <span className={`pinevela-wordmark ${className}`} data-brand-surface={surface}><span className="pine-label">Pine</span><span className="vela-label">Vela</span></span>;
 }
 
 export default function PineLogo({ className = '', size = 32, hideText = false }: PineLogoProps) {

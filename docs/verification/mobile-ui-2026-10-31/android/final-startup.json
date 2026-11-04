@@ -1,0 +1,15 @@
+{
+  "origin": "https://localhost",
+  "platform": "android",
+  "hash": "#/login",
+  "theme": "light",
+  "appearance": "public",
+  "welcome": true,
+  "launchOverlay": false,
+  "localAppearance": "light",
+  "originalLocalAppearance": "light",
+  "temporaryProbeCount": 0,
+  "horizontalOverflow": false,
+  "activeTab": null,
+  "signedOutStatus": 401
+}

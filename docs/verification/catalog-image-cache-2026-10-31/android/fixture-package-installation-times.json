@@ -1,0 +1,16 @@
+[
+  {
+    "package": "app.pinevela.mobile.transporttest",
+    "installationTimes": [
+      "lastUpdateTime=2026-10-31 16:29:24",
+      "firstInstallTime=2026-10-31 16:29:24"
+    ]
+  },
+  {
+    "package": "app.pinevela.mobile.transporttest.test",
+    "installationTimes": [
+      "lastUpdateTime=2026-10-31 16:29:25",
+      "firstInstallTime=2026-10-31 16:29:25"
+    ]
+  }
+]

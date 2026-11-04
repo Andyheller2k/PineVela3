@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from 'react';
+import { NATIVE_APP, NATIVE_PREVIEW } from '../native/environment';
 
 const installedDisplayMode = '(display-mode: standalone)';
 type AppWindow = Pick<Window, 'matchMedia'> & {
@@ -7,6 +8,7 @@ type AppWindow = Pick<Window, 'matchMedia'> & {
 
 /** A phone browser remains the website; only a launched installed app skips marketing. */
 export function isInstalledAppMode(appWindow: AppWindow | undefined = typeof window === 'undefined' ? undefined : window): boolean {
+  if (NATIVE_APP || NATIVE_PREVIEW) return true;
   if (!appWindow) return false;
   return appWindow.navigator.standalone === true
     || (typeof appWindow.matchMedia === 'function' && appWindow.matchMedia(installedDisplayMode).matches);

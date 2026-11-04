@@ -1,0 +1,34 @@
+{
+  "downloaded_on": "2026-10-29",
+  "google_fonts_repository_commit": "6157dfaa640ca5738b4d1a7070fe389c3036d7fc",
+  "stylesheet_url": "https://fonts.googleapis.com/css2?family=Outfit:wght@300..900&family=Plus+Jakarta+Sans:wght@300..800&family=JetBrains+Mono:wght@400..500&display=swap",
+  "files": [
+    {
+      "family": "Outfit",
+      "filename": "outfit-latin-variable.woff2",
+      "weights": "300 900",
+      "source_url": "https://fonts.gstatic.com/s/outfit/v15/QGYvz_MVcBeNP4NJtEtq.woff2",
+      "license_url": "https://raw.githubusercontent.com/google/fonts/6157dfaa640ca5738b4d1a7070fe389c3036d7fc/ofl/outfit/OFL.txt",
+      "bytes": 32292,
+      "sha256": "6c18d579fd87c3776be068b762cbc83fde3acb543d49eabd3ade842eb987e887"
+    },
+    {
+      "family": "Plus Jakarta Sans",
+      "filename": "plus-jakarta-sans-latin-variable.woff2",
+      "weights": "300 800",
+      "source_url": "https://fonts.gstatic.com/s/plusjakartasans/v12/LDIoaomQNQcsA88c7O9yZ4KMCoOg4Ko20yw.woff2",
+      "license_url": "https://raw.githubusercontent.com/google/fonts/6157dfaa640ca5738b4d1a7070fe389c3036d7fc/ofl/plusjakartasans/OFL.txt",
+      "bytes": 27348,
+      "sha256": "153fc85b70298beeb1d61a5f723331649e7f23bb77302a66e61cb3e2fbdb5e79"
+    },
+    {
+      "family": "JetBrains Mono",
+      "filename": "jetbrains-mono-latin-variable.woff2",
+      "weights": "400 500",
+      "source_url": "https://fonts.gstatic.com/s/jetbrainsmono/v24/tDbv2o-flEEny0FZhsfKu5WU4zr3E_BX0PnT8RD8yKwBNntkaToggR7BYRbKPxDcwg.woff2",
+      "license_url": "https://raw.githubusercontent.com/google/fonts/6157dfaa640ca5738b4d1a7070fe389c3036d7fc/ofl/jetbrainsmono/OFL.txt",
+      "bytes": 31432,
+      "sha256": "83c005d49d8a6a50474c73a5a36ac0468076e9c4a29da7bdb14995d80560a5be"
+    }
+  ]
+}

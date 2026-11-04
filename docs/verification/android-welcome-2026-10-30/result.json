@@ -1,0 +1,55 @@
+{
+  "passed": true,
+  "date": "2026-10-30T11:00:10.723Z",
+  "installedApkSha256": "00d205ed764fdcfef2003dea99d4c41344e4d3dbf1229975673638c93f46cbbf",
+  "actualAndroidWebView": true,
+  "scenarios": [
+    "Cold launch shows the glass welcome over the original landing artwork",
+    "Sign in opens the local login card and the selector animates both ways",
+    "Create account opens signup with compact fields and smaller required agreement text",
+    "Welcome and both account cards follow dark mode with matching Android bars",
+    "Reduced motion keeps tab switching functional and disables the animations"
+  ],
+  "screenshots": [
+    {
+      "name": "welcome-light",
+      "theme": "light",
+      "physicalDisplay": true
+    },
+    {
+      "name": "login-light",
+      "theme": "light",
+      "physicalDisplay": true
+    },
+    {
+      "name": "signup-light",
+      "theme": "light",
+      "physicalDisplay": true
+    },
+    {
+      "name": "welcome-dark",
+      "theme": "dark",
+      "physicalDisplay": true
+    },
+    {
+      "name": "signup-dark",
+      "theme": "dark",
+      "physicalDisplay": true
+    },
+    {
+      "name": "login-dark",
+      "theme": "dark",
+      "physicalDisplay": true
+    }
+  ],
+  "uncaughtExceptions": 0,
+  "nativeOnlyWelcome": true,
+  "bothButtonsOpenBundledForms": true,
+  "animationsObserved": true,
+  "signedOutStatus401": true,
+  "accountFormsSubmitted": false,
+  "googleOAuthTested": false,
+  "productionCaptchaTested": false,
+  "physicalPhoneTested": false,
+  "iosBuildTested": false
+}

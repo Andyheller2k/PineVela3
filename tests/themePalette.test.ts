@@ -6,8 +6,9 @@ const css = readFileSync(new URL('../src/theme.css', import.meta.url), 'utf8');
 const declarations = (block: string) => Object.fromEntries(
   [...block.matchAll(/(--[\w-]+):\s*([^;]+);/g)].map(match => [match[1], match[2].trim()])
 );
-const light = declarations(css.match(/:root \{([\s\S]*?)\n\}/)![1]);
-const dark = { ...light, ...declarations(css.match(/:root\[data-theme="dark"\] \{([\s\S]*?)\n\}/)![1]) };
+const defaults = declarations(css.match(/:root \{([\s\S]*?)\n\}/)![1]);
+const light = { ...defaults, ...declarations(css.match(/:root\[data-theme="light"\]\[data-appearance="product"\] \{([\s\S]*?)\n\}/)![1]) };
+const dark = { ...defaults, ...declarations(css.match(/:root\[data-theme="dark"\] \{([\s\S]*?)\n\}/)![1]) };
 const experience = readFileSync(new URL('../src/experience.css', import.meta.url), 'utf8');
 const strong = declarations(experience.match(/html\[data-theme\] :where\(body:has[^\{]+\{([^}]+)/)![1]);
 const gold = declarations(experience.match(/html\[data-theme="dark"\] \.pv-feature-card \{([^}]+)/)![1]);
@@ -61,7 +62,7 @@ for (const [appearance, tokens] of Object.entries({ light, dark })) {
 }
 
 for (const [context, tokens] of Object.entries({
-  'navy marketing and navigation': { ...light, ...strong },
+  'navy marketing and navigation': { ...defaults, ...strong },
   'gold feature panel': { ...dark, ...strong, ...gold },
 })) {
   test(`${context}: text, fields and actions keep contrast when surface roles change`, () => {
@@ -76,3 +77,9 @@ for (const [context, tokens] of Object.entries({
     }
   });
 }
+
+test('navigation labels retain contrast on the shared gold fill in either theme', () => {
+  for (const tokens of [light, dark]) for (const paint of samples(resolve(tokens, '--pv-navigation-gradient'))) {
+    assert.ok(contrast(rgb(resolve(tokens, '--pv-brand-navy')), paint) >= 4.5);
+  }
+});

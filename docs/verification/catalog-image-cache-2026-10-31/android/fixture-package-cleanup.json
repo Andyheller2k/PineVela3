@@ -1,0 +1,19 @@
+{
+  "fixturePackagesRemoved": [
+    {
+      "package": "app.pinevela.mobile.transporttest.test",
+      "removed": true,
+      "onlyCreatedFixturePackage": true
+    },
+    {
+      "package": "app.pinevela.mobile.transporttest",
+      "removed": true,
+      "onlyCreatedFixturePackage": true
+    }
+  ],
+  "remainingPineVelaPackageIds": [
+    "app.pinevela.mobile.debug"
+  ],
+  "realDebugAppUninstalled": false,
+  "realDebugAppDataCleared": false
+}

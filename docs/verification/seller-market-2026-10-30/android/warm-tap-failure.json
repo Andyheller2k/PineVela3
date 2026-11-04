@@ -1,0 +1,8 @@
+{
+  "passed": false,
+  "stage": "Sign in opens the local login card and the selector animates both ways",
+  "reason": "Correct in-app card did not settle",
+  "scenarios": [
+    "Cold launch shows the glass welcome over the original landing artwork"
+  ]
+}

@@ -1,0 +1,35 @@
+{
+  "backupHashes": {
+    "config.ini": "e07d5dbf3011f16d8635f0039f29035dfacaa3e3935f5428d7184f0361526326",
+    "hardware-qemu.ini": "7f92771d2893a61988f03d580aad190a9dc7d481aaa99d6b6756d95a9573577f",
+    "AVD.conf": "e87c3874ab4fb8e074531ba48e90547d616a5bb572244d1c4f9cf31aad98ca91",
+    "snapshots/default_boot/snapshot.pb": "3d64cf03e8aab594cc942a3a6b535a0abbd67fc47415ad3ad031f8e8dd1cc8cc",
+    "snapshots/default_boot/hardware.ini": "dc4b73c297fe01bb29998bc4d0dc0b7f301f6eb7d8666fd2ff528757b172ef48",
+    "snapshots/default_boot/compatible.pb": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "configChange": {
+    "fastboot.forceColdBoot": {
+      "before": "no",
+      "after": "yes"
+    }
+  },
+  "otherConfigLinesChanged": false,
+  "dataImagesModifiedByRepair": false,
+  "snapshotsDeleted": false,
+  "locksDeleted": false,
+  "reason": "Avoid inconsistent existing default_boot snapshot load that reported a missing cache snapshot. Preserve current persistent userdata and ensure normal terminal/VSCode startup uses cold boot.",
+  "sources": [
+    "https://developer.android.com/studio/run/emulator-snapshots#disable-quick-boot",
+    "https://android.googlesource.com/platform/external/qemu/+/emu-master-dev/android/android-emu/android/main-common.c"
+  ],
+  "verification": {
+    "passed": true,
+    "reopenCycles": 2,
+    "installedDebugSha256": "b4649a2ae5d1a520e13f3ede2ca6004788074f268078363ffd4a7a6e25d9cedd",
+    "packageManagerHandlersDrained": true,
+    "guestFilesystemSynced": true,
+    "quickBootSnapshotLoaded": false,
+    "report": "android/debug-install-quickboot.json",
+    "systemUiAnrInterruptionObserved": true
+  }
+}

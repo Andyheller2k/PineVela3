@@ -1,0 +1,10 @@
+{
+  "size": "Physical size: 1080x2340",
+  "density": "Physical density: 440",
+  "rotation": "0",
+  "autoRotation": "1",
+  "keyboardSetting": "0",
+  "navigation": [
+    "[x] com.android.internal.systemui.navbar.gestural"
+  ]
+}

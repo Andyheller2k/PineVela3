@@ -1,0 +1,47 @@
+{
+  "passed": true,
+  "date": "2026-11-04",
+  "typescriptPassed": true,
+  "webBuildPassed": true,
+  "mobileSyncPassed": true,
+  "focusedTestsPassed": true,
+  "browserChecksPassed": true,
+  "regressionChecksPassed": true,
+  "androidBuildPassed": true,
+  "androidInstrumentationPassed": true,
+  "androidWebViewChecksPassed": true,
+  "artifactScanPassed": true,
+  "diffCheckPassed": true,
+  "browserUniqueScenes": 109,
+  "browserExecutions": 120,
+  "additionalRegressionScenes": 14,
+  "focusedTestFiles": 3,
+  "nativeInstrumentationTests": 5,
+  "actualAndroidUiScenes": 16,
+  "apkSha256": "b4649a2ae5d1a520e13f3ede2ca6004788074f268078363ffd4a7a6e25d9cedd",
+  "emulatorUpdatedAndReopened": true,
+  "normalReopenCycles": 2,
+  "emulatorUsesColdBoot": true,
+  "emulatorLeftRunning": true,
+  "iosBuiltOrTested": false,
+  "realAuthenticationTested": false,
+  "deployedRemotely": false,
+  "verificationReports": [
+    "regression-mobile-subscriptions/report.json",
+    "native-instrumentation-summary.json",
+    "android/verified.json",
+    "android/debug-install-quickboot.json"
+  ],
+  "finalLogs": [
+    "web-build-motion.log",
+    "mobile-sync-motion.log",
+    "typescript-motion.log",
+    "focused-unit-tests-motion.log",
+    "native-build-motion-final.log"
+  ],
+  "limitations": [
+    "Account/role UI tests use local fixtures; no hosted signup, payment or account change was submitted.",
+    "iOS was not built or tested on Ubuntu.",
+    "Emulator System UI interruptions and earlier installer-flush/snapshot issues are documented in the Android evidence."
+  ]
+}

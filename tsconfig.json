@@ -29,6 +29,8 @@
     "dist",
     "dist-supabase",
     "dist-supabase-backend",
+    "dist-mobile",
+    "android",
     "build",
     "coverage"
   ]

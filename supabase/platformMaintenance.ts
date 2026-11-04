@@ -12,7 +12,8 @@ export function maintenanceBoundary(auth: SupabaseAuth): RequestHandler {
     const path=req.path.toLowerCase().replace(/\/+$/,'');
     const publicRead=['GET','HEAD'].includes(req.method) && ['/settings','/health'].includes(path);
     const authEntry=req.method==='POST' && ['/auth/login','/digital-market/login','/auth/verification-team-login',
-      '/verification-teams/login','/auth/logout','/auth/google/start'].includes(path)
+      '/verification-teams/login','/auth/logout','/auth/google/start',
+      '/auth/mobile/google/native/start','/auth/mobile/google/native/complete'].includes(path)
       || req.method==='GET' && path==='/auth/google/callback';
     // Without an access-cookie marker authenticate() necessarily denies this
     // session probe. Let that guard return 401 without a remote maintenance read.

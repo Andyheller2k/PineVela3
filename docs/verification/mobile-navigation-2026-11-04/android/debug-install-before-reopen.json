@@ -1,0 +1,19 @@
+{
+  "installedDebugSha256": "b4649a2ae5d1a520e13f3ede2ca6004788074f268078363ffd4a7a6e25d9cedd",
+  "initialUi": {
+    "page": "welcome",
+    "theme": "light",
+    "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+    "width": 393,
+    "height": 778,
+    "overflow": false,
+    "header": {
+      "top": 0,
+      "bottom": 78.7272720336914
+    },
+    "newNavigationPresent": false
+  },
+  "testOnlyPackagesRemoved": [
+    "app.pinevela.mobile.transporttest"
+  ]
+}

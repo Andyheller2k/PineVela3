@@ -1,0 +1,300 @@
+[
+  {
+    "selector": "[data-seller-panel=\"inventory\"] .market-inventory-grid",
+    "width": 390,
+    "viewport": 390,
+    "overflow": false,
+    "rows": [
+      {
+        "kind": "item",
+        "x": 12,
+        "y": 439,
+        "w": 179,
+        "h": 272.71875,
+        "b": 711.71875,
+        "image": {
+          "x": 13,
+          "y": 440,
+          "w": 177,
+          "h": 109.1875,
+          "b": 549.1875
+        },
+        "parts": [
+          {
+            "name": "market-card-copy p-5 space-y-2",
+            "x": 13,
+            "y": 549.1875,
+            "w": 177,
+            "h": 50.53125,
+            "b": 599.71875,
+            "display": "block"
+          },
+          {
+            "name": "market-card-footer p-5 pt-3 border-t border-slate-200/60 space-y-3 bg-transparent",
+            "x": 13,
+            "y": 599.71875,
+            "w": 177,
+            "h": 111,
+            "b": 710.71875,
+            "display": "block"
+          }
+        ]
+      },
+      {
+        "kind": "item",
+        "x": 199,
+        "y": 439,
+        "w": 179,
+        "h": 272.71875,
+        "b": 711.71875,
+        "image": {
+          "x": 200,
+          "y": 440,
+          "w": 177,
+          "h": 109.1875,
+          "b": 549.1875
+        },
+        "parts": [
+          {
+            "name": "market-card-copy p-5 space-y-2",
+            "x": 200,
+            "y": 549.1875,
+            "w": 177,
+            "h": 50.53125,
+            "b": 599.71875,
+            "display": "block"
+          },
+          {
+            "name": "market-card-footer p-5 pt-3 border-t border-slate-200/60 space-y-3 bg-transparent",
+            "x": 200,
+            "y": 599.71875,
+            "w": 177,
+            "h": 111,
+            "b": 710.71875,
+            "display": "block"
+          }
+        ]
+      },
+      {
+        "kind": "service",
+        "x": 12,
+        "y": 719.71875,
+        "w": 179,
+        "h": 275.5625,
+        "b": 995.28125,
+        "image": {
+          "x": 13,
+          "y": 720.71875,
+          "w": 177,
+          "h": 109.1875,
+          "b": 829.90625
+        },
+        "parts": [
+          {
+            "name": "market-card-copy p-5 space-y-2",
+            "x": 13,
+            "y": 829.90625,
+            "w": 177,
+            "h": 57.875,
+            "b": 887.78125,
+            "display": "block"
+          },
+          {
+            "name": "market-card-footer p-5 pt-3 border-t border-slate-200/60 space-y-3 bg-transparent",
+            "x": 13,
+            "y": 887.78125,
+            "w": 177,
+            "h": 106.5,
+            "b": 994.28125,
+            "display": "block"
+          }
+        ]
+      },
+      {
+        "kind": "service",
+        "x": 199,
+        "y": 719.71875,
+        "w": 179,
+        "h": 275.5625,
+        "b": 995.28125,
+        "image": {
+          "x": 200,
+          "y": 720.71875,
+          "w": 177,
+          "h": 109.1875,
+          "b": 829.90625
+        },
+        "parts": [
+          {
+            "name": "market-card-copy p-5 space-y-2",
+            "x": 200,
+            "y": 829.90625,
+            "w": 177,
+            "h": 57.875,
+            "b": 887.78125,
+            "display": "block"
+          },
+          {
+            "name": "market-card-footer p-5 pt-3 border-t border-slate-200/60 space-y-3 bg-transparent",
+            "x": 200,
+            "y": 887.78125,
+            "w": 177,
+            "h": 106.5,
+            "b": 994.28125,
+            "display": "block"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "selector": ".seller-services-grid",
+    "width": 390,
+    "viewport": 390,
+    "overflow": false,
+    "rows": [
+      {
+        "kind": "service",
+        "x": 12,
+        "y": 346.3800964355469,
+        "w": 179,
+        "h": 288.4687805175781,
+        "b": 634.848876953125,
+        "image": {
+          "x": 13,
+          "y": 347.3800964355469,
+          "w": 177,
+          "h": 109.1875,
+          "b": 456.5675964355469
+        },
+        "parts": [
+          {
+            "name": "market-card-copy p-4 space-y-2.5",
+            "x": 13,
+            "y": 456.5675964355469,
+            "w": 177,
+            "h": 124.28128051757812,
+            "b": 580.848876953125,
+            "display": "block"
+          },
+          {
+            "name": "seller-service-meta flex items-center justify-between gap-1 text-[10px] font-bold text-blue-700",
+            "x": 21,
+            "y": 464.5675964355469,
+            "w": 161,
+            "h": 22.5,
+            "b": 487.0675964355469,
+            "display": "flex"
+          },
+          {
+            "name": "market-card-title text-sm font-black text-slate-900 line-clamp-1",
+            "x": 21,
+            "y": 491.0675964355469,
+            "w": 161,
+            "h": 33.781280517578125,
+            "b": 524.848876953125,
+            "display": "flow-root"
+          },
+          {
+            "name": "compact-card-details-toggle",
+            "x": 21,
+            "y": 528.848876953125,
+            "w": 161,
+            "h": 44,
+            "b": 572.848876953125,
+            "display": "flex"
+          },
+          {
+            "name": "compact-card-details-content",
+            "x": 0,
+            "y": 0,
+            "w": 0,
+            "h": 0,
+            "b": 0,
+            "display": "none"
+          },
+          {
+            "name": "seller-service-actions market-card-footer p-3 border-t border-slate-100 bg-slate-50/50 flex items-center justify-between gap-2",
+            "x": 13,
+            "y": 580.848876953125,
+            "w": 177,
+            "h": 53,
+            "b": 633.848876953125,
+            "display": "flex"
+          }
+        ]
+      },
+      {
+        "kind": "service",
+        "x": 199,
+        "y": 346.3800964355469,
+        "w": 179,
+        "h": 271.5781555175781,
+        "b": 617.958251953125,
+        "image": {
+          "x": 200,
+          "y": 347.3800964355469,
+          "w": 177,
+          "h": 109.1875,
+          "b": 456.5675964355469
+        },
+        "parts": [
+          {
+            "name": "market-card-copy p-4 space-y-2.5",
+            "x": 200,
+            "y": 456.5675964355469,
+            "w": 177,
+            "h": 107.39065551757812,
+            "b": 563.958251953125,
+            "display": "block"
+          },
+          {
+            "name": "seller-service-meta flex items-center justify-between gap-1 text-[10px] font-bold text-blue-700",
+            "x": 208,
+            "y": 464.5675964355469,
+            "w": 161,
+            "h": 22.5,
+            "b": 487.0675964355469,
+            "display": "flex"
+          },
+          {
+            "name": "market-card-title text-sm font-black text-slate-900 line-clamp-1",
+            "x": 208,
+            "y": 491.0675964355469,
+            "w": 161,
+            "h": 16.890625,
+            "b": 507.9582214355469,
+            "display": "flow-root"
+          },
+          {
+            "name": "compact-card-details-toggle",
+            "x": 208,
+            "y": 511.9582214355469,
+            "w": 161,
+            "h": 44.000030517578125,
+            "b": 555.958251953125,
+            "display": "flex"
+          },
+          {
+            "name": "compact-card-details-content",
+            "x": 0,
+            "y": 0,
+            "w": 0,
+            "h": 0,
+            "b": 0,
+            "display": "none"
+          },
+          {
+            "name": "seller-service-actions market-card-footer p-3 border-t border-slate-100 bg-slate-50/50 flex items-center justify-between gap-2",
+            "x": 200,
+            "y": 563.958251953125,
+            "w": 177,
+            "h": 53,
+            "b": 616.958251953125,
+            "display": "flex"
+          }
+        ]
+      }
+    ]
+  }
+]

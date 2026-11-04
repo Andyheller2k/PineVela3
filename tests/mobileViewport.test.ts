@@ -46,13 +46,13 @@ type GestureEvent = {
 };
 type Listener = (event: any) => void;
 
-function environment(mobile = true, appearance = 'product') {
+function environment(mobile = true, appearance = 'product', content = 'width=device-width, initial-scale=1') {
   const previous = new Map<string, PropertyDescriptor | undefined>();
   const root = new Surface('html');
   root.dataset.appearance = appearance;
   const body = new Surface('body', root);
   const surface = new Surface('main', body);
-  const viewport = { content: 'width=device-width, initial-scale=1' };
+  const viewport = { content };
   const listeners = new Map<string, Set<Listener>>();
   const mediaListeners = new Set<Listener>();
   const media = {
@@ -272,4 +272,20 @@ test('cleanup removes every listener and restores the original viewport', () => 
     assert.equal(env.mediaListeners.size, 0);
     assert.equal(env.move(260).defaultPrevented, false);
   } finally { env.restore(); }
+});
+
+test('native containment survives pageshow and mobile/desktop resizing without changing website cover mode', () => {
+  for (const fit of ['contain', 'cover', 'auto']) {
+    const original = `width=device-width, initial-scale=1, viewport-fit=${fit}, interactive-widget=resizes-content`;
+    const env = environment(true, 'product', original);
+    try {
+      assert.match(env.viewport.content, new RegExp(`viewport-fit=${fit}(?:,|$)`));
+      env.dispatch('pageshow');
+      assert.match(env.viewport.content, new RegExp(`viewport-fit=${fit}(?:,|$)`));
+      env.mediaChange(false);assert.equal(env.viewport.content, original);
+      env.mediaChange(true);
+      assert.match(env.viewport.content, new RegExp(`viewport-fit=${fit}(?:,|$)`));
+      env.remove();assert.equal(env.viewport.content, original);
+    } finally { env.restore(); }
+  }
 });

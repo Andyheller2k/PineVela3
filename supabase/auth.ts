@@ -1,4 +1,5 @@
 import { installPrimaryEmailReentry } from './primaryEmailReentry.js';
+import { requestPrimarySignup } from './primarySignup.js';
 import {accountFeaturesForRequest,requireAccountAccess,checkAccountAccess} from './accountAccess.js';
 import crypto from 'node:crypto';
 import { managerKeyNeeded,managerBootstrapAllowed,checkManagerKey,managerKeyError } from './managerKeys.js';
@@ -12,15 +13,53 @@ import { WorkPool } from '../resourceSecurity.js';
 import { checkPortalPin } from './portalAccess.js';
 import { maintenanceError } from './platformMaintenance.js';
 import { takeTransactionAdmission } from './transactionAdmission.js';
-import { registeredSignupEmailError, signupEmail, signupResendEmail, signupVerificationId, withSignupEmailCooldown } from './signupEmails.js';
+import { registeredSignupEmailError, signupEmail, signupResendEmail, withSignupEmailCooldown } from './signupEmails.js';
 import {authRequestContext,captchaProviderBody} from './authProtection.js';
 import {withPasswordLoginLimit} from './loginAttempts.js';
+import { signupPasswordError } from '../signupPassword.js';
+import { PLATFORM_TERMS } from '../legalPolicy.js';
+import { currentTermsStatus, recordTermsAcceptance, termsAccessExempt, termsRequired, validateTermsAcceptance } from './legal.js';
 
 type Session = GoogleSession & { user?: any };
 export type AuthRequest = Request & { actor: VerifiedActor; accessToken: string };
 export const roleForKind: Record<string, string> = { primary: 'user', resident: 'student', manager: 'manager', seller: 'merchant', staff: 'staff', officer: 'verification_team', admin: 'admin' };
-const cookieOptions = { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'strict' as const, path: '/' };
+const cookieOptions = { httpOnly: true, get secure() { return process.env.NODE_ENV === 'production'; }, sameSite: 'strict' as const, path: '/' };
 const ACCESS = 'pv_sb_access', REFRESH = 'pv_sb_refresh';
+
+// Auth may use legacy error_code or versioned code responses. Only known codes
+// can influence public errors or diagnostics; provider messages remain private.
+const providerErrorCodes = new Set([
+  'captcha_failed', 'invalid_credentials', 'user_already_exists', 'email_exists',
+  'weak_password', 'email_address_invalid', 'email_address_not_authorized',
+  'signup_disabled', 'email_provider_disabled', 'validation_failed',
+  'over_email_send_rate_limit', 'over_request_rate_limit', 'unexpected_failure',
+  'same_password', 'current_password_required', 'current_password_mismatch',
+  'reauthentication_needed', 'reauthentication_not_valid', 'insufficient_aal', 'user_sso_managed',
+]);
+function providerErrorCode(data: any, response: globalThis.Response): string | undefined {
+  const value = typeof data?.error_code === 'string' ? data.error_code :
+    typeof data?.code === 'string' ? data.code : response.headers.get('x-sb-error-code');
+  return providerErrorCodes.has(value) ? value : undefined;
+}
+const diagnosticOperations = new Map([
+  ['/settings', 'settings'], ['/signup', 'signup'], ['/resend', 'resend'], ['/recover', 'recovery'],
+]);
+const diagnosticLastAt = new Map<string, number>();
+function authProviderDiagnostic(route: string, status: number, code?: string, response?: globalThis.Response) {
+  const operation = diagnosticOperations.get(route);
+  if (!operation) return;
+  // At most four fixed buckets and four events per minute per process. No
+  // per-email/IP keys, timers, request bodies or arbitrary provider text.
+  const now = Date.now(), previous = diagnosticLastAt.get(operation);
+  if (previous !== undefined && now >= previous && now - previous < 60_000) return;
+  diagnosticLastAt.set(operation, now);
+  const requestId = [response?.headers.get('sb-request-id'), response?.headers.get('x-request-id')]
+    .find(value => typeof value === 'string' && UUID.test(value));
+  console.warn('[Auth provider] Request rejected.', {
+    operation, status, category: code && providerErrorCodes.has(code) ? code : 'unclassified',
+    ...(requestId ? { requestId } : {}),
+  });
+}
 export function readCookie(req: Request, name: string): string {
   const matches = String(req.headers.cookie || '').split(';').map(part => part.trim()).filter(part => part.startsWith(`${name}=`));
   if (matches.length !== 1) return '';
@@ -34,6 +73,9 @@ export function sessionCookies(res: Response, session: Session) {
   for (const [name, token] of [[ACCESS, session.access_token], [REFRESH, session.refresh_token]]) {
     res.cookie(name, token, { ...cookieOptions, maxAge: 7 * 24 * 60 * 60_000 });
   }
+  // Installed only by the server's bounded mobile handoff middleware. This
+  // observes genuine issued sessions; refresh alone cannot create fresh proof.
+  res.locals.noteMobileSessionCookies?.(session);
 }
 export function clearAuthCookies(res: Response) {
   res.clearCookie(ACCESS, cookieOptions); res.clearCookie(REFRESH, cookieOptions);
@@ -91,13 +133,25 @@ export class SupabaseAuth {
     } catch { throw new ApiError(503, 'Authentication is temporarily unavailable.'); }
     const data = response.status === 204 ? {} : await response.json().catch(() => ({}));
     if (!response.ok) {
-      if(data?.error_code==='captcha_failed')throw new ApiError(422,'Security verification expired or failed. Please complete it again.','captcha_failed');
-      if(route==='/token?grant_type=password'&&data?.error_code==='invalid_credentials')
+      const code = providerErrorCode(data, response);
+      authProviderDiagnostic(route, response.status, code, response);
+      if(code==='captcha_failed')throw new ApiError(422,'Security verification expired or failed. Please complete it again.','captcha_failed');
+      if(route==='/token?grant_type=password'&&code==='invalid_credentials')
         throw new ApiError(401,'Invalid email or password.','invalid_credentials');
       if (response.status === 429) throw new ApiError(429, 'Too many authentication attempts. Please wait.');
       if (response.status >= 500) throw new ApiError(503, 'Authentication is temporarily unavailable.');
-      if (route === '/signup' && ['user_already_exists', 'email_exists'].includes(data?.error_code))
+      if (route === '/signup' && ['user_already_exists', 'email_exists'].includes(code))
         throw registeredSignupEmailError();
+      if (['/signup', '/resend', '/recover'].includes(route) && code === 'email_address_not_authorized')
+        throw new ApiError(503, 'Verification email delivery is temporarily unavailable. Please try again later.', 'email_delivery_unavailable');
+      if (route === '/signup') {
+        if (code === 'weak_password')
+          throw new ApiError(400, 'Use at least 8 characters, including uppercase and lowercase letters, a number and a symbol.', 'weak_password');
+        if (code === 'email_address_invalid')
+          throw new ApiError(400, 'Enter a valid, deliverable email address.', 'email_address_invalid');
+        if (code === 'signup_disabled' || code === 'email_provider_disabled')
+          throw new ApiError(503, 'Email sign-up is currently unavailable. Please try again later.', 'email_signup_unavailable');
+      }
       if (route === '/user' && method === 'PUT') {
         const errors: Record<string, [number, string]> = {
           weak_password: [400, 'Choose a stronger password that meets the email provider requirements.'],
@@ -109,13 +163,11 @@ export class SupabaseAuth {
           insufficient_aal: [403, 'Complete the required multi-factor authentication before changing your password.'],
           user_sso_managed: [403, 'Manage this password through your organization’s sign-in provider.'],
         };
-        const safe = errors[data?.error_code];
+        const safe = code ? errors[code] : undefined;
         if (safe) throw new ApiError(safe[0], safe[1]);
         throw new ApiError(response.status === 401 ? 401 : 400, 'The email password update could not be confirmed. Sign in or request a new recovery code before retrying.');
       }
       if (route === '/verify') throw new ApiError(400, 'The email code or link is invalid or expired. Request a new one.');
-      if (route === '/recover' && data?.error_code === 'email_address_not_authorized')
-        throw new ApiError(503, 'The configured development email service cannot send to this address. PineVela needs a configured SMTP service.');
       throw new ApiError(route.startsWith('/token') || route === '/user' ? 401 : 400, route.startsWith('/token') ? 'Invalid credentials or expired session.' : 'Authentication request could not be verified.');
     }
     return data;
@@ -192,6 +244,9 @@ export class SupabaseAuth {
     try {
       const {identity,accessToken}=await this.verifySession(req,res);
       const binding = await this.db.statement(`select s.active_context_id, c.kind,
+        exists(select 1 from private.legal_acceptances t where t.auth_user_id=s.auth_user_id
+          and t.purpose='platform_access' and t.resource_key='' and t.document_key=$3
+          and t.document_version=$4 and t.document_sha256=$5) as terms_accepted,
         private.account_access(c.id) as access,private.account_session_allowed(c.id,s.session_id) as allowed
         from private.account_sessions s
         join public.account_contexts c on c.id = s.active_context_id and c.auth_user_id = s.auth_user_id
@@ -201,10 +256,10 @@ export class SupabaseAuth {
           and private.portal_session_allowed(c.id,s.portal_pin_version)
           and (c.kind <> 'admin' or private.administrator_session_allowed(c.id,s.session_id) and exists (select 1 from public.admin_memberships m where m.context_id = c.id and m.status = 'active'))
           and (c.kind <> 'resident' or exists (select 1 from public.allocations a where a.resident_context_id = c.id and a.ended_at is null))
-          and (c.kind <> 'staff' or exists (select 1 from public.staff_assignments a where a.staff_context_id = c.id and a.status = 'active' and a.ended_at is null))`, [identity.sessionId, identity.authUserId]);
+          and (c.kind <> 'staff' or exists (select 1 from public.staff_assignments a where a.staff_context_id = c.id and a.status = 'active' and a.ended_at is null))`, [identity.sessionId, identity.authUserId, PLATFORM_TERMS.key, PLATFORM_TERMS.version, PLATFORM_TERMS.sha256]);
       if (!binding.rowCount) throw new ApiError(401, 'Your session has ended. Please sign in again.');
       checkAccountAccess(binding.rows[0].access,[],binding.rows[0].allowed);
-      const actor={ ...identity, contextId: binding.rows[0].active_context_id, kind: binding.rows[0].kind };
+      const actor={ ...identity, contextId: binding.rows[0].active_context_id, kind: binding.rows[0].kind, termsAccepted: binding.rows[0].terms_accepted === true };
       return { actor, accessToken };
     } catch (error) {
       if (error instanceof ApiError && error.status === 401) throw new SessionExpiredError(error.message, error.code);
@@ -233,6 +288,7 @@ export class SupabaseAuth {
     return (req, res, next) => {
       this.authenticate(req, res).then(async ({ actor, accessToken }) => {
         if (kinds && !kinds.includes(actor.kind)) throw new ApiError(403, 'This account cannot perform that action.');
+        if (!actor.termsAccepted && !termsAccessExempt(req.method,req.path)) throw termsRequired();
         actor.requiredFeatures=accountFeaturesForRequest(req.method,req.path);
         if(actor.requiredFeatures.length)await this.db.authorizedSystem(actor,[actor.kind],async()=>undefined);
         if (actor.kind === 'manager' && managerKeyNeeded(req)) {
@@ -240,6 +296,7 @@ export class SupabaseAuth {
             await managerBootstrapAllowed(client,actor,req.path) ? {allowed:true,version:undefined,locked:false} : checkManagerKey(client,actor,req.get('X-PineVela-Manager-Key')));
           if (!grant.allowed) {
             if (grant.locked) throw new ApiError(429,'Too many manager secret-key attempts. Wait 15 minutes.','manager_key_locked');
+            if (req.get('X-PineVela-Manager-Key')) throw new ApiError(403,'Invalid manager secret key. Check and try again.','manager_key_required');
             throw managerKeyError();
           }
           (actor as VerifiedActor).managerKeyVersion = grant.version;
@@ -273,6 +330,7 @@ export class SupabaseAuth {
     return result;
   }
   async projection(actor: VerifiedActor) {
+    const legal = await this.db.authorizedRead(actor,[actor.kind],c=>currentTermsStatus(c,actor));
     // Invitation fields are private. Read only this already verified officer's
     // completed receipt; all public projection reads retain their RLS role.
     const officer = actor.kind==='officer' ? await this.db.authorizedSystem(actor,['officer'],async client=>
@@ -296,7 +354,7 @@ export class SupabaseAuth {
       return { id: actor.contextId, profileId: actor.authUserId, name: officer?.full_name ?? person.display_name, email: person.email,
         phone: officer?.phone ?? person.phone,accountAccess:person.account_access, photo: person.avatar_path, avatar: person.avatar_path,
         photoUrl:person.avatar_path,avatarUrl:person.avatar_path,profilePicture:person.avatar_path,
-        role: roleForKind[actor.kind], token: '', isVerified: true,...seller,
+        role: roleForKind[actor.kind], token: '', isVerified: true, legal,...seller,
         customerService: actor.kind === 'primary' && Boolean((await client.query("select 1 from private.support_memberships where context_id=$1 and status='active'", [actor.contextId])).rowCount),
         ...(actor.kind === 'officer' ? {officerId:actor.contextId,assignedZone:officer?.assigned_zone ?? null} : {}),
         ...(room ? { roomId:room.room_id,roomNumber:room.room_number,blockName:room.block_name,hostelId:room.residence_id,hostelName:room.residence_name } : {}) };
@@ -328,14 +386,16 @@ export function installSupabaseAuth(app: Express, auth: SupabaseAuth) {
   app.post('/api/verification-teams/login', passwordLogin('officer'));
   app.post('/api/auth/google/start',(req,_res,next)=>{
     if (req.body?.mode!=='signup') return next();
+    try { validateTermsAcceptance(req.body?.termsAcceptance); } catch(error) { return next(error); }
     auth.db.system(async c=>(await c.query('select private.platform_available() as available')).rows[0].available)
       .then(available=>available ? next() : next(maintenanceError())).catch(next);
   });
   installGoogleManagerEnrollment(app,auth);
-  installGoogleAuth(app, async (identity, mode, session) => {
+  installGoogleAuth(app, async (identity, mode, session, acceptance) => {
     try {
       const actor = await auth.bind(session,undefined,undefined,mode==='signup');
       if (actor.authUserId !== identity.id) throw new ApiError(401, 'Google identity does not match.');
+      if(mode==='signup')await auth.db.authorizedSystem(actor,[actor.kind],c=>recordTermsAcceptance(c,actor,acceptance,'google_signup'));
       return actor.kind==='admin'?{token:session.access_token,redirectTo:'/admin/dashboard' as const}
         :actor.kind==='officer'?{token:session.access_token,redirectTo:'/field-officer' as const}
         :actor.kind==='manager'?{token:session.access_token,redirectTo:'/manager/dashboard' as const}
@@ -349,17 +409,15 @@ export function installSupabaseAuth(app: Express, auth: SupabaseAuth) {
   }, (res, _token, session) => { sessionCookies(res, session!); });
   installPrimaryEmailReentry(app,auth);
   app.post('/api/auth/register-unified', route(async (req, res) => {
+    validateTermsAcceptance(req.body?.termsAcceptance);
     const name = typeof req.body?.name === 'string' ? req.body.name.trim() : '';
     const email = signupEmail(req.body?.email);
     const password = req.body?.password;
-    if (!name || name.length > 120 || !email.includes('@') || typeof password !== 'string' || password.length < 8 || password.length > 256) throw new ApiError(400, 'Enter your name, valid email and a password of at least 8 characters.');
+    if (!name || name.length > 120 || !email.includes('@')) throw new ApiError(400, 'Enter your name and a valid email address.');
+    const passwordError = signupPasswordError(password);
+    if (passwordError) throw new ApiError(400, passwordError, 'weak_password');
     // Deliberately whitelist metadata: signup cannot supply a role or ownership.
-    const delivery = await withSignupEmailCooldown(auth.db, email, async () => {
-      requireConfirmationSettings(await auth.provider('/settings'));
-      const data = await auth.provider('/signup', { email, password, data: { name } });
-      return signupVerificationId(data, email);
-    }, { registration: true });
-    return res.status(202).json({ signupId:delivery.value, verificationRequired: true, retryAfter: delivery.retryAfter });
+    return res.status(202).json(await requestPrimarySignup(auth,name,email,password));
   }));
   app.post('/api/auth/resend-unified', route(async (req, res) => {
     const email = signupResendEmail(req.body);
@@ -371,12 +429,15 @@ export function installSupabaseAuth(app: Express, auth: SupabaseAuth) {
       message: 'If this email is awaiting signup confirmation, a new code has been requested. Check your inbox and spam folder.' });
   }));
   app.post('/api/auth/verify-unified', route(async (req, res) => {
+    validateTermsAcceptance(req.body?.termsAcceptance);
     const config = signupProviderConfig(), email = String(req.body?.email || '').trim().toLowerCase();
     const proof = signupChallenge(req.body?.code, config.url);
     const session = await auth.provider('/verify', 'token' in proof ? { email, ...proof } : proof);
     const person = await auth.provider('/user', undefined, session.access_token);
     if (person.id !== uuid(req.body?.signupId) || String(person.email).toLowerCase() !== email) throw new ApiError(400, 'Confirmation does not match this signup.');
-    const actor = await auth.bind(session); sessionCookies(res, session);
+    const actor = await auth.bind(session);
+    await auth.db.authorizedSystem(actor,[actor.kind],c=>recordTermsAcceptance(c,actor,req.body.termsAcceptance,'email_signup'));
+    sessionCookies(res, session);
     return res.json({ verified: true, user: await auth.projection(actor) });
   }));
   app.get('/api/auth/me', auth.require(), route(async (req, res) => res.json(await auth.projection(req.actor))));

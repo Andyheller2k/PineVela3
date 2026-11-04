@@ -14,7 +14,6 @@ Lock,
 MapPin,
 Plus,
 RotateCcw,
-Save,
 Trash2,
 Users,
 X
@@ -22,12 +21,11 @@ X
 import { AnimatePresence,motion } from 'motion/react';
 import { useEffect,useState } from 'react';
 import { safeJson } from '../lib/api';
-import { sessionFetch as fetch } from '../lib/session';
+import { authorizeManagerAction, sessionFetch as fetch } from '../lib/session';
 import { BlockRoomTypeConfig,Hostel,HostelBlockConfig,HostelRegistrationDraft } from '../types';
 import HostelImageUploader from './HostelImageUploader';
 import HostelMapPicker from './HostelMapPicker';
-
-const DRAFT_STORAGE_KEY = 'pinevela_hostel_registration_draft_v1';
+import { PLATFORM_TERMS } from '../../legalPolicy';
 
 export const getBillingFrequenciesForPropertyType = (wingOrType?: string) => {
   const t = (wingOrType || '').toLowerCase();
@@ -183,7 +181,7 @@ export default function HostelRegistration({
     { num: 4, title: 'Capacity', icon: Users, desc: 'Blocks, rooms & beds' }
   ];
 
-  // 1. Load draft from localStorage on mount
+  // Load the submitted/correction draft from the manager's authorized server context.
   useEffect(() => {
     {
       let current = true;
@@ -219,17 +217,9 @@ export default function HostelRegistration({
 
   }, [user?.id]);
 
-  // 2. Auto-save draft into localStorage as user types
-  const saveDraftToStorage = (data: HostelRegistrationDraft) => {
-    return;
-
-  };
-
   const updateFormData = (updates: Partial<HostelRegistrationDraft>) => {
     setFormData((prev) => {
-      const next = { ...prev, ...updates };
-      saveDraftToStorage(next);
-      return next;
+      return { ...prev, ...updates };
     });
     // Clear validation error if field was fixed
     setValidationErrors((prev) => {
@@ -245,7 +235,7 @@ export default function HostelRegistration({
 
     setFormData(prev => ({...initialDraftState,name:prev.name,addressLine1:prev.addressLine1,
       latitude:prev.latitude,longitude:prev.longitude,isLocationConfirmed:prev.isLocationConfirmed,
-      contactEmail:prev.contactEmail,contactPhone:prev.contactPhone,contactPhoneCountry:prev.contactPhoneCountry}));
+      managerName:prev.managerName,contactEmail:prev.contactEmail,contactPhone:prev.contactPhone,contactPhoneCountry:prev.contactPhoneCountry}));
     setDraftBannerVisible(false);
     setCurrentStep(1);
     setValidationErrors({});
@@ -257,6 +247,7 @@ export default function HostelRegistration({
 
     if (step === 1) {
       if (!formData.name.trim()) errors.name = 'Hostel name is required';
+      if (!formData.managerName.trim() || formData.managerName.trim().length > 160) errors.managerName = 'Enter the public manager contact name (up to 160 characters).';
       if (((!Number.isInteger(formData.yearEstablished) || formData.yearEstablished < 1000 || formData.yearEstablished > new Date().getFullYear()))) {
         errors.yearEstablished = 'Enter the actual establishment year.';
       }
@@ -276,6 +267,8 @@ export default function HostelRegistration({
         errors.image = `A maximum of 3 interior or relevant residence photos is allowed (currently ${galleryCount}/3 uploaded).`;
       }
     } else if (step === 4) {
+      if (formData.blocksList.length < 1) errors.blocksList = 'Add at least one block before submitting.';
+      else if (formData.blocksList.length > 10) errors.blocksList = 'A property registration can have at most 10 blocks.';
       if (!formData.maximumCapacity || formData.maximumCapacity <= 0) {
         errors.maximumCapacity = 'Total capacity must be greater than 0. Please configure room types with bedspaces.';
       }
@@ -352,6 +345,10 @@ export default function HostelRegistration({
 
   // Block handlers
   const handleAddBlock = () => {
+    if (formData.blocksList.length >= 10) {
+      setValidationErrors(prev => ({ ...prev, blocksList: 'A property registration can have at most 10 blocks.' }));
+      return;
+    }
     const nextIdx = formData.blocksList.length + 1;
     const blockLetter = String.fromCharCode(64 + nextIdx);
     const newBlock: HostelBlockConfig = {
@@ -367,6 +364,7 @@ export default function HostelRegistration({
     };
     const nextBlocks = [...formData.blocksList, newBlock];
     recalculateBlockTotals(nextBlocks);
+    setValidationErrors(prev => { const next = { ...prev }; delete next.blocksList; return next; });
   };
 
   const handleRemoveBlock = (id: string) => {
@@ -439,7 +437,7 @@ export default function HostelRegistration({
     recalculateBlockTotals(nextBlocks);
   };
 
-  // Final Atomic Submission
+  // One key confirmation covers the protected media uploads and database submit.
   const handleFinalSubmit = async () => {
     if (((!hasLoadedDraft || !residenceId))) {setSubmitError('Load your verified residence before submitting.');return;}
     for (let step = 1; step <= STEPS.length; step++) {
@@ -448,23 +446,25 @@ export default function HostelRegistration({
 
     setIsSubmitting(true);
     setSubmitError(null);
-    setSubmissionProgress('Initiating atomic hostel registration...');
+    setSubmissionProgress('Confirming residence submission...');
 
     try {
-      const token = '';
+      const res = await authorizeManagerAction(async managerKey => {
+      const keyedFetch = (path: string, options: RequestInit) => {
+        const headers = new Headers(options.headers);
+        headers.set('X-PineVela-Manager-Key', managerKey);
+        return fetch(path, { ...options, headers });
+      };
 
-      // 1. Upload Image to Storage (Local storage)
+      // Upload selected photographs before the residence transaction.
       let finalImageUrl = formData.imageUrl;
       let finalImagePath = formData.imagePath;
 
       if (formData.imagePreviewUrl && formData.imagePreviewUrl.startsWith('data:')) {
         setSubmissionProgress('Uploading high-resolution hostel exterior photograph...');
-        const uploadResp = await fetch('/api/storage/upload-hostel-image', {
+        const uploadResp = await keyedFetch('/api/storage/upload-hostel-image', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             fileName: `${(formData.name || 'hostel').toLowerCase().replace(/[^a-z0-9]/g, '-')}-facade.jpg`,
             fileType: 'image/jpeg',
@@ -472,7 +472,8 @@ export default function HostelRegistration({
           })
         });
 
-        const uploadResult = await safeJson(uploadResp);
+        const uploadResult = await safeJson(uploadResp.clone());
+        if (uploadResp.status === 403 && uploadResult.managerKeyRequired) return uploadResp;
         if (!uploadResp.ok || !uploadResult.success || !uploadResult.imageUrl) {
           throw new Error(uploadResult.error || 'The photograph could not be uploaded. Please select a valid image and try again.');
         }
@@ -487,9 +488,10 @@ export default function HostelRegistration({
         for (const photo of gallery) {
           if (!photo.startsWith('data:')) {uploaded.push(photo);continue;}
           setSubmissionProgress('Uploading residence gallery photographs...');
-          const response = await fetch('/api/storage/upload-hostel-image',{method:'POST',headers:{'Content-Type':'application/json'},
+          const response = await keyedFetch('/api/storage/upload-hostel-image',{method:'POST',headers:{'Content-Type':'application/json'},
             body:JSON.stringify({fileName:'residence-gallery',fileType:photo.match(/^data:([^;]+);base64,/)?.[1],fileData:photo})});
-          const result = await safeJson(response);
+          const result = await safeJson(response.clone());
+          if (response.status === 403 && result.managerKeyRequired) return response;
           if (!response.ok || !result.imageUrl) throw new Error(result.error || 'The gallery photograph could not be uploaded.');
           uploaded.push(result.imageUrl);
         }
@@ -497,8 +499,8 @@ export default function HostelRegistration({
         setFormData(prev => ({...prev,imageUrl:finalImageUrl,imagePreviewUrl:finalImageUrl,imagePath:finalImagePath,gallery}));
       }
 
-      // 2. Atomic Database Insertion into persistent store
-      setSubmissionProgress('Creating hostel record in persistent database...');
+      // The residence, room hierarchy and review case commit together server-side.
+      setSubmissionProgress('Submitting residence details for review...');
 
       const payload = {
         name: formData.name.trim(),
@@ -509,6 +511,7 @@ export default function HostelRegistration({
         genderCategory: formData.genderCategory,
         yearEstablished: formData.yearEstablished,
         contactEmail: formData.contactEmail,
+        managerName: formData.managerName.trim(),
         contactPhone: internationalPhone(formData.contactPhone, formData.contactPhoneCountry).number,
         contactPhoneCountry: formData.contactPhoneCountry,
         alternativePhone: formData.alternativePhone,
@@ -542,14 +545,12 @@ export default function HostelRegistration({
         ...(({}))
       };
 
-      const res = await fetch('/api/hostels/register', {
+      return keyedFetch('/api/hostels/register', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
+      }, 'submit this residence registration');
 
       if (!res.ok) {
         const errData = await safeJson(res);
@@ -561,10 +562,7 @@ export default function HostelRegistration({
 
       setSubmissionProgress('Finalizing setup and cleaning up temporary drafts...');
 
-      // 3. Clear draft in localStorage
-
-
-      // 4. Trigger celebration confetti
+      // Trigger celebration confetti.
       try {
         confetti({
           particleCount: 100,
@@ -591,7 +589,7 @@ export default function HostelRegistration({
   // If successfully registered, show interactive success card
   if (registeredResult) {
     return (
-      <div className="max-w-3xl mx-auto py-12 px-6 text-center space-y-6">
+      <div data-pv-onboarding className="max-w-3xl mx-auto py-12 px-6 text-center space-y-6">
         <motion.div
           initial={{ scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
@@ -673,7 +671,7 @@ export default function HostelRegistration({
   }
 
   return (
-    <div className="w-full max-w-5xl mx-auto py-4 px-4 sm:px-6 space-y-6">
+    <div data-pv-onboarding className="w-full max-w-5xl mx-auto py-4 px-4 sm:px-6 space-y-6">
       {/* Draft Saved Banner / Warning */}
       {draftBannerVisible && (
         <div className="bg-amber-50 border border-amber-200/80 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-left">
@@ -853,6 +851,15 @@ export default function HostelRegistration({
                   </div>
 
 
+                  <div className="sm:col-span-2 space-y-1.5">
+                    <label htmlFor="public-manager-name" className="text-xs font-bold text-slate-700">Public manager contact name <span className="text-rose-500">*</span></label>
+                    <p className="text-[11px] text-slate-500">This name appears on the public residence card. It can differ from your login profile.</p>
+                    <input id="public-manager-name" type="text" maxLength={160} autoComplete="name" value={formData.managerName}
+                      onChange={e => updateFormData({managerName:e.target.value})}
+                      className={`w-full px-3.5 py-2.5 bg-slate-50 border rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-900 text-slate-800 ${validationErrors.managerName ? 'border-rose-400 bg-rose-50/30' : 'border-slate-200'}`} />
+                    {validationErrors.managerName && <p className="text-[11px] text-rose-600 font-semibold">{validationErrors.managerName}</p>}
+                  </div>
+
                   <div className="space-y-1.5">
                     <label className="text-xs font-bold text-slate-700">
                       Public Contact Email <span className="text-rose-500">*</span>
@@ -991,18 +998,20 @@ export default function HostelRegistration({
                         Configured Residential Blocks ({formData.blocksList.length})
                       </span>
                       <span className="text-[11px] text-slate-500">
-                        Set gender designation and room type bedspaces (1 in 1, 2 in 1, 3 in 1, 4 in 1) for each block.
+                        Add 1–10 blocks. Set gender designation and room type bedspaces (1 in 1, 2 in 1, 3 in 1, 4 in 1) for each block.
                       </span>
                     </div>
                     <button
                       type="button"
                       onClick={handleAddBlock}
-                      className="flex items-center gap-1.5 px-3.5 py-2 bg-blue-900 hover:bg-blue-800 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer"
+                      disabled={formData.blocksList.length >= 10}
+                      className="flex items-center gap-1.5 px-3.5 py-2 bg-blue-900 hover:bg-blue-800 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       <Plus size={14} />
-                      <span>Add Another Block</span>
+                      <span>{formData.blocksList.length === 0 ? 'Add Block' : 'Add Another Block'}</span>
                     </button>
                   </div>
+                  {validationErrors.blocksList && <p role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs font-semibold text-rose-700">{validationErrors.blocksList}</p>}
 
                   <div className="space-y-5">
                     {formData.blocksList.map((block, idx) => {
@@ -1051,6 +1060,15 @@ export default function HostelRegistration({
                               )}
                             </div>
                           </div>
+
+                          <button
+                            type="button"
+                            onClick={() => handleAddRoomType(block.id)}
+                            className="pv-onboarding-action flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-xs font-bold shadow-sm transition-all cursor-pointer"
+                          >
+                            <Plus size={16} />
+                            <span>{roomTypes.length ? 'Add Another Room Type / Bedspace' : 'Add Room Type / Bedspace'}</span>
+                          </button>
 
                           <div className="grid grid-cols-1 sm:grid-cols-12 gap-3.5 items-start">
                             {/* Block Name */}
@@ -1122,23 +1140,15 @@ export default function HostelRegistration({
 
                           {/* ROOM TYPES & BEDSPACES SECTION INSIDE BLOCK */}
                           <div className="pt-3 border-t border-slate-200/80 space-y-3">
-                            <div className="flex items-center justify-between">
+                            <div>
                               <div>
                                 <span className="text-xs font-black text-slate-800 uppercase tracking-wider block">
                                   Room Types & Bedspace Configurations in {block.name || 'this Block'}
                                 </span>
                                 <span className="text-[11px] text-slate-500">
-                                  Define distinct room types (e.g. 1 in 1, 2 in 1, 3 in 1, 4 in 1) and bedspaces for this block.
+                                  Add each room type (1 in 1, 2 in 1, 3 in 1, or 4 in 1) and enter how many rooms use it.
                                 </span>
                               </div>
-                              <button
-                                type="button"
-                                onClick={() => handleAddRoomType(block.id)}
-                                className="flex items-center gap-1 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 rounded-xl text-xs font-bold transition-all cursor-pointer"
-                              >
-                                <Plus size={13} />
-                                <span>Add Room Type / Bedspace</span>
-                              </button>
                             </div>
 
                             <div className="space-y-2.5">
@@ -1213,7 +1223,7 @@ export default function HostelRegistration({
                     </span>
                     <span className="text-[11px] text-blue-800">
                       Block & Gender summary:{' '}
-                      {formData.blocksList.map((b) => `:  ()`).join(' • ')}
+                      {formData.blocksList.map((b, index) => `${b.name || `Block ${index + 1}`} (${b.gender || 'Mixed'})`).join(' • ')}
                     </span>
                   </div>
                   <div className="text-right shrink-0">
@@ -1225,12 +1235,14 @@ export default function HostelRegistration({
             )}
 
         {(currentStep === STEPS.length) && <div className="space-y-3 border-t border-slate-100 pt-4 text-sm">
-          <label className="flex items-start gap-3"><input type="checkbox" checked={formData.accuracyCertified}
+          <div className="flex items-start gap-3"><input id="registration-accuracy" type="checkbox" checked={formData.accuracyCertified}
             onChange={e => updateFormData({accuracyCertified:e.target.checked})} className="mt-1 h-5 w-5" />
-            <span>I confirm these property details, photographs and room counts are accurate.</span></label>
-          <label className="flex items-start gap-3"><input type="checkbox" checked={formData.agreeTerms}
+            <label htmlFor="registration-accuracy">I confirm these property details, photographs and room counts are accurate.</label></div>
+          <div className="flex items-start gap-3"><input id="registration-terms" type="checkbox" checked={formData.agreeTerms}
             onChange={e => updateFormData({agreeTerms:e.target.checked})} className="mt-1 h-5 w-5" />
-            <span>I agree to submit this registration for PineVela verification and administrator review.</span></label>
+            <div><label htmlFor="registration-terms">I agree to submit this registration for PineVela verification and administrator review, and accept the Terms of service.</label>
+              <p className="mt-1 text-xs">Read the <a href={PLATFORM_TERMS.href} target="_blank" rel="noopener noreferrer" className="font-bold underline underline-offset-2" style={{color:'var(--pv-link)'}}>Terms of service</a> and <a href={PLATFORM_TERMS.privacyHref} target="_blank" rel="noopener noreferrer" className="font-bold underline underline-offset-2" style={{color:'var(--pv-link)'}}>Privacy policy</a>. These links open in a new tab, so your registration stays here.</p>
+            </div></div>
           {validationErrors.confirmation && <p role="alert" className="text-rose-600">{validationErrors.confirmation}</p>}
         </div>}
         {/* Bottom Navigation Buttons */}
@@ -1251,13 +1263,10 @@ export default function HostelRegistration({
             </button>
             <button
               type="button"
-              onClick={() => {
-                saveDraftToStorage(formData);
-                onCancel();
-              }}
+              onClick={onCancel}
               className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold text-blue-600 bg-blue-50 border border-blue-200 hover:bg-blue-100 transition-colors"
             >
-              <Save size={15} />
+              <X size={15} />
               <span>{('Close')}</span>
             </button>
           </div>
@@ -1277,7 +1286,7 @@ export default function HostelRegistration({
                 type="button"
                 onClick={handleFinalSubmit}
                 disabled={isSubmitting || ((!hasLoadedDraft))}
-                className={`w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-3 rounded-xl text-xs font-extrabold transition-all ${
+                className={`pv-onboarding-action w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-3 rounded-xl text-xs font-extrabold transition-all ${
                   isSubmitting
                     ? 'bg-slate-200 text-slate-400 border border-slate-300 cursor-not-allowed shadow-none'
                     : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/30 hover:scale-102 cursor-pointer'

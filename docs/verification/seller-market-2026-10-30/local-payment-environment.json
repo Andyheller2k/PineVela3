@@ -1,0 +1,10 @@
+{
+  "secretPresent": true,
+  "secretFormatValid": true,
+  "mode": "live",
+  "production": false,
+  "publicOriginValid": false,
+  "productionCheckoutReady": false,
+  "providerAccepted": true,
+  "providerHttpStatus": 200
+}

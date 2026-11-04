@@ -1,3 +1,4 @@
+import {termsAcceptance} from '../legalPolicy.js';
 /** Native GoTrue, mail, HTTP, PostgreSQL/RLS and actual Web Crypto. No hosted writes. */
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
@@ -20,7 +21,7 @@ async function verify(h:LocalSupabaseHarness){
  const sellerCredentials:LocalAccountCredentials={email:'encrypted-seller-'+nonce+'-'+h.meta.runId.replaceAll('-','')+'@st.knust.edu.gh',password:crypto.randomBytes(30).toString('base64url')+'aA1!',name:'Local encrypted seller',accountKind:'seller'};
  const started=Date.now(),enrolled=expect(await other.session.json('/api/auth/enrollments',{kind:'seller',email:sellerCredentials.email,name:sellerCredentials.name,phone:'+233241234567',password:sellerCredentials.password}),202,'Actual seller enrollment requires native email confirmation');
  expect(await other.session.json('/api/auth/enrollments/'+enrolled.enrollmentId+'/verify',{code:h.providerOrigin+await h.mail.confirmation(sellerCredentials.email,started)}),200,'Actual seller email verifies');
- const application=expect(await other.session.json('/api/digital-market/register',{enrollmentId:enrolled.enrollmentId,university:'Local encryption acceptance campus',categoryToSell:'Books',idNumber:'ENC-'+nonce.toUpperCase(),storeName:'Local Encryption Store '+nonce,certified:true}),200,'Genuine verified seller applies');
+ const application=expect(await other.session.json('/api/digital-market/register',{enrollmentId:enrolled.enrollmentId,university:'Local encryption acceptance campus',categoryToSell:'Books',idNumber:'ENC-'+nonce.toUpperCase(),storeName:'Local Encryption Store '+nonce,certified:true,termsAcceptance:termsAcceptance(true)}),200,'Genuine verified seller applies');
  expect(await admin.session.json('/api/admin/digital-market/approve-application',{id:application.application.id,adminNotes:'Isolated encrypted messaging acceptance.',privateKey:support.admin.approvalKey}),200,'Keyed actual administrator approves');
  const seller=await signInLocalAccount(h,sellerCredentials);sellerCredentials.contextId=seller.user.id;sellerCredentials.role='merchant';
  const setup=expect(await seller.session.json('/api/digital-market/store-setup',{storeName:'Local Encryption Store '+nonce,username:'encrypted-'+nonce+'-'+h.meta.runId.replaceAll('-',''),location:'Local encryption acceptance campus',category:'Books',deliveryMode:'Campus Meetup',phone:'+233241234567',phoneCountry:'GH',description:'Owned local encrypted messaging verification.'}),200,'Actual store setup');

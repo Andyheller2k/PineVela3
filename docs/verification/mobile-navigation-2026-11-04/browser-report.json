@@ -1,0 +1,259 @@
+{
+  "passed": true,
+  "date": "2026-11-04",
+  "scenes": 109,
+  "checks": [
+    "320px light curved mobile navigation: primary dashboard",
+    "320px light curved mobile navigation: manager dashboard",
+    "320px light curved mobile navigation: staff dashboard",
+    "320px light curved mobile navigation: resident dashboard",
+    "320px light curved mobile navigation: administrator dashboard",
+    "320px light curved mobile navigation: seller dashboard",
+    "320px light curved mobile navigation: field officer",
+    "320px light curved mobile navigation: customer service",
+    "320px dark curved mobile navigation: primary dashboard",
+    "320px dark curved mobile navigation: manager dashboard",
+    "320px dark curved mobile navigation: staff dashboard",
+    "320px dark curved mobile navigation: resident dashboard",
+    "320px dark curved mobile navigation: administrator dashboard",
+    "320px dark curved mobile navigation: seller dashboard",
+    "320px dark curved mobile navigation: field officer",
+    "320px dark curved mobile navigation: customer service",
+    "390px light curved mobile navigation: primary dashboard",
+    "390px light curved mobile navigation: manager dashboard",
+    "390px light curved mobile navigation: staff dashboard",
+    "390px light curved mobile navigation: resident dashboard",
+    "390px light curved mobile navigation: administrator dashboard",
+    "390px light curved mobile navigation: seller dashboard",
+    "390px light curved mobile navigation: field officer",
+    "390px light curved mobile navigation: customer service",
+    "390px dark curved mobile navigation: primary dashboard",
+    "390px dark curved mobile navigation: manager dashboard",
+    "390px dark curved mobile navigation: staff dashboard",
+    "390px dark curved mobile navigation: resident dashboard",
+    "390px dark curved mobile navigation: administrator dashboard",
+    "390px dark curved mobile navigation: seller dashboard",
+    "390px dark curved mobile navigation: field officer",
+    "390px dark curved mobile navigation: customer service",
+    "430px light curved mobile navigation: primary dashboard",
+    "430px light curved mobile navigation: manager dashboard",
+    "430px light curved mobile navigation: staff dashboard",
+    "430px light curved mobile navigation: resident dashboard",
+    "430px light curved mobile navigation: administrator dashboard",
+    "430px light curved mobile navigation: seller dashboard",
+    "430px light curved mobile navigation: field officer",
+    "430px light curved mobile navigation: customer service",
+    "430px dark curved mobile navigation: primary dashboard",
+    "430px dark curved mobile navigation: manager dashboard",
+    "430px dark curved mobile navigation: staff dashboard",
+    "430px dark curved mobile navigation: resident dashboard",
+    "430px dark curved mobile navigation: administrator dashboard",
+    "430px dark curved mobile navigation: seller dashboard",
+    "430px dark curved mobile navigation: field officer",
+    "430px dark curved mobile navigation: customer service",
+    "768px light curved mobile navigation: primary dashboard",
+    "768px light curved mobile navigation: manager dashboard",
+    "768px light curved mobile navigation: staff dashboard",
+    "768px light curved mobile navigation: resident dashboard",
+    "768px light curved mobile navigation: administrator dashboard",
+    "768px light curved mobile navigation: seller dashboard",
+    "768px light curved mobile navigation: field officer",
+    "768px light curved mobile navigation: customer service",
+    "768px dark curved mobile navigation: primary dashboard",
+    "768px dark curved mobile navigation: manager dashboard",
+    "768px dark curved mobile navigation: staff dashboard",
+    "768px dark curved mobile navigation: resident dashboard",
+    "768px dark curved mobile navigation: administrator dashboard",
+    "768px dark curved mobile navigation: seller dashboard",
+    "768px dark curved mobile navigation: field officer",
+    "768px dark curved mobile navigation: customer service",
+    "curved mobile navigation switches at the existing role breakpoints",
+    "390px light curved mobile navigation smooth slide and icon handoff",
+    "390px dark curved mobile navigation smooth slide and icon handoff",
+    "390px curved mobile navigation pointer and keyboard activation",
+    "390px curved mobile navigation reduced motion settles without sliding",
+    "390px light curved mobile navigation fills the safe area",
+    "390px dark curved mobile navigation fills the safe area",
+    "390px light curved mobile navigation seller More retains Services",
+    "390px dark curved mobile navigation seller More retains Services",
+    "390px light curved mobile navigation seller dashboard center action",
+    "390px light curved mobile navigation resident dashboard center action",
+    "390px dark curved mobile navigation seller dashboard center action",
+    "390px dark curved mobile navigation resident dashboard center action",
+    "390px light curved mobile navigation companion visual handoff",
+    "390px dark curved mobile navigation companion visual handoff",
+    "1440px light curved mobile navigation preserves desktop primary dashboard",
+    "1440px light curved mobile navigation preserves desktop manager dashboard",
+    "1440px light curved mobile navigation preserves desktop staff dashboard",
+    "1440px light curved mobile navigation preserves desktop resident dashboard",
+    "1440px light curved mobile navigation preserves desktop administrator dashboard",
+    "1440px light curved mobile navigation preserves desktop seller dashboard",
+    "1440px light curved mobile navigation preserves desktop field officer",
+    "1440px light curved mobile navigation preserves desktop customer service",
+    "1440px dark curved mobile navigation preserves desktop primary dashboard",
+    "1440px dark curved mobile navigation preserves desktop manager dashboard",
+    "1440px dark curved mobile navigation preserves desktop staff dashboard",
+    "1440px dark curved mobile navigation preserves desktop resident dashboard",
+    "1440px dark curved mobile navigation preserves desktop administrator dashboard",
+    "1440px dark curved mobile navigation preserves desktop seller dashboard",
+    "1440px dark curved mobile navigation preserves desktop field officer",
+    "1440px dark curved mobile navigation preserves desktop customer service",
+    "390px light seller workbench publishing and retained photographs",
+    "390px dark seller workbench publishing and retained photographs",
+    "1440px light seller workbench publishing and retained photographs",
+    "1440px dark seller workbench publishing and retained photographs",
+    "390px light curved mobile navigation resident photo picker opens and cancels",
+    "390px dark curved mobile navigation resident photo picker opens and cancels",
+    "390px light curved mobile navigation manager badge-zero urgency primary",
+    "390px light curved mobile navigation manager badge-zero urgency secondary",
+    "390px dark curved mobile navigation manager badge-zero urgency primary",
+    "390px dark curved mobile navigation manager badge-zero urgency secondary",
+    "390px light curved mobile navigation unread manager selection motion",
+    "390px dark curved mobile navigation unread manager selection motion",
+    "390px light curved mobile navigation rapid destination changes settle on final tab",
+    "390px dark curved mobile navigation rapid destination changes settle on final tab"
+  ],
+  "syntheticLoopbackFixtures": true,
+  "realAuthenticationTested": false,
+  "runtimeExceptions": 0,
+  "hostedOrAccountWrites": 0,
+  "buildDirectory": "dist-supabase",
+  "groups": [
+    {
+      "report": "docs/verification/mobile-navigation-2026-11-04/browser-phones-final/report.json",
+      "scenes": 32,
+      "passed": true,
+      "runtimeExceptions": 0
+    },
+    {
+      "report": "docs/verification/mobile-navigation-2026-11-04/browser-wide-final/report.json",
+      "scenes": 32,
+      "passed": true,
+      "runtimeExceptions": 0
+    },
+    {
+      "report": "docs/verification/mobile-navigation-2026-11-04/browser-interactions/report.json",
+      "scenes": 13,
+      "passed": true,
+      "runtimeExceptions": 0
+    },
+    {
+      "report": "docs/verification/mobile-navigation-2026-11-04/browser-desktop-companion/report.json",
+      "scenes": 18,
+      "passed": true,
+      "runtimeExceptions": 0
+    },
+    {
+      "report": "docs/verification/mobile-navigation-2026-11-04/browser-seller-workbench/report.json",
+      "scenes": 4,
+      "passed": true,
+      "runtimeExceptions": 0
+    },
+    {
+      "report": "docs/verification/mobile-navigation-2026-11-04/browser-resident-photo-final/report.json",
+      "scenes": 2,
+      "passed": true,
+      "runtimeExceptions": 0
+    },
+    {
+      "report": "docs/verification/mobile-navigation-2026-11-04/browser-final-urgency-smoke/report.json",
+      "scenes": 12,
+      "passed": true,
+      "runtimeExceptions": 0,
+      "newUniqueScenes": 4,
+      "revalidatedScenes": 8
+    },
+    {
+      "report": "docs/verification/mobile-navigation-2026-11-04/browser-final-completed-frame-motion/report.json",
+      "scenes": 7,
+      "passed": true,
+      "runtimeExceptions": 0,
+      "newUniqueScenes": 4,
+      "revalidatedScenes": 3
+    }
+  ],
+  "coverage": {
+    "roleThemeViewportLayouts": 64,
+    "desktopLayouts": 16,
+    "navigationInteractions": 15,
+    "sellerPublishingRegressions": 4,
+    "actualResidentPhotoPickerCancellation": 2,
+    "managerBadgeZeroUrgency": 4,
+    "unreadManagerCompletedFrameMotion": 2,
+    "rapidDestinationChanges": 2
+  },
+  "sourceAndBuildSha256": {
+    "src/components/MobileNavigation.tsx": "26fd87c56a1b15fb4a6610d5051bc75c542e755b19044fc6505c7483e121ff18",
+    "src/mobileNavigation.css": "0eb209492dcbe8149397e7c1a76f963d8d54f15ab47b45d74419834172425b99",
+    "dist-supabase/index.html": "04bf037130b010e2d6aa103ce78dfb58485aee043f92f28cc6653b563a4261b4"
+  },
+  "supersededRuns": [
+    {
+      "path": "docs/verification/mobile-navigation-2026-11-04/browser-phones/failure.json",
+      "reason": "All 32 scene checks passed; harness counted expected synthetic manager welcome ensure calls. Narrow no-op fixture added and all cases passed again in browser-phones-final."
+    },
+    {
+      "path": "docs/verification/mobile-navigation-2026-11-04/browser-wide/failure.json",
+      "reason": "A width assertion included the 6px desktop scrollbar in innerWidth. Corrected it to the usable document clientWidth; all cases passed in browser-wide-final."
+    },
+    {
+      "path": "docs/verification/mobile-navigation-2026-11-04/browser-resident-photo/failure.json",
+      "reason": "The actual file chooser opened; desktop Chromium does not expose the capture property. Check now uses the capture attribute, and both themes passed in browser-resident-photo-final."
+    },
+    {
+      "path": "docs/verification/mobile-navigation-2026-11-04/browser-unread-motion/failure.json",
+      "reason": "Confirmed unread-state timing mismatch prompted the final motion fix; final completed-frame probe passes both themes."
+    },
+    {
+      "path": "docs/verification/mobile-navigation-2026-11-04/browser-final-motion/failure.json",
+      "reason": "A timer labeled80ms ran after728ms of rendering, past the completed transition; replaced by actual-elapsed completed-frame recording."
+    },
+    {
+      "path": "docs/verification/mobile-navigation-2026-11-04/browser-unread-motion-virtual-light/failure.json",
+      "reason": "Virtual-time experiment mixed compositor animation clocks and was discarded; no virtual-time code remains in the helper."
+    },
+    {
+      "path": "docs/verification/mobile-navigation-2026-11-04/browser-unread-motion-budget-light/failure.json",
+      "reason": "Virtual-time experiment mixed compositor animation clocks and was discarded; no virtual-time code remains in the helper."
+    },
+    {
+      "path": "docs/verification/mobile-navigation-2026-11-04/browser-final-unread-motion-isolated/failure.json",
+      "reason": "First sample was477.8ms after selection and correctly near the end; fixed assumed-deadline assertion."
+    },
+    {
+      "path": "docs/verification/mobile-navigation-2026-11-04/browser-final-motion-trace/failure.json",
+      "reason": "Recorder ran before application rAF and compared stale indicator state with current CSS progress. Final recorder samples after all rAF callbacks and both themes pass."
+    }
+  ],
+  "executedScenes": 120,
+  "finalBuildVerification": {
+    "report": "docs/verification/mobile-navigation-2026-11-04/browser-final-completed-frame-motion/report.json",
+    "passed": true,
+    "scenes": 7,
+    "genericSlideScenes": 2,
+    "reducedMotionScenes": 1,
+    "unreadManagerCompletedFrameMotionScenes": 2,
+    "rapidDestinationChangeScenes": 2,
+    "baselineRetained": "The final source change preserves the existing layout/theme; unchanged-destination updates no longer cancel the active motion. The badge-zero/role/theme geometry checks remain covered by prior groups. The manager-specific probe hides main-content painting while retaining actual state/effects to isolate navigation from chart rendering cost."
+  },
+  "baselineSourceAndBuildSha256": {
+    "src/components/MobileNavigation.tsx": "4493604008f32f38bb5c5f7c1181b8b983902e9069af14e246d79f5807ece8a6",
+    "src/mobileNavigation.css": "0eb209492dcbe8149397e7c1a76f963d8d54f15ab47b45d74419834172425b99",
+    "dist-supabase/index.html": "b1b51a7b87e431f1285c7f658c96611e3eda8ecf51b60e66f867e6afecdcae18"
+  },
+  "priorBuildUrgencyVerification": {
+    "report": "docs/verification/mobile-navigation-2026-11-04/browser-final-urgency-smoke/report.json",
+    "passed": true,
+    "scenes": 12,
+    "roleThemeSmokeScenes": 6,
+    "slideAndIconHandoffScenes": 2,
+    "managerBadgeZeroUrgencyScenes": 4,
+    "baselineScenes": 101,
+    "baselineRetained": "Only unread-dot and accessible update labels changed after the original baseline; layout, theme CSS and animation did not change."
+  },
+  "preMotionFixSourceAndBuildSha256": {
+    "src/components/MobileNavigation.tsx": "d7d9fb653e71ed6d0c4fd1757367b645ba3c2071e5e5aefc64730613073cde2e",
+    "src/mobileNavigation.css": "0eb209492dcbe8149397e7c1a76f963d8d54f15ab47b45d74419834172425b99",
+    "dist-supabase/index.html": "0ed88b7216bc96902617bf98e12f8220b21d5c70f27570ba647d43e1c16fd0c0"
+  }
+}

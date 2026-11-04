@@ -1,0 +1,127 @@
+{
+  "syntheticLoopbackFixtures": true,
+  "realAuthenticationTested": false,
+  "measurements": [
+    {
+      "theme": "light",
+      "motion": {
+        "before": {
+          "indicator": 45.3984375,
+          "previous": 756,
+          "target": 784
+        },
+        "during": {
+          "indicator": 56.011945724487305,
+          "previous": 756.794677734375,
+          "target": 783.205322265625
+        },
+        "after": {
+          "indicator": 120.203125,
+          "previous": 784,
+          "target": 756
+        },
+        "selected": "page",
+        "active": "digital-market",
+        "targetId": "digital-market"
+      }
+    },
+    {
+      "theme": "dark",
+      "motion": {
+        "before": {
+          "indicator": 45.3984375,
+          "previous": 756,
+          "target": 784
+        },
+        "during": {
+          "indicator": 51.022905349731445,
+          "previous": 756.0927734375,
+          "target": 783.9072265625
+        },
+        "after": {
+          "indicator": 120.203125,
+          "previous": 784,
+          "target": 756
+        },
+        "selected": "page",
+        "active": "digital-market",
+        "targetId": "digital-market"
+      }
+    },
+    {
+      "reduced": {
+        "active": "digital-market",
+        "center": 120.203125,
+        "target": 120.203125,
+        "iconDurations": [
+          0
+        ],
+        "indicatorDurations": [
+          0
+        ]
+      }
+    },
+    {
+      "theme": "light",
+      "safeAreaBefore": {
+        "x": 0,
+        "y": 740,
+        "w": 390,
+        "h": 104,
+        "right": 390,
+        "bottom": 844,
+        "cx": 195
+      },
+      "safeAreaAfter": {
+        "x": 0,
+        "y": 712,
+        "w": 390,
+        "h": 132,
+        "right": 390,
+        "bottom": 844,
+        "cx": 195
+      }
+    },
+    {
+      "theme": "dark",
+      "safeAreaBefore": {
+        "x": 0,
+        "y": 740,
+        "w": 390,
+        "h": 104,
+        "right": 390,
+        "bottom": 844,
+        "cx": 195
+      },
+      "safeAreaAfter": {
+        "x": 0,
+        "y": 712,
+        "w": 390,
+        "h": 132,
+        "right": 390,
+        "bottom": 844,
+        "cx": 195
+      }
+    },
+    {
+      "theme": "light",
+      "page": "seller dashboard",
+      "actionDialog": "Publish to your store"
+    },
+    {
+      "theme": "light",
+      "page": "resident dashboard",
+      "actionDialog": "Resident quick actions"
+    },
+    {
+      "theme": "dark",
+      "page": "seller dashboard",
+      "actionDialog": "Publish to your store"
+    },
+    {
+      "theme": "dark",
+      "page": "resident dashboard",
+      "actionDialog": "Resident quick actions"
+    }
+  ]
+}

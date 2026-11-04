@@ -1,0 +1,37 @@
+{
+  "passed": true,
+  "scenes": 3,
+  "checks": [
+    "Google return marker none",
+    "Google return marker fresh",
+    "Google return marker stale"
+  ],
+  "screenshots": [
+    "docs/verification/android-safe-area-2026-11-01/google-return-browser/google-return-fresh.png",
+    "docs/verification/android-safe-area-2026-11-01/google-return-browser/google-return-stale.png"
+  ],
+  "navigationClearance": [],
+  "buildDirectory": "dist-supabase",
+  "syntheticGuestCatalog": true,
+  "syntheticRoleVisualFixtures": [
+    "primary dashboard",
+    "manager dashboard",
+    "staff dashboard",
+    "resident dashboard",
+    "administrator dashboard",
+    "seller dashboard",
+    "field officer",
+    "customer service",
+    "manager onboarding",
+    "store onboarding"
+  ],
+  "hostedOrAccountWrites": 0,
+  "realAuthenticationTested": false,
+  "runtimeExceptions": 0,
+  "syntheticSellerWrites": 0,
+  "syntheticSignupResumeWrites": 0,
+  "syntheticAppearanceWrites": 0,
+  "syntheticSubscriptionCheckouts": 0,
+  "syntheticProfileSaves": 0,
+  "exceptionDetails": []
+}

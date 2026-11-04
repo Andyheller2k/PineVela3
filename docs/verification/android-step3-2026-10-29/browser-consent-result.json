@@ -1,0 +1,11 @@
+{
+  "passed": true,
+  "checks": 24,
+  "actualBundledFrontend": true,
+  "actualGoTrue": true,
+  "actualPasswordForms": true,
+  "syntheticAuthResponses": false,
+  "nativePluginTested": false,
+  "externalRequestsBlocked": 2,
+  "cloudWrites": 0
+}

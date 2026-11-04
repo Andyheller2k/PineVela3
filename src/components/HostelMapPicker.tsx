@@ -3,6 +3,7 @@ import { safeJson } from '../lib/api';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { MapPin, Search, Navigation, CheckCircle2, Copy, Check } from 'lucide-react';
+import { useClipboardFeedback } from '../lib/useClipboardFeedback';
 
 // Fix Leaflet default icon paths in modern Vite bundlers
 const DefaultIcon = L.icon({
@@ -60,7 +61,8 @@ export default function HostelMapPicker({
   const [isSearching, setIsSearching] = useState(false);
   const [isGeolocating, setIsGeolocating] = useState(false);
   const [detectedAddress, setDetectedAddress] = useState<string>('');
-  const [copiedCoords, setCopiedCoords] = useState(false);
+  const [copyError, setCopyError] = useState('');
+  const clipboard = useClipboardFeedback();
 
   const isKumasiVerified = checkIsKumasiLocation(latitude, longitude, detectedAddress || initialAddressHint);
 
@@ -227,10 +229,8 @@ export default function HostelMapPicker({
     );
   };
 
-  const copyCoordinates = () => {
-    navigator.clipboard.writeText(`${latitude.toFixed(6)}, ${longitude.toFixed(6)}`);
-    setCopiedCoords(true);
-    setTimeout(() => setCopiedCoords(false), 2000);
+  const copyCoordinates = async () => {
+    setCopyError(await clipboard.copy('coordinates', `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`) ? '' : 'Copy is unavailable. Select the coordinates to copy them.');
   };
 
   return (
@@ -333,11 +333,12 @@ export default function HostelMapPicker({
               <button
                 type="button"
                 onClick={copyCoordinates}
-                className="text-slate-400 hover:text-slate-700 transition-colors p-1 cursor-pointer"
-                title="Copy Coordinates"
+                className="inline-flex items-center gap-1 text-slate-400 hover:text-slate-700 transition-colors p-1 cursor-pointer"
+                title={clipboard.copiedId === 'coordinates' ? 'Copied' : 'Copy Coordinates'}
               >
-                {copiedCoords ? <Check size={14} className="text-emerald-600" /> : <Copy size={14} />}
+                {clipboard.copiedId === 'coordinates' ? <><Check size={14} className="text-emerald-600" /><span className="text-xs">Copied</span></> : <Copy size={14} />}
               </button>
+              {copyError && <span role="alert" className="text-xs text-red-700">{copyError}</span>}
             </div>
             {detectedAddress ? (
               <p className="text-[11px] text-slate-600 mt-1 line-clamp-1">

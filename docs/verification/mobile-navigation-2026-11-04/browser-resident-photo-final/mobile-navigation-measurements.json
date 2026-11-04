@@ -1,0 +1,18 @@
+{
+  "syntheticLoopbackFixtures": true,
+  "realAuthenticationTested": false,
+  "measurements": [
+    {
+      "theme": "light",
+      "actualResidentPhotoPicker": true,
+      "mode": "selectSingle",
+      "selectedFiles": 0
+    },
+    {
+      "theme": "dark",
+      "actualResidentPhotoPicker": true,
+      "mode": "selectSingle",
+      "selectedFiles": 0
+    }
+  ]
+}

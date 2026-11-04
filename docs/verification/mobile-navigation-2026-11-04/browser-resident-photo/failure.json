@@ -1,0 +1,39 @@
+{
+  "scenario": "390px light curved mobile navigation resident photo picker opens and cancels",
+  "completed": 0,
+  "error": "The established camera input remains connected",
+  "exceptions": [],
+  "apiRequests": [
+    "/api/settings",
+    "/api/auth/me",
+    "/api/auth/appearance",
+    "/api/auth/maintenance-notice",
+    "/api/admin-messages/pending",
+    "/api/auth/account-access",
+    "/api/notifications",
+    "/api/sync/events",
+    "/api/issue-reports",
+    "/api/student/my-rooms"
+  ],
+  "debug": {
+    "url": "http://127.0.0.1:40789/?scene=1793795148128-0.07630418400384165&visual_role=student&visual_theme=light#/resident/dashboard",
+    "title": "PineVela",
+    "text": "Pine\nVela\n\nResident · Verifying Accommodation\n\nHelp\nSign Out\nMy Room\nComplaints\nActions\nBulletins\nSettings\nPine\nVela\nResident Room & Key Hub\nVERIFIED ACTIVE\n\nOfficial digital access credentials, allocated accommodation details, and emergency services\n\nACCOUNT STATUS\nActive Resident\nNo Physical Hostel Room Key Linked Yet\n\nYou are logged in with your student resident account. Your digital room keys will appear here once allocated by your hostel administration.\n\nASSIGNED HOSTEL COMPLEX\nPineVela Residence\nRoom Assigned\nBLOCK / WING\nMain Complex\nROOM NUMBER\nAssigned\nRESIDENT NAME\nVisual fixture student\nCONTACT PHONE\nRegistered Phone\nRESIDENT ACCOUNT EMAIL\ntheme-fixture-student@pinevela.invalid\nPine\nVela\nPINEVELA KEYPASS\nDIGITAL ROOM KEY\nVALIDATED\n•••••••••••••••••\nReveal Digital Key\n\nDo not share your digital key code with unauthorized visitors\n\nRoom Maintenance & Repair Updates\n\nReal-time status of repair requests, staff dispatches, and signoffs for your allocated room\n\nOpen Maintenance Desk\nAll room fixtures and utilities in good condition. No outstanding maintenance requests.\n+ Report New Fault",
+    "root": true,
+    "scripts": [
+      "http://127.0.0.1:40789/analytics.js",
+      "http://127.0.0.1:40789/assets/index-qI_Gq6iX.js"
+    ],
+    "dataset": {
+      "appearance": "product",
+      "publicTheme": "none",
+      "authPage": "false",
+      "mobileAuth": "false",
+      "themePreference": "light",
+      "theme": "light",
+      "appMode": "browser",
+      "mobileViewport": "locked",
+      "mobileNavigation": "true"
+    }
+  }
+}

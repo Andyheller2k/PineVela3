@@ -32,7 +32,7 @@ function OfficerInvitationContent({token}:{token:string}) {
     finally {inFlight.current=false;if(mounted.current)setBusy(false);}
   }
   if(loading&&restorationError)return <SessionRestorationNotice/>;
-  return <main className="page-canvas flex min-h-screen items-center justify-center p-5" style={{color:'var(--pv-text)'}}><section className="w-full max-w-lg space-y-5 rounded-3xl border p-6 shadow-xl backdrop-blur-xl" style={{borderColor:'var(--pv-edge)',background:'var(--pv-glass)',color:'var(--pv-text)'}}>
+  return <main data-pv-onboarding className="page-canvas flex min-h-screen items-center justify-center p-5" style={{color:'var(--pv-text)'}}><section className="w-full max-w-lg space-y-5 rounded-3xl border p-6 shadow-xl backdrop-blur-xl" style={{borderColor:'var(--pv-edge)',background:'var(--pv-glass)',color:'var(--pv-text)'}}>
     <PineLogo size={36}/><h1 className="text-xl font-bold">Private verification officer invitation</h1>
     {error&&<p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-800 dark:bg-red-950 dark:text-red-200">{error}</p>}
     {accepted?accepted.accessAvailable?<><p>Your verified officer portal is enrolled.</p><p className="text-sm">Sign out and sign in again through the main login page to open your assigned inspection workspace.</p><button className={button} disabled={busy} onClick={()=>void signOut('/login')}>{busy?'Signing out…':'Sign in as verification officer'}</button></>

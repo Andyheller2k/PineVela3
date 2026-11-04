@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { MapPin, Search, Navigation, CheckCircle2, Copy, Check, ExternalLink, Compass, School } from 'lucide-react';
+import { useClipboardFeedback } from '../lib/useClipboardFeedback';
 
 // Fix Leaflet default icon paths in modern Vite bundlers
 const MeetupPinIcon = L.icon({
@@ -23,6 +24,8 @@ interface CampusMeetupMapPickerProps {
   onLocationSelect?: (data: { locationName: string; latitude: number; longitude: number }) => void;
   onClose?: () => void;
   preferredUniversity?: string;
+  resolvePin?: (latitude:number,longitude:number,signal:AbortSignal)=>Promise<string|null>;
+  searchPlaces?: (query:string,signal:AbortSignal)=>Promise<{label:string;latitude:number;longitude:number}[]>;
 }
 
 // KNUST Kumasi Campus & Residential Hubs
@@ -86,7 +89,9 @@ export default function CampusMeetupMapPicker({
   readOnly = false,
   onLocationSelect,
   onClose,
-  preferredUniversity
+  preferredUniversity,
+  resolvePin,
+  searchPlaces
 }: CampusMeetupMapPickerProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
@@ -109,7 +114,7 @@ export default function CampusMeetupMapPicker({
   const [mapError, setMapError] = useState('');
   const [isGeolocating, setIsGeolocating] = useState<boolean>(false);
   const [isReverseGeocoding, setIsReverseGeocoding] = useState<boolean>(false);
-  const [copiedCoords, setCopiedCoords] = useState<boolean>(false);
+  const clipboard = useClipboardFeedback();
 
   // Initialize Map
   useEffect(() => {
@@ -196,6 +201,11 @@ export default function CampusMeetupMapPicker({
       const controller = new AbortController();
       lookupRef.current = controller;
       try {
+        if (resolvePin) {
+          const label=await resolvePin(lat,lng,controller.signal);
+          if (!controller.signal.aborted && label) setLocationName(label);
+          return;
+        }
         const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`, { signal: controller.signal });
         if (res.ok) {
           const data = await res.json();
@@ -272,7 +282,8 @@ export default function CampusMeetupMapPicker({
     lookupRef.current = controller;
     setIsReverseGeocoding(true);
     try {
-      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery + ' Ghana')}&limit=1&addressdetails=1`, { signal: controller.signal });
+      const res = searchPlaces ? {ok:true,json:async()=>(await searchPlaces(searchQuery,controller.signal)).map(p=>({lat:p.latitude,lon:p.longitude,display_name:p.label}))}
+        : await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery + ' Ghana')}&limit=1&addressdetails=1`, { signal: controller.signal });
       if (res.ok) {
         const data = await res.json();
         if (controller.signal.aborted) return;
@@ -305,11 +316,10 @@ export default function CampusMeetupMapPicker({
     }
   };
 
-  const handleCopyCoords = () => {
+  const handleCopyCoords = async () => {
     const text = `${currentLat.toFixed(6)}, ${currentLng.toFixed(6)}`;
-    navigator.clipboard.writeText(text);
-    setCopiedCoords(true);
-    setTimeout(() => setCopiedCoords(false), 2000);
+    if (!await clipboard.copy('coordinates', text)) setMapError('Copy is unavailable. Select the coordinates to copy them.');
+    else setMapError('');
   };
 
   const handleConfirmLocation = () => {
@@ -436,10 +446,10 @@ export default function CampusMeetupMapPicker({
           <button
             type="button"
             onClick={handleCopyCoords}
-            className="p-1 hover:bg-white/20 rounded-md transition-colors cursor-pointer"
-            title="Copy GPS coordinates"
+            className="inline-flex items-center gap-1 p-1 hover:bg-white/20 rounded-md transition-colors cursor-pointer"
+            title={clipboard.copiedId === 'coordinates' ? 'Copied' : 'Copy GPS coordinates'}
           >
-            {copiedCoords ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3 text-slate-300" />}
+            {clipboard.copiedId === 'coordinates' ? <><Check className="w-3 h-3 text-emerald-400" /><span className="text-[10px]">Copied</span></> : <Copy className="w-3 h-3 text-slate-300" />}
           </button>
         </div>
 

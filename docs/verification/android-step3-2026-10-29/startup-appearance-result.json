@@ -1,0 +1,275 @@
+{
+  "passed": true,
+  "date": "2026-10-29T20:56:35.733Z",
+  "installedApk": true,
+  "installedApkSha256": "952e3db0d4e3205445234e22b0ac223ddffc634e455f54629626d8c6ba6e6391",
+  "buildVariant": "transportTest",
+  "androidApi": "36",
+  "webView": "133.0.6943.137",
+  "scenarios": [
+    "Actual Android night-mode changes update the WebView and physical system bars.",
+    "The real theme switch overrides the opposite Android system appearance.",
+    "Manual dark appearance persists across background/resume and process relaunch.",
+    "Transparent logo loads, app-ready removes the initial loader once, and hash navigation does not recreate it. Loader screenshots use an explicit diagnostic event hold.",
+    "Bundled policy content and physical bars follow an actual system theme change.",
+    "Dark background remains correct with Android three-button navigation."
+  ],
+  "captures": [
+    {
+      "name": "signin-system-light",
+      "theme": "light",
+      "width": 1080,
+      "height": 2340,
+      "statusInset": 136,
+      "navigationInset": 66,
+      "samples": {
+        "status": [
+          255,
+          255,
+          255
+        ],
+        "navigationLeft": [
+          255,
+          255,
+          255
+        ],
+        "navigationRight": [
+          255,
+          255,
+          255
+        ]
+      }
+    },
+    {
+      "name": "signin-system-dark",
+      "theme": "dark",
+      "width": 1080,
+      "height": 2340,
+      "statusInset": 136,
+      "navigationInset": 66,
+      "samples": {
+        "status": [
+          0,
+          29,
+          61
+        ],
+        "navigationLeft": [
+          0,
+          29,
+          61
+        ],
+        "navigationRight": [
+          0,
+          29,
+          61
+        ]
+      }
+    },
+    {
+      "name": "faq-manual-light-system-dark",
+      "theme": "light",
+      "width": 1080,
+      "height": 2340,
+      "statusInset": 136,
+      "navigationInset": 66,
+      "samples": {
+        "status": [
+          255,
+          255,
+          255
+        ],
+        "navigationLeft": [
+          255,
+          255,
+          255
+        ],
+        "navigationRight": [
+          255,
+          255,
+          255
+        ]
+      }
+    },
+    {
+      "name": "faq-manual-dark-system-light",
+      "theme": "dark",
+      "width": 1080,
+      "height": 2340,
+      "statusInset": 136,
+      "navigationInset": 66,
+      "samples": {
+        "status": [
+          0,
+          29,
+          61
+        ],
+        "navigationLeft": [
+          0,
+          29,
+          61
+        ],
+        "navigationRight": [
+          0,
+          29,
+          61
+        ]
+      }
+    },
+    {
+      "name": "faq-dark-after-resume",
+      "theme": "dark",
+      "width": 1080,
+      "height": 2340,
+      "statusInset": 136,
+      "navigationInset": 66,
+      "samples": {
+        "status": [
+          0,
+          29,
+          61
+        ],
+        "navigationLeft": [
+          0,
+          29,
+          61
+        ],
+        "navigationRight": [
+          0,
+          29,
+          61
+        ]
+      }
+    },
+    {
+      "name": "signin-dark-after-cold-relaunch",
+      "theme": "dark",
+      "width": 1080,
+      "height": 2340,
+      "statusInset": 136,
+      "navigationInset": 66,
+      "samples": {
+        "status": [
+          0,
+          29,
+          61
+        ],
+        "navigationLeft": [
+          0,
+          29,
+          61
+        ],
+        "navigationRight": [
+          0,
+          29,
+          61
+        ]
+      }
+    },
+    {
+      "name": "startup-loader-dark-held",
+      "theme": "dark",
+      "width": 1080,
+      "height": 2340,
+      "statusInset": 136,
+      "navigationInset": 66,
+      "samples": {
+        "status": [
+          0,
+          29,
+          61
+        ],
+        "navigationLeft": [
+          0,
+          29,
+          61
+        ],
+        "navigationRight": [
+          0,
+          29,
+          61
+        ]
+      },
+      "captureMethod": "Deterministic diagnostic hold of the app-ready event after the real application rendered. Does not measure natural startup timing."
+    },
+    {
+      "name": "startup-loader-light-held",
+      "theme": "light",
+      "width": 1080,
+      "height": 2340,
+      "statusInset": 136,
+      "navigationInset": 66,
+      "samples": {
+        "status": [
+          255,
+          255,
+          255
+        ],
+        "navigationLeft": [
+          255,
+          255,
+          255
+        ],
+        "navigationRight": [
+          255,
+          255,
+          255
+        ]
+      },
+      "captureMethod": "Deterministic diagnostic hold of the app-ready event after the real application rendered. Does not measure natural startup timing."
+    },
+    {
+      "name": "terms-system-dark",
+      "theme": "dark",
+      "width": 1080,
+      "height": 2340,
+      "statusInset": 136,
+      "navigationInset": 66,
+      "samples": {
+        "status": [
+          0,
+          29,
+          61
+        ],
+        "navigationLeft": [
+          0,
+          29,
+          61
+        ],
+        "navigationRight": [
+          0,
+          29,
+          61
+        ]
+      }
+    },
+    {
+      "name": "dark-three-button-navigation",
+      "theme": "dark",
+      "width": 1080,
+      "height": 2340,
+      "statusInset": 136,
+      "navigationInset": 132,
+      "samples": {
+        "status": [
+          0,
+          29,
+          61
+        ],
+        "navigationLeft": [
+          0,
+          29,
+          61
+        ],
+        "navigationRight": [
+          0,
+          29,
+          61
+        ]
+      },
+      "diagnosticReconnectedAfterAndroidResourceOverlayChange": true
+    }
+  ],
+  "uncaughtExceptions": 0,
+  "realGoogleOrCaptchaCompletion": false,
+  "physicalPhoneTested": false
+}

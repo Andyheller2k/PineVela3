@@ -124,8 +124,8 @@ export const MarketItemCard: React.FC<MarketItemCardProps> = memo(
             <ListingPlanBadge plan={product.subscriptionPlan} />
             {/* Category / PineVela (Service) Tag */}
             {isService ? (
-              <div className="absolute top-1.5 left-1.5 sm:top-2 sm:left-2 px-2 py-0.5 bg-gradient-to-r from-blue-700 via-blue-600 to-indigo-700 text-white text-[8px] sm:text-[9.5px] font-black rounded-md shadow-xs flex items-center gap-1 border border-blue-400/30 tracking-wide pointer-events-none">
-                <PineWordmark />
+              <div className="market-card-service-tag absolute top-1.5 left-1.5 sm:top-2 sm:left-2 px-2 py-0.5 bg-gradient-to-r from-blue-700 via-blue-600 to-indigo-700 text-white text-[8px] sm:text-[9.5px] font-black rounded-md shadow-xs flex items-center gap-1 border border-blue-400/30 tracking-wide pointer-events-none">
+                <PineWordmark surface="inverse" />
                 <span className="text-white font-black">(Service)</span>
               </div>
             ) : (
@@ -159,27 +159,27 @@ export const MarketItemCard: React.FC<MarketItemCardProps> = memo(
 
           {/* Details Section */}
           <div className="market-card-copy p-2 sm:p-3 space-y-1 sm:space-y-1.5">
-            <div className="flex items-center justify-between gap-1 text-[9px] sm:text-[10px] font-semibold text-blue-700">
+            <div className="market-card-university flex items-center justify-between gap-1 text-[9px] sm:text-[10px] font-semibold text-blue-700">
               <div className="flex items-center gap-1 sm:gap-1.5 min-w-0">
                 <GraduationCap className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
                 <span className="truncate">{product.sellerUniversity || 'Accredited University'}</span>
               </div>
               {isService && (
-                <span className="text-[8px] sm:text-[9px] font-black text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200 shrink-0">
+                <span className="market-card-service-label text-[8px] sm:text-[9px] font-black text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200 shrink-0">
                   (Service)
                 </span>
               )}
             </div>
 
-            <h3 className="text-[11px] sm:text-xs font-bold text-slate-900 line-clamp-1">{product.title}</h3>
+            <h3 className="market-card-title text-[11px] sm:text-xs font-bold text-slate-900 line-clamp-1">{product.title}</h3>
             {!marketListingAvailable(product) && <span className="text-[10px] font-bold text-rose-700">{isService ? 'Unavailable' : 'Sold out'}</span>}
 
-            <p className="hidden sm:block text-[11px] text-slate-500 line-clamp-1 leading-relaxed">
+            <p className="market-card-description hidden sm:block text-[11px] text-slate-500 line-clamp-1 leading-relaxed">
               {product.description || 'No description provided.'}
             </p>
 
             {isService && displayLocation && (
-              <div className="flex items-center gap-1 text-[9px] text-slate-500">
+              <div className="market-card-location flex items-center gap-1 text-[9px] text-slate-500">
                 <MapPin className="w-3 h-3 text-blue-600 shrink-0" />
                 <span className="truncate">{displayLocation}</span>
               </div>
@@ -189,8 +189,8 @@ export const MarketItemCard: React.FC<MarketItemCardProps> = memo(
 
         {/* Store & Action Footer */}
         <div className="market-card-footer p-2 sm:p-3 pt-0 sm:pt-0 border-t border-slate-100 flex items-center justify-between gap-1 sm:gap-2 mt-1 sm:mt-1.5">
-          <div className="flex items-center gap-1.5 min-w-0">
-            <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-md bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center overflow-hidden border border-blue-400/20 shrink-0 shadow-2xs">
+          <div className="market-card-store flex items-center gap-1.5 min-w-0">
+            <div className="market-card-store-logo w-5 h-5 sm:w-6 sm:h-6 rounded-md bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center overflow-hidden border border-blue-400/20 shrink-0 shadow-2xs">
               {product.storeLogoUrl ? (
                 <img src={product.storeLogoUrl} alt={product.storeName} className="w-full h-full object-cover" />
               ) : (

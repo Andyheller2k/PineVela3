@@ -1,0 +1,13 @@
+{
+  "at": "2026-10-31T16:34:43.786720+00:00",
+  "builtApkPath": "android/app/build/outputs/apk/debug/app-debug.apk",
+  "installedApkSha256": "cf618e06535092fe2081ccb4f20383ac62038027e66d48283592ff785c7ade06",
+  "actualInstalledChecksumMatches": true,
+  "cleanFinalBuildPassed": true,
+  "buildExitCode": 0,
+  "replaceInstallationPassed": true,
+  "appDataCleared": false,
+  "realDebugAppUninstalled": false,
+  "releaseApkCopiedByAgent": false,
+  "launchReturnCode": 0
+}

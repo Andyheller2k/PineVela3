@@ -1,0 +1,33 @@
+{
+  "passed": true,
+  "scenes": 1,
+  "checks": [
+    "390px dark mobile UI compact seller cards and scrolling alerts"
+  ],
+  "screenshots": [
+    "docs/verification/mobile-ui-2026-10-31/filter-keyboard/390-dark-compact-seller-services.png",
+    "docs/verification/mobile-ui-2026-10-31/filter-keyboard/390-dark-scrollable-seller-alerts.png"
+  ],
+  "navigationClearance": [],
+  "buildDirectory": "dist-supabase",
+  "syntheticGuestCatalog": true,
+  "syntheticRoleVisualFixtures": [
+    "primary dashboard",
+    "manager dashboard",
+    "staff dashboard",
+    "resident dashboard",
+    "administrator dashboard",
+    "seller dashboard",
+    "field officer",
+    "customer service",
+    "manager onboarding",
+    "store onboarding"
+  ],
+  "hostedOrAccountWrites": 0,
+  "realAuthenticationTested": false,
+  "runtimeExceptions": 0,
+  "syntheticSellerWrites": 0,
+  "syntheticSignupResumeWrites": 0,
+  "syntheticAppearanceWrites": 0,
+  "exceptionDetails": []
+}

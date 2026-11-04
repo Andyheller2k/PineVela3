@@ -1,0 +1,21 @@
+{
+  "candidate": "PineVela_Pixel_4a_API_37",
+  "bootSucceeded": true,
+  "androidRelease": "17",
+  "webview": "145.0.7632.218",
+  "requestedGuestRamMiB": 2560,
+  "actualGuestRamMiB": 4096,
+  "reasonRejected": "Emulator enforced4GB RAM, exhausted host swap; APK install became unacceptably slow",
+  "stopMethod": "Killed only our disposable trial process to avoid saving a4GB failed-candidate snapshot",
+  "oldLiteAvdIntact": true,
+  "apkInstalled": true,
+  "appLaunchTestCompleted": false,
+  "firstBootSeconds": 146.7,
+  "hostAvailableRamAtPressureMiB": 585,
+  "hostSwapFreeAtPressureMiB": 0,
+  "candidateAvdRemoved": true,
+  "unreferencedSystemImageRemoved": true,
+  "ownCachedZipRemoved": true,
+  "oldAvdFilesUnchanged": true,
+  "fallback": "Android16/API36 normal2560MiB minimum"
+}

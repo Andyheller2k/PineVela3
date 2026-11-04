@@ -1,0 +1,44 @@
+{
+  "checkedAt": "2026-10-30T22:19:19.737Z",
+  "readOnly": true,
+  "identitiesIncluded": false,
+  "integrity": {
+    "current_seller_contexts": 2,
+    "seller_using_owner_identity": 0,
+    "mismatched_owner_relationships": 0,
+    "sellers_without_active_primary": 0,
+    "unverified_active_sellers": 0
+  },
+  "emailIntegrity": {
+    "profile_email_mismatches": 0
+  },
+  "linkedPrimaryReadiness": {
+    "linked_primary_accounts": 2,
+    "confirmed": 2,
+    "password_enabled": 1,
+    "google_enabled": 1,
+    "sign_in_blocked": 0
+  },
+  "contexts": [
+    {
+      "kind": "primary",
+      "status": "active",
+      "count": 12
+    },
+    {
+      "kind": "seller",
+      "status": "active",
+      "count": 1
+    },
+    {
+      "kind": "seller",
+      "status": "closed",
+      "count": 1
+    },
+    {
+      "kind": "seller",
+      "status": "pending",
+      "count": 1
+    }
+  ]
+}

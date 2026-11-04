@@ -1,0 +1,10 @@
+{
+  "origin": "https://localhost",
+  "platform": "android",
+  "theme": "light",
+  "appearance": "public",
+  "localAppearance": "light",
+  "temporaryProbeCount": 0,
+  "nativeWelcomeVisible": true,
+  "launchOverlayVisible": false
+}

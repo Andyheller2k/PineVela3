@@ -1,0 +1,40 @@
+/* Brand-filled controls use the page action tokens, including older gold
+   utility classes. Status badges, destructive actions and image previews keep
+   their semantic paint. Navigation supplies its own gold action tokens. */
+html[data-theme][data-appearance="product"] [data-page-tabs] {
+  --pv-action-gradient: var(--pv-navigation-gradient);
+  --pv-action-hover-gradient: var(--pv-navigation-hover-gradient);
+  --pv-on-action: #001d3d;
+}
+html[data-theme][data-appearance="product"] :is(button, a[href]):is(
+  [class~="bg-amber-400"], [class~="bg-amber-500"], [class~="bg-amber-600"],
+  [class~="bg-yellow-400"], [class~="bg-yellow-500"], [class~="bg-yellow-600"],
+  [class~="bg-orange-500"], [class~="bg-orange-600"],
+  [class~="from-amber-400"], [class~="from-amber-500"], [class~="from-yellow-400"], [class~="from-yellow-500"]
+):not([data-avatar-preset], [data-plan-card]) {
+  background: var(--pv-action-gradient);
+  color: var(--pv-on-action);
+  border-color: var(--pv-selection);
+}
+html[data-theme][data-appearance="product"] :is(button, a[href]):is(
+  [class~="bg-amber-400"], [class~="bg-amber-500"], [class~="bg-amber-600"],
+  [class~="bg-yellow-400"], [class~="bg-yellow-500"], [class~="bg-yellow-600"],
+  [class~="bg-orange-500"], [class~="bg-orange-600"],
+  [class~="from-amber-400"], [class~="from-amber-500"], [class~="from-yellow-400"], [class~="from-yellow-500"]
+):not([data-avatar-preset], [data-plan-card]) :is(span, svg) { color: inherit; }
+html[data-theme][data-appearance="product"] [data-portal-navigation]:not([data-curved-navigation]) :is(button, a)[aria-current="page"],
+html[data-theme][data-appearance="product"] [data-portal-navigation="mobile"]:not([data-curved-navigation]) [data-navigation-id="more"][aria-expanded="true"],
+html[data-theme][data-appearance="product"] [data-portal-navigation]:not([data-curved-navigation]) :is(button, a)[aria-current="page"]:not(:disabled):is(:hover, :focus-visible, :active) {
+  background: var(--pv-navigation-gradient);
+  color: #001d3d;
+  border-color: #ffd60a;
+}
+@media (forced-colors: active) {
+  html[data-theme][data-appearance="product"] [data-portal-navigation]:not([data-curved-navigation]) :is(button, a)[aria-current="page"],
+  html[data-theme][data-appearance="product"] [data-portal-navigation="mobile"]:not([data-curved-navigation]) [data-navigation-id="more"][aria-expanded="true"],
+  html[data-theme][data-appearance="product"] [data-portal-navigation]:not([data-curved-navigation]) :is(button, a)[aria-current="page"]:not(:disabled):is(:hover, :focus-visible, :active) {
+    background: Highlight;
+    color: HighlightText;
+    border-color: Highlight;
+  }
+}

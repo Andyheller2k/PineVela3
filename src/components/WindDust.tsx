@@ -114,6 +114,9 @@ export default function WindDust({ variant = 'login' }: { variant?: WindVariant 
       element.dataset.paused = String(!visible || document.hidden || motion.matches || forcedColors.matches);
     };
     const cache = () => {
+      // A route can detach before React runs the effect cleanup. Detached
+      // computed styles contain no palette and are not valid canvas colors.
+      if (!element.isConnected) return;
       const style = getComputedStyle(element);
       const colors = ['--pv-wind-blue', '--pv-wind-gold', '--pv-wind-sky'].map(name => style.getPropertyValue(name).trim());
       canvases.forEach((canvas, i) => paint(canvas, width, height, colors, i, variant));

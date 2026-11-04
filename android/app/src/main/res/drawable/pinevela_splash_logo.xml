@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- PineVela's existing pineapple/house mark, with a transparent canvas.
+     The outer third is left clear for Android's splash icon mask. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="288dp" android:height="288dp"
+    android:viewportWidth="288" android:viewportHeight="288">
+    <group android:translateX="48" android:translateY="48">
+        <path android:fillColor="#007BFF" android:pathData="M87,64C64,62 54,47 57,30C76,29 89,44 87,64Z" />
+        <path android:fillColor="#FFFFFF" android:pathData="M65,37L80,53L74,41L83,55L84,48L86,61L72,51L80,54Z" />
+        <path android:fillColor="#F00000" android:pathData="M97,17C111,32 112,49 98,66C82,51 83,33 97,17Z" />
+        <path android:fillColor="#FFFFFF" android:pathData="M97,29L98,44L104,37L99,48L98,62L96,48L90,39L96,44Z" />
+        <path android:fillColor="#00884A" android:pathData="M107,64C105,44 119,29 137,29C140,49 126,64 107,64Z" />
+        <path android:fillColor="#FFFFFF" android:pathData="M129,37L115,54L121,42L112,56L111,49L109,62L123,52L116,55Z" />
+        <path android:fillColor="#E68300" android:pathData="M85,61H107C131,61 149,80 149,104V139C149,161 135,177 113,177H79C58,177 43,161 43,140V104C43,80 61,61 85,61Z" />
+        <path android:fillColor="#FFB400" android:pathData="M86,68H106C127,68 142,84 142,105V139C142,157 131,170 112,170H80C62,170 50,157 50,139V105C50,84 66,68 86,68Z" />
+        <path android:fillColor="#001D3D" android:pathData="M65,82H85V101H65ZM107,82H127V101H107ZM65,111H85V130H65ZM107,111H127V130H107ZM82,170V151C82,132 110,132 110,151V170Z" />
+    </group>
+</vector>

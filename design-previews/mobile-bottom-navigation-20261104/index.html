@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>PineVela · Mobile navigation preview</title>
+  <link rel="stylesheet" href="../../public/brand.css">
+  <style>
+    @font-face{font-family:Jakarta;src:url('../../assets/fonts/native/plus-jakarta-sans-latin-variable.woff2') format('woff2');font-weight:100 900;font-display:swap}
+    *{box-sizing:border-box}body{margin:0;background:#eef2f7;color:#001d3d;font-family:Jakarta,Arial,sans-serif}button{font:inherit;cursor:pointer}button:focus-visible{outline:3px solid #3b82f6;outline-offset:3px}
+    .sheet{width:min(1540px,100%);margin:auto;padding:46px 40px 32px}.masthead{display:flex;justify-content:space-between;gap:24px;align-items:center;margin-bottom:28px}.eyebrow{margin:0 0 10px;font-size:12px;font-weight:800;letter-spacing:.15em;text-transform:uppercase;color:#52657c}h1{font-size:36px;letter-spacing:-.045em;line-height:1.15;margin:0 0 12px}h1 span{font-weight:500}.intro{font-size:14px;line-height:1.65;margin:0;max-width:860px;color:#52657c}.brand{display:flex;align-items:center;gap:9px;white-space:nowrap}.brand img{width:36px;height:42px}.brand-label{font-family:'PineVela Wordmark',Jakarta,sans-serif;font-size:29px;letter-spacing:-1px;color:#191919}.brand-label b{font-weight:inherit;background:#ffd60a;border-radius:7px 0 0 7px;padding:2px 3px}.brand-label em{font-style:normal}
+    .columns{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:26px}.column-head{border-top:1px solid #c7d3e2;padding-top:16px}.column-head h2{font-size:18px;letter-spacing:-.03em;margin:0 0 5px}.column-head p{font-size:12px;line-height:1.6;color:#52657c;margin:0;min-height:38px}.mode{display:flex;align-items:center;gap:7px;margin:20px 0 9px;font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#52657c}.mode::before{content:'';width:7px;height:7px;border-radius:50%;background:#003566}.mode.dark-mode::before{background:#ffd60a;box-shadow:0 0 0 1px #b79a07}
+    .device{--canvas:#f4f6f9;--panel:#fff;--nav:#fff;--ink:#001d3d;--muted:#607083;--accent:#003566;--on-accent:#fff;--soft:#eaf0f7;--edge:#d6dfe9;position:relative;height:288px;overflow:hidden;border:5px solid #20374b;border-top-width:1px;border-radius:15px 15px 34px 34px;background:var(--canvas);color:var(--ink);box-shadow:0 14px 28px #17395812}
+    .device[data-theme=dark]{--canvas:#001d3d;--panel:#0e3459;--nav:#003566;--ink:#e8f0f8;--muted:#bbcee0;--accent:#ffd60a;--on-accent:#001d3d;--soft:#19466b;--edge:#3c5d7c;border-color:#20374b}
+    .sample-content{padding:19px 22px 0}.sample-title{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:800;margin:0 0 12px}.sample-title svg{width:19px;height:19px;color:var(--accent)}.sample-card{display:flex;align-items:center;gap:12px;background:var(--panel);border:1px solid var(--edge);border-radius:16px;padding:12px 14px;max-width:100%;box-shadow:0 2px 8px #001d3d04}.sample-symbol{width:38px;height:38px;display:grid;place-items:center;border-radius:12px;background:var(--soft);color:var(--accent)}.sample-symbol svg{width:20px;height:20px}.sample-card strong{display:block;font-size:12px;margin-bottom:4px}.sample-card small{display:block;font-size:10px;color:var(--muted)}.sample-card>.chevron{margin-left:auto;width:15px;color:var(--muted)}
+    .bottom-nav{position:absolute;bottom:0;left:0;right:0;height:138px;isolation:isolate}.nav-surface{position:absolute;inset:0;width:100%;height:100%;overflow:visible;filter:drop-shadow(0 -3px 5px #001d3d06)}.nav-surface path{fill:var(--nav)}.nav-surface .edge{fill:none;stroke:var(--edge);stroke-width:1}.nav-items{position:absolute;inset:0 10px 30px;display:grid;grid-template-columns:repeat(5,minmax(0,1fr))}.destination{position:relative;border:0;background:transparent;color:var(--muted);padding:0;min-width:0;min-height:104px;-webkit-tap-highlight-color:transparent;z-index:3}.destination .nav-icon{position:absolute;top:44px;left:50%;width:27px;height:27px;display:grid;place-items:center;transform:translate(-50%,0);transition:transform 500ms cubic-bezier(.33,0,.67,1),color 220ms ease}.nav-icon svg{display:block;width:25px;height:25px;stroke-width:1.8}.destination .nav-label{position:absolute;top:81px;left:0;right:0;line-height:1.35;text-align:center;font-size:10px;font-weight:600;white-space:nowrap;transition:color 200ms ease}.destination[aria-current=page]{color:var(--accent)}.destination[aria-current=page] .nav-label{font-weight:850}.bottom-nav[data-variant=standard] .destination[aria-current=page] .nav-icon{transform:translate(-50%,-28px);color:var(--on-accent)}.indicator{position:absolute;top:0;width:58px;height:58px;border-radius:50%;background:var(--accent);box-shadow:0 7px 13px #001d3d20,inset 0 1px 0 #ffffff30;z-index:2;pointer-events:none}.indicator::before{content:'';position:absolute;inset:1px;border:1px solid #ffffff15;border-radius:inherit}.home-indicator{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);height:4px;width:100px;border-radius:4px;background:var(--ink);opacity:.75;z-index:4}.side-highlight{position:absolute;top:36px;width:48px;height:40px;border-radius:13px;background:var(--soft);z-index:1;pointer-events:none;transition:left 500ms cubic-bezier(.33,0,.67,1)}.bottom-nav[data-variant=action] .destination[aria-current=page] .nav-icon{transform:translate(-50%,-6px)}.center-action{color:var(--accent)}.center-action .nav-icon{top:14px!important;color:var(--on-accent);transform:translateX(-50%)!important}.center-action .nav-icon svg{width:29px;height:29px;stroke-width:2.2}.center-action .nav-label{color:var(--ink);font-size:9px;font-weight:750}
+    .notes{display:grid;grid-template-columns:1fr 1fr 1fr;gap:26px;margin-top:26px;border-top:1px solid #c7d3e2;padding-top:17px}.notes p{font-size:11px;line-height:1.7;margin:0;color:#52657c}.notes strong{display:block;font-size:12px;color:#001d3d;margin-bottom:3px}.toolbar{display:flex;gap:12px;align-items:center;justify-content:center;margin:24px 0 0}.toolbar button{border:1px solid #aebfd2;background:#fff;color:#003566;border-radius:999px;padding:11px 18px;font-size:12px;font-weight:800}.toolbar span{font-size:12px;color:#52657c}.caption{font-size:10px;color:#65768a;line-height:1.65;margin:20px 0 0;text-align:center}.toast{position:absolute;inset:20px 15px auto;padding:14px;border:1px solid var(--edge);border-radius:16px;background:var(--panel);box-shadow:0 8px 30px #001d3d25;font-size:11px;line-height:1.6;z-index:10;display:none}.toast.open{display:block}.toast button{float:right;background:transparent;color:var(--ink);border:0;font-weight:800}.sheet[data-capture=true] .toolbar{display:none}
+    @media(max-width:900px){.sheet{padding:28px 20px}.columns{grid-template-columns:1fr;max-width:470px;margin:auto}.masthead{display:block}.masthead>.brand{display:none}.column-head p{min-height:0}.notes{grid-template-columns:1fr;max-width:470px;margin:24px auto 0}.toolbar{flex-wrap:wrap}h1{font-size:29px}.device{height:300px}.caption{max-width:470px;margin:20px auto 0}}
+    @media(max-width:380px){.destination .nav-label{font-size:9px}}
+    @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+  </style>
+</head>
+<body>
+<main class="sheet">
+  <header class="masthead"><div><p class="eyebrow">PineVela / Mobile navigation / Design preview</p><h1>Connected to the screen. <span>Made for your thumb.</span></h1><p class="intro">Light: white bar + blue selection. Dark: PineVela blue bar + yellow selection. The bar reaches both edges and continues through the phone’s bottom safe area.</p></div><div class="brand"><img src="../../public/store-covers/pinevela-logo.svg" alt=""><span class="brand-label"><b>Pine</b><em>Vela</em></span></div></header>
+  <section class="columns" id="previews" aria-label="Navigation design comparisons"></section>
+  <section class="notes" aria-label="Design behavior"><p><strong>A moving selection</strong>The curved cutout and selected circle glide together. The old icon settles while the new icon rises. Shared style for user, admin, manager, staff and other mobile product pages.</p><p><strong>A fixed Publish button</strong>The center + stays in its own curved cutout. The selected side icon changes softly. Services stays available in More; Publish offers an item or service.</p><p><strong>Resident quick actions</strong>The center + opens room quick actions. My Room, Complaints, Bulletins and Settings remain directly reachable. The lower phone area uses the same bar color.</p></section>
+  <div class="toolbar"><button type="button" id="replay">Replay selection motion</button><span>Preview only · tap any tab or the + buttons</span></div>
+  <p class="caption">Design concept only. No app navigation, account, desktop layout or hosted website has been changed. Illustrative content above each bar gives screen-edge context.</p>
+</main>
+<script>
+  const icons={
+    home:'<path d="m3 10 9-7 9 7v9a2 2 0 0 1-2 2h-4v-7H9v7H5a2 2 0 0 1-2-2z"/>',
+    package:'<path d="m12 3 9 5-9 5-9-5 9-5Zm-9 5v9l9 5 9-5V8M12 13v9M7.5 5.5l9 5"/>',
+    key:'<circle cx="8" cy="15" r="5"/><path d="m11.5 11.5 9-9M17 6l3 3M15 8l3 3"/>',
+    settings:'<path d="m9 3-.6 2.5-2.2 1.3-2.5-.7-2 3.5 1.8 1.8v2.6l-1.8 1.8 2 3.5 2.5-.7 2.2 1.3L9 22h4l.6-2.6 2.2-1.3 2.5.7 2-3.5-1.8-1.8v-2.6l1.8-1.8-2-3.5-2.5.7-2.2-1.3L13 3Z"/><circle cx="11" cy="12.5" r="3"/>',
+    sparkles:'<path d="m12 3 2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5ZM20 2v4M18 4h4"/>',
+    trend:'<path d="m3 17 6-6 4 4 8-10M15 5h6v6"/>',
+    wrench:'<path d="M14.5 6.5a5.5 5.5 0 0 0-6.9 7L3 18a2.1 2.1 0 0 0 3 3l4.5-4.6a5.5 5.5 0 0 0 7-6.9L14 13l-3-3Z"/>',
+    clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+    more:'<circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/>',
+    bell:'<path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/>',
+    plus:'<path d="M12 4v16M4 12h16"/>',
+    chevron:'<path d="m9 5 7 7-7 7"/>',
+    shield:'<path d="m12 3 8 4v5c0 5-8 9-8 9s-8-4-8-9V7zM8 12l3 3 5-6"/>'
+  };
+  const svg=name=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icons[name]||icons.home}</svg>`;
+  const configs=[
+    {id:'standard',name:'Everyday navigation',description:'A moving raised selection for the shared mobile bar.',variant:'standard',title:'Purchases & tracking',card:'Your purchases',sub:'Order progress and delivery details',icon:'package',tabs:[['Home','home'],['Purchases','package'],['Room','key'],['Options','settings'],['Ask AI','sparkles']],active:1},
+    {id:'seller',name:'Seller · publish',description:'A fixed center + for items and services.',variant:'action',title:'Seller inventory',card:'Your inventory',sub:'Manage your items and services',icon:'package',tabs:[['Home','trend'],['Stock','package'],['Publish','plus'],['Sales','clock'],['More','more']],active:1},
+    {id:'resident',name:'Resident · quick actions',description:'A fixed center + for room and maintenance actions.',variant:'action',title:'Your resident room',card:'Room services',sub:'Maintenance, bulletins and room settings',icon:'key',tabs:[['My Room','home'],['Complaints','wrench'],['Actions','plus'],['Bulletins','bell'],['Settings','settings']],active:1}
+  ];
+  document.querySelector('.sheet').dataset.capture=new URLSearchParams(location.search).has('capture');
+  const navStates=[];
+  document.getElementById('previews').innerHTML=configs.map(config=>`<article><header class="column-head"><h2>${config.name}</h2><p>${config.description}</p></header>${['light','dark'].map(theme=>`<p class="mode ${theme==='dark'?'dark-mode':''}">${theme} mode</p><div class="device" data-theme="${theme}" data-role="${config.id}"><div class="sample-content"><p class="sample-title">${svg(config.icon)}${config.title}</p><div class="sample-card"><span class="sample-symbol">${svg(config.icon)}</span><div><strong>${config.card}</strong><small>${config.sub}</small></div><span class="chevron">${svg('chevron')}</span></div></div><nav class="bottom-nav" data-variant="${config.variant}" aria-label="${config.name} ${theme} preview"><svg class="nav-surface" preserveAspectRatio="none" aria-hidden="true"><path class="fill"/><path class="edge"/></svg><span class="indicator"></span>${config.variant==='action'?'<span class="side-highlight"></span>':''}<div class="nav-items">${config.tabs.map(([label,icon],i)=>`<button type="button" class="destination ${config.variant==='action'&&i===2?'center-action':''}" data-index="${i}" aria-label="${label}" ${i===config.active?'aria-current="page"':''}><span class="nav-icon">${svg(icon)}</span><span class="nav-label">${label}</span></button>`).join('')}</div><div class="home-indicator" aria-hidden="true"></div></nav><div class="toast" role="status"><button type="button" aria-label="Close preview action">×</button><strong>${config.id==='seller'?'Publish an item or service':'Room quick actions'}</strong><br>${config.id==='seller'?'Preview: publish an item · offer a service':'Preview: report maintenance · room actions'}</div></div>`).join('')}</article>`).join('');
+  const reduced=matchMedia('(prefers-reduced-motion: reduce)');
+  const path=(w,c)=>`M0 32H${c-43}C${c-33} 32 ${c-35} 66 ${c} 66C${c+35} 66 ${c+33} 32 ${c+43} 32H${w}V138H0Z`;
+  document.querySelectorAll('.bottom-nav').forEach(nav=>{
+    const variant=nav.dataset.variant,buttons=[...nav.querySelectorAll('.destination')],state={nav,variant,buttons,active:1,position:0,frame:0};navStates.push(state);
+    const center=index=>{const button=buttons[index],rect=button.getBoundingClientRect(),parent=nav.getBoundingClientRect();return rect.left-parent.left+rect.width/2};
+    const draw=value=>{state.position=value;const d=path(nav.clientWidth,value);nav.querySelector('svg').setAttribute('viewBox',`0 0 ${nav.clientWidth} 138`);nav.querySelectorAll('.nav-surface path').forEach(p=>p.setAttribute('d',d));nav.querySelector('.indicator').style.left=(value-29)+'px'};
+    state.draw=()=>{draw(center(variant==='action'?2:state.active));if(variant==='action')nav.querySelector('.side-highlight').style.left=(center(state.active)-24)+'px'};state.draw();
+    state.select=index=>{
+      if(variant==='action'&&index===2){nav.parentElement.querySelector('.toast').classList.add('open');return}
+      state.active=index;buttons.forEach((button,i)=>{if(i===index)button.setAttribute('aria-current','page');else button.removeAttribute('aria-current')});
+      if(variant==='action'){nav.querySelector('.side-highlight').style.left=(center(index)-24)+'px';return}
+      cancelAnimationFrame(state.frame);const start=state.position,end=center(index),begin=performance.now(),duration=reduced.matches?0:500;
+      const step=now=>{const t=duration?Math.min(1,(now-begin)/duration):1,eased=t*t*(3-2*t);draw(start+(end-start)*eased);if(t<1)state.frame=requestAnimationFrame(step);else state.frame=0};state.frame=requestAnimationFrame(step);
+    };
+    buttons.forEach((button,i)=>button.addEventListener('click',()=>state.select(i)));
+    nav.parentElement.querySelector('.toast button').addEventListener('click',()=>nav.parentElement.querySelector('.toast').classList.remove('open'));
+  });
+  addEventListener('resize',()=>navStates.forEach(state=>{cancelAnimationFrame(state.frame);state.draw()}));
+  document.getElementById('replay').addEventListener('click',()=>navStates.forEach(state=>{const choices=state.variant==='action'?[0,1,3,4]:[0,1,2,3,4];state.select(choices[(choices.indexOf(state.active)+1)%choices.length])}));
+  window.previewState={navStates};
+</script>
+</body>
+</html>

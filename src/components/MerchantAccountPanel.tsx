@@ -19,7 +19,7 @@ export default function MerchantAccountPanel({ digitalMarketApp, digitalMarketSt
   ) : status;
   const effectiveMarketStore = digitalMarketStore?.setupCompleted && digitalMarketStore.registrationFeePaid ? digitalMarketStore : null;
   return (
-              <div className="space-y-6 [overflow-wrap:anywhere]">
+              <div data-pv-onboarding className="space-y-6 [overflow-wrap:anywhere]">
                 {/* 1. APPROVED MERCHANT MANDATORY STORE CREATION & PAYSTACK ONBOARDING SCREEN */}
                 {displayStatus === 'approved' && (
                   <div className="bg-white/95 border-2 border-blue-300/90 rounded-3xl p-6 sm:p-10 shadow-2xl space-y-6 backdrop-blur-md">

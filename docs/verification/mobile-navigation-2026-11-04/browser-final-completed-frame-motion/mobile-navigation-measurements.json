@@ -1,0 +1,275 @@
+{
+  "syntheticLoopbackFixtures": true,
+  "realAuthenticationTested": false,
+  "measurements": [
+    {
+      "theme": "light",
+      "motion": {
+        "before": {
+          "indicator": 45.3984375,
+          "previous": 756,
+          "target": 784
+        },
+        "during": {
+          "indicator": 100.7930908203125,
+          "previous": 757.376708984375,
+          "target": 782.623291015625
+        },
+        "after": {
+          "indicator": 120.203125,
+          "previous": 784,
+          "target": 756
+        },
+        "selected": "page",
+        "active": "digital-market",
+        "targetId": "digital-market"
+      }
+    },
+    {
+      "theme": "dark",
+      "motion": {
+        "before": {
+          "indicator": 45.3984375,
+          "previous": 756,
+          "target": 784
+        },
+        "during": {
+          "indicator": 68.18752861022949,
+          "previous": 757.3754272460938,
+          "target": 782.6245727539062
+        },
+        "after": {
+          "indicator": 120.203125,
+          "previous": 784,
+          "target": 756
+        },
+        "selected": "page",
+        "active": "digital-market",
+        "targetId": "digital-market"
+      }
+    },
+    {
+      "reduced": {
+        "active": "digital-market",
+        "center": 120.203125,
+        "target": 120.203125,
+        "iconDurations": [
+          0
+        ],
+        "indicatorDurations": [
+          0
+        ]
+      }
+    },
+    {
+      "theme": "light",
+      "unreadSelectionMotion": {
+        "before": {
+          "ms": 0.09999999962747097,
+          "indicator": 45.3984375,
+          "previousIcon": 756,
+          "targetIcon": 784,
+          "unread": true
+        },
+        "frames": [
+          {
+            "ms": 938.8999999999069,
+            "indicator": 52.65452003479004,
+            "previousIcon": 756,
+            "targetIcon": 784,
+            "unread": false
+          },
+          {
+            "ms": 947.3999999999069,
+            "indicator": 195.0078125,
+            "previousIcon": 784,
+            "targetIcon": 756,
+            "unread": false
+          }
+        ],
+        "after": {
+          "ms": 947.7999999998137,
+          "indicator": 195.0078125,
+          "previousIcon": 784,
+          "targetIcon": 756,
+          "unread": false
+        },
+        "mainPaintingIsolated": true,
+        "samplesAfterAnimationCallbacks": true
+      }
+    },
+    {
+      "theme": "dark",
+      "unreadSelectionMotion": {
+        "before": {
+          "ms": 0,
+          "indicator": 45.3984375,
+          "previousIcon": 756,
+          "targetIcon": 784,
+          "unread": true
+        },
+        "frames": [
+          {
+            "ms": 559.2000000001863,
+            "indicator": 47.31202507019043,
+            "previousIcon": 756,
+            "targetIcon": 784,
+            "unread": false
+          },
+          {
+            "ms": 563.1000000000931,
+            "indicator": 195.0078125,
+            "previousIcon": 784,
+            "targetIcon": 756,
+            "unread": false
+          },
+          {
+            "ms": 570.2000000001863,
+            "indicator": 195.0078125,
+            "previousIcon": 784,
+            "targetIcon": 756,
+            "unread": false
+          },
+          {
+            "ms": 588.7000000001863,
+            "indicator": 195.0078125,
+            "previousIcon": 784,
+            "targetIcon": 756,
+            "unread": false
+          },
+          {
+            "ms": 604.3000000002794,
+            "indicator": 195.0078125,
+            "previousIcon": 784,
+            "targetIcon": 756,
+            "unread": false
+          },
+          {
+            "ms": 622,
+            "indicator": 195.0078125,
+            "previousIcon": 784,
+            "targetIcon": 756,
+            "unread": false
+          },
+          {
+            "ms": 638.1000000000931,
+            "indicator": 195.0078125,
+            "previousIcon": 784,
+            "targetIcon": 756,
+            "unread": false
+          },
+          {
+            "ms": 656.4000000003725,
+            "indicator": 195.0078125,
+            "previousIcon": 784,
+            "targetIcon": 756,
+            "unread": false
+          },
+          {
+            "ms": 671.7000000001863,
+            "indicator": 195.0078125,
+            "previousIcon": 784,
+            "targetIcon": 756,
+            "unread": false
+          },
+          {
+            "ms": 688.4000000003725,
+            "indicator": 195.0078125,
+            "previousIcon": 784,
+            "targetIcon": 756,
+            "unread": false
+          },
+          {
+            "ms": 705.2000000001863,
+            "indicator": 195.0078125,
+            "previousIcon": 784,
+            "targetIcon": 756,
+            "unread": false
+          },
+          {
+            "ms": 721,
+            "indicator": 195.0078125,
+            "previousIcon": 784,
+            "targetIcon": 756,
+            "unread": false
+          },
+          {
+            "ms": 738,
+            "indicator": 195.0078125,
+            "previousIcon": 784,
+            "targetIcon": 756,
+            "unread": false
+          },
+          {
+            "ms": 754.7000000001863,
+            "indicator": 195.0078125,
+            "previousIcon": 784,
+            "targetIcon": 756,
+            "unread": false
+          },
+          {
+            "ms": 770.9000000003725,
+            "indicator": 195.0078125,
+            "previousIcon": 784,
+            "targetIcon": 756,
+            "unread": false
+          },
+          {
+            "ms": 788.2000000001863,
+            "indicator": 195.0078125,
+            "previousIcon": 784,
+            "targetIcon": 756,
+            "unread": false
+          }
+        ],
+        "after": {
+          "ms": 802.7000000001863,
+          "indicator": 195.0078125,
+          "previousIcon": 784,
+          "targetIcon": 756,
+          "unread": false
+        },
+        "mainPaintingIsolated": true,
+        "samplesAfterAnimationCallbacks": true
+      }
+    },
+    {
+      "theme": "light",
+      "rapidSelectionMotion": {
+        "targets": {
+          "home": 45.3984375,
+          "purchases": 120.203125,
+          "options": 269.8046875
+        },
+        "before": 45.3984375,
+        "first": 71.69393157958984,
+        "second": 170.7493133544922,
+        "returning": 114.34460830688477,
+        "after": 45.3984375,
+        "active": "home",
+        "currents": [
+          "home"
+        ]
+      }
+    },
+    {
+      "theme": "dark",
+      "rapidSelectionMotion": {
+        "targets": {
+          "home": 45.3984375,
+          "purchases": 120.203125,
+          "options": 269.8046875
+        },
+        "before": 45.3984375,
+        "first": 53.163766860961914,
+        "second": 109.34918594360352,
+        "returning": 92.76367950439453,
+        "after": 45.3984375,
+        "active": "home",
+        "currents": [
+          "home"
+        ]
+      }
+    }
+  ]
+}

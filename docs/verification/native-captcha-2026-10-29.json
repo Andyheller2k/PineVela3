@@ -1,0 +1,42 @@
+{
+  "date": "2026-10-29",
+  "scope": "Bundled Android on-demand CAPTCHA document and message boundary",
+  "httpAndVmTests": {
+    "passed": 4,
+    "failed": 0,
+    "command": "node --import tsx tests/nativeCaptcha.test.ts",
+    "turnstileSdk": "Explicitly synthetic VM fixture; not a real provider solve"
+  },
+  "actualOwnedApplicationTls": {
+    "passed": true,
+    "route": "/api/auth/mobile/captcha",
+    "exactFrameAncestor": "https://localhost",
+    "noSessionCookies": true,
+    "noFrameDenyHeader": true,
+    "noStore": true,
+    "localCaptchaDisabled": true
+  },
+  "review": {
+    "fixedOwnedFrame": "https://pinevela.app/api/auth/mobile/captcha",
+    "noNativeBridgeGrant": true,
+    "exactMessageWindowAndOrigin": true,
+    "randomChannelBits": 256,
+    "tokenLengthLimit": 2048,
+    "oneResultPerMount": true,
+    "noIdleWidgetLoad": true,
+    "expiredAndBackgroundChallengesRemoved": true,
+    "configurationFromUrl": false
+  },
+  "limitations": [
+    "The hosted endpoint must be deployed before production in-app CAPTCHA can complete.",
+    "A genuine production Cloudflare challenge solve has not been verified.",
+    "The current native transport and frame parent target Android; iOS native integration remains a subsequent step."
+  ],
+  "cloudWrites": 0,
+  "sourceSha256": {
+    "supabase/nativeCaptcha.ts": "9c91b29ee4f62626a0b3436221eb62e1a5ebd221d910b80ad5ed298a49a2de16",
+    "src/native/NativeCaptcha.tsx": "eeb06c84638102ac3141f146978983238ff11206e81b25d07e0aada3a6951fef",
+    "src/components/AuthCaptcha.tsx": "cd828f1a485430c47b18ed873335a851d1de6da5ba4a0215307196344b3e8959",
+    "tests/nativeCaptcha.test.ts": "344f485e27dd027ad9b2caf5b46234018035ab9bd2cb04d58471b4c595b1a8af"
+  }
+}

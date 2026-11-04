@@ -1,0 +1,26 @@
+{
+  "at": "2026-10-31T15:52:53.805775+00:00",
+  "plainStartupArgs": [
+    "/home/wyse/Android/Sdk/emulator/emulator",
+    "-avd",
+    "PineVela_Pixel_4a_API_36"
+  ],
+  "bootCompleted": true,
+  "installedApkSha256": "ee7ea453416fbe7c4fc9abb2a31a5d54079e4168fd8ee188c478edc1ac091dbb",
+  "matchesFinalApk": true,
+  "apkReinstalledAfterThisReopen": false,
+  "normalQuickBootSuccessfullyLoaded": true,
+  "safeQuickBootLifecycleLog": [
+    "INFO         | Loading snapshot 'default_boot'...",
+    "INFO         | Successfully loaded snapshot 'default_boot' using 12307 ms"
+  ],
+  "readinessChecks": [
+    {
+      "boot": "1",
+      "returnCode": 0
+    }
+  ],
+  "dataCleared": false,
+  "accountFormsSubmitted": false,
+  "paymentActionsSubmitted": false
+}

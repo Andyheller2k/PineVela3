@@ -88,7 +88,7 @@ export default function VerifiedAccountEnrollment({ kind,initialName = '',initia
   const label = (field:string) => `${formId}-${field}`;
   if(ready&&googleManager&&kind==='manager'&&!released&&(!pending||pending.authentication==='google'))
     return <GoogleManagerEnrollment key={user?.id} initialName={initialName} initialPhone={initialPhone} initialEmail={initialEmail} pending={pending} onChanged={load} onVerified={onVerified}/>;
-  return <div className="space-y-4">
+  return <div data-pv-onboarding className="space-y-4">
     {error && <p role="alert" className="rounded-xl bg-rose-50 p-3 text-sm text-rose-800">{error}</p>}
     {notice && <p role="status" className="rounded-xl bg-blue-50 p-3 text-sm text-blue-950">{notice}</p>}
     {captcha.widget}

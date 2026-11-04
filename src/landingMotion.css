@@ -51,6 +51,16 @@
   transition: opacity 580ms cubic-bezier(.22, 1, .36, 1), translate 580ms cubic-bezier(.22, 1, .36, 1), transform 360ms cubic-bezier(.22, 1, .36, 1);
   transition-delay: var(--landing-reveal-delay, 0ms), var(--landing-reveal-delay, 0ms), 0ms;
 }
+.landing-peak-page .landing-peak-scene {
+  position: relative;
+  width: 100%;
+  transform-origin: 48% 58%;
+  transform-style: preserve-3d;
+  filter: drop-shadow(1px 2px 1px rgb(0 29 61 / .14)) drop-shadow(4px 7px 3px rgb(0 29 61 / .12)) drop-shadow(0 24px 26px rgb(0 29 61 / .2));
+}
+/* A fixed foreground plane and soft silhouette shadows give depth without
+   pointer tracking or drifting objects. Login artwork keeps its own motion. */
+.landing-peak-page [data-artwork-layers="landing"] .artwork-layer { animation: none; filter: drop-shadow(1px 3px 2px rgb(0 29 61 / .18)); }
 .landing-peak-page[data-landing-motion] .public-catalog-track > .landing-reveal {
   translate: 12px 0;
 }
@@ -136,6 +146,12 @@
 .landing-peak-page :is(.landing-peak-shortcuts button, #public-header .public-header-link):active {
   transform: translateY(0) scale(.97);
 }
+@media (min-width: 1024px) and (prefers-reduced-motion: no-preference) {
+  .landing-peak-page .landing-peak-artwork { perspective: 1200px; }
+  .landing-peak-page .landing-peak-scene {
+    transform: rotateX(2deg) rotateY(-6deg) translateZ(12px);
+  }
+}
 @media (min-width: 1024px) and (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
   .landing-peak-page .landing-peak-brand-card {
     transform: perspective(1400px) rotateX(var(--landing-art-rotate-x, 0deg)) rotateY(var(--landing-art-rotate-y, 0deg));
@@ -161,6 +177,7 @@
     transition-delay: 0ms !important;
   }
   .landing-peak-page .landing-peak-artwork,
+  .landing-peak-page .landing-peak-scene,
   .landing-peak-page .landing-peak-brand-card,
   .landing-peak-page .landing-peak-hero .landing-peak-cta,
   .landing-peak-page .landing-peak-cta svg,
@@ -168,6 +185,7 @@
     transform: none !important;
     transition: none !important;
   }
+  .landing-peak-page [data-artwork-layers="landing"] .artwork-layer { translate: none !important; }
   .landing-peak-page .landing-peak-brand-card::after {
     display: none;
     animation: none;
@@ -179,4 +197,7 @@
   }
   .landing-peak-page #public-header :is(.public-header-sections, .public-header-account) .public-header-link::after,
   .landing-peak-page .landing-peak-shortcuts button::after { transition: none; }
+}
+@media (forced-colors: active) {
+  .landing-peak-page .landing-peak-scene { filter: none; }
 }

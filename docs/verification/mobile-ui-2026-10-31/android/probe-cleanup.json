@@ -1,0 +1,12 @@
+{
+  "origin": "https://localhost",
+  "platform": "android",
+  "hash": "#/login?mode=login",
+  "theme": "light",
+  "appearance": "public",
+  "localAppearance": "light",
+  "originalLocalAppearance": "light",
+  "temporaryProbeCount": 0,
+  "activeTab": "login",
+  "horizontalOverflow": false
+}

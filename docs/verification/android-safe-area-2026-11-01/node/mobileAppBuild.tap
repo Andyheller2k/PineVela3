@@ -1,0 +1,22 @@
+TAP version 13
+# Subtest: connected native bundle has only public client assets and preserves immutable policies
+ok 1 - connected native bundle has only public client assets and preserves immutable policies
+  ---
+  duration_ms: 54.197176
+  type: 'test'
+  ...
+# Subtest: every bundled Android HTML document contains its viewport inside the native safe area
+ok 2 - every bundled Android HTML document contains its viewport inside the native safe area
+  ---
+  duration_ms: 17.150577
+  type: 'test'
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 2
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 103.032864

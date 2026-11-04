@@ -1,0 +1,61 @@
+{
+  "passed": true,
+  "date": "2026-10-30T11:49:50.906Z",
+  "installedApkSha256": "838a9d3fa528d5e14eba35dc09a316d1b60663307cb94fbfd39a35741719a5e9",
+  "actualAndroidWebView": true,
+  "scenarios": [
+    "Cold launch shows the glass welcome over the original landing artwork",
+    "Sign in opens the local login card and the selector animates both ways",
+    "Create account opens signup with compact fields and smaller required agreement text",
+    "Welcome and both account cards follow dark mode with matching Android bars",
+    "Reduced motion keeps tab switching functional and disables the animations",
+    "Contact support on the bundled policy opens the local Help page"
+  ],
+  "screenshots": [
+    {
+      "name": "welcome-light",
+      "theme": "light",
+      "physicalDisplay": true
+    },
+    {
+      "name": "login-light",
+      "theme": "light",
+      "physicalDisplay": true
+    },
+    {
+      "name": "signup-light",
+      "theme": "light",
+      "physicalDisplay": true
+    },
+    {
+      "name": "welcome-dark",
+      "theme": "dark",
+      "physicalDisplay": true
+    },
+    {
+      "name": "signup-dark",
+      "theme": "dark",
+      "physicalDisplay": true
+    },
+    {
+      "name": "login-dark",
+      "theme": "dark",
+      "physicalDisplay": true
+    },
+    {
+      "name": "help-dark",
+      "theme": "dark",
+      "physicalDisplay": true
+    }
+  ],
+  "uncaughtExceptions": 0,
+  "nativeOnlyWelcome": true,
+  "bothButtonsOpenBundledForms": true,
+  "animationsObserved": true,
+  "signedOutStatus401": true,
+  "accountFormsSubmitted": false,
+  "googleOAuthTested": false,
+  "productionCaptchaTested": false,
+  "physicalPhoneTested": false,
+  "iosBuildTested": false
+}

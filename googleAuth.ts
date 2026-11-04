@@ -22,7 +22,7 @@ export function googleCallbackFailure(query: Record<string, unknown>): string | 
 
 /** Callback URLs may contain provider authorization codes even inside error descriptions. */
 export function googleRequestLogUrl(url: string): string {
-  return /^\/api\/auth\/google\/callback\/?(?:\?|$)/i.test(url) ? url.split('?')[0] : url;
+  return /^\/api\/auth\/(?:google\/callback|mobile\/(?:browser|start|status|finish|exchange|google\/native\/(?:start|complete)))\/?(?:\?|$)/i.test(url) ? url.split('?')[0] : url;
 }
 
 // This input comes ONLY from Supabase /user after a server-side PKCE exchange.
@@ -60,8 +60,8 @@ async function providerRequest(config: ReturnType<typeof signupProviderConfig>, 
   return response.json();
 }
 
-export function installGoogleAuth(app: Express, complete: (identity: GoogleIdentity, mode: Mode, session: GoogleSession) => Promise<string | {token:string;redirectTo:'/admin/dashboard'|'/field-officer'|'/manager/dashboard'|'/customer-service'}>, issueCookie: (res: any, token: string, session?: GoogleSession) => void) {
-  const flows = new Map<string, { verifier: string; mode: Mode; origin: string; config: ReturnType<typeof signupProviderConfig>; expires: number; returnTo?: string }>();
+export function installGoogleAuth(app: Express, complete: (identity: GoogleIdentity, mode: Mode, session: GoogleSession, termsAcceptance?: {accepted: unknown; version: unknown}) => Promise<string | {token:string;redirectTo:'/admin/dashboard'|'/field-officer'|'/manager/dashboard'|'/customer-service'}>, issueCookie: (res: any, token: string, session?: GoogleSession) => void) {
+  const flows = new Map<string, { verifier: string; mode: Mode; origin: string; config: ReturnType<typeof signupProviderConfig>; expires: number; returnTo?: string; termsAcceptance?: {accepted: unknown; version: unknown} }>();
   const cookieName = 'pv_google_flow';
   const cookieOptions = { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax' as const, path: '/api/auth/google/callback' };
   app.post('/api/auth/google/start', async (req, res) => {
@@ -74,7 +74,8 @@ export function installGoogleAuth(app: Express, complete: (identity: GoogleIdent
       for (const [state, flow] of flows) if (flow.expires <= Date.now()) flows.delete(state);
       if (flows.size >= 1000) return res.status(429).json({ error: 'Please wait before trying Google sign-in again.' });
       const state = crypto.randomBytes(32).toString('base64url'), verifier = crypto.randomBytes(48).toString('base64url');
-      flows.set(state, { verifier, mode: req.body.mode, origin, config, returnTo: validateLoginContinuation(req.body.returnTo), expires: Date.now() + 5 * 60_000 });
+      flows.set(state, { verifier, mode: req.body.mode, origin, config, returnTo: validateLoginContinuation(req.body.returnTo), expires: Date.now() + 5 * 60_000,
+        ...(req.body.mode==='signup' ? {termsAcceptance:{accepted:req.body.termsAcceptance?.accepted,version:req.body.termsAcceptance?.version}} : {}) });
       const url = new URL(`${config.url}/auth/v1/authorize`);
       url.searchParams.set('provider', 'google');
       url.searchParams.set('scopes', 'openid email profile');
@@ -108,7 +109,7 @@ export function installGoogleAuth(app: Express, complete: (identity: GoogleIdent
       const session = await providerRequest(flow.config, '/token?grant_type=pkce', { auth_code: code, code_verifier: flow.verifier });
       if (typeof session.access_token !== 'string' || !session.access_token) throw new GoogleError('failed');
       const identity = googleIdentity(await providerRequest(flow.config, '/user', undefined, session.access_token));
-      const completed = await complete(identity, flow.mode, session);
+      const completed = await complete(identity, flow.mode, session, flow.termsAcceptance);
       const token=typeof completed==='string'?completed:completed.token;
       const destination=typeof completed==='object'&&['/admin/dashboard','/field-officer','/manager/dashboard','/customer-service'].includes(completed.redirectTo)?completed.redirectTo:'/user/dashboard';
       issueCookie(res, token, session);

@@ -1,0 +1,33 @@
+{
+  "passed": true,
+  "scenes": 1,
+  "checks": [
+    "390x780 light Android layout welcome and native forms"
+  ],
+  "screenshots": [
+    "docs/verification/android-safe-area-2026-11-01/browser-smoke/390-light-native-signup.png"
+  ],
+  "navigationClearance": [],
+  "buildDirectory": "dist-mobile",
+  "syntheticGuestCatalog": true,
+  "syntheticRoleVisualFixtures": [
+    "primary dashboard",
+    "manager dashboard",
+    "staff dashboard",
+    "resident dashboard",
+    "administrator dashboard",
+    "seller dashboard",
+    "field officer",
+    "customer service",
+    "manager onboarding",
+    "store onboarding"
+  ],
+  "hostedOrAccountWrites": 0,
+  "realAuthenticationTested": false,
+  "runtimeExceptions": 0,
+  "syntheticSellerWrites": 0,
+  "syntheticSignupResumeWrites": 0,
+  "syntheticAppearanceWrites": 0,
+  "syntheticSubscriptionCheckouts": 0,
+  "exceptionDetails": []
+}

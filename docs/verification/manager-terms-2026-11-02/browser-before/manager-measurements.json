@@ -1,0 +1,78 @@
+{
+  "baseline": true,
+  "localFixturesOnly": true,
+  "measurements": [
+    {
+      "width": 1440,
+      "theme": "light",
+      "hidden": {
+        "pressed": "false",
+        "type": "password",
+        "background": "rgba(0, 0, 0, 0)",
+        "image": "none",
+        "color": "rgb(95, 109, 130)",
+        "iconColor": "rgb(95, 109, 130)",
+        "x": 671,
+        "right": 695,
+        "width": 24,
+        "centerY": 473,
+        "inputRight": 709,
+        "inputCenterY": 473,
+        "viewport": 1440,
+        "overflow": false
+      },
+      "shown": {
+        "pressed": "true",
+        "type": "text",
+        "background": "rgba(0, 0, 0, 0)",
+        "image": "linear-gradient(115deg, rgb(0, 53, 102), rgb(0, 29, 61))",
+        "color": "rgb(255, 255, 255)",
+        "iconColor": "rgb(255, 255, 255)",
+        "x": 671,
+        "right": 695,
+        "width": 24,
+        "centerY": 450,
+        "inputRight": 709,
+        "inputCenterY": 450,
+        "viewport": 1440,
+        "overflow": false
+      }
+    },
+    {
+      "width": 1440,
+      "theme": "dark",
+      "hidden": {
+        "pressed": "false",
+        "type": "password",
+        "background": "rgba(0, 0, 0, 0)",
+        "image": "none",
+        "color": "rgb(165, 186, 208)",
+        "iconColor": "rgb(165, 186, 208)",
+        "x": 671,
+        "right": 695,
+        "width": 24,
+        "centerY": 473,
+        "inputRight": 709,
+        "inputCenterY": 473,
+        "viewport": 1440,
+        "overflow": false
+      },
+      "shown": {
+        "pressed": "true",
+        "type": "text",
+        "background": "rgba(0, 0, 0, 0)",
+        "image": "linear-gradient(115deg, rgb(255, 195, 0), rgb(255, 214, 10))",
+        "color": "rgb(0, 29, 61)",
+        "iconColor": "rgb(0, 29, 61)",
+        "x": 671,
+        "right": 695,
+        "width": 24,
+        "centerY": 447.13543701171875,
+        "inputRight": 709,
+        "inputCenterY": 447.13543701171875,
+        "viewport": 1440,
+        "overflow": false
+      }
+    }
+  ]
+}

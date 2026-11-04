@@ -16,6 +16,7 @@ import {
   Layers,
   Map as MapIcon
 } from 'lucide-react';
+import { useClipboardFeedback } from '../lib/useClipboardFeedback';
 
 // Configure standard high-contrast pin icon
 const DefaultIcon = L.icon({
@@ -81,7 +82,7 @@ export default function MapLocationSelector({
   const [isGeolocating, setIsGeolocating] = useState(false);
   const [isReverseGeocoding, setIsReverseGeocoding] = useState(false);
   const [detectedAddress, setDetectedAddress] = useState<string>('');
-  const [copiedCoords, setCopiedCoords] = useState(false);
+  const clipboard = useClipboardFeedback();
   const [mapStyle, setMapStyle] = useState<'streets' | 'satellite'>('streets');
   const tileLayerRef = useRef<L.TileLayer | null>(null);
 
@@ -322,10 +323,9 @@ export default function MapLocationSelector({
     );
   };
 
-  const copyCoordinates = () => {
-    navigator.clipboard.writeText(`${latitude.toFixed(6)}, ${longitude.toFixed(6)}`);
-    setCopiedCoords(true);
-    setTimeout(() => setCopiedCoords(false), 2000);
+  const copyCoordinates = async () => {
+    if (!await clipboard.copy('coordinates', `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`)) setMapError('Copy is unavailable. Select the coordinates to copy them.');
+    else setMapError('');
   };
 
   return (
@@ -445,10 +445,10 @@ export default function MapLocationSelector({
             <button
               type="button"
               onClick={copyCoordinates}
-              className="p-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-600 transition-colors shrink-0"
-              title="Copy GPS coordinates"
+              className="inline-flex items-center gap-1 p-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-600 transition-colors shrink-0"
+              title={clipboard.copiedId === 'coordinates' ? 'Copied' : 'Copy GPS coordinates'}
             >
-              {copiedCoords ? <Check size={14} className="text-emerald-600" /> : <Copy size={14} />}
+              {clipboard.copiedId === 'coordinates' ? <><Check size={14} className="text-emerald-600" /><span className="text-xs">Copied</span></> : <Copy size={14} />}
             </button>
           </div>
         </div>

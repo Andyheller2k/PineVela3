@@ -1,0 +1,43 @@
+/* Shared by the React app, launch screens and static policy headers. */
+@font-face {
+  font-family: 'PineVela Wordmark';
+  src: url('./brand/caviar-dreams-bold.ttf') format('truetype');
+  font-style: normal;
+  font-weight: 600 900;
+  font-display: swap;
+}
+:root { --pv-wordmark-ink: #191919; }
+:root[data-theme="dark"], [data-brand-surface="inverse"] { --pv-wordmark-ink: #ffd60a; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --pv-wordmark-ink: #ffd60a; }
+}
+.pinevela-brand { max-width: 100%; }
+.pinevela-brand-mark { display: block; object-fit: contain; max-width: 100%; max-height: 100%; background: transparent; }
+html .pinevela-wordmark {
+  display: inline-flex;
+  align-items: stretch;
+  font-family: 'PineVela Wordmark', 'Caviar Dreams', sans-serif !important;
+  font-weight: 800;
+  font-style: normal;
+  letter-spacing: -.035em;
+  line-height: 1.15;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+html .pinevela-wordmark .pine-label {
+  background: #ffd60a;
+  color: #191919;
+  -webkit-text-fill-color: #191919;
+  padding: .12em .12em .12em .28em;
+  border-radius: .3em 0 0 .3em;
+}
+html .pinevela-wordmark .vela-label {
+  background: transparent;
+  color: var(--pv-wordmark-ink);
+  -webkit-text-fill-color: var(--pv-wordmark-ink);
+  padding: .12em .28em .12em .08em;
+  border-radius: 0 .3em .3em 0;
+}
+@media (forced-colors: active) {
+  html .pinevela-wordmark :is(.pine-label, .vela-label) { background: Canvas; color: CanvasText; -webkit-text-fill-color: CanvasText; }
+}

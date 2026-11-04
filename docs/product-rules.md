@@ -107,6 +107,11 @@ Changed residence details or an ended assignment block approval. Rejection needs
 a reason. Blocks with floors, rooms, beds or staff history are retained.
 
 Public manager contact changes do not alter the manager's verified login identity.
+New residence registrations explicitly collect the name that will appear on public
+residence cards, separate from the login profile. Until an older approved residence
+has a reviewed public contact name, its card shows the already published property
+email or phone instead of disclosing the account profile. Adding a name to an
+approved residence still requires the normal reviewed change request.
 Managers and their primary users receive submission/decision notices. Administrator
 request notices contribute to approval alerts and open the residence review section.
 Manager-key recovery separately requires the administrator's own settings key,

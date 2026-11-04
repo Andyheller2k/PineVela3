@@ -1,0 +1,408 @@
+{
+  "temporaryDomCssProbes": true,
+  "actualBundledAndroidWebView": true,
+  "bundledLazyMarketplaceCssLoadedForProbesOnly": "/assets/ReportButton-DohHaJQO.css",
+  "merchantProbeUsesActualRegistrationButtonClasses": true,
+  "authenticatedFlow": false,
+  "origin": "https://localhost",
+  "viewport": 393,
+  "before": {
+    "theme": "light",
+    "appearance": "public"
+  },
+  "allChecksPassed": true,
+  "results": [
+    {
+      "theme": "light",
+      "checks": {
+        "primaryPageActionUsesTheme": true,
+        "legacyGoldPageActionUsesTheme": true,
+        "selectedFilterUsesTheme": true,
+        "allAppNavigationGold": true,
+        "merchantRemainsGold": true,
+        "systemPillOuterTransparent": true,
+        "systemPillOuterRounded": true,
+        "systemPillInnerRounded": true,
+        "allPhoneCardGridsTwoColumns": true,
+        "phoneThumbnailsCompact": true,
+        "alertFiltersSideScrollable": true
+      },
+      "primary": {
+        "background": "linear-gradient(115deg, rgb(0, 53, 102), rgb(0, 29, 61))",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "ink": "rgb(255, 255, 255)",
+        "radius": 0,
+        "width": 131.2954559326172,
+        "height": 44
+      },
+      "legacy": {
+        "background": "linear-gradient(115deg, rgb(0, 53, 102), rgb(0, 29, 61))",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "ink": "rgb(255, 255, 255)",
+        "radius": 0,
+        "width": 184.93182373046875,
+        "height": 44
+      },
+      "selector": {
+        "background": "linear-gradient(115deg, rgb(0, 53, 102), rgb(0, 29, 61))",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "ink": "rgb(255, 255, 255)",
+        "radius": 0,
+        "width": 144.90341186523438,
+        "height": 44
+      },
+      "merchant": {
+        "background": "linear-gradient(135deg, rgb(255, 228, 119), rgb(255, 214, 10) 48%, rgb(255, 195, 0))",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "ink": "rgb(0, 29, 61)",
+        "radius": 20,
+        "width": 123.61932373046875,
+        "height": 44
+      },
+      "navigation": [
+        {
+          "mode": "mobile",
+          "background": "linear-gradient(115deg, rgb(255, 195, 0), rgb(255, 214, 10))",
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "ink": "rgb(0, 29, 61)",
+          "radius": 0,
+          "width": 245.125,
+          "height": 44
+        },
+        {
+          "mode": "top",
+          "background": "linear-gradient(115deg, rgb(255, 195, 0), rgb(255, 214, 10))",
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "ink": "rgb(0, 29, 61)",
+          "radius": 0,
+          "width": 220.2556915283203,
+          "height": 44
+        },
+        {
+          "mode": "sidebar",
+          "background": "linear-gradient(115deg, rgb(255, 195, 0), rgb(255, 214, 10))",
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "ink": "rgb(0, 29, 61)",
+          "radius": 0,
+          "width": 251.2329559326172,
+          "height": 44
+        },
+        {
+          "mode": "menu",
+          "background": "linear-gradient(115deg, rgb(255, 195, 0), rgb(255, 214, 10))",
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "ink": "rgb(0, 29, 61)",
+          "radius": 0,
+          "width": 235.8125,
+          "height": 44
+        },
+        {
+          "mode": "header",
+          "background": "linear-gradient(115deg, rgb(255, 195, 0), rgb(255, 214, 10))",
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "ink": "rgb(0, 29, 61)",
+          "radius": 0,
+          "width": 248.1306915283203,
+          "height": 44
+        }
+      ],
+      "systemPill": {
+        "outer": {
+          "background": "none",
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "ink": "rgb(0, 53, 102)",
+          "radius": 999,
+          "width": 115.00568389892578,
+          "height": 46
+        },
+        "inner": {
+          "background": "linear-gradient(115deg, rgb(0, 53, 102), rgb(0, 29, 61))",
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "ink": "rgb(255, 255, 255)",
+          "radius": 999,
+          "width": 115.00568389892578,
+          "height": 46
+        }
+      },
+      "grids": [
+        {
+          "kind": "market-catalog-grid",
+          "display": "grid",
+          "columns": "168px 168px",
+          "sameTop": true,
+          "cardWidths": [
+            168,
+            168
+          ],
+          "cardHeights": [
+            196.96023559570312,
+            196.96023559570312
+          ],
+          "thumbnailHeights": [
+            110.0625,
+            110.0625
+          ]
+        },
+        {
+          "kind": "market-inventory-grid",
+          "display": "grid",
+          "columns": "168px 168px",
+          "sameTop": true,
+          "cardWidths": [
+            168,
+            168
+          ],
+          "cardHeights": [
+            196.5625,
+            196.5625
+          ],
+          "thumbnailHeights": [
+            110.0625,
+            110.0625
+          ]
+        },
+        {
+          "kind": "seller-services-grid",
+          "display": "grid",
+          "columns": "168px 168px",
+          "sameTop": true,
+          "cardWidths": [
+            168,
+            168
+          ],
+          "cardHeights": [
+            198.96023559570312,
+            198.96023559570312
+          ],
+          "thumbnailHeights": [
+            110.0625,
+            110.0625
+          ]
+        }
+      ],
+      "filterMetrics": {
+        "overflowX": "auto",
+        "clientWidth": 344,
+        "scrollWidth": 610,
+        "children": [
+          {
+            "shrink": "0",
+            "whiteSpace": "nowrap",
+            "height": 44
+          },
+          {
+            "shrink": "0",
+            "whiteSpace": "nowrap",
+            "height": 44
+          },
+          {
+            "shrink": "0",
+            "whiteSpace": "nowrap",
+            "height": 44
+          },
+          {
+            "shrink": "0",
+            "whiteSpace": "nowrap",
+            "height": 44
+          }
+        ]
+      }
+    },
+    {
+      "theme": "dark",
+      "checks": {
+        "primaryPageActionUsesTheme": true,
+        "legacyGoldPageActionUsesTheme": true,
+        "selectedFilterUsesTheme": true,
+        "allAppNavigationGold": true,
+        "merchantRemainsGold": true,
+        "systemPillOuterTransparent": true,
+        "systemPillOuterRounded": true,
+        "systemPillInnerRounded": true,
+        "allPhoneCardGridsTwoColumns": true,
+        "phoneThumbnailsCompact": true,
+        "alertFiltersSideScrollable": true
+      },
+      "primary": {
+        "background": "linear-gradient(115deg, rgb(255, 195, 0), rgb(255, 214, 10))",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "ink": "rgb(0, 29, 61)",
+        "radius": 0,
+        "width": 131.2954559326172,
+        "height": 44
+      },
+      "legacy": {
+        "background": "linear-gradient(115deg, rgb(255, 195, 0), rgb(255, 214, 10))",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "ink": "rgb(0, 29, 61)",
+        "radius": 0,
+        "width": 184.93182373046875,
+        "height": 44
+      },
+      "selector": {
+        "background": "linear-gradient(115deg, rgb(255, 195, 0), rgb(255, 214, 10))",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "ink": "rgb(0, 29, 61)",
+        "radius": 0,
+        "width": 144.90341186523438,
+        "height": 44
+      },
+      "merchant": {
+        "background": "linear-gradient(135deg, rgb(255, 228, 119), rgb(255, 214, 10) 48%, rgb(255, 195, 0))",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "ink": "rgb(0, 29, 61)",
+        "radius": 20,
+        "width": 123.61932373046875,
+        "height": 44
+      },
+      "navigation": [
+        {
+          "mode": "mobile",
+          "background": "linear-gradient(115deg, rgb(255, 195, 0), rgb(255, 214, 10))",
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "ink": "rgb(0, 29, 61)",
+          "radius": 0,
+          "width": 245.125,
+          "height": 44
+        },
+        {
+          "mode": "top",
+          "background": "linear-gradient(115deg, rgb(255, 195, 0), rgb(255, 214, 10))",
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "ink": "rgb(0, 29, 61)",
+          "radius": 0,
+          "width": 220.2556915283203,
+          "height": 44
+        },
+        {
+          "mode": "sidebar",
+          "background": "linear-gradient(115deg, rgb(255, 195, 0), rgb(255, 214, 10))",
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "ink": "rgb(0, 29, 61)",
+          "radius": 0,
+          "width": 251.2329559326172,
+          "height": 44
+        },
+        {
+          "mode": "menu",
+          "background": "linear-gradient(115deg, rgb(255, 195, 0), rgb(255, 214, 10))",
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "ink": "rgb(0, 29, 61)",
+          "radius": 0,
+          "width": 235.8125,
+          "height": 44
+        },
+        {
+          "mode": "header",
+          "background": "linear-gradient(115deg, rgb(255, 195, 0), rgb(255, 214, 10))",
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "ink": "rgb(0, 29, 61)",
+          "radius": 0,
+          "width": 248.1306915283203,
+          "height": 44
+        }
+      ],
+      "systemPill": {
+        "outer": {
+          "background": "none",
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "ink": "rgb(220, 231, 243)",
+          "radius": 999,
+          "width": 115.00568389892578,
+          "height": 46
+        },
+        "inner": {
+          "background": "linear-gradient(115deg, rgb(255, 195, 0), rgb(255, 214, 10))",
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "ink": "rgb(0, 29, 61)",
+          "radius": 999,
+          "width": 115.00568389892578,
+          "height": 46
+        }
+      },
+      "grids": [
+        {
+          "kind": "market-catalog-grid",
+          "display": "grid",
+          "columns": "168px 168px",
+          "sameTop": true,
+          "cardWidths": [
+            168,
+            168
+          ],
+          "cardHeights": [
+            196.96023559570312,
+            196.96023559570312
+          ],
+          "thumbnailHeights": [
+            110.0625,
+            110.0625
+          ]
+        },
+        {
+          "kind": "market-inventory-grid",
+          "display": "grid",
+          "columns": "168px 168px",
+          "sameTop": true,
+          "cardWidths": [
+            168,
+            168
+          ],
+          "cardHeights": [
+            196.5625,
+            196.5625
+          ],
+          "thumbnailHeights": [
+            110.0625,
+            110.0625
+          ]
+        },
+        {
+          "kind": "seller-services-grid",
+          "display": "grid",
+          "columns": "168px 168px",
+          "sameTop": true,
+          "cardWidths": [
+            168,
+            168
+          ],
+          "cardHeights": [
+            198.96023559570312,
+            198.96023559570312
+          ],
+          "thumbnailHeights": [
+            110.0625,
+            110.0625
+          ]
+        }
+      ],
+      "filterMetrics": {
+        "overflowX": "auto",
+        "clientWidth": 344,
+        "scrollWidth": 610,
+        "children": [
+          {
+            "shrink": "0",
+            "whiteSpace": "nowrap",
+            "height": 44
+          },
+          {
+            "shrink": "0",
+            "whiteSpace": "nowrap",
+            "height": 44
+          },
+          {
+            "shrink": "0",
+            "whiteSpace": "nowrap",
+            "height": 44
+          },
+          {
+            "shrink": "0",
+            "whiteSpace": "nowrap",
+            "height": 44
+          }
+        ]
+      }
+    }
+  ]
+}

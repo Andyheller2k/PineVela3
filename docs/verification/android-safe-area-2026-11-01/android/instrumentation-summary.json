@@ -1,0 +1,109 @@
+{
+  "passed": true,
+  "total": 32,
+  "classes": {
+    "NativeHttpClientCookieTest": 10,
+    "NativeSafeAreaTest": 4,
+    "PineVelaWebViewBoundaryTest": 3,
+    "PublicMediaCacheTest": 13,
+    "SecureSessionStoreTest": 2
+  },
+  "measurements": [
+    {
+      "name": "left-cutout-three-button",
+      "window": "[0,0][1080,2340]",
+      "webView": "[92,145][1080,2208]",
+      "safeInsets": "Insets{left=92, top=145, right=0, bottom=132}",
+      "imeInsets": "Insets{left=0, top=0, right=0, bottom=0}",
+      "keyboardVisible": false,
+      "nativePadding": {
+        "left": 92,
+        "top": 145,
+        "right": 0,
+        "bottom": 132
+      }
+    },
+    {
+      "name": "right-landscape-cutout-and-navigation",
+      "window": "[0,0][1080,2340]",
+      "webView": "[0,64][900,2340]",
+      "safeInsets": "Insets{left=0, top=64, right=180, bottom=0}",
+      "imeInsets": "Insets{left=0, top=0, right=0, bottom=0}",
+      "keyboardVisible": false,
+      "nativePadding": {
+        "left": 0,
+        "top": 64,
+        "right": 180,
+        "bottom": 0
+      }
+    },
+    {
+      "name": "gesture-navigation",
+      "window": "[0,0][1080,2340]",
+      "webView": "[0,72][1080,2280]",
+      "safeInsets": "Insets{left=0, top=72, right=0, bottom=60}",
+      "imeInsets": "Insets{left=0, top=0, right=0, bottom=0}",
+      "keyboardVisible": false,
+      "nativePadding": {
+        "left": 0,
+        "top": 72,
+        "right": 0,
+        "bottom": 60
+      }
+    },
+    {
+      "name": "ime-open-with-cutout",
+      "window": "[0,0][1080,2340]",
+      "webView": "[92,145][1080,1620]",
+      "safeInsets": "Insets{left=92, top=145, right=0, bottom=132}",
+      "imeInsets": "Insets{left=0, top=0, right=0, bottom=720}",
+      "keyboardVisible": true,
+      "nativePadding": {
+        "left": 92,
+        "top": 145,
+        "right": 0,
+        "bottom": 720
+      }
+    },
+    {
+      "name": "ime-dismissed",
+      "window": "[0,0][1080,2340]",
+      "webView": "[92,145][1080,2208]",
+      "safeInsets": "Insets{left=92, top=145, right=0, bottom=132}",
+      "imeInsets": "Insets{left=0, top=0, right=0, bottom=0}",
+      "keyboardVisible": false,
+      "nativePadding": {
+        "left": 92,
+        "top": 145,
+        "right": 0,
+        "bottom": 132
+      }
+    },
+    {
+      "name": "actual-system-bars",
+      "window": "[0,0][1080,2340]",
+      "webView": "[0,136][1080,2274]",
+      "safeInsets": "Insets{left=0, top=136, right=0, bottom=66}",
+      "imeInsets": "Insets{left=0, top=0, right=0, bottom=0}",
+      "keyboardVisible": false,
+      "nativePadding": {
+        "left": 0,
+        "top": 136,
+        "right": 0,
+        "bottom": 66
+      }
+    }
+  ],
+  "localDocumentCount": 9,
+  "accountFormsSubmitted": false,
+  "paymentActionsSubmitted": false,
+  "testApk": "app.pinevela.mobile.transporttest.test",
+  "testedTargetApkSha256": "7246cca687e0fdc02d07ea3f552f6767e65a8505ba473e76f4a3f58b659c1b43",
+  "nativeSources": {
+    "android/app/src/main/java/app/pinevela/mobile/MainActivity.java": "9c67de29a202e63eead9d757d27e17f1a2a21b3453675e67f87bee377f044a32",
+    "android/app/src/main/java/app/pinevela/mobile/NativeAppearance.java": "819b1b6b585d6ef6cf5f95c85eeb87d2755e721b86705109fb4fd912d1260bca",
+    "android/app/src/main/java/app/pinevela/mobile/PineVelaTransportPlugin.java": "c0320f654e48f84f4e3d21d3b7b55b16bd439d79ff94aa8bf53e2b651c9bbe8a",
+    "node_modules/@capacitor/android/capacitor/src/main/java/com/getcapacitor/plugin/SystemBars.java": "dbe23dcf4472cc00bf7d23a635f7286168905b37ce8db9697da200454c21aa35"
+  },
+  "note": "Isolated instrumentation target uses final native code and contained policies. The final debug APK additionally includes a toast-only CSS update; full UI matrix verifies that exact APK separately."
+}

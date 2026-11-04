@@ -1,3 +1,4 @@
+import { publicAppBase } from '../lib/publicAppUrl';
 import { useEffect,useRef,useState } from 'react';
 import { useQuery,useQueryClient } from '@tanstack/react-query';
 import { Copy,KeyRound,Users } from 'lucide-react';
@@ -7,11 +8,13 @@ import AdministratorLabel from './AdministratorLabel';
 import AdminRemovalActions from './AdminRemovalActions';
 import SystemWipeReviewPanel from './SystemWipeReviewPanel';
 import { governanceRefreshInterval } from '../lib/governanceRefresh';
+import { useClipboardFeedback } from '../lib/useClipboardFeedback';
 
 const control='w-full rounded-xl border border-blue-200 bg-white/80 px-3 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500';
 const button='rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-40';
 export default function SupabaseAdminGovernancePanel() {
   const {apiFetch,user}=useAuth(),client=useQueryClient(),feedback=useActionFeedback(),mounted=useRef(true);
+  const clipboard=useClipboardFeedback();
   useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;};},[]);
   const {data,error,isPending}=useQuery<any>({queryKey:['adminGovernance',user?.id],enabled:user?.role==='admin',refetchInterval:governanceRefreshInterval(false),refetchOnWindowFocus:true,
     queryFn:async({signal})=>{const ownerId=user!.id;const value=await apiFetch('/api/admin/governance',{signal,headers:{'X-PineVela-Account-Context':ownerId}});if(!Array.isArray(value?.members)||value.currentId!==ownerId)throw new Error('Administrator approvals could not load. Sign in again.');return value;}});
@@ -25,8 +28,8 @@ export default function SupabaseAdminGovernancePanel() {
       const result=await apiFetch(path,{method:'POST',body:JSON.stringify(body)});
       if(!mounted.current)return;
       if(!result?.success)throw new Error('The approval action could not be saved.');
-      if(enrollment)setSecret(result.privateKey);
-      if(result.invitationToken){setInviteLink(`${window.location.origin}${window.location.pathname}#/admin-invitation?token=${encodeURIComponent(result.invitationToken)}`);setInviteName('');setInviteEmail('');}
+      if(enrollment){clipboard.reset();setSecret(result.privateKey);}
+      if(result.invitationToken){clipboard.reset();setInviteLink(`${publicAppBase()}#/admin-invitation?token=${encodeURIComponent(result.invitationToken)}`);setInviteName('');setInviteEmail('');}
       setKey('');setNotice(result.message);
       setMembershipTarget(null);
       await client.invalidateQueries({queryKey:['adminGovernance']});
@@ -41,11 +44,11 @@ export default function SupabaseAdminGovernancePanel() {
     <header className="rounded-3xl border border-blue-200 bg-white/65 p-6"><h2 className="text-xl font-bold"><AdministratorLabel slot={self?.slot} name={self?.name}/></h2>
       <p className="mt-3 text-sm text-slate-600">Approval keys belong to each administrator and are separate from login passwords and settings keys. Two other administrators must consent to a lost-key recovery.</p></header>
     {notice&&<p role="status" className="rounded-xl bg-blue-50 p-4 text-blue-900">{notice}</p>}
-    {secret&&<section className="space-y-3 rounded-2xl border border-amber-300 bg-amber-50 p-5"><h3 className="font-bold">Your private approval key</h3>
+    {secret&&<section data-pv-onboarding className="space-y-3 rounded-2xl border border-amber-300 bg-amber-50 p-5"><h3 className="font-bold">Your private approval key</h3>
       <p className="text-sm">Save this privately. It is displayed once and is never stored in browser storage.</p><textarea aria-label="Your private approval key" readOnly value={secret} className={`${control} font-mono`}/>
-      <div className="flex flex-wrap gap-3"><button type="button" className={button} onClick={async()=>{try{await navigator.clipboard.writeText(secret);setNotice('Copied. Store it privately.');}catch{feedback.fail('Select and copy the key manually.',feedback.begin());}}}><Copy size={16} className="mr-2 inline"/>Copy</button>
+      <div className="flex flex-wrap gap-3"><button type="button" className={button} onClick={async()=>{if(await clipboard.copy('approval-key',secret))setNotice('Copied. Store it privately.');else feedback.fail('Select and copy the key manually.',feedback.begin());}}><Copy size={16} className="mr-2 inline"/>{clipboard.copiedId==='approval-key'?'Copied':'Copy'}</button>
         <button type="button" className={button} onClick={()=>setSecret('')}>I have saved it</button></div></section>}
-    {!self?.keyEnrolled&&<form className="space-y-3 rounded-2xl border border-blue-200 bg-white/70 p-5" onSubmit={e=>{e.preventDefault();void act(root+'/keys/enroll',{},true);}}>
+    {!self?.keyEnrolled&&<form data-pv-onboarding className="space-y-3 rounded-2xl border border-blue-200 bg-white/70 p-5" onSubmit={e=>{e.preventDefault();void act(root+'/keys/enroll',{},true);}}>
       <h3 className="flex items-center gap-2 font-bold"><KeyRound size={20}/>Enroll your approval key</h3>
       <p className="text-sm text-slate-600">Sign in with Google or your verified email within the last five minutes. If that window has ended, sign out and sign in again.</p>
       <button className={button} disabled={busy||!data.freshSignIn||!data.capabilities?.approvalKeys}>Generate my approval key</button></form>}
@@ -79,7 +82,7 @@ export default function SupabaseAdminGovernancePanel() {
         </form>
         {inviteLink&&<section className="space-y-3 rounded-xl border border-amber-300 bg-amber-50 p-4"><p className="text-sm font-semibold">Save this private link. It is shown once.</p>
           <textarea readOnly aria-label="Private administrator invitation link" value={inviteLink} className={control}/><div className="flex flex-wrap gap-3">
-          <button type="button" className={button} onClick={async()=>{try{await navigator.clipboard.writeText(inviteLink);setNotice('Private invitation link copied.');}catch{feedback.fail('Select and copy the link manually.',feedback.begin());}}}>Copy invitation link</button>
+          <button type="button" className={button} onClick={async()=>{if(await clipboard.copy('admin-invitation',inviteLink))setNotice('Private invitation link copied.');else feedback.fail('Select and copy the link manually.',feedback.begin());}}>{clipboard.copiedId==='admin-invitation'?'Copied':'Copy invitation link'}</button>
           <button type="button" className={button} onClick={()=>setInviteLink('')}>I have saved it</button></div></section>}
         {data.invitations?.map((i:any)=><article key={i.id} className="rounded-xl border border-blue-100 p-3 text-sm"><p className="font-semibold">#{i.slot} {i.name} · {i.status}</p><p className="break-all">{i.email}</p><p className="text-xs">Expires {new Date(i.expiresAt).toLocaleString()}</p>
           {i.status==='reserved'&&<button type="button" className={`${button} mt-2`} disabled={busy||!key} onClick={()=>void act(`${root}/invitations/${i.id}/cancel`,{privateKey:key})}>Cancel invitation</button>}</article>)}

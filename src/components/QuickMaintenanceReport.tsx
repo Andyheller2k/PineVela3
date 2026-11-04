@@ -1,19 +1,27 @@
-import { useEffect, useRef, useState } from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { Camera, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { compressImageFileToLowRes } from '../lib/imageOptimizer';
 import { uploadMaintenancePhoto } from '../lib/maintenanceMedia';
 import DashboardOverlay from './DashboardOverlay';
 
-export default function QuickMaintenanceReport({ activeComplaint, hidden, onSubmitted }: {
-  activeComplaint?: any; hidden?: boolean; onSubmitted: (issue: any) => void;
-}) {
+export interface QuickMaintenanceReportHandle { openCamera: () => void; }
+
+const QuickMaintenanceReport = forwardRef<QuickMaintenanceReportHandle, {
+  activeComplaint?: any; hidden?: boolean; hideFloatingLauncher?: boolean; onSubmitted: (issue: any) => void;
+}>(function QuickMaintenanceReport({ activeComplaint, hidden, hideFloatingLauncher, onSubmitted }, ref) {
   const { apiFetch } = useAuth();
   const camera = useRef<HTMLInputElement>(null);
   const mounted = useRef(true);
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
   const [photo, setPhoto] = useState(''), [title, setTitle] = useState(''), [details, setDetails] = useState('');
   const [busy, setBusy] = useState(false), [error, setError] = useState('');
+  const openCamera = () => {
+    if (busy || hidden) return;
+    if (activeComplaint) setError(`Your complaint “${activeComplaint.title}” is still active. Wait for its resolution before filing another.`);
+    else camera.current?.click();
+  };
+  useImperativeHandle(ref, () => ({ openCamera }), [busy, hidden, activeComplaint]);
   const close = () => { if (!busy) { setPhoto(''); setTitle(''); setDetails(''); setError(''); } };
   async function capture(file?: File) {
     if (!file) return;
@@ -42,8 +50,8 @@ export default function QuickMaintenanceReport({ activeComplaint, hidden, onSubm
   const control = 'mt-1 w-full rounded-xl border border-blue-200 bg-white p-3 text-sm text-slate-900';
   return <>
     <input ref={camera} data-maintenance-camera type="file" accept="image/*" capture="environment" className="hidden" onChange={event => { void capture(event.target.files?.[0]); event.target.value = ''; }} />
-    {!hidden && !photo && <div className="fixed bottom-[calc(var(--pv-mobile-nav-height,4rem)+.875rem)] left-4 z-40 max-w-[calc(100%-5rem)] lg:hidden">
-      <button aria-label="Log maintenance with camera" title={activeComplaint ? `Active complaint: ${activeComplaint.title}` : 'Take a photograph and report an issue'} disabled={busy} onClick={() => { if (activeComplaint) setError(`Your complaint “${activeComplaint.title}” is still active. Wait for its resolution before filing another.`); else camera.current?.click(); }} className="flex min-h-12 items-center gap-2 rounded-full bg-blue-700 px-4 py-3 text-sm font-bold text-white shadow-lg disabled:opacity-60"><Camera size={20} />{busy ? 'Opening photo…' : 'Log maintenance'}</button>
+    {!hideFloatingLauncher && !hidden && !photo && <div className="fixed bottom-[calc(var(--pv-mobile-nav-height,4rem)+.875rem)] left-4 z-40 max-w-[calc(100%-5rem)] lg:hidden">
+      <button aria-label="Log maintenance with camera" title={activeComplaint ? `Active complaint: ${activeComplaint.title}` : 'Take a photograph and report an issue'} disabled={busy} onClick={openCamera} className="flex min-h-12 items-center gap-2 rounded-full bg-blue-700 px-4 py-3 text-sm font-bold text-white shadow-lg disabled:opacity-60"><Camera size={20} />{busy ? 'Opening photo…' : 'Log maintenance'}</button>
     </div>}
     {!photo && error && <DashboardOverlay aria-label="Maintenance reporting notice" onClose={() => setError('')} className="flex items-center justify-center bg-slate-950/50 p-4"><div className="w-full max-w-md space-y-4 rounded-3xl bg-white p-5 text-slate-900"><p role="alert" className="text-sm">{error}</p><button onClick={() => setError('')} className="rounded-xl bg-blue-700 px-4 py-3 font-semibold text-white">Close</button></div></DashboardOverlay>}
     {photo && <DashboardOverlay aria-label="Quick maintenance complaint" onClose={close} className="flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm">
@@ -58,4 +66,6 @@ export default function QuickMaintenanceReport({ activeComplaint, hidden, onSubm
       </form>
     </DashboardOverlay>}
   </>;
-}
+});
+
+export default QuickMaintenanceReport;

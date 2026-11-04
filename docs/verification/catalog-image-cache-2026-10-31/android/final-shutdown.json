@@ -1,0 +1,14 @@
+{
+  "taskStartedPid": 68749,
+  "normalShutdownRequested": true,
+  "onlyTaskEmulatorStopped": true,
+  "shutdownReturnCode": 0,
+  "processStopped": true,
+  "safeQuickBootLifecycleLog": [
+    "INFO         | Loading snapshot 'default_boot'...",
+    "INFO         | Successfully loaded snapshot 'default_boot' using 8714 ms",
+    "INFO         | Saving snapshot 'default_boot' took 17846 ms"
+  ],
+  "appDataCleared": false,
+  "snapshotsDeleted": false
+}

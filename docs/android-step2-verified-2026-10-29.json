@@ -1,0 +1,141 @@
+{
+  "step": 2,
+  "completed": "2026-10-29T16:05:06.741715+00:00",
+  "scope": "Bundled Android development preview; account transport deferred to step 3",
+  "applicationId": "app.pinevela.mobile.debug",
+  "baseApplicationId": "app.pinevela.mobile",
+  "appLabel": "PineVela Preview",
+  "versionCode": 1,
+  "versionName": "1.0-step2-preview",
+  "capacitor": "8.5.3",
+  "gradle": "8.14.3",
+  "androidGradlePlugin": "8.13.0",
+  "java": "21.0.12.1",
+  "minSdk": 24,
+  "compileSdk": 36,
+  "targetSdk": 36,
+  "minWebViewVersion": 111,
+  "webDir": "dist-mobile",
+  "mobileEntry": "/assets/index-ClOXS29D.js",
+  "webEntry": "/assets/index-BIOnewCO.js",
+  "apk": "android/app/build/outputs/apk/debug/app-debug.apk",
+  "downloadCopy": "/tmp/pinevela-android-step2-preview-20261029.apk",
+  "sizeBytes": 9431252,
+  "sha256": "708a519fea14ff6b6588decce4c568676f1d9346dd292f8e49beb5294a8353a4",
+  "debugSignedApkVerified": true,
+  "signatureScheme": "v2",
+  "releaseKeyCreated": false,
+  "aabCreated": false,
+  "gradleBuildPassed": true,
+  "firstGradleBuildSeconds": 481,
+  "finalIncrementalBuildSeconds": 43,
+  "typeScriptPassed": true,
+  "mobileBuildPassed": true,
+  "normalWebFrontendAndBackendBuildPassed": true,
+  "focusedTestsPassed": [
+    "tests/mobilePreview.test.ts",
+    "tests/appMode.test.ts",
+    "tests/signupPassword.test.ts",
+    "tests/authProviderErrors.test.ts"
+  ],
+  "pwaAndStaticDeliveryChecks": {
+    "passed": 8,
+    "failed": 0
+  },
+  "nativeBoundaryAndArtifactTests": {
+    "passed": 3,
+    "failed": 0
+  },
+  "chromiumMobileSmoke": {
+    "passed": 5,
+    "apiOrExternalRequests": 0,
+    "serviceWorkers": 0,
+    "uncaughtExceptions": 0
+  },
+  "androidEmulatorSmoke": {
+    "passed": true,
+    "date": "2026-10-29T16:04:01.354Z",
+    "installedApk": true,
+    "platform": "android",
+    "scenarios": [
+      "Installed APK boots its bundled login with an active Android bridge",
+      "Signup transition works and protected account actions stay disabled",
+      "System and manual themes render in the Android WebView",
+      "Bundled policies open locally and external links stay in the preview",
+      "APK reloads offline and makes no API or external requests"
+    ],
+    "apiOrExternalRequests": 0,
+    "uncaughtExceptions": 0,
+    "serviceWorkers": 0,
+    "authenticationAvailable": false,
+    "physicalDeviceTested": false
+  },
+  "emulator": "PineVela_Lite_API_35",
+  "emulatorApi": 35,
+  "webView": "124.0.6367.219",
+  "firstActivityColdLaunchMs": 2348,
+  "activityLaunchTimingIsNotAnInteractivePerformanceBenchmark": true,
+  "apkAudit": {
+    "mobileFilesByteMatched": 28,
+    "configuredPrivateValuesScanned": 7,
+    "privateValueMatches": 0,
+    "backendBundles": 0,
+    "sourceMaps": 0,
+    "envFiles": 0,
+    "websiteAnalyticsOrWorkerFiles": 0
+  },
+  "nativeManifest": {
+    "allowBackup": false,
+    "usesCleartextTraffic": false,
+    "sensitiveRuntimePermissions": [],
+    "networkPermission": "INTERNET",
+    "androidXInternalReceiverPermissionPresent": true
+  },
+  "noHostedServerUrl": true,
+  "apiTransportDisabledInPreview": true,
+  "authActionsDisabled": true,
+  "captchaNotLoaded": true,
+  "serverSecurityChanged": false,
+  "policyArticlesBytePreserved": true,
+  "googleFontOflNoticesIncluded": 3,
+  "existingChilderNoticeIncluded": true,
+  "snapshotTakenDuringStep2": {
+    "files": 1003,
+    "changed": [
+      ".gitignore",
+      "capacitor.config.ts",
+      "package.json",
+      "src/components/PageUnifiedLogin.tsx",
+      "src/components/WindDust.tsx",
+      "tsconfig.json"
+    ],
+    "missing": [],
+    "limitation": "Snapshot was taken during initial mobile scaffolding, not before every agent edit."
+  },
+  "diffCheckPassed": true,
+  "hostedDeployment": false,
+  "databaseChanges": false,
+  "realAccountsOrEmailsCreated": false,
+  "physicalDeviceTested": false,
+  "notVerified": [
+    "Native API sessions and real sign-in/signup",
+    "Google browser return and CAPTCHA compatibility",
+    "Protected media, payments and authenticated product pages",
+    "Physical-device performance",
+    "Release signing, AAB and store acceptance",
+    "Native status/navigation-bar color synchronization with manual WebView theme"
+  ],
+  "releaseFollowup": [
+    "Resolve existing Childer commercial font permission or replace it; confirm Caviar Dreams provenance",
+    "Native lifecycle/back/keyboard and branding polish",
+    "Account deletion, store privacy/data-safety disclosures and Play testing"
+  ],
+  "nextStep": "Secure native API/session transport and OAuth return, validated against an isolated test backend",
+  "coldRelaunchVerified": true,
+  "secondActivityColdLaunchMs": 2455,
+  "finalProcessFatalExceptions": 0,
+  "leftOpenInEmulator": true,
+  "previewThemeRestoredToSystem": true,
+  "debugForwardRemovedAfterTesting": true,
+  "screenshotsUseActualAndroidDisplay": true
+}

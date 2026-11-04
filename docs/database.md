@@ -1,5 +1,22 @@
 # PineVela Database Model
 
+## Legal evidence registry — 28 October 2026
+
+Migration `20261028120000_versioned_terms_acceptance.sql` adds
+`private.legal_documents` and `private.legal_acceptances`. Documents retain an
+immutable key/version/article/hash. Receipts reference that registry and the
+verified Auth subject, context and session, with a database timestamp and
+server-selected source/purpose. Merchant receipts additionally identify the
+application submission. The uniqueness constraint makes retries idempotent.
+
+Both tables enable RLS without browser policies/grants; only the privileged
+server path accesses them after checking the live actor. No consent backfill is
+performed. Auth-subject deletion cascades receipts; context deletion preserves
+the receipt with a null context. Retention beyond current account lifecycle
+still needs an owner-approved schedule. The app server requires the new project
+migration ledger entry before startup. Supabase MCP also records its own
+deployment timestamp separately from the project's immutable migration version.
+
 ## Message encryption and reports — 17 October 2026
 
 Migrations 71–73 add private, RLS-protected encryption identities and five report

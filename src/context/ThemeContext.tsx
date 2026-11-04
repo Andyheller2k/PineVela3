@@ -6,6 +6,7 @@ import { isPublicAppearance } from '../lib/publicAppearance';
 import { applyBrowserChrome } from '../lib/browserChrome';
 import { isAuthPage, isPhoneAuth, subscribePhoneAuthViewport } from '../lib/mobileAuthAppearance';
 import { DEVICE_THEME_KEY, isThemePreference, readSystemTheme, resolveTheme, subscribeSystemTheme, type Theme, type ThemePreference } from '../lib/themePreference';
+import { NATIVE_APP } from '../native/environment';
 
 export type { Theme, ThemePreference } from '../lib/themePreference';
 const read = (key: string): ThemePreference | null => { try { const value = localStorage.getItem(key); return isThemePreference(value) ? value : null; } catch { return null; } };
@@ -24,7 +25,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
   const authPage = isAuthPage(pathname);
   const publicAppearance = isPublicAppearance(pathname, search, !!user);
-  const appearanceLocked = authPage;
+  const appearanceLocked = authPage && !NATIVE_APP;
   const [preference, updatePreference] = useState<ThemePreference>(initialPreference);
   const systemTheme = useSyncExternalStore(
     useCallback(notify => preference === 'system' ? subscribeSystemTheme(notify) : () => {}, [preference]),

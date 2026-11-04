@@ -1,0 +1,34 @@
+{
+  "passed": true,
+  "scenes": 4,
+  "checks": [
+    "390px light catalog image cache navigation",
+    "390px dark catalog image cache navigation",
+    "1440px light catalog image cache navigation",
+    "1440px dark catalog image cache navigation"
+  ],
+  "screenshots": [],
+  "navigationClearance": [],
+  "buildDirectory": "dist-supabase",
+  "syntheticGuestCatalog": true,
+  "syntheticRoleVisualFixtures": [
+    "primary dashboard",
+    "manager dashboard",
+    "staff dashboard",
+    "resident dashboard",
+    "administrator dashboard",
+    "seller dashboard",
+    "field officer",
+    "customer service",
+    "manager onboarding",
+    "store onboarding"
+  ],
+  "hostedOrAccountWrites": 0,
+  "realAuthenticationTested": false,
+  "runtimeExceptions": 0,
+  "syntheticSellerWrites": 0,
+  "syntheticSignupResumeWrites": 0,
+  "syntheticAppearanceWrites": 0,
+  "syntheticSubscriptionCheckouts": 0,
+  "exceptionDetails": []
+}

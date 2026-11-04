@@ -1,0 +1,78 @@
+{
+  "passed": true,
+  "testCount": 51,
+  "suites": [
+    {
+      "suite": "mobileViewport",
+      "tests": 12,
+      "passed": 12,
+      "failed": 0,
+      "providerAccountSubmitted": false
+    },
+    {
+      "suite": "mobileAppBuild",
+      "tests": 2,
+      "passed": 2,
+      "failed": 0,
+      "providerAccountSubmitted": false
+    },
+    {
+      "suite": "mobileAuth",
+      "tests": 18,
+      "passed": 18,
+      "failed": 0,
+      "providerAccountSubmitted": false
+    },
+    {
+      "suite": "mobileGooglePage",
+      "tests": 3,
+      "passed": 3,
+      "failed": 0,
+      "providerAccountSubmitted": false
+    },
+    {
+      "suite": "nativeTransport",
+      "tests": 6,
+      "passed": 6,
+      "failed": 0,
+      "providerAccountSubmitted": false
+    },
+    {
+      "suite": "legalAcceptance",
+      "tests": 3,
+      "passed": 3,
+      "failed": 0,
+      "providerAccountSubmitted": false
+    },
+    {
+      "suite": "googleAuth",
+      "tests": 3,
+      "passed": 3,
+      "failed": 0,
+      "providerAccountSubmitted": false
+    },
+    {
+      "suite": "nativeDestination",
+      "tests": 1,
+      "passed": 1,
+      "failed": 0,
+      "providerAccountSubmitted": false
+    },
+    {
+      "suite": "installWorkerPrivacy",
+      "tests": 2,
+      "passed": 2,
+      "failed": 0,
+      "providerAccountSubmitted": false
+    },
+    {
+      "suite": "googleProviderReadOnly",
+      "tests": 1,
+      "passed": 1,
+      "failed": 0,
+      "providerAccountSubmitted": false
+    }
+  ],
+  "hostedAccountWrites": 0,
+  "googleProviderCheck": "Read-only public provider configuration and authorize redirect, no identity submitted."
+}

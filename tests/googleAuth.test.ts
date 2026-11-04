@@ -13,7 +13,8 @@ test('Provider failures after consent are not labelled cancellation and sensitiv
   assert.equal(googleCallbackFailure({ error: 'access_denied', error_code: 'provider_email_needs_verification' }), 'email_unverified');
   assert.equal(googleCallbackFailure({ error: 'access_denied' }), 'cancelled');
   assert.equal(googleCallbackFailure({ code: 'valid-code' }), undefined);
-  for (const path of ['/api/auth/google/callback', '/API/auth/Google/callback/']) {
+  for (const path of ['/api/auth/google/callback', '/API/auth/Google/callback/',
+    '/api/auth/mobile/google/native/start', '/api/auth/mobile/google/native/complete']) {
     assert.equal(googleRequestLogUrl(path + '?code=private&state=private&error_description=private'), path);
   }
   assert.equal(googleRequestLogUrl('/api/health'), '/api/health');

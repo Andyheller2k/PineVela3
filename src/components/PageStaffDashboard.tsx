@@ -37,7 +37,7 @@ import { } from '../utils/pdfHelper';
 import DashboardOverlay from './DashboardOverlay';
 import LogoutConfirmationModal from './LogoutConfirmationModal';
 import MobileNavigation from './MobileNavigation';
-import PineLogo from './PineLogo';
+import PineLogo, { PineWordmark } from './PineLogo';
 import TopNavBadge from './TopNavBadge';
 
 interface StaffBargain {
@@ -484,9 +484,9 @@ export default function PageStaffDashboard() {
       {/* MOBILE HEADER (lg:hidden) */}
       <header data-portal-navigation="header" className="lg:hidden flex items-center justify-between px-5 py-3 bg-sky-100/60 backdrop-blur-xl border-b border-white/70 sticky top-0 z-40 shadow-sm">
         <div className="flex items-center gap-2">
-          <PineLogo size={24} />
+          <PineLogo size={24} hideText />
           <div>
-            <h1 className="text-xs font-black tracking-tight text-blue-950 leading-tight">PineVela Staff</h1>
+            <h1 className="text-xs font-black tracking-tight text-blue-950 leading-tight"><PineWordmark /></h1><p className="text-[10px] text-slate-500">Staff</p>
           </div>
         </div>
         <div className="flex items-center gap-3">
@@ -594,6 +594,7 @@ export default function PageStaffDashboard() {
             {/* Tab TOP: Assigned Maintenance Work Orders (Highlighted First) */}
             <button
               onClick={() => setActiveTab('maintenance')}
+              aria-current={activeTab === 'maintenance' ? 'page' : undefined}
               title="Assigned Work Orders"
               className={`w-full flex items-center ${isSidebarCollapsed ? 'justify-center p-3' : 'justify-between px-3.5 py-3.5'} rounded-2xl text-xs font-bold transition-all cursor-pointer shadow-md ${
                 activeTab === 'maintenance'
@@ -631,6 +632,7 @@ export default function PageStaffDashboard() {
 
             <button
               onClick={() => setActiveTab('notifications')}
+              aria-current={activeTab === 'notifications' ? 'page' : undefined}
               title="Notifications"
               className={`w-full flex items-center ${isSidebarCollapsed ? 'justify-center p-3' : 'justify-between px-3.5 py-3'} rounded-2xl text-xs font-bold transition-all cursor-pointer ${
                 activeTab === 'notifications'
@@ -661,6 +663,7 @@ export default function PageStaffDashboard() {
             {/* Tab 3: Settings */}
             <button
               onClick={() => setActiveTab('settings')}
+              aria-current={activeTab === 'settings' ? 'page' : undefined}
               title="Staff Settings"
               className={`w-full flex items-center ${isSidebarCollapsed ? 'justify-center p-3' : 'justify-between px-3.5 py-3'} rounded-2xl text-xs font-bold transition-all cursor-pointer ${
                 activeTab === 'settings'

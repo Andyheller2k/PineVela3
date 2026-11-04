@@ -44,7 +44,12 @@ export default function DashboardOverlay({ children, layer = 100, style, onClose
       tabIndex={-1}
       style={{ margin: 0, width: '100%', height: '100%', maxWidth: 'none', maxHeight: 'none', border: 0, ...style, zIndex: layer }}
       data-dashboard-overlay=""
-      onCancel={event => { event.preventDefault(); event.stopPropagation(); onClose?.(); }}
+      onCancel={event => {
+        // Cancelling an input's native file picker bubbles through the dialog.
+        // Only an actual request to cancel this dialog should dismiss its form.
+        if (event.target !== event.currentTarget) return;
+        event.preventDefault(); event.stopPropagation(); onClose?.();
+      }}
       onKeyDown={event => {
         // React portals bubble through their owner; only the top dialog handles keys.
         event.stopPropagation();

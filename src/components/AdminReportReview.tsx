@@ -4,6 +4,7 @@ import { REPORT_STATUSES, type EntityReport } from '../../reportModel';
 import { useAuth } from '../context/AuthContext';
 import { requestKeyedApproval } from '../lib/approvalPrompt';
 import { supportApi } from '../lib/supportApi';
+import { useClipboardFeedback } from '../lib/useClipboardFeedback';
 import { ReportSummary } from './ReportReview';
 import AutomaticContentChecks from './AutomaticContentChecks';
 
@@ -14,6 +15,7 @@ export default function AdminReportReview({ onOpenApprovals, onReviewAccount }: 
   const [error, setError] = useState(''), [busy, setBusy] = useState(false), [refresh, setRefresh] = useState(0);
   const [page, setPage] = useState(0), [hasMore, setHasMore] = useState(false);
   const mounted = useRef(true), working = useRef(false);
+  const clipboard = useClipboardFeedback();
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
   useEffect(() => {
     const controller = new AbortController(); setReports(null); setError('');
@@ -31,7 +33,7 @@ export default function AdminReportReview({ onOpenApprovals, onReviewAccount }: 
     {reports === null ? <p role="status" className="text-sm text-slate-500">Loading report reviews…</p> : !filtered?.length && !report ? <p className="text-sm text-slate-500">No reports at this stage.</p> : <div className={`grid items-start gap-5 ${report ? 'xl:grid-cols-[18rem_1fr]' : ''}`}>
       <ul className="space-y-3">{filtered.map(item => <li key={item.ticketId}><button type="button" data-report-ticket-id={item.ticketId} disabled={busy} aria-current={selected === item.ticketId ? 'page' : undefined} onClick={() => { setSelected(item.ticketId); setReason(''); setProposalId(''); setError(''); }} className="w-full rounded-2xl border border-slate-200 p-4 text-left"><span className="block text-xs font-bold text-blue-700">{REPORT_STATUSES[item.status]}</span><span className="mt-2 block break-words text-sm font-bold">{item.targetName}</span><span className="mt-2 block break-all text-[11px] text-slate-500">Account: {item.targetContextId}</span></button></li>)}</ul>
       {report && <div className="min-w-0 space-y-5 rounded-2xl border border-amber-200 p-4 sm:p-5"><ReportSummary report={report} internal />
-        <div className="flex flex-wrap gap-3"><button type="button" disabled={busy} onClick={async () => { try { await navigator.clipboard.writeText(report.targetContextId); } catch { setError('Copy is unavailable. Select the reported account ID above.'); } }} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold text-blue-700"><Copy size={14} />Copy reported account ID</button>{onReviewAccount && <button type="button" disabled={busy} onClick={() => onReviewAccount(report)} className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold text-blue-700">Review reported account</button>}{onOpenApprovals && <button type="button" disabled={busy} onClick={onOpenApprovals} className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold text-blue-700">Open account approvals</button>}</div>
+        <div className="flex flex-wrap gap-3"><button type="button" disabled={busy} onClick={async () => { if (!await clipboard.copy('reported-account', report.targetContextId)) setError('Copy is unavailable. Select the reported account ID above.'); else setError(''); }} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold text-blue-700"><Copy size={14} />{clipboard.copiedId === 'reported-account' ? 'Copied' : 'Copy reported account ID'}</button>{onReviewAccount && <button type="button" disabled={busy} onClick={() => onReviewAccount(report)} className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold text-blue-700">Review reported account</button>}{onOpenApprovals && <button type="button" disabled={busy} onClick={onOpenApprovals} className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold text-blue-700">Open account approvals</button>}</div>
         {report.status === 'recommended' ? <form className="space-y-4 border-t border-slate-200 pt-5" onSubmit={event => {
           event.preventDefault(); if (working.current) return;
           void requestKeyedApproval(async privateKey => {

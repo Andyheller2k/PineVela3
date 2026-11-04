@@ -1,0 +1,18 @@
+{
+  "passed": true,
+  "date": "2026-10-29T16:04:01.354Z",
+  "installedApk": true,
+  "platform": "android",
+  "scenarios": [
+    "Installed APK boots its bundled login with an active Android bridge",
+    "Signup transition works and protected account actions stay disabled",
+    "System and manual themes render in the Android WebView",
+    "Bundled policies open locally and external links stay in the preview",
+    "APK reloads offline and makes no API or external requests"
+  ],
+  "apiOrExternalRequests": 0,
+  "uncaughtExceptions": 0,
+  "serviceWorkers": 0,
+  "authenticationAvailable": false,
+  "physicalDeviceTested": false
+}

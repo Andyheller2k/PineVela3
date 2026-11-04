@@ -1,0 +1,7 @@
+{
+  "documentURI": "chrome-error://chromewebdata/",
+  "navigationError": "net::ERR_INTERNET_DISCONNECTED",
+  "browserError": "ERR_INTERNET_DISCONNECTED",
+  "customOfflineHTML": false,
+  "createdAccountCaches": 0
+}
