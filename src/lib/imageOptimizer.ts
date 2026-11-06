@@ -79,20 +79,22 @@ export async function compressImageFileToLowRes(
  * Optimizes external URLs (such as Unsplash CDN images) to lowest practical resolution
  * and low quality for instant rendering and smooth scrolling.
  */
-export function optimizeImageDisplayUrl(url: string | null | undefined, width = 280, quality = 40): string {
+export function optimizeImageDisplayUrl(url: string | null | undefined, width = 640, quality = 82): string {
   if (!url || typeof url !== 'string' || !url.trim()) {
     // Ultra-lightweight inline SVG placeholder
     return `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200" fill="%23f1f5f9"><rect width="200" height="200" fill="%23f1f5f9"/><circle cx="100" cy="100" r="28" fill="%23cbd5e1"/></svg>`;
   }
 
   const trimmed = url.trim();
+  if (/^\/api\/media\/[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(trimmed))
+    return `${trimmed}?size=${width <= 192 ? 'thumb' : 'card'}`;
 
   // If Unsplash URL, replace width and quality params with low-res equivalents
-  if (trimmed.includes('images.unsplash.com')) {
+  if (trimmed.startsWith('https://images.unsplash.com/')) {
     try {
       const urlObj = new URL(trimmed);
       urlObj.searchParams.set('w', String(width));
-      urlObj.searchParams.set('q', String(quality));
+      urlObj.searchParams.set('q', String(Math.max(75, quality)));
       urlObj.searchParams.set('auto', 'format');
       urlObj.searchParams.set('fit', 'crop');
       return urlObj.toString();

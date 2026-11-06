@@ -1,0 +1,639 @@
+{
+  "passed": true,
+  "localVisualFixturesOnly": true,
+  "cloudWrites": 0,
+  "sourceSha256": {
+    "src/components/PageUnifiedLogin.tsx": "37c8d51f73860fa8dfc0851d5706b7c899c3cda75ff5a625a6589fc0476d13c9",
+    "src/components/PageUserDashboard.tsx": "5fb75341ef09d7225357a35e5d9507c823e4fd954e1f3ee8dbbbaf6f28663b40",
+    "src/components/ResidentPinReset.tsx": "b3d6d1ee7f85a9b3324d00b0f22666a1ae8b242470f8d59b0a81723b99283249",
+    "src/components/SupabaseResidentActivation.tsx": "6434c8ee119ea0871fd93f53af005fac1624b758ae145f02d2c39a8cf275d2e5",
+    "src/context/AuthContext.tsx": "e08e93f8ccdb122c3740b241b1d3f3b49bc9dd6d9576e189179d3f229af22a66",
+    "dist-supabase/index.html": "d1524e3cb5457dc3b581bb8da725fa564daa0bac98ff1de44a4e7dc2831064f9"
+  },
+  "measurements": [
+    {
+      "page": "login",
+      "theme": "light",
+      "width": 320,
+      "overflow": false,
+      "left": 37,
+      "right": 283,
+      "image": "linear-gradient(115deg, rgb(0, 53, 102), rgb(0, 29, 61))",
+      "color": "rgb(255, 255, 255)"
+    },
+    {
+      "page": "activation",
+      "theme": "light",
+      "width": 320,
+      "overflow": false,
+      "left": 37,
+      "right": 277,
+      "image": "linear-gradient(115deg, rgb(0, 53, 102), rgb(0, 29, 61))",
+      "color": "rgb(255, 255, 255)"
+    },
+    {
+      "page": "login",
+      "theme": "dark",
+      "width": 320,
+      "overflow": false,
+      "left": 37,
+      "right": 283,
+      "image": "linear-gradient(115deg, rgb(255, 195, 0) 0%, rgb(255, 214, 10) 100%)",
+      "color": "rgb(0, 29, 61)"
+    },
+    {
+      "page": "activation",
+      "theme": "dark",
+      "width": 320,
+      "overflow": false,
+      "left": 37,
+      "right": 277,
+      "image": "linear-gradient(115deg, rgb(255, 195, 0), rgb(255, 214, 10))",
+      "color": "rgb(0, 29, 61)"
+    },
+    {
+      "page": "login",
+      "theme": "light",
+      "width": 390,
+      "overflow": false,
+      "left": 37,
+      "right": 353,
+      "image": "linear-gradient(115deg, rgb(0, 53, 102), rgb(0, 29, 61))",
+      "color": "rgb(255, 255, 255)"
+    },
+    {
+      "page": "activation",
+      "theme": "light",
+      "width": 390,
+      "overflow": false,
+      "left": 37,
+      "right": 353,
+      "image": "linear-gradient(115deg, rgb(0, 53, 102), rgb(0, 29, 61))",
+      "color": "rgb(255, 255, 255)"
+    },
+    {
+      "page": "login",
+      "theme": "dark",
+      "width": 390,
+      "overflow": false,
+      "left": 37,
+      "right": 353,
+      "image": "linear-gradient(115deg, rgb(255, 195, 0) 0%, rgb(255, 214, 10) 100%)",
+      "color": "rgb(0, 29, 61)"
+    },
+    {
+      "page": "activation",
+      "theme": "dark",
+      "width": 390,
+      "overflow": false,
+      "left": 37,
+      "right": 353,
+      "image": "linear-gradient(115deg, rgb(255, 195, 0), rgb(255, 214, 10))",
+      "color": "rgb(0, 29, 61)"
+    },
+    {
+      "page": "login",
+      "theme": "light",
+      "width": 1440,
+      "overflow": false,
+      "left": 765,
+      "right": 1365,
+      "image": "linear-gradient(115deg, rgb(0, 53, 102), rgb(0, 29, 61))",
+      "color": "rgb(255, 255, 255)"
+    },
+    {
+      "page": "activation",
+      "theme": "light",
+      "width": 1440,
+      "overflow": false,
+      "left": 493,
+      "right": 947,
+      "image": "linear-gradient(115deg, rgb(0, 53, 102), rgb(0, 29, 61))",
+      "color": "rgb(255, 255, 255)"
+    },
+    {
+      "page": "login",
+      "theme": "dark",
+      "width": 1440,
+      "overflow": false,
+      "left": 765,
+      "right": 1365,
+      "image": "linear-gradient(115deg, rgb(255, 195, 0) 0%, rgb(255, 214, 10) 100%)",
+      "color": "rgb(0, 29, 61)"
+    },
+    {
+      "page": "activation",
+      "theme": "dark",
+      "width": 1440,
+      "overflow": false,
+      "left": 493,
+      "right": 947,
+      "image": "linear-gradient(115deg, rgb(255, 195, 0), rgb(255, 214, 10))",
+      "color": "rgb(0, 29, 61)"
+    },
+    {
+      "page": "reset-form",
+      "theme": "light",
+      "width": 320,
+      "height": 900,
+      "dialog": {
+        "left": 0,
+        "right": 320,
+        "top": 0,
+        "bottom": 900
+      },
+      "card": {
+        "left": 16,
+        "right": 304,
+        "top": 237.296875,
+        "bottom": 662.6875
+      },
+      "scrollWidth": 286,
+      "clientWidth": 286,
+      "controls": [
+        {
+          "left": 235,
+          "right": 279,
+          "top": 262.296875,
+          "bottom": 306.296875
+        },
+        {
+          "left": 41,
+          "right": 279,
+          "top": 453.6875,
+          "bottom": 497.6875
+        },
+        {
+          "left": 41,
+          "right": 279,
+          "top": 537.6875,
+          "bottom": 581.6875
+        },
+        {
+          "left": 41,
+          "right": 279,
+          "top": 593.6875,
+          "bottom": 637.6875
+        }
+      ]
+    },
+    {
+      "page": "reset-action",
+      "theme": "light",
+      "width": 320,
+      "overflow": false,
+      "left": 41,
+      "right": 279,
+      "image": "linear-gradient(115deg, rgb(0, 53, 102), rgb(0, 29, 61))",
+      "color": "rgb(255, 255, 255)"
+    },
+    {
+      "page": "reset-success",
+      "theme": "light",
+      "width": 320,
+      "height": 900,
+      "dialog": {
+        "left": 0,
+        "right": 320,
+        "top": 0,
+        "bottom": 900
+      },
+      "card": {
+        "left": 16,
+        "right": 304,
+        "top": 325.296875,
+        "bottom": 574.6875
+      },
+      "scrollWidth": 286,
+      "clientWidth": 286,
+      "controls": [
+        {
+          "left": 235,
+          "right": 279,
+          "top": 350.296875,
+          "bottom": 394.296875
+        }
+      ]
+    },
+    {
+      "page": "reset-form",
+      "theme": "dark",
+      "width": 320,
+      "height": 900,
+      "dialog": {
+        "left": 0,
+        "right": 320,
+        "top": 0,
+        "bottom": 900
+      },
+      "card": {
+        "left": 16,
+        "right": 304,
+        "top": 237.296875,
+        "bottom": 662.6875
+      },
+      "scrollWidth": 286,
+      "clientWidth": 286,
+      "controls": [
+        {
+          "left": 235,
+          "right": 279,
+          "top": 262.296875,
+          "bottom": 306.296875
+        },
+        {
+          "left": 41,
+          "right": 279,
+          "top": 453.6875,
+          "bottom": 497.6875
+        },
+        {
+          "left": 41,
+          "right": 279,
+          "top": 537.6875,
+          "bottom": 581.6875
+        },
+        {
+          "left": 41,
+          "right": 279,
+          "top": 593.6875,
+          "bottom": 637.6875
+        }
+      ]
+    },
+    {
+      "page": "reset-action",
+      "theme": "dark",
+      "width": 320,
+      "overflow": false,
+      "left": 41,
+      "right": 279,
+      "image": "linear-gradient(115deg, rgb(255, 195, 0) 0%, rgb(255, 214, 10) 100%)",
+      "color": "rgb(0, 29, 61)"
+    },
+    {
+      "page": "reset-success",
+      "theme": "dark",
+      "width": 320,
+      "height": 900,
+      "dialog": {
+        "left": 0,
+        "right": 320,
+        "top": 0,
+        "bottom": 900
+      },
+      "card": {
+        "left": 16,
+        "right": 304,
+        "top": 325.296875,
+        "bottom": 574.6875
+      },
+      "scrollWidth": 286,
+      "clientWidth": 286,
+      "controls": [
+        {
+          "left": 235,
+          "right": 279,
+          "top": 350.296875,
+          "bottom": 394.296875
+        }
+      ]
+    },
+    {
+      "page": "reset-form",
+      "theme": "light",
+      "width": 390,
+      "height": 900,
+      "dialog": {
+        "left": 0,
+        "right": 390,
+        "top": 0,
+        "bottom": 900
+      },
+      "card": {
+        "left": 16,
+        "right": 374,
+        "top": 237.296875,
+        "bottom": 662.6875
+      },
+      "scrollWidth": 356,
+      "clientWidth": 356,
+      "controls": [
+        {
+          "left": 305,
+          "right": 349,
+          "top": 262.296875,
+          "bottom": 306.296875
+        },
+        {
+          "left": 41,
+          "right": 349,
+          "top": 453.6875,
+          "bottom": 497.6875
+        },
+        {
+          "left": 41,
+          "right": 349,
+          "top": 537.6875,
+          "bottom": 581.6875
+        },
+        {
+          "left": 41,
+          "right": 349,
+          "top": 593.6875,
+          "bottom": 637.6875
+        }
+      ]
+    },
+    {
+      "page": "reset-action",
+      "theme": "light",
+      "width": 390,
+      "overflow": false,
+      "left": 41,
+      "right": 349,
+      "image": "linear-gradient(115deg, rgb(0, 53, 102), rgb(0, 29, 61))",
+      "color": "rgb(255, 255, 255)"
+    },
+    {
+      "page": "reset-success",
+      "theme": "light",
+      "width": 390,
+      "height": 900,
+      "dialog": {
+        "left": 0,
+        "right": 390,
+        "top": 0,
+        "bottom": 900
+      },
+      "card": {
+        "left": 16,
+        "right": 374,
+        "top": 337.296875,
+        "bottom": 562.6875
+      },
+      "scrollWidth": 356,
+      "clientWidth": 356,
+      "controls": [
+        {
+          "left": 305,
+          "right": 349,
+          "top": 362.296875,
+          "bottom": 406.296875
+        }
+      ]
+    },
+    {
+      "page": "reset-form",
+      "theme": "dark",
+      "width": 390,
+      "height": 900,
+      "dialog": {
+        "left": 0,
+        "right": 390,
+        "top": 0,
+        "bottom": 900
+      },
+      "card": {
+        "left": 16,
+        "right": 374,
+        "top": 237.296875,
+        "bottom": 662.6875
+      },
+      "scrollWidth": 356,
+      "clientWidth": 356,
+      "controls": [
+        {
+          "left": 305,
+          "right": 349,
+          "top": 262.296875,
+          "bottom": 306.296875
+        },
+        {
+          "left": 41,
+          "right": 349,
+          "top": 453.6875,
+          "bottom": 497.6875
+        },
+        {
+          "left": 41,
+          "right": 349,
+          "top": 537.6875,
+          "bottom": 581.6875
+        },
+        {
+          "left": 41,
+          "right": 349,
+          "top": 593.6875,
+          "bottom": 637.6875
+        }
+      ]
+    },
+    {
+      "page": "reset-action",
+      "theme": "dark",
+      "width": 390,
+      "overflow": false,
+      "left": 41,
+      "right": 349,
+      "image": "linear-gradient(115deg, rgb(255, 195, 0) 0%, rgb(255, 214, 10) 100%)",
+      "color": "rgb(0, 29, 61)"
+    },
+    {
+      "page": "reset-success",
+      "theme": "dark",
+      "width": 390,
+      "height": 900,
+      "dialog": {
+        "left": 0,
+        "right": 390,
+        "top": 0,
+        "bottom": 900
+      },
+      "card": {
+        "left": 16,
+        "right": 374,
+        "top": 337.296875,
+        "bottom": 562.6875
+      },
+      "scrollWidth": 356,
+      "clientWidth": 356,
+      "controls": [
+        {
+          "left": 305,
+          "right": 349,
+          "top": 362.296875,
+          "bottom": 406.296875
+        }
+      ]
+    },
+    {
+      "page": "reset-form",
+      "theme": "light",
+      "width": 1440,
+      "height": 900,
+      "dialog": {
+        "left": 0,
+        "right": 1440,
+        "top": 0,
+        "bottom": 900
+      },
+      "card": {
+        "left": 496,
+        "right": 944,
+        "top": 256.5,
+        "bottom": 643.5
+      },
+      "scrollWidth": 446,
+      "clientWidth": 446,
+      "controls": [
+        {
+          "left": 883,
+          "right": 915,
+          "top": 285.5,
+          "bottom": 317.5
+        },
+        {
+          "left": 525,
+          "right": 915,
+          "top": 438.5,
+          "bottom": 482.5
+        },
+        {
+          "left": 525,
+          "right": 915,
+          "top": 518.5,
+          "bottom": 562.5
+        },
+        {
+          "left": 525,
+          "right": 915,
+          "top": 574.5,
+          "bottom": 614.5
+        }
+      ]
+    },
+    {
+      "page": "reset-action",
+      "theme": "light",
+      "width": 1440,
+      "overflow": false,
+      "left": 525,
+      "right": 915,
+      "image": "linear-gradient(115deg, rgb(0, 53, 102), rgb(0, 29, 61))",
+      "color": "rgb(255, 255, 255)"
+    },
+    {
+      "page": "reset-success",
+      "theme": "light",
+      "width": 1440,
+      "height": 900,
+      "dialog": {
+        "left": 0,
+        "right": 1440,
+        "top": 0,
+        "bottom": 900
+      },
+      "card": {
+        "left": 496,
+        "right": 944,
+        "top": 352.5,
+        "bottom": 547.5
+      },
+      "scrollWidth": 446,
+      "clientWidth": 446,
+      "controls": [
+        {
+          "left": 883,
+          "right": 915,
+          "top": 381.5,
+          "bottom": 413.5
+        }
+      ]
+    },
+    {
+      "page": "reset-form",
+      "theme": "dark",
+      "width": 1440,
+      "height": 900,
+      "dialog": {
+        "left": 0,
+        "right": 1440,
+        "top": 0,
+        "bottom": 900
+      },
+      "card": {
+        "left": 496,
+        "right": 944,
+        "top": 256.5,
+        "bottom": 643.5
+      },
+      "scrollWidth": 446,
+      "clientWidth": 446,
+      "controls": [
+        {
+          "left": 883,
+          "right": 915,
+          "top": 285.5,
+          "bottom": 317.5
+        },
+        {
+          "left": 525,
+          "right": 915,
+          "top": 438.5,
+          "bottom": 482.5
+        },
+        {
+          "left": 525,
+          "right": 915,
+          "top": 518.5,
+          "bottom": 562.5
+        },
+        {
+          "left": 525,
+          "right": 915,
+          "top": 574.5,
+          "bottom": 614.5
+        }
+      ]
+    },
+    {
+      "page": "reset-action",
+      "theme": "dark",
+      "width": 1440,
+      "overflow": false,
+      "left": 525,
+      "right": 915,
+      "image": "linear-gradient(115deg, rgb(255, 195, 0) 0%, rgb(255, 214, 10) 100%)",
+      "color": "rgb(0, 29, 61)"
+    },
+    {
+      "page": "reset-success",
+      "theme": "dark",
+      "width": 1440,
+      "height": 900,
+      "dialog": {
+        "left": 0,
+        "right": 1440,
+        "top": 0,
+        "bottom": 900
+      },
+      "card": {
+        "left": 496,
+        "right": 944,
+        "top": 352.5,
+        "bottom": 547.5
+      },
+      "scrollWidth": 446,
+      "clientWidth": 446,
+      "controls": [
+        {
+          "left": 883,
+          "right": 915,
+          "top": 381.5,
+          "bottom": 413.5
+        }
+      ]
+    }
+  ]
+}

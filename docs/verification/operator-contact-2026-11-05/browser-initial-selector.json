@@ -1,0 +1,24 @@
+{
+  "scenario": "320px light versioned-terms",
+  "completed": 3,
+  "error": "Public page mounts did not settle",
+  "exceptions": [],
+  "apiRequests": [
+    "/api/settings",
+    "/api/auth/me"
+  ],
+  "debug": {
+    "url": "http://127.0.0.1:34107/legal/terms-2026-11-05.html?scene=1793838362943-0.30239020992410337",
+    "title": "Terms of service, 5 November 2026 — PineVela",
+    "text": "Skip to terms\nPine\nVela\nHome\nPrivacy policy\nContact support\n\nUSING PINEVELA\n\nTerms of service\n\nLast updated 5 November 2026\n\nOn this page\nThe service\nAccounts and access\nHousing relationships\nMarketplace activity\nContent and conduct\nOptional AI\nChanges and restrictions\nPrivacy and contact\n1. The service\n\nPineVela is operated by PineVela Ghana (\"we\", \"us\" or \"our\") at pinevela.app. These terms apply to your use of PineVela. If you do not agree to them, do not use the service.\n\nPineVela offers housing-management and marketplace tools for residents, housing managers, staff, sellers and administrators. Access to a feature depends on the account, registration, permissions and service availability that apply to you.\n\nA PineVela account does not by itself establish a tenancy, guarantee housing, authorize employment or approve a seller. Separate housing, employment, purchase and subscription arrangements may apply.\n\n2. Accounts and access\n\nYou must be at least 16 years old to use PineVela. If you are 16 or 17, you need a parent or guardian's permission where required by applicable law. Individual housing, employment, seller or payment arrangements may require a higher age or additional aut",
+    "root": false,
+    "scripts": [
+      "http://127.0.0.1:34107/analytics.js",
+      "http://127.0.0.1:34107/legal-appearance.js"
+    ],
+    "dataset": {
+      "themePreference": "light",
+      "theme": "light"
+    }
+  }
+}

@@ -1,8 +1,9 @@
 import type { MobileDestination } from './MobileNavigation';
-import { Bell, CheckCircle2, Home, Key, LogOut, Package, PanelLeftClose, PanelLeftOpen, Settings } from 'lucide-react';
+import { Bell, CheckCircle2, Home, Key, LogOut, Package, PanelLeftClose, Settings } from 'lucide-react';
 import { activateOnKeyboard } from '../lib/keyboardActivation';
 import HelpLink from './HelpLink';
 import MobileNavigation from './MobileNavigation';
+import CompactSidebarNavigation from './CompactSidebarNavigation';
 import NavigationHighlight from './NavigationHighlight';
 import PineLogo, { PineWordmark } from './PineLogo';
 import TopNavBadge from './TopNavBadge';
@@ -21,15 +22,15 @@ export function userDashboardDestinations(hasRoom: boolean, roomDescription: str
 
 /** Presentation only: the page continues to own account data and navigation. */
 export default function UserDashboardNavigation({
-  items: navItems, activeTab, onSelect: handleNavClick, isSidebarHidden, onLayoutChange: setIsSidebarHidden,
+  items: navItems, activeTab, onSelect: handleNavClick, isSidebarCompact, onLayoutChange: setIsSidebarCompact,
   profile: currentUser, hostelName, unreadCount: unreadNotificationsCount, badgeFor: tabUnreadCount,
   navigationId, onCompanionTarget: setCompanionNavigationTarget, onSignOut,
 }: {
   items: UserDashboardDestination[];
   activeTab: string;
   onSelect: (id: string) => void;
-  isSidebarHidden: boolean;
-  onLayoutChange: (hidden: boolean) => void;
+  isSidebarCompact: boolean;
+  onLayoutChange: (compact: boolean) => void;
   profile?: { avatar?: string; name?: string };
   hostelName?: string;
   unreadCount: number;
@@ -77,55 +78,12 @@ export default function UserDashboardNavigation({
       <MobileNavigation className="user-bottom-navigation" animatedSelection label="User navigation" activeTab={activeTab} onSelect={handleNavClick} items={navItems.filter(tab => tab.id !== 'notifications').map(tab => ({ ...tab, badge: tabUnreadCount(tab.id), label: tab.id === 'home' ? 'Home' : tab.id === 'digital-market' ? 'Purchases' : tab.id === 'login-room' ? 'Room' : 'Options' }))}
         trailingContent={<div ref={setCompanionNavigationTarget} className="pv-companion-nav-slot" />} />
 
-      {/* Compact desktop equivalent of the mobile navigation. It stays above the scrolling content. */}
-      {isSidebarHidden && (
-        <nav data-portal-navigation="top" className="user-top-navigation hidden lg:block fixed top-3 inset-x-6 mx-auto z-50 max-w-[860px] bg-white/72 backdrop-blur-xl border border-white/80 rounded-2xl shadow-lg">
-          <div className="flex items-center gap-1 px-2 py-1.5">
-            {/* Profile avatar button — left end */}
-            <button
-              onClick={() => handleNavClick('options')}
-              title="Profile & Settings"
-              className="shrink-0 flex flex-col items-center gap-0.5 py-1 px-1.5 rounded-xl transition-all cursor-pointer hover:bg-white/70"
-            >
-              {renderAvatarGraphic(currentUser?.avatar, 'w-6 h-6 text-[9px] ring-2 ring-white shadow-sm')}
-              <span className="text-[9px] font-bold text-slate-500">Profile</span>
-            </button>
-            <div className="w-px h-6 bg-slate-200/70 shrink-0" />
-            {navItems.map(tab => {
-              const Icon = tab.icon;
-              const isActive = activeTab === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  data-user-navigation=""
-                  aria-current={isActive ? 'page' : undefined}
-                  onClick={() => handleNavClick(tab.id)}
-                  title={tab.label}
-                  className={`flex-1 min-w-0 flex flex-col items-center justify-center gap-0.5 py-1.5 rounded-xl transition-all cursor-pointer ${isActive ? 'text-blue-700 bg-blue-100/65' : 'text-slate-500 hover:text-slate-800 hover:bg-white/70'}`}
-                >
-                  {isActive && <NavigationHighlight id={`top-${navigationId}`} />}
-                  <span className="relative inline-flex"><Icon className="w-4 h-4" /><TopNavBadge color="blue" count={tabUnreadCount(tab.id)} /></span>
-                  <span className="max-w-full truncate text-[9px] font-bold">{tab.id === 'digital-market' ? 'Purchases' : tab.id === 'notifications' ? 'Alerts' : tab.id === 'options' ? 'Options' : tab.label.split(' ')[0]}</span>
-                </button>
-              );
-            })}
-            <button
-              onClick={() => onSignOut()}
-              title="Sign Out"
-              className="shrink-0 flex flex-col items-center gap-0.5 px-2 py-1.5 text-rose-600 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer"
-            >
-              <LogOut className="w-4 h-4" />
-              <span className="text-[9px] font-bold">Sign Out</span>
-            </button>
-            <button onClick={() => setIsSidebarHidden(false)} title="Show sidebar" aria-controls="user-dashboard-sidebar" aria-expanded="false" className="shrink-0 p-2 text-slate-500 hover:text-blue-700 hover:bg-blue-50 rounded-xl transition-colors cursor-pointer">
-              <PanelLeftOpen className="w-4 h-4" />
-            </button>
-          <HelpLink compact className="!px-2" /></div>
-        </nav>
-      )}
+      {isSidebarCompact && <CompactSidebarNavigation id="user-dashboard-sidebar" label="User navigation sidebar"
+        activeTab={activeTab} onSelect={handleNavClick} onExpand={() => setIsSidebarCompact(false)} onSignOut={onSignOut}
+        items={navItems.map(tab => ({ ...tab, badge: tabUnreadCount(tab.id), label: tab.id === 'home' ? 'Home' : tab.id === 'digital-market' ? 'Purchases' : tab.id === 'login-room' ? 'Room' : tab.id === 'notifications' ? 'Alerts' : 'Options' }))} />}
 
       {/* Desktop sidebar */}
-      <aside id="user-dashboard-sidebar" data-portal-navigation="sidebar" aria-label="User navigation sidebar" aria-hidden={isSidebarHidden || undefined} inert={isSidebarHidden || undefined} className="user-dashboard-sidebar hidden lg:flex w-72 p-6 my-6 ml-6 h-[calc(100vh-3rem)] bg-gradient-to-br from-sky-100/90 via-blue-100/85 to-amber-50/40 backdrop-blur-3xl border border-sky-200/80 shadow-2xl rounded-3xl flex flex-col justify-between shrink-0 overflow-y-auto z-10 relative">
+      {!isSidebarCompact && <aside id="user-dashboard-sidebar" data-portal-navigation="sidebar" aria-label="User navigation sidebar" data-sidebar-collapsed="false" className="user-dashboard-sidebar hidden lg:flex w-72 p-6 my-6 ml-6 h-[calc(100vh-3rem)] bg-gradient-to-br from-sky-100/90 via-blue-100/85 to-amber-50/40 backdrop-blur-3xl border border-sky-200/80 shadow-2xl rounded-3xl flex flex-col justify-between shrink-0 overflow-y-auto z-10 relative">
 
         <div className="space-y-6">
           {/* Logo & Header */}
@@ -137,7 +95,7 @@ export default function UserDashboardNavigation({
                 <p className="text-[10px] font-medium text-blue-600/70 uppercase tracking-widest">User Account</p>
               </div>
             </div>
-            <button onClick={() => setIsSidebarHidden(true)} title="Hide sidebar" aria-controls="user-dashboard-sidebar" aria-expanded="true" className="p-2 text-slate-500 hover:text-blue-700 hover:bg-white/70 rounded-xl transition-colors cursor-pointer"><PanelLeftClose className="w-4 h-4" /></button>
+            <button onClick={() => setIsSidebarCompact(true)} title="Minimize sidebar" aria-label="Minimize sidebar" data-sidebar-toggle aria-controls="user-dashboard-sidebar" aria-expanded="true" className="p-2 text-slate-500 hover:text-blue-700 hover:bg-white/70 rounded-xl transition-colors cursor-pointer"><PanelLeftClose className="w-4 h-4" /></button>
           </div>
 
           {/* Student Profile Pill */}
@@ -208,7 +166,7 @@ export default function UserDashboardNavigation({
         <div className="flex justify-center pt-3"><HelpLink /></div>
         </div>
 
-      </aside>
+      </aside>}
 
   </>;
 }

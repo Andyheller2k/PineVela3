@@ -1,6 +1,6 @@
 # Housing manager and property terms — drafting template
 
-Status: UNPUBLISHED DRAFT. Version/effective date: `[FILL]`. Operator: Oppong Manu Andy, Ghana; andyheller2k@gmail.com.
+Status: UNPUBLISHED DRAFT. Version/effective date: `[FILL]`. Operator: PineVela Ghana; pinevela@pinevela.app.
 
 ## Authority and verification
 

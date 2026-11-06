@@ -35,15 +35,15 @@ html[data-theme="dark"] nav.pv-bottom-navigation[data-curved-navigation] {
   --pv-nav-inactive: #bbcee0;
   --pv-nav-edge: #3c5d7c;
 }
-.pv-bottom-navigation .pv-nav-surface-viewport { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.pv-bottom-navigation .pv-nav-surface-viewport { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 0; }
 .pv-bottom-navigation .pv-nav-surface { position: absolute; left: 0; top: 0; height: 100%; overflow: visible; pointer-events: none; transition: transform var(--pv-nav-motion); will-change: transform; }
 .pv-bottom-navigation .pv-nav-surface path { fill: var(--pv-nav-background); }
 .pv-bottom-navigation .pv-nav-surface .pv-nav-edge { fill: none; stroke: var(--pv-nav-edge); stroke-width: 1px; }
 .pv-bottom-navigation .pv-nav-indicator { position: absolute; left: 0; top: 0; width: 58px; height: 58px; border-radius: 50%; background: var(--pv-nav-accent); box-shadow: 0 5px 12px rgb(0 29 61 / .17), inset 0 1px 0 rgb(255 255 255 / .2); pointer-events: none; z-index: 1; transition: transform var(--pv-nav-motion); will-change: transform; }
 .pv-bottom-navigation[data-curved-navigation="standard"][data-has-selection="false"] .pv-nav-indicator { visibility: hidden; }
-.pv-bottom-navigation .pv-nav-side-highlight { position: absolute; left: 0; top: 36px; width: 48px; height: 40px; border-radius: 13px; background: var(--pv-nav-accent); transition: transform var(--pv-nav-motion); pointer-events: none; z-index: 1; }
+.pv-bottom-navigation .pv-nav-side-highlight { position: absolute; left: 0; top: 29.5px; width: 44px; height: 44px; border-radius: 50%; background: var(--pv-nav-accent); transition: transform var(--pv-nav-motion); pointer-events: none; z-index: 1; }
 .pv-bottom-navigation[data-has-selection="false"] .pv-nav-side-highlight { visibility: hidden; }
-html[data-theme] nav.pv-bottom-navigation > [data-mobile-nav-items] { position: absolute; inset: 0 max(8px, var(--safe-area-inset-right, env(safe-area-inset-right, 0px))) auto max(8px, var(--safe-area-inset-left, env(safe-area-inset-left, 0px))); display: flex; align-items: stretch; justify-content: space-around; height: 104px; padding: 0; gap: 0; overflow: visible; }
+html[data-theme] nav.pv-bottom-navigation > [data-mobile-nav-items] { position: absolute; inset: 0 max(8px, var(--safe-area-inset-right, env(safe-area-inset-right, 0px))) auto max(8px, var(--safe-area-inset-left, env(safe-area-inset-left, 0px))); display: flex; align-items: stretch; justify-content: space-around; height: 104px; padding: 0; gap: 0; overflow: visible; z-index: 2; }
 html[data-theme][data-appearance] nav.pv-bottom-navigation[data-curved-navigation] .ux-mobile-destination,
 html[data-theme][data-appearance] nav.pv-bottom-navigation[data-curved-navigation] .ux-mobile-destination:is(:hover, :active, :focus-visible) {
   position: relative;
@@ -63,7 +63,23 @@ html[data-theme][data-appearance] nav.pv-bottom-navigation[data-curved-navigatio
   transform: none;
   isolation: auto;
   -webkit-tap-highlight-color: transparent;
+  -webkit-appearance: none;
+  appearance: none;
+  touch-action: manipulation;
   z-index: 2;
+}
+/* Touch presses must not inherit the full rectangular keyboard outline from
+   the generic dark navigation rule. Keep keyboard focus around the glyph. */
+html[data-theme][data-appearance] nav.pv-bottom-navigation[data-curved-navigation] .ux-mobile-destination:is(:focus, :active) {
+  outline: none;
+}
+html[data-theme][data-appearance] nav.pv-bottom-navigation[data-curved-navigation] .ux-mobile-destination:focus-visible .pv-nav-icon {
+  outline: 2px solid var(--pv-nav-accent);
+  outline-offset: 6px;
+  border-radius: 50%;
+}
+html[data-theme] nav.pv-bottom-navigation[data-curved-navigation] :is(button, button *) {
+  -webkit-tap-highlight-color: transparent;
 }
 html[data-theme][data-appearance] nav.pv-bottom-navigation .ux-mobile-destination .pv-nav-icon {
   position: absolute;
@@ -82,6 +98,16 @@ html[data-theme][data-appearance] nav.pv-bottom-navigation .ux-mobile-destinatio
 }
 html[data-theme] nav.pv-bottom-navigation .pv-nav-icon > svg:not(.pv-nav-lock) { width: 25px; height: 25px; stroke-width: 1.8; color: inherit !important; filter: none; }
 html[data-theme][data-appearance] nav.pv-bottom-navigation .ux-mobile-destination .pv-nav-label { position: absolute; left: 0; right: 0; top: 80px; display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: inherit !important; font-size: 10px !important; line-height: 1.3; font-weight: 600; transition: color 200ms ease; }
+/* Keep the caption on a stationary foreground row. Only the icon lifts; neither
+   the moving surface nor its selected circle may cover this text in WebView. */
+html[data-theme][data-appearance] nav.pv-bottom-navigation[data-curved-navigation="standard"] .ux-mobile-destination .pv-nav-label {
+  top: 76px;
+  min-height: 16px;
+  line-height: 16px;
+  z-index: 1;
+  transform: none;
+  translate: none;
+}
 html[data-theme][data-appearance] nav.pv-bottom-navigation[data-curved-navigation] .ux-mobile-destination[data-nav-selected="true"] { color: var(--pv-nav-accent) !important; }
 html[data-theme][data-appearance] nav.pv-bottom-navigation[data-curved-navigation] .ux-mobile-destination[data-nav-selected="true"] .pv-nav-label { color: var(--pv-nav-accent) !important; font-weight: 800; }
 html[data-theme][data-appearance] nav.pv-bottom-navigation[data-curved-navigation="standard"] .ux-mobile-destination[data-nav-selected="true"] .pv-nav-icon { color: var(--pv-nav-on-accent) !important; transform: translate(-50%, -28px); }

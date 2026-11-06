@@ -1,0 +1,24 @@
+{
+  "passed": true,
+  "baseline": "docs/verification/navigation-keys-2026-11-04/summary.json",
+  "baselineSecurityChecksPassed": true,
+  "securitySuiteRerun": false,
+  "reason": "Frontend navigation only; all three cumulative backend builds are byte-identical to the prior verified package.",
+  "entries": [
+    {
+      "path": "dist-supabase-backend/supabase-server.mjs",
+      "sha256": "c33b7a728d320ea0cffd7f327d556b4208697d8785fb99efe513616d5702db83",
+      "unchanged": true
+    },
+    {
+      "path": "dist-supabase-backend/residence-worker.mjs",
+      "sha256": "c3566950533b94dc15093ebf3b523990b16efa054641e5a9ea9ec23dbb999e3c",
+      "unchanged": true
+    },
+    {
+      "path": "dist-supabase-backend/system-wipe-worker.mjs",
+      "sha256": "1f003184d68bc925d71310384460dbf564b46d34ff389d73a08894935e86a868",
+      "unchanged": true
+    }
+  ]
+}

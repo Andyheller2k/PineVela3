@@ -1,0 +1,36 @@
+{
+  "passed": true,
+  "tests": 42,
+  "results": [
+    {
+      "file": "tests/residentPinCrypto.test.ts",
+      "passed": true,
+      "tests": 2
+    },
+    {
+      "file": "tests/authProtection.test.ts",
+      "passed": true,
+      "tests": 2
+    },
+    {
+      "file": "tests/loginAttempts.test.ts",
+      "passed": true,
+      "tests": 7
+    },
+    {
+      "file": "tests/mobileAuth.test.ts",
+      "passed": true,
+      "tests": 18
+    },
+    {
+      "file": "tests/nativeTransport.test.ts",
+      "passed": true,
+      "tests": 6
+    },
+    {
+      "file": "tests/supabaseAccountAccess.test.ts",
+      "passed": true,
+      "tests": 7
+    }
+  ]
+}

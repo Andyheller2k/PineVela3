@@ -1,0 +1,7 @@
+{
+  "passed": false,
+  "stage": "photo variants and publication revalidation",
+  "checks": 69,
+  "code": "ERR_ASSERTION",
+  "error": "Unchanged public photo validates with a zero-byte 304"
+}

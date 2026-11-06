@@ -224,7 +224,7 @@ async function openHarness(meta:LocalSupabaseMetadata,credentials:ReturnType<typ
   const assertOwned=async()=>{const rows=(await db.pool.query('select run_id from pinevela_local_test.run_guard')).rows;
    assert.equal(rows.length,1);assert.equal(rows[0].run_id,meta.runId,'Database belongs to this exact disposable run');};
   await assertOwned();
-  const installed=(await db.pool.query("select version from private.schema_migrations where version='20261028120000'")).rowCount;
+  const installed=(await db.pool.query("select version from private.schema_migrations where version='20261105090000'")).rowCount;
   assert.equal(installed,1,'The current immutable application migrations must be installed');
   const settings=await fetch(providerOrigin+'/auth/v1/settings',{headers:{apikey:meta.anonKey},signal:AbortSignal.timeout(10000)});
   assert.equal(settings.status,200,'Actual local GoTrue responds');const authSettings=await settings.json();

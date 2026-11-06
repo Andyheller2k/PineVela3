@@ -1,0 +1,115 @@
+{
+  "passed": true,
+  "origin": "https://pinevela.app",
+  "webZip": "releases/web/pinevela-unified-room-login-20261105.zip",
+  "webZipSha256": "a7f64d54c77296d911c0c8959940faa8c40f22c01fac1b3f00dbf6b71c8f9c94",
+  "uploadedArchiveBytes": 6590836,
+  "rollbackBackup": "/home/jqmgxgpuym/pinevela-before-unified-room-login-20261105.zip",
+  "rollbackBackupBytes": 48174527,
+  "extraction": {
+    "http": 200,
+    "event": 1,
+    "result": 1
+  },
+  "fileHashes": [
+    {
+      "name": "dist-supabase/index.html",
+      "http": 200,
+      "sha256": "d1524e3cb5457dc3b581bb8da725fa564daa0bac98ff1de44a4e7dc2831064f9",
+      "matches": true,
+      "bytes": 8069
+    },
+    {
+      "name": "dist-supabase/assets/index-C6eymnMA.js",
+      "http": 200,
+      "sha256": "e4576777ba7e314855bbca6df68da2aedccd71a97e134d93059370c7e93497b1",
+      "matches": true,
+      "bytes": 365582
+    },
+    {
+      "name": "dist-supabase-backend/supabase-server.mjs",
+      "http": 200,
+      "sha256": "c1fee7b4d83958976f5f8cce4b25bc85d1b2a64424c9424defe62ca9cb9c2993",
+      "matches": true,
+      "bytes": 1048671,
+      "readMethod": "File Manager download"
+    },
+    {
+      "name": "dist-supabase-backend/residence-worker.mjs",
+      "http": 200,
+      "sha256": "877dad1e0569489566a0761cb0e0ad3af1e2913b42202fdb4d623248750c6fde",
+      "matches": true,
+      "bytes": 73218
+    },
+    {
+      "name": "dist-supabase-backend/system-wipe-worker.mjs",
+      "http": 200,
+      "sha256": "3b219cf6c41d28add1af73ac21bd8fe6417653f543227269b28b7bfe018a3b7b",
+      "matches": true,
+      "bytes": 54522
+    },
+    {
+      "name": "package.json",
+      "http": 200,
+      "sha256": "b2a5f2c49b4e9ce3c815db99ef3ba9e208923346bb3ae2840dd53614af73fb67",
+      "matches": true,
+      "bytes": 18597
+    },
+    {
+      "name": "package-lock.json",
+      "http": 200,
+      "sha256": "e019a6ea6b609665dda0d06c579bd653704a5117c0e9005c3a6d763505c68ad1",
+      "matches": true,
+      "bytes": 245084
+    }
+  ],
+  "restart": {
+    "nativeButtonClicked": true,
+    "cloudLinuxRequestHttp": 200,
+    "complete": true
+  },
+  "health": {
+    "http": 200,
+    "status": "ok",
+    "persistence": "supabase"
+  },
+  "publicReadback": {
+    "files": [
+      {
+        "path": "/index.html",
+        "http": 200,
+        "sha256": "d1524e3cb5457dc3b581bb8da725fa564daa0bac98ff1de44a4e7dc2831064f9",
+        "matches": true
+      },
+      {
+        "path": "/assets/index-C6eymnMA.js",
+        "http": 200,
+        "sha256": "e4576777ba7e314855bbca6df68da2aedccd71a97e134d93059370c7e93497b1",
+        "matches": true
+      }
+    ],
+    "login": {
+      "mounted": true,
+      "passwordLabel": true,
+      "emailField": true,
+      "methodSwitch": false,
+      "labels": [
+        "Email address",
+        "Password"
+      ],
+      "width": 1063,
+      "overflow": false
+    },
+    "authenticationFormsSubmitted": false,
+    "accountMutations": 0
+  },
+  "newSqlApplied": false,
+  "privateFilesChanged": false,
+  "environmentChanged": false,
+  "dependenciesChanged": false,
+  "genuineRoomActivationTested": false,
+  "genuineRoomPinResetPerformed": false,
+  "accountMutations": 0,
+  "alertPreferencesChanged": false,
+  "testNotificationsSent": 0
+}

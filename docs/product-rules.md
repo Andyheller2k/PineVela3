@@ -1,5 +1,19 @@
 # PineVela Product Rules
 
+## Resident room activation
+
+A verified primary user may activate a valid available room key and choose a
+6–12 digit resident PIN without a student mailbox. The primary email plus room PIN
+opens the isolated resident account; primary email/password keeps its primary-user
+meaning, through the same login form without a method selector. Settings links
+to the active room status card, where the primary owner can reset only its own
+activated room PIN. The control and endpoint are unavailable before activation
+or after room closure. Interrupted/unallocated setup may choose a new PIN only
+with verified primary ownership and a valid available room key. Legacy
+email-based resident/seller accounts retain their existing credentials. Approved
+housing, one active allocation per resident and exclusive room/bed occupancy
+remain mandatory. This change does not alter seller enrollment rules.
+
 ## Runtime checkpoint — 16 October 2026
 
 Supabase PostgreSQL/Storage and Supabase Auth are the sole runtime persistence and
@@ -148,8 +162,9 @@ a deletion proposal, pause, recovery receipt or final consent starts no cooldown
 ## Verified account identities
 
 The native Supabase runtime uses separate verified child identities linked to a primary owner.
-Resident and seller accounts with the same student email may share one Supabase login
-password, with different portal access PINs. Managers use a separate verified organization
+Legacy resident and seller accounts with the same student email may share one Supabase
+login password, with different portal access PINs. New primary-email/room-PIN residents
+use their own isolated native identity as described above. Managers use a separate verified organization
 email in the production email-enrollment flow. A server-selected, direct-loopback,
 non-production development flow temporarily permits a separate genuinely verified
 Google identity without a work mailbox. It preserves primary ownership, separate

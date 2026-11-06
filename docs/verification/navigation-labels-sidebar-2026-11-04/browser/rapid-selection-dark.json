@@ -1,0 +1,21 @@
+{
+  "targets": {
+    "home": 45.3984375,
+    "purchases": 120.203125,
+    "options": 269.8046875
+  },
+  "before": 45.3984375,
+  "first": 49.090925216674805,
+  "second": 126.80746841430664,
+  "returning": 105.63568115234375,
+  "elapsed": {
+    "first": 94.5,
+    "second": 93.5,
+    "returning": 87.29999999981374
+  },
+  "after": 45.3984375,
+  "active": "home",
+  "currents": [
+    "home"
+  ]
+}

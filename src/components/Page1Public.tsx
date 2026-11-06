@@ -230,6 +230,7 @@ export default function Page1Public() {
                 <li><button type="button" onClick={() => goToCompanySection('contact-us')} className="hover:text-blue-900 transition-colors cursor-pointer">Contact</button></li>
                 <li><a href="/privacy.html" className="hover:text-blue-900 transition-colors">Privacy policy</a></li>
                 <li><a href="/privacy.html#analytics" data-analytics-preferences className="hover:text-blue-900 transition-colors">Analytics preferences</a></li>
+                <li><Link to="/notification-settings" className="hover:text-blue-900 transition-colors">Device notifications</Link></li>
                 <li><a href="/terms.html" className="hover:text-blue-900 transition-colors">Terms of service</a></li>
               </ul>
             </div>

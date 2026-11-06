@@ -1,0 +1,39 @@
+{
+  "passed": true,
+  "installedPackage": "app.pinevela.mobile.debug",
+  "previousDebugSha256": "b90c6c94fbb9cfe83296721d3b54f4e6b4f6c8e2bbc981f0dd448351dd72ee09",
+  "installedDebugSha256": "b90c6c94fbb9cfe83296721d3b54f4e6b4f6c8e2bbc981f0dd448351dd72ee09",
+  "installedFrom": "releases/android/pinevela-unified-room-login-20261105.apk",
+  "noDataClearing": true,
+  "packageWritesFlushed": true,
+  "installMode": "adb install -r",
+  "rebootPerformed": false,
+  "emulatorRestartedForMemory": true,
+  "startedPreviouslyStoppedExistingEmulator": true,
+  "logoutPerformed": false,
+  "authenticationFormsSubmitted": false,
+  "accountMutationsRequestedByVerifier": 0,
+  "normalAppTrafficIntercepted": false,
+  "ui": {
+    "page": "welcome",
+    "theme": "light",
+    "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+    "width": 393,
+    "height": 778,
+    "overflow": false,
+    "header": {
+      "top": 0,
+      "bottom": 78.7272720336914
+    }
+  },
+  "loginUi": {
+    "passwordLabel": true,
+    "emailField": true,
+    "methodSwitch": false,
+    "overflow": false
+  },
+  "testOnlyPackagesRemoved": [],
+  "emulatorLeftRunning": true,
+  "initialInstallInterruptedByEmulatorSystemUi": true,
+  "emulatorSystemUiDialogAction": "Wait; no application data cleared"
+}

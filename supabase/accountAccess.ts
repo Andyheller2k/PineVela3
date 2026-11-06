@@ -12,7 +12,7 @@ export function accountFeaturesForRequest(method:string,path:string):AccountFeat
  if(p==='/api/auth/officer-invitation/accept'||p==='/api/auth/enrollments'||/^\/api\/auth\/enrollments\/[^/]+\/(verify|reactivate(?:\/send-code)?)$/.test(p)
    ||['/api/auth/register-manager','/api/auth/register-manager-account','/api/manager-verifications/submit','/api/digital-market/register','/api/staff'].includes(p))
   features.push('subaccounts');
- if(['/api/room-keys/claim','/api/residents/onboard','/api/room-keys/verify','/api/student/add-room'].includes(p))
+ if(['/api/room-keys/claim','/api/residents/onboard','/api/room-keys/verify','/api/student/add-room','/api/auth/resident-activate'].includes(p))
   features.push('subaccounts','rooms');
  if(method.toUpperCase()==='POST'&&p==='/api/digital-market/orders')features.push('orders');
  if(p.startsWith('/api/digital-market/products')||['/api/storage/upload-market-image','/api/storage/upload-market-images'].includes(p))features.push('publishing');

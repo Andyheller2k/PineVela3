@@ -1,0 +1,296 @@
+{
+  "theme": "light",
+  "w": 393,
+  "h": 778,
+  "ratio": 2.75,
+  "overflow": false,
+  "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+  "nav": {
+    "x": 0,
+    "y": 674.1818237304688,
+    "width": 393.0909118652344,
+    "bottom": 778.1818237304688,
+    "height": 104,
+    "background": "#fff",
+    "accent": "#003566",
+    "variant": "standard",
+    "duration": ".25s"
+  },
+  "surface": {
+    "background": "rgba(0, 0, 0, 0)",
+    "color": "rgb(0, 29, 61)",
+    "transitionDuration": "0s",
+    "rect": {
+      "left": -543.789794921875,
+      "top": 674.1818237304688,
+      "width": 1179,
+      "height": 104
+    }
+  },
+  "sideHighlight": null,
+  "selectedIcon": {
+    "background": "rgba(0, 0, 0, 0)",
+    "color": "rgb(255, 255, 255)",
+    "transitionDuration": "0.25s, 0.2s",
+    "rect": {
+      "left": 32.210227966308594,
+      "top": 690.1818237304688,
+      "width": 27,
+      "height": 27
+    }
+  },
+  "bubble": {
+    "left": 16.710227966308594,
+    "top": 674.1818237304688,
+    "width": 58,
+    "height": 58,
+    "visible": true
+  },
+  "buttons": [
+    {
+      "id": "home",
+      "current": "page",
+      "disabled": false
+    },
+    {
+      "id": "digital-market",
+      "current": null,
+      "disabled": false
+    },
+    {
+      "id": "login-room",
+      "current": null,
+      "disabled": false
+    },
+    {
+      "id": "options",
+      "current": null,
+      "disabled": false
+    },
+    {
+      "id": "companion",
+      "current": null,
+      "disabled": false
+    }
+  ],
+  "labels": [
+    {
+      "id": "home",
+      "selected": true,
+      "text": "Home",
+      "rect": {
+        "left": 8,
+        "top": 754.1818237304688,
+        "right": 83.42045593261719,
+        "bottom": 767.1818237304688,
+        "width": 75.42045593261719,
+        "height": 13
+      },
+      "icon": {
+        "top": 690.1818237304688,
+        "bottom": 717.1818237304688
+      },
+      "css": {
+        "position": "absolute",
+        "top": "80px",
+        "lineHeight": "13px",
+        "fontSize": "10px",
+        "color": "rgb(0, 53, 102)",
+        "textFill": "rgb(0, 53, 102)",
+        "transform": "none",
+        "translate": "none",
+        "zIndex": "1",
+        "visibility": "visible",
+        "opacity": "1",
+        "overflow": "hidden"
+      },
+      "button": {
+        "top": 674.1818237304688,
+        "bottom": 778.1818237304688,
+        "zIndex": "2",
+        "transform": "none",
+        "overflow": "visible"
+      },
+      "centerElement": "SPAN",
+      "centerClasses": "pv-nav-label",
+      "centerInOwnButton": true,
+      "withinViewport": true,
+      "labelOverIcon": false
+    },
+    {
+      "id": "digital-market",
+      "selected": false,
+      "text": "Purchases",
+      "rect": {
+        "left": 83.42045593261719,
+        "top": 754.1818237304688,
+        "right": 158.84091186523438,
+        "bottom": 767.1818237304688,
+        "width": 75.42045593261719,
+        "height": 13
+      },
+      "icon": {
+        "top": 718.1818237304688,
+        "bottom": 745.1818237304688
+      },
+      "css": {
+        "position": "absolute",
+        "top": "80px",
+        "lineHeight": "13px",
+        "fontSize": "10px",
+        "color": "rgb(96, 112, 131)",
+        "textFill": "rgb(96, 112, 131)",
+        "transform": "none",
+        "translate": "none",
+        "zIndex": "1",
+        "visibility": "visible",
+        "opacity": "1",
+        "overflow": "hidden"
+      },
+      "button": {
+        "top": 674.1818237304688,
+        "bottom": 778.1818237304688,
+        "zIndex": "2",
+        "transform": "none",
+        "overflow": "visible"
+      },
+      "centerElement": "SPAN",
+      "centerClasses": "pv-nav-label",
+      "centerInOwnButton": true,
+      "withinViewport": true,
+      "labelOverIcon": false
+    },
+    {
+      "id": "login-room",
+      "selected": false,
+      "text": "Room",
+      "rect": {
+        "left": 158.84091186523438,
+        "top": 754.1818237304688,
+        "right": 234.26136779785156,
+        "bottom": 767.1818237304688,
+        "width": 75.42045593261719,
+        "height": 13
+      },
+      "icon": {
+        "top": 718.1818237304688,
+        "bottom": 745.1818237304688
+      },
+      "css": {
+        "position": "absolute",
+        "top": "80px",
+        "lineHeight": "13px",
+        "fontSize": "10px",
+        "color": "rgb(96, 112, 131)",
+        "textFill": "rgb(96, 112, 131)",
+        "transform": "none",
+        "translate": "none",
+        "zIndex": "1",
+        "visibility": "visible",
+        "opacity": "1",
+        "overflow": "hidden"
+      },
+      "button": {
+        "top": 674.1818237304688,
+        "bottom": 778.1818237304688,
+        "zIndex": "2",
+        "transform": "none",
+        "overflow": "visible"
+      },
+      "centerElement": "SPAN",
+      "centerClasses": "pv-nav-label",
+      "centerInOwnButton": true,
+      "withinViewport": true,
+      "labelOverIcon": false
+    },
+    {
+      "id": "options",
+      "selected": false,
+      "text": "Options",
+      "rect": {
+        "left": 234.26136779785156,
+        "top": 754.1818237304688,
+        "right": 309.68182373046875,
+        "bottom": 767.1818237304688,
+        "width": 75.42045593261719,
+        "height": 13
+      },
+      "icon": {
+        "top": 718.1818237304688,
+        "bottom": 745.1818237304688
+      },
+      "css": {
+        "position": "absolute",
+        "top": "80px",
+        "lineHeight": "13px",
+        "fontSize": "10px",
+        "color": "rgb(96, 112, 131)",
+        "textFill": "rgb(96, 112, 131)",
+        "transform": "none",
+        "translate": "none",
+        "zIndex": "1",
+        "visibility": "visible",
+        "opacity": "1",
+        "overflow": "hidden"
+      },
+      "button": {
+        "top": 674.1818237304688,
+        "bottom": 778.1818237304688,
+        "zIndex": "2",
+        "transform": "none",
+        "overflow": "visible"
+      },
+      "centerElement": "SPAN",
+      "centerClasses": "pv-nav-label",
+      "centerInOwnButton": true,
+      "withinViewport": true,
+      "labelOverIcon": false
+    },
+    {
+      "id": "companion",
+      "selected": false,
+      "text": "Ask AI",
+      "rect": {
+        "left": 309.68182373046875,
+        "top": 754.1818237304688,
+        "right": 385.10227966308594,
+        "bottom": 767.1818237304688,
+        "width": 75.42045593261719,
+        "height": 13
+      },
+      "icon": {
+        "top": 718.1818237304688,
+        "bottom": 745.1818237304688
+      },
+      "css": {
+        "position": "absolute",
+        "top": "80px",
+        "lineHeight": "13px",
+        "fontSize": "10px",
+        "color": "rgb(96, 112, 131)",
+        "textFill": "rgb(96, 112, 131)",
+        "transform": "none",
+        "translate": "none",
+        "zIndex": "1",
+        "visibility": "visible",
+        "opacity": "1",
+        "overflow": "hidden"
+      },
+      "button": {
+        "top": 674.1818237304688,
+        "bottom": 778.1818237304688,
+        "zIndex": "2",
+        "transform": "none",
+        "overflow": "visible"
+      },
+      "centerElement": "SPAN",
+      "centerClasses": "pv-nav-label",
+      "centerInOwnButton": true,
+      "withinViewport": true,
+      "labelOverIcon": false
+    }
+  ],
+  "deniedWrites": 0,
+  "fixtureNoops": 0,
+  "fixtureReads": 14
+}

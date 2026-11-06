@@ -133,8 +133,8 @@ async function main() {
   }
   const fill = (selector, value) => evaluate(`(()=>{const e=document.querySelector(${JSON.stringify(selector)});if(!e)throw Error('Required local form missing');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(e,${JSON.stringify(value)});e.dispatchEvent(new Event('input',{bubbles:true}));e.dispatchEvent(new Event('change',{bubbles:true}));})()`);
   async function login() {
-    await until('document.querySelector(\'input[aria-label="Username or Email Address"]\')', 'Login form');
-    await fill('input[aria-label="Username or Email Address"]', credentials.email);
+    await until('document.querySelector(\'input[aria-label="Email address"]\')', 'Login form');
+    await fill('input[aria-label="Email address"]', credentials.email);
     await fill('input[aria-label="Password"]', credentials.password);
     await evaluate('document.querySelector(\'input[aria-label="Password"]\').closest("form").requestSubmit()');
     await until('location.hash.includes("/user/dashboard")||document.querySelector("#mobile-return-title")', 'Verified login');

@@ -73,7 +73,7 @@ const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
   const ready = async () => {
     await until(`document.querySelector('[data-native-welcome-login]') || document.querySelector('.login-credentials-form')`, 'Native entry');
     if (await evaluate(`!!document.querySelector('[data-native-welcome-login]')`)) await evaluate(`document.querySelector('[data-native-welcome-login]').click()`);
-    await until(`document.querySelector('.login-credentials-form input[aria-label="Username or Email Address"]') && document.querySelector('.login-credentials-form button[type="submit"]:not([disabled])') && !document.querySelector('#pv-app-launch')`, 'Native sign-in');
+    await until(`document.querySelector('.login-credentials-form input[aria-label="Email address"]') && document.querySelector('.login-credentials-form button[type="submit"]:not([disabled])') && !document.querySelector('#pv-app-launch')`, 'Native sign-in');
     assert.equal(await evaluate(`Capacitor.getPlatform()`), 'android');
     assert.ok(await evaluate(`document.documentElement.scrollWidth <= innerWidth + 1`));
   };

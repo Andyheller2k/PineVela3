@@ -190,7 +190,7 @@ const SellerInventoryCard: React.FC<SellerInventoryCardProps> = memo(
         <div>
           <div className="market-card-thumbnail relative h-48 bg-slate-900/5 overflow-hidden flex items-center justify-center p-1 border-b border-slate-100">
             <img
-              src={optimizeImageDisplayUrl(product.imageUrl, 150, 20)}
+              src={optimizeImageDisplayUrl(product.imageUrl)}
               alt={product.title}
               loading="lazy"
               decoding="async"
@@ -1848,7 +1848,7 @@ export default function PageDigitalMarket() {
                         title="Click to view service location on interactive map"
                       >
                         <img
-                          src={optimizeImageDisplayUrl(service.imageUrl, 400, 50)}
+                          src={optimizeImageDisplayUrl(service.imageUrl)}
                           alt={service.title}
                           loading="lazy"
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"

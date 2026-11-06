@@ -1,6 +1,6 @@
 # Buyer and marketplace rules — drafting template
 
-Status: UNPUBLISHED DRAFT. Version/effective date: `[FILL]`. Operator/contact: Oppong Manu Andy, Ghana; andyheller2k@gmail.com.
+Status: UNPUBLISHED DRAFT. Version/effective date: `[FILL]`. Operator/contact: PineVela Ghana; pinevela@pinevela.app.
 
 ## Before ordering
 

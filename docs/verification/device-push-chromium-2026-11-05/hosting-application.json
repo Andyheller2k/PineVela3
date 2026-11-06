@@ -1,0 +1,20 @@
+{
+  "verifiedDate": "2026-11-05",
+  "hostedPatchApplied": true,
+  "nodeRestarted": true,
+  "backendSha256": "16a87e0a5b70c21cde17899210cd5bd09bf806939425bfe634a09f72f992edeb",
+  "rollbackSha256": "ddbcebaab9611fe38c8ad806da342ea126d128b46a23f049904025f467e0dbf7",
+  "rollbackRelativePath": "dist-supabase-backend/supabase-server.before-browser-push-20261105.mjs",
+  "fileHashesVerifiedInSignedInCpanel": true,
+  "fileReadHtmlTranscodingDisabled": true,
+  "realChromeRegistrationPassed": true,
+  "unsupportedProviderErrorCleared": true,
+  "testNotificationsSent": 1,
+  "serviceWorkerDeliveredTestNotifications": 1,
+  "accountLabelPresent": true,
+  "browserErrors": [],
+  "discoveryChoicesChanged": false,
+  "browserSubscriptionTokensExported": false,
+  "browserEncryptionKeysExported": false,
+  "hostedAndroidQueueDeliveryVerified": false
+}

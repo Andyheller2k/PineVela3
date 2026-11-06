@@ -1,0 +1,5 @@
+{
+  "public/legal/terms-2026-10-27.html": "5a761951b97a5bcb2fc6d69c71c0ad34b0422da515cfef69399aa5a66e1cd355",
+  "supabase/migrations/20261028120000_versioned_terms_acceptance.sql": "79c1a618a5523bdbc54d348850fd1a1add93ddee15a0ea03f07d34f12b70b418",
+  "scripts/provision-supabase-owner.ts": "d2e0257c4d2b01054fdc1990ae8a90759ca6b3fc66104b6fcf7e19e39e938393"
+}

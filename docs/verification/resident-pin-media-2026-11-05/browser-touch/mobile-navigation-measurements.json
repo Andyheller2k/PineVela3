@@ -1,0 +1,452 @@
+{
+  "syntheticLoopbackFixtures": true,
+  "realAuthenticationTested": false,
+  "measurements": [
+    {
+      "page": "primary dashboard",
+      "theme": "light",
+      "touchDelivered": true,
+      "pressedCssStateForced": true,
+      "touchPress": {
+        "active": true,
+        "target": "home",
+        "outline": "none",
+        "outlineWidth": "3px",
+        "background": "rgba(0, 0, 0, 0)",
+        "tap": "rgba(0, 0, 0, 0)",
+        "children": [
+          "rgba(0, 0, 0, 0)",
+          "rgba(0, 0, 0, 0)",
+          "rgba(0, 0, 0, 0)",
+          "rgba(0, 0, 0, 0)",
+          "rgba(0, 0, 0, 0)"
+        ]
+      },
+      "keyboardFocus": {
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(0, 53, 102)"
+      }
+    },
+    {
+      "page": "manager dashboard",
+      "theme": "light",
+      "touchDelivered": true,
+      "pressedCssStateForced": true,
+      "touchPress": {
+        "active": true,
+        "target": "registration",
+        "outline": "none",
+        "outlineWidth": "3px",
+        "background": "rgba(0, 0, 0, 0)",
+        "tap": "rgba(0, 0, 0, 0)",
+        "children": [
+          "rgba(0, 0, 0, 0)",
+          "rgba(0, 0, 0, 0)",
+          "rgba(0, 0, 0, 0)",
+          "rgba(0, 0, 0, 0)",
+          "rgba(0, 0, 0, 0)",
+          "rgba(0, 0, 0, 0)",
+          "rgba(0, 0, 0, 0)",
+          "rgba(0, 0, 0, 0)"
+        ]
+      },
+      "keyboardFocus": {
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(0, 53, 102)"
+      }
+    },
+    {
+      "page": "staff dashboard",
+      "theme": "light",
+      "touchDelivered": true,
+      "pressedCssStateForced": true,
+      "touchPress": {
+        "active": true,
+        "target": "notifications",
+        "outline": "none",
+        "outlineWidth": "3px",
+        "background": "rgba(0, 0, 0, 0)",
+        "tap": "rgba(0, 0, 0, 0)",
+        "children": [
+          "rgba(0, 0, 0, 0)",
+          "rgba(0, 0, 0, 0)",
+          "rgba(0, 0, 0, 0)",
+          "rgba(0, 0, 0, 0)",
+          "rgba(0, 0, 0, 0)"
+        ]
+      },
+      "keyboardFocus": {
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(0, 53, 102)"
+      }
+    },
+    {
+      "page": "resident dashboard",
+      "theme": "light",
+      "touchDelivered": true,
+      "pressedCssStateForced": true,
+      "touchPress": {
+        "active": true,
+        "target": "room",
+        "outline": "none",
+        "outlineWidth": "3px",
+        "background": "rgba(0, 0, 0, 0)",
+        "tap": "rgba(0, 0, 0, 0)",
+        "children": [
+          "rgba(0, 0, 0, 0)",
+          "rgba(0, 0, 0, 0)",
+          "rgba(0, 0, 0, 0)",
+          "rgba(0, 0, 0, 0)",
+          "rgba(0, 0, 0, 0)"
+        ]
+      },
+      "keyboardFocus": {
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(0, 53, 102)"
+      }
+    },
+    {
+      "page": "administrator dashboard",
+      "theme": "light",
+      "touchDelivered": true,
+      "pressedCssStateForced": true,
+      "touchPress": {
+        "active": true,
+        "target": "overview",
+        "outline": "none",
+        "outlineWidth": "3px",
+        "background": "rgba(0, 0, 0, 0)",
+        "tap": "rgba(0, 0, 0, 0)",
+        "children": [
+          "rgba(0, 0, 0, 0)",
+          "rgba(0, 0, 0, 0)",
+          "rgba(0, 0, 0, 0)",
+          "rgba(0, 0, 0, 0)",
+          "rgba(0, 0, 0, 0)"
+        ]
+      },
+      "keyboardFocus": {
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(0, 53, 102)"
+      }
+    },
+    {
+      "page": "seller dashboard",
+      "theme": "light",
+      "touchDelivered": true,
+      "pressedCssStateForced": true,
+      "touchPress": {
+        "active": true,
+        "target": "dashboard",
+        "outline": "none",
+        "outlineWidth": "3px",
+        "background": "rgba(0, 0, 0, 0)",
+        "tap": "rgba(0, 0, 0, 0)",
+        "children": [
+          "rgba(0, 0, 0, 0)",
+          "rgba(0, 0, 0, 0)",
+          "rgba(0, 0, 0, 0)",
+          "rgba(0, 0, 0, 0)",
+          "rgba(0, 0, 0, 0)"
+        ]
+      },
+      "keyboardFocus": {
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(0, 53, 102)"
+      }
+    },
+    {
+      "page": "field officer",
+      "theme": "light",
+      "touchDelivered": true,
+      "pressedCssStateForced": true,
+      "touchPress": {
+        "active": true,
+        "target": "inspections",
+        "outline": "none",
+        "outlineWidth": "3px",
+        "background": "rgba(0, 0, 0, 0)",
+        "tap": "rgba(0, 0, 0, 0)",
+        "children": [
+          "rgba(0, 0, 0, 0)",
+          "rgba(0, 0, 0, 0)",
+          "rgba(0, 0, 0, 0)",
+          "rgba(0, 0, 0, 0)",
+          "rgba(0, 0, 0, 0)",
+          "rgba(0, 0, 0, 0)",
+          "rgba(0, 0, 0, 0)",
+          "rgba(0, 0, 0, 0)",
+          "rgba(0, 0, 0, 0)"
+        ]
+      },
+      "keyboardFocus": {
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(0, 53, 102)"
+      }
+    },
+    {
+      "page": "customer service",
+      "theme": "light",
+      "touchDelivered": true,
+      "pressedCssStateForced": true,
+      "touchPress": {
+        "active": true,
+        "target": "inbox",
+        "outline": "none",
+        "outlineWidth": "3px",
+        "background": "rgba(0, 0, 0, 0)",
+        "tap": "rgba(0, 0, 0, 0)",
+        "children": [
+          "rgba(0, 0, 0, 0)",
+          "rgba(0, 0, 0, 0)",
+          "rgba(0, 0, 0, 0)",
+          "rgba(0, 0, 0, 0)",
+          "rgba(0, 0, 0, 0)"
+        ]
+      },
+      "keyboardFocus": {
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(0, 53, 102)"
+      }
+    },
+    {
+      "page": "primary dashboard",
+      "theme": "dark",
+      "touchDelivered": true,
+      "pressedCssStateForced": true,
+      "touchPress": {
+        "active": true,
+        "target": "home",
+        "outline": "none",
+        "outlineWidth": "3px",
+        "background": "rgba(0, 0, 0, 0)",
+        "tap": "rgba(0, 0, 0, 0)",
+        "children": [
+          "rgba(0, 0, 0, 0)",
+          "rgba(0, 0, 0, 0)",
+          "rgba(0, 0, 0, 0)",
+          "rgba(0, 0, 0, 0)",
+          "rgba(0, 0, 0, 0)"
+        ]
+      },
+      "keyboardFocus": {
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(255, 214, 10)"
+      }
+    },
+    {
+      "page": "manager dashboard",
+      "theme": "dark",
+      "touchDelivered": true,
+      "pressedCssStateForced": true,
+      "touchPress": {
+        "active": true,
+        "target": "registration",
+        "outline": "none",
+        "outlineWidth": "3px",
+        "background": "rgba(0, 0, 0, 0)",
+        "tap": "rgba(0, 0, 0, 0)",
+        "children": [
+          "rgba(0, 0, 0, 0)",
+          "rgba(0, 0, 0, 0)",
+          "rgba(0, 0, 0, 0)",
+          "rgba(0, 0, 0, 0)",
+          "rgba(0, 0, 0, 0)",
+          "rgba(0, 0, 0, 0)",
+          "rgba(0, 0, 0, 0)",
+          "rgba(0, 0, 0, 0)"
+        ]
+      },
+      "keyboardFocus": {
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(255, 214, 10)"
+      }
+    },
+    {
+      "page": "staff dashboard",
+      "theme": "dark",
+      "touchDelivered": true,
+      "pressedCssStateForced": true,
+      "touchPress": {
+        "active": true,
+        "target": "notifications",
+        "outline": "none",
+        "outlineWidth": "3px",
+        "background": "rgba(0, 0, 0, 0)",
+        "tap": "rgba(0, 0, 0, 0)",
+        "children": [
+          "rgba(0, 0, 0, 0)",
+          "rgba(0, 0, 0, 0)",
+          "rgba(0, 0, 0, 0)",
+          "rgba(0, 0, 0, 0)",
+          "rgba(0, 0, 0, 0)"
+        ]
+      },
+      "keyboardFocus": {
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(255, 214, 10)"
+      }
+    },
+    {
+      "page": "resident dashboard",
+      "theme": "dark",
+      "touchDelivered": true,
+      "pressedCssStateForced": true,
+      "touchPress": {
+        "active": true,
+        "target": "room",
+        "outline": "none",
+        "outlineWidth": "3px",
+        "background": "rgba(0, 0, 0, 0)",
+        "tap": "rgba(0, 0, 0, 0)",
+        "children": [
+          "rgba(0, 0, 0, 0)",
+          "rgba(0, 0, 0, 0)",
+          "rgba(0, 0, 0, 0)",
+          "rgba(0, 0, 0, 0)",
+          "rgba(0, 0, 0, 0)"
+        ]
+      },
+      "keyboardFocus": {
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(255, 214, 10)"
+      }
+    },
+    {
+      "page": "administrator dashboard",
+      "theme": "dark",
+      "touchDelivered": true,
+      "pressedCssStateForced": true,
+      "touchPress": {
+        "active": true,
+        "target": "overview",
+        "outline": "none",
+        "outlineWidth": "3px",
+        "background": "rgba(0, 0, 0, 0)",
+        "tap": "rgba(0, 0, 0, 0)",
+        "children": [
+          "rgba(0, 0, 0, 0)",
+          "rgba(0, 0, 0, 0)",
+          "rgba(0, 0, 0, 0)",
+          "rgba(0, 0, 0, 0)",
+          "rgba(0, 0, 0, 0)"
+        ]
+      },
+      "keyboardFocus": {
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(255, 214, 10)"
+      }
+    },
+    {
+      "page": "seller dashboard",
+      "theme": "dark",
+      "touchDelivered": true,
+      "pressedCssStateForced": true,
+      "touchPress": {
+        "active": true,
+        "target": "dashboard",
+        "outline": "none",
+        "outlineWidth": "3px",
+        "background": "rgba(0, 0, 0, 0)",
+        "tap": "rgba(0, 0, 0, 0)",
+        "children": [
+          "rgba(0, 0, 0, 0)",
+          "rgba(0, 0, 0, 0)",
+          "rgba(0, 0, 0, 0)",
+          "rgba(0, 0, 0, 0)",
+          "rgba(0, 0, 0, 0)"
+        ]
+      },
+      "keyboardFocus": {
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(255, 214, 10)"
+      }
+    },
+    {
+      "page": "field officer",
+      "theme": "dark",
+      "touchDelivered": true,
+      "pressedCssStateForced": true,
+      "touchPress": {
+        "active": true,
+        "target": "inspections",
+        "outline": "none",
+        "outlineWidth": "3px",
+        "background": "rgba(0, 0, 0, 0)",
+        "tap": "rgba(0, 0, 0, 0)",
+        "children": [
+          "rgba(0, 0, 0, 0)",
+          "rgba(0, 0, 0, 0)",
+          "rgba(0, 0, 0, 0)",
+          "rgba(0, 0, 0, 0)",
+          "rgba(0, 0, 0, 0)",
+          "rgba(0, 0, 0, 0)",
+          "rgba(0, 0, 0, 0)",
+          "rgba(0, 0, 0, 0)",
+          "rgba(0, 0, 0, 0)"
+        ]
+      },
+      "keyboardFocus": {
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(255, 214, 10)"
+      }
+    },
+    {
+      "page": "customer service",
+      "theme": "dark",
+      "touchDelivered": true,
+      "pressedCssStateForced": true,
+      "touchPress": {
+        "active": true,
+        "target": "inbox",
+        "outline": "none",
+        "outlineWidth": "3px",
+        "background": "rgba(0, 0, 0, 0)",
+        "tap": "rgba(0, 0, 0, 0)",
+        "children": [
+          "rgba(0, 0, 0, 0)",
+          "rgba(0, 0, 0, 0)",
+          "rgba(0, 0, 0, 0)",
+          "rgba(0, 0, 0, 0)",
+          "rgba(0, 0, 0, 0)"
+        ]
+      },
+      "keyboardFocus": {
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(255, 214, 10)"
+      }
+    }
+  ]
+}

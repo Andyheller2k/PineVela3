@@ -35,8 +35,8 @@ async function privateJson(file) { assert(path.isAbsolute(file)); const stat = a
     async function screenshot(name) { const result = await command('Page.captureScreenshot', { format: 'png' }); await fs.writeFile(path.join(artifacts, name + '.png'), Buffer.from(result.data, 'base64'), { mode: 0o600 }); }
     async function dismissWelcome() { await evaluate(`(()=>{for(const d of document.querySelectorAll('dialog[open]'))if(/Welcome/.test(d.getAttribute('aria-label')||''))d.querySelector('button[aria-label="Close dialog"]')?.click()})()`); }
     async function signIn(kind) {
-      stage = 'real native login ' + kind; await size(1440, 1000); await go('/#/login'); await until('!!document.querySelector(\'input[aria-label="Username or Email Address"]\')', 'Login form');
-      await evaluate(`(()=>{for(const [label,value] of ${JSON.stringify([['Username or Email Address', actors[kind].email], ['Password', actors[kind].password]])}){const e=document.querySelector('input[aria-label="'+label+'"]');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(e,value);e.dispatchEvent(new Event('input',{bubbles:true}));}})()`);
+      stage = 'real native login ' + kind; await size(1440, 1000); await go('/#/login'); await until('!!document.querySelector(\'input[aria-label="Email address"]\')', 'Login form');
+      await evaluate(`(()=>{for(const [label,value] of ${JSON.stringify([['Email address', actors[kind].email], ['Password', actors[kind].password]])}){const e=document.querySelector('input[aria-label="'+label+'"]');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(e,value);e.dispatchEvent(new Event('input',{bubbles:true}));}})()`);
       await evaluate('document.querySelector(\'input[aria-label="Password"]\').closest("form").requestSubmit()');
       const destination = kind === 'agent' ? '#/customer-service' : kind === 'admin' ? '#/admin/dashboard' : '#/user/dashboard';
       await until(`location.hash.split('?')[0]===${JSON.stringify(destination)}&&!!document.querySelector('[data-portal-navigation]')`, 'Genuine account destination'); await dismissWelcome();

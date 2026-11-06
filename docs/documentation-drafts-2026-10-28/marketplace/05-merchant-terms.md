@@ -1,6 +1,6 @@
 # Merchant agreement — drafting template
 
-Status: UNPUBLISHED DRAFT. Version/effective date: `[FILL]`. Operator: Oppong Manu Andy, Ghana, trading as PineVela. Contact: andyheller2k@gmail.com. Notice address: `[FILL]`.
+Status: UNPUBLISHED DRAFT. Version/effective date: `[FILL]`. Operator: PineVela Ghana, trading as PineVela. Contact: pinevela@pinevela.app. Notice address: `[FILL]`.
 
 ## 1. Application and eligibility
 

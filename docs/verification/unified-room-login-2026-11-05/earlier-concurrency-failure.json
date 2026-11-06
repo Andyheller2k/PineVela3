@@ -1,0 +1,7 @@
+{
+  "passed": false,
+  "stage": "concurrent claims and reactivation",
+  "checks": 58,
+  "code": "ERR_ASSERTION",
+  "error": "Concurrent independent owners cannot double-claim a room"
+}

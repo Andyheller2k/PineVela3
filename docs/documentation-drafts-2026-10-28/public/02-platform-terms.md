@@ -5,7 +5,7 @@ Version: `[FILL: terms version]`. Effective: `[FILL: date]`.
 
 ## 1. Operator and contact
 
-PineVela is operated by Oppong Manu Andy, Ghana. Our website is https://pinevela.app. Contact andyheller2k@gmail.com for account or service questions. Address for notices: `[FILL: full address]`. Trading/registration details, if applicable: `[FILL]`.
+PineVela is operated by PineVela Ghana. Our website is https://pinevela.app. Contact pinevela@pinevela.app for account or service questions. Address for notices: `[FILL: full address]`. Trading/registration details, if applicable: `[FILL]`.
 
 ## 2. Agreement and related policies
 
@@ -69,4 +69,4 @@ We take reasonable steps to operate the service, but maintenance, connectivity i
 
 Material changes will be identified with an updated version and appropriate notice. We will seek renewed acceptance where required for the change. A new policy must not silently alter completed transactions or unrelated optional consents.
 
-Contact andyheller2k@gmail.com to raise a concern. `[FILL: complaint and appeal timelines.]` These terms are governed by Ghanaian law, subject to mandatory rights and competent court or regulator jurisdiction. `[REVIEW: final dispute clause and any arbitration proposal before using it.]`
+Contact pinevela@pinevela.app to raise a concern. `[FILL: complaint and appeal timelines.]` These terms are governed by Ghanaian law, subject to mandatory rights and competent court or regulator jurisdiction. `[REVIEW: final dispute clause and any arbitration proposal before using it.]`

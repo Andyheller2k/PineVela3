@@ -1,0 +1,31 @@
+{
+  "passed": true,
+  "installedPackage": "app.pinevela.mobile.debug",
+  "previousDebugSha256": "1186c808ffd54756894b77e56d56f6b20f416b3c844598f6064409e16b34dedc",
+  "installedDebugSha256": "09cf568b00a547a8679e824f195641e98804ddef7e2096087ae553af5fab9ef9",
+  "installedFrom": "releases/android/pinevela-notification-settings-cleanup-20261105.apk",
+  "noDataClearing": true,
+  "packageWritesFlushed": true,
+  "installMode": "adb install -r",
+  "rebootPerformed": false,
+  "emulatorRestartedForMemory": false,
+  "startedPreviouslyStoppedExistingEmulator": true,
+  "logoutPerformed": false,
+  "authenticationFormsSubmitted": false,
+  "accountMutationsRequestedByVerifier": 0,
+  "normalAppTrafficIntercepted": false,
+  "ui": {
+    "page": "welcome",
+    "theme": "light",
+    "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+    "width": 393,
+    "height": 778,
+    "overflow": false,
+    "header": {
+      "top": 0,
+      "bottom": 78.7272720336914
+    }
+  },
+  "testOnlyPackagesRemoved": [],
+  "emulatorLeftRunning": true
+}

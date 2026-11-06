@@ -25,8 +25,6 @@ export function enrollmentInput(body: any): EnrollmentInput {
       email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || !phone || phone.length > 40 ||
       typeof body?.password !== 'string' || body.password.length < 8 || body.password.length > 256)
     throw new ApiError(400, 'Enter the account type, name, email, phone and a password of at least 8 characters.');
-  if (kind === 'resident' && !/^[a-z0-9._%+-]+@(st\.)?knust\.edu\.gh$/i.test(email))
-    throw new ApiError(400, 'Use your official KNUST student email for your resident account.');
   if (kind === 'seller' && !/^[a-z0-9._%+-]+@[a-z0-9.-]+\.(edu\.gh|ac\.gh)$/i.test(email))
     throw new ApiError(400, 'Use your Ghanaian university student email for your seller account.');
   if (kind === 'manager') {
@@ -36,8 +34,8 @@ export function enrollmentInput(body: any): EnrollmentInput {
   // Ownership, status and role fields in the body have no effect.
   return { kind, email, name, phone, password: body.password };
 }
-async function primaryOwner(client: PoolClient, actor: VerifiedActor, readOnly=false) {
-  const { rows: [owner] } = await client.query(`select p.id,p.email from public.profiles p
+export async function primaryOwner(client: PoolClient, actor: VerifiedActor, readOnly=false) {
+  const { rows: [owner] } = await client.query(`select p.id,p.email,p.display_name,p.phone from public.profiles p
     join public.account_contexts c on c.auth_user_id = p.id
     where c.id = $1 and c.auth_user_id = $2 and c.kind = 'primary' and c.status = 'active'
       and p.primary_owner_id is null ${readOnly?'for share':'for update'} of p`, [actor.contextId,actor.authUserId]);
@@ -148,6 +146,25 @@ export async function claimResidentRoom(client: PoolClient, actor: VerifiedActor
   const enrollment = await ownedEnrollment(client,actor,id);
   if (enrollment.kind !== 'resident' || !enrollment.verified_at || enrollment.status !== 'pending_review' || enrollment.context_status !== 'pending')
     throw new ApiError(409, 'Verify your resident email before activating a room.');
+  const key = await availableResidentRoom(client,actor,value);
+  const confirmed = await client.query(`select 1 from auth.users u join public.profiles p on p.id = u.id
+    where u.id = $1 and lower(u.email) = $2 and u.email_confirmed_at is not null and p.primary_owner_id = $3`,
+    [enrollment.auth_user_id,enrollment.invited_email,actor.authUserId]);
+  if (!confirmed.rowCount) throw new ApiError(409, 'The resident identity is no longer verified.');
+  await client.query('insert into public.allocations(resident_context_id,room_id,bed_id) values ($1,$2,$3)', [enrollment.linked_context_id,key.room_id,key.bed_id]);
+  await client.query('update private.room_activation_keys set claimed_at = now(),claimed_by = $1 where id = $2', [enrollment.linked_context_id,key.id]);
+  await client.query("update public.account_contexts set status = 'active',updated_at = now() where id = $1", [enrollment.linked_context_id]);
+  await client.query("update private.account_enrollments set status = 'completed',room_id = $2,residence_id = $3 where id = $1", [enrollment.id,key.room_id,key.residence_id]);
+  const pinLogin=enrollment.enrollment_fields?.authentication==='resident_pin';
+  await notify(client,[actor.contextId],{ category:'success',title:'Resident Room Activated',
+    message:`Your room at ${key.residence_name} is activated. ${pinLogin?'Use your primary email and room PIN to sign in to your resident account.':'Sign in separately with your verified resident email to open your room account.'}` });
+  // Do not switch the primary user's session into the child's identity.
+  return { success:true,accountId:enrollment.linked_context_id,requiresSeparateLogin:true };
+}
+
+/** Residence/key/room/bed locks and current allocation checks are shared by
+ * reservation and final activation. No browser-supplied room ID is trusted. */
+export async function availableResidentRoom(client:PoolClient,actor:VerifiedActor,value:unknown) {
   const code = typeof value === 'string' ? value.trim().toUpperCase() : '';
   if (!code || code.length > 100) throw new ApiError(400, 'Enter a valid room activation key.');
   // Residence first matches generation/release lock order. Recheck the current
@@ -165,22 +182,11 @@ export async function claimResidentRoom(client: PoolClient, actor: VerifiedActor
     where k.code = $1 and k.revoked_at is null for update of k,r`, [code]);
   if (!key || key.status !== 'approved' || !key.eligible) throw new ApiError(404, 'This room key is not available for activation.');
   if (key.claimed_at || key.claimed_by) throw new ApiError(409, 'This room key has already been used.');
-  const confirmed = await client.query(`select 1 from auth.users u join public.profiles p on p.id = u.id
-    where u.id = $1 and lower(u.email) = $2 and u.email_confirmed_at is not null and p.primary_owner_id = $3`,
-    [enrollment.auth_user_id,enrollment.invited_email,actor.authUserId]);
-  if (!confirmed.rowCount) throw new ApiError(409, 'The resident identity is no longer verified.');
   if ((await client.query('select 1 from public.allocations where ended_at is null and (primary_owner_id = $1 or room_id = $2)', [actor.authUserId,key.room_id])).rowCount)
     throw new ApiError(409, 'You already occupy a room or this room is occupied.');
   const { rows: [bed] } = await client.query('select id from public.beds where room_id = $1 order by bed_number limit 1 for update', [key.room_id]);
   if (!bed) throw new ApiError(409, 'This room has no configured bed. Contact its manager.');
-  await client.query('insert into public.allocations(resident_context_id,room_id,bed_id) values ($1,$2,$3)', [enrollment.linked_context_id,key.room_id,bed.id]);
-  await client.query('update private.room_activation_keys set claimed_at = now(),claimed_by = $1 where id = $2', [enrollment.linked_context_id,key.id]);
-  await client.query("update public.account_contexts set status = 'active',updated_at = now() where id = $1", [enrollment.linked_context_id]);
-  await client.query("update private.account_enrollments set status = 'completed',room_id = $2,residence_id = $3 where id = $1", [enrollment.id,key.room_id,key.residence_id]);
-  await notify(client,[actor.contextId],{ category:'success',title:'Resident Room Activated',
-    message:`Your room at ${key.residence_name} is activated. Sign in separately with your verified resident email to open your room account.` });
-  // Do not switch the primary user's session into the child's identity.
-  return { success:true,accountId:enrollment.linked_context_id,requiresSeparateLogin:true };
+  return {...key,bed_id:bed.id};
 }
 
 export function installEnrollment(app: Express, auth: SupabaseAuth) {

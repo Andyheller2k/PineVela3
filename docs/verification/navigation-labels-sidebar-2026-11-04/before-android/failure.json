@@ -1,0 +1,6 @@
+{
+  "passed": false,
+  "reason": "user-light: physical highlighted circle reaches its measured viewport position\n+ actual - expected\n\n  [\n    0,\n+   21,\n+   41\n-   53,\n-   102\n  ]\n",
+  "installedApkSha256": "b59de36152b3ac211f27f5113540ae7fdec9adc6611048a9a02d0054e45c43a7",
+  "scenes": []
+}

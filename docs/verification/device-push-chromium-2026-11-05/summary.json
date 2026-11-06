@@ -1,0 +1,14 @@
+{
+  "passed": true,
+  "unitTests": 9,
+  "databaseHttpChecks": 113,
+  "backendDiffHunks": 1,
+  "privateCredentialMatches": 0,
+  "zip": "/home/wyse/Documents/PineVela3/releases/web/pinevela-browser-push-fix-20261105.zip",
+  "zipSha256": "0e0326be518d6174d5e2710e7935d2e3f5fb99b07737bdb2df7a1df9784ad4c7",
+  "tmpZip": "/tmp/pinevela-browser-push-fix-20261105.zip",
+  "backendSha256": "16a87e0a5b70c21cde17899210cd5bd09bf806939425bfe634a09f72f992edeb",
+  "previousBackendSha256": "ddbcebaab9611fe38c8ad806da342ea126d128b46a23f049904025f467e0dbf7",
+  "hostedPatchApplied": false,
+  "hostedQueueDeliveryVerified": false
+}

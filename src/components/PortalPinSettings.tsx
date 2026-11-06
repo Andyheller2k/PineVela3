@@ -13,7 +13,7 @@ export default function PortalPinSettings() {
 function OwnPortalPinSettings({ contextId }: { contextId: string }) {
   const { logout } = useAuth(), navigate = useNavigate();
   const mounted = useRef(false);
-  const [status, setStatus] = useState<{ portalPinEnabled: boolean } | null>(null);
+  const [status, setStatus] = useState<{ portalPinEnabled: boolean; residentPinLogin?:boolean } | null>(null);
   const [error, setError] = useState(''), [busy, setBusy] = useState(false), [complete, setComplete] = useState(false);
   const [currentPin, setCurrentPin] = useState(''), [newPin, setNewPin] = useState(''), [confirmPin, setConfirmPin] = useState('');
   const [reload, setReload] = useState(0);
@@ -52,7 +52,7 @@ function OwnPortalPinSettings({ contextId }: { contextId: string }) {
   const input = 'mt-1 block min-h-11 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-slate-900 dark:border-slate-600 dark:bg-slate-950 dark:text-slate-100';
   return <section className="rounded-2xl border border-blue-200 bg-white/80 p-5 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100">
     <h3 className="text-base font-semibold">Portal access PIN</h3>
-    <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">Resident and seller portals sharing a student email use separate PINs. Changing this PIN leaves the email password and the other portal unchanged.</p>
+    <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">{status?.residentPinLogin?'Sign in to your resident account with your primary email and this room PIN. Changing it leaves your primary password and other accounts unchanged.':'Resident and seller portals sharing a student email use separate PINs. Changing this PIN leaves the email password and the other portal unchanged.'}</p>
     {error && <p role="alert" className="mt-3 text-sm text-rose-700 dark:text-rose-300">{error}</p>}
     {!status ? error ? <button type="button" className="mt-3 min-h-11 rounded-xl border border-blue-300 px-4" onClick={() => setReload(value => value + 1)}>Retry loading</button>
       : <p role="status" className="mt-3">Loading portal security…</p>

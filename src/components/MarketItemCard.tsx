@@ -112,7 +112,7 @@ export const MarketItemCard: React.FC<MarketItemCardProps> = memo(
           {/* Product Thumbnail Container with Lazy Loading */}
           <div className={`market-card-thumbnail relative h-28 sm:h-36 overflow-hidden flex items-center justify-center select-none ${transparent ? "bg-transparent" : `bg-slate-100 border-b border-slate-100 ${isService ? "bg-slate-900" : ""}`} ${isService ? "p-0" : "p-1"}`}>
             <img
-              src={optimizeImageDisplayUrl(product.imageUrl, 180, 30)}
+              src={optimizeImageDisplayUrl(product.imageUrl)}
               alt={product.title}
               loading="lazy"
               decoding="async"

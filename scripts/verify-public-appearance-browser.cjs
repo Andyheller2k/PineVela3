@@ -20,12 +20,16 @@ const pause=ms=>new Promise(r=>setTimeout(r,ms));
  const googleReturnUi=process.env.PINEVELA_GOOGLE_RETURN_UI==='1';
  const managerFixUi=process.env.PINEVELA_MANAGER_FIX_UI==='1',managerTermAttempts=new Map();
  const catalogCacheUi=process.env.PINEVELA_CATALOG_CACHE_UI==='1',photoRequests=[];
+ const residentPinUi=process.env.PINEVELA_RESIDENT_PIN_UI==='1',residentPinRequests=[];
+ const nearbyUi=process.env.PINEVELA_NEARBY_UI==='1',mapStoreRequests=[];
+ const nearbyStores=nearbyUi?require('./lib/nearby-ui-fixtures.cjs'):null;
  const subscriptionUi=process.env.PINEVELA_SUBSCRIPTIONS_UI==='1',subscriptionCheckouts=[],settingsStreams=new Set();
  let subscriptionRates={default:7.25,star:127.35,pro:211.5};
  const setSubscriptionRates=(rates,notify=false)=>{subscriptionRates={...rates};if(notify)for(const response of settingsStreams)response.write('data: '+JSON.stringify({entity:'settings'})+'\n\n');};
  const curvedNavUi=process.env.PINEVELA_CURVED_NAV_UI==='1';
+ const sidebarUi=process.env.PINEVELA_SIDEBAR_UI==='1';
  const shortKeysUi=process.env.PINEVELA_SHORT_KEYS_UI==='1',managerCodeRotations=[];
- const mobileUi=process.env.PINEVELA_MOBILE_UI==='1'||androidLayoutUi||profileToastUi||curvedNavUi,appearanceSaves=[],savedAppearance=new Map();
+ const mobileUi=process.env.PINEVELA_MOBILE_UI==='1'||androidLayoutUi||profileToastUi||curvedNavUi||sidebarUi||nearbyUi,appearanceSaves=[],savedAppearance=new Map();
  const sellerMutations=[],signupResumeMutations=[];
  const products=Array.from({length:3},(_,i)=>({id:'browser-fixture-item-'+i,storeId:'browser-fixture-store',storeName:'Campus fixture store',title:['Study essentials','Campus headphones','Everyday backpack'][i],description:'Local browser-test fixture.',price:30+i*20,category:'Education',imageUrl:'/icons/pinevela-192.png',stockQuantity:3,status:'Available'}));
  const mobileServices=[0,1].map(i=>({...products[0],id:'browser-fixture-service-'+i,title:i?'Campus printing and graphic design service with a long title':'Phone screen repair',isService:true,category:'Services',serviceCategory:'Graphic Design & Printing',serviceLocationMode:'flexible',callLine:'+233241234567',location:'Ayeduase Gate, Kumasi',sellerUniversity:'KNUST',workingDays:'Mon - Sat',openingTime:'08:00',closingTime:'18:00',isAvailable:true,stockQuantity:null}));
@@ -37,6 +41,7 @@ const pause=ms=>new Promise(r=>setTimeout(r,ms));
  const resetCatalogPhotos=()=>{
   catalog=products.map((item,i)=>({...item,imageUrl:photoPath('1',i)}));
   hostels.splice(0,hostels.length,...originalHostels.map((hostel,i)=>({...hostel,imageUrl:photoPath('2',i)})));
+  orders.forEach((order,i)=>{order.productImage=photoPath('6',i);});
   photoRequests.length=0;
  };
  const notifyCatalog=()=>{for(const response of settingsStreams)response.write('data: '+JSON.stringify({entity:'hostels'})+'\n\n');};
@@ -44,19 +49,28 @@ const pause=ms=>new Promise(r=>setTimeout(r,ms));
  const photoBytes=catalogCacheUi?await fs.readFile(path.join(root,'icons/pinevela-192.png')):null;
  const server=http.createServer(async(req,res)=>{
   try{
+   if(nearbyUi)res.setHeader('Permissions-Policy','geolocation=()');
    const url=new URL(req.url,'http://127.0.0.1'),route=url.pathname,referer=new URL(req.headers.referer||'/','http://127.0.0.1');
    const role=referer.searchParams.get('visual_role'),theme=referer.searchParams.get('visual_theme')||'system';
-   const navUrgency=curvedNavUi&&role==='manager'?referer.searchParams.get('visual_nav_urgency'):null;
+   const navUrgency=(curvedNavUi||nearbyUi)&&role==='manager'?referer.searchParams.get('visual_nav_urgency'):null;
    const pendingTerms=referer.searchParams.get('visual_terms')?.startsWith('pending'),legalScene=referer.searchParams.get('scene');
-   const legal={accepted:!pendingTerms||acceptedLegalScenes.has(legalScene),document:{version:'2026-10-27',href:'/legal/terms-2026-10-27.html',privacyHref:'/privacy.html'}};
+   const legal={accepted:!pendingTerms||acceptedLegalScenes.has(legalScene),document:{version:'2026-11-05',href:'/legal/terms-2026-11-05.html',privacyHref:'/privacy.html'}};
    const user=role&&['user','student','manager','staff','admin','merchant','field_officer'].includes(role)?{id:'theme-fixture-'+role,role,name:'Visual fixture '+role,email:'theme-fixture-'+role+'@pinevela.invalid',isVerified:true,hasCustomerServiceAccess:true,hasApprovedHostel:navUrgency==='primary',legal,...(profileAvatars.has(legalScene)?{avatar:profileAvatars.get(legalScene)}:{})}:null;
    if(route.startsWith('/api/')){
     apiRequests.push(route);apiRequestsByScene.push({path:route,scene:legalScene});res.setHeader('Content-Type','application/json');res.setHeader('Cache-Control','no-store');
+    if(residentPinUi&&route==='/api/auth/captcha')return res.end(JSON.stringify({enabled:false}));
+    if(residentPinUi&&req.method==='POST'&&['/api/room-keys/verify','/api/auth/resident-activate','/api/auth/login','/api/auth/resident-pin/reset'].includes(route)){
+     let raw='';for await(const chunk of req){raw+=chunk;if(raw.length>1024)throw Error('Oversized resident visual fixture');}
+     const body=JSON.parse(raw);residentPinRequests.push({route,body});
+     if(route==='/api/room-keys/verify')return res.end(JSON.stringify({roomKey:body.roomKey,hostelName:'Visual fixture residence',blockName:'Pine',roomNumber:'101'}));
+     if(route.endsWith('/resident-pin/reset'))return res.end(JSON.stringify({success:true}));
+     res.writeHead(route.endsWith('/login')?401:400);return res.end(JSON.stringify({error:'Visual fixture submission received.'}));
+    }
     if((subscriptionUi||catalogCacheUi)&&route==='/api/sync/events'){res.setHeader('Content-Type','text/event-stream');res.write('data: connected\n\n');settingsStreams.add(res);req.on('close',()=>settingsStreams.delete(res));return;}
     if(catalogCacheUi&&route.startsWith('/api/media/')){
      const missing=route===photoPath('9'),etag='"pv-'+route.split('/').pop()+'-'+ 'a'.repeat(64)+'"';
      const status=missing?404:req.headers['if-none-match']===etag?304:200;
-     photoRequests.push({path:route,status,bytes:status===200?photoBytes.length:0,conditional:!!req.headers['if-none-match']});
+     photoRequests.push({path:route,status,bytes:status===200?photoBytes.length:0,conditional:!!req.headers['if-none-match'],variant:url.searchParams.get('size')});
      if(missing){res.writeHead(404);return res.end('{}');}
      res.setHeader('Content-Type','image/png');res.setHeader('Cache-Control','private, no-cache, max-age=0, must-revalidate');res.setHeader('ETag',etag);res.setHeader('X-PineVela-Public-Photo','1');
      res.writeHead(status);return res.end(status===200?photoBytes:undefined);
@@ -69,10 +83,10 @@ const pause=ms=>new Promise(r=>setTimeout(r,ms));
      if(!allowed){res.writeHead(403);return res.end(JSON.stringify({error:req.headers['x-pinevela-manager-key']?'Invalid manager secret key. Check and try again.':'Enter your current manager secret key.',managerKeyRequired:true}));}
      return res.end(JSON.stringify({key:'246802'}));
     }
-    if(curvedNavUi&&user?.role==='manager'&&req.method==='POST'&&route==='/api/manager/welcome/ensure')return res.end(JSON.stringify({show:false}));
+    if((curvedNavUi||nearbyUi)&&user?.role==='manager'&&req.method==='POST'&&route==='/api/manager/welcome/ensure')return res.end(JSON.stringify({show:false}));
     if(req.method==='POST'&&route==='/api/legal/accept'&&pendingTerms){
      let raw='';for await(const chunk of req){raw+=chunk;if(raw.length>2048)throw Error('Unexpected fixture input size');}
-     const body=JSON.parse(raw);assert.deepEqual(body,{termsAcceptance:{accepted:true,version:'2026-10-27'}});legalAcceptances.push({scene:legalScene,body});
+     const body=JSON.parse(raw);assert.deepEqual(body,{termsAcceptance:{accepted:true,version:'2026-11-05'}});legalAcceptances.push({scene:legalScene,body});
      if(managerFixUi&&referer.searchParams.get('visual_terms')==='pending-manager-key'){res.writeHead(403);return res.end(JSON.stringify({error:'Enter your current manager secret key to authorize this action.',managerKeyRequired:true}));}
      if(managerFixUi&&referer.searchParams.get('visual_terms')==='pending-hang')return;
      if(managerFixUi&&referer.searchParams.get('visual_terms')==='pending-retry'){
@@ -111,15 +125,21 @@ const pause=ms=>new Promise(r=>setTimeout(r,ms));
      profileAvatars.set(legalScene,body.avatar);return res.end(JSON.stringify({success:true,user:{...user,avatar:body.avatar}}));
     }
     if(req.method!=='GET'){mutations.push(route);res.writeHead(405);return res.end('{}');}
+    if(nearbyUi&&route==='/api/digital-market/stores'){const q=(url.searchParams.get('q')||'').toLowerCase();mapStoreRequests.push({route,q});return res.end(JSON.stringify({stores:nearbyStores.stores.filter(s=>!q||[s.storeName,s.location,s.category,s.campus,...nearbyStores.products.filter(p=>p.storeId===s.id).map(p=>p.title)].join(' ').toLowerCase().includes(q)),hasMore:false}));}
+    if(nearbyUi&&/^\/api\/digital-market\/stores\/[^/]+\/map-location$/.test(route)){const id=route.split('/')[4];mapStoreRequests.push({route,id});if(id===nearbyStores.unpinned){res.writeHead(503);return res.end(JSON.stringify({error:'Local fixture location provider unavailable'}));}return res.end(JSON.stringify({point:{lat:6.6845316,lng:-1.5800191},precision:'approximate',label:'Bomso, Ghana'}));}
     if(googleReturnUi&&route==='/api/auth/mobile/status')return res.end(JSON.stringify({active:true,provider:'google',mode:'login',fresh:referer.searchParams.get('visual_return')!=='stale'}));
     if(route==='/api/auth/me'){if(user)return res.end(JSON.stringify(user));res.writeHead(401);return res.end('{}');}
     if(route==='/api/legal/status'&&user)return res.end(JSON.stringify(legal));
     if(route==='/api/settings')return res.end(JSON.stringify({maintenanceMode:false,contactDetails:{linkedinUrl:'',whatsappNumber:'',facebookUrl:'',tiktokUrl:''},registrationFee:0,semesterFee:0,commission:0,subscriptionPrices:subscriptionUi?(referer.searchParams.get('visual_prices')==='missing'?{default:7.25,pro:211.5}:subscriptionRates):{default:0,star:0,pro:0},announcement:''}));
-    if(route==='/api/digital-market/products')return res.end(JSON.stringify(catalog));
+    if(route==='/api/digital-market/products')return res.end(JSON.stringify(nearbyUi?nearbyStores.products:catalog));
     if(route==='/api/hostels')return res.end(JSON.stringify(hostels));
     if(route==='/api/digital-market/stores/browser-fixture-store')return res.end(JSON.stringify({store:{id:'browser-fixture-store',storeName:'Campus fixture store',description:'Read-only visual fixture for the theme audit.',category:'Education',location:'Campus',ratingCount:0},products}));
     if(user){
      const json=data=>res.end(JSON.stringify(data));
+     const residentState=residentPinUi?referer.searchParams.get('visual_setup'):null;
+     const fixtureRoom={id:'visual-active-room',roomKey:'PV101X',hostelName:'Visual fixture residence',blockName:'Pine',roomNumber:'101',assignedStudentName:'Visual resident',assignedStudentPhone:'+233241234567',managerName:'Visual manager'};
+     const activeRooms=residentState==='resident-active'?[fixtureRoom]:[];
+     const residentAccount=residentState&&residentState!=='resident-none'?{id:'visual-resident-context',active:residentState==='resident-active',residentPinLogin:true,status:residentState==='resident-active'?'active':residentState==='resident-closed'?'closed':'pending',email:user.email,name:'Visual resident',...fixtureRoom}:null;
      if(sellerWorkflows&&route==='/api/locations/suggestions')return json({places:[{label:'Ayeduase Gate, Kumasi, Ghana',latitude:6.6702,longitude:-1.5643},{label:'Ayeduase Road, Kumasi, Ghana',latitude:6.671,longitude:-1.565}]});
      if(sellerWorkflows&&route==='/api/locations/reverse')return json({places:[{label:'Map-selected campus location, Kumasi, Ghana',latitude:6.67,longitude:-1.56}]});
      if((sellerWorkflows||mobileUi)&&route==='/api/digital-market/inventory')return json(mobileUi?catalog:[...products,{...products[0],id:'browser-fixture-service',title:'Campus printing service',category:'Services',isService:true,serviceCategory:'Graphic Design & Printing',serviceLocationMode:'flexible',callLine:'+233241234567',isAvailable:true,stockQuantity:null}]);
@@ -128,11 +148,12 @@ const pause=ms=>new Promise(r=>setTimeout(r,ms));
      if(route==='/api/auth/account-access')return json({restrictions:[]});
      if(route==='/api/auth/maintenance-notice')return json({serverTime:new Date().toISOString(),notice:null});
      if(mobileUi&&route==='/api/companion')return json({preferences:{companion:'nova',responseStyle:'balanced',interests:'',reminders:true,aiEnabled:false},firstName:'Fixture',turns:[],available:true,provider:'cloudflare',providerName:'Cloudflare Workers AI'});
-     if(route==='/api/student/my-profile')return json({user,rooms:[]});
-     if(route==='/api/student/my-rooms')return json({rooms:[]});
-     if(route==='/api/manager/my-hostel')return json({hostel:navUrgency?{id:'browser-fixture-residence-0',name:'Navigation fixture residence',location:'Local fixture',isApproved:navUrgency==='primary',blocksList:[]}:null});
+     if(route==='/api/student/my-profile')return json({user,rooms:activeRooms,roomKeyDetails:activeRooms[0]||null});
+     if(route==='/api/student/my-rooms')return json({rooms:activeRooms});
+     if(route==='/api/manager/my-hostel')return json({hostel:navUrgency?{id:'browser-fixture-residence-0',name:'Navigation fixture residence',location:'Local fixture',isApproved:navUrgency==='primary',blocksList:nearbyUi?nearbyStores.blocks:[]}:null});
+     if(nearbyUi&&route==='/api/room-keys')return json(nearbyStores.keys);
      if(navUrgency&&route==='/api/issue-reports')return json([{id:'fixture-closed-maintenance-log',title:'Closed request with a new log',hostelId:'browser-fixture-residence-0',hostelName:'Navigation fixture residence',status:'Closed',reportedAt:new Date().toISOString(),category:'General',urgency:'Normal'}]);
-     if(route==='/api/users/my-registered-accounts')return json({managerAccount:null,residentAccount:null,merchantAccount:null});
+     if(route==='/api/users/my-registered-accounts')return json({managerAccount:null,residentAccount,merchantAccount:null});
      if(route==='/api/users/manager-onboarding')return json({registrations:{managerAccount:null},policy:{googleManagerEnrollment:false},enrollments:[],access:{restriction:null,serverTime:new Date().toISOString()}});
      if(route==='/api/digital-market/status'&&referer.searchParams.has('visual_registration'))return json({application:{id:'theme-fixture-pending',status:'pending',accountStatus:referer.searchParams.get('visual_registration')==='restricted'?'restricted':'active',storeName:'Visual fixture store'},store:null});
      if(route==='/api/digital-market/status')return json({application:user.role==='merchant'?{id:'theme-fixture-application',status:'approved',storeName:'Visual fixture store'}:null,store:user.role==='merchant'?{id:'browser-fixture-store',storeName:'Visual fixture store',category:'Education',location:'Campus',description:'Read-only theme fixture.',subscriptionPlan:subscriptionUi?(['star','pro'].includes(referer.searchParams.get('visual_plan'))?referer.searchParams.get('visual_plan'):referer.searchParams.get('visual_plan')==='expired'?'pro':'default'):'default',...(subscriptionUi?{subscriptionStatus:'active',subscriptionExpiresAt:new Date(Date.now()+(referer.searchParams.get('visual_plan')==='expired'?-86400000:86400000)).toISOString()}:{}),ratingCount:0,setupCompleted:referer.searchParams.get('visual_setup')!=='pending',registrationFeePaid:true,username:'campus-fixture',phone:'+233241234567',phoneCountry:'GH',deliveryMode:'Campus Meetup'}:null});
@@ -174,7 +195,7 @@ const pause=ms=>new Promise(r=>setTimeout(r,ms));
    seedScript=(await command('Page.addScriptToEvaluateOnNewDocument',{source:`if(document.documentURI.startsWith(${JSON.stringify(origin+'/')})){${androidLayout?.bridgeSource||''}${googleReturnSeed}if(sessionStorage.getItem('public-theme-case')!==${JSON.stringify(seed)}){localStorage.clear();${preference?`localStorage.setItem('pinevela:appearance',${JSON.stringify(preference)});`:''}sessionStorage.setItem('public-theme-case',${JSON.stringify(seed)})}}`})).identifier;
    await os(systemDark);const url=new URL(route,origin);url.searchParams.set('scene',seed);if(googleReturnUi)url.searchParams.set('visual_return',visual.mobileReturn||'none');if(visual.signupResume)url.searchParams.set('visual_signup_resume',visual.signupResume==='cooldown'?'cooldown':'1');if(visual.role){url.searchParams.set('visual_role',visual.role);url.searchParams.set('visual_theme',preference||'system');if(visual.terms)url.searchParams.set('visual_terms',visual.terms);if(visual.setup)url.searchParams.set('visual_setup',visual.setup);if(visual.registration)url.searchParams.set('visual_registration',visual.registration);if(visual.plan)url.searchParams.set('visual_plan',visual.plan);if(visual.prices)url.searchParams.set('visual_prices',visual.prices);}await command('Page.navigate',{url:url.href});
    await until(`location.search===${JSON.stringify(url.search)}&&document.readyState==='complete'`,'New document');
-   const selector=visual.selector||(route.includes('privacy.html')||route.includes('terms.html')?'.document':route.includes('/faq')?'input[type=search]':route.includes('/help')?'textarea':route.includes('/why-us')?'.why-us-pair':route.includes('/pinemarket/stores/')?'[data-market-storefront]':route.includes('/pinemarket')?'[data-listing-id]':route.includes('/pineresidence')?'[data-public-residence] h1':route.includes('/support-invitation')?'.support-surface h1':'.landing-peak-hero');
+   const selector=visual.selector||(route.includes('privacy.html')||route.includes('terms.html')||route.startsWith('/legal/terms-')?'.document':route.includes('/faq')?'input[type=search]':route.includes('/help')?'textarea':route.includes('/why-us')?'.why-us-pair':route.includes('/pinemarket/stores/')?'[data-market-storefront]':route.includes('/pinemarket')?'[data-listing-id]':route.includes('/pineresidence')?'[data-public-residence] h1':route.includes('/support-invitation')?'.support-surface h1':'.landing-peak-hero');
    await until(`!!document.querySelector(${JSON.stringify(selector)})`,'Public page mounts');await pause(180);
   };
   const capture=async(name,clip)=>{const shot=await command('Page.captureScreenshot',{format:'png',captureBeyondViewport:!!clip,...(clip?{clip}:{})});const file=path.join(output,name+'.png');await fs.writeFile(file,Buffer.from(shot.data,'base64'));screenshots.push(file);};
@@ -207,33 +228,12 @@ const pause=ms=>new Promise(r=>setTimeout(r,ms));
    await until("!document.querySelector('dialog[open]')",'Welcome closes without an API write');await evaluate('document.fonts.ready.then(()=>true)');await pause(300);
   };
   const navigationClearance=[];
-  for(const width of [1024,1280,1440,1710])for(const theme of ['light','dark'])await test(`${width}px ${theme} desktop market top navigation clearance`,async()=>{
-   await primaryMarket(width,theme);const sidebar=await marketGeometry();
-   await evaluate("document.querySelector('.user-dashboard-sidebar button[title=\"Hide sidebar\"]').click()");
-   await until("document.querySelector('.user-dashboard')?.dataset.navigationLayout==='top'&&!!document.querySelector('.user-top-navigation')",'Top navigation');
-   const market=await marketGeometry(),navigation=await evaluate("(()=>{const r=document.querySelector('.user-top-navigation').getBoundingClientRect();return{top:r.top,bottom:r.bottom}})()");
-   await capture(`${width}-${theme}-market-top-navigation`);
-   assert(market.switcher.y>=navigation.bottom+12,`Market controls must be below navigation: ${JSON.stringify({navigation,market:market.switcher})}`);
-   assert.equal(market.overflow,false);assert(market.firstCard.bottom<900,'First product row remains visible');
-   assert(await evaluate("[...document.querySelectorAll('.user-catalog-switcher button')].every(b=>{const r=b.getBoundingClientRect();return document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)?.closest('button')===b})"),'Both catalog buttons are directly clickable');
-   await evaluate("document.querySelectorAll('.user-catalog-switcher button')[1].click()");await until("!!document.querySelector('[data-home-catalog=hostels]')",'Residences catalog');
-   const residences=await marketGeometry();assert.equal(market.switcher.y,residences.switcher.y,'Market and Residences use the same top-nav clearance');
-   await evaluate("document.querySelectorAll('.user-catalog-switcher button')[0].click()");await until("!!document.querySelector('#home-market-section [data-listing-id]')",'Market catalog');
-   assert.equal((await marketGeometry()).switcher.y,market.switcher.y);
-   await evaluate("document.querySelector('.user-top-navigation button[title=\"Show sidebar\"]').click()");await until("document.querySelector('.user-dashboard')?.dataset.navigationLayout==='sidebar'",'Sidebar restored');
-   const restored=await marketGeometry();assert.equal(restored.switcher.y,sidebar.switcher.y);assert.equal(restored.firstCard.y,sidebar.firstCard.y,'Sidebar catalog density is unchanged');
-   await evaluate("document.querySelector('.user-dashboard-sidebar button[title=\"Hide sidebar\"]').click()");
-   await until("document.querySelector('.user-dashboard')?.dataset.navigationLayout==='top'&&localStorage.getItem('pinevela_navigation_layout')==='top'",'Top layout saved');await command('Page.reload');
-   await until("document.querySelector('.user-dashboard')?.dataset.navigationLayout==='top'&&!!document.querySelector('#home-market-section [data-listing-id]')",'Saved top layout after reload');
-   assert.equal((await marketGeometry()).switcher.y,market.switcher.y);
-   navigationClearance.push({width,theme,navigationBottom:navigation.bottom,marketTop:market.switcher.y,residencesTop:residences.switcher.y});
-  });
   for(const width of [320,390,768,1023])for(const theme of ['light','dark'])await test(`${width}px ${theme} mobile market navigation spacing`,async()=>{
    await primaryMarket(width,theme);const before=await marketGeometry();
    await evaluate("localStorage.setItem('pinevela_navigation_layout','top')");await command('Page.reload');
-   await until("document.querySelector('.user-dashboard')?.dataset.navigationLayout==='top'&&!!document.querySelector('#home-market-section [data-listing-id]')",'Saved layout on mobile');
+   await until("document.querySelector('.user-dashboard')?.dataset.navigationLayout==='compact'&&!!document.querySelector('#home-market-section [data-listing-id]')",'Legacy compact preference on mobile');
    const after=await marketGeometry();assert.equal(after.switcher.y,before.switcher.y);assert.equal(after.firstCard.y,before.firstCard.y);assert.equal(after.overflow,false);
-   assert(await evaluate("document.querySelector('.user-dashboard-header').getBoundingClientRect().height>0&&document.querySelector('.user-top-navigation').getBoundingClientRect().height===0"),'Mobile header remains the navigation');
+   assert(await evaluate("document.querySelector('.user-dashboard-header').getBoundingClientRect().height>0&&document.querySelector('.pv-compact-sidebar').getBoundingClientRect().height===0"),'Mobile header remains the navigation');
   });
   if(process.env.PINEVELA_MARKET_BASELINE==='1'){
    const baseline={};
@@ -303,13 +303,13 @@ const pause=ms=>new Promise(r=>setTimeout(r,ms));
    for(const width of [320,390,1440])for(const theme of ['light','dark'])for(const reduced of [false,true])await test(`${width}px ${theme} login/signup motion ${reduced?'reduced':'normal'}`,async()=>{
     await viewport(width);await load('/#/login',theme,theme==='light',{selector:'.login-credentials-form'});
     await command('Emulation.setEmulatedMedia',{features:[{name:'prefers-color-scheme',value:theme==='light'?'dark':'light'},{name:'prefers-reduced-motion',value:reduced?'reduce':'no-preference'}]});await evaluate('document.fonts.ready.then(()=>true)');await pause(420);
-    const reads=apiRequests.length;await typeInput('Username or Email Address','visual-fixture@pinevela.invalid');
+    const reads=apiRequests.length;await typeInput('Email address','visual-fixture@pinevela.invalid');
     const signup=await switchAuth('register');assert.equal(signup.mode,'register');assert.equal(signup.forms,1);
     assert.equal(signup.name,reduced?'none':'pv-login-signup-in');if(!reduced){assert.equal(parseFloat(signup.duration),.19);assert.equal(signup.iterations,'1');assert(signup.frames.some(f=>f.x===6),'Signup enters with a small right-side offset: '+JSON.stringify(signup));}
     await until("getComputedStyle(document.querySelector('.login-signup-form')).opacity==='1'&&!document.querySelector('.login-signup-form').getAnimations().some(a=>a.playState==='running')",'Signup transition finishes');
     assert(await evaluate('document.documentElement.scrollWidth<=innerWidth'),'Animated fields stay inside the viewport');await typeInput('Your Full Name','Local visual fixture');
     const login=await switchAuth('login');assert.equal(login.name,reduced?'none':'pv-login-signin-in');assert.equal(login.mode,'login');assert.equal(login.forms,1);if(!reduced)assert(login.frames.some(f=>f.x===-6),'Login enters from the opposite side');
-    await until("getComputedStyle(document.querySelector('.login-credentials-form')).opacity==='1'&&!document.querySelector('.login-credentials-form').getAnimations().some(a=>a.playState==='running')",'Login transition finishes');assert.equal(await evaluate("document.querySelector('input[aria-label=\"Username or Email Address\"]').value"),'visual-fixture@pinevela.invalid','Login draft survives form switching');
+    await until("getComputedStyle(document.querySelector('.login-credentials-form')).opacity==='1'&&!document.querySelector('.login-credentials-form').getAnimations().some(a=>a.playState==='running')",'Login transition finishes');assert.equal(await evaluate("document.querySelector('input[aria-label=\"Email address\"]').value"),'visual-fixture@pinevela.invalid','Login draft survives form switching');
     await switchAuth('register');await until("!!document.querySelector('input[aria-label=\"Your Full Name\"]')",'Signup returns');assert.equal(await evaluate("document.querySelector('input[aria-label=\"Your Full Name\"]').value"),'Local visual fixture','Signup draft survives form switching');
     await evaluate("(()=>{const b=document.querySelectorAll('.login-mode-toggle button');b[0].click();b[1].click();b[0].click()})()");await until("document.querySelector('.login-auth-card').dataset.activeTab==='login'",'Rapid switches settle');assert.equal(await evaluate("document.querySelectorAll('.login-auth-card form').length"),1,'Rapid switches leave one active form');
     assert.equal(apiRequests.length,reads,'Changing auth tabs makes no API or CAPTCHA requests');
@@ -318,7 +318,7 @@ const pause=ms=>new Promise(r=>setTimeout(r,ms));
     await pause(220);await capture(`${width}-${theme}-auth-${reduced?'reduced':'animated'}`);
    });
   }
-  const publicRoutes=[['landing','/#/'],['market','/#/pinemarket'],['residence','/#/pineresidence'],['store','/#/pinemarket/stores/browser-fixture-store'],['why-us','/#/why-us'],['support-invitation','/#/support-invitation'],['faq','/#/faq?from=/'],['help','/#/help?from=/'],['privacy','/privacy.html'],['terms','/terms.html']];
+  const publicRoutes=[['landing','/#/'],['market','/#/pinemarket'],['residence','/#/pineresidence'],['store','/#/pinemarket/stores/browser-fixture-store'],['why-us','/#/why-us'],['support-invitation','/#/support-invitation'],['faq','/#/faq?from=/'],['help','/#/help?from=/'],['privacy','/privacy.html'],['terms','/terms.html'],['versioned-terms','/legal/terms-2026-11-05.html']];
   for(const width of [320,390,1440])for(const theme of ['light','dark'])for(const [name,route]of publicRoutes){
    await test(`${width}px ${theme} ${name}`,async()=>{
     await viewport(width);await load(route,theme,theme==='light');
@@ -328,10 +328,14 @@ const pause=ms=>new Promise(r=>setTimeout(r,ms));
     assert.equal(state.chrome,theme==='light'?'#ffffff':'#001d3d');assert.equal(state.invalidImages,0);
     assert.equal(await evaluate("new URL(document.querySelector('link[rel=icon]').href).pathname"),'/icons/pinevela-192.png','Homepage and policies advertise the same PNG favicon');
     assert(contrast(color(state.ink),color(state.body))>=4.5,'Heading contrast');assert(contrast(color(state.muted),color(state.body))>=4.5,'Body/supporting contrast');
-    if(name==='privacy'||name==='terms'){
+    if(name==='privacy'||name==='terms'||name==='versioned-terms'){
      const logo=await evaluate("(async()=>{const i=document.querySelector('.brand img');await i.decode();const c=document.createElement('canvas');c.width=64;c.height=64;const x=c.getContext('2d');x.drawImage(i,0,0,64,64);return{path:new URL(i.src).pathname,corners:[[0,0],[63,0],[0,63],[63,63]].map(([a,b])=>x.getImageData(a,b,1,1).data[3])}})()");
      assert.equal(logo.path,'/store-covers/pinevela-logo.svg','Policies use the same mascot as the app');assert(logo.corners.every(alpha=>alpha===0),'The legal-page mascot has transparent corners');
      assert(await evaluate("[...document.querySelectorAll('header a,footer a')].filter(a=>a.textContent==='Contact support').every(a=>a.getAttribute('href')==='/#/help')"),'Policy Contact support links stay inside PineVela');
+     assert(await evaluate("document.querySelector('.document').textContent.includes('PineVela Ghana')&&!!document.querySelector('a[href=\"mailto:pinevela@pinevela.app\"]')&&!/Oppong Manu Andy|and(?:y)?heller2k@gmail\\.com/i.test(document.body.textContent)"),'Current policies use the updated operator/contact');
+    }
+    if(name==='help'){
+     assert(await evaluate("!!document.querySelector('a[href=\"mailto:pinevela@pinevela.app\"]')&&!document.querySelector('a[href*=\"heller2k\"]')"),'Help email uses the public support mailbox');
     }
     if(name==='landing'){
      assert.equal(await evaluate("document.body.textContent.includes('Your campus, connected')"),false,'The removed hero label is absent');
@@ -398,7 +402,7 @@ const pause=ms=>new Promise(r=>setTimeout(r,ms));
    await viewport(width);await load('/#/user/dashboard',theme,theme==='light',{role:'user',terms:'pending',selector:'.terms-review-card'});
    await until("!!document.querySelector('.terms-review-card input[type=checkbox]')",'Published Terms choice');
    const state=await evaluate(`(()=>{const c=document.querySelector('.terms-review-card'),input=c.querySelector('input[type=checkbox]'),button=c.querySelector('button[type=submit]'),label=c.querySelector('label'),s=getComputedStyle(c);return{theme:document.documentElement.dataset.theme,checked:input.checked,disabled:button.disabled,overflow:document.documentElement.scrollWidth>innerWidth,ink:s.color,bg:s.backgroundColor,labelFor:label.htmlFor,inputId:input.id,terms:c.querySelector('.terms-acceptance-control a').getAttribute('href')}})()`);
-   assert.equal(state.theme,theme);assert.equal(state.checked,false);assert.equal(state.disabled,true);assert.equal(state.overflow,false);assert.equal(state.labelFor,state.inputId);assert.equal(state.terms,'/legal/terms-2026-10-27.html');assert(contrast(color(state.ink),color(state.bg))>=4.5);
+   assert.equal(state.theme,theme);assert.equal(state.checked,false);assert.equal(state.disabled,true);assert.equal(state.overflow,false);assert.equal(state.labelFor,state.inputId);assert.equal(state.terms,'/legal/terms-2026-11-05.html');assert(contrast(color(state.ink),color(state.bg))>=4.5);
    const currentScene=await evaluate("new URLSearchParams(location.search).get('scene')");
    assert(apiRequestsByScene.filter(r=>r.scene===currentScene).every(r=>['/api/auth/me','/api/settings','/api/auth/maintenance-notice','/api/auth/appearance','/api/legal/status'].includes(r.path)),'Private page and notification providers wait for agreement');
    await evaluate("document.querySelector('.terms-review-card button[type=submit]').click()");await pause(120);assert.equal(legalAcceptances.length,accepts,'Unchecked choice cannot submit');
@@ -517,10 +521,13 @@ const pause=ms=>new Promise(r=>setTimeout(r,ms));
    {name:'store onboarding',route:'/#/digital-market/onboard',role:'merchant',setup:'pending',selector:'section[aria-label="Store activation progress"]'},
   ];
   if(mobileUi&&!curvedNavUi)await require('./lib/mobile-ui-browser-checks.cjs')({viewport,load,evaluate,until,test,capture,command,os,pause,productRoutes,output});
+  if(sidebarUi)await require('./lib/compact-sidebar-browser-checks.cjs')({viewport,load,evaluate,until,test,capture,command,pause,output,productRoutes});
   if(curvedNavUi)await require('./lib/mobile-navigation-browser-checks.cjs')({viewport,load,evaluate,until,test,capture,command,pause,output,productRoutes,fileChooserEvents});
   if(shortKeysUi)await require('./lib/short-keys-browser-checks.cjs')({viewport,load,evaluate,until,test,capture,pause,managerCodeRotations});
   if(subscriptionUi)await require('./lib/seller-subscription-browser-checks.cjs')({viewport,load,evaluate,until,test,capture,command,pause,output,setSubscriptionRates,subscriptionCheckouts,settingsStreams});
   if(catalogCacheUi)await require('./lib/catalog-image-cache-browser-checks.cjs')({viewport,load,evaluate,until,test,capture,command,pause,output,photoRequests,photoPath,resetCatalogPhotos,notifyCatalog,settingsStreams,updateCatalog:work=>work(catalog,hostels)});
+  if(residentPinUi)await require('./lib/resident-pin-browser-checks.cjs')({viewport,load,evaluate,until,test,capture,pause,output,residentPinRequests});
+  if(nearbyUi)await require('./lib/nearby-shops-browser-checks.cjs')({viewport,load,evaluate,until,test,capture,pause,output,mapStoreRequests});
   if(androidLayout)await androidLayout.run({viewport,load,evaluate,until,test,capture,command,pause,output,productRoutes});
   if(profileToastUi)await require('./lib/profile-toast-browser-checks.cjs')({viewport,load,evaluate,until,test,capture,pause,output});
   if(googleReturnUi)await require('./lib/google-return-browser-checks.cjs')({viewport,load,evaluate,until,test,capture,pause,output,apiRequests});

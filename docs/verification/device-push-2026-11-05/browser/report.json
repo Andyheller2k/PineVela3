@@ -1,0 +1,153 @@
+{
+  "passed": true,
+  "checks": 49,
+  "checkLabels": [
+    "320px light has no horizontal overflow",
+    "320px light has accessible action size",
+    "320px light primary text contrast passes",
+    "320px light uses the correct primary theme color",
+    "320px light selectors use the correct theme color",
+    "Discovery is optional and permission waits for a button press",
+    "320px dark has no horizontal overflow",
+    "320px dark has accessible action size",
+    "320px dark primary text contrast passes",
+    "320px dark uses the correct primary theme color",
+    "320px dark selectors use the correct theme color",
+    "Discovery is optional and permission waits for a button press",
+    "390px light has no horizontal overflow",
+    "390px light has accessible action size",
+    "390px light primary text contrast passes",
+    "390px light uses the correct primary theme color",
+    "390px light selectors use the correct theme color",
+    "Discovery is optional and permission waits for a button press",
+    "390px dark has no horizontal overflow",
+    "390px dark has accessible action size",
+    "390px dark primary text contrast passes",
+    "390px dark uses the correct primary theme color",
+    "390px dark selectors use the correct theme color",
+    "Discovery is optional and permission waits for a button press",
+    "1440px light has no horizontal overflow",
+    "1440px light has accessible action size",
+    "1440px light primary text contrast passes",
+    "1440px light uses the correct primary theme color",
+    "1440px light selectors use the correct theme color",
+    "Discovery is optional and permission waits for a button press",
+    "1440px dark has no horizontal overflow",
+    "1440px dark has accessible action size",
+    "1440px dark primary text contrast passes",
+    "1440px dark uses the correct primary theme color",
+    "1440px dark selectors use the correct theme color",
+    "Discovery is optional and permission waits for a button press",
+    "Enable saves only the chosen current-account preferences",
+    "Explicit enable prompts once and reuses the browser subscription",
+    "Registration is bound to the projected current account",
+    "Test submission includes the device capability",
+    "Disable revokes the installation and clears local enabled state",
+    "An independent login requires an explicit choice before joining the device",
+    "Keeping other verified accounts is an explicit submitted preference",
+    "Denied permission does not prompt repeatedly",
+    "Correct account loads the private notification",
+    "Wrong account UI never fetches private notification content",
+    "Market discovery opens the requested item details",
+    "Residence discovery opens the requested property details",
+    "No uncaught browser exceptions"
+  ],
+  "scenes": [
+    {
+      "width": 320,
+      "theme": "light",
+      "overflow": false,
+      "background": "rgb(0, 53, 102)",
+      "color": "rgb(255, 255, 255)",
+      "buttonHeight": 44,
+      "choices": [
+        true,
+        false,
+        false
+      ],
+      "checkboxColor": "rgb(0, 53, 102)",
+      "promptCount": 0
+    },
+    {
+      "width": 320,
+      "theme": "dark",
+      "overflow": false,
+      "background": "rgb(255, 215, 0)",
+      "color": "rgb(0, 29, 61)",
+      "buttonHeight": 44,
+      "choices": [
+        true,
+        false,
+        false
+      ],
+      "checkboxColor": "rgb(255, 215, 0)",
+      "promptCount": 0
+    },
+    {
+      "width": 390,
+      "theme": "light",
+      "overflow": false,
+      "background": "rgb(0, 53, 102)",
+      "color": "rgb(255, 255, 255)",
+      "buttonHeight": 44,
+      "choices": [
+        true,
+        false,
+        false
+      ],
+      "checkboxColor": "rgb(0, 53, 102)",
+      "promptCount": 0
+    },
+    {
+      "width": 390,
+      "theme": "dark",
+      "overflow": false,
+      "background": "rgb(255, 215, 0)",
+      "color": "rgb(0, 29, 61)",
+      "buttonHeight": 44,
+      "choices": [
+        true,
+        false,
+        false
+      ],
+      "checkboxColor": "rgb(255, 215, 0)",
+      "promptCount": 0
+    },
+    {
+      "width": 1440,
+      "theme": "light",
+      "overflow": false,
+      "background": "rgb(0, 53, 102)",
+      "color": "rgb(255, 255, 255)",
+      "buttonHeight": 44,
+      "choices": [
+        true,
+        false,
+        false
+      ],
+      "checkboxColor": "rgb(0, 53, 102)",
+      "promptCount": 0
+    },
+    {
+      "width": 1440,
+      "theme": "dark",
+      "overflow": false,
+      "background": "rgb(255, 215, 0)",
+      "color": "rgb(0, 29, 61)",
+      "buttonHeight": 44,
+      "choices": [
+        true,
+        false,
+        false
+      ],
+      "checkboxColor": "rgb(255, 215, 0)",
+      "promptCount": 0
+    }
+  ],
+  "actualBuiltReact": true,
+  "actualServiceWorkerRegistration": true,
+  "browserPermissionAndSubscription": "explicit fixtures",
+  "syntheticApiReplies": true,
+  "remoteDeliveryVerified": false,
+  "productionWrites": 0
+}

@@ -189,7 +189,7 @@ export default function PageUnifiedLogin({ nativePreview = false }: { nativePrev
     if (credentialActionPending.current) return;
     setLoginError(null);
     if (!usernameOrEmail || !password) {
-      setLoginError('Please provide both username/email and password.');
+      setLoginError('Enter your email and password.');
       return;
     }
 
@@ -687,14 +687,13 @@ export default function PageUnifiedLogin({ nativePreview = false }: { nativePrev
             ) : activeTab === 'login' ? (
               /* System Login Form */
               <form key="login" onSubmit={handleLoginSubmit} className="login-motion-form login-credentials-form space-y-4 text-left py-1">
-                
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-700 block">Username or Email Address</label>
+                  <label className="text-xs font-bold text-slate-700 block">Email address</label>
                   <div className="relative">
                     <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400 pointer-events-none">
                       <Mail size={17} />
                     </span>
-                    <input aria-label="Username or Email Address"
+                    <input aria-label="Email address"
                       type="text"
                       required
                       placeholder="e.g. student@pinevela.com"
@@ -728,6 +727,7 @@ export default function PageUnifiedLogin({ nativePreview = false }: { nativePrev
                     </span>
                     <input aria-label="Password"
                       type={showPassword ? 'text' : 'password'}
+                      maxLength={256}
                       required
                       placeholder="••••••••"
                       value={password}
@@ -814,7 +814,7 @@ export default function PageUnifiedLogin({ nativePreview = false }: { nativePrev
                       type="text"
                       required
                       autoComplete="name"
-                      placeholder={NATIVE_APP ? 'Full name' : 'e.g. Oppong Manu Andy'}
+                      placeholder={NATIVE_APP ? 'Full name' : 'e.g. Alex Mensah'}
                       value={regName}
                       onChange={(e) => setRegName(e.target.value)}
                       className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-900 bg-white text-slate-800 text-xs sm:text-sm font-semibold transition-all"

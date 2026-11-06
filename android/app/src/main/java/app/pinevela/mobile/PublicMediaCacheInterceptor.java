@@ -18,15 +18,17 @@ final class PublicMediaCacheInterceptor implements Interceptor {
         Request request = chain.request();
         Response response = chain.proceed(request);
         String path = request.url().encodedPath();
+        String query = request.url().encodedQuery();
+        String variant = query == null ? "" : query.matches("size=(card|thumb)") ? "-" + query.substring(5) + "-webp-v1" : "invalid";
         String id = path.substring(path.lastIndexOf('/') + 1).toLowerCase(java.util.Locale.ROOT);
-        boolean allowed = "GET".equals(request.method()) && request.url().query() == null
+        boolean allowed = "GET".equals(request.method()) && !"invalid".equals(variant)
             && path.matches("/api/media/[A-Fa-f0-9]{8}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{12}")
             && "1".equals(response.header("X-PineVela-Public-Photo"))
             && response.headers("Set-Cookie").isEmpty()
             && !variesOnCredentials(response)
-            && response.header("ETag", "").matches("\"pv-" + id + "-[a-f0-9]{64}\"")
+            && response.header("ETag", "").matches("\"pv-" + id + "-[a-f0-9]{64}" + variant + "\"")
             && (response.code() == 304 || (response.code() == 200
-                && "image/png".equals(response.header("Content-Type"))
+                && ("image/webp".equals(response.header("Content-Type")) || query == null && "image/png".equals(response.header("Content-Type")))
                 && response.body() != null && response.body().contentLength() <= TransportPolicy.MEDIA_LIMIT));
         if (allowed) {
             // Revalidate every new retrieval. Never replay an offline/stale photo

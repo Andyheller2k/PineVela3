@@ -1,0 +1,21 @@
+{
+  "passed": true,
+  "databaseOnly": true,
+  "webDeployed": false,
+  "apkInstalled": false,
+  "notificationsSent": 0,
+  "rlsTables": 4,
+  "browserAndScopedRoleGrantChecks": 16,
+  "project": "bivajljcdeofyxzmplxm",
+  "version": "20261105110000",
+  "migrationSha256": "fd2056f0051420e4a63f0d18384d8cc83ceea23fa4b1b467324e647218cc545f",
+  "sqlEditorSha256": "5a5571ecf8cc70bc471a389f202a87d5b6c275487c5532089df03b00117d07dc",
+  "rolledBackDryRunPassed": true,
+  "alreadyApplied": false,
+  "counts": {
+    "installations": 0,
+    "bindings": 0,
+    "jobs": 0,
+    "catalogbaseline": 2
+  }
+}

@@ -35,13 +35,15 @@ final class PineVelaWebViewClient extends BridgeWebViewClient {
         if (url.getPath() != null && url.getPath().startsWith(Bridge.CAPACITOR_HTTP_INTERCEPTOR_START)) return denied();
         if (request.isForMainFrame() && !local) return denied();
         if (local && url.getPath() != null && url.getPath().startsWith("/api/")) {
-            if (request.isForMainFrame() || !"GET".equals(request.getMethod()) || url.getQuery() != null || url.getFragment() != null || !url.getPath().matches("/api/media/[A-Fa-f0-9-]{36}")) return denied();
+            if (request.isForMainFrame() || !"GET".equals(request.getMethod()) || url.getFragment() != null) return denied();
             try {
-                NativeHttpClient.MediaResult result = NativeHttpClient.get(bridge.getContext()).media(url.getEncodedPath());
+                String path = url.getEncodedPath() + (url.getEncodedQuery() == null ? "" : "?" + url.getEncodedQuery());
+                TransportPolicy.mediaPath(path);
+                NativeHttpClient.MediaResult result = NativeHttpClient.get(bridge.getContext()).media(path);
                 Map<String, String> headers = new LinkedHashMap<>();
                 headers.put("Cache-Control", "private, no-store"); headers.put("X-Content-Type-Options", "nosniff");
                 headers.put("Content-Security-Policy", "sandbox; default-src 'none'");
-                return new WebResourceResponse("image/png", null, result.status, result.status == 200 ? "OK" : "Unavailable", headers, result.stream);
+                return new WebResourceResponse(result.contentType, null, result.status, result.status == 200 ? "OK" : "Unavailable", headers, result.stream);
             } catch (Exception ignored) { return denied(); }
         }
         return super.shouldInterceptRequest(view, request);

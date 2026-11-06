@@ -19,6 +19,8 @@ import {withPasswordLoginLimit} from './loginAttempts.js';
 import { signupPasswordError } from '../signupPassword.js';
 import { PLATFORM_TERMS } from '../legalPolicy.js';
 import { currentTermsStatus, recordTermsAcceptance, termsAccessExempt, termsRequired, validateTermsAcceptance } from './legal.js';
+import { residentContactEmail } from './residentContact.js';
+import {probeResidentPinLogin,residentPinLoginProof} from './residentPinLogin.js';
 
 type Session = GoogleSession & { user?: any };
 export type AuthRequest = Request & { actor: VerifiedActor; accessToken: string };
@@ -277,7 +279,19 @@ export class SupabaseAuth {
     }
     // Only verified token identifiers select the binding, never body/context
     // fields. Revocation commits before success, including banned/closed roles.
-    await this.db.statement('delete from private.account_sessions where session_id=$1 and auth_user_id=$2',
+    const installation=req.get('X-PineVela-Push-Installation'),key=req.get('X-PineVela-Push-Key');
+    if(installation&&UUID.test(installation)&&key&&/^[A-Za-z0-9_-]{43}$/.test(key)){
+      // A device proof can revoke only that installation, just like the
+      // disconnect endpoint. All independently verified account bindings on
+      // this device stop together on shared-device sign out.
+      await this.db.statement(`with revoked as (
+        update private.device_push_installations i set enabled=false,updated_at=clock_timestamp()
+        where i.id=$3 and i.secret_sha256=$4 returning i.id
+      ), bindings as (
+        update private.device_push_bindings set enabled=false where installation_id in(select id from revoked)
+      ) delete from private.account_sessions where session_id=$1 and auth_user_id=$2`,
+      [verified.identity.sessionId,verified.identity.authUserId,installation,crypto.createHash('sha256').update(key).digest('hex')]);
+    }else await this.db.statement('delete from private.account_sessions where session_id=$1 and auth_user_id=$2',
       [verified.identity.sessionId,verified.identity.authUserId]);
     clearAuthCookies(res);
     // App access is already revoked durably. Provider refresh-token cleanup has
@@ -337,6 +351,7 @@ export class SupabaseAuth {
       (await client.query(`select e.enrollment_fields->>'fullName' as full_name,e.enrollment_fields->>'phone' as phone,
         e.enrollment_fields->>'assignedZone' as assigned_zone from private.account_enrollments e
         where e.kind='officer' and e.status='completed' and e.linked_context_id=$1 and e.auth_user_id=$2`,[actor.contextId,actor.authUserId])).rows[0]) : undefined;
+    const residentEmail=actor.kind==='resident'?await this.db.authorizedSystem(actor,['resident'],client=>residentContactEmail(client,actor)):undefined;
     return this.db.readActor(actor, async client => {
       const { rows: [person] } = await client.query('select display_name, email, phone, avatar_path,private.current_account_access() as account_access from public.profiles where id = $1', [actor.authUserId]);
       if (!person) throw new ApiError(401, 'Your profile is no longer available.');
@@ -351,7 +366,8 @@ export class SupabaseAuth {
         from public.allocations a join public.rooms r on r.id = a.room_id join public.floors f on f.id = r.floor_id
         join public.blocks b on b.id = f.block_id join public.residences h on h.id = b.residence_id
         where a.resident_context_id = $1 and a.ended_at is null`,[actor.contextId])).rows[0] : null;
-      return { id: actor.contextId, profileId: actor.authUserId, name: officer?.full_name ?? person.display_name, email: person.email,
+      return { id: actor.contextId, profileId: actor.authUserId, name: officer?.full_name ?? person.display_name, email: residentEmail ?? person.email,
+        ...(residentEmail?{residentPinLogin:true}:{}),
         phone: officer?.phone ?? person.phone,accountAccess:person.account_access, photo: person.avatar_path, avatar: person.avatar_path,
         photoUrl:person.avatar_path,avatarUrl:person.avatar_path,profilePicture:person.avatar_path,
         role: roleForKind[actor.kind], token: '', isVerified: true, legal,...seller,
@@ -372,9 +388,25 @@ export function installSupabaseAuth(app: Express, auth: SupabaseAuth) {
     if (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || typeof req.body?.password !== 'string' || !req.body.password || req.body.password.length > 256) throw new ApiError(400, 'Enter your email address and password.');
     const desired = kind || req.body?.accountKind;
     if (desired && (typeof desired !== 'string' || !Object.hasOwn(roleForKind,desired))) throw new ApiError(400,'Choose a valid account type.');
-    const session = await auth.provider('/token?grant_type=password', { email, password: req.body.password });
+    const pinCandidate=!desired&&req.body?.portalPin===undefined&&/^\d{6,12}$/.test(req.body.password);
+    const resident=pinCandidate?await probeResidentPinLogin(auth.db,email,req.body.password):null;
+    let session:Session;
+    try{
+      // Exactly one public-key exchange consumes the submission CAPTCHA. A PIN
+      // can authenticate only its isolated resident, never the primary owner.
+      session=await auth.provider('/token?grant_type=password',resident?{email:resident.email,password:resident.password}:{email,password:req.body.password});
+    }catch(error){
+      if(pinCandidate&&!resident){
+        // Commit wrong PINs even when CAPTCHA/provider admission rejects the
+        // request. A successful numeric primary password never reaches here.
+        try{await residentPinLoginProof(auth.db,email,req.body.password);}
+        catch(denial){if(!(denial instanceof ApiError&&denial.status===401))throw denial;}
+      }
+      throw error;
+    }
     try {
-      const actor = await auth.bind(session,desired,req.body?.portalPin);
+      const actor = await auth.bind(session,resident?'resident':desired,resident?req.body.password:req.body?.portalPin);
+      if(resident&&(actor.authUserId!==resident.authUserId||actor.contextId!==resident.contextId))throw new ApiError(401,'Invalid email or room PIN.','invalid_credentials');
       const user = await auth.projection(actor);
       sessionCookies(res, session);
       return res.json(kind === 'seller' ? { user,token:'',needsSetup:!user.merchantSetupCompleted || !user.merchantRegistrationFeePaid } : kind === 'officer' ? {success:true,user,token:''} : user);

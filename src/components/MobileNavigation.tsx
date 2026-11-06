@@ -80,7 +80,7 @@ export default function MobileNavigation({ items, activeTab, onSelect, primaryId
       for (const element of [surface, indicator, ...(sideHighlight ? [sideHighlight] : [])]) element.style.transitionDuration = instant ? '0ms' : '';
       surface.style.transform = `translate3d(${next - center}px, 0, 0)`;
       indicator.style.transform = `translate3d(${next - 29}px, 0, 0)`;
-      if (sideHighlight && selected) sideHighlight.style.transform = `translate3d(${centerOf(selected) - 24}px, 0, 0)`;
+      if (sideHighlight && selected) sideHighlight.style.transform = `translate3d(${centerOf(selected) - sideHighlight.offsetWidth / 2}px, 0, 0)`;
       previousDestination = destination; previousWidth = width; previousHeight = height;
       previousCount = buttons.length; previousTarget = next;
     };

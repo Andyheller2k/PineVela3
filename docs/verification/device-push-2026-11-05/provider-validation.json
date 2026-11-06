@@ -1,0 +1,10 @@
+{
+  "passed": true,
+  "validationOnly": true,
+  "notificationsSent": 0,
+  "productionDatabaseWrites": 0,
+  "httpStatus": 200,
+  "providerCode": "OK",
+  "androidConfigured": true,
+  "webConfigured": true
+}

@@ -1,0 +1,31 @@
+{
+  "passed": false,
+  "actualInstalledAndroidWebView": true,
+  "backend": "https://pinevela.app",
+  "publicShop": {
+    "id": "af645a01-f514-4b49-a673-15f8b0d52dd0",
+    "name": "PineVela Store",
+    "address": "Bomso"
+  },
+  "permissionPromptCancelled": false,
+  "permissionsGrantedByVerifier": false,
+  "accountFormsSubmitted": false,
+  "accountWrites": 0,
+  "originalRouteRestored": true,
+  "runtimeExceptions": 0,
+  "ui": {
+    "width": 393,
+    "height": 778,
+    "overflow": false,
+    "mapWithinViewport": true,
+    "approximateNotice": true,
+    "noExactDirections": true,
+    "viewShopAvailable": true,
+    "tilesLoaded": 6,
+    "deviceLocationUsed": false
+  },
+  "emulatorLeftRunning": true,
+  "domChecksPassed": true,
+  "systemDialogCoveredMap": true,
+  "note": "The first native DOM checks passed, but the device screenshot was covered by Android launcher/permission dialogs. A final hardware-graphics run replaces this preliminary result."
+}

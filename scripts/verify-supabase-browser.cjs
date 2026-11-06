@@ -47,7 +47,7 @@ async function freePort(){const s=net.createServer();s.listen(0,'127.0.0.1');awa
     const evaluate=async expression=>{const r=await command('Runtime.evaluate',{expression,returnByValue:true,awaitPromise:true});assert(!r.exceptionDetails,'Browser evaluation completes');return r.result.value;};
     async function until(expression,label){const end=Date.now()+45000;while(Date.now()<end){if(await evaluate(expression))return;await pause(150);}throw new Error(label+' did not complete before the deadline');}
     const toggle='document.querySelector(\'[role="switch"][aria-label="Dark mode"]\')';
-    const login='!!document.querySelector(\'input[aria-label="Username or Email Address"]\')';
+    const login='!!document.querySelector(\'input[aria-label="Email address"]\')';
     const choices="Array.from(document.querySelectorAll('main a')).some(a=>a.textContent.trim()==='Sign in')";
     await command('Page.enable');await command('Runtime.enable');await command('Network.enable');
     for(const width of [375,768,1440]){
@@ -70,7 +70,7 @@ async function freePort(){const s=net.createServer();s.listen(0,'127.0.0.1');awa
       check(await evaluate("!!document.querySelector('input[aria-label=\"Password\"][type=text]')"),'The visible password control operates');
       await evaluate("document.querySelector('button[aria-label=\"Hide password\"]').click()");
       check(await evaluate("!!document.querySelector('input[aria-label=\"Password\"][type=password]')"),'The password can be masked again');
-      check(await evaluate("(()=>{const input=document.querySelector('input[aria-label=\"Username or Email Address\"]');const form=input.closest('form');form.requestSubmit();return !form.checkValidity();})()"),'Empty credentials are rejected without a login request');
+      check(await evaluate("(()=>{const input=document.querySelector('input[aria-label=\"Email address\"]');const form=input.closest('form');form.requestSubmit();return !form.checkValidity();})()"),'Empty credentials are rejected without a login request');
 
       stage='delayed sign-in restoration '+width;held=undefined;const start=network.length;
       await command('Fetch.enable',{patterns:[{urlPattern:base+'/api/auth/me',requestStage:'Request'}]});

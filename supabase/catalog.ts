@@ -2,6 +2,7 @@ import type { Express, RequestHandler } from 'express';
 import { ApiError, SupabaseDatabase, uuid } from './db.js';
 import { MARKET_DEFAULT_COVERS, MARKET_DEFAULT_LOGO } from '../marketBranding.js';
 import { marketPlanBenefits } from '../marketPlans.js';
+import {installNearbyStores} from './nearbyStores.js';
 
 const route = (work: (req: any, res: any) => Promise<unknown>): RequestHandler => (req, res, next) => { work(req, res).catch(next); };
 function residence(row: any) {
@@ -43,6 +44,7 @@ export async function publicProducts(db: SupabaseDatabase, storeId?: string) {
     rating: Number(row.rating), reviewCount: Number(row.review_count), storeRating: Number(row.store_rating), ratingCount: Number(row.store_rating_count) }));
 }
 export function installCatalog(app: Express, db: SupabaseDatabase) {
+  installNearbyStores(app,db);
   app.get('/api/hostels', route(async (_req, res) => res.json((await db.publicRows('select * from private.residence_catalog order by registered_at desc')).map(residence))));
   app.get('/api/hostels/:id', route(async (req, res) => {
     const rows = await db.publicRows('select * from private.residence_catalog where id = $1', [uuid(req.params.id)]);

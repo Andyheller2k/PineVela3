@@ -11,7 +11,7 @@ Prepared: 28 October 2026. These are editable starting points, not a compliance 
 4. Review the acceptance requirements. The accompanying app update enforces the current published Platform Terms; this pack's new merchant and other draft agreements are not automatically published or accepted.
 5. Review final wording with a Ghana-qualified adviser, approve versions, then use the release checklist. Do not upload this entire folder into the public website.
 
-Confirmed drafting facts: PineVela; operator Oppong Manu Andy; Ghana; support contact andyheller2k@gmail.com; website https://pinevela.app; general minimum age 16. A registered company, full notice address, DPC registration, fees, retention periods and merchant contract-age arrangements have not been confirmed.
+Confirmed drafting facts: PineVela; operator PineVela Ghana; Ghana; support contact pinevela@pinevela.app; website https://pinevela.app; general minimum age 16. A registered company, full notice address, DPC registration, fees, retention periods and merchant contract-age arrangements have not been confirmed.
 
 ## Complete structure
 

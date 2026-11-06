@@ -21,13 +21,15 @@ export async function keyRows(client:PoolClient,actor:VerifiedActor,residenceId?
     throw new ApiError(404,'Authorized residence not found.');
   const rows = (await client.query(`select k.id,r.id as "roomId",k.code as "roomKey",h.id as "hostelId",h.name as "hostelName",b.name as "blockName",b.room_prefix as "blockInitial",
     r.room_number as "roomNumber",f.floor_number as floor,cycle.academic_year as "academicYear",a.resident_context_id as "assignedStudentId",
-    p.display_name as "assignedStudentName",p.email as "assignedStudentEmail",p.phone as "assignedStudentPhone",
+    p.display_name as "assignedStudentName",case when e.enrollment_fields->>'authentication'='resident_pin' then owner.email else p.email end as "assignedStudentEmail",p.phone as "assignedStudentPhone",
     (a.id is not null) as "isAssigned",case when a.id is null then 'Available' else 'Occupied' end as status
     from private.room_activation_keys k join public.rooms r on r.id = k.room_id join public.floors f on f.id = r.floor_id
     join public.blocks b on b.id = f.block_id join public.residences h on h.id = b.residence_id
     left join private.residence_room_key_cycles cycle on cycle.id=k.cycle_id
     left join public.allocations a on a.room_id = r.id and a.ended_at is null
     left join public.account_contexts c on c.id = a.resident_context_id left join public.profiles p on p.id = c.auth_user_id
+    left join private.account_enrollments e on e.linked_context_id=c.id
+    left join public.profiles owner on owner.id=c.primary_owner_id
     where k.revoked_at is null and ${scope} and ($3::uuid is null or h.id = $3) and ($4::uuid is null or r.id = $4)
     order by h.id,b.name,f.floor_number,r.room_number limit 10000`,[actor.kind,actor.contextId,residenceId || null,roomId || null])).rows;
   if (actor.kind === 'staff') return rows;

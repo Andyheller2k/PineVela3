@@ -11,6 +11,7 @@ import { checkApprovalKey, deniedApprovalKey, requireApprovalGrant } from './adm
 import { checkProfileContext } from './profiles.js';
 import { notify } from './notifications.js';
 import { SAFETY_MODEL, SAFETY_POLICY, childSafetyConcern, safetyDigest, safetyVerdict, type SafetyPurpose } from './contentSafetyPolicy.js';
+import { rasterContentType } from '../imageUploadSecurity.js';
 
 const jobs = new WorkPool(2, 4), budgets = new AttemptBudgets();
 const inFlight = new Map<string, Promise<void>>();
@@ -24,7 +25,7 @@ async function provider(input: string | Buffer) {
       const response = await fetch('https://api.openai.com/v1/moderations', {
         method: 'POST', redirect: 'error', cache: 'no-store', signal: AbortSignal.timeout(15000),
         headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model: SAFETY_MODEL, input: typeof input === 'string' ? input : [{ type: 'image_url', image_url: { url: 'data:image/png;base64,' + input.toString('base64') } }] }),
+        body: JSON.stringify({ model: SAFETY_MODEL, input: typeof input === 'string' ? input : [{ type: 'image_url', image_url: { url: `data:${rasterContentType(input)};base64,` + input.toString('base64') } }] }),
       });
       if (!response.ok || !response.body) { await response.body?.cancel(); throw unavailable(); }
       const reader = response.body.getReader(), parts: Uint8Array[] = []; let size = 0;
@@ -76,7 +77,7 @@ export async function moderateContent(auth: SupabaseAuth, actor: VerifiedActor, 
     const result = await evaluateContentSafety(input, filename);
     const id = crypto.randomUUID(), image = Buffer.isBuffer(input), storage = new SupabaseStorage();
     // Quarantine objects have no public media row or client Storage grant.
-    const imagePath = image && result.verdict !== 'approved' ? `contexts/${actor.contextId}/${id}.png` : null;
+    const imagePath = image && result.verdict !== 'approved' ? `contexts/${actor.contextId}/${id}.${rasterContentType(input as Buffer)==='image/webp'?'webp':'png'}` : null;
     if (imagePath) await storage.upload(imagePath, input as Buffer);
     let saved: any;
     try {
@@ -138,7 +139,7 @@ export function installContentSafety(app: Express, auth: SupabaseAuth) {
     const row = await auth.db.authorizedRead(req.actor, ['primary', 'admin'], read);
     const bytes = await new SupabaseStorage().download(row.image_path, row);
     await auth.db.authorizedRead(req.actor, ['primary', 'admin'], c => supportOperator(c));
-    res.set({ 'Content-Type': 'image/png', 'Cache-Control': 'private, no-store', 'Referrer-Policy': 'no-referrer', 'Content-Security-Policy': "sandbox; default-src 'none'; frame-ancestors 'none'" }).send(bytes);
+    res.set({ 'Content-Type': rasterContentType(bytes), 'Cache-Control': 'private, no-store', 'Referrer-Policy': 'no-referrer', 'Content-Security-Policy': "sandbox; default-src 'none'; frame-ancestors 'none'" }).send(bytes);
   }));
   app.post('/api/admin/content-checks/:id/decision', auth.require(['admin']), checked, route(async (req, res) => {
     bodyFields(req.body, ['decision', 'reason', 'privateKey']);

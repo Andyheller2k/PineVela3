@@ -1,8 +1,9 @@
 import { Search, X, SlidersHorizontal, MapPin } from 'lucide-react';
 import MarketSortSelect, { type MarketSort } from './MarketSortSelect';
 import MarketPricePanel from './MarketPricePanel';
-import { Fragment, useId, type Dispatch, type SetStateAction } from 'react';
+import { useId, type Dispatch, type SetStateAction } from 'react';
 import DashboardOverlay from './DashboardOverlay';
+import '../nearbyShortcut.css';
 
 export type { MarketSort } from './MarketSortSelect';
 interface Props {
@@ -48,6 +49,7 @@ export default function MarketplaceFilters({ catalogSearch, setCatalogSearch, ca
     </div>
 
     <div className="marketplace-filter-controls flex flex-wrap items-center gap-2">
+      {onNearbyServices&&<button type="button" className="market-nearby-shortcut" aria-label="Find shops and services nearby" title="Nearby shops and services" aria-haspopup="dialog" onClick={onNearbyServices}><MapPin size={19} aria-hidden="true" /></button>}
       {/* Toggle Price Range Slider Button */}
       <button
         type="button"
@@ -97,17 +99,14 @@ export default function MarketplaceFilters({ catalogSearch, setCatalogSearch, ca
   {/* Category Pills inside Marketplace */}
   <div role="group" aria-label="Marketplace categories" className="market-categories flex items-center gap-1.5 overflow-x-auto pb-2 -mx-1 px-1">
     {['All', 'Services','Electronics', 'Textbooks', 'Appliances', 'Fashion', 'Furniture'].map(cat => (
-      <Fragment key={cat}><button
+      <button key={cat}
         type="button"
         aria-pressed={catalogCategory === cat}
         onClick={() => setCatalogCategory(cat)}
         className="px-3 py-1.5 rounded-xl text-[11px] font-bold whitespace-nowrap cursor-pointer"
       >
         {cat}
-      </button>{compactCatalog && cat === 'Services' && catalogCategory === 'Services' && onNearbyServices &&
-        <button type="button" className="market-nearby-shortcut" aria-label="Find services near you" aria-haspopup="dialog" onClick={onNearbyServices}>
-          <MapPin size={14} aria-hidden="true" /><span>Nearby</span>
-        </button>}</Fragment>
+      </button>
     ))}
   </div>
 

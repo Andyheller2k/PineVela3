@@ -1,0 +1,51 @@
+{
+  "passed": true,
+  "tests": 54,
+  "results": [
+    {
+      "file": "tests/residentPinCrypto.test.ts",
+      "passed": true,
+      "tests": 2
+    },
+    {
+      "file": "tests/cataloguePhotos.test.ts",
+      "passed": true,
+      "tests": 3
+    },
+    {
+      "file": "tests/imageUploadSecurity.test.ts",
+      "passed": true,
+      "tests": 2
+    },
+    {
+      "file": "tests/supabaseStorageBackup.test.ts",
+      "passed": true,
+      "tests": 21
+    },
+    {
+      "file": "tests/nativeTransport.test.ts",
+      "passed": true,
+      "tests": 6
+    },
+    {
+      "file": "tests/mobileAppBuild.test.ts",
+      "passed": true,
+      "tests": 2
+    },
+    {
+      "file": "tests/authProtection.test.ts",
+      "passed": true,
+      "tests": 2
+    },
+    {
+      "file": "tests/devicePush.test.ts",
+      "passed": true,
+      "tests": 9
+    },
+    {
+      "file": "tests/supabaseAccountAccess.test.ts",
+      "passed": true,
+      "tests": 7
+    }
+  ]
+}

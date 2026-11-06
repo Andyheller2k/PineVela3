@@ -1,0 +1,11 @@
+{
+  "requestedByUser": true,
+  "scheduled": true,
+  "timer": "pinevela-sleep-20261105-213438.timer",
+  "delaySeconds": 45,
+  "canSuspend": "yes",
+  "actualSuspensionObserved": false,
+  "filesSavedBeforeSleep": true,
+  "emulatorClosedCleanly": true,
+  "hostingZipStillPending": true
+}

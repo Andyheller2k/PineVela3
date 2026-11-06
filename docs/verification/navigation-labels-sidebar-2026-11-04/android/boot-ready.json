@@ -1,0 +1,252 @@
+{
+  "bootCompleted": true,
+  "bootAnimationNotRunning": true,
+  "bootAnimationServiceProperty": "",
+  "bootAnimationMode": "disabled by existing no-boot-anim launch flag",
+  "bootAnimationProcessPresent": false,
+  "osSettleSeconds": 18,
+  "initialGuardRequiredStoppedProperty": true,
+  "initialGuardMisclassifiedDisabledAnimation": true,
+  "initialGuardSamples": [
+    {
+      "elapsedSeconds": 0.01,
+      "bootCompleted": "",
+      "bootAnimation": ""
+    },
+    {
+      "elapsedSeconds": 3.02,
+      "bootCompleted": "",
+      "bootAnimation": ""
+    },
+    {
+      "elapsedSeconds": 6.07,
+      "bootCompleted": "",
+      "bootAnimation": ""
+    },
+    {
+      "elapsedSeconds": 9.08,
+      "bootCompleted": "",
+      "bootAnimation": ""
+    },
+    {
+      "elapsedSeconds": 12.09,
+      "bootCompleted": "",
+      "bootAnimation": ""
+    },
+    {
+      "elapsedSeconds": 15.09,
+      "bootCompleted": "",
+      "bootAnimation": ""
+    },
+    {
+      "elapsedSeconds": 18.11,
+      "bootCompleted": "",
+      "bootAnimation": ""
+    },
+    {
+      "elapsedSeconds": 21.26,
+      "bootCompleted": "",
+      "bootAnimation": ""
+    },
+    {
+      "elapsedSeconds": 24.31,
+      "bootCompleted": "",
+      "bootAnimation": ""
+    },
+    {
+      "elapsedSeconds": 27.38,
+      "bootCompleted": "",
+      "bootAnimation": ""
+    },
+    {
+      "elapsedSeconds": 30.52,
+      "bootCompleted": "",
+      "bootAnimation": ""
+    },
+    {
+      "elapsedSeconds": 34.41,
+      "bootCompleted": "",
+      "bootAnimation": ""
+    },
+    {
+      "elapsedSeconds": 37.69,
+      "bootCompleted": "",
+      "bootAnimation": ""
+    },
+    {
+      "elapsedSeconds": 41.23,
+      "bootCompleted": "1",
+      "bootAnimation": ""
+    },
+    {
+      "elapsedSeconds": 44.48,
+      "bootCompleted": "1",
+      "bootAnimation": ""
+    },
+    {
+      "elapsedSeconds": 47.87,
+      "bootCompleted": "1",
+      "bootAnimation": ""
+    },
+    {
+      "elapsedSeconds": 51.15,
+      "bootCompleted": "1",
+      "bootAnimation": ""
+    },
+    {
+      "elapsedSeconds": 54.47,
+      "bootCompleted": "1",
+      "bootAnimation": ""
+    },
+    {
+      "elapsedSeconds": 57.66,
+      "bootCompleted": "1",
+      "bootAnimation": ""
+    },
+    {
+      "elapsedSeconds": 60.84,
+      "bootCompleted": "1",
+      "bootAnimation": ""
+    },
+    {
+      "elapsedSeconds": 64.12,
+      "bootCompleted": "1",
+      "bootAnimation": ""
+    },
+    {
+      "elapsedSeconds": 67.25,
+      "bootCompleted": "1",
+      "bootAnimation": ""
+    },
+    {
+      "elapsedSeconds": 70.41,
+      "bootCompleted": "1",
+      "bootAnimation": ""
+    },
+    {
+      "elapsedSeconds": 73.59,
+      "bootCompleted": "1",
+      "bootAnimation": ""
+    },
+    {
+      "elapsedSeconds": 76.73,
+      "bootCompleted": "1",
+      "bootAnimation": ""
+    },
+    {
+      "elapsedSeconds": 79.91,
+      "bootCompleted": "1",
+      "bootAnimation": ""
+    },
+    {
+      "elapsedSeconds": 83.14,
+      "bootCompleted": "1",
+      "bootAnimation": ""
+    },
+    {
+      "elapsedSeconds": 86.24,
+      "bootCompleted": "1",
+      "bootAnimation": ""
+    },
+    {
+      "elapsedSeconds": 89.37,
+      "bootCompleted": "1",
+      "bootAnimation": ""
+    },
+    {
+      "elapsedSeconds": 92.49,
+      "bootCompleted": "1",
+      "bootAnimation": ""
+    },
+    {
+      "elapsedSeconds": 95.64,
+      "bootCompleted": "1",
+      "bootAnimation": ""
+    },
+    {
+      "elapsedSeconds": 98.88,
+      "bootCompleted": "1",
+      "bootAnimation": ""
+    },
+    {
+      "elapsedSeconds": 101.99,
+      "bootCompleted": "1",
+      "bootAnimation": ""
+    },
+    {
+      "elapsedSeconds": 105.14,
+      "bootCompleted": "1",
+      "bootAnimation": ""
+    },
+    {
+      "elapsedSeconds": 108.41,
+      "bootCompleted": "1",
+      "bootAnimation": ""
+    },
+    {
+      "elapsedSeconds": 111.59,
+      "bootCompleted": "1",
+      "bootAnimation": ""
+    },
+    {
+      "elapsedSeconds": 114.81,
+      "bootCompleted": "1",
+      "bootAnimation": ""
+    },
+    {
+      "elapsedSeconds": 117.93,
+      "bootCompleted": "1",
+      "bootAnimation": ""
+    },
+    {
+      "elapsedSeconds": 120.99,
+      "bootCompleted": "1",
+      "bootAnimation": ""
+    },
+    {
+      "elapsedSeconds": 124.04,
+      "bootCompleted": "1",
+      "bootAnimation": ""
+    },
+    {
+      "elapsedSeconds": 127.08,
+      "bootCompleted": "1",
+      "bootAnimation": ""
+    },
+    {
+      "elapsedSeconds": 130.34,
+      "bootCompleted": "1",
+      "bootAnimation": ""
+    },
+    {
+      "elapsedSeconds": 133.48,
+      "bootCompleted": "1",
+      "bootAnimation": ""
+    },
+    {
+      "elapsedSeconds": 136.57,
+      "bootCompleted": "1",
+      "bootAnimation": ""
+    },
+    {
+      "elapsedSeconds": 139.61,
+      "bootCompleted": "1",
+      "bootAnimation": ""
+    },
+    {
+      "elapsedSeconds": 142.67,
+      "bootCompleted": "1",
+      "bootAnimation": ""
+    },
+    {
+      "elapsedSeconds": 145.7,
+      "bootCompleted": "1",
+      "bootAnimation": ""
+    },
+    {
+      "elapsedSeconds": 148.76,
+      "bootCompleted": "1",
+      "bootAnimation": ""
+    }
+  ]
+}

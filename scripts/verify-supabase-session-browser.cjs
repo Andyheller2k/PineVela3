@@ -93,14 +93,14 @@ const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
     }
     if (!authenticated) {
       await command('Page.navigate', { url: base + '/#/login' });
-      await until("!!document.querySelector('input[aria-label=\"Username or Email Address\"]')", 'Guest app loads');
+      await until("!!document.querySelector('input[aria-label=\"Email address\"]')", 'Guest app loads');
     }
     const initial = await evaluate("(async()=>{const r=await fetch('/api/auth/me',{credentials:'same-origin',signal:AbortSignal.timeout(45000)});const u=await r.json();return {status:r.status,role:u.role,verified:!!u.isVerified,route:location.hash};})()");
     check(authenticated ? initial.status === 200 && initial.verified && initial.role === 'admin' : initial.status === 401, 'The starting identity is genuinely verified or genuinely absent');
     const route = authenticated ? initial.route : '#/admin/dashboard';
     assert(route.startsWith('#/admin/'), 'Use the actual administrator route');
     const retry = "Array.from(document.querySelectorAll('button')).find(b=>b.textContent.trim()==='Retry connection')";
-    const login = "!!document.querySelector('input[aria-label=\"Username or Email Address\"]')";
+    const login = "!!document.querySelector('input[aria-label=\"Email address\"]')";
     const resolved = authenticated ? "location.hash===" + JSON.stringify(route) + "&&!!document.querySelector('img[alt=\"Administrator profile\"]')" : login;
     async function start(nextMode) {
       if (authenticated) await command('Page.bringToFront');

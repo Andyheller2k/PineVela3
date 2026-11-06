@@ -17,6 +17,7 @@ export function managerKeyNeeded(req:Pick<Request,'method'|'path'>) {
       // This endpoint can record only the live account's own current agreement.
       // It must be available before the manager dashboard/key prompt mounts.
       '/api/legal/accept',
+      '/api/device-push/register','/api/device-push/test',
       // Avatar media and the manager-only avatar save stay bound to the live
       // Auth identity. The general profile route still protects contact edits.
       '/api/storage/upload-profile-image','/api/auth/profile/avatar',

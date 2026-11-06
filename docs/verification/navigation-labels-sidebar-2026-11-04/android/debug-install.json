@@ -1,0 +1,33 @@
+{
+  "passed": true,
+  "installedPackage": "app.pinevela.mobile.debug",
+  "previousDebugSha256": "74aab1b14f02cc62ebf50470a565b4a47e3d5130edd4f362139e211012896ada",
+  "installedDebugSha256": "1a43c8a3d596c48704db69e778bb15d007df01fd78ab1d2a298838fcc6d71f8a",
+  "installedFrom": "android/app/build/outputs/apk/debug/app-debug.apk",
+  "noDataClearing": true,
+  "packageWritesFlushed": true,
+  "installMode": "adb install -r",
+  "rebootPerformed": false,
+  "emulatorRestartedForMemory": true,
+  "startedPreviouslyStoppedExistingEmulator": true,
+  "logoutPerformed": false,
+  "authenticationFormsSubmitted": false,
+  "accountMutationsRequestedByVerifier": 0,
+  "normalAppTrafficIntercepted": false,
+  "ui": {
+    "page": "welcome",
+    "theme": "light",
+    "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+    "width": 393,
+    "height": 778,
+    "overflow": false,
+    "header": {
+      "top": 0,
+      "bottom": 78.7272720336914
+    }
+  },
+  "testOnlyPackagesRemoved": [
+    "app.pinevela.mobile.transporttest"
+  ],
+  "emulatorLeftRunning": true
+}

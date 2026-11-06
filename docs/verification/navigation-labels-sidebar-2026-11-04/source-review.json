@@ -1,0 +1,10 @@
+{
+  "passed": true,
+  "diffCheckPassed": true,
+  "retiredTopNavigationSourceMatches": 0,
+  "localStorageTopValueRetainedForMigration": true,
+  "backendSourceChanged": false,
+  "nativeSourceChanged": false,
+  "schemaChanged": false,
+  "dependenciesChanged": false
+}

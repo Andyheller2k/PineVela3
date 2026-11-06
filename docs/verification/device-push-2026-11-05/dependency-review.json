@@ -1,0 +1,31 @@
+{
+  "npmProductionFindings": {
+    "info": 0,
+    "low": 0,
+    "moderate": 2,
+    "high": 1,
+    "critical": 0,
+    "total": 3
+  },
+  "findings": [
+    {
+      "name": "body-parser",
+      "severity": "high",
+      "introducedNode": false,
+      "affectedNewDirectDependency": false
+    },
+    {
+      "name": "qs",
+      "severity": "moderate",
+      "introducedNode": false,
+      "affectedNewDirectDependency": false
+    },
+    {
+      "name": "vite",
+      "severity": "moderate",
+      "introducedNode": false,
+      "affectedNewDirectDependency": false
+    }
+  ],
+  "newPushDependenciesAffected": false
+}

@@ -1,0 +1,12 @@
+{
+  "passed": true,
+  "emulator": "PineVela_Pixel_4a_API_36",
+  "installedPackage": "app.pinevela.mobile.debug",
+  "verifiedInstalledApkSha256": "1186c808ffd54756894b77e56d56f6b20f416b3c844598f6064409e16b34dedc",
+  "packageDataPreserved": true,
+  "deviceFilesystemFlushed": true,
+  "gracefulShutdownRequested": true,
+  "adbDeviceStopped": true,
+  "userdataDeleted": false,
+  "command": "adb -s emulator-5554 emu kill"
+}

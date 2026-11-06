@@ -7,10 +7,10 @@ Status: INTERNAL WORKING DRAFT. Complete before approving public policies.
 | Field | Confirmed value |
 | --- | --- |
 | Brand | PineVela |
-| Operator supplied by owner | Oppong Manu Andy |
+| Operator supplied by owner | PineVela Ghana |
 | Country | Ghana |
 | Website | https://pinevela.app |
-| Support/privacy contact currently supplied | andyheller2k@gmail.com |
+| Support/privacy contact currently supplied | pinevela@pinevela.app |
 | General minimum user age | 16 |
 
 ## Decisions still required

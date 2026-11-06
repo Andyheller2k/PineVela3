@@ -1,0 +1,12 @@
+{
+  "package": "app.pinevela.mobile.transporttest",
+  "preExisting": false,
+  "packagesInstalledByThisRun": [
+    "app.pinevela.mobile.transporttest"
+  ],
+  "debugPackageUntouched": true,
+  "emulatorStartedExistingAVD": true,
+  "avdConfigurationChanged": false,
+  "dataCleared": false,
+  "installCompleted": true
+}

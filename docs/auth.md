@@ -1,5 +1,46 @@
 # PineVela Authentication and Authorization
 
+## Primary email and resident room PIN — 5 November 2026
+
+New room activation starts in a verified primary account and requires a current,
+available room key plus a chosen 6–12 digit PIN. A student mailbox is not required.
+The normal login card has one email field and one **Password** field.
+Primary email/password opens the primary account; primary email/valid room PIN
+opens the isolated resident account. There is no authentication-method selector.
+Only an unqualified normal login can resolve a room PIN; explicit role and legacy
+portal login requests keep their existing authorization paths. A valid room PIN
+takes precedence over a numeric primary password with the identical value.
+
+The server provisions a separate native Auth identity for the resident, bound to
+the owned enrollment through the existing private nonce initializer. It never
+issues the primary identity's token after a PIN check. The random resident provider
+password is encrypted under a PIN-derived key; private owner recovery uses a
+domain-separated key from the existing delivery-PIN master. PIN recovery requires
+the live verified primary owner and an active allocation, and cannot target a
+client-selected context. The reset control is on the primary user's active room
+status card; Settings links there through **Manage active room**. Pending, closed,
+suspended and legacy email-based accounts cannot use this reset endpoint.
+PIN changes atomically rewrap the same provider credential and revoke earlier
+resident bindings without changing a primary or seller password.
+
+Persistent portal lockout applies after five failures for 15 minutes; login IP
+and identity admission limits and required submission CAPTCHA remain enforced.
+Unified login makes one public-key provider exchange per submission. A failed PIN
+probe rolls back its counters so a retained numeric primary password can still
+sign in. If that provider exchange fails, the wrong PIN is recorded persistently,
+including when CAPTCHA or admission is denied.
+Ownership, approved housing, allocation exclusivity and RLS are rechecked when
+activating or signing in. Interrupted setup resumes its own reservation rather
+than adopting an Auth identity by email. Before activation, or after room release,
+the verified primary owner may choose a new setup PIN only after presenting a
+valid available room key. Active accounts use the active-room reset control.
+Competing claims retry a rolled-back database deadlock once, then return a clear
+conflict; native Auth creation is never repeated by that transaction retry.
+The final claim rechecks the current PIN to prevent competing setup windows from
+committing stale credentials. Existing email-based resident/seller
+identities keep their passwords, own portal PINs and sign-in path. See the
+[release and verification notes](unified-room-login-2026-11-05.md).
+
 ## Resuming an unfinished primary signup — 30 October 2026
 
 A repeated signup for an unconfirmed email does not replace its original name or

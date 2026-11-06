@@ -1,0 +1,10 @@
+{
+  "existingAvd": "PineVela_Pixel_4a_API_36",
+  "emulatorAlreadyRunning": false,
+  "avdConfigurationChanged": false,
+  "dataCleared": false,
+  "debugPackageUntouched": true,
+  "heavyBrowserAndCompilerWorkStopped": true,
+  "startedAtEpochSeconds": 1793831548.9143708,
+  "detachedEmulatorHostPid": 17066
+}

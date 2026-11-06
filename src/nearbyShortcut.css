@@ -1,0 +1,2 @@
+.market-nearby-shortcut { display: inline-flex; flex-shrink: 0; align-items: center; justify-content: center; width: 44px; min-height: 44px; border: 1px solid var(--pv-edge); border-radius: 12px; color: var(--pv-link); background: var(--pv-field); cursor: pointer; }
+.market-nearby-shortcut:focus-visible { outline: 2px solid var(--pv-link); outline-offset: 2px; }

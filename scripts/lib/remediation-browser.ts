@@ -56,7 +56,7 @@ export async function verifyRemediationBrowser(db:SupabaseDatabase){
   }
   await command('Emulation.setDeviceMetricsOverride',{width:1440,height:1000,deviceScaleFactor:1,mobile:false});
   await command('Page.navigate',{url:origin+'/#/login'});
-  await until('!!document.querySelector(\'input[aria-label="Username or Email Address"]\')');
+  await until('!!document.querySelector(\'input[aria-label="Email address"]\')');
   framing.push('The actual built login remains usable through direct navigation');
   await command('Page.navigate',{url:parentOrigin+'/frame'});await pause(1000);
   const tree=await command('Page.getFrameTree');

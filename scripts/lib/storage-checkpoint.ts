@@ -35,7 +35,7 @@ export async function storageCheckpoint<T=undefined>(checkpointId:string,inspect
 export function reconstructStorageBackup(archiveId:string,binding:StorageBackupBinding,snapshot:StorageSnapshot) {
   const temporary=fs.mkdtempSync(path.join('/tmp','pv-storage-restore-'));fs.chmodSync(temporary,0o700);
   try{return verifyStorageBackup(storageArchiveRoot(),archiveId,binding,snapshot,(entry,bytes)=>{
-    const file=path.join(temporary,entry.id+(isStorageFolderMarker(entry.path)?'.folder-marker':'.png')),fd=fs.openSync(file,fs.constants.O_CREAT|fs.constants.O_EXCL|fs.constants.O_WRONLY|fs.constants.O_NOFOLLOW,0o600);
+    const file=path.join(temporary,entry.id+(isStorageFolderMarker(entry.path)?'.folder-marker':entry.path.endsWith('.webp')?'.webp':'.png')),fd=fs.openSync(file,fs.constants.O_CREAT|fs.constants.O_EXCL|fs.constants.O_WRONLY|fs.constants.O_NOFOLLOW,0o600);
     try{fs.writeFileSync(fd,bytes);fs.fsyncSync(fd);}finally{fs.closeSync(fd);}
     const recovered=fs.readFileSync(file);
     try{if(recovered.length!==entry.byte_size||crypto.createHash('sha256').update(recovered).digest('hex')!==entry.sha256)throw new Error('Reconstructed photograph integrity failed.');}

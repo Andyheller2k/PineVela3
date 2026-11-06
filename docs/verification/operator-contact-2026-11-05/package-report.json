@@ -1,0 +1,15 @@
+{
+  "passed": true,
+  "archiveEntries": 198,
+  "zip": "/home/wyse/Documents/PineVela3/releases/web/pinevela-operator-contact-20261105.zip",
+  "zipBytes": 6537368,
+  "zipSha256": "54c0978c21531e46491ae2f8ae63488256798ea15c94d6b366a9f94a5ead93c4",
+  "apk": "/home/wyse/Documents/PineVela3/releases/android/pinevela-operator-contact-20261105.apk",
+  "apkBytes": 15507719,
+  "apkSha256": "6b861e22a26b0e230bcf7b06d670b4b73c370d7928f7d5c9c786b6de3ec3c003",
+  "tmpZip": "/tmp/pinevela-operator-contact-20261105.zip",
+  "sql": "/home/wyse/Documents/PineVela3/releases/database/pinevela-apply-operator-contact-20261105.sql",
+  "draftsZip": "/home/wyse/Documents/PineVela3/releases/documentation/pinevela-documentation-drafts-20261105.zip",
+  "deployedRemotely": false,
+  "emulatorAppChanged": false
+}

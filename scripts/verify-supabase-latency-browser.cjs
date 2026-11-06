@@ -123,7 +123,7 @@ async function main() {
       localJavaScript:resources.filter(item=>new URL(item.name).origin===location.origin&&/\\.js(?:$|\\?)/.test(item.name)).map(item=>({asset:new URL(item.name).pathname,transferSize:item.transferSize,encodedBodySize:item.encodedBodySize,durationMs:Math.round(item.duration)}))};})()`;
     const routes = [
       { name: 'landing', route: '/', ready: "!!document.querySelector('#btn-login') && !!document.querySelector('[data-public-market=preview]')", data: ['/api/hostels', '/api/digital-market/products'], settled: "!document.querySelector('[data-public-market] [role=status], [data-public-residence] [role=status]')" },
-      { name: 'login', route: '/login', ready: "!!document.querySelector('input[aria-label=\"Username or Email Address\"]') && !!document.querySelector('input[aria-label=Password][type=password]')", data: [], settled: 'true' },
+      { name: 'login', route: '/login', ready: "!!document.querySelector('input[aria-label=\"Email address\"]') && !!document.querySelector('input[aria-label=Password][type=password]')", data: [], settled: 'true' },
       { name: 'residences', route: '/pineresidence', ready: "!!document.querySelector('[data-public-residence=catalog]')", data: ['/api/hostels'], settled: "!document.querySelector('[data-public-residence=catalog] [role=status]')" },
       { name: 'market', route: '/pinemarket', ready: "!!document.querySelector('[data-public-market=catalog]')", data: ['/api/digital-market/products'], settled: "!document.querySelector('[data-public-market=catalog] [role=status]')" },
     ];
@@ -153,7 +153,7 @@ async function main() {
         check(!sceneRequests(scene).some(mapChunk), 'Optional services map JavaScript is absent before opening it');
         check(!await evaluate("!!document.querySelector('[data-public-market] [role=alert], [data-public-residence] [role=alert]')"), 'Native public data reads show no error');
         if (route.name === 'login') {
-          check(await evaluate("(()=>{const form=document.querySelector('input[aria-label=\"Username or Email Address\"]').closest('form');form.requestSubmit();return !form.checkValidity();})()"), 'Blank credentials remain native-invalid');
+          check(await evaluate("(()=>{const form=document.querySelector('input[aria-label=\"Email address\"]').closest('form');form.requestSubmit();return !form.checkValidity();})()"), 'Blank credentials remain native-invalid');
         }
         if (route.name === 'market') {
           const openMap = "[...document.querySelectorAll('button')].find(item=>item.textContent.trim()==='Services near you').click()";

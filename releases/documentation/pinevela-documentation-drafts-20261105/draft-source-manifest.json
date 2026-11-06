@@ -1,0 +1,28 @@
+{
+  "documents": 22,
+  "status": "unpublished drafts",
+  "files": {
+    "00-START-HERE.md": "e9113adc1bdae818fdb7b6e151d5372a1727c206619545be4186745071fc5228",
+    "01-business-decisions.md": "e2e2ba048c9a5a437b89372b888801da0596ffeb780dddd0444d63292dec73db",
+    "public/02-platform-terms.md": "7af15ba9227cefea139905bb238c0cb9382aa440c137116844be53a3c569b3fb",
+    "public/03-privacy-policy.md": "8ae38c2d4bae987287cebc77c8ccba67a914163178fce8353b162f84dae3cce3",
+    "public/04-cookies-and-analytics.md": "d7e44d0216f6155662f5eafd47744c62f78bc5427ceacbb03fd0bfc363214a33",
+    "marketplace/05-merchant-terms.md": "554ba10461e6bddcb70731bc163f4fee3f3b48e1e10a0e26c85589f8acea9cb8",
+    "marketplace/06-buyer-and-marketplace-rules.md": "c6b188a8c4f33a08436e8dbe02db2a76c0c150b7183a4fb7b2e08a0915593dfd",
+    "marketplace/07-payments-cancellations-refunds.md": "56bc7c42e65caabc7cafa71452d462ce5910a59f499ad4952e5170eb0364146e",
+    "housing/08-manager-and-property-terms.md": "2a98c81905f37da45768390ed2f0610ef2cd1c5f4c1ced0d68a6d5a24fde9945",
+    "housing/09-resident-housing-use.md": "799dbc8cde9eb9477fc87585dd76f11b54d03a7e6bf76703b37273a9a4d14e56",
+    "housing/10-staff-access-and-conduct.md": "321c661f957a97b1a2836a0b6d6a4b005583837bb74d4e38fc0c1e1ab2929295",
+    "community/11-acceptable-use-and-content.md": "6489e99b9c8924bf5876cda8a2560319d3d27b9ca0055e817faca7dda83c2588",
+    "community/12-complaints-disputes-appeals.md": "c1bc031c38f0f7ee51f484fa0e91e009cfa59446dff24d451188256c0a8f2bf1",
+    "internal/13-terms-acceptance-requirements.md": "44bce45b174f9135fd4c51d04ee531375b94c8b37827a0cef9c0aecd150cc883",
+    "internal/14-data-retention-and-deletion.md": "0644e2c8df7d23472b040d54763a2b6f693dfedf02ce2ba571bf6b2eb7fb1eab",
+    "internal/15-security-incidents-and-providers.md": "f1de1e1f7b4622e6e6a61a0f64cea6a30d4d14900ed064e41be44b6acbc3378c",
+    "internal/16-publication-and-versioning.md": "5278b6d8985b99a1f44fa41171e1cc04666ac1fcd3a9f2ba0fd8d90eecd1a867",
+    "support/17-user-guide-and-faq-structure.md": "c442df37d887d829cfb2fb71f232a20c43d0b63568d35c6e7ecc0eefcaef00f2",
+    "support/18-onboarding-and-support-copy.md": "71196855289e9e5b294c4624a8a8064df18e6fe5edf188d4da6979c44a0c4448",
+    "operations/19-analytics-and-ddos-plan.md": "086c14875af920ad54c5956421cb78d862f45e569d57a08c6b0b5123d9ae1cec",
+    "operations/20-technical-documentation-map.md": "e068d8fd2ea007b5a9209a176dcf87eea95511998096df2fe07dd4fdb487cc17",
+    "21-official-sources-and-review-notes.md": "dc70a3d69374eb9d85f0d7cd13e9baebf19a158176c0520b1455178d22863590"
+  }
+}

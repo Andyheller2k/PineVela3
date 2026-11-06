@@ -1,0 +1,19 @@
+{
+  "passed": true,
+  "browserChecks": 36,
+  "newSqlRequired": false,
+  "verifiedBackendSourceFingerprintsMatch": true,
+  "authHttpChecks": 110,
+  "unitTests": 42,
+  "privateCredentialMatches": 0,
+  "webZip": "/home/wyse/Documents/PineVela3/releases/web/pinevela-unified-room-login-20261105.zip",
+  "webZipSha256": "736504b3781669351382b3be461aca403fe09e5152c6ddc28ff4cbdd556215f3",
+  "webZipBytes": 6589128,
+  "apk": "/home/wyse/Documents/PineVela3/releases/android/pinevela-unified-room-login-20261105.apk",
+  "apkSha256": "3edbcc97992159fa484713696107260d8ab7546e904cbb32d4fc7ca9c7826882",
+  "apkBytes": 14827469,
+  "backendSha256": "c1fee7b4d83958976f5f8cce4b25bc85d1b2a64424c9424defe62ca9cb9c2993",
+  "indexSha256": "52893b6600ced9bd002a60537ac18a6afa032f5caa01046b0c0892d7e2f1e814",
+  "hostingStatus": "See hosting-application.json",
+  "apkInstallStatus": "See android/debug-install.json"
+}

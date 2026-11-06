@@ -19,6 +19,7 @@ coverage/
 /data/
 /uploads/
 /.security/
+android/app/**/google-services.json
 **/pinevela_store.json*
 **/request-limits.json*
 

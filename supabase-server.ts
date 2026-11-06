@@ -7,10 +7,11 @@ import { loadOrderPins } from './supabase/orderPins.js';
 import { installStaticFrontend,frontendFramingProtection } from './supabase/staticFrontend.js';
 import {startOrderExpiry} from './supabase/orderExpiry.js';
 import {startPaymentReconciliation} from './supabase/paymentReversals.js';
+import {startDevicePushWorker} from './supabase/devicePushWorker.js';
 dotenv.config({ quiet: true });
 const db = new SupabaseDatabase();
 // Refuse to serve a partially applied or inaccessible schema.
-await db.pool.query("select version from private.schema_migrations where version = '20261028120000'").then(result => {
+await db.pool.query("select version from private.schema_migrations where version = '20261105110000'").then(result => {
   if (!result.rowCount) throw new Error('Apply all Supabase migrations before starting the server.');
 });
 const pinKey=loadOrderPins();
@@ -19,6 +20,7 @@ if((await db.pool.query('select exists(select 1 from private.market_order_pins w
 const { app, auth } = createSupabaseApp(db);
 const closePaymentReconciliation=startPaymentReconciliation(auth);
 const closeOrderExpiry=startOrderExpiry(db);
+const closeDevicePush=startDevicePushWorker(db);
 let vite:ViteDevServer|undefined;
 app.use((req,res,next) => {
   let pathname:string;
@@ -48,6 +50,7 @@ async function close() {
     await app.locals.closeSupport?.();
     await closePaymentReconciliation();
     await closeOrderExpiry();
+    await closeDevicePush();
     await app.locals.closeRealtime();
     await vite?.close();
     // Finish accepted HTTP work before ending its database pool. Vite's own

@@ -1,0 +1,10 @@
+{
+  "passed": true,
+  "tests": 17,
+  "files": [
+    "tests/nearbyStores.test.ts",
+    "tests/serviceLocation.test.ts",
+    "tests/mapLogo.test.ts",
+    "tests/mapRoute.test.ts"
+  ]
+}

@@ -54,7 +54,7 @@ exports.run=async({viewport,load,evaluate,until,test,capture,command,pause,outpu
  for(const theme of ['light','dark'])for(const route of ['/help','/faq','/pinemarket','/pineresidence'])await test(`${theme} Android layout support/catalogue ${route}`,async()=>{
   await viewport(390,780);await load('/#'+route,theme);await contained(route);
  });
- for(const theme of ['light','dark'])for(const route of ['/privacy.html','/terms.html','/legal/terms-2026-10-27.html'])await test(`${theme} Android layout policy ${route}`,async()=>{
+ for(const theme of ['light','dark'])for(const route of ['/privacy.html','/terms.html','/legal/terms-2026-10-27.html','/legal/terms-2026-11-05.html'])await test(`${theme} Android layout policy ${route}`,async()=>{
   await viewport(390,780);await load(route,theme,false,{selector:'.document'});await contained(route);
  });
  for(const mode of ['login','signup'])await test(`${mode} Android Google button starts the native provider handoff`,async()=>{

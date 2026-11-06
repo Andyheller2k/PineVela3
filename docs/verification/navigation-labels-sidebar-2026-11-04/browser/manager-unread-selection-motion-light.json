@@ -1,0 +1,294 @@
+{
+  "before": {
+    "ms": 0,
+    "indicator": 45.3984375,
+    "previousIcon": 756,
+    "targetIcon": 784,
+    "unread": true
+  },
+  "frames": [
+    {
+      "ms": 16.100000000093132,
+      "indicator": 47.33009147644043,
+      "previousIcon": 756.3615112304688,
+      "targetIcon": 783.6384887695312,
+      "unread": false
+    },
+    {
+      "ms": 33.3000000002794,
+      "indicator": 52.761634826660156,
+      "previousIcon": 757.3780517578125,
+      "targetIcon": 782.6219482421875,
+      "unread": false
+    },
+    {
+      "ms": 49.10000000009313,
+      "indicator": 61.12195587158203,
+      "previousIcon": 758.9427490234375,
+      "targetIcon": 781.0572509765625,
+      "unread": false
+    },
+    {
+      "ms": 65.8000000002794,
+      "indicator": 71.78590393066406,
+      "previousIcon": 760.9385375976562,
+      "targetIcon": 779.0614624023438,
+      "unread": false
+    },
+    {
+      "ms": 82.8000000002794,
+      "indicator": 84.26309967041016,
+      "previousIcon": 763.273681640625,
+      "targetIcon": 776.726318359375,
+      "unread": false
+    },
+    {
+      "ms": 99.70000000018626,
+      "indicator": 98.11671447753906,
+      "previousIcon": 765.866455078125,
+      "targetIcon": 774.133544921875,
+      "unread": false
+    },
+    {
+      "ms": 116,
+      "indicator": 112.84029769897461,
+      "previousIcon": 768.6220092773438,
+      "targetIcon": 771.3779907226562,
+      "unread": false
+    },
+    {
+      "ms": 132.90000000037253,
+      "indicator": 127.64599609375,
+      "previousIcon": 771.3929443359375,
+      "targetIcon": 768.6070556640625,
+      "unread": false
+    },
+    {
+      "ms": 150.20000000018626,
+      "indicator": 142.19512557983398,
+      "previousIcon": 774.1159057617188,
+      "targetIcon": 765.8840942382812,
+      "unread": false
+    },
+    {
+      "ms": 168.8000000002794,
+      "indicator": 156.05559921264648,
+      "previousIcon": 776.7099609375,
+      "targetIcon": 763.2900390625,
+      "unread": false
+    },
+    {
+      "ms": 182.70000000018626,
+      "indicator": 168.6133270263672,
+      "previousIcon": 779.0601806640625,
+      "targetIcon": 760.9398193359375,
+      "unread": false
+    },
+    {
+      "ms": 199.90000000037253,
+      "indicator": 179.2785186767578,
+      "previousIcon": 781.0562133789062,
+      "targetIcon": 758.9437866210938,
+      "unread": false
+    },
+    {
+      "ms": 216.8000000002794,
+      "indicator": 187.6404266357422,
+      "previousIcon": 782.6211547851562,
+      "targetIcon": 757.3788452148438,
+      "unread": false
+    },
+    {
+      "ms": 232.40000000037253,
+      "indicator": 193.0738983154297,
+      "previousIcon": 783.6380615234375,
+      "targetIcon": 756.3619384765625,
+      "unread": false
+    },
+    {
+      "ms": 248.8000000002794,
+      "indicator": 195.00779724121094,
+      "previousIcon": 784,
+      "targetIcon": 756,
+      "unread": false
+    },
+    {
+      "ms": 265.70000000018626,
+      "indicator": 195.0078125,
+      "previousIcon": 784,
+      "targetIcon": 756,
+      "unread": false
+    },
+    {
+      "ms": 282.20000000018626,
+      "indicator": 195.0078125,
+      "previousIcon": 784,
+      "targetIcon": 756,
+      "unread": false
+    },
+    {
+      "ms": 298.70000000018626,
+      "indicator": 195.0078125,
+      "previousIcon": 784,
+      "targetIcon": 756,
+      "unread": false
+    },
+    {
+      "ms": 315.10000000009313,
+      "indicator": 195.0078125,
+      "previousIcon": 784,
+      "targetIcon": 756,
+      "unread": false
+    },
+    {
+      "ms": 331.70000000018626,
+      "indicator": 195.0078125,
+      "previousIcon": 784,
+      "targetIcon": 756,
+      "unread": false
+    },
+    {
+      "ms": 349.10000000009313,
+      "indicator": 195.0078125,
+      "previousIcon": 784,
+      "targetIcon": 756,
+      "unread": false
+    },
+    {
+      "ms": 365.20000000018626,
+      "indicator": 195.0078125,
+      "previousIcon": 784,
+      "targetIcon": 756,
+      "unread": false
+    },
+    {
+      "ms": 381.90000000037253,
+      "indicator": 195.0078125,
+      "previousIcon": 784,
+      "targetIcon": 756,
+      "unread": false
+    },
+    {
+      "ms": 398.70000000018626,
+      "indicator": 195.0078125,
+      "previousIcon": 784,
+      "targetIcon": 756,
+      "unread": false
+    },
+    {
+      "ms": 415,
+      "indicator": 195.0078125,
+      "previousIcon": 784,
+      "targetIcon": 756,
+      "unread": false
+    },
+    {
+      "ms": 432.90000000037253,
+      "indicator": 195.0078125,
+      "previousIcon": 784,
+      "targetIcon": 756,
+      "unread": false
+    },
+    {
+      "ms": 448.40000000037253,
+      "indicator": 195.0078125,
+      "previousIcon": 784,
+      "targetIcon": 756,
+      "unread": false
+    },
+    {
+      "ms": 464.90000000037253,
+      "indicator": 195.0078125,
+      "previousIcon": 784,
+      "targetIcon": 756,
+      "unread": false
+    },
+    {
+      "ms": 481.90000000037253,
+      "indicator": 195.0078125,
+      "previousIcon": 784,
+      "targetIcon": 756,
+      "unread": false
+    },
+    {
+      "ms": 498.70000000018626,
+      "indicator": 195.0078125,
+      "previousIcon": 784,
+      "targetIcon": 756,
+      "unread": false
+    },
+    {
+      "ms": 514.8000000002794,
+      "indicator": 195.0078125,
+      "previousIcon": 784,
+      "targetIcon": 756,
+      "unread": false
+    },
+    {
+      "ms": 531.6000000000931,
+      "indicator": 195.0078125,
+      "previousIcon": 784,
+      "targetIcon": 756,
+      "unread": false
+    },
+    {
+      "ms": 548.6000000000931,
+      "indicator": 195.0078125,
+      "previousIcon": 784,
+      "targetIcon": 756,
+      "unread": false
+    },
+    {
+      "ms": 565,
+      "indicator": 195.0078125,
+      "previousIcon": 784,
+      "targetIcon": 756,
+      "unread": false
+    },
+    {
+      "ms": 581.8000000002794,
+      "indicator": 195.0078125,
+      "previousIcon": 784,
+      "targetIcon": 756,
+      "unread": false
+    },
+    {
+      "ms": 598.2000000001863,
+      "indicator": 195.0078125,
+      "previousIcon": 784,
+      "targetIcon": 756,
+      "unread": false
+    },
+    {
+      "ms": 614.8000000002794,
+      "indicator": 195.0078125,
+      "previousIcon": 784,
+      "targetIcon": 756,
+      "unread": false
+    },
+    {
+      "ms": 631.8000000002794,
+      "indicator": 195.0078125,
+      "previousIcon": 784,
+      "targetIcon": 756,
+      "unread": false
+    },
+    {
+      "ms": 648.7000000001863,
+      "indicator": 195.0078125,
+      "previousIcon": 784,
+      "targetIcon": 756,
+      "unread": false
+    }
+  ],
+  "after": {
+    "ms": 656.1000000000931,
+    "indicator": 195.0078125,
+    "previousIcon": 784,
+    "targetIcon": 756,
+    "unread": false
+  },
+  "selectionDOMFixture": true,
+  "realFunctionalSelectionTestedSeparately": true,
+  "samplesAtAnimationFrames": true
+}

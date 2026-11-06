@@ -11,7 +11,7 @@ function NativeHelp() {
     <h1 className="text-3xl font-bold">Help & support</h1>
     <p className="mt-4 max-w-xl text-sm leading-7">You can read PineVela’s frequently asked questions and policies in this Android preview. Sending support requests and signing in will be connected in the next step.</p>
     <Link to="/faq" className="mt-6 inline-flex rounded-xl bg-blue-700 px-5 py-3 text-sm font-bold text-white">Browse frequently asked questions</Link>
-    <p className="mt-6 text-sm">Support email: andyheller2k@gmail.com</p>
+    <p className="mt-6 text-sm">Support email: pinevela@pinevela.app</p>
   </SupportLayout>;
 }
 

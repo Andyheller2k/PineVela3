@@ -1,0 +1,34 @@
+{
+  "passed": true,
+  "installedPackage": "app.pinevela.mobile.debug",
+  "previousDebugSha256": "77206a065cbab322f89a108aa90b9d3c94766601f96e6f1ee5697c85e1791a4a",
+  "installedDebugSha256": "1186c808ffd54756894b77e56d56f6b20f416b3c844598f6064409e16b34dedc",
+  "installedFrom": "releases/android/pinevela-resident-pin-media-20261105.apk",
+  "noDataClearing": true,
+  "packageWritesFlushed": true,
+  "installMode": "adb install -r",
+  "rebootPerformed": false,
+  "emulatorRestartedForMemory": false,
+  "startedPreviouslyStoppedExistingEmulator": true,
+  "logoutPerformed": false,
+  "authenticationFormsSubmitted": false,
+  "accountMutationsRequestedByVerifier": 0,
+  "normalAppTrafficIntercepted": false,
+  "ui": {
+    "page": "welcome",
+    "theme": "light",
+    "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+    "width": 393,
+    "height": 778,
+    "overflow": false,
+    "header": {
+      "top": 0,
+      "bottom": 78.7272720336914
+    }
+  },
+  "testOnlyPackagesRemoved": [
+    "app.pinevela.mobile.transporttest",
+    "app.pinevela.mobile.transporttest.test"
+  ],
+  "emulatorLeftRunning": true
+}

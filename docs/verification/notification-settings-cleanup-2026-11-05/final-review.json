@@ -1,0 +1,13 @@
+{
+  "passed": true,
+  "sharedSettingsButtonsRemoved": true,
+  "unusedContextActionsRemoved": true,
+  "allAlertCategoriesCanBeSavedOff": true,
+  "browserChecks": 51,
+  "androidInstalledInPlace": true,
+  "androidDataPreserved": true,
+  "sourceSha256": {
+    "src/components/DeviceNotificationSettings.tsx": "d2ca04a8f9f4378fbbddfab708b940fd85da9939389b604f3e8b0cf0365ed668",
+    "src/context/DevicePushContext.tsx": "5c823ab56399edec6b7cecf5afae2c4b7936d11779e8bac19d05fb4b64ee8f76"
+  }
+}

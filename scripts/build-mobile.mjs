@@ -38,7 +38,7 @@ for (const name of ['outfit-OFL.txt', 'plus-jakarta-sans-OFL.txt', 'jetbrains-mo
 }
 await copy('assets/fonts/Childer-LICENSE.txt', 'licenses/fonts/Childer-LICENSE.txt');
 
-for (const name of ['privacy.html', 'terms.html', 'legal/terms-2026-10-27.html']) {
+for (const name of ['privacy.html', 'terms.html', 'legal/terms-2026-10-27.html', 'legal/terms-2026-11-05.html']) {
   const original = await fs.readFile(path.join(root, 'public', name), 'utf8');
   const originalArticle = article(original);
   if (!originalArticle) throw new Error(`Missing published article in ${name}`);

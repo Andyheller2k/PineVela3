@@ -1,0 +1,3898 @@
+{
+  "passed": true,
+  "installedApkSha256": "ebb414595b21ee47ec016a2c0685818479144d7913fa3bb181cdbfd95c7ae78a",
+  "actualInstalledAndroidWebView": true,
+  "realNativeAppearance": true,
+  "syntheticReadOnlyAccountFixtures": true,
+  "productionWrites": 0,
+  "debugSessionUntouched": true,
+  "scenes": [
+    {
+      "name": "user-light",
+      "theme": "light",
+      "w": 393,
+      "h": 778,
+      "ratio": 2.75,
+      "overflow": false,
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "nav": {
+        "x": 0,
+        "y": 674.1818237304688,
+        "width": 393.0909118652344,
+        "bottom": 778.1818237304688,
+        "height": 104,
+        "background": "#fff",
+        "accent": "#003566",
+        "variant": "standard",
+        "duration": ".25s"
+      },
+      "surface": {
+        "background": "rgba(0, 0, 0, 0)",
+        "color": "rgb(0, 29, 61)",
+        "transitionDuration": "0s",
+        "rect": {
+          "left": -543.789794921875,
+          "top": 674.1818237304688,
+          "width": 1179,
+          "height": 104
+        }
+      },
+      "sideHighlight": null,
+      "selectedIcon": {
+        "background": "rgba(0, 0, 0, 0)",
+        "color": "rgb(255, 255, 255)",
+        "transitionDuration": "0.25s, 0.2s",
+        "rect": {
+          "left": 32.210227966308594,
+          "top": 690.1818237304688,
+          "width": 27,
+          "height": 27
+        }
+      },
+      "bubble": {
+        "left": 16.710227966308594,
+        "top": 674.1818237304688,
+        "width": 58,
+        "height": 58,
+        "visible": true
+      },
+      "buttons": [
+        {
+          "id": "home",
+          "current": "page",
+          "disabled": false,
+          "caption": {
+            "top": 750.1818237304688,
+            "bottom": 766.1818237304688,
+            "iconBottom": 717.1818237304688,
+            "textTop": 751.6364135742188,
+            "textBottom": 764.3636474609375,
+            "color": "rgb(0, 53, 102)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        },
+        {
+          "id": "digital-market",
+          "current": null,
+          "disabled": false,
+          "caption": {
+            "top": 750.1818237304688,
+            "bottom": 766.1818237304688,
+            "iconBottom": 745.1818237304688,
+            "textTop": 751.6364135742188,
+            "textBottom": 764.3636474609375,
+            "color": "rgb(96, 112, 131)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        },
+        {
+          "id": "login-room",
+          "current": null,
+          "disabled": false,
+          "caption": {
+            "top": 750.1818237304688,
+            "bottom": 766.1818237304688,
+            "iconBottom": 745.1818237304688,
+            "textTop": 751.6364135742188,
+            "textBottom": 764.3636474609375,
+            "color": "rgb(96, 112, 131)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        },
+        {
+          "id": "options",
+          "current": null,
+          "disabled": false,
+          "caption": {
+            "top": 750.1818237304688,
+            "bottom": 766.1818237304688,
+            "iconBottom": 745.1818237304688,
+            "textTop": 751.6364135742188,
+            "textBottom": 764.3636474609375,
+            "color": "rgb(96, 112, 131)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        },
+        {
+          "id": "companion",
+          "current": null,
+          "disabled": false,
+          "caption": {
+            "top": 750.1818237304688,
+            "bottom": 766.1818237304688,
+            "iconBottom": 745.1818237304688,
+            "textTop": 751.6364135742188,
+            "textBottom": 764.3636474609375,
+            "color": "rgb(96, 112, 131)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        }
+      ],
+      "deniedWrites": 0,
+      "fixtureNoops": 0,
+      "fixtureReads": 14,
+      "pixels": {
+        "topRgb": [
+          255,
+          255,
+          255
+        ],
+        "bottomRgb": [
+          255,
+          255,
+          255
+        ],
+        "bubbleRgb": [
+          0,
+          53,
+          102
+        ]
+      },
+      "screenshot": "user-light.png"
+    },
+    {
+      "name": "user-light-selected-digital-market",
+      "theme": "light",
+      "w": 393,
+      "h": 778,
+      "ratio": 2.75,
+      "overflow": false,
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "nav": {
+        "x": 0,
+        "y": 674.1818237304688,
+        "width": 393.0909118652344,
+        "bottom": 778.1818237304688,
+        "height": 104,
+        "background": "#fff",
+        "accent": "#003566",
+        "variant": "standard",
+        "duration": ".25s"
+      },
+      "surface": {
+        "background": "rgba(0, 0, 0, 0)",
+        "color": "rgb(0, 29, 61)",
+        "transitionDuration": "0.25s",
+        "rect": {
+          "left": -468.36932373046875,
+          "top": 674.1818237304688,
+          "width": 1179,
+          "height": 104
+        }
+      },
+      "sideHighlight": null,
+      "selectedIcon": {
+        "background": "rgba(0, 0, 0, 0)",
+        "color": "rgb(255, 255, 255)",
+        "transitionDuration": "0.25s, 0.2s",
+        "rect": {
+          "left": 107.63068389892578,
+          "top": 690.1818237304688,
+          "width": 27,
+          "height": 27
+        }
+      },
+      "bubble": {
+        "left": 92.13068389892578,
+        "top": 674.1818237304688,
+        "width": 58,
+        "height": 58,
+        "visible": true
+      },
+      "buttons": [
+        {
+          "id": "home",
+          "current": null,
+          "disabled": false,
+          "caption": {
+            "top": 750.1818237304688,
+            "bottom": 766.1818237304688,
+            "iconBottom": 745.1818237304688,
+            "textTop": 751.6364135742188,
+            "textBottom": 764.3636474609375,
+            "color": "rgb(96, 112, 131)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        },
+        {
+          "id": "digital-market",
+          "current": "page",
+          "disabled": false,
+          "caption": {
+            "top": 750.1818237304688,
+            "bottom": 766.1818237304688,
+            "iconBottom": 717.1818237304688,
+            "textTop": 751.6364135742188,
+            "textBottom": 764.3636474609375,
+            "color": "rgb(0, 53, 102)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        },
+        {
+          "id": "login-room",
+          "current": null,
+          "disabled": false,
+          "caption": {
+            "top": 750.1818237304688,
+            "bottom": 766.1818237304688,
+            "iconBottom": 745.1818237304688,
+            "textTop": 751.6364135742188,
+            "textBottom": 764.3636474609375,
+            "color": "rgb(96, 112, 131)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        },
+        {
+          "id": "options",
+          "current": null,
+          "disabled": false,
+          "caption": {
+            "top": 750.1818237304688,
+            "bottom": 766.1818237304688,
+            "iconBottom": 745.1818237304688,
+            "textTop": 751.6364135742188,
+            "textBottom": 764.3636474609375,
+            "color": "rgb(96, 112, 131)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        },
+        {
+          "id": "companion",
+          "current": null,
+          "disabled": false,
+          "caption": {
+            "top": 750.1818237304688,
+            "bottom": 766.1818237304688,
+            "iconBottom": 745.1818237304688,
+            "textTop": 751.6364135742188,
+            "textBottom": 764.3636474609375,
+            "color": "rgb(96, 112, 131)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        }
+      ],
+      "deniedWrites": 0,
+      "fixtureNoops": 0,
+      "fixtureReads": 16,
+      "pixels": {
+        "topRgb": [
+          255,
+          255,
+          255
+        ],
+        "bottomRgb": [
+          255,
+          255,
+          255
+        ],
+        "bubbleRgb": [
+          0,
+          53,
+          102
+        ]
+      },
+      "screenshot": "user-light-selected-digital-market.png"
+    },
+    {
+      "name": "user-light-selected-login-room",
+      "theme": "light",
+      "w": 393,
+      "h": 778,
+      "ratio": 2.75,
+      "overflow": false,
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "nav": {
+        "x": 0,
+        "y": 674.1818237304688,
+        "width": 393.0909118652344,
+        "bottom": 778.1818237304688,
+        "height": 104,
+        "background": "#fff",
+        "accent": "#003566",
+        "variant": "standard",
+        "duration": ".25s"
+      },
+      "surface": {
+        "background": "rgba(0, 0, 0, 0)",
+        "color": "rgb(0, 29, 61)",
+        "transitionDuration": "0.25s",
+        "rect": {
+          "left": -392.9488830566406,
+          "top": 674.1818237304688,
+          "width": 1179,
+          "height": 104
+        }
+      },
+      "sideHighlight": null,
+      "selectedIcon": {
+        "background": "rgba(0, 0, 0, 0)",
+        "color": "rgb(255, 255, 255)",
+        "transitionDuration": "0.25s, 0.2s",
+        "rect": {
+          "left": 183.0511474609375,
+          "top": 690.1818237304688,
+          "width": 27,
+          "height": 27
+        }
+      },
+      "bubble": {
+        "left": 167.5511474609375,
+        "top": 674.1818237304688,
+        "width": 58,
+        "height": 58,
+        "visible": true
+      },
+      "buttons": [
+        {
+          "id": "home",
+          "current": null,
+          "disabled": false,
+          "caption": {
+            "top": 750.1818237304688,
+            "bottom": 766.1818237304688,
+            "iconBottom": 745.1818237304688,
+            "textTop": 751.6364135742188,
+            "textBottom": 764.3636474609375,
+            "color": "rgb(96, 112, 131)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        },
+        {
+          "id": "digital-market",
+          "current": null,
+          "disabled": false,
+          "caption": {
+            "top": 750.1818237304688,
+            "bottom": 766.1818237304688,
+            "iconBottom": 745.1818237304688,
+            "textTop": 751.6364135742188,
+            "textBottom": 764.3636474609375,
+            "color": "rgb(96, 112, 131)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        },
+        {
+          "id": "login-room",
+          "current": "page",
+          "disabled": false,
+          "caption": {
+            "top": 750.1818237304688,
+            "bottom": 766.1818237304688,
+            "iconBottom": 717.1818237304688,
+            "textTop": 751.6364135742188,
+            "textBottom": 764.3636474609375,
+            "color": "rgb(0, 53, 102)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        },
+        {
+          "id": "options",
+          "current": null,
+          "disabled": false,
+          "caption": {
+            "top": 750.1818237304688,
+            "bottom": 766.1818237304688,
+            "iconBottom": 745.1818237304688,
+            "textTop": 751.6364135742188,
+            "textBottom": 764.3636474609375,
+            "color": "rgb(96, 112, 131)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        },
+        {
+          "id": "companion",
+          "current": null,
+          "disabled": false,
+          "caption": {
+            "top": 750.1818237304688,
+            "bottom": 766.1818237304688,
+            "iconBottom": 745.1818237304688,
+            "textTop": 751.6364135742188,
+            "textBottom": 764.3636474609375,
+            "color": "rgb(96, 112, 131)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        }
+      ],
+      "deniedWrites": 0,
+      "fixtureNoops": 0,
+      "fixtureReads": 16,
+      "pixels": {
+        "topRgb": [
+          255,
+          255,
+          255
+        ],
+        "bottomRgb": [
+          255,
+          255,
+          255
+        ],
+        "bubbleRgb": [
+          0,
+          53,
+          102
+        ]
+      },
+      "screenshot": "user-light-selected-login-room.png"
+    },
+    {
+      "name": "user-light-selected-options",
+      "theme": "light",
+      "w": 393,
+      "h": 778,
+      "ratio": 2.75,
+      "overflow": false,
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "nav": {
+        "x": 0,
+        "y": 674.1818237304688,
+        "width": 393.0909118652344,
+        "bottom": 778.1818237304688,
+        "height": 104,
+        "background": "#fff",
+        "accent": "#003566",
+        "variant": "standard",
+        "duration": ".25s"
+      },
+      "surface": {
+        "background": "rgba(0, 0, 0, 0)",
+        "color": "rgb(0, 29, 61)",
+        "transitionDuration": "0.25s",
+        "rect": {
+          "left": -317.5284118652344,
+          "top": 674.1818237304688,
+          "width": 1179,
+          "height": 104
+        }
+      },
+      "sideHighlight": null,
+      "selectedIcon": {
+        "background": "rgba(0, 0, 0, 0)",
+        "color": "rgb(255, 255, 255)",
+        "transitionDuration": "0.25s, 0.2s",
+        "rect": {
+          "left": 258.4715881347656,
+          "top": 690.1818237304688,
+          "width": 27,
+          "height": 27
+        }
+      },
+      "bubble": {
+        "left": 242.9716033935547,
+        "top": 674.1818237304688,
+        "width": 58,
+        "height": 58,
+        "visible": true
+      },
+      "buttons": [
+        {
+          "id": "home",
+          "current": null,
+          "disabled": false,
+          "caption": {
+            "top": 750.1818237304688,
+            "bottom": 766.1818237304688,
+            "iconBottom": 745.1818237304688,
+            "textTop": 751.6364135742188,
+            "textBottom": 764.3636474609375,
+            "color": "rgb(96, 112, 131)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        },
+        {
+          "id": "digital-market",
+          "current": null,
+          "disabled": false,
+          "caption": {
+            "top": 750.1818237304688,
+            "bottom": 766.1818237304688,
+            "iconBottom": 745.1818237304688,
+            "textTop": 751.6364135742188,
+            "textBottom": 764.3636474609375,
+            "color": "rgb(96, 112, 131)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        },
+        {
+          "id": "login-room",
+          "current": null,
+          "disabled": false,
+          "caption": {
+            "top": 750.1818237304688,
+            "bottom": 766.1818237304688,
+            "iconBottom": 745.1818237304688,
+            "textTop": 751.6364135742188,
+            "textBottom": 764.3636474609375,
+            "color": "rgb(96, 112, 131)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        },
+        {
+          "id": "options",
+          "current": "page",
+          "disabled": false,
+          "caption": {
+            "top": 750.1818237304688,
+            "bottom": 766.1818237304688,
+            "iconBottom": 717.1818237304688,
+            "textTop": 751.6364135742188,
+            "textBottom": 764.3636474609375,
+            "color": "rgb(0, 53, 102)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        },
+        {
+          "id": "companion",
+          "current": null,
+          "disabled": false,
+          "caption": {
+            "top": 750.1818237304688,
+            "bottom": 766.1818237304688,
+            "iconBottom": 745.1818237304688,
+            "textTop": 751.6364135742188,
+            "textBottom": 764.3636474609375,
+            "color": "rgb(96, 112, 131)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        }
+      ],
+      "deniedWrites": 0,
+      "fixtureNoops": 0,
+      "fixtureReads": 17,
+      "pixels": {
+        "topRgb": [
+          255,
+          255,
+          255
+        ],
+        "bottomRgb": [
+          255,
+          255,
+          255
+        ],
+        "bubbleRgb": [
+          0,
+          53,
+          102
+        ]
+      },
+      "screenshot": "user-light-selected-options.png"
+    },
+    {
+      "name": "user-light-selected-home",
+      "theme": "light",
+      "w": 393,
+      "h": 778,
+      "ratio": 2.75,
+      "overflow": false,
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "nav": {
+        "x": 0,
+        "y": 674.1818237304688,
+        "width": 393.0909118652344,
+        "bottom": 778.1818237304688,
+        "height": 104,
+        "background": "#fff",
+        "accent": "#003566",
+        "variant": "standard",
+        "duration": ".25s"
+      },
+      "surface": {
+        "background": "rgba(0, 0, 0, 0)",
+        "color": "rgb(0, 29, 61)",
+        "transitionDuration": "0.25s",
+        "rect": {
+          "left": -543.789794921875,
+          "top": 674.1818237304688,
+          "width": 1179,
+          "height": 104
+        }
+      },
+      "sideHighlight": null,
+      "selectedIcon": {
+        "background": "rgba(0, 0, 0, 0)",
+        "color": "rgb(255, 255, 255)",
+        "transitionDuration": "0.25s, 0.2s",
+        "rect": {
+          "left": 32.210227966308594,
+          "top": 690.1818237304688,
+          "width": 27,
+          "height": 27
+        }
+      },
+      "bubble": {
+        "left": 16.710227966308594,
+        "top": 674.1818237304688,
+        "width": 58,
+        "height": 58,
+        "visible": true
+      },
+      "buttons": [
+        {
+          "id": "home",
+          "current": "page",
+          "disabled": false,
+          "caption": {
+            "top": 750.1818237304688,
+            "bottom": 766.1818237304688,
+            "iconBottom": 717.1818237304688,
+            "textTop": 751.6364135742188,
+            "textBottom": 764.3636474609375,
+            "color": "rgb(0, 53, 102)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        },
+        {
+          "id": "digital-market",
+          "current": null,
+          "disabled": false,
+          "caption": {
+            "top": 750.1818237304688,
+            "bottom": 766.1818237304688,
+            "iconBottom": 745.1818237304688,
+            "textTop": 751.6364135742188,
+            "textBottom": 764.3636474609375,
+            "color": "rgb(96, 112, 131)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        },
+        {
+          "id": "login-room",
+          "current": null,
+          "disabled": false,
+          "caption": {
+            "top": 750.1818237304688,
+            "bottom": 766.1818237304688,
+            "iconBottom": 745.1818237304688,
+            "textTop": 751.6364135742188,
+            "textBottom": 764.3636474609375,
+            "color": "rgb(96, 112, 131)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        },
+        {
+          "id": "options",
+          "current": null,
+          "disabled": false,
+          "caption": {
+            "top": 750.1818237304688,
+            "bottom": 766.1818237304688,
+            "iconBottom": 745.1818237304688,
+            "textTop": 751.6364135742188,
+            "textBottom": 764.3636474609375,
+            "color": "rgb(96, 112, 131)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        },
+        {
+          "id": "companion",
+          "current": null,
+          "disabled": false,
+          "caption": {
+            "top": 750.1818237304688,
+            "bottom": 766.1818237304688,
+            "iconBottom": 745.1818237304688,
+            "textTop": 751.6364135742188,
+            "textBottom": 764.3636474609375,
+            "color": "rgb(96, 112, 131)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        }
+      ],
+      "deniedWrites": 0,
+      "fixtureNoops": 0,
+      "fixtureReads": 18,
+      "pixels": {
+        "topRgb": [
+          255,
+          255,
+          255
+        ],
+        "bottomRgb": [
+          255,
+          255,
+          255
+        ],
+        "bubbleRgb": [
+          0,
+          53,
+          102
+        ]
+      },
+      "screenshot": "user-light-selected-home.png"
+    },
+    {
+      "name": "user-dark",
+      "theme": "dark",
+      "w": 393,
+      "h": 778,
+      "ratio": 2.75,
+      "overflow": false,
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "nav": {
+        "x": 0,
+        "y": 674.1818237304688,
+        "width": 393.0909118652344,
+        "bottom": 778.1818237304688,
+        "height": 104,
+        "background": "#003566",
+        "accent": "#ffd60a",
+        "variant": "standard",
+        "duration": ".25s"
+      },
+      "surface": {
+        "background": "rgba(0, 0, 0, 0)",
+        "color": "rgb(232, 240, 248)",
+        "transitionDuration": "0s",
+        "rect": {
+          "left": -543.789794921875,
+          "top": 674.1818237304688,
+          "width": 1179,
+          "height": 104
+        }
+      },
+      "sideHighlight": null,
+      "selectedIcon": {
+        "background": "rgba(0, 0, 0, 0)",
+        "color": "rgb(0, 29, 61)",
+        "transitionDuration": "0.25s, 0.2s",
+        "rect": {
+          "left": 32.210227966308594,
+          "top": 690.1818237304688,
+          "width": 27,
+          "height": 27
+        }
+      },
+      "bubble": {
+        "left": 16.710227966308594,
+        "top": 674.1818237304688,
+        "width": 58,
+        "height": 58,
+        "visible": true
+      },
+      "buttons": [
+        {
+          "id": "home",
+          "current": "page",
+          "disabled": false,
+          "caption": {
+            "top": 750.1818237304688,
+            "bottom": 766.1818237304688,
+            "iconBottom": 717.1818237304688,
+            "textTop": 751.6364135742188,
+            "textBottom": 764.3636474609375,
+            "color": "rgb(255, 214, 10)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        },
+        {
+          "id": "digital-market",
+          "current": null,
+          "disabled": false,
+          "caption": {
+            "top": 750.1818237304688,
+            "bottom": 766.1818237304688,
+            "iconBottom": 745.1818237304688,
+            "textTop": 751.6364135742188,
+            "textBottom": 764.3636474609375,
+            "color": "rgb(187, 206, 224)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        },
+        {
+          "id": "login-room",
+          "current": null,
+          "disabled": false,
+          "caption": {
+            "top": 750.1818237304688,
+            "bottom": 766.1818237304688,
+            "iconBottom": 745.1818237304688,
+            "textTop": 751.6364135742188,
+            "textBottom": 764.3636474609375,
+            "color": "rgb(187, 206, 224)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        },
+        {
+          "id": "options",
+          "current": null,
+          "disabled": false,
+          "caption": {
+            "top": 750.1818237304688,
+            "bottom": 766.1818237304688,
+            "iconBottom": 745.1818237304688,
+            "textTop": 751.6364135742188,
+            "textBottom": 764.3636474609375,
+            "color": "rgb(187, 206, 224)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        },
+        {
+          "id": "companion",
+          "current": null,
+          "disabled": false,
+          "caption": {
+            "top": 750.1818237304688,
+            "bottom": 766.1818237304688,
+            "iconBottom": 745.1818237304688,
+            "textTop": 751.6364135742188,
+            "textBottom": 764.3636474609375,
+            "color": "rgb(187, 206, 224)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        }
+      ],
+      "deniedWrites": 0,
+      "fixtureNoops": 0,
+      "fixtureReads": 14,
+      "pixels": {
+        "topRgb": [
+          0,
+          29,
+          61
+        ],
+        "bottomRgb": [
+          0,
+          53,
+          102
+        ],
+        "bubbleRgb": [
+          255,
+          214,
+          10
+        ]
+      },
+      "screenshot": "user-dark.png"
+    },
+    {
+      "name": "user-dark-selected-digital-market",
+      "theme": "dark",
+      "w": 393,
+      "h": 778,
+      "ratio": 2.75,
+      "overflow": false,
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "nav": {
+        "x": 0,
+        "y": 674.1818237304688,
+        "width": 393.0909118652344,
+        "bottom": 778.1818237304688,
+        "height": 104,
+        "background": "#003566",
+        "accent": "#ffd60a",
+        "variant": "standard",
+        "duration": ".25s"
+      },
+      "surface": {
+        "background": "rgba(0, 0, 0, 0)",
+        "color": "rgb(232, 240, 248)",
+        "transitionDuration": "0.25s",
+        "rect": {
+          "left": -468.36932373046875,
+          "top": 674.1818237304688,
+          "width": 1179,
+          "height": 104
+        }
+      },
+      "sideHighlight": null,
+      "selectedIcon": {
+        "background": "rgba(0, 0, 0, 0)",
+        "color": "rgb(0, 29, 61)",
+        "transitionDuration": "0.25s, 0.2s",
+        "rect": {
+          "left": 107.63068389892578,
+          "top": 690.1818237304688,
+          "width": 27,
+          "height": 27
+        }
+      },
+      "bubble": {
+        "left": 92.13068389892578,
+        "top": 674.1818237304688,
+        "width": 58,
+        "height": 58,
+        "visible": true
+      },
+      "buttons": [
+        {
+          "id": "home",
+          "current": null,
+          "disabled": false,
+          "caption": {
+            "top": 750.1818237304688,
+            "bottom": 766.1818237304688,
+            "iconBottom": 745.1818237304688,
+            "textTop": 751.6364135742188,
+            "textBottom": 764.3636474609375,
+            "color": "rgb(187, 206, 224)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        },
+        {
+          "id": "digital-market",
+          "current": "page",
+          "disabled": false,
+          "caption": {
+            "top": 750.1818237304688,
+            "bottom": 766.1818237304688,
+            "iconBottom": 717.1818237304688,
+            "textTop": 751.6364135742188,
+            "textBottom": 764.3636474609375,
+            "color": "rgb(255, 214, 10)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        },
+        {
+          "id": "login-room",
+          "current": null,
+          "disabled": false,
+          "caption": {
+            "top": 750.1818237304688,
+            "bottom": 766.1818237304688,
+            "iconBottom": 745.1818237304688,
+            "textTop": 751.6364135742188,
+            "textBottom": 764.3636474609375,
+            "color": "rgb(187, 206, 224)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        },
+        {
+          "id": "options",
+          "current": null,
+          "disabled": false,
+          "caption": {
+            "top": 750.1818237304688,
+            "bottom": 766.1818237304688,
+            "iconBottom": 745.1818237304688,
+            "textTop": 751.6364135742188,
+            "textBottom": 764.3636474609375,
+            "color": "rgb(187, 206, 224)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        },
+        {
+          "id": "companion",
+          "current": null,
+          "disabled": false,
+          "caption": {
+            "top": 750.1818237304688,
+            "bottom": 766.1818237304688,
+            "iconBottom": 745.1818237304688,
+            "textTop": 751.6364135742188,
+            "textBottom": 764.3636474609375,
+            "color": "rgb(187, 206, 224)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        }
+      ],
+      "deniedWrites": 0,
+      "fixtureNoops": 0,
+      "fixtureReads": 14,
+      "pixels": {
+        "topRgb": [
+          0,
+          29,
+          61
+        ],
+        "bottomRgb": [
+          0,
+          53,
+          102
+        ],
+        "bubbleRgb": [
+          255,
+          214,
+          10
+        ]
+      },
+      "screenshot": "user-dark-selected-digital-market.png"
+    },
+    {
+      "name": "user-dark-selected-login-room",
+      "theme": "dark",
+      "w": 393,
+      "h": 778,
+      "ratio": 2.75,
+      "overflow": false,
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "nav": {
+        "x": 0,
+        "y": 674.1818237304688,
+        "width": 393.0909118652344,
+        "bottom": 778.1818237304688,
+        "height": 104,
+        "background": "#003566",
+        "accent": "#ffd60a",
+        "variant": "standard",
+        "duration": ".25s"
+      },
+      "surface": {
+        "background": "rgba(0, 0, 0, 0)",
+        "color": "rgb(232, 240, 248)",
+        "transitionDuration": "0.25s",
+        "rect": {
+          "left": -392.9488830566406,
+          "top": 674.1818237304688,
+          "width": 1179,
+          "height": 104
+        }
+      },
+      "sideHighlight": null,
+      "selectedIcon": {
+        "background": "rgba(0, 0, 0, 0)",
+        "color": "rgb(0, 29, 61)",
+        "transitionDuration": "0.25s, 0.2s",
+        "rect": {
+          "left": 183.0511474609375,
+          "top": 690.1818237304688,
+          "width": 27,
+          "height": 27
+        }
+      },
+      "bubble": {
+        "left": 167.5511474609375,
+        "top": 674.1818237304688,
+        "width": 58,
+        "height": 58,
+        "visible": true
+      },
+      "buttons": [
+        {
+          "id": "home",
+          "current": null,
+          "disabled": false,
+          "caption": {
+            "top": 750.1818237304688,
+            "bottom": 766.1818237304688,
+            "iconBottom": 745.1818237304688,
+            "textTop": 751.6364135742188,
+            "textBottom": 764.3636474609375,
+            "color": "rgb(187, 206, 224)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        },
+        {
+          "id": "digital-market",
+          "current": null,
+          "disabled": false,
+          "caption": {
+            "top": 750.1818237304688,
+            "bottom": 766.1818237304688,
+            "iconBottom": 745.1818237304688,
+            "textTop": 751.6364135742188,
+            "textBottom": 764.3636474609375,
+            "color": "rgb(187, 206, 224)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        },
+        {
+          "id": "login-room",
+          "current": "page",
+          "disabled": false,
+          "caption": {
+            "top": 750.1818237304688,
+            "bottom": 766.1818237304688,
+            "iconBottom": 717.1818237304688,
+            "textTop": 751.6364135742188,
+            "textBottom": 764.3636474609375,
+            "color": "rgb(255, 214, 10)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        },
+        {
+          "id": "options",
+          "current": null,
+          "disabled": false,
+          "caption": {
+            "top": 750.1818237304688,
+            "bottom": 766.1818237304688,
+            "iconBottom": 745.1818237304688,
+            "textTop": 751.6364135742188,
+            "textBottom": 764.3636474609375,
+            "color": "rgb(187, 206, 224)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        },
+        {
+          "id": "companion",
+          "current": null,
+          "disabled": false,
+          "caption": {
+            "top": 750.1818237304688,
+            "bottom": 766.1818237304688,
+            "iconBottom": 745.1818237304688,
+            "textTop": 751.6364135742188,
+            "textBottom": 764.3636474609375,
+            "color": "rgb(187, 206, 224)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        }
+      ],
+      "deniedWrites": 0,
+      "fixtureNoops": 0,
+      "fixtureReads": 14,
+      "pixels": {
+        "topRgb": [
+          0,
+          29,
+          61
+        ],
+        "bottomRgb": [
+          0,
+          53,
+          102
+        ],
+        "bubbleRgb": [
+          255,
+          214,
+          10
+        ]
+      },
+      "screenshot": "user-dark-selected-login-room.png"
+    },
+    {
+      "name": "user-dark-selected-options",
+      "theme": "dark",
+      "w": 393,
+      "h": 778,
+      "ratio": 2.75,
+      "overflow": false,
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "nav": {
+        "x": 0,
+        "y": 674.1818237304688,
+        "width": 393.0909118652344,
+        "bottom": 778.1818237304688,
+        "height": 104,
+        "background": "#003566",
+        "accent": "#ffd60a",
+        "variant": "standard",
+        "duration": ".25s"
+      },
+      "surface": {
+        "background": "rgba(0, 0, 0, 0)",
+        "color": "rgb(232, 240, 248)",
+        "transitionDuration": "0.25s",
+        "rect": {
+          "left": -317.5284118652344,
+          "top": 674.1818237304688,
+          "width": 1179,
+          "height": 104
+        }
+      },
+      "sideHighlight": null,
+      "selectedIcon": {
+        "background": "rgba(0, 0, 0, 0)",
+        "color": "rgb(0, 29, 61)",
+        "transitionDuration": "0.25s, 0.2s",
+        "rect": {
+          "left": 258.4715881347656,
+          "top": 690.1818237304688,
+          "width": 27,
+          "height": 27
+        }
+      },
+      "bubble": {
+        "left": 242.9716033935547,
+        "top": 674.1818237304688,
+        "width": 58,
+        "height": 58,
+        "visible": true
+      },
+      "buttons": [
+        {
+          "id": "home",
+          "current": null,
+          "disabled": false,
+          "caption": {
+            "top": 750.1818237304688,
+            "bottom": 766.1818237304688,
+            "iconBottom": 745.1818237304688,
+            "textTop": 751.6364135742188,
+            "textBottom": 764.3636474609375,
+            "color": "rgb(187, 206, 224)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        },
+        {
+          "id": "digital-market",
+          "current": null,
+          "disabled": false,
+          "caption": {
+            "top": 750.1818237304688,
+            "bottom": 766.1818237304688,
+            "iconBottom": 745.1818237304688,
+            "textTop": 751.6364135742188,
+            "textBottom": 764.3636474609375,
+            "color": "rgb(187, 206, 224)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        },
+        {
+          "id": "login-room",
+          "current": null,
+          "disabled": false,
+          "caption": {
+            "top": 750.1818237304688,
+            "bottom": 766.1818237304688,
+            "iconBottom": 745.1818237304688,
+            "textTop": 751.6364135742188,
+            "textBottom": 764.3636474609375,
+            "color": "rgb(187, 206, 224)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        },
+        {
+          "id": "options",
+          "current": "page",
+          "disabled": false,
+          "caption": {
+            "top": 750.1818237304688,
+            "bottom": 766.1818237304688,
+            "iconBottom": 717.1818237304688,
+            "textTop": 751.6364135742188,
+            "textBottom": 764.3636474609375,
+            "color": "rgb(255, 214, 10)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        },
+        {
+          "id": "companion",
+          "current": null,
+          "disabled": false,
+          "caption": {
+            "top": 750.1818237304688,
+            "bottom": 766.1818237304688,
+            "iconBottom": 745.1818237304688,
+            "textTop": 751.6364135742188,
+            "textBottom": 764.3636474609375,
+            "color": "rgb(187, 206, 224)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        }
+      ],
+      "deniedWrites": 0,
+      "fixtureNoops": 0,
+      "fixtureReads": 16,
+      "pixels": {
+        "topRgb": [
+          0,
+          29,
+          61
+        ],
+        "bottomRgb": [
+          0,
+          53,
+          102
+        ],
+        "bubbleRgb": [
+          255,
+          214,
+          10
+        ]
+      },
+      "screenshot": "user-dark-selected-options.png"
+    },
+    {
+      "name": "user-dark-selected-home",
+      "theme": "dark",
+      "w": 393,
+      "h": 778,
+      "ratio": 2.75,
+      "overflow": false,
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "nav": {
+        "x": 0,
+        "y": 674.1818237304688,
+        "width": 393.0909118652344,
+        "bottom": 778.1818237304688,
+        "height": 104,
+        "background": "#003566",
+        "accent": "#ffd60a",
+        "variant": "standard",
+        "duration": ".25s"
+      },
+      "surface": {
+        "background": "rgba(0, 0, 0, 0)",
+        "color": "rgb(232, 240, 248)",
+        "transitionDuration": "0.25s",
+        "rect": {
+          "left": -543.789794921875,
+          "top": 674.1818237304688,
+          "width": 1179,
+          "height": 104
+        }
+      },
+      "sideHighlight": null,
+      "selectedIcon": {
+        "background": "rgba(0, 0, 0, 0)",
+        "color": "rgb(0, 29, 61)",
+        "transitionDuration": "0.25s, 0.2s",
+        "rect": {
+          "left": 32.210227966308594,
+          "top": 690.1818237304688,
+          "width": 27,
+          "height": 27
+        }
+      },
+      "bubble": {
+        "left": 16.710227966308594,
+        "top": 674.1818237304688,
+        "width": 58,
+        "height": 58,
+        "visible": true
+      },
+      "buttons": [
+        {
+          "id": "home",
+          "current": "page",
+          "disabled": false,
+          "caption": {
+            "top": 750.1818237304688,
+            "bottom": 766.1818237304688,
+            "iconBottom": 717.1818237304688,
+            "textTop": 751.6364135742188,
+            "textBottom": 764.3636474609375,
+            "color": "rgb(255, 214, 10)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        },
+        {
+          "id": "digital-market",
+          "current": null,
+          "disabled": false,
+          "caption": {
+            "top": 750.1818237304688,
+            "bottom": 766.1818237304688,
+            "iconBottom": 745.1818237304688,
+            "textTop": 751.6364135742188,
+            "textBottom": 764.3636474609375,
+            "color": "rgb(187, 206, 224)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        },
+        {
+          "id": "login-room",
+          "current": null,
+          "disabled": false,
+          "caption": {
+            "top": 750.1818237304688,
+            "bottom": 766.1818237304688,
+            "iconBottom": 745.1818237304688,
+            "textTop": 751.6364135742188,
+            "textBottom": 764.3636474609375,
+            "color": "rgb(187, 206, 224)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        },
+        {
+          "id": "options",
+          "current": null,
+          "disabled": false,
+          "caption": {
+            "top": 750.1818237304688,
+            "bottom": 766.1818237304688,
+            "iconBottom": 745.1818237304688,
+            "textTop": 751.6364135742188,
+            "textBottom": 764.3636474609375,
+            "color": "rgb(187, 206, 224)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        },
+        {
+          "id": "companion",
+          "current": null,
+          "disabled": false,
+          "caption": {
+            "top": 750.1818237304688,
+            "bottom": 766.1818237304688,
+            "iconBottom": 745.1818237304688,
+            "textTop": 751.6364135742188,
+            "textBottom": 764.3636474609375,
+            "color": "rgb(187, 206, 224)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        }
+      ],
+      "deniedWrites": 0,
+      "fixtureNoops": 0,
+      "fixtureReads": 16,
+      "pixels": {
+        "topRgb": [
+          0,
+          29,
+          61
+        ],
+        "bottomRgb": [
+          0,
+          53,
+          102
+        ],
+        "bubbleRgb": [
+          255,
+          214,
+          10
+        ]
+      },
+      "screenshot": "user-dark-selected-home.png"
+    },
+    {
+      "name": "merchant-light",
+      "theme": "light",
+      "w": 393,
+      "h": 778,
+      "ratio": 2.75,
+      "overflow": false,
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "nav": {
+        "x": 0,
+        "y": 674.1818237304688,
+        "width": 393.0909118652344,
+        "bottom": 778.1818237304688,
+        "height": 104,
+        "background": "#fff",
+        "accent": "#003566",
+        "variant": "action",
+        "duration": ".25s"
+      },
+      "surface": {
+        "background": "rgba(0, 0, 0, 0)",
+        "color": "rgb(0, 29, 61)",
+        "transitionDuration": "0s",
+        "rect": {
+          "left": -392.9488830566406,
+          "top": 674.1818237304688,
+          "width": 1179,
+          "height": 104
+        }
+      },
+      "sideHighlight": {
+        "background": "rgb(0, 53, 102)",
+        "color": "rgb(0, 29, 61)",
+        "transitionDuration": "0s",
+        "rect": {
+          "left": 21.710227966308594,
+          "top": 710.1818237304688,
+          "width": 48,
+          "height": 40
+        }
+      },
+      "selectedIcon": {
+        "background": "rgba(0, 0, 0, 0)",
+        "color": "rgb(255, 255, 255)",
+        "transitionDuration": "0.25s, 0.2s",
+        "rect": {
+          "left": 32.210227966308594,
+          "top": 712.1818237304688,
+          "width": 27,
+          "height": 27
+        }
+      },
+      "bubble": {
+        "left": 167.5511474609375,
+        "top": 674.1818237304688,
+        "width": 58,
+        "height": 58,
+        "visible": true
+      },
+      "buttons": [
+        {
+          "id": "dashboard",
+          "current": "page",
+          "disabled": false,
+          "caption": {
+            "top": 754.1818237304688,
+            "bottom": 767.1818237304688,
+            "iconBottom": 739.1818237304688,
+            "textTop": 754.1818237304688,
+            "textBottom": 766.9091186523438,
+            "color": "rgb(0, 53, 102)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        },
+        {
+          "id": "inventory",
+          "current": null,
+          "disabled": false,
+          "caption": {
+            "top": 754.1818237304688,
+            "bottom": 767.1818237304688,
+            "iconBottom": 745.1818237304688,
+            "textTop": 754.1818237304688,
+            "textBottom": 766.9091186523438,
+            "color": "rgb(96, 112, 131)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        },
+        {
+          "id": "quick-action",
+          "current": null,
+          "disabled": false,
+          "caption": {
+            "top": 754.1818237304688,
+            "bottom": 765.880687713623,
+            "iconBottom": 715.1818237304688,
+            "textTop": 754.1818237304688,
+            "textBottom": 765.45458984375,
+            "color": "rgb(96, 112, 131)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        },
+        {
+          "id": "sales",
+          "current": null,
+          "disabled": false,
+          "caption": {
+            "top": 754.1818237304688,
+            "bottom": 767.1818237304688,
+            "iconBottom": 745.1818237304688,
+            "textTop": 754.1818237304688,
+            "textBottom": 766.9091186523438,
+            "color": "rgb(96, 112, 131)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        },
+        {
+          "id": "more",
+          "current": null,
+          "disabled": false,
+          "caption": {
+            "top": 754.1818237304688,
+            "bottom": 767.1818237304688,
+            "iconBottom": 745.1818237304688,
+            "textTop": 754.1818237304688,
+            "textBottom": 766.9091186523438,
+            "color": "rgb(96, 112, 131)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        }
+      ],
+      "deniedWrites": 0,
+      "fixtureNoops": 0,
+      "fixtureReads": 10,
+      "pixels": {
+        "topRgb": [
+          255,
+          255,
+          255
+        ],
+        "bottomRgb": [
+          255,
+          255,
+          255
+        ],
+        "bubbleRgb": [
+          0,
+          53,
+          102
+        ],
+        "sideHighlightRgb": [
+          0,
+          53,
+          102
+        ]
+      },
+      "screenshot": "merchant-light.png"
+    },
+    {
+      "name": "merchant-dark",
+      "theme": "dark",
+      "w": 393,
+      "h": 778,
+      "ratio": 2.75,
+      "overflow": false,
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "nav": {
+        "x": 0,
+        "y": 674.1818237304688,
+        "width": 393.0909118652344,
+        "bottom": 778.1818237304688,
+        "height": 104,
+        "background": "#003566",
+        "accent": "#ffd60a",
+        "variant": "action",
+        "duration": ".25s"
+      },
+      "surface": {
+        "background": "rgba(0, 0, 0, 0)",
+        "color": "rgb(232, 240, 248)",
+        "transitionDuration": "0s",
+        "rect": {
+          "left": -392.9488830566406,
+          "top": 674.1818237304688,
+          "width": 1179,
+          "height": 104
+        }
+      },
+      "sideHighlight": {
+        "background": "rgb(255, 214, 10)",
+        "color": "rgb(232, 240, 248)",
+        "transitionDuration": "0s",
+        "rect": {
+          "left": 21.710227966308594,
+          "top": 710.1818237304688,
+          "width": 48,
+          "height": 40
+        }
+      },
+      "selectedIcon": {
+        "background": "rgba(0, 0, 0, 0)",
+        "color": "rgb(0, 29, 61)",
+        "transitionDuration": "0.25s, 0.2s",
+        "rect": {
+          "left": 32.210227966308594,
+          "top": 712.1818237304688,
+          "width": 27,
+          "height": 27
+        }
+      },
+      "bubble": {
+        "left": 167.5511474609375,
+        "top": 674.1818237304688,
+        "width": 58,
+        "height": 58,
+        "visible": true
+      },
+      "buttons": [
+        {
+          "id": "dashboard",
+          "current": "page",
+          "disabled": false,
+          "caption": {
+            "top": 754.1818237304688,
+            "bottom": 767.1818237304688,
+            "iconBottom": 739.1818237304688,
+            "textTop": 754.1818237304688,
+            "textBottom": 766.9091186523438,
+            "color": "rgb(255, 214, 10)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        },
+        {
+          "id": "inventory",
+          "current": null,
+          "disabled": false,
+          "caption": {
+            "top": 754.1818237304688,
+            "bottom": 767.1818237304688,
+            "iconBottom": 745.1818237304688,
+            "textTop": 754.1818237304688,
+            "textBottom": 766.9091186523438,
+            "color": "rgb(187, 206, 224)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        },
+        {
+          "id": "quick-action",
+          "current": null,
+          "disabled": false,
+          "caption": {
+            "top": 754.1818237304688,
+            "bottom": 765.880687713623,
+            "iconBottom": 715.1818237304688,
+            "textTop": 754.1818237304688,
+            "textBottom": 765.45458984375,
+            "color": "rgb(187, 206, 224)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        },
+        {
+          "id": "sales",
+          "current": null,
+          "disabled": false,
+          "caption": {
+            "top": 754.1818237304688,
+            "bottom": 767.1818237304688,
+            "iconBottom": 745.1818237304688,
+            "textTop": 754.1818237304688,
+            "textBottom": 766.9091186523438,
+            "color": "rgb(187, 206, 224)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        },
+        {
+          "id": "more",
+          "current": null,
+          "disabled": false,
+          "caption": {
+            "top": 754.1818237304688,
+            "bottom": 767.1818237304688,
+            "iconBottom": 745.1818237304688,
+            "textTop": 754.1818237304688,
+            "textBottom": 766.9091186523438,
+            "color": "rgb(187, 206, 224)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        }
+      ],
+      "deniedWrites": 0,
+      "fixtureNoops": 0,
+      "fixtureReads": 10,
+      "pixels": {
+        "topRgb": [
+          0,
+          29,
+          61
+        ],
+        "bottomRgb": [
+          0,
+          53,
+          102
+        ],
+        "bubbleRgb": [
+          255,
+          214,
+          10
+        ],
+        "sideHighlightRgb": [
+          255,
+          214,
+          10
+        ]
+      },
+      "screenshot": "merchant-dark.png"
+    },
+    {
+      "name": "student-light",
+      "theme": "light",
+      "w": 393,
+      "h": 778,
+      "ratio": 2.75,
+      "overflow": false,
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "nav": {
+        "x": 0,
+        "y": 674.1818237304688,
+        "width": 393.0909118652344,
+        "bottom": 778.1818237304688,
+        "height": 104,
+        "background": "#fff",
+        "accent": "#003566",
+        "variant": "action",
+        "duration": ".25s"
+      },
+      "surface": {
+        "background": "rgba(0, 0, 0, 0)",
+        "color": "rgb(0, 29, 61)",
+        "transitionDuration": "0s",
+        "rect": {
+          "left": -392.9488830566406,
+          "top": 674.1818237304688,
+          "width": 1179,
+          "height": 104
+        }
+      },
+      "sideHighlight": {
+        "background": "rgb(0, 53, 102)",
+        "color": "rgb(0, 29, 61)",
+        "transitionDuration": "0s",
+        "rect": {
+          "left": 21.710227966308594,
+          "top": 710.1818237304688,
+          "width": 48,
+          "height": 40
+        }
+      },
+      "selectedIcon": {
+        "background": "rgba(0, 0, 0, 0)",
+        "color": "rgb(255, 255, 255)",
+        "transitionDuration": "0.25s, 0.2s",
+        "rect": {
+          "left": 32.210227966308594,
+          "top": 712.1818237304688,
+          "width": 27,
+          "height": 27
+        }
+      },
+      "bubble": {
+        "left": 167.5511474609375,
+        "top": 674.1818237304688,
+        "width": 58,
+        "height": 58,
+        "visible": true
+      },
+      "buttons": [
+        {
+          "id": "room",
+          "current": "page",
+          "disabled": false,
+          "caption": {
+            "top": 754.1818237304688,
+            "bottom": 767.1818237304688,
+            "iconBottom": 739.1818237304688,
+            "textTop": 754.1818237304688,
+            "textBottom": 766.9091186523438,
+            "color": "rgb(0, 53, 102)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        },
+        {
+          "id": "complaints",
+          "current": null,
+          "disabled": false,
+          "caption": {
+            "top": 754.1818237304688,
+            "bottom": 767.1818237304688,
+            "iconBottom": 745.1818237304688,
+            "textTop": 754.1818237304688,
+            "textBottom": 766.9091186523438,
+            "color": "rgb(96, 112, 131)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        },
+        {
+          "id": "quick-action",
+          "current": null,
+          "disabled": false,
+          "caption": {
+            "top": 754.1818237304688,
+            "bottom": 765.880687713623,
+            "iconBottom": 715.1818237304688,
+            "textTop": 754.1818237304688,
+            "textBottom": 765.45458984375,
+            "color": "rgb(96, 112, 131)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        },
+        {
+          "id": "alerts",
+          "current": null,
+          "disabled": false,
+          "caption": {
+            "top": 754.1818237304688,
+            "bottom": 767.1818237304688,
+            "iconBottom": 745.1818237304688,
+            "textTop": 754.1818237304688,
+            "textBottom": 766.9091186523438,
+            "color": "rgb(96, 112, 131)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        },
+        {
+          "id": "settings",
+          "current": null,
+          "disabled": false,
+          "caption": {
+            "top": 754.1818237304688,
+            "bottom": 767.1818237304688,
+            "iconBottom": 745.1818237304688,
+            "textTop": 754.1818237304688,
+            "textBottom": 766.9091186523438,
+            "color": "rgb(96, 112, 131)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        }
+      ],
+      "deniedWrites": 0,
+      "fixtureNoops": 0,
+      "fixtureReads": 9,
+      "pixels": {
+        "topRgb": [
+          255,
+          255,
+          255
+        ],
+        "bottomRgb": [
+          255,
+          255,
+          255
+        ],
+        "bubbleRgb": [
+          0,
+          53,
+          102
+        ],
+        "sideHighlightRgb": [
+          0,
+          53,
+          102
+        ]
+      },
+      "screenshot": "student-light.png"
+    },
+    {
+      "name": "student-dark",
+      "theme": "dark",
+      "w": 393,
+      "h": 778,
+      "ratio": 2.75,
+      "overflow": false,
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "nav": {
+        "x": 0,
+        "y": 674.1818237304688,
+        "width": 393.0909118652344,
+        "bottom": 778.1818237304688,
+        "height": 104,
+        "background": "#003566",
+        "accent": "#ffd60a",
+        "variant": "action",
+        "duration": ".25s"
+      },
+      "surface": {
+        "background": "rgba(0, 0, 0, 0)",
+        "color": "rgb(232, 240, 248)",
+        "transitionDuration": "0s",
+        "rect": {
+          "left": -392.9488830566406,
+          "top": 674.1818237304688,
+          "width": 1179,
+          "height": 104
+        }
+      },
+      "sideHighlight": {
+        "background": "rgb(255, 214, 10)",
+        "color": "rgb(232, 240, 248)",
+        "transitionDuration": "0s",
+        "rect": {
+          "left": 21.710227966308594,
+          "top": 710.1818237304688,
+          "width": 48,
+          "height": 40
+        }
+      },
+      "selectedIcon": {
+        "background": "rgba(0, 0, 0, 0)",
+        "color": "rgb(0, 29, 61)",
+        "transitionDuration": "0.25s, 0.2s",
+        "rect": {
+          "left": 32.210227966308594,
+          "top": 712.1818237304688,
+          "width": 27,
+          "height": 27
+        }
+      },
+      "bubble": {
+        "left": 167.5511474609375,
+        "top": 674.1818237304688,
+        "width": 58,
+        "height": 58,
+        "visible": true
+      },
+      "buttons": [
+        {
+          "id": "room",
+          "current": "page",
+          "disabled": false,
+          "caption": {
+            "top": 754.1818237304688,
+            "bottom": 767.1818237304688,
+            "iconBottom": 739.1818237304688,
+            "textTop": 754.1818237304688,
+            "textBottom": 766.9091186523438,
+            "color": "rgb(255, 214, 10)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        },
+        {
+          "id": "complaints",
+          "current": null,
+          "disabled": false,
+          "caption": {
+            "top": 754.1818237304688,
+            "bottom": 767.1818237304688,
+            "iconBottom": 745.1818237304688,
+            "textTop": 754.1818237304688,
+            "textBottom": 766.9091186523438,
+            "color": "rgb(187, 206, 224)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        },
+        {
+          "id": "quick-action",
+          "current": null,
+          "disabled": false,
+          "caption": {
+            "top": 754.1818237304688,
+            "bottom": 765.880687713623,
+            "iconBottom": 715.1818237304688,
+            "textTop": 754.1818237304688,
+            "textBottom": 765.45458984375,
+            "color": "rgb(187, 206, 224)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        },
+        {
+          "id": "alerts",
+          "current": null,
+          "disabled": false,
+          "caption": {
+            "top": 754.1818237304688,
+            "bottom": 767.1818237304688,
+            "iconBottom": 745.1818237304688,
+            "textTop": 754.1818237304688,
+            "textBottom": 766.9091186523438,
+            "color": "rgb(187, 206, 224)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        },
+        {
+          "id": "settings",
+          "current": null,
+          "disabled": false,
+          "caption": {
+            "top": 754.1818237304688,
+            "bottom": 767.1818237304688,
+            "iconBottom": 745.1818237304688,
+            "textTop": 754.1818237304688,
+            "textBottom": 766.9091186523438,
+            "color": "rgb(187, 206, 224)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        }
+      ],
+      "deniedWrites": 0,
+      "fixtureNoops": 0,
+      "fixtureReads": 9,
+      "pixels": {
+        "topRgb": [
+          0,
+          29,
+          61
+        ],
+        "bottomRgb": [
+          0,
+          53,
+          102
+        ],
+        "bubbleRgb": [
+          255,
+          214,
+          10
+        ],
+        "sideHighlightRgb": [
+          255,
+          214,
+          10
+        ]
+      },
+      "screenshot": "student-dark.png"
+    },
+    {
+      "name": "manager-light",
+      "theme": "light",
+      "w": 393,
+      "h": 778,
+      "ratio": 2.75,
+      "overflow": false,
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "nav": {
+        "x": 0,
+        "y": 674.1818237304688,
+        "width": 393.0909118652344,
+        "bottom": 778.1818237304688,
+        "height": 104,
+        "background": "#fff",
+        "accent": "#003566",
+        "variant": "standard",
+        "duration": ".25s"
+      },
+      "surface": {
+        "background": "rgba(0, 0, 0, 0)",
+        "color": "rgb(0, 29, 61)",
+        "transitionDuration": "0s",
+        "rect": {
+          "left": -440.0909118652344,
+          "top": 674.1818237304688,
+          "width": 1179,
+          "height": 104
+        }
+      },
+      "sideHighlight": null,
+      "selectedIcon": {
+        "background": "rgba(0, 0, 0, 0)",
+        "color": "rgb(255, 255, 255)",
+        "transitionDuration": "0.25s, 0.2s",
+        "rect": {
+          "left": 135.90908813476562,
+          "top": 690.1818237304688,
+          "width": 27,
+          "height": 27
+        }
+      },
+      "bubble": {
+        "left": 120.40909576416016,
+        "top": 674.1818237304688,
+        "width": 58,
+        "height": 58,
+        "visible": true
+      },
+      "buttons": [
+        {
+          "id": "registration",
+          "current": null,
+          "disabled": false,
+          "caption": {
+            "top": 750.1818237304688,
+            "bottom": 766.1818237304688,
+            "iconBottom": 745.1818237304688,
+            "textTop": 751.6364135742188,
+            "textBottom": 764.3636474609375,
+            "color": "rgb(96, 112, 131)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        },
+        {
+          "id": "notifications",
+          "current": "page",
+          "disabled": false,
+          "caption": {
+            "top": 750.1818237304688,
+            "bottom": 766.1818237304688,
+            "iconBottom": 717.1818237304688,
+            "textTop": 751.6364135742188,
+            "textBottom": 764.3636474609375,
+            "color": "rgb(0, 53, 102)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        },
+        {
+          "id": "settings",
+          "current": null,
+          "disabled": false,
+          "caption": {
+            "top": 750.1818237304688,
+            "bottom": 766.1818237304688,
+            "iconBottom": 745.1818237304688,
+            "textTop": 751.6364135742188,
+            "textBottom": 764.3636474609375,
+            "color": "rgb(96, 112, 131)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        },
+        {
+          "id": "more",
+          "current": null,
+          "disabled": false,
+          "caption": {
+            "top": 750.1818237304688,
+            "bottom": 766.1818237304688,
+            "iconBottom": 745.1818237304688,
+            "textTop": 751.6364135742188,
+            "textBottom": 764.3636474609375,
+            "color": "rgb(96, 112, 131)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        }
+      ],
+      "deniedWrites": 0,
+      "fixtureNoops": 1,
+      "fixtureReads": 20,
+      "pixels": {
+        "topRgb": [
+          255,
+          255,
+          255
+        ],
+        "bottomRgb": [
+          255,
+          255,
+          255
+        ],
+        "bubbleRgb": [
+          0,
+          53,
+          102
+        ]
+      },
+      "screenshot": "manager-light.png"
+    },
+    {
+      "name": "manager-dark",
+      "theme": "dark",
+      "w": 393,
+      "h": 778,
+      "ratio": 2.75,
+      "overflow": false,
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "nav": {
+        "x": 0,
+        "y": 674.1818237304688,
+        "width": 393.0909118652344,
+        "bottom": 778.1818237304688,
+        "height": 104,
+        "background": "#003566",
+        "accent": "#ffd60a",
+        "variant": "standard",
+        "duration": ".25s"
+      },
+      "surface": {
+        "background": "rgba(0, 0, 0, 0)",
+        "color": "rgb(232, 240, 248)",
+        "transitionDuration": "0s",
+        "rect": {
+          "left": -440.0909118652344,
+          "top": 674.1818237304688,
+          "width": 1179,
+          "height": 104
+        }
+      },
+      "sideHighlight": null,
+      "selectedIcon": {
+        "background": "rgba(0, 0, 0, 0)",
+        "color": "rgb(0, 29, 61)",
+        "transitionDuration": "0.25s, 0.2s",
+        "rect": {
+          "left": 135.90908813476562,
+          "top": 690.1818237304688,
+          "width": 27,
+          "height": 27
+        }
+      },
+      "bubble": {
+        "left": 120.40909576416016,
+        "top": 674.1818237304688,
+        "width": 58,
+        "height": 58,
+        "visible": true
+      },
+      "buttons": [
+        {
+          "id": "registration",
+          "current": null,
+          "disabled": false,
+          "caption": {
+            "top": 750.1818237304688,
+            "bottom": 766.1818237304688,
+            "iconBottom": 745.1818237304688,
+            "textTop": 751.6364135742188,
+            "textBottom": 764.3636474609375,
+            "color": "rgb(187, 206, 224)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        },
+        {
+          "id": "notifications",
+          "current": "page",
+          "disabled": false,
+          "caption": {
+            "top": 750.1818237304688,
+            "bottom": 766.1818237304688,
+            "iconBottom": 717.1818237304688,
+            "textTop": 751.6364135742188,
+            "textBottom": 764.3636474609375,
+            "color": "rgb(255, 214, 10)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        },
+        {
+          "id": "settings",
+          "current": null,
+          "disabled": false,
+          "caption": {
+            "top": 750.1818237304688,
+            "bottom": 766.1818237304688,
+            "iconBottom": 745.1818237304688,
+            "textTop": 751.6364135742188,
+            "textBottom": 764.3636474609375,
+            "color": "rgb(187, 206, 224)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        },
+        {
+          "id": "more",
+          "current": null,
+          "disabled": false,
+          "caption": {
+            "top": 750.1818237304688,
+            "bottom": 766.1818237304688,
+            "iconBottom": 745.1818237304688,
+            "textTop": 751.6364135742188,
+            "textBottom": 764.3636474609375,
+            "color": "rgb(187, 206, 224)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        }
+      ],
+      "deniedWrites": 0,
+      "fixtureNoops": 1,
+      "fixtureReads": 20,
+      "pixels": {
+        "topRgb": [
+          0,
+          29,
+          61
+        ],
+        "bottomRgb": [
+          0,
+          53,
+          102
+        ],
+        "bubbleRgb": [
+          255,
+          214,
+          10
+        ]
+      },
+      "screenshot": "manager-dark.png"
+    },
+    {
+      "name": "staff-light",
+      "theme": "light",
+      "w": 393,
+      "h": 778,
+      "ratio": 2.75,
+      "overflow": false,
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "nav": {
+        "x": 0,
+        "y": 674.1818237304688,
+        "width": 393.0909118652344,
+        "bottom": 778.1818237304688,
+        "height": 104,
+        "background": "#fff",
+        "accent": "#003566",
+        "variant": "standard",
+        "duration": ".25s"
+      },
+      "surface": {
+        "background": "rgba(0, 0, 0, 0)",
+        "color": "rgb(0, 29, 61)",
+        "transitionDuration": "0s",
+        "rect": {
+          "left": -267.2528381347656,
+          "top": 674.1818237304688,
+          "width": 1179,
+          "height": 104
+        }
+      },
+      "sideHighlight": null,
+      "selectedIcon": {
+        "background": "rgba(0, 0, 0, 0)",
+        "color": "rgb(255, 255, 255)",
+        "transitionDuration": "0.25s, 0.2s",
+        "rect": {
+          "left": 308.74432373046875,
+          "top": 690.1818237304688,
+          "width": 27,
+          "height": 27
+        }
+      },
+      "bubble": {
+        "left": 293.2471618652344,
+        "top": 674.1818237304688,
+        "width": 58,
+        "height": 58,
+        "visible": true
+      },
+      "buttons": [
+        {
+          "id": "notifications",
+          "current": null,
+          "disabled": false,
+          "caption": {
+            "top": 750.1818237304688,
+            "bottom": 766.1818237304688,
+            "iconBottom": 745.1818237304688,
+            "textTop": 751.6364135742188,
+            "textBottom": 764.3636474609375,
+            "color": "rgb(96, 112, 131)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        },
+        {
+          "id": "settings",
+          "current": null,
+          "disabled": false,
+          "caption": {
+            "top": 750.1818237304688,
+            "bottom": 766.1818237304688,
+            "iconBottom": 745.1818237304688,
+            "textTop": 751.6364135742188,
+            "textBottom": 764.3636474609375,
+            "color": "rgb(96, 112, 131)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        },
+        {
+          "id": "maintenance",
+          "current": "page",
+          "disabled": false,
+          "caption": {
+            "top": 750.1818237304688,
+            "bottom": 766.1818237304688,
+            "iconBottom": 717.1818237304688,
+            "textTop": 751.6364135742188,
+            "textBottom": 764.3636474609375,
+            "color": "rgb(0, 53, 102)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        }
+      ],
+      "deniedWrites": 0,
+      "fixtureNoops": 0,
+      "fixtureReads": 10,
+      "pixels": {
+        "topRgb": [
+          255,
+          255,
+          255
+        ],
+        "bottomRgb": [
+          255,
+          255,
+          255
+        ],
+        "bubbleRgb": [
+          0,
+          53,
+          102
+        ]
+      },
+      "screenshot": "staff-light.png"
+    },
+    {
+      "name": "staff-dark",
+      "theme": "dark",
+      "w": 393,
+      "h": 778,
+      "ratio": 2.75,
+      "overflow": false,
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "nav": {
+        "x": 0,
+        "y": 674.1818237304688,
+        "width": 393.0909118652344,
+        "bottom": 778.1818237304688,
+        "height": 104,
+        "background": "#003566",
+        "accent": "#ffd60a",
+        "variant": "standard",
+        "duration": ".25s"
+      },
+      "surface": {
+        "background": "rgba(0, 0, 0, 0)",
+        "color": "rgb(232, 240, 248)",
+        "transitionDuration": "0s",
+        "rect": {
+          "left": -267.2528381347656,
+          "top": 674.1818237304688,
+          "width": 1179,
+          "height": 104
+        }
+      },
+      "sideHighlight": null,
+      "selectedIcon": {
+        "background": "rgba(0, 0, 0, 0)",
+        "color": "rgb(0, 29, 61)",
+        "transitionDuration": "0.25s, 0.2s",
+        "rect": {
+          "left": 308.74432373046875,
+          "top": 690.1818237304688,
+          "width": 27,
+          "height": 27
+        }
+      },
+      "bubble": {
+        "left": 293.2471618652344,
+        "top": 674.1818237304688,
+        "width": 58,
+        "height": 58,
+        "visible": true
+      },
+      "buttons": [
+        {
+          "id": "notifications",
+          "current": null,
+          "disabled": false,
+          "caption": {
+            "top": 750.1818237304688,
+            "bottom": 766.1818237304688,
+            "iconBottom": 745.1818237304688,
+            "textTop": 751.6364135742188,
+            "textBottom": 764.3636474609375,
+            "color": "rgb(187, 206, 224)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        },
+        {
+          "id": "settings",
+          "current": null,
+          "disabled": false,
+          "caption": {
+            "top": 750.1818237304688,
+            "bottom": 766.1818237304688,
+            "iconBottom": 745.1818237304688,
+            "textTop": 751.6364135742188,
+            "textBottom": 764.3636474609375,
+            "color": "rgb(187, 206, 224)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        },
+        {
+          "id": "maintenance",
+          "current": "page",
+          "disabled": false,
+          "caption": {
+            "top": 750.1818237304688,
+            "bottom": 766.1818237304688,
+            "iconBottom": 717.1818237304688,
+            "textTop": 751.6364135742188,
+            "textBottom": 764.3636474609375,
+            "color": "rgb(255, 214, 10)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        }
+      ],
+      "deniedWrites": 0,
+      "fixtureNoops": 0,
+      "fixtureReads": 10,
+      "pixels": {
+        "topRgb": [
+          0,
+          29,
+          61
+        ],
+        "bottomRgb": [
+          0,
+          53,
+          102
+        ],
+        "bubbleRgb": [
+          255,
+          214,
+          10
+        ]
+      },
+      "screenshot": "staff-dark.png"
+    },
+    {
+      "name": "admin-light",
+      "theme": "light",
+      "w": 393,
+      "h": 778,
+      "ratio": 2.75,
+      "overflow": false,
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "nav": {
+        "x": 0,
+        "y": 674.1818237304688,
+        "width": 393.0909118652344,
+        "bottom": 778.1818237304688,
+        "height": 104,
+        "background": "#fff",
+        "accent": "#003566",
+        "variant": "standard",
+        "duration": ".25s"
+      },
+      "surface": {
+        "background": "rgba(0, 0, 0, 0)",
+        "color": "rgb(0, 29, 61)",
+        "transitionDuration": "0s",
+        "rect": {
+          "left": -543.789794921875,
+          "top": 674.1818237304688,
+          "width": 1179,
+          "height": 104
+        }
+      },
+      "sideHighlight": null,
+      "selectedIcon": {
+        "background": "rgba(0, 0, 0, 0)",
+        "color": "rgb(255, 255, 255)",
+        "transitionDuration": "0.25s, 0.2s",
+        "rect": {
+          "left": 32.210227966308594,
+          "top": 690.1818237304688,
+          "width": 27,
+          "height": 27
+        }
+      },
+      "bubble": {
+        "left": 16.710227966308594,
+        "top": 674.1818237304688,
+        "width": 58,
+        "height": 58,
+        "visible": true
+      },
+      "buttons": [
+        {
+          "id": "overview",
+          "current": "page",
+          "disabled": false,
+          "caption": {
+            "top": 750.1818237304688,
+            "bottom": 766.1818237304688,
+            "iconBottom": 717.1818237304688,
+            "textTop": 751.6364135742188,
+            "textBottom": 764.3636474609375,
+            "color": "rgb(0, 53, 102)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        },
+        {
+          "id": "residences",
+          "current": null,
+          "disabled": false,
+          "caption": {
+            "top": 750.1818237304688,
+            "bottom": 766.1818237304688,
+            "iconBottom": 745.1818237304688,
+            "textTop": 751.6364135742188,
+            "textBottom": 764.3636474609375,
+            "color": "rgb(96, 112, 131)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        },
+        {
+          "id": "managers",
+          "current": null,
+          "disabled": false,
+          "caption": {
+            "top": 750.1818237304688,
+            "bottom": 766.1818237304688,
+            "iconBottom": 745.1818237304688,
+            "textTop": 751.6364135742188,
+            "textBottom": 764.3636474609375,
+            "color": "rgb(96, 112, 131)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        },
+        {
+          "id": "notifications",
+          "current": null,
+          "disabled": false,
+          "caption": {
+            "top": 750.1818237304688,
+            "bottom": 766.1818237304688,
+            "iconBottom": 745.1818237304688,
+            "textTop": 751.6364135742188,
+            "textBottom": 764.3636474609375,
+            "color": "rgb(96, 112, 131)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        },
+        {
+          "id": "more",
+          "current": null,
+          "disabled": false,
+          "caption": {
+            "top": 750.1818237304688,
+            "bottom": 766.1818237304688,
+            "iconBottom": 745.1818237304688,
+            "textTop": 751.6364135742188,
+            "textBottom": 764.3636474609375,
+            "color": "rgb(96, 112, 131)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        }
+      ],
+      "deniedWrites": 0,
+      "fixtureNoops": 0,
+      "fixtureReads": 10,
+      "pixels": {
+        "topRgb": [
+          255,
+          255,
+          255
+        ],
+        "bottomRgb": [
+          255,
+          255,
+          255
+        ],
+        "bubbleRgb": [
+          0,
+          53,
+          102
+        ]
+      },
+      "screenshot": "admin-light.png"
+    },
+    {
+      "name": "admin-light-selected-more",
+      "theme": "light",
+      "w": 393,
+      "h": 778,
+      "ratio": 2.75,
+      "overflow": false,
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "nav": {
+        "x": 0,
+        "y": 674.1818237304688,
+        "width": 393.0909118652344,
+        "bottom": 778.1818237304688,
+        "height": 104,
+        "background": "#fff",
+        "accent": "#003566",
+        "variant": "standard",
+        "duration": ".25s"
+      },
+      "surface": {
+        "background": "rgba(0, 0, 0, 0)",
+        "color": "rgb(0, 29, 61)",
+        "transitionDuration": "0.25s",
+        "rect": {
+          "left": -242.1079559326172,
+          "top": 674.1818237304688,
+          "width": 1179,
+          "height": 104
+        }
+      },
+      "sideHighlight": null,
+      "selectedIcon": {
+        "background": "rgba(0, 0, 0, 0)",
+        "color": "rgb(255, 255, 255)",
+        "transitionDuration": "0.25s, 0.2s",
+        "rect": {
+          "left": 333.8920593261719,
+          "top": 690.1818237304688,
+          "width": 27,
+          "height": 27
+        }
+      },
+      "bubble": {
+        "left": 318.3920593261719,
+        "top": 674.1818237304688,
+        "width": 58,
+        "height": 58,
+        "visible": true
+      },
+      "buttons": [
+        {
+          "id": "overview",
+          "current": null,
+          "disabled": false,
+          "caption": {
+            "top": 750.1818237304688,
+            "bottom": 766.1818237304688,
+            "iconBottom": 745.1818237304688,
+            "textTop": 751.6364135742188,
+            "textBottom": 764.3636474609375,
+            "color": "rgb(96, 112, 131)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        },
+        {
+          "id": "residences",
+          "current": null,
+          "disabled": false,
+          "caption": {
+            "top": 750.1818237304688,
+            "bottom": 766.1818237304688,
+            "iconBottom": 745.1818237304688,
+            "textTop": 751.6364135742188,
+            "textBottom": 764.3636474609375,
+            "color": "rgb(96, 112, 131)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        },
+        {
+          "id": "managers",
+          "current": null,
+          "disabled": false,
+          "caption": {
+            "top": 750.1818237304688,
+            "bottom": 766.1818237304688,
+            "iconBottom": 745.1818237304688,
+            "textTop": 751.6364135742188,
+            "textBottom": 764.3636474609375,
+            "color": "rgb(96, 112, 131)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        },
+        {
+          "id": "notifications",
+          "current": null,
+          "disabled": false,
+          "caption": {
+            "top": 750.1818237304688,
+            "bottom": 766.1818237304688,
+            "iconBottom": 745.1818237304688,
+            "textTop": 751.6364135742188,
+            "textBottom": 764.3636474609375,
+            "color": "rgb(96, 112, 131)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        },
+        {
+          "id": "more",
+          "current": "page",
+          "disabled": false,
+          "caption": {
+            "top": 750.1818237304688,
+            "bottom": 766.1818237304688,
+            "iconBottom": 717.1818237304688,
+            "textTop": 751.6364135742188,
+            "textBottom": 764.3636474609375,
+            "color": "rgb(0, 53, 102)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        }
+      ],
+      "deniedWrites": 0,
+      "fixtureNoops": 0,
+      "fixtureReads": 15,
+      "pixels": {
+        "topRgb": [
+          255,
+          255,
+          255
+        ],
+        "bottomRgb": [
+          255,
+          255,
+          255
+        ],
+        "bubbleRgb": [
+          0,
+          53,
+          102
+        ]
+      },
+      "screenshot": "admin-light-selected-more.png"
+    },
+    {
+      "name": "admin-dark",
+      "theme": "dark",
+      "w": 393,
+      "h": 778,
+      "ratio": 2.75,
+      "overflow": false,
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "nav": {
+        "x": 0,
+        "y": 674.1818237304688,
+        "width": 393.0909118652344,
+        "bottom": 778.1818237304688,
+        "height": 104,
+        "background": "#003566",
+        "accent": "#ffd60a",
+        "variant": "standard",
+        "duration": ".25s"
+      },
+      "surface": {
+        "background": "rgba(0, 0, 0, 0)",
+        "color": "rgb(232, 240, 248)",
+        "transitionDuration": "0s",
+        "rect": {
+          "left": -543.789794921875,
+          "top": 674.1818237304688,
+          "width": 1179,
+          "height": 104
+        }
+      },
+      "sideHighlight": null,
+      "selectedIcon": {
+        "background": "rgba(0, 0, 0, 0)",
+        "color": "rgb(0, 29, 61)",
+        "transitionDuration": "0.25s, 0.2s",
+        "rect": {
+          "left": 32.210227966308594,
+          "top": 690.1818237304688,
+          "width": 27,
+          "height": 27
+        }
+      },
+      "bubble": {
+        "left": 16.710227966308594,
+        "top": 674.1818237304688,
+        "width": 58,
+        "height": 58,
+        "visible": true
+      },
+      "buttons": [
+        {
+          "id": "overview",
+          "current": "page",
+          "disabled": false,
+          "caption": {
+            "top": 750.1818237304688,
+            "bottom": 766.1818237304688,
+            "iconBottom": 717.1818237304688,
+            "textTop": 751.6364135742188,
+            "textBottom": 764.3636474609375,
+            "color": "rgb(255, 214, 10)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        },
+        {
+          "id": "residences",
+          "current": null,
+          "disabled": false,
+          "caption": {
+            "top": 750.1818237304688,
+            "bottom": 766.1818237304688,
+            "iconBottom": 745.1818237304688,
+            "textTop": 751.6364135742188,
+            "textBottom": 764.3636474609375,
+            "color": "rgb(187, 206, 224)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        },
+        {
+          "id": "managers",
+          "current": null,
+          "disabled": false,
+          "caption": {
+            "top": 750.1818237304688,
+            "bottom": 766.1818237304688,
+            "iconBottom": 745.1818237304688,
+            "textTop": 751.6364135742188,
+            "textBottom": 764.3636474609375,
+            "color": "rgb(187, 206, 224)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        },
+        {
+          "id": "notifications",
+          "current": null,
+          "disabled": false,
+          "caption": {
+            "top": 750.1818237304688,
+            "bottom": 766.1818237304688,
+            "iconBottom": 745.1818237304688,
+            "textTop": 751.6364135742188,
+            "textBottom": 764.3636474609375,
+            "color": "rgb(187, 206, 224)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        },
+        {
+          "id": "more",
+          "current": null,
+          "disabled": false,
+          "caption": {
+            "top": 750.1818237304688,
+            "bottom": 766.1818237304688,
+            "iconBottom": 745.1818237304688,
+            "textTop": 751.6364135742188,
+            "textBottom": 764.3636474609375,
+            "color": "rgb(187, 206, 224)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        }
+      ],
+      "deniedWrites": 0,
+      "fixtureNoops": 0,
+      "fixtureReads": 10,
+      "pixels": {
+        "topRgb": [
+          0,
+          29,
+          61
+        ],
+        "bottomRgb": [
+          0,
+          53,
+          102
+        ],
+        "bubbleRgb": [
+          255,
+          214,
+          10
+        ]
+      },
+      "screenshot": "admin-dark.png"
+    },
+    {
+      "name": "admin-dark-selected-more",
+      "theme": "dark",
+      "w": 393,
+      "h": 778,
+      "ratio": 2.75,
+      "overflow": false,
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "nav": {
+        "x": 0,
+        "y": 674.1818237304688,
+        "width": 393.0909118652344,
+        "bottom": 778.1818237304688,
+        "height": 104,
+        "background": "#003566",
+        "accent": "#ffd60a",
+        "variant": "standard",
+        "duration": ".25s"
+      },
+      "surface": {
+        "background": "rgba(0, 0, 0, 0)",
+        "color": "rgb(232, 240, 248)",
+        "transitionDuration": "0.25s",
+        "rect": {
+          "left": -242.1079559326172,
+          "top": 674.1818237304688,
+          "width": 1179,
+          "height": 104
+        }
+      },
+      "sideHighlight": null,
+      "selectedIcon": {
+        "background": "rgba(0, 0, 0, 0)",
+        "color": "rgb(0, 29, 61)",
+        "transitionDuration": "0.25s, 0.2s",
+        "rect": {
+          "left": 333.8920593261719,
+          "top": 690.1818237304688,
+          "width": 27,
+          "height": 27
+        }
+      },
+      "bubble": {
+        "left": 318.3920593261719,
+        "top": 674.1818237304688,
+        "width": 58,
+        "height": 58,
+        "visible": true
+      },
+      "buttons": [
+        {
+          "id": "overview",
+          "current": null,
+          "disabled": false,
+          "caption": {
+            "top": 750.1818237304688,
+            "bottom": 766.1818237304688,
+            "iconBottom": 745.1818237304688,
+            "textTop": 751.6364135742188,
+            "textBottom": 764.3636474609375,
+            "color": "rgb(187, 206, 224)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        },
+        {
+          "id": "residences",
+          "current": null,
+          "disabled": false,
+          "caption": {
+            "top": 750.1818237304688,
+            "bottom": 766.1818237304688,
+            "iconBottom": 745.1818237304688,
+            "textTop": 751.6364135742188,
+            "textBottom": 764.3636474609375,
+            "color": "rgb(187, 206, 224)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        },
+        {
+          "id": "managers",
+          "current": null,
+          "disabled": false,
+          "caption": {
+            "top": 750.1818237304688,
+            "bottom": 766.1818237304688,
+            "iconBottom": 745.1818237304688,
+            "textTop": 751.6364135742188,
+            "textBottom": 764.3636474609375,
+            "color": "rgb(187, 206, 224)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        },
+        {
+          "id": "notifications",
+          "current": null,
+          "disabled": false,
+          "caption": {
+            "top": 750.1818237304688,
+            "bottom": 766.1818237304688,
+            "iconBottom": 745.1818237304688,
+            "textTop": 751.6364135742188,
+            "textBottom": 764.3636474609375,
+            "color": "rgb(187, 206, 224)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        },
+        {
+          "id": "more",
+          "current": "page",
+          "disabled": false,
+          "caption": {
+            "top": 750.1818237304688,
+            "bottom": 766.1818237304688,
+            "iconBottom": 717.1818237304688,
+            "textTop": 751.6364135742188,
+            "textBottom": 764.3636474609375,
+            "color": "rgb(255, 214, 10)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        }
+      ],
+      "deniedWrites": 0,
+      "fixtureNoops": 0,
+      "fixtureReads": 15,
+      "pixels": {
+        "topRgb": [
+          0,
+          29,
+          61
+        ],
+        "bottomRgb": [
+          0,
+          53,
+          102
+        ],
+        "bubbleRgb": [
+          255,
+          214,
+          10
+        ]
+      },
+      "screenshot": "admin-dark-selected-more.png"
+    },
+    {
+      "name": "field_officer-light",
+      "theme": "light",
+      "w": 393,
+      "h": 778,
+      "ratio": 2.75,
+      "overflow": false,
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "nav": {
+        "x": 0,
+        "y": 674.1818237304688,
+        "width": 393.0909118652344,
+        "bottom": 778.1818237304688,
+        "height": 104,
+        "background": "#fff",
+        "accent": "#003566",
+        "variant": "standard",
+        "duration": ".25s"
+      },
+      "surface": {
+        "background": "rgba(0, 0, 0, 0)",
+        "color": "rgb(0, 29, 61)",
+        "transitionDuration": "0s",
+        "rect": {
+          "left": -487.227294921875,
+          "top": 674.1818237304688,
+          "width": 1179,
+          "height": 104
+        }
+      },
+      "sideHighlight": null,
+      "selectedIcon": {
+        "background": "rgba(0, 0, 0, 0)",
+        "color": "rgb(255, 255, 255)",
+        "transitionDuration": "0.25s, 0.2s",
+        "rect": {
+          "left": 88.7727279663086,
+          "top": 690.1818237304688,
+          "width": 27,
+          "height": 27
+        }
+      },
+      "bubble": {
+        "left": 73.2727279663086,
+        "top": 674.1818237304688,
+        "width": 58,
+        "height": 58,
+        "visible": true
+      },
+      "buttons": [
+        {
+          "id": "inspections",
+          "current": "page",
+          "disabled": false,
+          "caption": {
+            "top": 750.1818237304688,
+            "bottom": 766.1818237304688,
+            "iconBottom": 717.1818237304688,
+            "textTop": 751.6364135742188,
+            "textBottom": 764.3636474609375,
+            "color": "rgb(0, 53, 102)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        },
+        {
+          "id": "options",
+          "current": null,
+          "disabled": false,
+          "caption": {
+            "top": 750.1818237304688,
+            "bottom": 766.1818237304688,
+            "iconBottom": 745.1818237304688,
+            "textTop": 751.6364135742188,
+            "textBottom": 764.3636474609375,
+            "color": "rgb(96, 112, 131)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        }
+      ],
+      "deniedWrites": 0,
+      "fixtureNoops": 0,
+      "fixtureReads": 8,
+      "pixels": {
+        "topRgb": [
+          255,
+          255,
+          255
+        ],
+        "bottomRgb": [
+          255,
+          255,
+          255
+        ],
+        "bubbleRgb": [
+          0,
+          53,
+          102
+        ]
+      },
+      "screenshot": "field_officer-light.png"
+    },
+    {
+      "name": "field_officer-dark",
+      "theme": "dark",
+      "w": 393,
+      "h": 778,
+      "ratio": 2.75,
+      "overflow": false,
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "nav": {
+        "x": 0,
+        "y": 674.1818237304688,
+        "width": 393.0909118652344,
+        "bottom": 778.1818237304688,
+        "height": 104,
+        "background": "#003566",
+        "accent": "#ffd60a",
+        "variant": "standard",
+        "duration": ".25s"
+      },
+      "surface": {
+        "background": "rgba(0, 0, 0, 0)",
+        "color": "rgb(232, 240, 248)",
+        "transitionDuration": "0s",
+        "rect": {
+          "left": -487.227294921875,
+          "top": 674.1818237304688,
+          "width": 1179,
+          "height": 104
+        }
+      },
+      "sideHighlight": null,
+      "selectedIcon": {
+        "background": "rgba(0, 0, 0, 0)",
+        "color": "rgb(0, 29, 61)",
+        "transitionDuration": "0.25s, 0.2s",
+        "rect": {
+          "left": 88.7727279663086,
+          "top": 690.1818237304688,
+          "width": 27,
+          "height": 27
+        }
+      },
+      "bubble": {
+        "left": 73.2727279663086,
+        "top": 674.1818237304688,
+        "width": 58,
+        "height": 58,
+        "visible": true
+      },
+      "buttons": [
+        {
+          "id": "inspections",
+          "current": "page",
+          "disabled": false,
+          "caption": {
+            "top": 750.1818237304688,
+            "bottom": 766.1818237304688,
+            "iconBottom": 717.1818237304688,
+            "textTop": 751.6364135742188,
+            "textBottom": 764.3636474609375,
+            "color": "rgb(255, 214, 10)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        },
+        {
+          "id": "options",
+          "current": null,
+          "disabled": false,
+          "caption": {
+            "top": 750.1818237304688,
+            "bottom": 766.1818237304688,
+            "iconBottom": 745.1818237304688,
+            "textTop": 751.6364135742188,
+            "textBottom": 764.3636474609375,
+            "color": "rgb(187, 206, 224)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        }
+      ],
+      "deniedWrites": 0,
+      "fixtureNoops": 0,
+      "fixtureReads": 8,
+      "pixels": {
+        "topRgb": [
+          0,
+          29,
+          61
+        ],
+        "bottomRgb": [
+          0,
+          53,
+          102
+        ],
+        "bubbleRgb": [
+          255,
+          214,
+          10
+        ]
+      },
+      "screenshot": "field_officer-dark.png"
+    },
+    {
+      "name": "support-light",
+      "theme": "light",
+      "w": 393,
+      "h": 778,
+      "ratio": 2.75,
+      "overflow": false,
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "nav": {
+        "x": 0,
+        "y": 674.1818237304688,
+        "width": 393.0909118652344,
+        "bottom": 778.1818237304688,
+        "height": 104,
+        "background": "#fff",
+        "accent": "#003566",
+        "variant": "standard",
+        "duration": ".25s"
+      },
+      "surface": {
+        "background": "rgba(0, 0, 0, 0)",
+        "color": "rgb(0, 29, 61)",
+        "transitionDuration": "0s",
+        "rect": {
+          "left": -534.3636474609375,
+          "top": 674.1818237304688,
+          "width": 1179,
+          "height": 104
+        }
+      },
+      "sideHighlight": null,
+      "selectedIcon": {
+        "background": "rgba(0, 0, 0, 0)",
+        "color": "rgb(255, 255, 255)",
+        "transitionDuration": "0.25s, 0.2s",
+        "rect": {
+          "left": 41.6363639831543,
+          "top": 690.1818237304688,
+          "width": 27,
+          "height": 27
+        }
+      },
+      "bubble": {
+        "left": 26.136363983154297,
+        "top": 674.1818237304688,
+        "width": 58,
+        "height": 58,
+        "visible": true
+      },
+      "buttons": [
+        {
+          "id": "inbox",
+          "current": "page",
+          "disabled": false,
+          "caption": {
+            "top": 750.1818237304688,
+            "bottom": 766.1818237304688,
+            "iconBottom": 717.1818237304688,
+            "textTop": 751.6364135742188,
+            "textBottom": 764.3636474609375,
+            "color": "rgb(0, 53, 102)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        },
+        {
+          "id": "reports",
+          "current": null,
+          "disabled": false,
+          "caption": {
+            "top": 750.1818237304688,
+            "bottom": 766.1818237304688,
+            "iconBottom": 745.1818237304688,
+            "textTop": 751.6364135742188,
+            "textBottom": 764.3636474609375,
+            "color": "rgb(96, 112, 131)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        },
+        {
+          "id": "notifications",
+          "current": null,
+          "disabled": false,
+          "caption": {
+            "top": 750.1818237304688,
+            "bottom": 766.1818237304688,
+            "iconBottom": 745.1818237304688,
+            "textTop": 751.6364135742188,
+            "textBottom": 764.3636474609375,
+            "color": "rgb(96, 112, 131)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        },
+        {
+          "id": "settings",
+          "current": null,
+          "disabled": false,
+          "caption": {
+            "top": 750.1818237304688,
+            "bottom": 766.1818237304688,
+            "iconBottom": 745.1818237304688,
+            "textTop": 751.6364135742188,
+            "textBottom": 764.3636474609375,
+            "color": "rgb(96, 112, 131)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        }
+      ],
+      "deniedWrites": 0,
+      "fixtureNoops": 0,
+      "fixtureReads": 9,
+      "pixels": {
+        "topRgb": [
+          255,
+          255,
+          255
+        ],
+        "bottomRgb": [
+          255,
+          255,
+          255
+        ],
+        "bubbleRgb": [
+          0,
+          53,
+          102
+        ]
+      },
+      "screenshot": "support-light.png"
+    },
+    {
+      "name": "support-dark",
+      "theme": "dark",
+      "w": 393,
+      "h": 778,
+      "ratio": 2.75,
+      "overflow": false,
+      "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+      "nav": {
+        "x": 0,
+        "y": 674.1818237304688,
+        "width": 393.0909118652344,
+        "bottom": 778.1818237304688,
+        "height": 104,
+        "background": "#003566",
+        "accent": "#ffd60a",
+        "variant": "standard",
+        "duration": ".25s"
+      },
+      "surface": {
+        "background": "rgba(0, 0, 0, 0)",
+        "color": "rgb(232, 240, 248)",
+        "transitionDuration": "0s",
+        "rect": {
+          "left": -534.3636474609375,
+          "top": 674.1818237304688,
+          "width": 1179,
+          "height": 104
+        }
+      },
+      "sideHighlight": null,
+      "selectedIcon": {
+        "background": "rgba(0, 0, 0, 0)",
+        "color": "rgb(0, 29, 61)",
+        "transitionDuration": "0.25s, 0.2s",
+        "rect": {
+          "left": 41.6363639831543,
+          "top": 690.1818237304688,
+          "width": 27,
+          "height": 27
+        }
+      },
+      "bubble": {
+        "left": 26.136363983154297,
+        "top": 674.1818237304688,
+        "width": 58,
+        "height": 58,
+        "visible": true
+      },
+      "buttons": [
+        {
+          "id": "inbox",
+          "current": "page",
+          "disabled": false,
+          "caption": {
+            "top": 750.1818237304688,
+            "bottom": 766.1818237304688,
+            "iconBottom": 717.1818237304688,
+            "textTop": 751.6364135742188,
+            "textBottom": 764.3636474609375,
+            "color": "rgb(255, 214, 10)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        },
+        {
+          "id": "reports",
+          "current": null,
+          "disabled": false,
+          "caption": {
+            "top": 750.1818237304688,
+            "bottom": 766.1818237304688,
+            "iconBottom": 745.1818237304688,
+            "textTop": 751.6364135742188,
+            "textBottom": 764.3636474609375,
+            "color": "rgb(187, 206, 224)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        },
+        {
+          "id": "notifications",
+          "current": null,
+          "disabled": false,
+          "caption": {
+            "top": 750.1818237304688,
+            "bottom": 766.1818237304688,
+            "iconBottom": 745.1818237304688,
+            "textTop": 751.6364135742188,
+            "textBottom": 764.3636474609375,
+            "color": "rgb(187, 206, 224)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        },
+        {
+          "id": "settings",
+          "current": null,
+          "disabled": false,
+          "caption": {
+            "top": 750.1818237304688,
+            "bottom": 766.1818237304688,
+            "iconBottom": 745.1818237304688,
+            "textTop": 751.6364135742188,
+            "textBottom": 764.3636474609375,
+            "color": "rgb(187, 206, 224)",
+            "transform": "none",
+            "visible": true,
+            "foreground": true
+          }
+        }
+      ],
+      "deniedWrites": 0,
+      "fixtureNoops": 0,
+      "fixtureReads": 9,
+      "pixels": {
+        "topRgb": [
+          0,
+          29,
+          61
+        ],
+        "bottomRgb": [
+          0,
+          53,
+          102
+        ],
+        "bubbleRgb": [
+          255,
+          214,
+          10
+        ]
+      },
+      "screenshot": "support-dark.png"
+    }
+  ],
+  "motionChecks": [
+    {
+      "theme": "light",
+      "before": 16.710227966308594,
+      "target": "digital-market",
+      "cssDuration": ".25s",
+      "surfaceDurations": [
+        250
+      ],
+      "indicatorDurations": [
+        250
+      ],
+      "iconDurations": [
+        250,
+        200
+      ],
+      "surfaceAnimations": [
+        250
+      ],
+      "indicatorAnimations": [
+        250
+      ],
+      "sameNotchPath": true,
+      "inlinePlaneTransform": "translate3d(-468.369px, 0px, 0px)",
+      "after": 92.13068389892578,
+      "finalTarget": "digital-market"
+    },
+    {
+      "theme": "dark",
+      "before": 16.710227966308594,
+      "target": "digital-market",
+      "cssDuration": ".25s",
+      "surfaceDurations": [
+        250
+      ],
+      "indicatorDurations": [
+        250
+      ],
+      "iconDurations": [
+        250,
+        200
+      ],
+      "surfaceAnimations": [
+        250
+      ],
+      "indicatorAnimations": [
+        250
+      ],
+      "sameNotchPath": true,
+      "inlinePlaneTransform": "translate3d(-468.369px, 0px, 0px)",
+      "after": 92.13068389892578,
+      "finalTarget": "digital-market"
+    }
+  ],
+  "actualAdbTaps": [
+    {
+      "passed": true,
+      "package": "app.pinevela.mobile.transporttest",
+      "theme": "light",
+      "from": "home",
+      "to": "digital-market",
+      "cssX": 121.13068389892578,
+      "cssY": 726.1818237304688,
+      "devicePixelRatio": 2.75,
+      "statusInsetPixels": 136,
+      "physicalX": 333,
+      "physicalY": 2133,
+      "inputCommand": "adb shell input tap",
+      "screenshot": "user-light-selected-digital-market.png",
+      "syntheticReadOnlyAccountFixture": true,
+      "productionWrites": 0
+    }
+  ]
+}

@@ -86,7 +86,7 @@ const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
     await command('Page.enable'); await command('Runtime.enable'); await command('Network.enable');
 
     await command('Page.navigate', {url:base+'/#/login'});
-    await until("!!document.querySelector('input[aria-label=\"Username or Email Address\"]')",'Guest login');
+    await until("!!document.querySelector('input[aria-label=\"Email address\"]')",'Guest login');
     for(const width of [375,1440]) for(const dark of [false,true]) {
       await command('Emulation.setDeviceMetricsOverride',{width,height:900,deviceScaleFactor:1,mobile:width<600});
       await evaluate(`(()=>{const b=document.querySelector('button[role=switch][aria-label="Dark mode"]');if((b.getAttribute('aria-checked')==='true')!==${dark})b.click();return true;})()`);

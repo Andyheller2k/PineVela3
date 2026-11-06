@@ -24,7 +24,7 @@ const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
   const until=async(expression,label)=>{const deadline=Date.now()+50000;while(Date.now()<deadline){if(await evaluate(expression))return;await pause(150);}throw Error(label+' did not become ready');};
   await command('Page.enable');await command('Runtime.enable');await command('Network.enable');
   stage='normal guest startup';await command('Page.navigate',{url:base+'/#/user/dashboard'});
-  await until("location.hash.startsWith('#/login')&&!!document.querySelector('input[aria-label=\"Username or Email Address\"]')",'Real guest sign-in page');
+  await until("location.hash.startsWith('#/login')&&!!document.querySelector('input[aria-label=\"Email address\"]')",'Real guest sign-in page');
   assert(responses.includes(401));checks++;console.log(JSON.stringify({stage,passed:true,checks}));
   for(const route of ['/user/dashboard','/register-manager']){
    stage='bounded guest restoration '+route;
@@ -35,7 +35,7 @@ const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
    await until("!!document.querySelector('[data-route-loading-retry]')",'Bounded loading recovery');checks++;
    assert(held.size===1&&await evaluate("[...document.querySelectorAll('button')].some(b=>b.textContent==='Reload page')&&!document.querySelector('main.user-dashboard-content')&&!document.body.innerText.includes('Create your manager login')"));checks++;
    for(const id of held){await command('Fetch.continueRequest',{requestId:id});held.delete(id);}await command('Fetch.disable');
-   await until("location.hash.startsWith('#/login')&&!!document.querySelector('input[aria-label=\"Username or Email Address\"]')",'Actual guest session resolution');checks++;
+   await until("location.hash.startsWith('#/login')&&!!document.querySelector('input[aria-label=\"Email address\"]')",'Actual guest session resolution');checks++;
    console.log(JSON.stringify({stage,passed:true,checks}));
   }
   const report={passed:true,checks,isolatedRealBrowser:true,heldActualRequests:true,routeDeadlineMs:30000,actualAuthenticationStatuses:responses,providerRepliesFabricated:false,credentialsExtracted:false,cloudProductMutations:0,genuinePrimaryJourneyPending:true};

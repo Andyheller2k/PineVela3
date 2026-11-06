@@ -57,8 +57,8 @@ module.exports=async({viewport,load,evaluate,until,test,capture,command,pause,ou
   await test(`${theme} catalog image cache updates hidden images and removes withdrawn cards`,async()=>{
    await open(390,theme);await catalog(2);await ready(residence);await catalog(1);
    updateCatalog((items,hostels)=>{items[0].imageUrl=photoPath('3');hostels[0].imageUrl=photoPath('4');items.splice(1,1);hostels.splice(1,1);});
-   await refresh();await until(`document.querySelector(${JSON.stringify(market)})?.getAttribute('src')===${JSON.stringify(photoPath('3'))}`,'Changed market photo');await ready(market);
-   await catalog(2);await until(`document.querySelector(${JSON.stringify(residence)})?.getAttribute('src')===${JSON.stringify(photoPath('4'))}`,'Changed residence photo');await ready(residence);
+   await refresh();await until(`document.querySelector(${JSON.stringify(market)})?.getAttribute('src')===${JSON.stringify(photoPath('3')+'?size=card')}`,'Changed market photo');await ready(market);
+   await catalog(2);await until(`document.querySelector(${JSON.stringify(residence)})?.getAttribute('src')===${JSON.stringify(photoPath('4')+'?size=card')}`,'Changed residence photo');await ready(residence);
    assert(await evaluate(`!document.querySelector('[data-listing-id="browser-fixture-item-1"]')&&!document.querySelector('[data-residence-id="browser-fixture-residence-1"]')`),'Removed listings do not remain in retained DOM');
   });
   await test(`${theme} catalog image cache reuses image bytes after a filter remount`,async()=>{
@@ -74,7 +74,7 @@ module.exports=async({viewport,load,evaluate,until,test,capture,command,pause,ou
    await open(390,theme);updateCatalog((_items,hostels)=>{hostels[0].imageUrl=photoPath('9');});await refresh();await catalog(2);
    await until(`document.querySelector('[data-residence-id="browser-fixture-residence-0"]')?.textContent.includes('No residence photos uploaded')`,'Failed cover fallback');
    updateCatalog((_items,hostels)=>{hostels[0].imageUrl=photoPath('5');});await refresh();
-   await until(`document.querySelector(${JSON.stringify(residence)})?.getAttribute('src')===${JSON.stringify(photoPath('5'))}`,'Replacement cover');await ready(residence);
+   await until(`document.querySelector(${JSON.stringify(residence)})?.getAttribute('src')===${JSON.stringify(photoPath('5')+'?size=card')}`,'Replacement cover');await ready(residence);
   });
   await test(`${theme} catalog image cache survives a browser reload with conditional validation`,async()=>{
    await open(390,theme);const before=photoRequests.length;
@@ -84,5 +84,19 @@ module.exports=async({viewport,load,evaluate,until,test,capture,command,pause,ou
    measurements.push({theme,browserReload:requests});
   });
  }
+ for(const width of [390,1440])for(const theme of ['light','dark'])await test(`${width}px ${theme} purchase image cache navigation`,async()=>{
+  await open(width,theme);await tab('digital-market',width);
+  const purchase='[data-purchases-panel] .purchase-product img';await ready(purchase);await pause(150);
+  const initial=await evaluate(`(()=>{window.retainedPurchasePhoto=document.querySelector('${purchase}');return{src:window.retainedPurchasePhoto.getAttribute('src'),count:document.querySelectorAll('[data-purchases-panel] .purchase-card').length}})()`);
+  assert(initial.count>0&&initial.src.endsWith('?size=thumb'),'Actual purchase cards use compact image variants');
+  const before=photoRequests.length;await tab('options',width);
+  await until(`document.querySelector('[data-dashboard-view]')?.dataset.dashboardView==='options'`,'Options');
+  assert(await evaluate(`(()=>{const p=document.querySelector('[data-purchases-panel]');return p.hidden&&p.inert&&!p.getClientRects().length})()`),'Hidden purchase details cannot receive focus');
+  await tab('home',width);await tab('digital-market',width);await ready(purchase);await pause(150);
+  assert(await evaluate(`window.retainedPurchasePhoto===document.querySelector('${purchase}')`),'The same decoded purchase image node survives navigation');
+  assert.equal(photoRequests.length,before,'Purchase-tab round trips cause zero photo HTTP requests');
+  await capture(`${width}-${theme}-purchase-image-cache`);
+  measurements.push({width,theme,purchases:{...initial,requestsAfterNavigation:photoRequests.length-before}});
+ });
  await fs.writeFile(output+'/cache-measurements.json',JSON.stringify({baseline,measurements},null,2)+'\n');
 };

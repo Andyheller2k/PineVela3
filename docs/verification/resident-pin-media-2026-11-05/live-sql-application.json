@@ -1,0 +1,32 @@
+{
+  "passed": true,
+  "databaseOnly": true,
+  "hostedAppDeployed": false,
+  "authAccountsCreated": 0,
+  "existingPasswordsChanged": 0,
+  "imageBytesRewritten": 0,
+  "project": "bivajljcdeofyxzmplxm",
+  "migrations": [
+    {
+      "version": "20261105150000",
+      "digest": "54c5980740cd84b24ea60583cf133b18d605c34685e018b91c0d52c5fb841c48"
+    },
+    {
+      "version": "20261105160000",
+      "digest": "c8d29f22b568bf297fa9aeca34c6008d0633f52fbd45c2ba3708ff7b7b7dbb0e"
+    }
+  ],
+  "sqlEditorSha256": "a2aaa577f57684ddbc065bbb17ae61ddeddbffd8195be953df2ed713a0f2ca8d",
+  "backupCheckpoint": "effdcea9-ce67-4f75-bf10-0904fcbd2c71",
+  "rolledBackDryRunPassed": true,
+  "alreadyApplied": false,
+  "credentialRls": true,
+  "deniedRoleGrantChecks": 4,
+  "ownerIndexValid": true,
+  "storageBucketPrivate": true,
+  "allowedPhotoTypes": [
+    "image/png",
+    "image/webp"
+  ],
+  "credentialRecords": 0
+}

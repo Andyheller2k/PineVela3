@@ -1,0 +1,33 @@
+{
+  "passed": true,
+  "checks": 17,
+  "labels": [
+    "Restored real public catalogue contains an eligible shop",
+    "Restored catalogue includes an address-only shop without weakening moderation",
+    "Guest discovery returns only the public shop directory",
+    "Shop names are searchable case-insensitively independently of service location mode",
+    "Directory projection excludes private identities, emails, phone numbers and credentials",
+    "Area lookup receives only the published address",
+    "Public address-only shop can obtain a labelled area pin",
+    "Repeated shop lookups reuse the bounded area cache",
+    "Search punctuation stays a parameter rather than SQL",
+    "Wildcard characters cannot widen literal shop search",
+    "Array-shaped search input is rejected",
+    "Client widening flags are rejected",
+    "Client-supplied geocoding targets are rejected",
+    "Malformed shop IDs are rejected",
+    "Unknown shop lookup discloses no location",
+    "Unpublished shop disappears from directory",
+    "A cached location cannot reveal a shop after public eligibility is removed"
+  ],
+  "realPostgreSQL": true,
+  "realPublicCatalogueRole": true,
+  "geocoderTransport": "injected local public-area response",
+  "cloudWrites": 0,
+  "sourceSha256": {
+    "supabase/catalog.ts": "be7e268d4cbc5f03a493d46f60c65676a07007b72837d163775e7a1445b5a336",
+    "supabase/nearbyStores.ts": "e498c1629294aa9ac68ad7a288f48909f4752b959728487b064d806f1acf2e92",
+    "nearbyStores.ts": "a6eacf197da20c0e0538c1aac387fb793fb199fa9e07b05fd16289f37cdafef6",
+    "supabase/locationSuggestions.ts": "a5aa77d675453191189f57049e0880e087d1812340900c6d0270a101e85074cf"
+  }
+}

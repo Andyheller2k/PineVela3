@@ -1,0 +1,22 @@
+{
+  "verifiedDate": "2026-11-05",
+  "source": "read-only inspection of the existing Chrome/Chromium PineVela tab",
+  "permission": "granted",
+  "subscriptionPresent": true,
+  "unsupportedErrorVisibleBeforePatch": true,
+  "service": {
+    "protocol": "https:",
+    "hostname": "jmt17.google.com",
+    "pathFamily": "/fcm/send/",
+    "nonstandardPort": false,
+    "query": false,
+    "fragment": false,
+    "userInfo": false
+  },
+  "p256dhBytes": 65,
+  "authBytes": 16,
+  "subscriptionTokensExported": false,
+  "encryptionKeysExported": false,
+  "officialSource": "https://chromium.googlesource.com/chromium/src/+/main/components/push_messaging/push_messaging_constants.cc",
+  "hostedPatchApplied": false
+}

@@ -906,3 +906,23 @@ Migration 75 adds private, RLS-protected companion preferences, recent AI turns
 and server-only usage reservations. State belongs to the active primary context;
 browser/catalog roles have no grants. It introduces no public RPC, peer chat or
 approval authority. See [companion behavior and verification](companion.md).
+
+## Device push delivery
+
+Migration `20261105110000` adds private installations, verified per-account bindings, a public-catalog announcement ledger and leased delivery jobs. All four tables have RLS and revoked browser/scoped-backend grants. Existing recipient inserts enqueue jobs atomically through an invoker trigger; no historical notifications or users are auto-subscribed. See [device notifications](device-notifications-2026-11-05.md) for delivery, retention and installation.
+
+## Resident PIN and catalogue photo formats
+
+Migration `20261105150000` permits owned WebP objects for marketplace/residence
+photographs and matching marketplace moderation quarantine. Existing PNG paths,
+private Storage, attachment ownership and content-digest checks remain intact;
+no saved photograph bytes are rewritten.
+
+Migration `20261105160000` adds `private.resident_pin_credentials`, linked to an
+owned resident enrollment and primary profile. RLS is enabled, browser and scoped
+runtime-role grants are revoked, and an invoker trigger enforces immutable
+ownership and the managed enrollment type. PIN hashes, encrypted provider
+credentials and persistent setup lockouts remain private. Provider accounts are
+created through Supabase Auth Admin after verified owner/key checks, never through
+SQL password writes. The additive wrapper verifies all 86 prerequisite migration
+digests and can be repeated safely. See [deployment evidence](resident-pin-media-update-2026-11-05.md).

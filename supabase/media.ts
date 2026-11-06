@@ -3,7 +3,8 @@ import express,{type Express,type RequestHandler} from 'express';
 import type { PoolClient } from 'pg';
 import { ApiError,uuid,type VerifiedActor } from './db.js';
 import type { SupabaseAuth,AuthRequest } from './auth.js';
-import { decodeImageUpload } from '../imageUploadSecurity.js';
+import { decodeImageUpload, rasterContentType } from '../imageUploadSecurity.js';
+import { cataloguePhoto, type PhotoSize } from './cataloguePhotos.js';
 import { AttemptBudgets } from '../resourceSecurity.js';
 import { maintenanceResidence,residentRoom } from './maintenance.js';
 import { SupabaseStorage,MAX_MEDIA_BYTES } from './storage.js';
@@ -85,7 +86,9 @@ export async function reserveMedia(client:PoolClient,actor:VerifiedActor,purpose
   const used = (await client.query(`select count(*) as count,coalesce(sum(byte_size),0) as bytes from public.media_assets
     where owner_context_id = $1 and created_at > clock_timestamp() - interval '24 hours'`,[actor.contextId])).rows[0];
   if (Number(used.count) >= 100 || Number(used.bytes) + bytes.length > 250 * 1024 * 1024) throw new ApiError(429,'Your daily photograph upload allowance is used. Try again later.');
-  const id = crypto.randomUUID(),objectPath = `contexts/${actor.contextId}/${id}.png`;
+  const extension=rasterContentType(bytes)==='image/webp'?'webp':'png';
+  if(extension==='webp'&&!['market','hostel'].includes(purpose))throw new ApiError(400,'This photograph purpose requires PNG.');
+  const id = crypto.randomUUID(),objectPath = `contexts/${actor.contextId}/${id}.${extension}`;
   return (await client.query(`insert into public.media_assets(id,owner_context_id,owner_auth_user_id,purpose,inspection_id,object_path,byte_size,sha256,residence_id,allocation_id,issue_id)
     values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) returning *`,[id,actor.contextId,actor.authUserId,purpose,inspectionId || null,objectPath,bytes.length,digest,scope?.residenceId || null,scope?.allocationId || null,scope?.issueId || null])).rows[0];
 }
@@ -152,7 +155,8 @@ export function installMedia(app:Express,auth:SupabaseAuth,storage = new Supabas
       const inspectionId = purpose === 'inspection' ? uuid(req.body?.inspectionId) : undefined;
       const housing = {residenceId:req.body?.hostelId === undefined ? undefined : uuid(req.body.hostelId),issueId:purpose === 'repair' ? uuid(req.body?.issueId) : undefined};
       await auth.db.authorizedSystem(req.actor,[req.actor.kind],client => canUploadMedia(client,req.actor,purpose,inspectionId,housing));
-      const bytes = await decodeImageUpload(req.body,purpose==='avatar'?512:2048);
+      const catalogue = purpose==='market'||purpose==='hostel';
+      const bytes = await decodeImageUpload(req.body,purpose==='avatar'?512:catalogue?1600:2048,catalogue?'webp':'png');
       if (purpose==='market' || purpose==='avatar') {
         checkProfileContext(req.actor,req.headers['x-pinevela-profile-context']);
         await moderateContent(auth,req.actor,purpose==='market'?'market_image':'avatar',bytes,typeof req.body?.fileName==='string'?req.body.fileName.slice(0,255):'');
@@ -207,6 +211,9 @@ export function installMedia(app:Express,auth:SupabaseAuth,storage = new Supabas
   app.use((error:any,req:any,_res:any,next:any) => {req.releaseUpload?.();next(error);});
   app.get('/api/media/:id',route(async (req,res) => {
     const id = uuid(req.params.id);
+    if(Object.keys(req.query).some(key=>key!=='size') || req.query.size!==undefined && !['card','thumb'].includes(req.query.size as string))
+      throw new ApiError(400,'Choose a supported photograph size.');
+    const size=req.query.size as PhotoSize|undefined;
     let asset = await auth.db.system(async client => {
       await client.query("select pg_advisory_xact_lock_shared(hashtextextended('platform-maintenance',0))");
       if (!(await client.query('select private.platform_available() as available')).rows[0].available) return undefined;
@@ -223,15 +230,17 @@ export function installMedia(app:Express,auth:SupabaseAuth,storage = new Supabas
       asset = await auth.db.actor(actor,async client => (await client.query("select * from public.media_assets where id = $1 and state = 'ready'",[id])).rows[0]);
     }
     if (!asset) throw new ApiError(404,'Photograph not found.');
-    res.set({'Content-Type':'image/png','Content-Disposition':'inline; filename="photograph.png"',
+    if(size&&!['market','hostel'].includes(asset.purpose))throw new ApiError(400,'Display sizes are available for catalogue photographs.');
+    const format=size||asset.object_path.endsWith('.webp')?'webp':'png';
+    res.set({'Content-Type':`image/${format}`,'Content-Disposition':`inline; filename="photograph.${format}"`,
       'Cache-Control':publicCataloguePhoto?'private, no-cache, max-age=0, must-revalidate':'private, no-store','Content-Security-Policy':"sandbox; default-src 'none'; frame-ancestors 'none'",'Referrer-Policy':'no-referrer'});
     // Publication/maintenance/ownership checks above run even for a conditional
     // request. A hidden or removed image must never receive a cached 304 reply.
     if(publicCataloguePhoto && /^[a-f0-9]{64}$/.test(asset.sha256)) {
-      res.set({'ETag':`"pv-${id}-${asset.sha256}"`,'X-PineVela-Public-Photo':'1'});
+      res.set({'ETag':`"pv-${id}-${asset.sha256}${size?`-${size}-webp-v1`:''}"`,'X-PineVela-Public-Photo':'1'});
       if(req.fresh)return res.status(304).end();
     }
-    const bytes = await storage.download(asset.object_path,asset);
+    const bytes = size ? await cataloguePhoto(id,asset.sha256,size,()=>storage.download(asset.object_path,asset)) : await storage.download(asset.object_path,asset);
     // Conditional replies are handled explicitly above. Express must not add a
     // weak ETag or synthesize a 304 for an authorized private photograph.
     return res.set('Content-Length',String(bytes.length)).end(bytes);

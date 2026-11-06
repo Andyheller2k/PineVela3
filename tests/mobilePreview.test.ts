@@ -45,11 +45,18 @@ test('native artifact includes local assets and policy articles, excludes websit
   for (const name of files) assert.ok(!/(?:^|\/)(?:\.env[^/]*|sw\.js|analytics\.(?:js|css)|manifest\.webmanifest|[^/]*\.map|[^/]*\.mjs)$/.test(name), name);
   assert.ok(files.every(name => !/dist-supabase|supabase-server|system-wipe-worker|residence-worker/.test(name)));
   const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
-  assert.ok(html.includes("connect-src 'none'"));
+  if(html.includes('data-native-preview="true"'))assert.ok(html.includes("connect-src 'none'"),'Disconnected preview cannot contact any API');
+  else{
+    const policy=html.match(/http-equiv="Content-Security-Policy" content="([^"]+)"/)?.[1]||'';
+    const connections=policy.split(';').find(part=>part.trim().startsWith('connect-src '))?.trim().split(/\s+/).slice(1)||[];
+    assert.deepEqual(connections,["'self'",'https://challenges.cloudflare.com','https://nominatim.openstreetmap.org','https://valhalla1.openstreetmap.de'],
+      'Connected native build retains only its local transport and fixed CAPTCHA/map service destinations');
+    assert.ok(html.includes('data-native-preview="false"'));
+  }
   assert.ok(!/analytics|serviceWorker|manifest\.webmanifest/.test(html));
   for (const name of files.filter(name => name.endsWith('.css'))) assert.ok(!/fonts\.googleapis\.com|fonts\.gstatic\.com/.test(fs.readFileSync(path.join(root, name), 'utf8')), name);
   const article = (file: string) => fs.readFileSync(file, 'utf8').match(/<article\b[\s\S]*?<\/article>/)?.[0];
-  for (const name of ['privacy.html', 'terms.html', 'legal/terms-2026-10-27.html']) {
+  for (const name of ['privacy.html', 'terms.html', 'legal/terms-2026-10-27.html', PLATFORM_TERMS.href.slice(1)]) {
     assert.equal(article(path.join(root, name)), article(path.join('public', name)), name);
     assert.ok(!fs.readFileSync(path.join(root, name), 'utf8').includes('src="/analytics.js"'));
   }

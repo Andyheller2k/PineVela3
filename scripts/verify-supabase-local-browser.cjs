@@ -176,12 +176,12 @@ async function main() {
       await command('Emulation.setDeviceMetricsOverride', { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false });
       const guestStart = requests.length;
       await navigate('/?localBrowserRun=' + fixture.runId + '#/login');
-      await until("!!document.querySelector('input[aria-label=\"Username or Email Address\"]')", 'Actual login form');
+      await until("!!document.querySelector('input[aria-label=\"Email address\"]')", 'Actual login form');
       check(!requests.slice(guestStart).some(item => item.path === '/api/sync/events'), 'The actual guest login page opens no authenticated event stream');
       const started = await evaluate('performance.now()'), requestStart = requests.length;
-      await fill('input[aria-label="Username or Email Address"]', actor.email);
+      await fill('input[aria-label="Email address"]', actor.email);
       await fill('input[aria-label="Password"]', actor.password);
-      await evaluate("document.querySelector('input[aria-label=\"Username or Email Address\"]').closest('form').requestSubmit()");
+      await evaluate("document.querySelector('input[aria-label=\"Email address\"]').closest('form').requestSubmit()");
       if (actor.portalPin) {
         await until("!!document.querySelector('#login-portal-pin')", 'Actual shared-email portal choice');
         await evaluate(`(()=>{const select=document.querySelector('#login-portal');Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,'value').set.call(select,${JSON.stringify(actor.accountKind)});select.dispatchEvent(new Event('change',{bubbles:true}));})()`);

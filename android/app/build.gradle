@@ -73,11 +73,12 @@ dependencies {
 
 apply from: 'capacitor.build.gradle'
 
-try {
-    def servicesJSON = file('google-services.json')
-    if (servicesJSON.text) {
-        apply plugin: 'com.google.gms.google-services'
-    }
-} catch(Exception e) {
-    logger.info("google-services.json not found, google-services plugin not applied. Push Notifications won't work")
+def firebaseConfigs = ['google-services.json', 'src/debug/google-services.json', 'src/release/google-services.json']
+if (firebaseConfigs.any { file(it).isFile() && file(it).length() > 0 }) {
+    apply plugin: 'com.google.gms.google-services'
+    // The offline, isolated transport fixture never contacts Firebase. No fake
+    // project registration or real sender credential enters that test variant.
+    tasks.matching { it.name == 'processTransportTestGoogleServices' }.configureEach { enabled = false }
+} else {
+    logger.info('Firebase client configuration missing; Android push remains unavailable.')
 }

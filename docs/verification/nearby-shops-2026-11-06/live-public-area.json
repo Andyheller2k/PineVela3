@@ -1,0 +1,14 @@
+{
+  "passed": true,
+  "inputWasPublishedPublicAddress": true,
+  "location": {
+    "point": {
+      "lat": 6.6845316,
+      "lng": -1.5800191
+    },
+    "precision": "approximate",
+    "label": "Bomso, Ashanti Region, Ghana"
+  },
+  "privateDataSent": false,
+  "provider": "Photon / OpenStreetMap"
+}

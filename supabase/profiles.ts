@@ -3,6 +3,7 @@ import type { PoolClient } from 'pg';
 import { ApiError,type VerifiedActor } from './db.js';
 import type { SupabaseAuth,AuthRequest } from './auth.js';
 import { checkAdministratorSettingsKey,deniedKey,requireSettingsGrant,type SettingsGrant } from './adminSettings.js';
+import { residentContactEmail } from './residentContact.js';
 
 export const AVATAR_PRESETS = ['pine-classic','pine-emerald','pine-amber','pine-rose','pine-violet','pine-dark','pine-cyan','pine-golden','pine-crimson','pine-forest'];
 const aliases = ['avatar','avatarUrl','photo','photoUrl','profilePicture'];
@@ -34,7 +35,8 @@ export async function saveProfile(c:PoolClient,a:VerifiedActor,body:any,grant?:S
   if(a.kind!=='admin' && (await c.query(`select 1 from public.admin_memberships m join public.account_contexts x on x.id=m.context_id
     where x.auth_user_id=$1 and m.status='active' and x.status='active'`,[a.authUserId])).rowCount)
     throw new ApiError(403,'Use your administrator portal and settings key to change this identity\'s profile.');
-  if(body.email!==undefined && (typeof body.email!=='string' || body.email.trim().toLowerCase()!==person.email.toLowerCase()))
+  const displayedEmail=await residentContactEmail(c,a)||person.email;
+  if(body.email!==undefined && (typeof body.email!=='string' || body.email.trim().toLowerCase()!==displayedEmail.toLowerCase()))
     throw new ApiError(400,'Credential emails require a verified account-email change process.');
   const fields:any={};
   for(const [key,col,max] of [['name','display_name',120],['phone','phone',40]] as const) {

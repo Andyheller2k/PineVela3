@@ -7,7 +7,7 @@ import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
 import { routePopupFeedback } from '../lib/feedback';
 import { activateOnKeyboard } from '../lib/keyboardActivation';
-import { saveNavigationLayout,usesTopNavigation } from '../lib/navigationLayout';
+import { useSidebarLayout } from '../lib/useSidebarLayout';
 import { invalidateAllQueries,queryClient } from '../lib/queryClient';
 import { loadManagerDashboardData } from '../lib/managerDashboardData';
 import AcademicYearRoomReset from './AcademicYearRoomReset';
@@ -20,6 +20,7 @@ import ManagerPropertyStatusCard,{ managerPropertyLockMessage,managerPropertyRev
 import { ManagerMeetingsTab } from './ManagerMeetingsTab';
 import ManagerProfileSettings from './ManagerProfileSettings';
 import MobileNavigation from './MobileNavigation';
+import CompactSidebarNavigation from './CompactSidebarNavigation';
 import OnboardingProgress,{ STAFF_ACCOUNT_STEPS } from './OnboardingProgress';
 import PineLogo from './PineLogo';
 import { ManagerResidenceRequests } from './ResidenceChangeRequests';
@@ -47,7 +48,7 @@ LogOut as LogOutIcon,
 Mail,
 MapPin,
 MessageSquare,
-PanelLeftClose,PanelLeftOpen,
+PanelLeftClose,
 Phone,
 Plus,
 RefreshCw,Scale,
@@ -130,13 +131,9 @@ export default function PageManagerDashboard() {
   const [activeTab, setActiveTab] = useState<'overview' | 'registration' | 'properties' | 'blocks' | 'staff' | 'maintenance' | 'meetings' | 'notifications' | 'settings'>(
     isPendingOnboarding ? 'notifications' : 'overview'
   );
-  // Collapsible sidebar state (Disabled minimizing to prevent glitched overlapping)
+  // Expanded sidebar and compact side rail share a device preference.
   const isSidebarCollapsed = false;
-  const [isSidebarTopNav, setIsSidebarTopNav] = useState(usesTopNavigation);
-
-  useEffect(() => {
-    saveNavigationLayout(isSidebarTopNav);
-  }, [isSidebarTopNav]);
+  const [isSidebarCompact, setIsSidebarCompact] = useSidebarLayout('manager-dashboard-sidebar');
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const clipboard = useClipboardFeedback();
@@ -903,18 +900,20 @@ export default function PageManagerDashboard() {
 
       {/* SIDEBAR: PURELY STATIC / FIXED ICE-BLUE FROSTY BLUE WITH CURVED EDGES & BLUE GLOW */}
 
-      {isSidebarTopNav && <nav data-portal-navigation="top" className="hidden lg:block fixed top-3 left-1/2 -translate-x-1/2 z-50 w-[min(760px,calc(100vw-3rem))] bg-white/72 backdrop-blur-xl border border-white/80 rounded-2xl shadow-lg"><div className="flex items-center gap-1 px-2 py-1.5">
-        {/* Profile avatar button — left end */}
-        <button onClick={() => setActiveTab('settings')} aria-current={activeTab === 'settings' ? 'page' : undefined} title="Manager Profile Settings" className="shrink-0 flex flex-col items-center gap-0.5 py-1 px-1.5 rounded-xl hover:bg-white/70 cursor-pointer">
-          <img src={user?.photo || user?.avatar || (user as any)?.photoUrl || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80'} alt="Profile" className="w-6 h-6 rounded-full object-cover ring-2 ring-white shadow-sm" />
-          <span className="text-[9px] font-bold text-slate-500">Profile</span>
-        </button>
-        <div className="w-px h-6 bg-slate-200/70 shrink-0" />
-        {[
-        { id: 'overview', label: 'Overview', icon: ShieldCheck }, { id: 'registration', label: primaryProperty?.registrationRequired ? 'Register' : 'Status', icon: Building2 }, ...(hasApprovedProperty ? [{ id: 'properties', label: 'Properties', icon: Building2 }] : []), { id: 'blocks', label: 'Blocks', icon: Layers }, { id: 'staff', label: 'Staff', icon: Users, badge: staffBargains.filter(b => (b.status || '').toLowerCase() === 'pending').length || staffList.length }, { id: 'maintenance', label: 'Fixes', icon: Wrench, badge: maintenanceIssues.filter(i => !i.withdrawn && !i.closedByManager && (i.status === 'Pending' || i.status === 'Resolved' || i.rescheduleRequested || i.staffRescheduleRequested || i.staffDeclined)).length || activeIssues }, { id: 'meetings', label: 'Meetings', icon: CalendarCheck }, { id: 'notifications', label: 'Alerts', icon: Bell, badge: systemUnreadCount }
-      ].map(tab => <button aria-current={activeTab === tab.id ? 'page' : undefined} key={tab.id} disabled={!hasApprovedProperty && tab.id !== 'notifications' && tab.id !== 'registration'} onClick={() => tab.id === 'registration' ? openRegistrationTab() : setActiveTab(tab.id as any)} aria-label={`${tab.label}${tab.badge ? ` (${tab.badge})` : ''}`} className={`flex-1 min-w-0 flex flex-col items-center gap-0.5 py-1.5 rounded-xl text-[9px] font-bold ${activeTab === tab.id ? 'text-blue-700 bg-blue-100/65' : 'text-slate-500 hover:bg-white/70'} disabled:opacity-40 cursor-pointer`}><span className="relative inline-flex"><tab.icon className="w-4 h-4" /><TopNavBadge count={tab.badge} /></span><span className="truncate max-w-full">{tab.label}</span></button>)}<button onClick={() => setShowLogoutConfirm(true)} title="Sign Out" className="shrink-0 flex flex-col items-center gap-0.5 px-2 py-1.5 text-[9px] font-bold text-rose-600 hover:bg-rose-50 rounded-xl cursor-pointer"><LogOutIcon className="w-4 h-4" /><span>Sign Out</span></button><button onClick={() => setIsSidebarTopNav(false)} title="Show sidebar" className="p-2 text-slate-500 hover:text-blue-700 cursor-pointer"><PanelLeftOpen className="w-4 h-4" /></button><HelpLink compact className="!px-2" /></div></nav>}
-      {!isSidebarTopNav && <aside data-portal-navigation="sidebar" className={`hidden lg:flex ${isSidebarCollapsed ? 'w-20 p-4' : 'w-72 p-6'} my-6 ml-6 h-[calc(100vh-3rem)] bg-gradient-to-br from-sky-100/90 via-blue-100/85 to-amber-50/40 backdrop-blur-3xl border border-sky-200/80 shadow-2xl rounded-3xl flex flex-col justify-between shrink-0 overflow-y-auto z-20 transition-all duration-300 relative`}>
-        <button onClick={() => setIsSidebarTopNav(true)} title="Use top navigation" className="absolute top-3 right-3 p-2 rounded-xl text-slate-500 hover:text-blue-700 hover:bg-white/70 cursor-pointer"><PanelLeftClose className="w-4 h-4" /></button>
+      {isSidebarCompact && <CompactSidebarNavigation id="manager-dashboard-sidebar" label="Manager navigation sidebar"
+        activeTab={activeTab} onExpand={() => setIsSidebarCompact(false)} items={[
+          { id: 'registration', label: primaryProperty?.registrationRequired ? 'Register' : 'Status', icon: Building2 },
+          { id: 'overview', label: 'Overview', icon: ShieldCheck, locked: !hasApprovedProperty },
+          { id: 'properties', label: 'Properties', icon: Building2, locked: !hasApprovedProperty },
+          { id: 'blocks', label: 'Blocks', icon: Layers, locked: !hasApprovedProperty },
+          { id: 'staff', label: 'Staff', icon: Users, locked: !hasApprovedProperty, badge: staffBargains.filter(b => (b.status || '').toLowerCase() === 'pending').length || staffList.length },
+          { id: 'maintenance', label: 'Fixes', icon: Wrench, locked: !hasApprovedProperty, hasUpdates: hasUnviewedMaintenanceLogs, badge: maintenanceIssues.filter(i => !i.withdrawn && !i.closedByManager && (i.status === 'Pending' || i.status === 'Resolved' || i.rescheduleRequested || i.staffRescheduleRequested || i.staffDeclined)).length || activeIssues },
+          { id: 'meetings', label: 'Meetings', icon: CalendarCheck, locked: !hasApprovedProperty },
+          { id: 'notifications', label: 'Alerts', icon: Bell, badge: systemUnreadCount },
+          { id: 'settings', label: 'Settings', icon: Settings }
+        ]} onSelect={id => id === 'registration' ? openRegistrationTab() : setActiveTab(id as any)} onSignOut={() => setShowLogoutConfirm(true)} />}
+      {!isSidebarCompact && <aside id="manager-dashboard-sidebar" data-portal-navigation="sidebar" data-sidebar-collapsed="false" aria-label="Manager navigation sidebar" className={`hidden lg:flex ${isSidebarCollapsed ? 'w-20 p-4' : 'w-72 p-6'} my-6 ml-6 h-[calc(100vh-3rem)] bg-gradient-to-br from-sky-100/90 via-blue-100/85 to-amber-50/40 backdrop-blur-3xl border border-sky-200/80 shadow-2xl rounded-3xl flex flex-col justify-between shrink-0 overflow-y-auto z-20 transition-all duration-300 relative`}>
+        <button onClick={() => setIsSidebarCompact(true)} title="Minimize sidebar" aria-label="Minimize sidebar" data-sidebar-toggle aria-controls="manager-dashboard-sidebar" aria-expanded="true" className="absolute top-3 right-3 p-2 rounded-xl text-slate-500 hover:text-blue-700 hover:bg-white/70 cursor-pointer"><PanelLeftClose className="w-4 h-4" /></button>
 
         <div className="space-y-6">
           {/* Logo & Header */}
@@ -1083,7 +1082,7 @@ export default function PageManagerDashboard() {
 
 
       {/* MAIN CONTENT AREA */}
-      <main className={`dashboard-centered-content flex-1 p-6 pb-28 lg:p-10 lg:pb-10 space-y-8 overflow-y-auto h-full relative ${isSidebarTopNav ? 'lg:pt-24 lg:w-[calc(100vw-22rem)] lg:max-w-[calc(100vw-22rem)] lg:mx-auto' : ''}`}>
+      <main className={`dashboard-centered-content flex-1 p-6 pb-28 lg:p-10 lg:pb-10 space-y-8 overflow-y-auto h-full relative`}>
         {managerError && <div role="alert" className="relative z-10 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800 dark:border-red-800 dark:bg-red-950 dark:text-red-100">Updates unavailable: {managerError.message} <button type="button" onClick={() => void retryManagerData()} className="font-bold underline">Retry</button></div>}
         {managerData?.failedSections.length > 0 && <div role="status" className="relative z-10 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950 dark:border-amber-500 dark:bg-amber-950 dark:text-amber-100">Some sections are temporarily unavailable: {managerData.failedSections.join(', ')}. <button type="button" onClick={() => void retryManagerData()} className="font-bold underline">Retry</button></div>}
         {welcomeError && <div role="alert" className="relative z-10 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-rose-300 bg-rose-50 p-3 text-sm font-semibold text-rose-800">
@@ -1410,17 +1409,17 @@ export default function PageManagerDashboard() {
             {activeTab === 'blocks' && (
               <div className="relative z-10 space-y-6">
                 {/* Header Banner */}
-                <div className="bg-sky-50/80 border border-sky-200/80 p-6 rounded-3xl shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  <div className="flex items-center gap-4">
+                <div data-room-keys-heading="" className="bg-sky-50/80 border border-sky-200/80 p-5 sm:p-6 rounded-3xl shadow-xs flex flex-wrap items-center justify-between gap-4">
+                  <div className="flex min-w-0 flex-[1_1_22rem] items-center gap-4">
                     <div className="w-12 h-12 rounded-2xl bg-blue-600 text-white flex items-center justify-center shadow-md shadow-blue-500/20 shrink-0">
                       <Key className="w-6 h-6" />
                     </div>
-                    <div>
+                    <div className="min-w-0">
                       <h2 className="text-xl font-bold text-slate-900">Physical Property Wings & Digital Room Keys</h2>
                       <p className="text-xs text-slate-600">Select any block to inspect all rooms, view their unique digital access keys, search room numbers, and dispatch keys to students.</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div data-room-key-actions="" className="flex max-w-full flex-wrap items-center gap-2 [&>button]:shrink-0 [&>button]:min-h-11 [&>button]:whitespace-nowrap [&_svg]:shrink-0">
                     <button
                       type="button"
                       onClick={() => { setRoomAccessError(null); setRoomAccessAction({ type: 'reshuffle' }); }}
@@ -1440,7 +1439,7 @@ export default function PageManagerDashboard() {
                       <span>{loadingRoomKeys ? 'Refreshing...' : 'Refresh Keys'}</span>
                     </button>
                     <span className="text-xs font-bold bg-white text-blue-900 px-3.5 py-2 rounded-xl border border-blue-200 shadow-xs shrink-0">
-                      {propertyBlocks.length} Wings • {roomKeysList.length || '30+'} Digital Keys
+                      {propertyBlocks.length} Wings • {roomKeysList.length} Digital Keys
                     </span>
                   </div>
                 </div>

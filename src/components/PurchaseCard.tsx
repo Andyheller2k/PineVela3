@@ -2,6 +2,7 @@ import { useState, type ReactNode } from 'react';
 import { ChevronDown } from 'lucide-react';
 import type { DigitalMarketOrder } from '../types';
 import '../purchaseCards.css';
+import { optimizeImageDisplayUrl } from '../lib/imageOptimizer';
 
 /** Only mount tracking/PIN controls after the owner expands this order. */
 export default function PurchaseCard({ order, isBuyer, children }: {
@@ -13,7 +14,7 @@ export default function PurchaseCard({ order, isBuyer, children }: {
     <summary className="purchase-summary">
       <span className="purchase-merchant"><span>{isBuyer ? order.storeName : order.buyerName}</span><ChevronDown size={18} aria-hidden="true" /></span>
       <span className="purchase-product">
-        <img src={order.productImage} alt="" loading="lazy" decoding="async" />
+        <img src={optimizeImageDisplayUrl(order.productImage,192)} alt="" loading="lazy" decoding="async" />
         <span className="purchase-product-copy"><span className="purchase-title">{order.productTitle}</span><span className="purchase-quantity">Qty {order.quantity} · GHS {order.totalAmount}</span></span>
       </span>
       <span className="purchase-status" data-status={order.status}>{order.status}</span>

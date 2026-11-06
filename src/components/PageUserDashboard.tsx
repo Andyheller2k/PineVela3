@@ -68,7 +68,7 @@ import { useClipboardFeedback } from '../lib/useClipboardFeedback';
 import { optimizeImageDisplayUrl } from '../lib/imageOptimizer';
 import { matchesMarketCategory } from '../lib/marketCatalog';
 import { marketNoticeKind } from '../lib/marketNotifications';
-import { saveNavigationLayout,usesTopNavigation } from '../lib/navigationLayout';
+import { useSidebarLayout } from '../lib/useSidebarLayout';
 import { queryClient } from '../lib/queryClient';
 import { managerRegistrationStatus,merchantRegistrationStatus,type ManagerRegistration } from '../lib/registrationStatus';
 import { filterResidences } from '../lib/residenceCatalog';
@@ -82,6 +82,7 @@ import ManagerRegistrationCard from './ManagerRegistrationCard';
 import MarketImageGallery from './MarketImageGallery';
 import MarketItemCard,{ getServiceActionLabel } from './MarketItemCard';
 import PurchaseCard from './PurchaseCard';
+import ResidentPinReset from './ResidentPinReset';
 import MarketplaceFilters from './MarketplaceFilters';
 import MarketplaceInbox from './MarketplaceInbox';
 import ReportButton from './ReportButton';
@@ -145,6 +146,10 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
   const [activeTab, setActiveTab] = useState<'home' | 'notifications' | 'options' | 'overview' | 'issues' | 'announcements' | 'settings' | 'register-resident' | 'login-room' | 'digital-market'>(
     (queryTab || initialTab) === 'register-resident' ? 'home' : queryTab || initialTab || (isMerchantUser ? 'digital-market' : 'home')
   );
+  const [purchasesVisitedFor, setPurchasesVisitedFor] = useState<string|undefined>();
+  useEffect(() => {
+    if (activeTab === 'digital-market' && user?.id) setPurchasesVisitedFor(user.id);
+  }, [activeTab, user?.id]);
 
   // Registration status comes from the current authenticated account, including deletions.
   const merchantRegistration = useQuery<{ application: DigitalMarketApplication | null; store: DigitalMarketStore | null }>({
@@ -475,12 +480,8 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
   // Image zoom viewer modal
   const [zoomedImage, setZoomedImage] = useState<string | null>(null);
 
-  // Let desktop users switch to the compact, fixed top navigation when they need more room.
-  const [isSidebarHidden, setIsSidebarHidden] = useState(usesTopNavigation);
-
-  useEffect(() => {
-    saveNavigationLayout(isSidebarHidden);
-  }, [isSidebarHidden]);
+  // Keep desktop navigation on the side while making more room for content.
+  const [isSidebarCompact, setIsSidebarCompact] = useSidebarLayout('user-dashboard-sidebar');
 
   // Catalog selection for the home tab
   const [homeFilterType, setHomeFilterType] = useState<'hostels' | 'market'>('market');
@@ -1195,7 +1196,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
   if (loadingData && issueReports.length === 0) return <RouteSkeleton />;
 
   return (
-    <div data-dashboard-shell data-navigation-layout={isSidebarHidden ? 'top' : 'sidebar'} className="user-dashboard page-canvas min-h-screen h-screen flex flex-col lg:flex-row text-slate-800 overflow-hidden font-sans relative">
+    <div data-dashboard-shell data-navigation-layout={isSidebarCompact ? 'compact' : 'sidebar'} className="user-dashboard page-canvas min-h-screen h-screen flex flex-col lg:flex-row text-slate-800 overflow-hidden font-sans relative">
       {/* Toast Notification */}
       <AnimatePresence>
         {toastMessage && (
@@ -1213,12 +1214,12 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
       </AnimatePresence>
 
       <UserDashboardNavigation items={navItems} activeTab={activeTab} onSelect={handleNavClick}
-        isSidebarHidden={isSidebarHidden} onLayoutChange={setIsSidebarHidden} profile={currentUser}
+        isSidebarCompact={isSidebarCompact} onLayoutChange={setIsSidebarCompact} profile={currentUser}
         hostelName={user?.hostelName} unreadCount={unreadNotificationsCount} badgeFor={tabUnreadCount}
         navigationId={navigationId} onCompanionTarget={setCompanionNavigationTarget} onSignOut={() => setShowSignoutConfirmModal(true)} />
 
       {/* MAIN CONTENT AREA */}
-      <main ref={mainScrollRef} data-dashboard-view={activeTab} className={`user-dashboard-content hide-scrollbar flex-1 p-6 pb-28 lg:px-10 lg:pb-10 space-y-8 overflow-y-auto h-full relative z-10 ${isSidebarHidden ? 'lg:pt-24 lg:w-[calc(100vw-22rem)] lg:max-w-[calc(100vw-22rem)] lg:mx-auto' : 'lg:pt-10'}`}>
+      <main ref={mainScrollRef} data-dashboard-view={activeTab} className={`user-dashboard-content hide-scrollbar flex-1 p-6 pb-28 lg:px-10 lg:pb-10 space-y-8 overflow-y-auto h-full relative z-10 lg:pt-10`}>
 
         {(dashboardLoadError)&&<section role="alert" className="space-y-3 rounded-2xl border border-blue-200 bg-[var(--pv-panel)] p-5 text-[var(--pv-text)]">
           <h2 className="text-lg font-semibold">Could not refresh your dashboard</h2><p className="text-sm">{dashboardLoadError}</p>
@@ -1435,6 +1436,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                   return (
                     <div
                       key={rKey || idx}
+                      data-active-room-status=""
                       className="bg-white/95 border border-blue-200/90 hover:border-blue-400 rounded-3xl p-6 shadow-xl space-y-5 backdrop-blur-md transition-all flex flex-col justify-between"
                     >
                       <div className="space-y-4">
@@ -1458,6 +1460,17 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                             <span>Active</span>
                           </span>
                         </div>
+
+                        {registeredAccounts.residentAccount?.active && registeredAccounts.residentAccount.residentPinLogin && (
+                          <div data-resident-login-steps="" className="rounded-2xl border border-blue-200 bg-blue-50/70 p-3 text-xs text-slate-700">
+                            <h5 className="mb-1.5 font-bold text-slate-900">Log in to your resident room</h5>
+                            <ol className="list-decimal space-y-1 pl-4">
+                              <li>On the login page, enter your primary email.</li>
+                              <li>Enter your room PIN in the Password field.</li>
+                              <li>Tap Login.</li>
+                            </ol>
+                          </div>
+                        )}
 
                         {/* DOSSIER DETAILS */}
                         <div className="bg-slate-50/80 border border-slate-200/80 rounded-2xl p-4 space-y-2.5 text-xs">
@@ -1504,6 +1517,12 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
 
                       {/* CARD ACTIONS */}
                       <div className="pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
+                        {registeredAccounts.residentAccount?.active&&<button
+                          type="button"
+                          data-room-pin-reset={registeredAccounts.residentAccount.residentPinLogin?'':undefined}
+                          onClick={()=>openResetPasswordModal('resident',registeredAccounts.residentAccount.email||'')}
+                          className="min-h-11 px-3 py-2 bg-blue-900 text-white font-bold text-xs rounded-xl inline-flex items-center justify-center gap-1.5"
+                        ><KeyRound className="w-3.5 h-3.5"/>{registeredAccounts.residentAccount.residentPinLogin?'Reset room PIN':'Resident account security'}</button>}
                         <button
                           type="button"
                           onClick={() => {
@@ -1566,8 +1585,8 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
         )}
 
         {/* TAB: DIGITAL STUDENT MARKET */}
-        {activeTab === 'digital-market' && (
-          <div className="space-y-6 animate-fadeIn relative z-10 max-w-6xl">
+        {(activeTab === 'digital-market' || purchasesVisitedFor === user?.id && Boolean(user?.id)) && (
+          <div key={`purchases:${user?.id}`} hidden={activeTab !== 'digital-market'} inert={activeTab !== 'digital-market'} data-purchases-panel className="space-y-6 relative z-10 max-w-6xl">
             <div className="user-purchases-heading flex items-center gap-3 rounded-3xl border border-slate-200 bg-white/90 p-5 sm:p-6 shadow-xl">
               <div className="rounded-2xl bg-blue-600 p-3 text-white"><Package className="h-6 w-6" /></div>
               <div><h2 className="user-section-title text-xl font-black text-slate-900">Purchases & Tracking</h2>
@@ -2652,7 +2671,7 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
 
               <div className="space-y-4 pt-4 xl:pt-0 xl:border-t-0 border-t border-slate-100">
                 {/* REGISTERED RESIDENT ACCOUNT MANAGEMENT */}
-                {(roomKeyDetails || currentUser?.roomKey || registeredAccounts.residentAccount) && (
+                {registeredAccounts.residentAccount?.active && (
                   <div className="p-5 bg-gradient-to-br from-blue-50/80 to-indigo-50/60 border border-blue-200 rounded-2xl space-y-4">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                       <div className="flex items-center gap-2.5">
@@ -2689,11 +2708,11 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
                     <div className="flex flex-wrap items-center justify-end gap-2 pt-2 border-t border-blue-100">
                       <button
                         type="button"
-                        onClick={() => openResetPasswordModal('resident', registeredAccounts.residentAccount?.email || currentUser?.email || '')}
+                        onClick={() => setActiveTab('login-room')}
                         className="px-3.5 py-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 font-bold text-xs rounded-xl transition-all flex items-center gap-1 cursor-pointer"
                       >
                         <KeyRound className="w-3.5 h-3.5" />
-                        <span>{('Resident account security')}</span>
+                        <span>Manage active room</span>
                       </button>
                       <button
                         type="button"
@@ -3159,17 +3178,17 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
       {/* ========================================================================= */}
       {/* MODAL: RESET REGISTERED ACCOUNT PASSWORD */}
       {/* ========================================================================= */}
-      {showResetPasswordModal && (
-        <DashboardOverlay aria-label={('Resident account security')} onClose={() => setShowResetPasswordModal(false)} className="fixed inset-0 bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-4 animate-in fade-in duration-150">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-2xl border border-slate-200 space-y-5">
-            <div className="flex items-start justify-between gap-3 pb-3 border-b border-slate-100">
-              <div className="flex items-start gap-3">
+      {showResetPasswordModal && registeredAccounts.residentAccount?.active && (
+        <DashboardOverlay aria-label={registeredAccounts.residentAccount.residentPinLogin?'Reset room PIN':'Resident account security'} onClose={() => setShowResetPasswordModal(false)} className="fixed inset-0 bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-4 animate-in fade-in duration-150">
+          <div data-popup-card="" className="bg-white rounded-3xl min-w-0 max-w-md w-full max-h-[calc(100dvh-2rem)] overflow-y-auto p-6 sm:p-7 shadow-2xl border border-slate-200 space-y-5">
+            <div className="flex min-w-0 items-start justify-between gap-3 pb-3 border-b border-slate-100">
+              <div className="flex min-w-0 flex-1 items-start gap-3">
                 <div className="w-11 h-11 rounded-2xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-blue-600/30">
                   <KeyRound className="w-5 h-5" />
                 </div>
-                <div>
+                <div className="min-w-0 flex-1">
                   <h3 className="text-base font-black text-slate-900">
-                    {('Resident account security')}
+                    {registeredAccounts.residentAccount.residentPinLogin?'Reset room PIN':'Resident account security'}
                   </h3>
                   <p className="text-xs text-slate-500 font-medium truncate max-w-xs">{resetTargetEmail}</p>
                 </div>
@@ -3177,13 +3196,13 @@ export default function PageUserDashboard({ initialTab, initialMarketMode }: Pag
               <button aria-label="Close dialog"
                 type="button"
                 onClick={() => setShowResetPasswordModal(false)}
-                className="text-slate-400 hover:text-slate-700 p-1.5 rounded-xl hover:bg-slate-100 cursor-pointer"
+                className="shrink-0 text-slate-400 hover:text-slate-700 p-1.5 rounded-xl hover:bg-slate-100 cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            {(<div className="space-y-4">
+            {registeredAccounts.residentAccount?.residentPinLogin ? <ResidentPinReset /> : (<div className="space-y-4">
               <p className="text-sm text-slate-600">Sign in with the verified resident email to manage its credentials. If that email also opens your seller account, its email password is shared and each portal has a separate access PIN.</p>
               <p className="text-sm text-slate-600">The resident portal's Settings page lets you change its current PIN. Your primary account cannot change another verified identity's password.</p>
               <button type="button" disabled={resettingPassword} className="min-h-11 rounded-xl bg-blue-700 px-5 py-3 text-sm font-semibold text-white disabled:opacity-50" onClick={async () => {

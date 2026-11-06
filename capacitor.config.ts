@@ -12,6 +12,9 @@ const config: CapacitorConfig = {
     errorPath: 'webview-update-required.html',
   },
   plugins: {
+    PushNotifications: {
+      presentationOptions: ['badge','sound','banner','list'],
+    },
     SystemBars: {
       insetsHandling: 'native',
       initialViewportFitValueHint: 'contain',

@@ -48,7 +48,7 @@ async function main() {
   const resumeSignup = process.env.PINEVELA_RESUME_NATIVE_SIGNUP === '1';
   let interruptedRun;
   assert(!resumeSignup || process.env.PINEVELA_TEST_NATIVE_SIGNUP === '1', 'An explicit native signup continuation requires the real OTP scenario');
-  const loginReady = `document.querySelector('.login-credentials-form input[aria-label="Username or Email Address"]')&&document.querySelector('.login-credentials-form button[type="submit"]:not([disabled])')`;
+  const loginReady = `document.querySelector('.login-credentials-form input[aria-label="Email address"]')&&document.querySelector('.login-credentials-form button[type="submit"]:not([disabled])')`;
   const check = (value, label) => { assert(value, label); checks++; };
   const scenario = async (label, work) => { stage = label; await work(); passed.push(label); console.log('PASS ' + label); };
   function browser() {
@@ -309,7 +309,7 @@ async function main() {
       await until(loginReady, 'Native email login form');
       const capture = path.join(path.dirname(serverFile), 'android-native-browser.json');
       const browserCaptureBefore = await fs.stat(capture).then(stat => stat.mtimeMs).catch(() => null);
-      await fill('input[aria-label="Username or Email Address"]', fixture.email);
+      await fill('input[aria-label="Email address"]', fixture.email);
       await fill('input[aria-label="Password"]', 'Incorrect-fixture-password-only1!');
       await evaluate(`document.querySelector('.login-credentials-form').requestSubmit()`);
       await until(`document.querySelector('.login-credentials-form [role="alert"]')&&document.querySelector('.login-credentials-form button[type="submit"]:not([disabled])')`, 'Native incorrect-password feedback');
@@ -333,7 +333,7 @@ async function main() {
       check(await evaluate(`Capacitor.Plugins.PineVelaTransport.getStatus().then(r=>r.pending===true)`), 'The older browser return belongs to a real pending native flow');
       adb(['shell', 'am', 'start', '-n', app + '/app.pinevela.mobile.MainActivity']);
       await until(loginReady, 'Native form after leaving a pending browser flow');
-      await fill('input[aria-label="Username or Email Address"]', fixture.email);
+      await fill('input[aria-label="Email address"]', fixture.email);
       await fill('input[aria-label="Password"]', fixture.password);
       await evaluate(`document.querySelector('.login-credentials-form').requestSubmit()`);
       await until(`location.hash.startsWith('#/user/dashboard')&&document.querySelector('[data-dashboard-view]')`, 'Newer native email identity');

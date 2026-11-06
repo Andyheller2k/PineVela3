@@ -2,7 +2,7 @@ import { publicLoginPath } from '../lib/publicContinuation';
 import {marketListingAvailable} from '../../marketListingAvailability';
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowRight, ShoppingBag, Store, X, LockKeyhole, MapPin, Phone, Star } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { filterMarketCatalog, isMarketService } from '../lib/marketCatalog';
@@ -12,6 +12,7 @@ import MarketImageGallery from './MarketImageGallery';
 import DashboardOverlay from './DashboardOverlay';
 import PublicCatalogRail from './PublicCatalogRail';
 import ReportButton from './ReportButton';
+import '../nearbyShortcut.css';
 
 const NearbyServicesMap = lazy(() => import('./NearbyServicesMap'));
 
@@ -20,6 +21,7 @@ type PublicListing = MarketProductItem & { sellerPhone?: string; sellerName?: st
 export default function PublicMarketCatalog({ preview = false, searchQuery, catalogOverride, hideHeading = false, onInspect }: { preview?: boolean; searchQuery?: string; catalogOverride?: MarketProductItem[]; hideHeading?: boolean; onInspect?: (product: MarketProductItem) => void }) {
   const Heading = preview ? 'h2' : 'h1';
   const navigate = useNavigate();
+  const [params,setParams]=useSearchParams();
   const { user } = useAuth();
   const { data: remoteCatalog = [], isPending, isError, refetch } = useQuery<PublicListing[]>({
     queryKey: ['public-pinemarket'],
@@ -57,6 +59,13 @@ export default function PublicMarketCatalog({ preview = false, searchQuery, cata
     minPriceFilter, maxPriceFilter, priceSortOption), [catalog, catalogSearch, catalogCategory, minPriceFilter, maxPriceFilter, priceSortOption]);
   const shown = preview ? filtered : filtered.slice(0, visibleCount);
   const inspect = (product: MarketProductItem) => { if (onInspect) { onInspect(product); return; } setSelected(product); setSelectedPriceIndex(0); };
+  const requested=params.get('listing');
+  useEffect(()=>{
+    if(preview||!requested||!catalog.length)return;
+    const product=catalog.find(item=>item.id===requested);
+    if(product)inspect(product);
+    const next=new URLSearchParams(params);next.delete('listing');setParams(next,{replace:true});
+  },[requested,preview,catalog]);
   const closeInspection = () => { setSelected(null); setShowNearby(false); setDirections(''); };
   const requestOrder = () => {
     setShowNearby(false);
@@ -89,7 +98,7 @@ export default function PublicMarketCatalog({ preview = false, searchQuery, cata
         <Heading className={`${preview ? 'text-3xl' : 'text-lg'} font-black text-slate-900 flex items-center gap-2`}><ShoppingBag className="w-5 h-5 text-blue-700" />PineMarket</Heading>
         <p className="text-xs text-slate-500 font-semibold mt-1">Discover items and services from campus sellers.</p>
       </div>
-      <div className="flex flex-wrap gap-2"><button type="button" onClick={() => { setDirections(''); setShowNearby(true); }} className="px-4 py-2.5 border border-blue-200 bg-blue-50 text-blue-700 text-xs font-bold rounded-xl flex items-center gap-2"><MapPin size={16} />Services near you</button>{preview && <button type="button" onClick={() => navigate('/pinemarket')} className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-black rounded-xl flex items-center gap-2">Explore Market <ArrowRight size={16} /></button>}</div>
+      <div className="flex flex-wrap gap-2"><button type="button" onClick={() => { setDirections(''); setShowNearby(true); }} className="market-nearby-shortcut" aria-label="Find shops and services nearby" title="Nearby shops and services"><MapPin size={19} aria-hidden="true" /></button>{preview && <button type="button" onClick={() => navigate('/pinemarket')} className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-black rounded-xl flex items-center gap-2">Explore Market <ArrowRight size={16} /></button>}</div>
     </div>}
     {showNearby && <Suspense fallback={<DashboardOverlay aria-label="Services near you" onClose={() => setShowNearby(false)} className="fixed inset-0 flex items-center justify-center bg-slate-950/60 p-4">
       <div className="space-y-4 rounded-2xl bg-white p-6 text-slate-900"><p role="status">Loading services map…</p><button type="button" onClick={() => setShowNearby(false)} className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white">Close services map</button></div>

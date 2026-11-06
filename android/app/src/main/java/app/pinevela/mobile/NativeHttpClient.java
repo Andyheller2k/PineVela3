@@ -34,8 +34,9 @@ import java.util.function.BooleanSupplier;
 final class NativeHttpClient {
     static final class MediaResult {
         final int status;
+        final String contentType;
         final InputStream stream;
-        MediaResult(int status, InputStream stream) { this.status = status; this.stream = stream; }
+        MediaResult(int status, String contentType, InputStream stream) { this.status = status; this.contentType = contentType; this.stream = stream; }
     }
     static final class Result {
         final int status;
@@ -175,7 +176,7 @@ final class NativeHttpClient {
 
     private MediaResult performMedia(String path, long expectedEpoch) throws Exception {
         TransportPolicy.path(path);
-        if (!path.matches("/api/media/[A-Fa-f0-9-]{36}")) throw new IllegalArgumentException("Invalid media path.");
+        TransportPolicy.mediaPath(path);
         HttpUrl url = HttpUrl.get(origin + path);
         Request.Builder builder = new Request.Builder().url(url).get().header("Origin", origin)
             .header("X-PineVela-Session", "cookie").header("X-PineVela-Native", "android").header("Cache-Control", "max-age=0");
@@ -203,13 +204,14 @@ final class NativeHttpClient {
                 if (!redirect(response) && liveHeaders != null) mergeCookies(url, liveHeaders);
             }
             ResponseBody body = response.body();
-            if (response.code() != 200 || body == null || !"image/png".equals(response.header("Content-Type")) || body.contentLength() > TransportPolicy.MEDIA_LIMIT) {
+            String contentType = response.header("Content-Type");
+            if (response.code() != 200 || body == null || !("image/png".equals(contentType) || "image/webp".equals(contentType)) || body.contentLength() > TransportPolicy.MEDIA_LIMIT) {
                 int status = response.code(); response.close(); calls.remove(requestId, call);
-                return new MediaResult(status >= 400 && status <= 599 ? status : 502, new java.io.ByteArrayInputStream(new byte[0]));
+                return new MediaResult(status >= 400 && status <= 599 ? status : 502, "image/png", new java.io.ByteArrayInputStream(new byte[0]));
             }
             // No cookie updates happen while consuming the stream, so finishing
             // an old image after logout cannot write cookies back into the jar.
-            return new MediaResult(200, new FilterInputStream(body.byteStream()) {
+            return new MediaResult(200, contentType, new FilterInputStream(body.byteStream()) {
                 private int received;
                 private void counted(int count) throws IOException {
                     if (count > 0 && (received += count) > TransportPolicy.MEDIA_LIMIT) { close(); throw new IOException("Media response exceeds limit."); }

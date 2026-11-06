@@ -2,6 +2,7 @@ import { useId } from 'react';
 import { useTheme } from '../context/ThemeContext';
 import ThemeToggle from './ThemeToggle';
 import HelpLink from './HelpLink';
+import DeviceNotificationSettings from './DeviceNotificationSettings';
 
 export default function AppearanceSettings() {
   const headingId = useId();
@@ -9,7 +10,7 @@ export default function AppearanceSettings() {
   const { theme, preference, publicAppearance, savePending } = useTheme();
   const themeLabel = theme === 'dark' ? 'Dark' : 'Light';
   if (publicAppearance) return null;
-  return <section aria-labelledby={headingId} className="rounded-2xl border border-slate-200 bg-white p-5 space-y-4">
+  return <><section aria-labelledby={headingId} className="rounded-2xl border border-slate-200 bg-white p-5 space-y-4">
     <div><h3 id={headingId} className="text-lg font-bold text-slate-900">Appearance</h3>
       <p className="mt-1 text-sm text-slate-500">Choose a theme for login and product pages.</p></div>
     <div className="space-y-3">
@@ -19,5 +20,5 @@ export default function AppearanceSettings() {
         : preference === 'system' ? `Following system default. ${themeLabel} mode is on.` : `${themeLabel} mode is on.`}</p>
     </div>
     <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 pt-4"><a href="/privacy.html#analytics" data-analytics-preferences className="text-sm font-semibold text-blue-700 underline underline-offset-4">Analytics preferences</a><HelpLink /></div>
-  </section>;
+  </section><div className="mt-5"><DeviceNotificationSettings /></div></>;
 }

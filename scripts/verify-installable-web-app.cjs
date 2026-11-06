@@ -68,7 +68,7 @@ async function freePort() {
     };
     await command('Page.enable'); await command('Runtime.enable'); await command('Network.enable');
     const version = await command('Browser.getVersion');
-    const login = `!!document.querySelector('input[aria-label="Username or Email Address"]')`;
+    const login = `!!document.querySelector('input[aria-label="Email address"]')`;
     for (const width of [375, 768, 1440]) {
       stage = 'browser website ' + width;
       await command('Emulation.setDeviceMetricsOverride', {width, height: 900, deviceScaleFactor: 1, mobile: width < 1024});

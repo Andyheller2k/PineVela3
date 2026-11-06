@@ -4,9 +4,11 @@ import { ApiError, SessionExpiredError, SupabaseDatabase } from './db.js';
 import { SupabaseAuth, csrfBoundary, installSupabaseAuth, type AuthRequest } from './auth.js';
 import { installCatalog } from './catalog.js';
 import { installNotifications } from './notifications.js';
+import {installDevicePush} from './devicePush.js';
 import { installManagerWelcome } from './managerWelcome.js';
 import { installRealtime } from './realtime.js';
 import { installEnrollment } from './enrollment.js';
+import { installResidentPin } from './residentPin.js';
 import { SignupError } from '../supabaseSignup.js';
 import { installAccountStatus } from './accountStatus.js';
 import { installResidentProfiles } from './residentProfiles.js';
@@ -85,7 +87,7 @@ export function createSupabaseApp(db: SupabaseDatabase) {
         { scope: 'supabase-api-global', identity: 'all', maximum: 3000, windowMs: 60000 },
       ];
       if(req.method==='POST'&&path==='/auth/enrollments/google/start')limits.push({scope:'supabase-auth-ip',identity:req.ip||req.socket.remoteAddress||'',maximum:20,windowMs:60000});
-      if (req.method === 'POST' && ((path.startsWith('/auth/staff-invitations/') || path.startsWith('/auth/officer-invitation/')) || /^\/auth\/(login|register-unified|verify-unified|resend-unified|primary-reentry(?:\/verify)?|recover(?:\/complete)?|change-password|portal-pin|enrollments(?:\/[^/]+\/(?:verify|resend|reactivate(?:\/send-code)?))?|google\/start|mobile\/(?:start|finish|exchange))$/.test(path) || /\/(login|verification-team-login)$/.test(path))) limits.push({ scope: 'supabase-auth-ip', identity: req.ip || req.socket.remoteAddress || '', maximum: 20, windowMs: 60000 });
+      if (req.method === 'POST' && ((path.startsWith('/auth/staff-invitations/') || path.startsWith('/auth/officer-invitation/')) || /^\/auth\/(login|resident-login|resident-activate|resident-pin\/reset|register-unified|verify-unified|resend-unified|primary-reentry(?:\/verify)?|recover(?:\/complete)?|change-password|portal-pin|enrollments(?:\/[^/]+\/(?:verify|resend|reactivate(?:\/send-code)?))?|google\/start|mobile\/(?:start|finish|exchange))$/.test(path) || /\/(login|verification-team-login)$/.test(path))) limits.push({ scope: 'supabase-auth-ip', identity: req.ip || req.socket.remoteAddress || '', maximum: 20, windowMs: 60000 });
       if (req.method === 'POST' && ['/room-keys/claim','/room-keys/verify','/residents/onboard'].includes(path)) limits.push({ scope:'supabase-room-key-ip',identity:req.ip || req.socket.remoteAddress || '',maximum:10,windowMs:60000 });
       if(req.method==='POST' && (['/users/delete-registered-account','/student/delete-room'].includes(path) || /^\/(?:manager\/closure-request\/[^/]+\/withdraw|admin\/manager-closure-requests\/[^/]+\/(?:reject|review))$/.test(path)))
         limits.push({scope:'supabase-closure-ip',identity:req.ip || req.socket.remoteAddress || '',maximum:20,windowMs:60000});
@@ -118,6 +120,7 @@ export function createSupabaseApp(db: SupabaseDatabase) {
   mobileAuth.install(app);
   createNativeGoogleAuth(auth).install(app);
   installSupabaseAuth(app, auth); installLegal(app, auth); installNotifications(app, auth);
+  installDevicePush(app,auth);
   installManagerWelcome(app, auth);
   installSupport(app, auth);
   installModeration(app, auth);
@@ -129,6 +132,7 @@ export function createSupabaseApp(db: SupabaseDatabase) {
   installPasswordSecurity(app,auth);
   installManagerClosureRequests(app,auth);
   installEnrollment(app,auth);
+  installResidentPin(app,auth);
   installManagerReactivation(app,auth);
   installAccountStatus(app,auth);
   installResidentProfiles(app,auth);

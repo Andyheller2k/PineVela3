@@ -1,0 +1,20 @@
+{
+  "passed": true,
+  "browserChecks": 36,
+  "newSqlRequired": false,
+  "verifiedBackendSourceFingerprintsMatch": true,
+  "authHttpChecks": 110,
+  "unitTests": 42,
+  "privateCredentialMatches": 0,
+  "webZip": "/home/wyse/Documents/PineVela3/releases/web/pinevela-unified-room-login-20261105.zip",
+  "webZipSha256": "a7f64d54c77296d911c0c8959940faa8c40f22c01fac1b3f00dbf6b71c8f9c94",
+  "webZipBytes": 6590836,
+  "apk": "/home/wyse/Documents/PineVela3/releases/android/pinevela-unified-room-login-20261105.apk",
+  "apkSha256": "b90c6c94fbb9cfe83296721d3b54f4e6b4f6c8e2bbc981f0dd448351dd72ee09",
+  "apkBytes": 14827469,
+  "backendSha256": "c1fee7b4d83958976f5f8cce4b25bc85d1b2a64424c9424defe62ca9cb9c2993",
+  "indexSha256": "d1524e3cb5457dc3b581bb8da725fa564daa0bac98ff1de44a4e7dc2831064f9",
+  "hostingStatus": "Applied; seven file hashes, restart, health and live login verified",
+  "apkInstallStatus": "Installed over emulator app; data preserved and native login verified",
+  "emulatorLeftRunning": true
+}

@@ -9,7 +9,7 @@ import {MEDIA_BUCKET,MAX_MEDIA_BYTES,isStorageFolderMarker} from './storage.js';
 
 const uuid=/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/;
 const digest=/^[a-f0-9]{64}$/;
-const objectPath=/^contexts\/([a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12})\/([a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12})\.png$/;
+const objectPath=/^contexts\/([a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12})\/([a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12})\.(png|webp)$/;
 const MAX_OBJECTS=10000,MAX_TOTAL_BYTES=4*1024*1024*1024,MAX_MANIFEST_BYTES=32*1024*1024;
 type Row=Record<string,any>;
 export type StorageSnapshot={buckets:Row[];objects:Row[];assets:Row[];multipartUploads:number};
@@ -62,7 +62,7 @@ export function storageRecoveryObjects(snapshot:StorageSnapshot) {
       return {id:o.id,path:o.name,byte_size:0,sha256:sha(Buffer.alloc(0)),source:'orphan' as const};
     }
     if(o.bucket_id!==MEDIA_BUCKET||!uuid.test(o.id)||!match||objects.has(o.name)||!Number.isSafeInteger(size)||
-      size<1||size>MAX_MEDIA_BYTES||o.metadata?.mimetype!=='image/png')throw new Error('Unsupported Storage object; recovery cannot omit it.');
+      size<1||size>MAX_MEDIA_BYTES||o.metadata?.mimetype!==`image/${match[3]}`)throw new Error('Unsupported Storage object; recovery cannot omit it.');
     objects.add(o.name);total+=size;
     if(total>MAX_TOTAL_BYTES)throw new Error('Storage recovery exceeds the bounded archive capacity.');
     const a=assets.get(o.name);

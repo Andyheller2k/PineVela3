@@ -11,6 +11,8 @@ import AnalyticsNavigation from './components/AnalyticsNavigation';
 import MobileBrowserReturn from './components/MobileBrowserReturn';
 import { AuthProvider,useAuth } from './context/AuthContext';
 import { NotificationProvider } from './context/NotificationContext';
+import {DevicePushProvider} from './context/DevicePushContext';
+import PageDeviceNotification,{DevicePushContinuation,PageDeviceNotificationSettings} from './components/PageDeviceNotifications';
 import { PlatformAccessBoundary,PlatformSettingsProvider } from './context/PlatformSettingsContext';
 import { queryClient,setupRealtimeQuerySync } from './lib/queryClient';
 
@@ -175,6 +177,8 @@ function AppContent() {
         <Route path="/why-us" element={<PageWrapper smoothEntry loadingFallback={<p role="status" className="p-8 text-center text-sm text-slate-500">Loading Why PineVela…</p>}><PageWhyUs /></PageWrapper>} />
         <Route path="/help" element={<PageWrapper smoothEntry loadingFallback={<p role="status" className="p-8 text-center text-sm text-slate-500">Loading Help…</p>}><PageHelp /></PageWrapper>} />
         <Route path="/support-invitation" element={<PageWrapper><PageSupportInvitation /></PageWrapper>} />
+        <Route path="/device-notification" element={<PageWrapper><PageDeviceNotification /></PageWrapper>} />
+        <Route path="/notification-settings" element={<PageWrapper><PageDeviceNotificationSettings /></PageWrapper>} />
         <Route path="/customer-service" element={<ProtectedRoute allowedRoles={['user', 'admin']}><PageWrapper><PageCustomerService key={user?.id} /></PageWrapper></ProtectedRoute>} />
 
         <Route path="/staff-invitation" element={<PageWrapper><PageStaffInvitation /></PageWrapper>} />
@@ -384,6 +388,8 @@ export default function App() {
               <AppLaunchLoader />
               <PlatformAccessBoundary>
                 <LegalTermsBoundary>
+                <DevicePushProvider>
+                <DevicePushContinuation />
                 <NotificationProvider>
                   <div className="app-canvas min-h-screen flex flex-col relative overflow-hidden">
                     <ThemeEnvironment />
@@ -399,6 +405,7 @@ export default function App() {
                     </div>
                   </div>
                 </NotificationProvider>
+                </DevicePushProvider>
                 </LegalTermsBoundary>
               </PlatformAccessBoundary>
             </PlatformSettingsProvider>

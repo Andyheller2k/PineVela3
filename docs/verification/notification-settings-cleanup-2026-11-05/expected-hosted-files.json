@@ -1,0 +1,30 @@
+[
+  {
+    "path": "dist-supabase/index.html",
+    "sha256": "acf37baa03a42d1afb2b42580bdbf9c4ccc9f13fb12fe2f1f6dc18a8825d4606"
+  },
+  {
+    "path": "dist-supabase/assets/index-D7iKrHGR.js",
+    "sha256": "5ec519916bf47f4b60dbf873507c0699c638267c83c615f221151c1efb319e02"
+  },
+  {
+    "path": "dist-supabase-backend/supabase-server.mjs",
+    "sha256": "f4a46bb9d620b0387cdbababf53945d81ebacaf357b3a5585f02b3366c6b0259"
+  },
+  {
+    "path": "dist-supabase-backend/residence-worker.mjs",
+    "sha256": "877dad1e0569489566a0761cb0e0ad3af1e2913b42202fdb4d623248750c6fde"
+  },
+  {
+    "path": "dist-supabase-backend/system-wipe-worker.mjs",
+    "sha256": "3b219cf6c41d28add1af73ac21bd8fe6417653f543227269b28b7bfe018a3b7b"
+  },
+  {
+    "path": "package.json",
+    "sha256": "b2a5f2c49b4e9ce3c815db99ef3ba9e208923346bb3ae2840dd53614af73fb67"
+  },
+  {
+    "path": "package-lock.json",
+    "sha256": "e019a6ea6b609665dda0d06c579bd653704a5117c0e9005c3a6d763505c68ad1"
+  }
+]

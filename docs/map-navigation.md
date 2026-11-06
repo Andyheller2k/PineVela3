@@ -1,4 +1,33 @@
-# Nearby service waypoint navigation
+# Nearby shops and waypoint navigation
+
+The marketplace toolbar has a location-pin button in every category on desktop
+and mobile. Nearby searches the existing public shop catalogue as well as
+fixed/hybrid service pins. Goods-only, flexible-service and empty public shops
+remain discoverable without granting device location access. Searching a name
+moves the map to matching locations and is independent of the nearby radius.
+
+An owner's saved shop pin is exact. Address-only shops can resolve to a labelled
+approximate area; they remain in search results if resolution fails. Approximate
+areas never become an exact shop route. Users can open the shop to confirm the
+entrance. `/api/digital-market/stores` and the shop's `/map-location` endpoint
+read the existing guarded public catalogue, never private account records. Every
+area lookup rechecks publication, including cache hits. No schema change is used.
+
+Only the published address goes to the configured HTTPS Photon provider. Visitor
+GPS is excluded. Area lookups use a bounded cache and queue, coalesce identical
+addresses, are spaced at least one second apart, and have per-IP/global limits.
+The UI automatically resolves at most three address-only shops per search result;
+others resolve on selection. Requests stop when the map closes. Android declares
+foreground coarse/fine permissions; no background location permission is used.
+
+Verification on 6 November 2026: 17 unit checks, 17 real isolated PostgreSQL/HTTP
+checks and 32 browser scenarios passed. These cover publication removal after a
+cached lookup, public-field projection, literal search input, exact/approximate
+pins, lookup failure, search without GPS, desktop/mobile icons and both themes.
+Evidence and separate live-host/native results are under
+`docs/verification/nearby-shops-2026-11-06/`.
+
+## Waypoint navigation
 
 Setting a waypoint selects the navigation destination. The trail comes from Valhalla routing over OpenStreetMap roads and paths, using its real pedestrian or automobile costing. It is not a line drawn directly between the pins. Turn instructions, distance and travel time come from the same route response; the ETA is an estimate without live traffic.
 

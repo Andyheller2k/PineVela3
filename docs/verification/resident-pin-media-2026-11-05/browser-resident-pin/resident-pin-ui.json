@@ -1,0 +1,127 @@
+{
+  "passed": true,
+  "localVisualFixturesOnly": true,
+  "cloudWrites": 0,
+  "measurements": [
+    {
+      "page": "login",
+      "theme": "light",
+      "width": 320,
+      "overflow": false,
+      "left": 37,
+      "right": 283,
+      "image": "linear-gradient(115deg, rgb(0, 53, 102), rgb(0, 29, 61))",
+      "color": "rgb(255, 255, 255)"
+    },
+    {
+      "page": "activation",
+      "theme": "light",
+      "width": 320,
+      "overflow": false,
+      "left": 37,
+      "right": 277,
+      "image": "linear-gradient(115deg, rgb(0, 53, 102), rgb(0, 29, 61))",
+      "color": "rgb(255, 255, 255)"
+    },
+    {
+      "page": "login",
+      "theme": "dark",
+      "width": 320,
+      "overflow": false,
+      "left": 37,
+      "right": 283,
+      "image": "linear-gradient(115deg, rgb(255, 195, 0) 0%, rgb(255, 214, 10) 100%)",
+      "color": "rgb(0, 29, 61)"
+    },
+    {
+      "page": "activation",
+      "theme": "dark",
+      "width": 320,
+      "overflow": false,
+      "left": 37,
+      "right": 277,
+      "image": "linear-gradient(115deg, rgb(255, 195, 0), rgb(255, 214, 10))",
+      "color": "rgb(0, 29, 61)"
+    },
+    {
+      "page": "login",
+      "theme": "light",
+      "width": 390,
+      "overflow": false,
+      "left": 37,
+      "right": 353,
+      "image": "linear-gradient(115deg, rgb(0, 53, 102), rgb(0, 29, 61))",
+      "color": "rgb(255, 255, 255)"
+    },
+    {
+      "page": "activation",
+      "theme": "light",
+      "width": 390,
+      "overflow": false,
+      "left": 37,
+      "right": 353,
+      "image": "linear-gradient(115deg, rgb(0, 53, 102), rgb(0, 29, 61))",
+      "color": "rgb(255, 255, 255)"
+    },
+    {
+      "page": "login",
+      "theme": "dark",
+      "width": 390,
+      "overflow": false,
+      "left": 37,
+      "right": 353,
+      "image": "linear-gradient(115deg, rgb(255, 195, 0) 0%, rgb(255, 214, 10) 100%)",
+      "color": "rgb(0, 29, 61)"
+    },
+    {
+      "page": "activation",
+      "theme": "dark",
+      "width": 390,
+      "overflow": false,
+      "left": 37,
+      "right": 353,
+      "image": "linear-gradient(115deg, rgb(255, 195, 0), rgb(255, 214, 10))",
+      "color": "rgb(0, 29, 61)"
+    },
+    {
+      "page": "login",
+      "theme": "light",
+      "width": 1440,
+      "overflow": false,
+      "left": 765,
+      "right": 1365,
+      "image": "linear-gradient(115deg, rgb(0, 53, 102), rgb(0, 29, 61))",
+      "color": "rgb(255, 255, 255)"
+    },
+    {
+      "page": "activation",
+      "theme": "light",
+      "width": 1440,
+      "overflow": false,
+      "left": 493,
+      "right": 947,
+      "image": "linear-gradient(115deg, rgb(0, 53, 102), rgb(0, 29, 61))",
+      "color": "rgb(255, 255, 255)"
+    },
+    {
+      "page": "login",
+      "theme": "dark",
+      "width": 1440,
+      "overflow": false,
+      "left": 765,
+      "right": 1365,
+      "image": "linear-gradient(115deg, rgb(255, 195, 0) 0%, rgb(255, 214, 10) 100%)",
+      "color": "rgb(0, 29, 61)"
+    },
+    {
+      "page": "activation",
+      "theme": "dark",
+      "width": 1440,
+      "overflow": false,
+      "left": 493,
+      "right": 947,
+      "image": "linear-gradient(115deg, rgb(255, 195, 0), rgb(255, 214, 10))",
+      "color": "rgb(0, 29, 61)"
+    }
+  ]
+}

@@ -1,9 +1,13 @@
 import {mapLogoUrl} from '../lib/mapLogo';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import {useQuery} from '@tanstack/react-query';
+import {useNavigate} from 'react-router-dom';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { MapPin, Navigation, X, LocateFixed, Footprints, Car, Route, Flag, Crosshair, Pause, ChevronDown } from 'lucide-react';
-import { distanceKm, mappedService, serviceDirections, servicePoint, type MapPoint } from '../../serviceLocation';
+import { distanceKm, serviceDirections, servicePoint, type MapPoint } from '../../serviceLocation';
+import type {PublicMapStore,StoreMapLocation} from '../../nearbyStores';
+import {nearbyPlaces,storeLocationKey,type NearbyPlace} from '../lib/nearbyPlaces';
 import { fetchMapRoute, routeProgress, formatRouteDistance, formatRouteDuration, type MapRoute, type RouteMode } from '../lib/mapRoute';
 import type { MarketProductItem } from './MarketItemCard';
 import DashboardOverlay from './DashboardOverlay';
@@ -12,12 +16,21 @@ import '../nearby-map.css';
 type Props = { products: MarketProductItem[]; onClose: () => void; onInspect: (product: MarketProductItem, directions: string) => void };
 type Position = { point: MapPoint; source: 'device' | 'manual'; accuracy?: number; heading?: number; measuredAt?: number };
 type Placement = 'origin' | 'waypoint' | null;
+const noStores:PublicMapStore[]=[];
 
 export default function NearbyServicesMap({ products, onClose, onInspect }: Props) {
+  const navigate=useNavigate();
   const element = useRef<HTMLDivElement>(null), map = useRef<L.Map | null>(null);
   const markers = useRef<L.LayerGroup | null>(null), positionLayer = useRef<L.LayerGroup | null>(null), routeLayer = useRef<L.LayerGroup | null>(null);
   const [position, setPosition] = useState<Position>(), [locationError, setLocationError] = useState(''), [locating, setLocating] = useState(false);
   const [query, setQuery] = useState(''), [radius, setRadius] = useState(10), [focusedId, setFocusedId] = useState('');
+  const [storeSearch,setStoreSearch]=useState(''),[locations,setLocations]=useState<Record<string,StoreMapLocation>>({}),[locationFailures,setLocationFailures]=useState<string[]>([]),[resolving,setResolving]=useState<string[]>([]);
+  const locationRequests=useRef(new Map<string,AbortController>()),resolved=useRef(locations),focus=useRef(focusedId),activeSearch=useRef(query);
+  resolved.current=locations;focus.current=focusedId;activeSearch.current=query;
+  useEffect(()=>{const timer=setTimeout(()=>setStoreSearch(query.trim().length>=2?query.trim():''),300);return()=>clearTimeout(timer);},[query]);
+  const directory=useQuery<{stores:PublicMapStore[];hasMore:boolean}>({queryKey:['public-map-stores',storeSearch],staleTime:60000,retry:false,refetchOnWindowFocus:false,placeholderData:previous=>previous,
+    queryFn:async({signal})=>{const response=await fetch('/api/digital-market/stores?q='+encodeURIComponent(storeSearch),{signal});if(!response.ok)throw Error('Shops could not be loaded.');const data=await response.json();if(!Array.isArray(data.stores))throw Error('Shops could not be loaded.');return data;}});
+  const stores=directory.data?.stores||noStores;
   const [waypoint, setWaypoint] = useState<MapPoint>(), [destinationName, setDestinationName] = useState('Your waypoint'), [placement, setPlacement] = useState<Placement>(null);
   const [mode, setMode] = useState<RouteMode>('walking'), [route, setRoute] = useState<MapRoute>();
   const [routeState, setRouteState] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle'), [routeError, setRouteError] = useState('');
@@ -28,10 +41,10 @@ export default function NearbyServicesMap({ products, onClose, onInspect }: Prop
   const lastReliablePosition = useRef<Position | undefined>(undefined);
   const navigation = useRef({ following, followCamera }); navigation.current = { following, followCamera };
   const origin = position?.point;
-  const services = useMemo(() => products.filter(mappedService), [products]);
+  const services = useMemo(() => nearbyPlaces(products,stores,locations), [products,stores,locations]);
   const search = query.trim().toLowerCase();
-  const matches = useMemo(() => search.length >= 2 ? services.filter(p => [p.title, p.storeName, p.serviceCategory, p.description].some(value => value?.toLowerCase().includes(search))) : [], [services, search]);
-  const nearby = useMemo(() => origin ? services.filter(p => distanceKm(origin, servicePoint(p.lat, p.lng)!) <= radius).sort((a, b) => distanceKm(origin, servicePoint(a.lat, a.lng)!) - distanceKm(origin, servicePoint(b.lat, b.lng)!)) : [], [services, origin, radius]);
+  const matches = useMemo(() => search.length >= 2 ? services.filter(p => p.searchText.includes(search)||p.kind==='store'&&!directory.isPlaceholderData&&storeSearch.toLocaleLowerCase('en')===search) : [], [services, search,storeSearch,directory.isPlaceholderData]);
+  const nearby = useMemo(() => origin ? services.filter(p => !p.point||distanceKm(origin,p.point)<=radius).sort((a,b)=>(a.point?distanceKm(origin,a.point):Infinity)-(b.point?distanceKm(origin,b.point):Infinity)) : services, [services, origin, radius]);
   const shown = search.length >= 2 ? matches : nearby, focused = services.find(p => p.id === focusedId);
   const reliablePosition = position?.source === 'device' && position.accuracy !== undefined && position.accuracy <= 80;
   const guidanceOrigin = position?.source === 'manual' || reliablePosition ? origin : lastReliablePosition.current?.point || route?.origin;
@@ -60,7 +73,7 @@ export default function NearbyServicesMap({ products, onClose, onInspect }: Prop
       if (!live.current || request !== locationRequest.current) return;
       const next = acceptDevicePosition(value); setLocating(false);
       if (!next) { setLocationError('The device returned an invalid location. Try again or choose a starting point.'); return; }
-      setPosition(next); setOriginRevision(value => value + 1); map.current?.setView([next.point.lat, next.point.lng], 15);
+      setPosition(next); setOriginRevision(value => value + 1); if(activeSearch.current.trim().length<2&&!focus.current)map.current?.setView([next.point.lat, next.point.lng], 15);
     }, failure => {
       if (!live.current || request !== locationRequest.current) return;
       setLocating(false);
@@ -77,15 +90,35 @@ export default function NearbyServicesMap({ products, onClose, onInspect }: Prop
     if (kind === 'origin') { locationRequest.current++; lastReliablePosition.current = undefined; setLocating(false); setPosition({ point, source: 'manual' }); setOriginRevision(value => value + 1); setLocationError(''); }
     else { setWaypoint(point); setDestinationName('Your waypoint'); setFocusedId(''); }
   };
-  const selectService = (product: MarketProductItem) => {
-    const point = servicePoint(product.lat, product.lng); if (!point) return;
-    setFocusedId(product.id); setWaypoint(point); setDestinationName(product.title); stopGuidance();
-    placing.current = null; setPlacement(null); map.current?.setView([point.lat, point.lng], 16);
+  const selectService = (place: NearbyPlace) => {
+    setFocusedId(place.id);stopGuidance();placing.current=null;setPlacement(null);
+    if(!place.point||place.precision!=='exact'){
+      setWaypoint(undefined);setRoute(undefined);setRouteState('idle');
+      if(place.point)map.current?.setView([place.point.lat,place.point.lng],13);
+      else if(place.store){setLocationFailures(f=>f.filter(id=>id!==storeLocationKey(place.store!)));void resolveStore(place.store);}
+      return;
+    }
+    setWaypoint(place.point);setDestinationName(place.title);map.current?.setView([place.point.lat,place.point.lng],16);
   };
+  async function resolveStore(store:PublicMapStore){
+    const key=storeLocationKey(store);if(locationRequests.current.has(key)||resolved.current[key])return;
+    const controller=new AbortController();locationRequests.current.set(key,controller);setResolving(old=>[...old,key]);
+    try{const response=await fetch(`/api/digital-market/stores/${encodeURIComponent(store.id)}/map-location`,{signal:controller.signal});if(!response.ok)throw Error('Shop location unavailable');const data:StoreMapLocation=await response.json();
+      if(data.point&&!servicePoint(data.point.lat,data.point.lng)||!['exact','approximate','unavailable'].includes(data.precision))throw Error('Invalid shop location');
+      if(!live.current||controller.signal.aborted)return;setLocations(old=>({...old,[key]:data}));
+      if(data.point&&focus.current===`store:${store.id}`)map.current?.setView([data.point.lat,data.point.lng],data.precision==='exact'?16:13);
+    }catch{if(live.current&&!controller.signal.aborted)setLocationFailures(old=>[...old,key]);}
+    finally{if(locationRequests.current.get(key)===controller){locationRequests.current.delete(key);if(live.current)setResolving(old=>old.filter(k=>k!==key));}}
+  }
+  useEffect(()=>{
+    // Resolve only three visible address-only shops automatically, never a full
+    // catalogue or every GPS update. Other shops resolve when selected.
+    for(const store of stores.slice(0,3))if(!store.mapLocation.point&&store.location.trim().length>=3&&!resolved.current[storeLocationKey(store)]&&!locationFailures.includes(storeLocationKey(store)))void resolveStore(store);
+  },[stores]);
 
   useEffect(() => {
     live.current = true;
-    const first = services[0] && servicePoint(services[0].lat, services[0].lng);
+    const first = services.find(s=>s.point)?.point;
     const instance = L.map(element.current!, { zoomControl: false, scrollWheelZoom: false, zoomAnimation: false }).setView(first ? [first.lat, first.lng] : [0, 0], first ? 12 : 2); map.current = instance;
     L.control.zoom({ position: 'bottomright' }).addTo(instance);
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' }).addTo(instance);
@@ -116,6 +149,7 @@ export default function NearbyServicesMap({ products, onClose, onInspect }: Prop
     const resize = new ResizeObserver(() => { if (live.current && map.current === instance) instance.invalidateSize(); }); resize.observe(element.current!); locate();
     return () => {
       live.current = false; locationRequest.current++; routeRequest.current++; watchRevision.current++;
+      for(const controller of locationRequests.current.values())controller.abort();locationRequests.current.clear();
       if (watch.current !== null) navigator.geolocation?.clearWatch(watch.current);
       watch.current = null; clearTimeout(wheelTimer); container.removeEventListener('wheel', wheel); resize.disconnect(); instance.remove(); map.current = null;
     };
@@ -124,21 +158,27 @@ export default function NearbyServicesMap({ products, onClose, onInspect }: Prop
   useEffect(() => {
     markers.current?.clearLayers();
     for (const product of shown) {
-      const point = servicePoint(product.lat, product.lng)!;
+      const point = product.point;if(!point)continue;
       const root = document.createElement('div'); root.className = 'nearby-store-icon'; root.textContent = '🏪';
-      if (product.storeLogoUrl) {
+      root.dataset.precision=product.precision;
+      if (product.logoUrl) {
         try {
-          const url = mapLogoUrl(product.storeLogoUrl,window.location.origin);
+          const url = mapLogoUrl(product.logoUrl,window.location.origin);
           if (url) {
             const img = document.createElement('img'); img.src = url; img.alt = ''; img.referrerPolicy = 'no-referrer'; img.onerror = () => { img.remove(); root.textContent = '🏪'; }; root.textContent = ''; root.append(img);
           }
         } catch { /* Invalid profile URLs use the store icon. */ }
       }
       const marker = L.marker([point.lat, point.lng], { title: `${product.storeName}: ${product.title}`, icon: L.divIcon({ html: root, className: '', iconSize: [42, 42], iconAnchor: [21, 21] }), draggable: false });
-      marker.on('click', () => placing.current ? placePoint(point, placing.current) : selectService(product));
-      marker.on('add', () => { marker.getElement()?.setAttribute('aria-label', `Route to ${product.title} on map`); marker.getElement()?.setAttribute('data-service-marker', product.id); }); markers.current?.addLayer(marker);
+      marker.on('click', () => placing.current&&product.precision==='exact' ? placePoint(point, placing.current) : selectService(product));
+      marker.on('add', () => { marker.getElement()?.setAttribute('aria-label', `${product.precision==='approximate'?'Approximate area for':'Locate'} ${product.title} on map`); marker.getElement()?.setAttribute('data-service-marker', product.id);marker.getElement()?.setAttribute('data-location-precision',product.precision); }); markers.current?.addLayer(marker);
     }
   }, [shown]);
+  useEffect(()=>{
+    if(following||focusedId||waypoint)return;
+    const points=shown.flatMap(p=>p.point?[[p.point.lat,p.point.lng] as [number,number]]:[]);
+    if(points.length&&(search.length>=2||!origin))map.current?.fitBounds(L.latLngBounds(points),{padding:[48,48],maxZoom:search.length>=2?14:12});
+  },[shown,search,following,focusedId,waypoint,origin]);
 
   useEffect(() => {
     const request = ++routeRequest.current, abort = new AbortController();
@@ -220,17 +260,27 @@ export default function NearbyServicesMap({ products, onClose, onInspect }: Prop
   return <DashboardOverlay aria-label="Services near you" onClose={onClose} className="fixed inset-0 bg-white">
     <div className="nearby-services-screen flex h-dvh w-full flex-col bg-white" data-route-state={routeState} data-route-points={route?.points.length || 0} data-origin-source={position?.source || ''} data-origin-lat={origin?.lat} data-origin-lng={origin?.lng} data-waypoint-lat={waypoint?.lat} data-waypoint-lng={waypoint?.lng} data-following={following}>
       <header className="nearby-map-header z-10 shrink-0 space-y-2 border-b border-blue-200 bg-white/95 p-3 sm:p-4">
-        <div className="flex items-center justify-between gap-2"><h2 className="flex items-center gap-2 text-lg font-extrabold text-slate-900"><MapPin size={20} />Services near you</h2><div className="flex gap-2">{following && <button type="button" onClick={stopGuidance} aria-label="Stop live guidance" className="nearby-map-action"><Pause size={14} />Stop</button>}<button type="button" onClick={onClose} aria-label="Close services map" className="rounded-xl p-2 text-slate-700"><X size={22} /></button></div></div>
-        <div className="flex flex-wrap gap-2"><input aria-label="Search PineVela services on map" value={query} maxLength={120} onChange={e => { setQuery(e.target.value); setFocusedId(''); }} placeholder="Search a service or store" className="min-w-0 flex-1 rounded-xl border border-blue-200 bg-white px-3 py-2 text-sm text-slate-900" /><select aria-label="Nearby service radius" value={radius} onChange={e => setRadius(Number(e.target.value))} className="rounded-xl border border-blue-200 bg-white p-2 text-sm text-slate-900">{[5, 10, 25].map(km => <option key={km} value={km}>{km} km</option>)}</select><button type="button" onClick={locate} disabled={locating} className="flex items-center gap-2 rounded-xl bg-blue-600 px-3 py-2 text-xs font-semibold text-white"><LocateFixed size={16} />{locating ? 'Finding location…' : 'Use my location'}</button></div>
+        <div className="flex items-center justify-between gap-2"><h2 className="flex items-center gap-2 text-lg font-extrabold text-slate-900"><MapPin size={20} />Nearby shops &amp; services</h2><div className="flex gap-2">{following && <button type="button" onClick={stopGuidance} aria-label="Stop live guidance" className="nearby-map-action"><Pause size={14} />Stop</button>}<button type="button" onClick={onClose} aria-label="Close services map" className="rounded-xl p-2 text-slate-700"><X size={22} /></button></div></div>
+        <div className="flex flex-wrap gap-2"><input aria-label="Search shops and services on map" value={query} maxLength={120} onChange={e => { setQuery(e.target.value); setFocusedId(''); }} placeholder="Search a shop or service" className="min-w-0 flex-1 rounded-xl border border-blue-200 bg-white px-3 py-2 text-sm text-slate-900" /><select aria-label="Nearby service radius" value={radius} onChange={e => setRadius(Number(e.target.value))} className="rounded-xl border border-blue-200 bg-white p-2 text-sm text-slate-900">{[5, 10, 25].map(km => <option key={km} value={km}>{km} km</option>)}</select><button type="button" onClick={locate} disabled={locating} className="flex items-center gap-2 rounded-xl bg-blue-600 px-3 py-2 text-xs font-semibold text-white"><LocateFixed size={16} />{locating ? 'Finding location…' : 'Use my location'}</button></div>
         {locationError && <p role="alert" className="text-xs leading-5 text-rose-700">{locationError}</p>}
-        <p className="text-xs text-slate-600">{search.length >= 2 ? `${shown.length} matching services across all locations` : origin ? `${shown.length} services within ${radius} km${position?.source === 'device' ? ` · accuracy about ${Math.round(position.accuracy || 0)} m` : ' · chosen starting point'}` : 'Search for a service, or choose your starting point and waypoint on the map.'}</p>
+        <p role="status" data-map-summary="" className="text-xs text-slate-600">{directory.isPending?'Loading shops…':search.length>=2?`${shown.length} matching shops and services across all locations`:origin?`${shown.filter(p=>p.point).length} mapped places within ${radius} km`:`${shown.length} shops and services · search a name or choose your location`}{resolving.length>0?' · Finding shop areas…':''}{directory.data?.hasMore?' · Search by name to find more shops.':''}</p>
+        {directory.isError&&<p role="alert" className="text-xs text-rose-700">Shops could not be loaded. <button type="button" className="font-bold underline" onClick={()=>{void directory.refetch();}}>Retry shops</button></p>}
+        {!directory.isPending&&!directory.isError&&!shown.length&&<p className="text-xs text-slate-600">{search.length>=2?'No matching shops or services. Try another name.':'No mapped places in this area. Search a shop name or increase the distance.'}</p>}
       </header>
       <div className="relative min-h-0 flex-1"><div ref={element} role="region" aria-label="Waypoint map" className="nearby-map h-full w-full" data-placement={placement || ''} />
-        {(shown.length > 0 || focused) && <aside aria-label="Mapped services" className="nearby-map-results absolute left-3 top-3 z-[500] max-h-[40%] w-64 max-w-[calc(100%_-_5rem)] space-y-2 overflow-y-auto rounded-2xl border border-blue-200 bg-white/95 p-3 shadow-lg">{shown.slice(0, 30).map(product => <button type="button" key={product.id} onClick={() => selectService(product)} className="block w-full rounded-xl px-2 py-2 text-left hover:bg-blue-50" data-map-search-result={product.id}><span className="block text-xs font-bold text-slate-900">{product.title}</span><span className="block text-[11px] text-slate-500">{product.storeName}{origin ? ` · ${distanceKm(origin, servicePoint(product.lat, product.lng)!).toFixed(1)} km away` : ''}</span></button>)}{focused && <button type="button" onClick={() => onInspect(focused, directionsTo(servicePoint(focused.lat, focused.lng)!))} className="w-full rounded-xl bg-blue-600 px-3 py-2 text-xs font-semibold text-white">View service details</button>}</aside>}
+        {(shown.length>0||focused)&&<aside aria-label="Mapped shops and services" className="nearby-map-results absolute left-3 top-3 z-[500] max-h-[40%] w-64 max-w-[calc(100%_-_5rem)] space-y-2 overflow-y-auto rounded-2xl border border-blue-200 bg-white/95 p-3 shadow-lg">
+          {shown.slice(0,30).map(place=><button type="button" key={place.id} onClick={()=>selectService(place)} className="block w-full rounded-xl px-2 py-2 text-left hover:bg-blue-50" data-map-search-result={place.id}>
+            <span className="block text-xs font-bold text-slate-900">{place.title}</span>
+            <span className="block text-[11px] text-slate-500">{place.kind==='store'?'Shop':place.storeName}{place.precision==='approximate'?' · Approximate area':place.point?' · Exact pin':place.store&&resolving.includes(storeLocationKey(place.store))?' · Finding area…':' · Map pin not provided'}{origin&&place.point?` · ${distanceKm(origin,place.point).toFixed(1)} km${place.precision==='approximate'?' to area':' away'}`:''}</span>
+          </button>)}
+          {focused?.product&&focused.point&&<button type="button" onClick={()=>onInspect(focused.product!,directionsTo(focused.point!))} className="w-full rounded-xl bg-blue-600 px-3 py-2 text-xs font-semibold text-white">View service details</button>}
+          {focused?.store&&<button type="button" onClick={()=>{onClose();navigate(`/pinemarket/stores/${encodeURIComponent(focused.storeId)}`);}} className="w-full rounded-xl bg-blue-600 px-3 py-2 text-xs font-semibold text-white">View shop</button>}
+        </aside>}
         {following && <button type="button" onClick={recenter} aria-pressed={followCamera} className="absolute bottom-4 left-3 z-[500] inline-flex items-center gap-2 rounded-full border border-yellow-400 bg-blue-950 px-4 py-3 text-xs font-bold text-yellow-300 shadow-lg"><LocateFixed size={16} />{followCamera ? 'Following you' : 'Recenter'}</button>}
         {placement && <div className="nearby-placement-hint absolute inset-x-3 bottom-4 z-[500] mx-auto flex max-w-md items-center justify-between gap-3 rounded-2xl border border-yellow-400/60 bg-blue-950 p-3 text-xs font-semibold text-yellow-100 shadow-lg"><p>Tap the map to set {placement === 'origin' ? 'your starting point' : 'your waypoint'}.</p><button type="button" onClick={() => { const center = map.current?.getCenter(); if (center) placePoint({ lat: center.lat, lng: center.lng }, placement); }} className="shrink-0 rounded-xl bg-yellow-400 px-3 py-2 font-bold text-blue-950">Use map center</button></div>}
       </div>
       <footer className="nearby-map-footer shrink-0 space-y-3 border-t border-blue-200 bg-white p-3 sm:px-5">
+        {focused?.store&&focused.precision!=='exact'&&<p data-approximate-shop="" role="status" className="text-xs leading-5 text-slate-600">{focused.point?'Approximate area from the shop’s public address. Ask the shop for its exact entrance before travelling.':locationFailures.includes(storeLocationKey(focused.store))?'The shop’s area could not be located. Open the shop for its address, or tap it to retry.':'This shop has not saved an exact map pin. Its public address is shown on the shop page.'}</p>}
         <div className="flex flex-wrap items-center justify-between gap-2"><div className="flex flex-wrap gap-2"><button type="button" onClick={() => beginPlacement('waypoint')} aria-pressed={placement === 'waypoint'} className="nearby-map-action"><Flag size={14} />{placement === 'waypoint' ? 'Cancel waypoint' : 'Set a waypoint'}</button><button type="button" onClick={() => beginPlacement('origin')} aria-pressed={placement === 'origin'} className="nearby-map-action"><Crosshair size={14} />{placement === 'origin' ? 'Cancel starting point' : 'Set starting point'}</button>{waypoint && <button type="button" onClick={clearWaypoint} className="nearby-map-action">Clear waypoint</button>}</div>
           <div role="group" aria-label="Travel mode" className="nearby-travel-modes inline-flex rounded-xl border border-blue-200 p-1">{([{ value: 'walking', label: 'Walk', icon: Footprints }, { value: 'driving', label: 'Drive', icon: Car }] as const).map(item => <button type="button" key={item.value} aria-pressed={mode === item.value} onClick={() => { setMode(item.value); stopGuidance(); }} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-bold"><item.icon size={14} />{item.label}</button>)}</div>
         </div>
@@ -246,7 +296,7 @@ export default function NearbyServicesMap({ products, onClose, onInspect }: Prop
             <details className="nearby-route-steps w-full"><summary className="flex w-fit cursor-pointer items-center gap-1 py-1 text-xs font-bold text-blue-700">All directions<ChevronDown size={13} /></summary><ol className="mt-2 max-h-32 space-y-2 overflow-y-auto border-l-2 border-yellow-400 pl-4 text-xs leading-5 text-slate-700">{route.steps.map((step, index) => <li key={index}>{step.instruction} <span className="text-slate-500">· {formatRouteDistance(step.distanceMeters)}</span></li>)}</ol></details>
           </div>}
         </section>}
-        <p className="nearby-map-privacy text-[10px] leading-4 text-slate-500">Location stays out of PineVela storage. Map tiles: OpenStreetMap. Drawing routes shares selected points with Valhalla; opening Google Maps shares them with Google.</p>
+        <p className="nearby-map-privacy text-[10px] leading-4 text-slate-500">Your location stays out of PineVela storage. Public shop addresses use Photon / OpenStreetMap for approximate areas. Drawing routes shares selected points with Valhalla; opening Google Maps shares them with Google.</p>
       </footer>
     </div>
   </DashboardOverlay>;

@@ -10,6 +10,7 @@ import { AttemptBudgets } from '../resourceSecurity.js';
 import { SUPPORT_CATEGORIES, SUPPORT_STATUSES, SUPPORT_TYPES } from '../supportModel.js';
 import { checkProfileContext } from './profiles.js';
 import { deliverSupportEmail, supportMailConfiguration } from './supportEmail.js';
+import { residentContactEmail } from './residentContact.js';
 
 const route = (work: (req: AuthRequest, res: any) => Promise<unknown>): RequestHandler => (req, res, next) => { work(req as AuthRequest, res).catch(next); };
 const digest = (s: string) => crypto.createHash('sha256').update(s).digest('hex');
@@ -64,7 +65,7 @@ export async function createSupportTicket(c: PoolClient, a: VerifiedActor | null
     const person = (await c.query(`select p.display_name,u.email from public.profiles p join auth.users u on u.id=p.id
      where p.id=$1 and u.email_confirmed_at is not null and not u.is_anonymous and u.deleted_at is null`, [a.authUserId])).rows[0];
     if (!person) throw new ApiError(403, 'Verify your account email before submitting a signed-in request.');
-    name = person.display_name; contact = person.email;
+    name = person.display_name; contact = await residentContactEmail(c,a)||person.email;
   } else { name = text(body.name, 'your name', 120); contact = email(body.email); guest = tokenDigest(body.accessToken); }
   await c.query('select pg_advisory_xact_lock(hashtextextended($1,0))', [`support-request:${a?.contextId || contact}`]);
   const existing = (await c.query(`select t.id,t.guest_token_digest,t.subject,t.type,t.category,t.source,t.requester_name,t.requester_email,m.body

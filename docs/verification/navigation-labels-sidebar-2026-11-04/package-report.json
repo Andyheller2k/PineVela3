@@ -1,0 +1,11 @@
+{
+  "passed": true,
+  "zip": "/home/wyse/Documents/PineVela3/releases/web/pinevela-navigation-labels-sidebar-20261104.zip",
+  "temporaryZip": "/tmp/pinevela-navigation-labels-sidebar-20261104.zip",
+  "apk": "/home/wyse/Documents/PineVela3/releases/android/pinevela-navigation-labels-sidebar-20261104.apk",
+  "zipFiles": 199,
+  "zipBytes": 6539672,
+  "zipSha256": "041194facaa02cd2f70c74b0e0708b43455a018f3d6eb0bb952c4b08b5507c8d",
+  "apkSha256": "1a43c8a3d596c48704db69e778bb15d007df01fd78ab1d2a298838fcc6d71f8a",
+  "deployedRemotely": false
+}

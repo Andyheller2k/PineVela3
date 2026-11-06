@@ -1,0 +1,14 @@
+{
+  "backupCreated": true,
+  "backupPath": "/home/jqmgxgpuym/pinevela-before-notification-cleanup-20261105-2215.zip",
+  "backupBytes": 47476158,
+  "backupIncludes": [
+    "dist-supabase",
+    "dist-supabase-backend",
+    "package.json",
+    "package-lock.json",
+    "app.cjs"
+  ],
+  "beforeBackendSha256": "f4a46bb9d620b0387cdbababf53945d81ebacaf357b3a5585f02b3366c6b0259",
+  "htmlEncodingTransformationDisabled": true
+}

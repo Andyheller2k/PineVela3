@@ -1,0 +1,18 @@
+{
+  "package": "app.pinevela.mobile.transporttest",
+  "preExisting": false,
+  "packagesInstalledByThisRun": [
+    "app.pinevela.mobile.transporttest"
+  ],
+  "debugPackageUntouched": true,
+  "emulatorStartedExistingAVD": true,
+  "avdConfigurationChanged": false,
+  "dataCleared": false,
+  "installCompleted": true,
+  "startedPreviouslyStoppedExistingEmulator": true,
+  "emulatorRestartedForMemory": true,
+  "reinstalledFreshFinalApk": true,
+  "finalApkSha256": "ebb414595b21ee47ec016a2c0685818479144d7913fa3bb181cdbfd95c7ae78a",
+  "installMode": "replace preserving package data",
+  "noDataClearing": true
+}

@@ -522,7 +522,16 @@ The default native backend verifies tokens with Supabase Auth, checks the live
 Auth session and trusted account binding, and assumes a non-BYPASSRLS database role for
 request transactions. Client ownership/role fields never populate this binding. Revoked
 sessions fail RLS before JWT expiry. Primary-owner links do not permit signing into a
-sub-account: its student/work identity must be verified and authenticated. Shared student
+sub-account: its separate native identity must be verified and authenticated. New
+room-PIN residents use the primary-owner-authorized isolated identity described in
+[authentication](auth.md#primary-email-and-resident-room-pin--5-november-2026);
+the PIN never yields the primary Auth identity. Unified login resolves only an
+active owned resident, performs one CAPTCHA-protected native provider exchange,
+and commits failed PIN attempts when that exchange fails. A retained numeric
+primary password can still authenticate without consuming a resident's failure
+counter. PIN reset requires the verified primary owner and a live active allocation;
+it accepts only the new PIN and never a client-selected account identifier.
+Shared student
 identities also require the selected portal's access PIN; RLS checks the accepted key
 version and changing a PIN invalidates earlier proof. Failed PIN attempts are serialized
 and persist before returning a denial; five failures lock that portal for 15 minutes.
@@ -538,7 +547,10 @@ remain exempt only when the manager has no active residence assignment.
 
 Photos use private Supabase Storage and an immutable portal/Auth-owned registry.
 Uploads authenticate before the 28MB parser, decode actual raster pixels, strip metadata,
-resize to 2048px and cap output at 6MB. Daily account/global quotas serialize in PostgreSQL;
+bound the decoded pixel count and cap output at 6MB. Avatars/evidence retain their
+existing PNG processing. New market/residence photos become metadata-free WebP at
+up to 1600px, quality 84; large output retries at 1280px, quality 80. Existing PNGs
+are retained. Daily account/global quotas serialize in PostgreSQL;
 IP admission and worker limits are bounded per process. Browser writes are denied. Attachment
 triggers enforce account, purpose and inspection relationships. Image responses check current
 publication/plan or private account access and verify digest/size, with a sandbox
@@ -547,12 +559,19 @@ use `private, no-cache, max-age=0, must-revalidate` and an immutable asset/diges
 Every conditional read rechecks publication and maintenance before 304; hidden, removed
 or unauthorized media cannot use that response. No image gets an unchecked cache lifetime.
 Verified public catalogue replies also carry `X-PineVela-Public-Photo: 1`. Android's
-dedicated 20MB photo cache accepts only these PNG replies with valid asset/digest ETags
+dedicated 20MB photo cache accepts only these PNG/WebP replies with valid asset/digest ETags
 and no `Set-Cookie`; every new retrieval still validates with the server. Private,
 withdrawn, malformed and cookie-bearing replies cannot populate that cache. Generic
 API/session replies and the WebView media proxy remain `no-store`. Native session
 cookies are merged only from actual network headers, never cached response metadata.
 The app does not persist catalogue photos in a service worker, localStorage or Preferences.
+Exact `size=card` (640px) and `size=thumb` (192px) selectors produce bounded WebP
+variants for authorized market/residence photos. Arbitrary sizes, URLs and private
+evidence transformations are rejected. A 16MiB/128-entry, ten-minute server byte
+cache coalesces transforms; it never caches authorization. Publication, maintenance
+and access are checked before every byte-cache hit or conditional response.
+Inactive purchase panels retain their image nodes only within the current account
+mount and become hidden/inert; account teardown removes those private nodes.
 Failed transfers are reconciled through Storage APIs; ready assets are never removed by
 the stale-upload cleanup command. Ordinary API JSON bodies are 1MB. IP admission remains bounded per process;
 multi-instance deployments need shared ingress limits. Encrypted byte backups now bind
@@ -1281,3 +1300,9 @@ replay finding in [the verification report](auth-protection-verification.md).
 Local bounded burst/SQL-injection tests validate application defenses only.
 Distributed volumetric protection requires a hosting/CDN/WAF boundary; per-process
 budgets and CAPTCHA do not establish a DDoS availability guarantee.
+
+## Device notification boundary
+
+Push registration derives the account from the verified session and saves its session/PIN grant. Delivery rechecks live access, legal acceptance, admin membership, resident allocation, staff employment and feedback access. An independent account joins existing device connections only through an explicit choice; logout revokes the installation. Notification links never authenticate or switch accounts. Public thumbnails recheck publication even on cache hits. Private sender files are excluded from builds and public updates. See [device notifications](device-notifications-2026-11-05.md).
+
+Browser subscriptions also accept Chromium's documented Google service at exactly `jmt17.google.com` with a nonempty `/fcm/send/` path. The original subscription URL remains unchanged. HTTPS, port, user-info, query, fragment, encryption-key and unknown-host restrictions still apply; this does not allow arbitrary Google hosts. See [Chromium's endpoint definitions](https://chromium.googlesource.com/chromium/src/+/main/components/push_messaging/push_messaging_constants.cc).

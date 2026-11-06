@@ -116,6 +116,27 @@ public class NativeHttpClientCookieTest {
         }
     }
 
+    @Test public void webpCardAndThumbStreamAsDecodableImagesWithoutAcceptingArbitraryQueries() throws Exception {
+        android.graphics.Bitmap source=android.graphics.Bitmap.createBitmap(16,12,android.graphics.Bitmap.Config.ARGB_8888);
+        source.eraseColor(android.graphics.Color.rgb(0,53,102));
+        java.io.ByteArrayOutputStream output=new java.io.ByteArrayOutputStream();
+        assertTrue(source.compress(android.graphics.Bitmap.CompressFormat.WEBP_LOSSY,84,output));source.recycle();
+        byte[] bytes=output.toByteArray();java.util.concurrent.atomic.AtomicInteger requests=new java.util.concurrent.atomic.AtomicInteger();
+        NativeHttpClient transport=client(isolatedContext(),chain->{requests.incrementAndGet();return reply(chain.request(),200,
+            new Headers.Builder().add("Content-Type","image/webp").build(),ResponseBody.create(bytes,MediaType.get("image/webp")));});
+        for(String size:new String[]{"card","thumb"}){
+            NativeHttpClient.MediaResult result=transport.media(MEDIA_PATH+"?size="+size);
+            assertEquals(200,result.status);assertEquals("image/webp",result.contentType);
+            android.graphics.Bitmap decoded;
+            try(java.io.InputStream stream=result.stream){decoded=android.graphics.BitmapFactory.decodeStream(stream);}
+            assertNotNull(decoded);assertEquals(16,decoded.getWidth());assertEquals(12,decoded.getHeight());decoded.recycle();
+        }
+        for(String suffix:new String[]{"?size=9000","?size=card&url=https://example.com","?size=card&size=thumb"}){
+            try{transport.media(MEDIA_PATH+suffix);fail("Accepted an unbounded photograph request");}catch(IllegalArgumentException expected){}
+        }
+        assertEquals(2,requests.get());
+    }
+
     @Test public void interruptedAndOversizedBodiesKeepAcceptedRotation() throws Exception {
         for (boolean oversized : new boolean[] { false, true }) {
             Context context = isolatedContext();

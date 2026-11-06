@@ -1,5 +1,8 @@
 # PineVela Google sign-in branding — 26 October 2026
 
+Operator/contact fields below were revised on 5 November 2026. These file edits
+do not change saved Google Console settings.
+
 The owner has since selected the app hostname, provided the operator identity,
 Ghana and minimum age 16. Use [the 27 October update](google-oauth-branding-2026-10-27.md)
 and its app-layout ZIP. The details below describe the historical draft and main
@@ -13,13 +16,13 @@ Google/Supabase documentation. Google Console settings have not been changed.
 | Field | Value |
 | --- | --- |
 | App name | `PineVela` |
-| User support email | `andyheller2k@gmail.com` |
+| User support email | `pinevela@pinevela.app` |
 | App logo | Existing square `public/icons/pinevela-192.png` (192 × 192 PNG, 18,180 bytes) |
 | Application home page | `https://pinevela.app/` |
 | Application privacy policy | `https://pinevela.app/privacy.html` **after approval and deployment** |
 | Application terms of service | `https://pinevela.app/terms.html` **after approval and deployment** |
 | Authorized domain to add | `pinevela.app` (no scheme, path or wildcard) |
-| Developer contact email | `andyheller2k@gmail.com` |
+| Developer contact email | `pinevela@pinevela.app` |
 
 The owner's original `PineVelatrans.png` is a valid PNG below 1 MB (688,849
 bytes), but is 1214 × 1296 rather than square. The existing square app icon

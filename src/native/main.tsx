@@ -7,6 +7,7 @@ import { installNativeTransport } from './bootstrap';
 import { installMobileViewport } from '../lib/mobileViewport';
 import { appLaunch } from '../lib/appLaunch';
 import { installNativeStartup } from './startup';
+import {initializeNativePush} from '../lib/devicePush';
 import './policy.js';
 import '../index.css';
 import '../publicPages.css';
@@ -27,6 +28,9 @@ function PreviewReady() {
 // uses the private native transport. No website worker or tag is installed.
 async function start() {
   if (!NATIVE_PREVIEW) await installNativeTransport();
+  // Capture retained cold-start taps before mounting the router. No permission
+  // prompt or FCM token request occurs until notifications are explicitly enabled.
+  if (!NATIVE_PREVIEW) await initializeNativePush().catch(()=>{});
   installMobileViewport();
   createRoot(document.getElementById('root')!).render(<StrictMode>{NATIVE_PREVIEW ? <PreviewReady /> : <App />}</StrictMode>);
 }

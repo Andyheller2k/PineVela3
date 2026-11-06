@@ -1,0 +1,26 @@
+{
+  "initialThresholdCssPixels": 1,
+  "observedPositiveMovementCssPixels": 0.9659404754638672,
+  "initialSample": {
+    "targets": {
+      "home": 45.3984375,
+      "purchases": 120.203125,
+      "options": 269.8046875
+    },
+    "before": 45.3984375,
+    "first": 46.36437797546387,
+    "second": 125.16915893554688,
+    "returning": 104.38098526000977,
+    "elapsed": {
+      "first": 82.6999999997206,
+      "second": 101.8000000002794,
+      "returning": 74.60000000009313
+    },
+    "after": 45.3984375,
+    "active": "home",
+    "currents": [
+      "home"
+    ]
+  },
+  "note": "The eased transition moved less than one CSS pixel at the sampled drawable frame. The assertion now accepts measurable subpixel progress above 0.1px, while still requiring direction, bounded intermediate movement, the 250ms transition and correct final destination."
+}

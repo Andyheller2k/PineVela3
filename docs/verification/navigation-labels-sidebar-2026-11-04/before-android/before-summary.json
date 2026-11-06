@@ -1,0 +1,56 @@
+{
+  "baselineApkSha256": "b59de36152b3ac211f27f5113540ae7fdec9adc6611048a9a02d0054e45c43a7",
+  "actualInstalledAndroidWebView": true,
+  "syntheticReadOnlyAccountFixtures": true,
+  "debugAccountUntouched": true,
+  "productionWrites": 0,
+  "dataCleared": false,
+  "avdConfigurationChanged": false,
+  "defaultHomeObserved": {
+    "notReproduced": true,
+    "scope": "Default Home only; actual nondefault taps were not reached",
+    "viewport": {
+      "width": 393,
+      "height": 778
+    },
+    "navTop": 674.1818237304688,
+    "navBottom": 778.1818237304688,
+    "selectedLabelTop": 754.1818237304688,
+    "selectedLabelBottom": 767.1818237304688,
+    "selectedIconTop": 690.1818237304688,
+    "selectedIconBottom": 717.1818237304688,
+    "labelCenterHitsOwnButton": true,
+    "labelTransform": "none",
+    "labelTranslate": "none",
+    "labelColor": "rgb(0, 53, 102)",
+    "horizontalOverflow": false,
+    "labelVisibleInScreenshot": true
+  },
+  "afterTapCasesVerified": 0,
+  "managerCasesVerified": 0,
+  "constraints": [
+    "First emulator launch showed Android System UI ANR; selected visible Wait after hierarchy inspection. Emulator subsequently exited gracefully.",
+    "Second same-AVD launch detached without configuration/data changes; transportTest then showed app-specific ANR titled PineVela Development is not responding.",
+    "Android am_anr event: input dispatching timed out after 5000ms waiting for FocusEvent(hasFocus=true) in transportTest MainActivity. WebView JS evaluations and label geometry remained responsive.",
+    "Repeated ANR prevented physical pixel assertions and actual navigation tap coverage. Baseline script failures are retained as startup evidence, not a navigation-label regression result.",
+    "Force-stopped only disposable transportTest once and issued one warm launch; parent asked to stop further device commands before new builds. Warm launch session ID47369 may still need polling. No further restart attempts."
+  ],
+  "evidence": {
+    "geometry": "user-light.geometry.json",
+    "osAnrScreenshot": "system-ui-startup-anr.png",
+    "appAnrScreenshot": "current-startup.png",
+    "lastAppAnrScreenshot": "failure.png",
+    "ownership": "test-install.json",
+    "diagnostic": "diagnose-baseline.cjs",
+    "log": "diagnostic.log"
+  },
+  "existingAvd": "PineVela_Pixel_4a_API_36",
+  "emulatorSerial": "emulator-5554",
+  "emulatorDetachedHostPid": 11902,
+  "installedOnlyForThisTask": [
+    "app.pinevela.mobile.transporttest"
+  ],
+  "emulatorLeftRunning": true,
+  "testPackageLeftInstalledForParentAfterChecks": true,
+  "overallBaselineTestPassClaimed": false
+}

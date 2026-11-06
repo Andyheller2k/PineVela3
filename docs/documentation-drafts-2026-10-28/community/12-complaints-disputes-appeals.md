@@ -1,6 +1,6 @@
 # Complaints, disputes and appeals — drafting template
 
-Status: UNPUBLISHED DRAFT. Contact: andyheller2k@gmail.com. Version/effective date: `[FILL]`.
+Status: UNPUBLISHED DRAFT. Contact: pinevela@pinevela.app. Version/effective date: `[FILL]`.
 
 ## Choose the right route
 
@@ -10,7 +10,7 @@ Status: UNPUBLISHED DRAFT. Contact: andyheller2k@gmail.com. Version/effective da
 | Goods, fulfilment or merchant refund | Seller, then PineVela support if unresolved | Order reference, dates and relevant evidence |
 | Housing charges, deposit, repairs or tenancy | Authorized housing operator; platform support for app issues | Property/room reference only as necessary |
 | Content or account restriction | Published appeal/support process | Decision/reference and reason for review |
-| Privacy access, correction or deletion | Privacy contact: andyheller2k@gmail.com | Request scope and proportionate identity verification |
+| Privacy access, correction or deletion | Privacy contact: pinevela@pinevela.app | Request scope and proportionate identity verification |
 | Immediate danger | Appropriate emergency service/housing emergency contact | `[FILL: verified local/property contacts]` |
 
 ## Draft process

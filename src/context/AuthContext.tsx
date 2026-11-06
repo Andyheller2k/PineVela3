@@ -7,6 +7,7 @@ import SignOutProgress from '../components/SignOutProgress';
 import { advanceSessionGeneration,clearLegacySessionStorage,sessionFetch as fetch } from '../lib/session';
 import { SessionCheckUnavailable,SessionRestoration } from '../lib/sessionRestoration';
 import { nativePreviewUnavailable } from '../native/environment';
+import {devicePushProofHeaders,clearLocalDevicePushOnLogout} from '../lib/devicePush';
 
 
 export interface AuthenticatedUser {
@@ -136,7 +137,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       queryClient.clear();
     };
     const channel = new BroadcastChannel('pinevela-session');
-    channel.onmessage = event => { if (event.data === 'logout') clear(); };
+    channel.onmessage = event => { if (event.data === 'logout') {clear();void clearLocalDevicePushOnLogout().catch(()=>{});} };
     window.addEventListener('pinevela-session-expired', clear);
     return () => { channel.close(); window.removeEventListener('pinevela-session-expired', clear); };
   }, [restoration]);
@@ -253,12 +254,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         await restoration.settled();
         if (generation !== restoration.generation) return false;
-        const res = await fetch('/api/auth/logout', { method: 'POST', keepalive: true });
+        const res = await fetch('/api/auth/logout', { method: 'POST', keepalive: true,headers:devicePushProofHeaders() });
         if (!res.ok) throw new Error('Server did not confirm sign out.');
         if (generation !== restoration.generation) return false;
         userRef.current = null;
         clearLegacySessionStorage();
         setUser(null);
+        // Durable revocation has completed; optional OS cleanup cannot turn a
+        // confirmed logout into an apparent authentication failure.
+        void clearLocalDevicePushOnLogout().catch(()=>{});
         // Discard private cached results without starting fresh dashboard reads
         // while the just-signed-out components are still unmounting.
         queryClient.clear();

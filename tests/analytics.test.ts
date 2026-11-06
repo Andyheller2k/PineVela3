@@ -80,7 +80,7 @@ test('a blocked tag stops queue growth and never starts retries',()=>{
   assert.equal(b.window['ga-disable-'+ID],true);
 });
 test('standalone policy documents and the app include the shared bootstrap once',()=>{
-  for(const file of ['index.html','public/privacy.html','public/terms.html','public/legal/terms-2026-10-27.html']){
+  for(const file of ['index.html','public/privacy.html','public/terms.html','public/legal/terms-2026-10-27.html','public/legal/terms-2026-11-05.html']){
     const html=fs.readFileSync(file,'utf8');assert.equal((html.match(/src="\/analytics\.js"/g)||[]).length,1);assert(!html.includes('googletagmanager.com/gtag/js'));
   }
 });

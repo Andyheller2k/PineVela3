@@ -29,7 +29,23 @@ try{await withIsolatedBackup(checkpoint,async config=>{
       if(ledger.has(version))assert.equal(ledger.get(version),digest);
       else await db.system(async c=>{await c.query(sql);await c.query('insert into private.schema_migrations(version,digest) values($1,$2)',[version,digest]);});
     }
+    if(process.env.PINEVELA_OPERATOR_SQL){
+      const sql=fs.readFileSync(process.env.PINEVELA_OPERATOR_SQL,'utf8');
+      await db.pool.query(sql);await db.pool.query(sql);
+      check((await db.pool.query("select count(*)::int as n from private.schema_migrations where version='20261105090000'")).rows[0].n===1,
+        'Packaged SQL Editor update is safe to repeat and retains a single matching ledger entry');
+    }
     check((await db.pool.query('select count(*)::int as n from private.legal_acceptances')).rows[0].n===0,'Migration never auto-consents restored users');
+    const revision=fs.readFileSync('supabase/migrations/20261105090000_operator_contact_terms.sql','utf8');
+    await db.system(c=>c.query(revision));
+    check((await db.pool.query('select count(*)::int as n from private.legal_documents where document_key=$1 and version=$2',
+      [PLATFORM_TERMS.key,PLATFORM_TERMS.version])).rows[0].n===1,'Operator revision can be reapplied without duplicating the document');
+    const registered=(await db.pool.query('select content_html,content_sha256 from private.legal_documents where document_key=$1 and version=$2',
+      [PLATFORM_TERMS.key,PLATFORM_TERMS.version])).rows[0];
+    check(registered.content_sha256===PLATFORM_TERMS.sha256&&crypto.createHash('sha256').update(registered.content_html).digest('hex')===PLATFORM_TERMS.sha256,
+      'Updated database article and server descriptor have the same hash');
+    check(registered.content_html.includes('PineVela Ghana')&&registered.content_html.includes('mailto:pinevela@pinevela.app'),
+      'Current registry uses the approved operator and contact');
     const provider='https://terms-fixture.supabase.co';
     Object.assign(process.env,{SUPABASE_URL:provider,SUPABASE_ANON_KEY:'sb_publishable_local_terms_fixture',NODE_ENV:'development'});
     delete process.env.AUTH_CAPTCHA_SITE_KEY;
@@ -88,6 +104,18 @@ try{await withIsolatedBackup(checkpoint,async config=>{
     const owner=await identity(),foreign=await identity();
     const ownerActor=await auth.bind(owner.session),foreignActor=await auth.bind(foreign.session);
     check((await call('/api/auth/me',owner)).data.legal.accepted===false,'An existing verified identity is not auto-consented');
+    const historical=(await db.pool.query("select content_sha256,content_html from private.legal_documents where document_key='platform_terms' and version='2026-10-27'")).rows[0];
+    check(historical.content_sha256==='5221d730f6e4247f43cbf82e8b51e55a37cb075016bde7849a500a66a6e56ada'
+      &&crypto.createHash('sha256').update(historical.content_html).digest('hex')===historical.content_sha256,'Previously accepted article remains unchanged');
+    await db.system(c=>c.query(`insert into private.legal_acceptances(auth_user_id,context_id,session_id,purpose,document_key,document_version,document_sha256,source)
+      values($1,$2,$3,'platform_access','platform_terms','2026-10-27',$4,'account_gate')`,
+      [owner.id,ownerActor.contextId,owner.sessionId,historical.content_sha256]));
+    const oldReceipt=(await db.pool.query('select id,accepted_at from private.legal_acceptances where auth_user_id=$1',[owner.id])).rows[0];
+    await db.system(c=>c.query(revision));
+    check((await call('/api/legal/status',owner)).data.accepted===false,'An old-version receipt does not silently accept the revised agreement');
+    check((await call('/api/legal/accept',owner,{termsAcceptance:{accepted:true,version:'2026-10-27'}})).status===409,'HTTP rejects old-version acceptance after the revision');
+    const preservedReceipt=(await db.pool.query('select id,accepted_at from private.legal_acceptances where id=$1',[oldReceipt.id])).rows[0];
+    check(preservedReceipt?.accepted_at.getTime()===oldReceipt.accepted_at.getTime(),'Operator revision preserves historical receipt identity and timestamp');
     check((await call('/api/private-probe',owner)).status===403,'Direct authenticated product HTTP cannot bypass agreement');
     check((await call('/api/support/probe',owner)).status===200,'Support remains accessible before acceptance');
     check((await call('/api/legal/accept',undefined,{termsAcceptance:termsAcceptance(true)})).status===401,'Anonymous request cannot write a receipt');
@@ -131,10 +159,10 @@ try{await withIsolatedBackup(checkpoint,async config=>{
     check((await call('/api/manager/terms-regression-probe',manager,{})).data.code==='manager_key_required','Manager product writes still require the operation key after accepting Terms');
     check((await call('/api/legal/accept',undefined,{termsAcceptance:termsAcceptance(true)})).status===401,'Anonymous caller cannot save acceptance');
     stage='primary acceptance receipt';
-    const receipt=(await db.pool.query('select * from private.legal_acceptances where auth_user_id=$1',[owner.id])).rows[0];
+    const receipt=(await db.pool.query('select * from private.legal_acceptances where auth_user_id=$1 and document_version=$2',[owner.id,PLATFORM_TERMS.version])).rows[0];
     check(receipt.context_id===ownerActor.contextId&&receipt.session_id===owner.sessionId&&receipt.document_sha256===PLATFORM_TERMS.sha256,'Receipt binds verified context/session and server document hash');
     await call('/api/legal/accept',owner,{termsAcceptance:termsAcceptance(true)});
-    const repeat=(await db.pool.query('select * from private.legal_acceptances where auth_user_id=$1',[owner.id])).rows;
+    const repeat=(await db.pool.query('select * from private.legal_acceptances where auth_user_id=$1 and document_version=$2',[owner.id,PLATFORM_TERMS.version])).rows;
     check(repeat.length===1&&String(repeat[0].accepted_at)===String(receipt.accepted_at),'Repeat acceptance preserves the first evidence timestamp');
     stage='email verification receipt';
     callbackFixture=foreign;

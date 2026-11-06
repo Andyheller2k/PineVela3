@@ -1,0 +1,28 @@
+{
+  "operator": "PineVela Ghana",
+  "email": "pinevela@pinevela.app",
+  "termsVersion": "2026-11-05",
+  "articleSha256": "ae27c932e6b9b3706d359b2842179afb6b3dfaf9020924b6622ac21c47f4fa3f",
+  "updatedContactFiles": [
+    "public/terms.html",
+    "public/privacy.html",
+    "src/components/PageHelp.tsx",
+    "src/native/NativeApp.tsx",
+    "scripts/build-documentation-draft-pack.py",
+    "docs/design/wordpress-branding-homepage-draft.html",
+    "docs/google-oauth-branding-2026-10-26.md",
+    "docs/google-oauth-branding-2026-10-27.md",
+    "docs/documentation-drafts-2026-10-28/00-START-HERE.md",
+    "docs/documentation-drafts-2026-10-28/01-business-decisions.md",
+    "docs/documentation-drafts-2026-10-28/community/12-complaints-disputes-appeals.md",
+    "docs/documentation-drafts-2026-10-28/housing/08-manager-and-property-terms.md",
+    "docs/documentation-drafts-2026-10-28/marketplace/05-merchant-terms.md",
+    "docs/documentation-drafts-2026-10-28/marketplace/06-buyer-and-marketplace-rules.md",
+    "docs/documentation-drafts-2026-10-28/public/02-platform-terms.md",
+    "docs/documentation-drafts-2026-10-28/public/03-privacy-policy.md",
+    "docs/documentation-drafts-2026-10-28/public/04-cookies-and-analytics.md"
+  ],
+  "historicalTermsPreserved": true,
+  "accountIdentityChanged": false,
+  "migration": "supabase/migrations/20261105090000_operator_contact_terms.sql"
+}

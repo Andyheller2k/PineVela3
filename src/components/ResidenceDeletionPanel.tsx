@@ -47,7 +47,7 @@ export default function ResidenceDeletionPanel({ active = true, selectedHostel, 
   const keyField = <label className="block text-sm font-semibold">Your private approval key<input aria-label="Hostel deletion approval key" type="password" autoComplete="off" maxLength={128} value={privateKey} onChange={e => setPrivateKey(e.target.value)} className={control} /></label>;
   return <section aria-label="Hostel deletion approvals" className="space-y-4 rounded-3xl border border-blue-200 bg-white/70 p-5 text-slate-900">
     <h3 className="text-lg font-bold">Hostel deletion approvals</h3>
-    <p className="text-sm">At least two distinct administrators must approve using their own keys. Administrator #1 (Andyheller2k) always makes the final keyed decision. Approvals expire after 24 hours.</p>
+    <p className="text-sm">At least two distinct administrators must approve using their own keys. Administrator #1 always makes the final keyed decision. Approvals expire after 24 hours.</p>
     {(<p role="status" className="text-sm">After two keyed approvals, the founder can pause reviewed housing records for backup preparation. {data?.capabilities?.residenceExecutionRequests ? 'After verified backups and fresh final consent, the founder can request deletion. A worker rechecks everything before execution.' : 'Deletion requests remain unavailable pending authenticated acceptance.'} Approving or pausing does not delete records.</p>)}
     {error && <p role="alert" className="text-red-700">{error.message}</p>}
     {failure && !selectedHostel && <p role="alert" className="text-red-700">{failure}</p>}

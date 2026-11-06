@@ -1,0 +1,126 @@
+{
+  "passed": true,
+  "verifiedAt": "2026-11-06T01:39:32.192751+00:00",
+  "site": "https://pinevela.app",
+  "applicationRoot": "/home/jqmgxgpuym/pinevela-app",
+  "backup": {
+    "path": "/home/jqmgxgpuym/pinevela-before-nearby-shops-20261106.zip",
+    "bytes": 48917920,
+    "createdBeforeExtraction": true,
+    "apiEvent": 1,
+    "apiResult": 1,
+    "previousBackupsPreserved": true
+  },
+  "upload": {
+    "file": "pinevela-nearby-shops-20261106.zip",
+    "bytes": 6591215,
+    "progressPercent": 100,
+    "remoteFileSizeVerified": true
+  },
+  "extraction": {
+    "http": 200,
+    "apiEvent": 1,
+    "apiResult": 1
+  },
+  "verifiedFiles": [
+    {
+      "file": "dist-supabase/index.html",
+      "sha256": "00178a9c52082d3e856f65b225ce01fde4d908caf5da75b78e067fa6d461d72d",
+      "bytes": 8069,
+      "match": true,
+      "readback": "cPanel UAPI with HTML encoding update disabled"
+    },
+    {
+      "file": "dist-supabase/assets/index-BaYOT2QR.js",
+      "sha256": "fbbef507fd60fb59460fa1c11f3156d22144e8750fc066a3a63d30238a2e4d77",
+      "bytes": 365638,
+      "match": true,
+      "readback": "cPanel File Manager download"
+    },
+    {
+      "file": "dist-supabase-backend/supabase-server.mjs",
+      "sha256": "d4e16beb1e212382c97c07cf9dd79f45499947ddfbd06648a2ec210f7aef9554",
+      "bytes": 1054411,
+      "match": true,
+      "readback": "cPanel File Manager download"
+    },
+    {
+      "file": "dist-supabase-backend/residence-worker.mjs",
+      "sha256": "877dad1e0569489566a0761cb0e0ad3af1e2913b42202fdb4d623248750c6fde",
+      "bytes": 73218,
+      "match": true,
+      "readback": "cPanel File Manager download"
+    },
+    {
+      "file": "dist-supabase-backend/system-wipe-worker.mjs",
+      "sha256": "3b219cf6c41d28add1af73ac21bd8fe6417653f543227269b28b7bfe018a3b7b",
+      "bytes": 54522,
+      "match": true,
+      "readback": "cPanel File Manager download"
+    },
+    {
+      "file": "package.json",
+      "sha256": "b2a5f2c49b4e9ce3c815db99ef3ba9e208923346bb3ae2840dd53614af73fb67",
+      "bytes": 18597,
+      "match": true,
+      "readback": "cPanel File Manager download"
+    },
+    {
+      "file": "package-lock.json",
+      "sha256": "e019a6ea6b609665dda0d06c579bd653704a5117c0e9005c3a6d763505c68ad1",
+      "bytes": 245084,
+      "match": true,
+      "readback": "cPanel File Manager download"
+    }
+  ],
+  "restart": {
+    "nativeNodeButtonClicked": true,
+    "requestHttp": 200,
+    "requestCompleted": true,
+    "durationMs": 2346
+  },
+  "health": {
+    "http": 200,
+    "status": "ok",
+    "persistence": "supabase"
+  },
+  "publicReadback": {
+    "indexSha256": "00178a9c52082d3e856f65b225ce01fde4d908caf5da75b78e067fa6d461d72d",
+    "indexBytes": 8069,
+    "mainScript": "/assets/index-BaYOT2QR.js",
+    "mainScriptSha256": "fbbef507fd60fb59460fa1c11f3156d22144e8750fc066a3a63d30238a2e4d77",
+    "mainScriptBytes": 365638,
+    "bothMatch": true
+  },
+  "publicShopApi": {
+    "directoryHttp": 200,
+    "search": "PineVela",
+    "matches": 1,
+    "publicShopId": "af645a01-f514-4b49-a673-15f8b0d52dd0",
+    "publicShopName": "PineVela Store",
+    "publicAddress": "Bomso",
+    "areaHttp": 200,
+    "precision": "approximate",
+    "point": {
+      "lat": 6.6845316,
+      "lng": -1.5800191
+    },
+    "label": "Bomso, Ashanti Region, Ghana"
+  },
+  "liveChromeMap": {
+    "mapOpen": true,
+    "publicShopMarkerPresent": true,
+    "precision": "approximate",
+    "searchInputPresent": true,
+    "tilesLoaded": 24,
+    "documentOverflow": false,
+    "accountFormsSubmitted": false,
+    "authenticatedManagerOrResidentScreensExercised": false,
+    "note": "Manager and resident geometry was verified separately with local browser fixtures. The user continued navigating the Chrome tab; subsequent route changes were left alone."
+  },
+  "newSqlRequired": false,
+  "dependenciesChanged": false,
+  "environmentChanges": false,
+  "privateSenderFilesReplaced": false,
+  "accountWritesByVerification": 0
+}

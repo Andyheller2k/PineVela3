@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import { ApiError } from './db.js';
 import { WorkPool } from '../resourceSecurity.js';
+import { rasterContentType } from '../imageUploadSecurity.js';
 export const MEDIA_BUCKET = 'pinevela-media', MAX_MEDIA_BYTES = 6 * 1024 * 1024;
 // A real zero-byte folder marker created by Supabase Studio. Only recovery
 // downloads accept it; application photograph paths remain UUID-owned PNGs.
@@ -33,7 +34,7 @@ async function readBounded(response:Response,maximum:number) {
 export class SupabaseStorage {
   private operations = new WorkPool(4,8);
   private path(value:string,folderMarker=false) {
-    if (!/^contexts\/[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}\/[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}\.png$/.test(value)
+    if (!/^contexts\/[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}\/[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}\.(?:png|webp)$/.test(value)
       && !(folderMarker&&isStorageFolderMarker(value))) throw new ApiError(400,'Invalid photograph path.');
     return `${MEDIA_BUCKET}/${value}`;
   }
@@ -60,7 +61,9 @@ export class SupabaseStorage {
   }
   async upload(path:string,bytes:Buffer) {
     if (!bytes.length || bytes.length > MAX_MEDIA_BYTES) throw new ApiError(413,'The processed photograph must be at most 6MB.');
-    await this.request(`/object/${this.path(path)}`,{method:'POST',headers:{'Content-Type':'image/png','x-upsert':'false'},body:new Uint8Array(bytes)},65536);
+    const contentType = rasterContentType(bytes);
+    if (!path.endsWith(contentType === 'image/webp' ? '.webp' : '.png')) throw new ApiError(400,'Photograph format does not match its path.');
+    await this.request(`/object/${this.path(path)}`,{method:'POST',headers:{'Content-Type':contentType,'x-upsert':'false'},body:new Uint8Array(bytes)},65536);
   }
   async download(path:string,expected:{byte_size:number;sha256:string}) {
     if(typeof expected.sha256!=='string'||!/^[a-f0-9]{64}$/.test(expected.sha256))throw new ApiError(503,'Photograph integrity metadata is required.');
@@ -81,7 +84,8 @@ export class SupabaseStorage {
     if(!Number.isSafeInteger(expected.byte_size)||expected.byte_size<1||expected.byte_size>MAX_MEDIA_BYTES ||
       (expected.sha256!==undefined&&!/^[a-f0-9]{64}$/.test(expected.sha256)))throw new ApiError(503,'Invalid photograph recovery metadata.');
     const result = await this.request(`/object/authenticated/${this.path(path)}`,{method:'GET'},MAX_MEDIA_BYTES,false,timeoutMs);
-    if (!result.contentType?.startsWith('image/png') || result.bytes.length !== expected.byte_size ||
+    const contentType=path.endsWith('.webp')?'image/webp':'image/png';
+    if (result.contentType?.split(';')[0] !== contentType || result.bytes.length !== expected.byte_size || rasterContentType(result.bytes)!==contentType ||
       (expected.sha256!==undefined&&crypto.createHash('sha256').update(result.bytes).digest('hex') !== expected.sha256)) throw new ApiError(503,'Photograph integrity could not be verified.');
     return result.bytes;
   }

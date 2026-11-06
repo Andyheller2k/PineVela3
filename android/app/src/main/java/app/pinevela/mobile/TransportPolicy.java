@@ -13,7 +13,8 @@ final class TransportPolicy {
     static final int MEDIA_LIMIT = 6 * 1024 * 1024;
     private static final Set<String> METHODS = new HashSet<>(Arrays.asList("GET", "HEAD", "POST", "PUT", "PATCH", "DELETE"));
     private static final Set<String> REQUEST_HEADERS = new HashSet<>(Arrays.asList(
-        "accept", "content-type", "if-none-match", "x-pinevela-manager-key", "x-pinevela-profile-context", "x-pinevela-account-context", "x-pinevela-ai-provider", "x-pinevela-session"
+        "accept", "content-type", "if-none-match", "x-pinevela-manager-key", "x-pinevela-profile-context", "x-pinevela-account-context", "x-pinevela-ai-provider", "x-pinevela-session",
+        "x-pinevela-push-installation", "x-pinevela-push-key"
     ));
     private static final Set<String> RESPONSE_HEADERS = new HashSet<>(Arrays.asList(
         "content-type", "cache-control", "content-language", "retry-after", "etag", "last-modified", "x-content-type-options"
@@ -40,6 +41,13 @@ final class TransportPolicy {
         String method = value == null ? "GET" : value.toUpperCase(Locale.ROOT);
         if (!METHODS.contains(method)) throw new IllegalArgumentException("Unsupported request method.");
         return method;
+    }
+
+    /** Only bounded server-owned display variants may enter the image channel. */
+    static String mediaPath(String value) {
+        if (value == null || !value.matches("/api/media/[A-Fa-f0-9]{8}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{12}(?:\\?size=(?:card|thumb))?"))
+            throw new IllegalArgumentException("Invalid media path.");
+        return value;
     }
 
     static int bodyLimit(String path) {

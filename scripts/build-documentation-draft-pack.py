@@ -111,7 +111,7 @@ def build(output):
     paragraph('Complete documentation drafting pack', 'Subtitle')
     paragraph('Prepared 28 October 2026 • 22 editable documents', 'Subtitle')
     paragraph('WORKING DRAFTS — NOT APPROVED FOR PUBLICATION', 'Heading1')
-    paragraph('Operator: Oppong Manu Andy, Ghana. Contact: andyheller2k@gmail.com. General minimum platform age: 16.')
+    paragraph('Operator: PineVela Ghana. Contact: pinevela@pinevela.app. General minimum platform age: 16.')
     paragraph('Complete every [FILL], [DECIDE] and [REVIEW] field and obtain appropriate Ghana legal/privacy review. Do not upload this authoring pack into the public website.')
     paragraph('The accompanying app release enforces acceptance of the currently published Platform Terms. These new policy and merchant drafts remain unpublished until you approve them.')
     paragraph('Start with document 00 for the full structure and document 01 for the business worksheet. Blue links in this Word document open official references or jump to another included document.')

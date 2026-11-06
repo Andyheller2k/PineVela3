@@ -11,6 +11,7 @@ import { createMobileAuth } from '../supabase/mobileAuth.js';
 import { SupabaseAuth, csrfBoundary, readCookie, sessionCookies } from '../supabase/auth.js';
 import { ApiError, type SupabaseDatabase } from '../supabase/db.js';
 import { googleRequestLogUrl, type GoogleSession } from '../googleAuth.js';
+import {termsAcceptance} from '../legalPolicy.js';
 
 const random = () => crypto.randomBytes(32).toString('base64url');
 const challenge = (verifier: string) => crypto.createHash('sha256').update(verifier).digest('base64url');
@@ -173,14 +174,14 @@ test('Android handoff preserves verified sessions and rejects unsafe browser/cod
     }
   });
   await t.test('Google signup carries current Terms consent to a direct launch without accepting identity selectors', async () => {
-    const valid={challenge:challenge(random()),state:random(),mode:'signup',client:'android-debug',provider:'google',termsAcceptance:{accepted:true,version:'2026-10-27'}};
+    const valid={challenge:challenge(random()),state:random(),mode:'signup',client:'android-debug',provider:'google',termsAcceptance:termsAcceptance(true)};
     const response=await request('/api/auth/mobile/start',valid);assert.equal(response.status,200);
     const url=new URL((await response.json()).browserUrl),opened=await request(url.pathname+url.search);
     assert.equal(opened.headers.get('location'),'/api/auth/mobile/google');
     const cookie=cookieValues(opened).join('; '),page=await request('/api/auth/mobile/google',undefined,cookie);
-    assert.equal(page.status,200);const html=await page.text();assert.match(html,/"mode":"signup"/);assert.match(html,/"termsAcceptance":\{"accepted":true,"version":"2026-10-27"\}/);
+    assert.equal(page.status,200);const html=await page.text();assert.match(html,/"mode":"signup"/);assert(html.includes('"termsAcceptance":'+JSON.stringify(termsAcceptance(true))));
     assert.equal((await request('/api/auth/mobile/finish',{},cookie)).status,401,'Rendering a launcher is never fresh Google proof');
-    for(const acceptance of [null,{accepted:false,version:'2026-10-27'},{accepted:true,version:'old'},{accepted:true,version:'2026-10-27',userId:identityId}])
+    for(const acceptance of [null,termsAcceptance(false),{accepted:true,version:'old'},{...termsAcceptance(true),userId:identityId}])
       assert.ok([400,409].includes((await request('/api/auth/mobile/start',{...valid,termsAcceptance:acceptance})).status));
     for(const extra of [{mode:'login'},{provider:'password'},{userId:identityId},{redirectTo:'https://foreign.test'}])
       assert.equal((await request('/api/auth/mobile/start',{...valid,...extra})).status,400);

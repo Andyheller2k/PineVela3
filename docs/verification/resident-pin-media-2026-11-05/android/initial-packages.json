@@ -1,0 +1,5 @@
+{
+  "initialPackages": [
+    "app.pinevela.mobile.debug"
+  ]
+}

@@ -24,7 +24,7 @@ export async function notifyPrimaryOwner(client: PoolClient, applicantContext: s
 export async function readNotifications(client: PoolClient, actor: VerifiedActor, market = false) {
   const rows = (await client.query(`select n.*, r.read_at, r.popup_acknowledged_at from public.notifications n
     join public.notification_recipients r on r.notification_id=n.id where r.context_id=$1
-    and ($2::boolean=false or n.category like 'market%' or n.category in('admin_message','support')) order by n.created_at desc,n.id limit 500`, [actor.contextId, market])).rows;
+    and ($2::boolean=false or n.category like 'market%' or n.category in('admin_message','support','discover_market','discover_residence','device_test')) order by n.created_at desc,n.id limit 500`, [actor.contextId, market])).rows;
   return rows.map(n => ({ id: n.id, title: n.title, message: n.message, type: n.admin_message_type || n.category, category: n.category,
     date: n.created_at, read: n.read_at !== null, link: n.link, adminMessage: n.category === 'admin_message',
     module: ['admin_settings','admin_governance'].includes(n.category) ? n.category : undefined,

@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowRight, Building2, LockKeyhole, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { filterResidences, type Residence } from '../lib/residenceCatalog';
@@ -13,6 +13,7 @@ import PublicCatalogRail from './PublicCatalogRail';
 export default function PublicResidenceCatalog({ preview = false, searchQuery = '' }: { preview?: boolean; searchQuery?: string }) {
   const Heading = preview ? 'h2' : 'h1';
   const navigate = useNavigate();
+  const [params,setParams]=useSearchParams();
   const { user } = useAuth();
   const { data: hostels = [], isPending, isError, refetch } = useQuery<Residence[]>({
     queryKey: ['hostels'],
@@ -26,6 +27,12 @@ export default function PublicResidenceCatalog({ preview = false, searchQuery = 
     refetchInterval: 30000,
   });
   const [selected, setSelected] = useState<Residence | null>(null);
+  const requested=params.get('property');
+  useEffect(()=>{
+    if(preview||!requested||!hostels.length)return;
+    const property=hostels.find(item=>item.id===requested);if(property)setSelected(property);
+    const next=new URLSearchParams(params);next.delete('property');setParams(next,{replace:true});
+  },[requested,preview,hostels]);
   const [activation, setActivation] = useState<Residence | null>(null);
   const [visibleCount, setVisibleCount] = useState(24);
   const filtered = filterResidences(hostels, searchQuery);

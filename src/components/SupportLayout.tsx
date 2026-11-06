@@ -31,6 +31,6 @@ export default function SupportLayout({ children, publicPage = false }: { childr
       </div>
     </header>
     <main id="support-main" tabIndex={-1} className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-8 sm:py-12">{children}</main>
-    <footer className="support-footer mx-auto flex w-full max-w-6xl flex-wrap gap-x-6 gap-y-3 px-4 py-8 text-sm sm:px-8"><span>© {new Date().getFullYear()} PineVela</span><a href="/privacy.html">Privacy policy</a><a href="/terms.html">Terms of service</a></footer>
+    <footer className="support-footer mx-auto flex w-full max-w-6xl flex-wrap gap-x-6 gap-y-3 px-4 py-8 text-sm sm:px-8"><span>© {new Date().getFullYear()} PineVela</span><a href="/privacy.html">Privacy policy</a><a href="/terms.html">Terms of service</a><Link to="/notification-settings">Device notifications</Link></footer>
   </div>;
 }

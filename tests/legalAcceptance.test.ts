@@ -11,7 +11,7 @@ test('agreement proof requires an explicit current version, not a truthy value o
     {accepted:'true',version:PLATFORM_TERMS.version},{...termsAcceptance(true),userId:crypto.randomUUID()},
     {...termsAcceptance(true),acceptedAt:'2026-01-01'},{...termsAcceptance(true),sha256:PLATFORM_TERMS.sha256}])
     assert.throws(()=>validateTermsAcceptance(value),(e:any)=>e.status===400);
-  for(const version of [undefined,'','old','2026-10-28',null])
+  for(const version of [undefined,'','old','2026-10-27','2026-10-28',null])
     assert.throws(()=>validateTermsAcceptance({accepted:true,version}),(e:any)=>e.status===409);
 });
 
@@ -20,9 +20,10 @@ test('immutable accessible Terms and the registry hash match the actual publishe
   const original=article('public/terms.html'),saved=article('public'+PLATFORM_TERMS.href);
   assert.equal(saved,original);
   assert.equal(crypto.createHash('sha256').update(saved).digest('hex'),PLATFORM_TERMS.sha256);
-  const migration=fs.readFileSync('supabase/migrations/20261028120000_versioned_terms_acceptance.sql','utf8');
-  assert.ok(migration.includes(PLATFORM_TERMS.sha256));
-  assert.ok(migration.includes(saved.replaceAll("'","''")));
+  const migrations=fs.readdirSync('supabase/migrations').filter(file=>file.endsWith('.sql'))
+    .map(file=>fs.readFileSync('supabase/migrations/'+file,'utf8'));
+  assert.ok(migrations.some(migration=>migration.includes(PLATFORM_TERMS.sha256)
+    &&migration.includes(saved.replaceAll("'","''"))));
 });
 
 test('public agreement/help, account preferences and supported closure do not grant product access', () => {

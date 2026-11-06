@@ -33,10 +33,8 @@
   box-shadow: inset 0 1px 0 rgb(255 244 191 / .4), 0 3px 12px rgb(0 8 20 / .12);
 }
 .user-dashboard [data-user-navigation],
-.user-bottom-navigation .ux-mobile-destination,
 .user-dashboard .user-catalog-switcher button { position: relative; isolation: isolate; }
 .user-dashboard [data-user-navigation] > :not(.user-navigation-highlight),
-.user-bottom-navigation .ux-mobile-destination > :not(.user-navigation-highlight),
 .user-dashboard .user-catalog-switcher button > :not(.user-navigation-highlight) { position: relative; z-index: 1; }
 html[data-theme] .user-dashboard [data-user-navigation][aria-current="page"],
 html[data-theme] .user-bottom-navigation[data-animated-navigation] button[aria-current="page"],
@@ -59,7 +57,7 @@ html[data-theme] .user-dashboard .user-catalog-switcher button[aria-pressed="tru
 .user-dashboard-header .user-header-alerts { color: inherit; }
 .user-dashboard-header .user-header-alerts [data-notification-count] { right: 0; top: 0; }
 
-/* Expanded sidebar and the existing compact-top layout remain available. */
+/* The expanded sidebar keeps its existing layout beside the compact side rail. */
 .user-dashboard-sidebar { transition: width .22s var(--user-motion), padding .22s var(--user-motion), margin .22s var(--user-motion), opacity .16s, border-width .22s; overflow-x: hidden; }
 .user-dashboard-sidebar > div { min-width: 14.875rem; }
 .user-dashboard-sidebar [data-user-navigation] { min-height: 68px; padding: 10px 12px; }
@@ -69,10 +67,6 @@ html[data-theme] .user-dashboard .user-catalog-switcher button[aria-pressed="tru
 .user-dashboard-sidebar [data-user-navigation] .user-navigation-highlight::before {
   content: ""; position: absolute; top: 17px; bottom: 17px; left: 5px; width: 3px; border-radius: 2px; background: #001d3d;
 }
-.user-dashboard[data-navigation-layout="top"] .user-dashboard-sidebar { width: 0; padding-inline: 0; margin-inline: 0; border-width: 0; opacity: 0; visibility: hidden; pointer-events: none; }
-.user-top-navigation { animation: user-view-enter .2s var(--user-motion) both; }
-.user-top-navigation [data-user-navigation] { min-height: 48px; border-radius: 12px; }
-.user-top-navigation [data-user-navigation] > span:last-child { font-size: 10px; }
 
 /* Content geometry remains unchanged; feedback is confined to the card itself. */
 .user-dashboard :is([data-listing-id], [data-residence-id]) { transition: transform .18s var(--user-motion), box-shadow .18s, border-color .18s; }
@@ -111,10 +105,6 @@ html[data-theme="dark"] .user-price-sheet .market-price-panel { background: #001
 /* The primary marketplace uses the same compact controls at every width.
    Public catalogs and other account pages retain their own toolbar layouts. */
 .user-dashboard-content[data-dashboard-view="home"]:has([data-home-catalog="market"]) { padding-top: 24px; }
-@media (min-width: 1024px) {
-  /* Match the existing lg:pt-24 clearance used by the other top-nav views. */
-  .user-dashboard[data-navigation-layout="top"] .user-dashboard-content[data-dashboard-view="home"]:has([data-home-catalog="market"]) { padding-top: 6rem; }
-}
 .user-dashboard .user-home-content[data-home-catalog="market"] { --user-home-gap: 12px; }
 .user-dashboard .user-home-content[data-home-catalog="market"] > :not(:last-child) { margin-block-end: var(--user-home-gap); }
 .user-dashboard .user-market-panel > :not(:last-child) { margin-block-end: 8px; }
@@ -132,12 +122,11 @@ html[data-theme="dark"] .user-price-sheet .market-price-panel { background: #001
 }
 .user-dashboard .marketplace-filter-bar[data-compact-catalog] .market-search-field { width: auto; min-width: 0; }
 .user-dashboard .marketplace-filter-bar[data-compact-catalog] input { min-height: 44px; box-shadow: none; }
-.user-dashboard .marketplace-filter-bar[data-compact-catalog] .marketplace-filter-controls { display: flex; width: auto; gap: 0; }
+.user-dashboard .marketplace-filter-bar[data-compact-catalog] .marketplace-filter-controls { display: flex; width: auto; gap: 6px; }
 .user-dashboard .marketplace-filter-bar[data-compact-catalog] .market-price-toggle { min-height: 44px; padding: 6px 10px; font-size: 13px; }
 .user-dashboard .marketplace-filter-bar[data-compact-catalog] :is(.market-sort-control, .market-item-count) { display: none; }
 .user-dashboard .user-market-panel .market-categories { margin-inline: 0; padding: 0; }
 .user-dashboard .user-market-panel .market-categories button { padding-inline: 10px; }
-.user-dashboard .market-categories .market-nearby-shortcut { display: inline-flex; align-items: center; gap: 5px; border-style: dashed; color: var(--pv-link); background: var(--pv-field); }
 
 html[data-theme] .user-market-filters-overlay { align-items: center; padding: 24px; }
 html[data-theme] .user-market-filter-sheet { padding: 16px; display: flex; flex-direction: column; gap: 12px; background: var(--pv-panel); color: var(--pv-text); border: 1px solid var(--pv-dialog-edge); }

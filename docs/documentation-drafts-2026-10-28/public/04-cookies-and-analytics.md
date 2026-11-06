@@ -41,4 +41,4 @@ Clearing cookies/storage may sign you out or remove local settings. It does not 
 - Make the final notice reachable before sign-in and from the preference control.
 - Record the selected categories and notice version; honor later changes.
 
-Privacy contact: andyheller2k@gmail.com. See the Privacy Policy and the internal analytics plan for the selected setup.
+Privacy contact: pinevela@pinevela.app. See the Privacy Policy and the internal analytics plan for the selected setup.

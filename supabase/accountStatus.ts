@@ -7,7 +7,7 @@ import { SupabaseAuth,type AuthRequest } from './auth.js';
 export async function registrationStatus(client: PoolClient,actor: VerifiedActor) {
   if (actor.kind !== 'primary') throw new ApiError(403,'Use your primary user account to view registrations.');
   const rows = (await client.query(`select c.id,c.kind,c.status,p.display_name,p.email,p.phone,c.created_at,
-    e.id as enrollment_id,e.status as enrollment_status,e.verified_at,
+    e.id as enrollment_id,e.status as enrollment_status,e.verified_at,e.enrollment_fields->>'authentication' as authentication,
     v.status as review_status,v.review_notes,v.id as verification_id,v.submitted_data,v.residence_id as verification_residence_id,v.withdrawn_by_wipe_id
     from public.account_contexts c join public.profiles p on p.id = c.auth_user_id
     left join private.account_enrollments e on e.linked_context_id = c.id
@@ -40,7 +40,9 @@ export async function registrationStatus(client: PoolClient,actor: VerifiedActor
       join public.residences h on h.id = b.residence_id
       left join private.room_activation_keys k on k.room_id = r.id and k.claimed_by = a.resident_context_id and k.revoked_at is null
       where a.resident_context_id = $1 and a.ended_at is null`,[resident.id])).rows[0];
-    residentAccount = { id:resident.id,name:resident.display_name,email:resident.email,phone:resident.phone,
+    const pinLogin=resident.authentication==='resident_pin';
+    const primaryEmail=pinLogin?(await client.query('select email from public.profiles where id=$1',[actor.authUserId])).rows[0]?.email:undefined;
+    residentAccount = { id:resident.id,name:resident.display_name,email:primaryEmail||resident.email,phone:resident.phone,residentPinLogin:pinLogin,
       active:resident.status === 'active' && Boolean(room),status:resident.status,emailVerified:Boolean(resident.verified_at),
       enrollmentId:resident.enrollment_id,enrollmentStatus:resident.enrollment_status,
       roomKey:room?.code || '',roomNumber:room?.room_number || '',blockName:room?.block_name || '',

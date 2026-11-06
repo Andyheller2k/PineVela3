@@ -16,12 +16,14 @@ export function checkResidentProfileRequest(actor: VerifiedActor, query: unknown
 export async function ownResidentRooms(client: PoolClient, actor: VerifiedActor) {
   if (!['primary', 'resident'].includes(actor.kind)) throw new ApiError(403, 'Use your user or resident account to view your rooms.');
   const rows = (await client.query(`select a.id as allocation_id,a.room_id,a.bed_id,a.started_at,
-    c.id as resident_context_id,p.display_name,p.email,p.phone,
+    c.id as resident_context_id,p.display_name,case when e.enrollment_fields->>'authentication'='resident_pin' then owner.email else p.email end as email,p.phone,
     r.room_number,f.floor_number,b.name as block_name,h.id as residence_id,h.name as residence_name,
     k.id as key_id,k.code,coalesce(h.manager_contact_name,manager.display_name) as manager_name,
     coalesce(h.contact_phone,manager.phone) as manager_phone
     from public.allocations a join public.account_contexts c on c.id=a.resident_context_id
     join public.profiles p on p.id=c.auth_user_id
+    left join private.account_enrollments e on e.linked_context_id=c.id
+    left join public.profiles owner on owner.id=c.primary_owner_id
     join public.rooms r on r.id=a.room_id join public.floors f on f.id=r.floor_id
     join public.blocks b on b.id=f.block_id join public.residences h on h.id=b.residence_id
     left join private.room_activation_keys k on k.room_id=r.id and k.claimed_by=c.id and k.revoked_at is null

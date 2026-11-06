@@ -365,6 +365,19 @@ public class PublicMediaCacheTest {
         assertEquals(16, fixture.requests.size());
     }
 
+    @Test public void webpDisplayVariantsRevalidateWithSeparateCacheIdentities() throws Exception {
+        for (String size : new String[] { "", "card", "thumb" }) {
+            String path=PATH+(size.isEmpty()?"":"?size="+size);
+            String etag=tag(PHOTO_A);if(!size.isEmpty())etag=etag.substring(0,etag.length()-1)+"-"+size+"-webp-v1\"";
+            fixture.enqueue(publicPhoto(PHOTO_A).header("Content-Type","image/webp").header("ETag",etag));
+            try(Response first=get(path)){assertNull(first.cacheResponse());assertEquals("image/webp",first.header("Content-Type"));assertArrayEquals(PHOTO_A,first.body().bytes());}
+            fixture.enqueue(validated(PHOTO_A).header("ETag",etag));
+            try(Response cached=get(path)){assertNotNull(cached.cacheResponse());assertEquals(304,cached.networkResponse().code());assertArrayEquals(PHOTO_A,cached.body().bytes());}
+            assertEquals(etag,fixture.requests.get(fixture.requests.size()-1).headers.get("if-none-match"));
+        }
+        assertEquals(6,fixture.requests.size());
+    }
+
     @Test public void networkFailureNeverFallsBackToAnOfflinePhoto() throws Exception {
         prime(); fixture.close();
         try (Response ignored = get(PATH)) { fail("Returned a stale public photo without server authorization"); }

@@ -1,13 +1,16 @@
 # Google branding and public policies — 27 October 2026
 
+Operator/contact fields below were revised on 5 November 2026. These file edits
+do not change saved Google Console settings.
+
 The owner subsequently confirmed Google branding verification. The authorized
 move replacing WordPress with the app at **pinevela.app** is now complete. The
 values and preparation checks below record the original preview setup. See the
 [completed cutover record](pinevela-main-domain-cutover-2026-10-27.md) for current
 URLs, hosting backups, verification and remaining provider checks.
 
-Owner-confirmed details: operator **Oppong Manu Andy**, country **Ghana**,
-minimum age **16**, contact **andyheller2k@gmail.com**. The owner selected the
+Owner-confirmed details: operator **PineVela Ghana**, country **Ghana**,
+minimum age **16**, contact **pinevela@pinevela.app**. The owner selected the
 application at **preview.pinevela.app** and will upload their own Google logo.
 No postal address, registration number or provider retention period was supplied
 or invented.
@@ -17,14 +20,14 @@ or invented.
 | Field | Value |
 | --- | --- |
 | App name | `PineVela` |
-| User support email | `andyheller2k@gmail.com` |
+| User support email | `pinevela@pinevela.app` |
 | App logo | Owner supplies the image |
 | Application home page | `https://preview.pinevela.app/` |
 | Privacy policy | `https://preview.pinevela.app/privacy.html` |
 | Terms of service | `https://preview.pinevela.app/terms.html` |
 | Authorized domain to add | `pinevela.app` |
 | Existing authorized domain to retain | `bivajljcdeofyxzmplxm.supabase.co` |
-| Developer contact email | `andyheller2k@gmail.com` |
+| Developer contact email | `pinevela@pinevela.app` |
 
 The authorized-domain entry uses the registered domain, without `https://`, a
 path or wildcard. `pinevela.app` covers the selected `preview` subdomain.

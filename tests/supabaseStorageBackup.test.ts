@@ -3,6 +3,7 @@ import test from 'node:test';
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
+import sharp from 'sharp';
 import {createStorageBackup,verifyStorageBackup,storageRecoveryObjects,storageSnapshotDigest,readPrivateRecoveryFile,
   type StorageSnapshot,type StorageBackupBinding} from '../supabase/storageBackup.js';
 import {SupabaseStorage} from '../supabase/storage.js';
@@ -36,6 +37,19 @@ test('actual image bytes and orphan objects recover from authenticated encrypted
     assert.equal(fs.statSync(path.join(dir,file)).mode&0o077,0);
     if(file!=='key')assert.equal(fs.readFileSync(path.join(dir,file)).includes(image.subarray(0,64)),false);
   }
+}));
+test('mixed original PNG and compressed WebP bytes survive encrypted backup and restore',async()=>using(async f=>{
+  const compressed=await sharp(image).resize({width:128}).webp({quality:84}).toBuffer();
+  const owner=f.snapshot.assets[0].owner_context_id,id=crypto.randomUUID(),objectPath=`contexts/${owner}/${id}.webp`;
+  f.snapshot.assets.push({id,owner_context_id:owner,bucket_id:'pinevela-media',object_path:objectPath,byte_size:compressed.length,
+    sha256:crypto.createHash('sha256').update(compressed).digest('hex'),state:'ready'});
+  f.snapshot.objects.push({id:crypto.randomUUID(),name:objectPath,bucket_id:'pinevela-media',metadata:{size:compressed.length,mimetype:'image/webp'}});
+  const saved=await createStorageBackup(f.directory,f.binding,f.snapshot,async object=>Buffer.from(object.path.endsWith('.webp')?compressed:image),async()=>f.snapshot);
+  let webpRestored=false;
+  const result=verifyStorageBackup(f.directory,saved.id,f.binding,f.snapshot,(object,bytes)=>{
+    if(object.path.endsWith('.webp')){assert.deepEqual(bytes,compressed);webpRestored=true;}else assert.deepEqual(bytes,image);
+  });
+  assert(webpRestored);assert.equal(result.objects,3);assert.equal(result.bytes,image.length*2+compressed.length);
 }));
 test('empty bucket recovery is verified without claiming object-byte provider coverage',async()=>using(async f=>{
   f.snapshot.assets=[];f.snapshot.objects=[];let reads=0;

@@ -63,7 +63,6 @@ html[data-theme][data-appearance="product"] [data-portal-navigation] {
   backdrop-filter: var(--pv-auth-glass-filter);
   box-shadow: var(--pv-auth-glass-shadow) !important;
 }
-html[data-theme] [data-portal-navigation="top"] button[title="Sign Out"] { color: #fecdd3; }
 html[data-theme] [data-portal-navigation] [class~="text-blue-600/70"] { color: var(--pv-muted); }
 html[data-theme] #public-header { border-bottom: 1px solid rgb(255 195 0 / .32); }
 html[data-theme] :is([data-portal-navigation], [id="public-header"]) :is(input, select) { background: #00162e !important; color: #dce7f3 !important; border-color: #6c8dae !important; }

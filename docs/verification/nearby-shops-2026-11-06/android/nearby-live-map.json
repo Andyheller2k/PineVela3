@@ -1,0 +1,39 @@
+{
+  "passed": true,
+  "actualInstalledAndroidWebView": true,
+  "installedApkSha256": "b2b9d7d6d653502b9a8381c539e2a38626f570a095a94c7a020767a726c94813",
+  "backend": "https://pinevela.app",
+  "publicShop": {
+    "id": "af645a01-f514-4b49-a673-15f8b0d52dd0",
+    "name": "PineVela Store",
+    "address": "Bomso"
+  },
+  "permissionPromptDenied": false,
+  "permissionsGrantedByVerifier": false,
+  "launcherRecoveryBeforeCheck": true,
+  "noSystemDialogCoveringMap": true,
+  "accountFormsSubmitted": false,
+  "accountWrites": 0,
+  "originalRouteRestored": true,
+  "runtimeExceptions": 0,
+  "ui": {
+    "width": 393,
+    "height": 778,
+    "overflow": false,
+    "mapWithinViewport": true,
+    "approximateNotice": true,
+    "noExactDirections": true,
+    "viewShopAvailable": true,
+    "tilesLoaded": 6,
+    "deviceLocationUsed": false
+  },
+  "emulatorLeftRunning": true,
+  "mapWorksWithoutDeviceLocationFix": true,
+  "permissionPromptObservedInPreliminaryRun": true,
+  "postCheckLocationPermissionsObserved": {
+    "coarseGranted": true,
+    "fineGranted": true,
+    "grantCommandIssuedByVerifier": false,
+    "denialTestFlagsClearedByVerifier": true
+  }
+}

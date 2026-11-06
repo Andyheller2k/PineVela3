@@ -5,7 +5,7 @@ Version: `[FILL]`. Effective: `[FILL]`.
 
 ## 1. Who is responsible
 
-PineVela is operated by Oppong Manu Andy in Ghana. Website: https://pinevela.app. Privacy contact: andyheller2k@gmail.com. Address: `[FILL: public notice address]`. Privacy lead and applicable registration details: `[FILL: verified information]`.
+PineVela is operated by PineVela Ghana. Website: https://pinevela.app. Privacy contact: pinevela@pinevela.app. Address: `[FILL: public notice address]`. Privacy lead and applicable registration details: `[FILL: verified information]`.
 
 We explain below what information we process, why, who receives it and how you can raise a privacy request. Where a housing provider or merchant independently decides how to use information, its own notice and responsibilities may also apply. `[REVIEW: controller/processor roles and agreements for each relationship.]`
 
@@ -45,6 +45,12 @@ We use providers for hosting, authentication, databases, file storage, transacti
 
 Providers and recipients may process information outside Ghana. `[REVIEW: applicable transfer conditions, contracts, safeguards and disclosure of actual processing locations.]`
 
+### Optional device notifications
+
+When enabled, Android alerts use Google Firebase Cloud Messaging and browser alerts use the browser's push provider. PineVela stores the device token/subscription, a device identifier, verified account bindings and notification choices. Private alerts contain an account label and short summary; optional marketplace/residence discovery alerts can include public listing details and pictures. Keys, payment PINs and encrypted message contents are not included in device payloads.
+
+Each account connects only after it has been authenticated on that installation. Separate opt-in controls cover marketplace and residence discovery. Disabling alerts or signing out disconnects that device. Registration leases expire after 90 days without renewal and are removed after another 30 days; delivery-job records are removed after 30 days. Existing in-app notification history has its own retention. [REVIEW: confirm provider contracts, lock-screen guidance and deployed cleanup behaviour.]
+
 ## 6. Cookies, security and analytics
 
 Essential cookies and browser storage support sessions, security, saved preferences and installed-app functions. Cloudflare Turnstile processes browser/connection signals for applicable authentication checks. The Cookies and Analytics Notice identifies the current categories and available controls.
@@ -81,4 +87,4 @@ The platform's intended minimum age is 16. Additional safeguards and any require
 
 We use technical and organizational safeguards appropriate to the service and investigate reported incidents. No website can guarantee prevention of every attack. `[REVIEW: final incident-notification wording against the actual response process.]`
 
-We will publish approved updates with a version/effective date and provide an appropriate notice of material changes. Privacy questions: andyheller2k@gmail.com.
+We will publish approved updates with a version/effective date and provide an appropriate notice of material changes. Privacy questions: pinevela@pinevela.app.

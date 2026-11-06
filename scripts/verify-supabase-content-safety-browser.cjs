@@ -37,8 +37,8 @@ async function privateJson(file) { const s = await fs.lstat(file); assert(s.isFi
     async function dismissWelcome() { await evaluate(`(()=>{for(const d of document.querySelectorAll('dialog[open]'))if(/Welcome/.test(d.getAttribute('aria-label')||''))d.querySelector('button[aria-label="Close dialog"]')?.click()})()`); }
     async function signIn(kind) {
       stage = 'real login ' + kind; const actor = fixture.actors[kind]; await size(1440, 1000); await go('/#/login');
-      await until('!!document.querySelector(\'input[aria-label="Username or Email Address"]\')', 'Sign-in form');
-      await fill('input[aria-label="Username or Email Address"]', actor.email); await fill('input[aria-label="Password"]', actor.password);
+      await until('!!document.querySelector(\'input[aria-label="Email address"]\')', 'Sign-in form');
+      await fill('input[aria-label="Email address"]', actor.email); await fill('input[aria-label="Password"]', actor.password);
       await evaluate('document.querySelector(\'input[aria-label="Password"]\').closest("form").requestSubmit()');
       const route = kind === 'agent' ? '/customer-service' : kind === 'admin' ? '/admin/dashboard' : '/user/dashboard';
       await until(`location.hash.split('?')[0]===${JSON.stringify('#' + route)}`, 'Correct native destination');

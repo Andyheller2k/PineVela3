@@ -13,7 +13,7 @@ ChevronRight,
 Clock,
 Loader2,
 LogOut as LogOutIcon,
-PanelLeftClose,PanelLeftOpen,
+PanelLeftClose,
 RefreshCw,
 Scale,
 Settings,
@@ -31,12 +31,13 @@ import { apiFetch,} from '../lib/api';
 import { routePopupFeedback } from '../lib/feedback';
 import { activateOnKeyboard } from '../lib/keyboardActivation';
 import { uploadMaintenancePhoto } from '../lib/maintenanceMedia';
-import { saveNavigationLayout,usesTopNavigation } from '../lib/navigationLayout';
+import { useSidebarLayout } from '../lib/useSidebarLayout';
 import { } from '../lib/queryClient';
 import { } from '../utils/pdfHelper';
 import DashboardOverlay from './DashboardOverlay';
 import LogoutConfirmationModal from './LogoutConfirmationModal';
 import MobileNavigation from './MobileNavigation';
+import CompactSidebarNavigation from './CompactSidebarNavigation';
 import PineLogo, { PineWordmark } from './PineLogo';
 import TopNavBadge from './TopNavBadge';
 
@@ -75,18 +76,14 @@ export default function PageStaffDashboard() {
   const issueReads = React.useRef(new AccountRefreshGate()), bargainReads = React.useRef(new AccountRefreshGate());
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; issueReads.current.cancel(); bargainReads.current.cancel(); }; }, []);
   const navigate = useNavigate();
-  const [isSidebarTopNav, setIsSidebarTopNav] = useState(usesTopNavigation);
-
-  useEffect(() => {
-    saveNavigationLayout(isSidebarTopNav);
-  }, [isSidebarTopNav]);
+  const [isSidebarCompact, setIsSidebarCompact] = useSidebarLayout('staff-dashboard-sidebar');
 
   // Data States
   const [staffRecord, setStaffRecord] = useState<any | null>(null);
 
   // Staff maintenance, notifications and account settings.
   const [activeTab, setActiveTab] = useState<'notifications' | 'settings' | 'maintenance'>('maintenance');
-  // Collapsible sidebar state (Disabled minimizing to prevent glitched overlapping)
+  // Expanded sidebar and compact side rail share a device preference.
   const isSidebarCollapsed = false;
   const [loading, setLoading] = useState(true);
   const [toastMessage, setToastMessage] = useState<{ text: string; type: 'success' | 'error' | 'info' } | null>(null);
@@ -509,20 +506,14 @@ export default function PageStaffDashboard() {
 
       {/* LEFT SIDEBAR NAVIGATION */}
 
-      {isSidebarTopNav && <nav data-portal-navigation="top" className="hidden lg:block fixed top-3 left-1/2 -translate-x-1/2 z-50 w-[min(780px,calc(100vw-3rem))] bg-sky-100/70 backdrop-blur-xl border border-white/80 rounded-2xl shadow-lg"><div className="flex items-center gap-1 px-2 py-1.5">
-        {/* Profile avatar button — left end */}
-        <button onClick={() => setActiveTab('settings')} title="Profile & Settings" className="shrink-0 flex flex-col items-center gap-0.5 py-1 px-1.5 rounded-xl hover:bg-white/70 cursor-pointer">
-          {settingsPhoto || user?.photo || user?.avatar ? (
-            <img src={settingsPhoto || user?.photo || user?.avatar} alt="Profile" className="w-6 h-6 rounded-full object-cover ring-2 ring-white shadow-sm" />
-          ) : (
-            <div className="w-6 h-6 rounded-full bg-blue-900 text-white flex items-center justify-center font-black text-[9px] shadow-sm">{user?.name?.[0] || 'S'}</div>
-          )}
-          <span className="text-[9px] font-bold text-slate-500">Profile</span>
-        </button>
-        <div className="w-px h-6 bg-slate-200/70 shrink-0" />
-        {[{ id: 'maintenance', label: 'Fixes', icon: Wrench, badge: employment ? assignedIssues.filter(i => !i.withdrawn && i.status !== 'Resolved' && !i.staffCompleted).length : 0 }, { id: 'notifications', label: 'Alerts', icon: Bell, badge: unreadCount }, { id: 'settings', label: 'Settings', icon: Settings }].map(tab => <button aria-current={activeTab === tab.id ? 'page' : undefined} key={tab.id} onClick={() => setActiveTab(tab.id as any)} aria-label={`${tab.label}${tab.badge ? ` (${tab.badge})` : ''}`} className={`flex-1 min-w-0 flex flex-col items-center gap-0.5 py-1.5 rounded-xl text-[9px] font-bold cursor-pointer ${activeTab === tab.id ? 'text-blue-700 bg-blue-100/65' : 'text-slate-500 hover:bg-white/70'}`}><span className="relative inline-flex"><tab.icon className="w-4 h-4" /><TopNavBadge count={tab.badge} /></span><span className="truncate max-w-full">{tab.label}</span></button>)}<button onClick={() => setShowLogoutConfirm(true)} title="Sign Out" className="shrink-0 flex flex-col items-center gap-0.5 px-2 py-1.5 text-[9px] font-bold text-rose-600 hover:bg-rose-50 rounded-xl cursor-pointer"><LogOutIcon className="w-4 h-4" /><span>Sign Out</span></button><button onClick={() => setIsSidebarTopNav(false)} title="Show sidebar" className="p-2 text-slate-500 hover:text-blue-700 cursor-pointer"><PanelLeftOpen className="w-4 h-4" /></button><HelpLink compact className="!px-2" /></div></nav>}
-      {!isSidebarTopNav && <aside data-portal-navigation="sidebar" className={`hidden lg:flex ${isSidebarCollapsed ? 'w-20 p-4' : 'w-72 p-6'} my-6 ml-6 h-[calc(100vh-3rem)] bg-gradient-to-br from-sky-100/90 via-blue-100/85 to-amber-50/40 backdrop-blur-3xl border border-sky-200/80 shadow-2xl rounded-3xl flex flex-col justify-between shrink-0 overflow-y-auto z-20 transition-all duration-300 relative`}>
-        <button onClick={() => setIsSidebarTopNav(true)} title="Use top navigation" className="absolute top-3 right-3 p-2 rounded-xl text-slate-500 hover:text-blue-700 hover:bg-white/70 cursor-pointer"><PanelLeftClose className="w-4 h-4" /></button>
+      {isSidebarCompact && <CompactSidebarNavigation id="staff-dashboard-sidebar" label="Staff navigation sidebar"
+        activeTab={activeTab} onExpand={() => setIsSidebarCompact(false)} items={[
+          { id: 'maintenance', label: 'Orders', icon: Wrench, badge: employment ? assignedIssues.filter(i => !i.withdrawn && i.status !== 'Resolved' && !i.staffCompleted).length : 0 },
+          { id: 'notifications', label: 'Alerts', icon: Bell, badge: unreadCount },
+          { id: 'settings', label: 'Settings', icon: Settings }
+        ]} onSelect={id => setActiveTab(id as any)} onSignOut={() => setShowLogoutConfirm(true)} />}
+      {!isSidebarCompact && <aside id="staff-dashboard-sidebar" data-portal-navigation="sidebar" data-sidebar-collapsed="false" aria-label="Staff navigation sidebar" className={`hidden lg:flex ${isSidebarCollapsed ? 'w-20 p-4' : 'w-72 p-6'} my-6 ml-6 h-[calc(100vh-3rem)] bg-gradient-to-br from-sky-100/90 via-blue-100/85 to-amber-50/40 backdrop-blur-3xl border border-sky-200/80 shadow-2xl rounded-3xl flex flex-col justify-between shrink-0 overflow-y-auto z-20 transition-all duration-300 relative`}>
+        <button onClick={() => setIsSidebarCompact(true)} title="Minimize sidebar" aria-label="Minimize sidebar" data-sidebar-toggle aria-controls="staff-dashboard-sidebar" aria-expanded="true" className="absolute top-3 right-3 p-2 rounded-xl text-slate-500 hover:text-blue-700 hover:bg-white/70 cursor-pointer"><PanelLeftClose className="w-4 h-4" /></button>
 
         <div className="space-y-6">
           {/* Logo & Header */}
@@ -718,7 +709,7 @@ export default function PageStaffDashboard() {
 
 
       {/* MAIN WORKSPACE CONTENT */}
-      <main className={`dashboard-centered-content min-w-0 flex-1 m-4 mb-24 lg:mb-6 lg:my-6 lg:mr-6 h-auto lg:h-[calc(100vh-3rem)] overflow-y-auto pb-24 lg:pb-8 bg-gradient-to-br from-sky-100/65 via-blue-100/45 to-indigo-100/35 backdrop-blur-2xl border border-white/70 shadow-2xl shadow-blue-950/10 rounded-3xl p-6 md:p-8 space-y-8 relative z-10 ${isSidebarTopNav ? 'lg:pt-24 lg:w-[calc(100vw-22rem)] lg:max-w-[calc(100vw-22rem)] lg:mx-auto' : ''}`}>
+      <main className={`dashboard-centered-content min-w-0 flex-1 m-4 mb-24 lg:mb-6 lg:my-6 lg:mr-6 h-auto lg:h-[calc(100vh-3rem)] overflow-y-auto pb-24 lg:pb-8 bg-gradient-to-br from-sky-100/65 via-blue-100/45 to-indigo-100/35 backdrop-blur-2xl border border-white/70 shadow-2xl shadow-blue-950/10 rounded-3xl p-6 md:p-8 space-y-8 relative z-10`}>
         {/* TOP STATUS BAR */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-200/60">
           <div>

@@ -15,7 +15,7 @@ test('connected native bundle has only public client assets and preserves immuta
   assert.ok(!/https:\/\/pinevela\.app\/.*\.js|serviceWorker|analytics|manifest\.webmanifest/.test(html));
   for (const name of files.filter(name => name.endsWith('.css'))) assert.ok(!/fonts\.googleapis\.com|fonts\.gstatic\.com/.test(fs.readFileSync(path.join(root, name), 'utf8')), name);
   const article = (file: string) => fs.readFileSync(file, 'utf8').match(/<article\b[\s\S]*?<\/article>/)?.[0];
-  for (const name of ['privacy.html', 'terms.html', 'legal/terms-2026-10-27.html']) assert.equal(article(path.join(root, name)), article(path.join('public', name)), name);
+  for (const name of ['privacy.html', 'terms.html', 'legal/terms-2026-10-27.html', PLATFORM_TERMS.href.slice(1)]) assert.equal(article(path.join(root, name)), article(path.join('public', name)), name);
   assert.equal(createHash('sha256').update(article(root + PLATFORM_TERMS.href)!).digest('hex'), PLATFORM_TERMS.sha256);
   assert.equal(files.filter(name => name.startsWith('licenses/fonts/') && name.endsWith('-OFL.txt')).length, 3);
 });

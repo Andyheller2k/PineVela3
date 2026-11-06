@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Building2, Eye, Key, MapPin } from 'lucide-react';
 import { publicResidenceContact, residenceImages, type Residence } from '../lib/residenceCatalog';
+import { optimizeImageDisplayUrl } from '../lib/imageOptimizer';
 
 export default function ResidenceCard({ hostel, onInspect, onActivate }: { hostel: Residence; onInspect: (hostel: Residence) => void; onActivate: (hostel: Residence) => void }) {
   const [failedCover, setFailedCover] = useState<string>();
@@ -11,7 +12,7 @@ export default function ResidenceCard({ hostel, onInspect, onActivate }: { hoste
     <div data-residence-id={hostel.id} className="bg-slate-50/80 border border-slate-200/80 rounded-2xl overflow-hidden shadow-xs hover:shadow-md transition-all flex flex-col justify-between">
       <div>
         <div className="relative h-36 w-full bg-slate-200 overflow-hidden">
-          {coverImg ? <img src={coverImg} alt={hostel.name} loading="lazy" decoding="async" fetchPriority="low" referrerPolicy="no-referrer" onError={() => setFailedCover(coverImg)} className="w-full h-full object-cover" /> : <div className="h-full flex flex-col items-center justify-center gap-2 text-slate-500"><Building2 size={28} /><span className="text-xs">No residence photos uploaded</span></div>}
+          {coverImg ? <img src={optimizeImageDisplayUrl(coverImg)} alt={hostel.name} loading="lazy" decoding="async" fetchPriority="low" referrerPolicy="no-referrer" onError={() => setFailedCover(coverImg)} className="w-full h-full object-cover" /> : <div className="h-full flex flex-col items-center justify-center gap-2 text-slate-500"><Building2 size={28} /><span className="text-xs">No residence photos uploaded</span></div>}
           <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5">
             {hostel.hostelType && (
               <span className="px-2.5 py-0.5 bg-white/90 backdrop-blur-sm text-slate-800 text-[10px] font-black rounded-full shadow-xs">

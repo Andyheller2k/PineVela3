@@ -15,6 +15,7 @@ import AdministratorLabel from './AdministratorLabel';
 import DashboardOverlay from './DashboardOverlay';
 import { AdminManagerClosureRequests } from './ManagerClosureRequest';
 import MobileNavigation from './MobileNavigation';
+import CompactSidebarNavigation from './CompactSidebarNavigation';
 import ResidenceDeletionPanel from './ResidenceDeletionPanel';
 
 import { useQuery } from '@tanstack/react-query';
@@ -40,7 +41,7 @@ Lock,
 LogOut as LogOutIcon,
 MapPin,
 MessageSquare,
-PanelLeftClose,PanelLeftOpen,
+PanelLeftClose,
 Plus,
 Search,
 ShieldAlert,
@@ -62,7 +63,7 @@ import { safeJson } from '../lib/api';
 import { readAdministratorDirectories } from '../lib/adminDirectories';
 import { requestKeyedApproval } from '../lib/approvalPrompt';
 import { recordedInspectionCoordinates } from '../lib/inspectionLocation';
-import { saveNavigationLayout,usesTopNavigation } from '../lib/navigationLayout';
+import { useSidebarLayout } from '../lib/useSidebarLayout';
 import { queryClient,} from '../lib/queryClient';
 import { currentManagerInspection,pendingManagerRegistration } from '../lib/registrationStatus';
 import { pendingResidenceReview,residenceReviewLabel,residenceReviewStatus } from '../lib/residenceReview';
@@ -118,13 +119,9 @@ export default function PageAdminDashboard() {
   const [adminMarketSubTab, setAdminMarketSubTab] = useState<'applications' | 'stores'>('applications');
   const [banReasonInput, setBanReasonInput] = useState<string>('');
   const [banningStoreTarget, setBanningStoreTarget] = useState<any | null>(null);
-  // Collapsible sidebar state (Disabled minimizing to prevent glitched overlapping)
+  // Expanded sidebar and compact side rail share a device preference.
   const isSidebarCollapsed = false;
-  const [isSidebarTopNav, setIsSidebarTopNav] = useState(usesTopNavigation);
-
-  useEffect(() => {
-    saveNavigationLayout(isSidebarTopNav);
-  }, [isSidebarTopNav]);
+  const [isSidebarCompact, setIsSidebarCompact] = useSidebarLayout('admin-dashboard-sidebar');
   const actionFeedback = useActionFeedback();
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
@@ -633,7 +630,7 @@ export default function PageAdminDashboard() {
   const adminAlertCount = unreadCount;
 
   return (
-    <div data-dashboard-shell data-navigation-layout={isSidebarTopNav ? 'top' : 'sidebar'} data-sidebar-collapsed={isSidebarCollapsed} onClickCapture={actionFeedback.capture} onSubmitCapture={actionFeedback.capture} className="admin-dashboard page-canvas min-h-screen h-screen flex flex-col lg:flex-row text-slate-800 overflow-hidden font-sans">
+    <div data-dashboard-shell data-navigation-layout={isSidebarCompact ? 'compact' : 'sidebar'} data-sidebar-collapsed={isSidebarCompact} onClickCapture={actionFeedback.capture} onSubmitCapture={actionFeedback.capture} className="admin-dashboard page-canvas min-h-screen h-screen flex flex-col lg:flex-row text-slate-800 overflow-hidden font-sans">
       <AdminRemovalNotice />
       {/* Toast Notification */}
       <AnimatePresence>
@@ -679,18 +676,20 @@ export default function PageAdminDashboard() {
 
       {/* SIDEBAR: PURELY STATIC / FIXED ICE-BLUE FROSTY BLUE WITH CURVED EDGES & BLUE GLOW */}
 
-      {isSidebarTopNav && <nav data-portal-navigation="top" className="hidden lg:block fixed top-3 left-1/2 -translate-x-1/2 z-50 w-[min(760px,calc(100vw-3rem))] bg-white/72 backdrop-blur-xl border border-white/80 rounded-2xl shadow-lg"><div className="flex items-center gap-1 px-2 py-1.5">
-        {/* Profile avatar button — left end */}
-        <button onClick={() => setActiveTab('settings')} title="Profile & Settings" className="shrink-0 flex flex-col items-center gap-0.5 py-1 px-1.5 rounded-xl hover:bg-white/70 cursor-pointer">
-          {user?.photo || user?.avatar ? <img src={user.photo || user.avatar} alt="Profile" className="w-6 h-6 rounded-full object-cover ring-2 ring-white shadow-sm" /> : <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-blue-900">{user?.name?.slice(0, 1)}</span>}
-          <span className="text-[9px] font-bold text-slate-500">Profile</span>
-        </button>
-        <div className="w-px h-6 bg-slate-200/70 shrink-0" />
-        {[
-        { id: 'overview', label: 'Overview', icon: ShieldCheck }, { id: 'user_accounts', label: 'Accounts', icon: Users, badge: allUsersData.totalUsers }, { id: 'residences', label: 'Residences', icon: Building2, badge: pendingHostelsCount }, { id: 'managers', label: 'Managers', icon: Users, badge: pendingManagersCount }, { id: 'digital_market', label: 'Market', icon: ShoppingBag, badge: digitalMarketApps.filter(a => a.status === 'pending').length }, { id: 'notifications', label: 'Alerts', icon: Bell, badge: adminAlertCount }, { id: 'messages', label: 'Message Gateway', icon: MessageSquare }, { id: 'governance', label: 'Approvals', icon: ShieldCheck, badge: governanceUnread }, { id: 'settings', label: 'Settings', icon: Edit3, badge: settingsUnread }
-      ].map(tab => <button aria-current={activeTab === tab.id ? 'page' : undefined} key={tab.id} onClick={() => setActiveTab(tab.id as any)} aria-label={`${tab.label}${tab.badge ? ` (${tab.badge})` : ''}`} className={`flex-1 min-w-0 flex flex-col items-center gap-0.5 py-1.5 rounded-xl text-[9px] font-bold cursor-pointer ${activeTab === tab.id ? 'text-blue-700 bg-blue-100/65' : 'text-slate-500 hover:bg-white/70'}`}><span className="relative inline-flex"><tab.icon className="w-4 h-4" /><TopNavBadge count={tab.badge} /></span><span className="truncate max-w-full">{tab.label}</span></button>)}<button onClick={() => setShowLogoutConfirm(true)} title="Sign Out" className="shrink-0 flex flex-col items-center gap-0.5 px-2 py-1.5 text-[9px] font-bold text-rose-600 hover:bg-rose-50 rounded-xl cursor-pointer"><LogOutIcon className="w-4 h-4" /><span>Sign Out</span></button><button onClick={() => setIsSidebarTopNav(false)} title="Show sidebar" className="p-2 text-slate-500 hover:text-blue-700 cursor-pointer"><PanelLeftOpen className="w-4 h-4" /></button><HelpLink compact className="!px-2" /></div></nav>}
-      {!isSidebarTopNav && <aside data-portal-navigation="sidebar" className={`hidden lg:flex ${isSidebarCollapsed ? 'w-20 p-4' : 'w-72 p-6'} my-6 ml-6 h-[calc(100vh-3rem)] bg-gradient-to-br from-sky-100/90 via-blue-100/85 to-amber-50/40 backdrop-blur-3xl border border-sky-200/80 shadow-2xl rounded-3xl flex flex-col justify-between shrink-0 overflow-y-auto transition-all duration-300 relative`}>
-        <button onClick={() => setIsSidebarTopNav(true)} title="Use top navigation" className="absolute top-3 right-3 p-2 rounded-xl text-slate-500 hover:text-blue-700 hover:bg-white/70 cursor-pointer"><PanelLeftClose className="w-4 h-4" /></button>
+      {isSidebarCompact && <CompactSidebarNavigation id="admin-dashboard-sidebar" label="Administrator navigation sidebar"
+        activeTab={activeTab} onExpand={() => setIsSidebarCompact(false)} items={[
+          { id: 'overview', label: 'Overview', icon: ShieldCheck },
+          { id: 'user_accounts', label: 'Accounts', icon: Users, badge: allUsersData.totalUsers },
+          { id: 'residences', label: 'Residences', icon: Building2, badge: pendingHostelsCount },
+          { id: 'managers', label: 'Managers', icon: Users, badge: pendingManagersCount },
+          { id: 'digital_market', label: 'Market', icon: ShoppingBag, badge: digitalMarketApps.filter(a => a.status === 'pending').length },
+          { id: 'notifications', label: 'Alerts', icon: Bell, badge: adminAlertCount },
+          { id: 'messages', label: 'Messages', icon: MessageSquare },
+          { id: 'governance', label: 'Approvals', icon: ShieldCheck, badge: governanceUnread },
+          { id: 'settings', label: 'Settings', icon: Edit3, badge: settingsUnread }
+        ]} onSelect={id => setActiveTab(id as any)} onSignOut={() => setShowLogoutConfirm(true)} />}
+      {!isSidebarCompact && <aside id="admin-dashboard-sidebar" data-portal-navigation="sidebar" data-sidebar-collapsed="false" aria-label="Administrator navigation sidebar" className={`hidden lg:flex ${isSidebarCollapsed ? 'w-20 p-4' : 'w-72 p-6'} my-6 ml-6 h-[calc(100vh-3rem)] bg-gradient-to-br from-sky-100/90 via-blue-100/85 to-amber-50/40 backdrop-blur-3xl border border-sky-200/80 shadow-2xl rounded-3xl flex flex-col justify-between shrink-0 overflow-y-auto transition-all duration-300 relative`}>
+        <button onClick={() => setIsSidebarCompact(true)} title="Minimize sidebar" aria-label="Minimize sidebar" data-sidebar-toggle aria-controls="admin-dashboard-sidebar" aria-expanded="true" className="absolute top-3 right-3 p-2 rounded-xl text-slate-500 hover:text-blue-700 hover:bg-white/70 cursor-pointer"><PanelLeftClose className="w-4 h-4" /></button>
 
         <div className="space-y-8">
           {/* Logo & Header */}
@@ -779,7 +778,7 @@ export default function PageAdminDashboard() {
       </aside>}
 
       {/* MAIN CONTENT AREA */}
-      <main className={`admin-dashboard-content dashboard-centered-content flex-1 p-6 lg:p-10 space-y-8 overflow-y-auto relative ${isSidebarTopNav ? 'lg:pt-24' : ''}`}>
+      <main className={`admin-dashboard-content dashboard-centered-content flex-1 p-6 lg:p-10 space-y-8 overflow-y-auto relative`}>
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-blue-200 bg-white/65 p-4 text-sm backdrop-blur-xl"><span className="flex min-w-0 items-center gap-3 font-semibold text-blue-950">{(user?.photo || user?.avatar) && <img src={user.photo || user.avatar} alt="Administrator profile" className="h-9 w-9 shrink-0 rounded-full object-cover" />}<AdministratorLabel slot={adminSlot} name={user?.name} /></span><button onClick={() => setActiveTab('governance')} className="rounded-xl bg-blue-600 px-4 py-2 font-semibold text-white">Shared approvals{pendingGovernance ? ` (${pendingGovernance})` : ''}</button></div>
         {(adminDataPending) && <p role="status" className="rounded-2xl border border-blue-200 bg-white/70 p-5 text-sm text-slate-700 dark:border-cyan-900 dark:bg-slate-900 dark:text-slate-100">Loading administrator directories…</p>}
         {(adminDataError) && <div role="alert" className="rounded-2xl border border-rose-200 bg-rose-50 p-5 text-sm text-rose-900 dark:border-rose-900 dark:bg-rose-950 dark:text-rose-100"><p>{adminDataError.message}</p>{adminData && <p className="mt-2">Showing the last successfully loaded directory information.</p>}<button type="button" disabled={adminDataFetching} onClick={() => void retryAdminData()} className="mt-2 min-h-11 font-semibold underline disabled:opacity-50">Retry administrator directories</button></div>}

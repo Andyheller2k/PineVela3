@@ -5,6 +5,13 @@ import static org.junit.Assert.*;
 import java.net.URI;
 
 public class TransportPolicyTest {
+    @Test public void photographVariantsHaveAnExactBoundedAllowlist() {
+        String path="/api/media/11111111-1111-4111-8111-111111111111";
+        for(String suffix:new String[]{"","?size=card","?size=thumb"})assertEquals(path+suffix,TransportPolicy.mediaPath(path+suffix));
+        for(String suffix:new String[]{"?size=9000","?size=card&url=https://example.com","?size=card&size=thumb","?size=%63ard","?SIZE=card","?size=","?","#x","/extra"}){
+            try{TransportPolicy.mediaPath(path+suffix);fail("Accepted unsupported photo selector");}catch(IllegalArgumentException expected){}
+        }
+    }
     private void rejectedPath(String path) {
         try { TransportPolicy.path(path); fail("Accepted unsafe path"); } catch (IllegalArgumentException expected) {}
     }

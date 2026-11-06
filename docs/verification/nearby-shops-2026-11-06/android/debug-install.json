@@ -1,0 +1,49 @@
+{
+  "passed": true,
+  "installedPackage": "app.pinevela.mobile.debug",
+  "previousDebugSha256": "b2b9d7d6d653502b9a8381c539e2a38626f570a095a94c7a020767a726c94813",
+  "installedDebugSha256": "b2b9d7d6d653502b9a8381c539e2a38626f570a095a94c7a020767a726c94813",
+  "installedFrom": "releases/android/pinevela-nearby-shops-20261106.apk",
+  "noDataClearing": true,
+  "packageWritesFlushed": true,
+  "installMode": "adb install -r",
+  "rebootPerformed": false,
+  "emulatorRestartedForMemory": false,
+  "startedPreviouslyStoppedExistingEmulator": true,
+  "logoutPerformed": false,
+  "authenticationFormsSubmitted": false,
+  "accountMutationsRequestedByVerifier": 0,
+  "normalAppTrafficIntercepted": false,
+  "ui": {
+    "page": "welcome",
+    "theme": "light",
+    "viewport": "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain, interactive-widget=resizes-content",
+    "width": 393,
+    "height": 778,
+    "overflow": false,
+    "header": {
+      "top": 0,
+      "bottom": 78.7272720336914
+    }
+  },
+  "loginUi": {
+    "passwordLabel": true,
+    "emailField": true,
+    "methodSwitch": false,
+    "overflow": false
+  },
+  "testOnlyPackagesRemoved": [],
+  "emulatorLeftRunning": true,
+  "startupRecovery": {
+    "firstVerificationAttemptTimedOutDuringInstallation": true,
+    "androidLauncherAndSystemUiWarningsObserved": true,
+    "waitSelected": true,
+    "stalledLauncherClosedAfterRepeatedWarning": true,
+    "pinevelaDataCleared": false,
+    "normalGraphicsRestartAfterSoftwareRendering": true,
+    "restartClearedAppData": false
+  },
+  "postInstallEmulatorReopened": true,
+  "postReopenApkSha256": "b2b9d7d6d653502b9a8381c539e2a38626f570a095a94c7a020767a726c94813",
+  "postReopenMapVerified": true
+}

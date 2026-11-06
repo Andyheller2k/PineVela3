@@ -1,0 +1,49 @@
+{
+  "scenario": "320px light current Terms acceptance",
+  "completed": 24,
+  "error": "Confirmed saved acceptance releases the page did not settle",
+  "exceptions": [],
+  "apiRequests": [
+    "/api/settings",
+    "/api/auth/me",
+    "/api/settings",
+    "/api/auth/me",
+    "/api/settings",
+    "/api/auth/me",
+    "/api/settings",
+    "/api/auth/me",
+    "/api/settings",
+    "/api/auth/me",
+    "/api/settings",
+    "/api/auth/me",
+    "/api/settings",
+    "/api/auth/me",
+    "/api/auth/appearance",
+    "/api/legal/status",
+    "/api/auth/maintenance-notice",
+    "/api/legal/accept",
+    "/api/auth/maintenance-notice",
+    "/api/auth/maintenance-notice",
+    "/api/auth/maintenance-notice"
+  ],
+  "debug": {
+    "url": "http://127.0.0.1:39349/?scene=1793838474695-0.23271967094825485&visual_role=user&visual_theme=light&visual_terms=pending#/user/dashboard",
+    "title": "PineVela",
+    "text": "Pine\nVela\n\nBEFORE YOU CONTINUE\n\nYour PineVela agreement\n\nRead our Terms of service before using your account. We’ll save the version you accept so you can continue without this step next time.\n\nI am at least 16 and I have read and accept the Terms of service (version 2026-11-05).\n\nSee the Privacy policy for how your data is used. This does not opt you into marketing or AI sharing.\n\nUnexpected token 'F', \"Fixture server error\" is not valid JSON\n\nAccept and continue\nContact support or request account closure\nSign out",
+    "root": true,
+    "scripts": [
+      "http://127.0.0.1:39349/analytics.js",
+      "http://127.0.0.1:39349/assets/index-BfJg9A76.js"
+    ],
+    "dataset": {
+      "appearance": "product",
+      "publicTheme": "none",
+      "authPage": "false",
+      "mobileAuth": "false",
+      "themePreference": "light",
+      "theme": "light",
+      "appMode": "browser",
+      "mobileViewport": "locked"
+    }
+  }
+}

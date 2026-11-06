@@ -1,0 +1,33 @@
+{
+  "passed": true,
+  "unitTests": 54,
+  "databaseHttpChecks": 88,
+  "browserScenes": 46,
+  "android": {
+    "passed": true,
+    "actualAndroidWebView": true,
+    "scenes": 26,
+    "heldTouchChecks": 16,
+    "instrumentationTests": 29,
+    "jvmTests": 10,
+    "syntheticFixturesOnly": true,
+    "debugAppDataPreserved": true
+  },
+  "databaseApplied": true,
+  "androidAppUpdatedInPlace": true,
+  "hostedAppDeployed": false,
+  "hostedNewResidentFlowVerified": false,
+  "previousBrowserPushFixAlreadyLive": true,
+  "zip": "/home/wyse/Documents/PineVela3/releases/web/pinevela-resident-pin-media-20261105.zip",
+  "zipSha256": "5add6f5c8512583a7ce536ee960785b048b478596cf6be86f25a4128e165d955",
+  "zipBytes": 6599238,
+  "apk": "/home/wyse/Documents/PineVela3/releases/android/pinevela-resident-pin-media-20261105.apk",
+  "apkSha256": "1186c808ffd54756894b77e56d56f6b20f416b3c844598f6064409e16b34dedc",
+  "apkBytes": 14827469,
+  "sqlEditorSha256": "a2aaa577f57684ddbc065bbb17ae61ddeddbffd8195be953df2ed713a0f2ca8d",
+  "entries": 204,
+  "privateCredentialMatches": 0,
+  "emulatorClosedCleanly": true,
+  "sleepScheduled": true,
+  "sleepRecord": "sleep.json"
+}

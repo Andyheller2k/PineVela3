@@ -1,0 +1,18 @@
+{
+  "passed": true,
+  "unitTests": 63,
+  "databaseHttpChecks": 104,
+  "browserChecks": 49,
+  "androidChecks": 14,
+  "actualFcmEmulatorDelivery": true,
+  "databaseApplied": true,
+  "hostedAppDeployed": false,
+  "hostedQueueDeliveryVerified": false,
+  "zip": "/home/wyse/Documents/PineVela3/releases/web/pinevela-device-notifications-20261105.zip",
+  "zipSha256": "6acb7d9c369f03efd53ca170e8017cc05ce24482ce9d94537fec469e70bcaeef",
+  "apk": "/home/wyse/Documents/PineVela3/releases/android/pinevela-device-notifications-20261105.apk",
+  "apkSha256": "77206a065cbab322f89a108aa90b9d3c94766601f96e6f1ee5697c85e1791a4a",
+  "tmpZip": "/tmp/pinevela-device-notifications-20261105.zip",
+  "entries": 200,
+  "privateCredentialMatches": 0
+}

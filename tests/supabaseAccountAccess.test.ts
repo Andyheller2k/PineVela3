@@ -15,7 +15,7 @@ test('both conversation reads and sends require messaging access',()=>{
   for(const method of ['GET','POST'])assert.deepEqual(accountFeaturesForRequest(method,'/api/digital-market/messages'),['messaging']);
 });
 test('activation aliases require both room and sub-account access',()=>{
-  for(const path of ['/api/room-keys/claim','/api/residents/onboard','/api/room-keys/verify'])
+  for(const path of ['/api/room-keys/claim','/api/residents/onboard','/api/room-keys/verify','/api/auth/resident-activate','/API/AUTH/RESIDENT-ACTIVATE/'])
     assert.deepEqual(accountFeaturesForRequest('POST',path),['subaccounts','rooms']);
 });
 test('officer acceptance requires sub-account access while invitation inspection stays available',()=>{

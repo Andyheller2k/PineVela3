@@ -27,10 +27,12 @@ module.exports = async ({ viewport, load, evaluate, until, test, capture, comman
       assert.equal(mobile.surface, mobile.theme === 'light' ? 'rgb(255, 255, 255)' : 'rgb(0, 53, 102)', 'Mobile navigation surface follows the theme');
       assert.equal(mobile.highlight, accent, 'Separate mobile highlight follows the theme');
       assert.equal(mobile.ink, accent, 'Selected mobile label follows the theme');
-      assert.equal(mobile.icon, mobile.variant === 'action' ? accent : mobile.theme === 'light' ? 'rgb(255, 255, 255)' : 'rgb(0, 29, 61)', 'Selected mobile icon contrasts with its highlight');
+      assert.equal(mobile.icon, mobile.theme === 'light' ? 'rgb(255, 255, 255)' : 'rgb(0, 29, 61)', 'Selected mobile icon contrasts with its highlight');
       assert(Math.abs(mobile.left) <= 1 && Math.abs(mobile.right - mobile.viewport) <= 1 && Math.abs(mobile.bottom - mobile.height) <= 1, 'Mobile surface connects to the bottom and sides of the viewport');
       return;
     }
+    const rail = await evaluate(`(()=>{const n=[...document.querySelectorAll('.pv-compact-sidebar')].find(e=>e.getClientRects().length);if(!n)return null;const b=n.querySelector('[aria-current="page"]'),circle=b?.querySelector('.pv-sidebar-highlight');return{theme:document.documentElement.dataset.theme,circle:circle?getComputedStyle(circle).backgroundColor:null,label:b?.querySelector('.pv-sidebar-label').textContent,icon:b?getComputedStyle(b.querySelector('.pv-sidebar-icon')).color:null}})()`);
+    if(rail){assert(rail.label);assert.equal(rail.circle,rail.theme==='light'?'rgb(0, 53, 102)':'rgb(255, 214, 10)');assert.equal(rail.icon,rail.theme==='light'?'rgb(255, 255, 255)':'rgb(0, 29, 61)');return;}
     const selected = await evaluate(`(()=>{return [...document.querySelectorAll('[data-portal-navigation] [aria-current="page"],nav[data-page-tabs] [aria-current="page"],button[data-page-tabs][aria-current="page"]')].filter(e=>e.getClientRects().length).map(e=>{const shape=e.querySelector('.user-navigation-highlight')||e,s=getComputedStyle(shape);return {label:e.textContent.trim(),fill:s.backgroundImage,ink:getComputedStyle(e).color}})})()`);
     assert(selected.length > 0, 'An actual active navigation control renders');
     for (const paint of selected) {
@@ -165,7 +167,7 @@ module.exports = async ({ viewport, load, evaluate, until, test, capture, comman
     assert.equal(edge, theme === 'light' ? 'rgb(0, 53, 102)' : 'rgb(255, 214, 10)');
     await click('[aria-label="Close companion"]');
     assert(await evaluate(`(()=>{const b=[...document.querySelectorAll('.market-categories button')].find(e=>e.textContent==='Services');b.click();return true})()`));
-    await click('[aria-label="Find services near you"]'); await until(`!!document.querySelector('.nearby-travel-modes')`, 'Nearby services map controls');
+    await click('[aria-label="Find shops and services nearby"]'); await until(`!!document.querySelector('.nearby-travel-modes')`, 'Nearby services map controls');
     await checkPaint('.nearby-travel-modes button[aria-pressed="true"]', theme);
     await capture(`390-${theme}-map-page-controls`);
   });
@@ -174,7 +176,7 @@ module.exports = async ({ viewport, load, evaluate, until, test, capture, comman
       await viewport(width); await load(page.route, theme, false, page); await closeWelcome(); await checkNavigation();
       assert(await evaluate(`document.documentElement.scrollWidth<=innerWidth`), 'Dashboard fits its viewport');
       if (width >= 1024) {
-        const changed = await evaluate(`(()=>{const e=[...document.querySelectorAll('button')].find(e=>e.getClientRects().length&&/top navigation|hide sidebar/i.test(e.title||e.getAttribute('aria-label')||''));if(!e)return false;e.click();return true})()`);
+        const changed = await evaluate(`(()=>{const e=[...document.querySelectorAll('button')].find(e=>e.getClientRects().length&&/minimize sidebar/i.test(e.title||e.getAttribute('aria-label')||''));if(!e)return false;e.click();return true})()`);
         if (changed) { await pause(300); await checkNavigation(); }
       }
     });

@@ -1,0 +1,35 @@
+{
+  "passed": true,
+  "actualInstalledApkSha256": "ebb414595b21ee47ec016a2c0685818479144d7913fa3bb181cdbfd95c7ae78a",
+  "roleThemeAndAfterSelectionScenes": 26,
+  "stationaryCaptionChecks": 116,
+  "compositorMotionChecks": 2,
+  "actualPhysicalPurchasesTaps": 1,
+  "sellerResidentActionSheets": 4,
+  "uncaughtWebViewExceptions": 0,
+  "productionWrites": 0,
+  "syntheticReadOnlyAccountsOnly": true,
+  "debugAccountDataUntouched": true,
+  "avdConfigurationChanged": false,
+  "dataCleared": false,
+  "osStartupDialog": {
+    "title": "System UI isn't responding",
+    "appearedBeforeAppLaunched": true,
+    "action": "Visible Wait control selected once from current accessibility hierarchy",
+    "settled": true,
+    "evidence": [
+      "os-before-app.png",
+      "os-startup-hierarchy.xml",
+      "os-startup-wait.json",
+      "os-after-wait.png"
+    ]
+  },
+  "appAnrDuringFinalNavigationRun": false,
+  "manualScreenshotReview": [
+    "user-light-selected-digital-market.png",
+    "admin-dark-selected-more.png"
+  ],
+  "testPackageLeftInstalledForParent": true,
+  "emulatorLeftRunningForParent": true,
+  "parentMustInstallDebugAndPerformOwnershipCleanup": true
+}

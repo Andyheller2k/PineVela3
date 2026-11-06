@@ -1,0 +1,6 @@
+{
+  "previousBuildExit": 143,
+  "previousBuildSuccessful": false,
+  "retry": "Gradle assembleDebug with offline cached dependencies",
+  "sourceChangedForRetry": false
+}
